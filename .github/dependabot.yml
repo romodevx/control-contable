@@ -32,3 +32,18 @@ updates:
     groups:
       actions:
         patterns: ['*']
+
+  - package-ecosystem: pub
+    directory: /mobile
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 14
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      pub-minor-patch:
+        update-types: [minor, patch]

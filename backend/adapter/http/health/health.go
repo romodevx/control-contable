@@ -10,7 +10,6 @@ package health
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"time"
 
@@ -23,20 +22,11 @@ import (
 // a process that is alive while the database is not.
 const DefaultPingTimeout = 500 * time.Millisecond
 
-// Pinger is the readiness port: one cheap round trip to the database.
+// Pinger is the readiness port: one cheap round trip to the database
+// (pgdb.Pinger in production).
 type Pinger interface {
 	Ping(ctx context.Context) error
 }
-
-// ErrDatabaseNotWired is reported by NotWired.
-var ErrDatabaseNotWired = errors.New("health: database adapter not wired yet")
-
-// NotWired is the Pinger used until the database adapter exists (P0-12): it
-// always fails, so /healthz honestly reports the database as unreachable.
-type NotWired struct{}
-
-// Ping implements Pinger.
-func (NotWired) Ping(context.Context) error { return ErrDatabaseNotWired }
 
 // Handler serves getHealth.
 type Handler struct {

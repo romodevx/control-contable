@@ -13,6 +13,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/config"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagsgorm"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagtest"
+	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgtest"
 	"github.com/romodevx/control-contable/backend/migrations"
 )
@@ -59,6 +60,19 @@ func TestFlags_endToEndOverPostgres(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"enabled":["module_auth"]}`, rec.Body.String())
 	conforms(t, req, rec)
+}
+
+// The API never runs as a privileged role outside dev (PR #19 follow-up): the
+// schema owner is refused at startup, a plain runtime login is accepted.
+func TestGuardRuntimeRole_overPostgres(t *testing.T) {
+	db := pgtest.NewDatabase(t)
+	owner := db.Connect(t, pgtest.RoleOwner)
+	app := db.Connect(t, pgtest.RoleApp)
+	for _, env := range []config.Environment{config.EnvStaging, config.EnvProduction} {
+		require.ErrorIs(t, guardRuntimeRole(t.Context(), env, owner), pgdb.ErrPrivilegedRole, env)
+		require.NoError(t, guardRuntimeRole(t.Context(), env, app), env)
+	}
+	assert.NoError(t, guardRuntimeRole(t.Context(), config.EnvDev, owner), "dev is not checked")
 }
 
 // A runtime role without SELECT on feature_flags (cc_webhook) cannot read the

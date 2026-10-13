@@ -2,7 +2,7 @@ import 'package:control_contable/core/theme/app_spacing.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
-/// Placeholder home until the dashboard module (M4) ships.
+/// Placeholder home until the dashboard module (M6) ships.
 class HomeScreen extends StatelessWidget {
   /// Creates the screen.
   const new({super.key});

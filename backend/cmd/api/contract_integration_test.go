@@ -125,11 +125,11 @@ func assertGate(t *testing.T, c *contracttest.Contract, env contractEnv, op gate
 	}
 }
 
-// The database health probe degrades /healthz without breaking its contract,
+// An unreachable database degrades /healthz without breaking its contract,
 // whatever the flags.
 func TestContract_healthzDegradedConforms(t *testing.T) {
 	c := contracttest.Load(t)
-	env := newContractEnv(t, health.NotWired{})
+	env := newContractEnv(t, unreachableDatabase(t))
 	_, err := env.store.ApplyPreset(t.Context(), "demo_full")
 	require.NoError(t, err)
 	env.flags.Invalidate()
@@ -140,6 +140,7 @@ func TestContract_healthzDegradedConforms(t *testing.T) {
 	var got gen.HealthStatus
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
 	assert.Equal(t, gen.HealthStatusStatusDegraded, got.Status)
+	assert.Equal(t, gen.HealthStatusDatabaseUnreachable, got.Database)
 }
 
 // samplePathValues fill the contract's path parameters. The gate answers

@@ -23,8 +23,8 @@ class DesignDirection {
   final AppTokens dark;
 }
 
-/// The active direction. "A · Confianza sobria" until the owner picks
-/// another one in PR #3.
+/// The active direction: "A · Confianza sobria", chosen by the owner on
+/// 2026-10-13 (docs/design/DIRECTIONS.md).
 final designDirectionProvider = Provider<DesignDirection>(
   (ref) => confianzaSobria,
   name: 'designDirectionProvider',
