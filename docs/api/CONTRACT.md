@@ -75,3 +75,33 @@ Module contracts are frozen the same way at each module's "contract freeze" task
 
 To freeze a new node, add `x-frozen: sha256:pending`, run `make contract-lint` and copy the
 `actual` hash from the error.
+
+## Contract tests (P0-18)
+
+Real responses from the real router are validated against this file with
+[libopenapi-validator](https://github.com/pb33f/libopenapi-validator) `v0.16.1` (pinned per
+ADR-0001), independently of the kin-openapi copy the server is generated from. The harness is
+`backend/adapter/http/contracttest`:
+
+```go
+c := contracttest.Load(t)                                         // parses this file once per test binary
+rec := c.ServeOp(t, contracttest.Op("createIncome"), handler, req) // serve + validate; counts as coverage
+rec = c.Serve(t, handler, req)                                     // serve + validate; no coverage claim (e.g. flag-OFF 404)
+```
+
+- Status, declared response headers and body are checked in **strict mode**: an undeclared
+  property or header fails (edge headers such as `X-Content-Type-Options` and `X-Request-Id`
+  excepted). Formats (`uuid`, `date`, ...) are asserted.
+- A failure prints the operation, the declared statuses, each violation with its JSON path and
+  the response received (status, headers, pretty-printed body).
+- `ServeOp` also fails when the request does not route to the named operation.
+
+**Coverage of the contract.** `TestContractCoverage` scans the backend's Go files (every build
+tag) for `contracttest.Op("<operationId>")` literals. Every operation must be either covered or
+listed in `pendingOperations` (`backend/adapter/http/contracttest/coverage_test.go`) with the
+PLAN task that owns its tests; never both. The list only shrinks: a module's contract-test task
+covers its operations and removes them from it in the same PR. A new operation is added to the
+list (or covered) in the PR that adds it to the contract.
+
+Run them with `make test-integration` (they need Docker), or only the contract suites with
+`make test-contract`. CI runs them in the backend workflow's integration job.
