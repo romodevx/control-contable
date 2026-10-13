@@ -17,7 +17,7 @@ T _$identity<T>(T value) => value;
 mixin _$ReminderSettings {
 
  bool get enabled;/// Day of month for the early reminder; null disables it.
-@JsonKey(name: 'early_day') int? get earlyDay;@JsonKey(name: 'on_due_date') bool get onDueDate;/// Local time, America/Mexico_City.
+@JsonKey(includeIfNull: true, name: 'early_day') int? get earlyDay;@JsonKey(name: 'on_due_date') bool get onDueDate;/// Local time, America/Mexico_City.
 @JsonKey(name: 'send_time') String get sendTime;/// Lock-screen privacy opt-in.
 @JsonKey(name: 'show_amounts') bool get showAmounts;
 /// Create a copy of ReminderSettings
@@ -57,7 +57,7 @@ abstract mixin class $ReminderSettingsCopyWith<$Res>  {
   factory $ReminderSettingsCopyWith(ReminderSettings value, $Res Function(ReminderSettings) _then) = _$ReminderSettingsCopyWithImpl;
 @useResult
 $Res call({
- bool enabled,@JsonKey(name: 'early_day') int? earlyDay,@JsonKey(name: 'on_due_date') bool onDueDate,@JsonKey(name: 'send_time') String sendTime,@JsonKey(name: 'show_amounts') bool showAmounts
+ bool enabled,@JsonKey(includeIfNull: true, name: 'early_day') int? earlyDay,@JsonKey(name: 'on_due_date') bool onDueDate,@JsonKey(name: 'send_time') String sendTime,@JsonKey(name: 'show_amounts') bool showAmounts
 });
 
 
@@ -166,7 +166,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool enabled, @JsonKey(name: 'early_day')  int? earlyDay, @JsonKey(name: 'on_due_date')  bool onDueDate, @JsonKey(name: 'send_time')  String sendTime, @JsonKey(name: 'show_amounts')  bool showAmounts)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool enabled, @JsonKey(includeIfNull: true, name: 'early_day')  int? earlyDay, @JsonKey(name: 'on_due_date')  bool onDueDate, @JsonKey(name: 'send_time')  String sendTime, @JsonKey(name: 'show_amounts')  bool showAmounts)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ReminderSettings() when $default != null:
 return $default(_that.enabled,_that.earlyDay,_that.onDueDate,_that.sendTime,_that.showAmounts);case _:
@@ -187,7 +187,7 @@ return $default(_that.enabled,_that.earlyDay,_that.onDueDate,_that.sendTime,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool enabled, @JsonKey(name: 'early_day')  int? earlyDay, @JsonKey(name: 'on_due_date')  bool onDueDate, @JsonKey(name: 'send_time')  String sendTime, @JsonKey(name: 'show_amounts')  bool showAmounts)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool enabled, @JsonKey(includeIfNull: true, name: 'early_day')  int? earlyDay, @JsonKey(name: 'on_due_date')  bool onDueDate, @JsonKey(name: 'send_time')  String sendTime, @JsonKey(name: 'show_amounts')  bool showAmounts)  $default,) {final _that = this;
 switch (_that) {
 case _ReminderSettings():
 return $default(_that.enabled,_that.earlyDay,_that.onDueDate,_that.sendTime,_that.showAmounts);case _:
@@ -207,7 +207,7 @@ return $default(_that.enabled,_that.earlyDay,_that.onDueDate,_that.sendTime,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool enabled, @JsonKey(name: 'early_day')  int? earlyDay, @JsonKey(name: 'on_due_date')  bool onDueDate, @JsonKey(name: 'send_time')  String sendTime, @JsonKey(name: 'show_amounts')  bool showAmounts)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool enabled, @JsonKey(includeIfNull: true, name: 'early_day')  int? earlyDay, @JsonKey(name: 'on_due_date')  bool onDueDate, @JsonKey(name: 'send_time')  String sendTime, @JsonKey(name: 'show_amounts')  bool showAmounts)?  $default,) {final _that = this;
 switch (_that) {
 case _ReminderSettings() when $default != null:
 return $default(_that.enabled,_that.earlyDay,_that.onDueDate,_that.sendTime,_that.showAmounts);case _:
@@ -222,12 +222,12 @@ return $default(_that.enabled,_that.earlyDay,_that.onDueDate,_that.sendTime,_tha
 @JsonSerializable()
 
 class _ReminderSettings implements ReminderSettings {
-  const _ReminderSettings({this.enabled = false, @JsonKey(name: 'early_day') this.earlyDay = 14, @JsonKey(name: 'on_due_date') this.onDueDate = true, @JsonKey(name: 'send_time') this.sendTime = '10:00', @JsonKey(name: 'show_amounts') this.showAmounts = false});
+  const _ReminderSettings({this.enabled = false, @JsonKey(includeIfNull: true, name: 'early_day') this.earlyDay = 14, @JsonKey(name: 'on_due_date') this.onDueDate = true, @JsonKey(name: 'send_time') this.sendTime = '10:00', @JsonKey(name: 'show_amounts') this.showAmounts = false});
   factory _ReminderSettings.fromJson(Map<String, dynamic> json) => _$ReminderSettingsFromJson(json);
 
 @override@JsonKey() final  bool enabled;
 /// Day of month for the early reminder; null disables it.
-@override@JsonKey(name: 'early_day') final  int? earlyDay;
+@override@JsonKey(includeIfNull: true, name: 'early_day') final  int? earlyDay;
 @override@JsonKey(name: 'on_due_date') final  bool onDueDate;
 /// Local time, America/Mexico_City.
 @override@JsonKey(name: 'send_time') final  String sendTime;
@@ -269,7 +269,7 @@ abstract mixin class _$ReminderSettingsCopyWith<$Res> implements $ReminderSettin
   factory _$ReminderSettingsCopyWith(_ReminderSettings value, $Res Function(_ReminderSettings) _then) = __$ReminderSettingsCopyWithImpl;
 @override @useResult
 $Res call({
- bool enabled,@JsonKey(name: 'early_day') int? earlyDay,@JsonKey(name: 'on_due_date') bool onDueDate,@JsonKey(name: 'send_time') String sendTime,@JsonKey(name: 'show_amounts') bool showAmounts
+ bool enabled,@JsonKey(includeIfNull: true, name: 'early_day') int? earlyDay,@JsonKey(name: 'on_due_date') bool onDueDate,@JsonKey(name: 'send_time') String sendTime,@JsonKey(name: 'show_amounts') bool showAmounts
 });
 
 

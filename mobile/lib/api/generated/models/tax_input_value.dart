@@ -15,8 +15,8 @@ part 'tax_input_value.g.dart';
 abstract class TaxInputValue with _$TaxInputValue {
   const factory TaxInputValue({
     required String key,
-    @JsonKey(name: 'value_cents') MoneyCents? valueCents,
-    @JsonKey(name: 'value_rate') DecimalRate? valueRate,
+    @JsonKey(includeIfNull: false, name: 'value_cents') MoneyCents? valueCents,
+    @JsonKey(includeIfNull: false, name: 'value_rate') DecimalRate? valueRate,
   }) = _TaxInputValue;
 
   factory TaxInputValue.fromJson(Map<String, Object?> json) =>

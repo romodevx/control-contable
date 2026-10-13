@@ -27,7 +27,7 @@ Map<String, dynamic> _$BreakdownLineToJson(_BreakdownLine instance) =>
       'operation': _$BreakdownLineOperationEnumMap[instance.operation]!,
       'amount_cents': instance.amountCents,
       'legal_basis': instance.legalBasis,
-      'rate': instance.rate,
+      'rate': ?instance.rate,
     };
 
 const _$BreakdownLineTaxEnumMap = {

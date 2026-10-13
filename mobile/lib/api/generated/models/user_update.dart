@@ -9,7 +9,8 @@ part 'user_update.g.dart';
 
 @Freezed()
 abstract class UserUpdate with _$UserUpdate {
-  const factory UserUpdate({String? name}) = _UserUpdate;
+  const factory UserUpdate({@JsonKey(includeIfNull: false) String? name}) =
+      _UserUpdate;
 
   factory UserUpdate.fromJson(Map<String, Object?> json) =>
       _$UserUpdateFromJson(json);

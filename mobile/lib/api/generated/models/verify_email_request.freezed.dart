@@ -19,7 +19,7 @@ mixin _$VerifyEmailRequest {
 /// Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.
  String get email;/// 6-digit emailed code; 15 min TTL, 5 wrong tries.
  String get code;/// The new account's password (D8). 12-128 characters; the breached/common-password check (offline list, D5) runs server-side.
- String get password; String? get name;
+ String get password;@JsonKey(includeIfNull: false) String? get name;
 /// Create a copy of VerifyEmailRequest
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -57,7 +57,7 @@ abstract mixin class $VerifyEmailRequestCopyWith<$Res>  {
   factory $VerifyEmailRequestCopyWith(VerifyEmailRequest value, $Res Function(VerifyEmailRequest) _then) = _$VerifyEmailRequestCopyWithImpl;
 @useResult
 $Res call({
- String email, String code, String password, String? name
+ String email, String code, String password,@JsonKey(includeIfNull: false) String? name
 });
 
 
@@ -165,7 +165,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String email,  String code,  String password,  String? name)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String email,  String code,  String password, @JsonKey(includeIfNull: false)  String? name)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _VerifyEmailRequest() when $default != null:
 return $default(_that.email,_that.code,_that.password,_that.name);case _:
@@ -186,7 +186,7 @@ return $default(_that.email,_that.code,_that.password,_that.name);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String email,  String code,  String password,  String? name)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String email,  String code,  String password, @JsonKey(includeIfNull: false)  String? name)  $default,) {final _that = this;
 switch (_that) {
 case _VerifyEmailRequest():
 return $default(_that.email,_that.code,_that.password,_that.name);case _:
@@ -206,7 +206,7 @@ return $default(_that.email,_that.code,_that.password,_that.name);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String email,  String code,  String password,  String? name)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String email,  String code,  String password, @JsonKey(includeIfNull: false)  String? name)?  $default,) {final _that = this;
 switch (_that) {
 case _VerifyEmailRequest() when $default != null:
 return $default(_that.email,_that.code,_that.password,_that.name);case _:
@@ -221,7 +221,7 @@ return $default(_that.email,_that.code,_that.password,_that.name);case _:
 @JsonSerializable()
 
 class _VerifyEmailRequest implements VerifyEmailRequest {
-  const _VerifyEmailRequest({required this.email, required this.code, required this.password, this.name});
+  const _VerifyEmailRequest({required this.email, required this.code, required this.password, @JsonKey(includeIfNull: false) this.name});
   factory _VerifyEmailRequest.fromJson(Map<String, dynamic> json) => _$VerifyEmailRequestFromJson(json);
 
 /// Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.
@@ -230,7 +230,7 @@ class _VerifyEmailRequest implements VerifyEmailRequest {
 @override final  String code;
 /// The new account's password (D8). 12-128 characters; the breached/common-password check (offline list, D5) runs server-side.
 @override final  String password;
-@override final  String? name;
+@override@JsonKey(includeIfNull: false) final  String? name;
 
 /// Create a copy of VerifyEmailRequest
 /// with the given fields replaced by the non-null parameter values.
@@ -267,7 +267,7 @@ abstract mixin class _$VerifyEmailRequestCopyWith<$Res> implements $VerifyEmailR
   factory _$VerifyEmailRequestCopyWith(_VerifyEmailRequest value, $Res Function(_VerifyEmailRequest) _then) = __$VerifyEmailRequestCopyWithImpl;
 @override @useResult
 $Res call({
- String email, String code, String password, String? name
+ String email, String code, String password,@JsonKey(includeIfNull: false) String? name
 });
 
 

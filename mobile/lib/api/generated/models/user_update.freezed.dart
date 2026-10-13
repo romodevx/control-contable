@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$UserUpdate {
 
- String? get name;
+@JsonKey(includeIfNull: false) String? get name;
 /// Create a copy of UserUpdate
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -54,7 +54,7 @@ abstract mixin class $UserUpdateCopyWith<$Res>  {
   factory $UserUpdateCopyWith(UserUpdate value, $Res Function(UserUpdate) _then) = _$UserUpdateCopyWithImpl;
 @useResult
 $Res call({
- String? name
+@JsonKey(includeIfNull: false) String? name
 });
 
 
@@ -159,7 +159,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? name)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(includeIfNull: false)  String? name)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _UserUpdate() when $default != null:
 return $default(_that.name);case _:
@@ -180,7 +180,7 @@ return $default(_that.name);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? name)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(includeIfNull: false)  String? name)  $default,) {final _that = this;
 switch (_that) {
 case _UserUpdate():
 return $default(_that.name);case _:
@@ -200,7 +200,7 @@ return $default(_that.name);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? name)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(includeIfNull: false)  String? name)?  $default,) {final _that = this;
 switch (_that) {
 case _UserUpdate() when $default != null:
 return $default(_that.name);case _:
@@ -215,10 +215,10 @@ return $default(_that.name);case _:
 @JsonSerializable()
 
 class _UserUpdate implements UserUpdate {
-  const _UserUpdate({this.name});
+  const _UserUpdate({@JsonKey(includeIfNull: false) this.name});
   factory _UserUpdate.fromJson(Map<String, dynamic> json) => _$UserUpdateFromJson(json);
 
-@override final  String? name;
+@override@JsonKey(includeIfNull: false) final  String? name;
 
 /// Create a copy of UserUpdate
 /// with the given fields replaced by the non-null parameter values.
@@ -255,7 +255,7 @@ abstract mixin class _$UserUpdateCopyWith<$Res> implements $UserUpdateCopyWith<$
   factory _$UserUpdateCopyWith(_UserUpdate value, $Res Function(_UserUpdate) _then) = __$UserUpdateCopyWithImpl;
 @override @useResult
 $Res call({
- String? name
+@JsonKey(includeIfNull: false) String? name
 });
 
 

@@ -27,7 +27,7 @@ Map<String, dynamic> _$TaxpayerToJson(_Taxpayer instance) => <String, dynamic>{
   'rfc_masked': instance.rfcMasked,
   'regimes': instance.regimes,
   'created_at': instance.createdAt.toIso8601String(),
-  'archived_at': instance.archivedAt?.toIso8601String(),
+  'archived_at': ?instance.archivedAt?.toIso8601String(),
 };
 
 const _$PersonTypeEnumMap = {

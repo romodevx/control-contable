@@ -15,23 +15,28 @@ part 'expense_update.g.dart';
 @Freezed()
 abstract class ExpenseUpdate with _$ExpenseUpdate {
   const factory ExpenseUpdate({
-    @JsonKey(name: 'regime_code') RegimeCode? regimeCode,
-    @JsonKey(name: 'category_code') String? categoryCode,
-    String? description,
+    @JsonKey(includeIfNull: false, name: 'regime_code') RegimeCode? regimeCode,
+    @JsonKey(includeIfNull: false, name: 'category_code') String? categoryCode,
+    @JsonKey(includeIfNull: false) String? description,
 
     /// Subtotal before IVA.
-    @JsonKey(name: 'amount_cents') NonNegativeCents? amountCents,
-    @JsonKey(name: 'iva_rate') IvaRate? ivaRate,
-    @JsonKey(name: 'iva_cents') NonNegativeCents? ivaCents,
-    @JsonKey(name: 'payment_method') PaymentMethod? paymentMethod,
-    @JsonKey(name: 'has_cfdi') bool? hasCfdi,
-    @JsonKey(name: 'paid_on') DateTime? paidOn,
+    @JsonKey(includeIfNull: false, name: 'amount_cents')
+    NonNegativeCents? amountCents,
+    @JsonKey(includeIfNull: false, name: 'iva_rate') IvaRate? ivaRate,
+    @JsonKey(includeIfNull: false, name: 'iva_cents')
+    NonNegativeCents? ivaCents,
+    @JsonKey(includeIfNull: false, name: 'payment_method')
+    PaymentMethod? paymentMethod,
+    @JsonKey(includeIfNull: false, name: 'has_cfdi') bool? hasCfdi,
+    @JsonKey(includeIfNull: false, name: 'paid_on') DateTime? paidOn,
 
     /// ISR the taxpayer (typically a PM) withheld from the supplier; must be remitted.
-    @JsonKey(name: 'isr_withheld_cents') NonNegativeCents? isrWithheldCents,
+    @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')
+    NonNegativeCents? isrWithheldCents,
 
     /// IVA the taxpayer withheld from the supplier (LIVA 1-A); remitted in full, creditable when paid.
-    @JsonKey(name: 'iva_withheld_cents') NonNegativeCents? ivaWithheldCents,
+    @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')
+    NonNegativeCents? ivaWithheldCents,
   }) = _ExpenseUpdate;
 
   factory ExpenseUpdate.fromJson(Map<String, Object?> json) =>

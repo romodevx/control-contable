@@ -22,7 +22,8 @@ abstract class SubscriptionPlan with _$SubscriptionPlan {
     required SubscriptionPlanStore store,
     @JsonKey(name: 'expires_at') required DateTime expiresAt,
     @JsonKey(name: 'will_renew') required bool willRenew,
-    @JsonKey(name: 'management_url') String? managementUrl,
+    @JsonKey(includeIfNull: false, name: 'management_url')
+    String? managementUrl,
   }) = _SubscriptionPlan;
 
   factory SubscriptionPlan.fromJson(Map<String, Object?> json) =>

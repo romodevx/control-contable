@@ -28,12 +28,12 @@ Map<String, dynamic> _$EventToJson(_Event instance) => <String, dynamic>{
   'type': instance.type,
   'app_user_id': instance.appUserId,
   'event_timestamp_ms': instance.eventTimestampMs,
-  'original_app_user_id': instance.originalAppUserId,
-  'product_id': instance.productId,
-  'entitlement_ids': instance.entitlementIds,
-  'environment': _$EnvironmentEnumMap[instance.environment],
-  'store': instance.store,
-  'expiration_at_ms': instance.expirationAtMs,
+  'original_app_user_id': ?instance.originalAppUserId,
+  'product_id': ?instance.productId,
+  'entitlement_ids': ?instance.entitlementIds,
+  'environment': ?_$EnvironmentEnumMap[instance.environment],
+  'store': ?instance.store,
+  'expiration_at_ms': ?instance.expirationAtMs,
 };
 
 const _$EnvironmentEnumMap = {

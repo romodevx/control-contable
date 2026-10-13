@@ -19,7 +19,7 @@ Map<String, dynamic> _$DeviceCreateToJson(_DeviceCreate instance) =>
       'id': instance.id,
       'platform': _$DeviceCreatePlatformEnumMap[instance.platform]!,
       'push_token': instance.pushToken,
-      'app_version': instance.appVersion,
+      'app_version': ?instance.appVersion,
     };
 
 const _$DeviceCreatePlatformEnumMap = {

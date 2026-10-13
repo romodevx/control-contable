@@ -29,20 +29,21 @@ _IncomeCreate _$IncomeCreateFromJson(Map<String, dynamic> json) =>
       id: json['id'] as String?,
     );
 
-Map<String, dynamic> _$IncomeCreateToJson(_IncomeCreate instance) =>
-    <String, dynamic>{
-      'regime_code': instance.regimeCode,
-      'description': instance.description,
-      'counterparty_type': _$CounterpartyTypeEnumMap[instance.counterpartyType],
-      'amount_cents': instance.amountCents,
-      'iva_rate': _$IvaRateEnumMap[instance.ivaRate],
-      'iva_cents': instance.ivaCents,
-      'isr_withheld_cents': instance.isrWithheldCents,
-      'iva_withheld_cents': instance.ivaWithheldCents,
-      'invoiced_on': instance.invoicedOn?.toIso8601String(),
-      'collected_on': instance.collectedOn?.toIso8601String(),
-      'id': instance.id,
-    };
+Map<String, dynamic> _$IncomeCreateToJson(
+  _IncomeCreate instance,
+) => <String, dynamic>{
+  'regime_code': ?instance.regimeCode,
+  'description': ?instance.description,
+  'counterparty_type': ?_$CounterpartyTypeEnumMap[instance.counterpartyType],
+  'amount_cents': ?instance.amountCents,
+  'iva_rate': ?_$IvaRateEnumMap[instance.ivaRate],
+  'iva_cents': ?instance.ivaCents,
+  'isr_withheld_cents': ?instance.isrWithheldCents,
+  'iva_withheld_cents': ?instance.ivaWithheldCents,
+  'invoiced_on': ?instance.invoicedOn?.toIso8601String(),
+  'collected_on': ?instance.collectedOn?.toIso8601String(),
+  'id': ?instance.id,
+};
 
 const _$CounterpartyTypeEnumMap = {
   CounterpartyType.personaFisica: 'persona_fisica',

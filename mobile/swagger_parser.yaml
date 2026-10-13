@@ -13,3 +13,5 @@ swagger_parser:
   put_clients_in_folder: true
   unknown_enum_value: true
   mark_files_as_generated: true
+  # Required nullable fields keep `null` on the wire (build.yaml leaves unset ones out).
+  include_if_null: true

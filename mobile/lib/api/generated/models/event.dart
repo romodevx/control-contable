@@ -16,12 +16,15 @@ abstract class Event with _$Event {
     required String type,
     @JsonKey(name: 'app_user_id') required String appUserId,
     @JsonKey(name: 'event_timestamp_ms') required int eventTimestampMs,
-    @JsonKey(name: 'original_app_user_id') String? originalAppUserId,
-    @JsonKey(name: 'product_id') String? productId,
-    @JsonKey(name: 'entitlement_ids') List<String>? entitlementIds,
-    Environment? environment,
-    String? store,
-    @JsonKey(name: 'expiration_at_ms') int? expirationAtMs,
+    @JsonKey(includeIfNull: false, name: 'original_app_user_id')
+    String? originalAppUserId,
+    @JsonKey(includeIfNull: false, name: 'product_id') String? productId,
+    @JsonKey(includeIfNull: false, name: 'entitlement_ids')
+    List<String>? entitlementIds,
+    @JsonKey(includeIfNull: false) Environment? environment,
+    @JsonKey(includeIfNull: false) String? store,
+    @JsonKey(includeIfNull: false, name: 'expiration_at_ms')
+    int? expirationAtMs,
   }) = _Event;
 
   factory Event.fromJson(Map<String, Object?> json) => _$EventFromJson(json);

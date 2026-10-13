@@ -18,7 +18,7 @@ abstract class Error with _$Error {
     /// Human-readable, safe to show; never contains PII.
     required String message,
     @JsonKey(name: 'request_id') required String requestId,
-    List<FieldError>? details,
+    @JsonKey(includeIfNull: false) List<FieldError>? details,
   }) = _Error;
 
   factory Error.fromJson(Map<String, Object?> json) => _$ErrorFromJson(json);

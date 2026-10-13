@@ -19,5 +19,5 @@ Map<String, dynamic> _$VerifyEmailRequestToJson(_VerifyEmailRequest instance) =>
       'email': instance.email,
       'code': instance.code,
       'password': instance.password,
-      'name': instance.name,
+      'name': ?instance.name,
     };

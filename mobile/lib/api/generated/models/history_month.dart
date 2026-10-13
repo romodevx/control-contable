@@ -20,9 +20,10 @@ abstract class HistoryMonth with _$HistoryMonth {
     @JsonKey(name: 'total_payable_rounded_cents')
     required NonNegativeCents totalPayableRoundedCents,
     @JsonKey(name: 'changed_since_viewed') required bool changedSinceViewed,
-    TaxResult? iva,
-    TaxResult? isr,
-    @JsonKey(name: 'last_viewed_at') DateTime? lastViewedAt,
+    @JsonKey(includeIfNull: false) TaxResult? iva,
+    @JsonKey(includeIfNull: false) TaxResult? isr,
+    @JsonKey(includeIfNull: false, name: 'last_viewed_at')
+    DateTime? lastViewedAt,
   }) = _HistoryMonth;
 
   factory HistoryMonth.fromJson(Map<String, Object?> json) =>

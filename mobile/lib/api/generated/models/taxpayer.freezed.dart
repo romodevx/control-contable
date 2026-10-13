@@ -17,7 +17,7 @@ T _$identity<T>(T value) => value;
 mixin _$Taxpayer {
 
  Uuid get id;@JsonKey(name: 'person_type') PersonType get personType;@JsonKey(name: 'display_name') String get displayName;/// The full RFC is never returned.
-@JsonKey(name: 'rfc_masked') String get rfcMasked; List<TaxpayerRegime> get regimes;@JsonKey(name: 'created_at') DateTime get createdAt;@JsonKey(name: 'archived_at') DateTime? get archivedAt;
+@JsonKey(name: 'rfc_masked') String get rfcMasked; List<TaxpayerRegime> get regimes;@JsonKey(name: 'created_at') DateTime get createdAt;@JsonKey(includeIfNull: false, name: 'archived_at') DateTime? get archivedAt;
 /// Create a copy of Taxpayer
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -55,7 +55,7 @@ abstract mixin class $TaxpayerCopyWith<$Res>  {
   factory $TaxpayerCopyWith(Taxpayer value, $Res Function(Taxpayer) _then) = _$TaxpayerCopyWithImpl;
 @useResult
 $Res call({
- Uuid id,@JsonKey(name: 'person_type') PersonType personType,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'rfc_masked') String rfcMasked, List<TaxpayerRegime> regimes,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'archived_at') DateTime? archivedAt
+ Uuid id,@JsonKey(name: 'person_type') PersonType personType,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'rfc_masked') String rfcMasked, List<TaxpayerRegime> regimes,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(includeIfNull: false, name: 'archived_at') DateTime? archivedAt
 });
 
 
@@ -166,7 +166,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Uuid id, @JsonKey(name: 'person_type')  PersonType personType, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'rfc_masked')  String rfcMasked,  List<TaxpayerRegime> regimes, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'archived_at')  DateTime? archivedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Uuid id, @JsonKey(name: 'person_type')  PersonType personType, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'rfc_masked')  String rfcMasked,  List<TaxpayerRegime> regimes, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(includeIfNull: false, name: 'archived_at')  DateTime? archivedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Taxpayer() when $default != null:
 return $default(_that.id,_that.personType,_that.displayName,_that.rfcMasked,_that.regimes,_that.createdAt,_that.archivedAt);case _:
@@ -187,7 +187,7 @@ return $default(_that.id,_that.personType,_that.displayName,_that.rfcMasked,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Uuid id, @JsonKey(name: 'person_type')  PersonType personType, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'rfc_masked')  String rfcMasked,  List<TaxpayerRegime> regimes, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'archived_at')  DateTime? archivedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Uuid id, @JsonKey(name: 'person_type')  PersonType personType, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'rfc_masked')  String rfcMasked,  List<TaxpayerRegime> regimes, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(includeIfNull: false, name: 'archived_at')  DateTime? archivedAt)  $default,) {final _that = this;
 switch (_that) {
 case _Taxpayer():
 return $default(_that.id,_that.personType,_that.displayName,_that.rfcMasked,_that.regimes,_that.createdAt,_that.archivedAt);case _:
@@ -207,7 +207,7 @@ return $default(_that.id,_that.personType,_that.displayName,_that.rfcMasked,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Uuid id, @JsonKey(name: 'person_type')  PersonType personType, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'rfc_masked')  String rfcMasked,  List<TaxpayerRegime> regimes, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'archived_at')  DateTime? archivedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Uuid id, @JsonKey(name: 'person_type')  PersonType personType, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'rfc_masked')  String rfcMasked,  List<TaxpayerRegime> regimes, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(includeIfNull: false, name: 'archived_at')  DateTime? archivedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Taxpayer() when $default != null:
 return $default(_that.id,_that.personType,_that.displayName,_that.rfcMasked,_that.regimes,_that.createdAt,_that.archivedAt);case _:
@@ -222,7 +222,7 @@ return $default(_that.id,_that.personType,_that.displayName,_that.rfcMasked,_tha
 @JsonSerializable()
 
 class _Taxpayer implements Taxpayer {
-  const _Taxpayer({required this.id, @JsonKey(name: 'person_type') required this.personType, @JsonKey(name: 'display_name') required this.displayName, @JsonKey(name: 'rfc_masked') required this.rfcMasked, required  List<TaxpayerRegime> regimes, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'archived_at') this.archivedAt}): _regimes = regimes;
+  const _Taxpayer({required this.id, @JsonKey(name: 'person_type') required this.personType, @JsonKey(name: 'display_name') required this.displayName, @JsonKey(name: 'rfc_masked') required this.rfcMasked, required  List<TaxpayerRegime> regimes, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(includeIfNull: false, name: 'archived_at') this.archivedAt}): _regimes = regimes;
   factory _Taxpayer.fromJson(Map<String, dynamic> json) => _$TaxpayerFromJson(json);
 
 @override final  Uuid id;
@@ -238,7 +238,7 @@ class _Taxpayer implements Taxpayer {
 }
 
 @override@JsonKey(name: 'created_at') final  DateTime createdAt;
-@override@JsonKey(name: 'archived_at') final  DateTime? archivedAt;
+@override@JsonKey(includeIfNull: false, name: 'archived_at') final  DateTime? archivedAt;
 
 /// Create a copy of Taxpayer
 /// with the given fields replaced by the non-null parameter values.
@@ -275,7 +275,7 @@ abstract mixin class _$TaxpayerCopyWith<$Res> implements $TaxpayerCopyWith<$Res>
   factory _$TaxpayerCopyWith(_Taxpayer value, $Res Function(_Taxpayer) _then) = __$TaxpayerCopyWithImpl;
 @override @useResult
 $Res call({
- Uuid id,@JsonKey(name: 'person_type') PersonType personType,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'rfc_masked') String rfcMasked, List<TaxpayerRegime> regimes,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'archived_at') DateTime? archivedAt
+ Uuid id,@JsonKey(name: 'person_type') PersonType personType,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'rfc_masked') String rfcMasked, List<TaxpayerRegime> regimes,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(includeIfNull: false, name: 'archived_at') DateTime? archivedAt
 });
 
 

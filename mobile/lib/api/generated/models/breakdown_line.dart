@@ -24,7 +24,7 @@ abstract class BreakdownLine with _$BreakdownLine {
     required BreakdownLineOperation operation,
     @JsonKey(name: 'amount_cents') required MoneyCents amountCents,
     @JsonKey(name: 'legal_basis') required List<Citation> legalBasis,
-    DecimalRate? rate,
+    @JsonKey(includeIfNull: false) DecimalRate? rate,
   }) = _BreakdownLine;
 
   factory BreakdownLine.fromJson(Map<String, Object?> json) =>

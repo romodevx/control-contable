@@ -22,7 +22,7 @@ abstract class TaxpayerCreate with _$TaxpayerCreate {
     required List<TaxpayerRegimeCreate> regimes,
 
     /// Optional client-generated id (idempotent retries).
-    Uuid? id,
+    @JsonKey(includeIfNull: false) Uuid? id,
   }) = _TaxpayerCreate;
 
   factory TaxpayerCreate.fromJson(Map<String, Object?> json) =>

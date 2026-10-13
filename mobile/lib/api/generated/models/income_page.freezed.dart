@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$IncomePage {
 
- List<Income> get items; PeriodTotals get totals;@JsonKey(name: 'next_cursor') String? get nextCursor;
+ List<Income> get items; PeriodTotals get totals;@JsonKey(includeIfNull: false, name: 'next_cursor') String? get nextCursor;
 /// Create a copy of IncomePage
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -54,7 +54,7 @@ abstract mixin class $IncomePageCopyWith<$Res>  {
   factory $IncomePageCopyWith(IncomePage value, $Res Function(IncomePage) _then) = _$IncomePageCopyWithImpl;
 @useResult
 $Res call({
- List<Income> items, PeriodTotals totals,@JsonKey(name: 'next_cursor') String? nextCursor
+ List<Income> items, PeriodTotals totals,@JsonKey(includeIfNull: false, name: 'next_cursor') String? nextCursor
 });
 
 
@@ -170,7 +170,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<Income> items,  PeriodTotals totals, @JsonKey(name: 'next_cursor')  String? nextCursor)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<Income> items,  PeriodTotals totals, @JsonKey(includeIfNull: false, name: 'next_cursor')  String? nextCursor)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _IncomePage() when $default != null:
 return $default(_that.items,_that.totals,_that.nextCursor);case _:
@@ -191,7 +191,7 @@ return $default(_that.items,_that.totals,_that.nextCursor);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<Income> items,  PeriodTotals totals, @JsonKey(name: 'next_cursor')  String? nextCursor)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<Income> items,  PeriodTotals totals, @JsonKey(includeIfNull: false, name: 'next_cursor')  String? nextCursor)  $default,) {final _that = this;
 switch (_that) {
 case _IncomePage():
 return $default(_that.items,_that.totals,_that.nextCursor);case _:
@@ -211,7 +211,7 @@ return $default(_that.items,_that.totals,_that.nextCursor);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<Income> items,  PeriodTotals totals, @JsonKey(name: 'next_cursor')  String? nextCursor)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<Income> items,  PeriodTotals totals, @JsonKey(includeIfNull: false, name: 'next_cursor')  String? nextCursor)?  $default,) {final _that = this;
 switch (_that) {
 case _IncomePage() when $default != null:
 return $default(_that.items,_that.totals,_that.nextCursor);case _:
@@ -226,7 +226,7 @@ return $default(_that.items,_that.totals,_that.nextCursor);case _:
 @JsonSerializable()
 
 class _IncomePage implements IncomePage {
-  const _IncomePage({required  List<Income> items, required this.totals, @JsonKey(name: 'next_cursor') this.nextCursor}): _items = items;
+  const _IncomePage({required  List<Income> items, required this.totals, @JsonKey(includeIfNull: false, name: 'next_cursor') this.nextCursor}): _items = items;
   factory _IncomePage.fromJson(Map<String, dynamic> json) => _$IncomePageFromJson(json);
 
  final  List<Income> _items;
@@ -237,7 +237,7 @@ class _IncomePage implements IncomePage {
 }
 
 @override final  PeriodTotals totals;
-@override@JsonKey(name: 'next_cursor') final  String? nextCursor;
+@override@JsonKey(includeIfNull: false, name: 'next_cursor') final  String? nextCursor;
 
 /// Create a copy of IncomePage
 /// with the given fields replaced by the non-null parameter values.
@@ -274,7 +274,7 @@ abstract mixin class _$IncomePageCopyWith<$Res> implements $IncomePageCopyWith<$
   factory _$IncomePageCopyWith(_IncomePage value, $Res Function(_IncomePage) _then) = __$IncomePageCopyWithImpl;
 @override @useResult
 $Res call({
- List<Income> items, PeriodTotals totals,@JsonKey(name: 'next_cursor') String? nextCursor
+ List<Income> items, PeriodTotals totals,@JsonKey(includeIfNull: false, name: 'next_cursor') String? nextCursor
 });
 
 

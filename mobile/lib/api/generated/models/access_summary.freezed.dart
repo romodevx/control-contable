@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$AccessSummary {
 
- AccessSummaryAccess get access;@JsonKey(name: 'trial_ends_at') DateTime? get trialEndsAt;@JsonKey(name: 'incomes_remaining') int? get incomesRemaining;@JsonKey(name: 'expenses_remaining') int? get expensesRemaining;
+ AccessSummaryAccess get access;@JsonKey(includeIfNull: false, name: 'trial_ends_at') DateTime? get trialEndsAt;@JsonKey(includeIfNull: false, name: 'incomes_remaining') int? get incomesRemaining;@JsonKey(includeIfNull: false, name: 'expenses_remaining') int? get expensesRemaining;
 /// Create a copy of AccessSummary
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -54,7 +54,7 @@ abstract mixin class $AccessSummaryCopyWith<$Res>  {
   factory $AccessSummaryCopyWith(AccessSummary value, $Res Function(AccessSummary) _then) = _$AccessSummaryCopyWithImpl;
 @useResult
 $Res call({
- AccessSummaryAccess access,@JsonKey(name: 'trial_ends_at') DateTime? trialEndsAt,@JsonKey(name: 'incomes_remaining') int? incomesRemaining,@JsonKey(name: 'expenses_remaining') int? expensesRemaining
+ AccessSummaryAccess access,@JsonKey(includeIfNull: false, name: 'trial_ends_at') DateTime? trialEndsAt,@JsonKey(includeIfNull: false, name: 'incomes_remaining') int? incomesRemaining,@JsonKey(includeIfNull: false, name: 'expenses_remaining') int? expensesRemaining
 });
 
 
@@ -162,7 +162,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( AccessSummaryAccess access, @JsonKey(name: 'trial_ends_at')  DateTime? trialEndsAt, @JsonKey(name: 'incomes_remaining')  int? incomesRemaining, @JsonKey(name: 'expenses_remaining')  int? expensesRemaining)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( AccessSummaryAccess access, @JsonKey(includeIfNull: false, name: 'trial_ends_at')  DateTime? trialEndsAt, @JsonKey(includeIfNull: false, name: 'incomes_remaining')  int? incomesRemaining, @JsonKey(includeIfNull: false, name: 'expenses_remaining')  int? expensesRemaining)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AccessSummary() when $default != null:
 return $default(_that.access,_that.trialEndsAt,_that.incomesRemaining,_that.expensesRemaining);case _:
@@ -183,7 +183,7 @@ return $default(_that.access,_that.trialEndsAt,_that.incomesRemaining,_that.expe
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( AccessSummaryAccess access, @JsonKey(name: 'trial_ends_at')  DateTime? trialEndsAt, @JsonKey(name: 'incomes_remaining')  int? incomesRemaining, @JsonKey(name: 'expenses_remaining')  int? expensesRemaining)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( AccessSummaryAccess access, @JsonKey(includeIfNull: false, name: 'trial_ends_at')  DateTime? trialEndsAt, @JsonKey(includeIfNull: false, name: 'incomes_remaining')  int? incomesRemaining, @JsonKey(includeIfNull: false, name: 'expenses_remaining')  int? expensesRemaining)  $default,) {final _that = this;
 switch (_that) {
 case _AccessSummary():
 return $default(_that.access,_that.trialEndsAt,_that.incomesRemaining,_that.expensesRemaining);case _:
@@ -203,7 +203,7 @@ return $default(_that.access,_that.trialEndsAt,_that.incomesRemaining,_that.expe
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( AccessSummaryAccess access, @JsonKey(name: 'trial_ends_at')  DateTime? trialEndsAt, @JsonKey(name: 'incomes_remaining')  int? incomesRemaining, @JsonKey(name: 'expenses_remaining')  int? expensesRemaining)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( AccessSummaryAccess access, @JsonKey(includeIfNull: false, name: 'trial_ends_at')  DateTime? trialEndsAt, @JsonKey(includeIfNull: false, name: 'incomes_remaining')  int? incomesRemaining, @JsonKey(includeIfNull: false, name: 'expenses_remaining')  int? expensesRemaining)?  $default,) {final _that = this;
 switch (_that) {
 case _AccessSummary() when $default != null:
 return $default(_that.access,_that.trialEndsAt,_that.incomesRemaining,_that.expensesRemaining);case _:
@@ -218,13 +218,13 @@ return $default(_that.access,_that.trialEndsAt,_that.incomesRemaining,_that.expe
 @JsonSerializable()
 
 class _AccessSummary implements AccessSummary {
-  const _AccessSummary({required this.access, @JsonKey(name: 'trial_ends_at') this.trialEndsAt, @JsonKey(name: 'incomes_remaining') this.incomesRemaining, @JsonKey(name: 'expenses_remaining') this.expensesRemaining});
+  const _AccessSummary({required this.access, @JsonKey(includeIfNull: false, name: 'trial_ends_at') this.trialEndsAt, @JsonKey(includeIfNull: false, name: 'incomes_remaining') this.incomesRemaining, @JsonKey(includeIfNull: false, name: 'expenses_remaining') this.expensesRemaining});
   factory _AccessSummary.fromJson(Map<String, dynamic> json) => _$AccessSummaryFromJson(json);
 
 @override final  AccessSummaryAccess access;
-@override@JsonKey(name: 'trial_ends_at') final  DateTime? trialEndsAt;
-@override@JsonKey(name: 'incomes_remaining') final  int? incomesRemaining;
-@override@JsonKey(name: 'expenses_remaining') final  int? expensesRemaining;
+@override@JsonKey(includeIfNull: false, name: 'trial_ends_at') final  DateTime? trialEndsAt;
+@override@JsonKey(includeIfNull: false, name: 'incomes_remaining') final  int? incomesRemaining;
+@override@JsonKey(includeIfNull: false, name: 'expenses_remaining') final  int? expensesRemaining;
 
 /// Create a copy of AccessSummary
 /// with the given fields replaced by the non-null parameter values.
@@ -261,7 +261,7 @@ abstract mixin class _$AccessSummaryCopyWith<$Res> implements $AccessSummaryCopy
   factory _$AccessSummaryCopyWith(_AccessSummary value, $Res Function(_AccessSummary) _then) = __$AccessSummaryCopyWithImpl;
 @override @useResult
 $Res call({
- AccessSummaryAccess access,@JsonKey(name: 'trial_ends_at') DateTime? trialEndsAt,@JsonKey(name: 'incomes_remaining') int? incomesRemaining,@JsonKey(name: 'expenses_remaining') int? expensesRemaining
+ AccessSummaryAccess access,@JsonKey(includeIfNull: false, name: 'trial_ends_at') DateTime? trialEndsAt,@JsonKey(includeIfNull: false, name: 'incomes_remaining') int? incomesRemaining,@JsonKey(includeIfNull: false, name: 'expenses_remaining') int? expensesRemaining
 });
 
 

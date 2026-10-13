@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$HistoryMonth {
 
- Period get period; HistoryMonthStatus get status;@JsonKey(name: 'total_payable_rounded_cents') NonNegativeCents get totalPayableRoundedCents;@JsonKey(name: 'changed_since_viewed') bool get changedSinceViewed; TaxResult? get iva; TaxResult? get isr;@JsonKey(name: 'last_viewed_at') DateTime? get lastViewedAt;
+ Period get period; HistoryMonthStatus get status;@JsonKey(name: 'total_payable_rounded_cents') NonNegativeCents get totalPayableRoundedCents;@JsonKey(name: 'changed_since_viewed') bool get changedSinceViewed;@JsonKey(includeIfNull: false) TaxResult? get iva;@JsonKey(includeIfNull: false) TaxResult? get isr;@JsonKey(includeIfNull: false, name: 'last_viewed_at') DateTime? get lastViewedAt;
 /// Create a copy of HistoryMonth
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -54,7 +54,7 @@ abstract mixin class $HistoryMonthCopyWith<$Res>  {
   factory $HistoryMonthCopyWith(HistoryMonth value, $Res Function(HistoryMonth) _then) = _$HistoryMonthCopyWithImpl;
 @useResult
 $Res call({
- Period period, HistoryMonthStatus status,@JsonKey(name: 'total_payable_rounded_cents') NonNegativeCents totalPayableRoundedCents,@JsonKey(name: 'changed_since_viewed') bool changedSinceViewed, TaxResult? iva, TaxResult? isr,@JsonKey(name: 'last_viewed_at') DateTime? lastViewedAt
+ Period period, HistoryMonthStatus status,@JsonKey(name: 'total_payable_rounded_cents') NonNegativeCents totalPayableRoundedCents,@JsonKey(name: 'changed_since_viewed') bool changedSinceViewed,@JsonKey(includeIfNull: false) TaxResult? iva,@JsonKey(includeIfNull: false) TaxResult? isr,@JsonKey(includeIfNull: false, name: 'last_viewed_at') DateTime? lastViewedAt
 });
 
 
@@ -189,7 +189,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Period period,  HistoryMonthStatus status, @JsonKey(name: 'total_payable_rounded_cents')  NonNegativeCents totalPayableRoundedCents, @JsonKey(name: 'changed_since_viewed')  bool changedSinceViewed,  TaxResult? iva,  TaxResult? isr, @JsonKey(name: 'last_viewed_at')  DateTime? lastViewedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Period period,  HistoryMonthStatus status, @JsonKey(name: 'total_payable_rounded_cents')  NonNegativeCents totalPayableRoundedCents, @JsonKey(name: 'changed_since_viewed')  bool changedSinceViewed, @JsonKey(includeIfNull: false)  TaxResult? iva, @JsonKey(includeIfNull: false)  TaxResult? isr, @JsonKey(includeIfNull: false, name: 'last_viewed_at')  DateTime? lastViewedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _HistoryMonth() when $default != null:
 return $default(_that.period,_that.status,_that.totalPayableRoundedCents,_that.changedSinceViewed,_that.iva,_that.isr,_that.lastViewedAt);case _:
@@ -210,7 +210,7 @@ return $default(_that.period,_that.status,_that.totalPayableRoundedCents,_that.c
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Period period,  HistoryMonthStatus status, @JsonKey(name: 'total_payable_rounded_cents')  NonNegativeCents totalPayableRoundedCents, @JsonKey(name: 'changed_since_viewed')  bool changedSinceViewed,  TaxResult? iva,  TaxResult? isr, @JsonKey(name: 'last_viewed_at')  DateTime? lastViewedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Period period,  HistoryMonthStatus status, @JsonKey(name: 'total_payable_rounded_cents')  NonNegativeCents totalPayableRoundedCents, @JsonKey(name: 'changed_since_viewed')  bool changedSinceViewed, @JsonKey(includeIfNull: false)  TaxResult? iva, @JsonKey(includeIfNull: false)  TaxResult? isr, @JsonKey(includeIfNull: false, name: 'last_viewed_at')  DateTime? lastViewedAt)  $default,) {final _that = this;
 switch (_that) {
 case _HistoryMonth():
 return $default(_that.period,_that.status,_that.totalPayableRoundedCents,_that.changedSinceViewed,_that.iva,_that.isr,_that.lastViewedAt);case _:
@@ -230,7 +230,7 @@ return $default(_that.period,_that.status,_that.totalPayableRoundedCents,_that.c
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Period period,  HistoryMonthStatus status, @JsonKey(name: 'total_payable_rounded_cents')  NonNegativeCents totalPayableRoundedCents, @JsonKey(name: 'changed_since_viewed')  bool changedSinceViewed,  TaxResult? iva,  TaxResult? isr, @JsonKey(name: 'last_viewed_at')  DateTime? lastViewedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Period period,  HistoryMonthStatus status, @JsonKey(name: 'total_payable_rounded_cents')  NonNegativeCents totalPayableRoundedCents, @JsonKey(name: 'changed_since_viewed')  bool changedSinceViewed, @JsonKey(includeIfNull: false)  TaxResult? iva, @JsonKey(includeIfNull: false)  TaxResult? isr, @JsonKey(includeIfNull: false, name: 'last_viewed_at')  DateTime? lastViewedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _HistoryMonth() when $default != null:
 return $default(_that.period,_that.status,_that.totalPayableRoundedCents,_that.changedSinceViewed,_that.iva,_that.isr,_that.lastViewedAt);case _:
@@ -245,16 +245,16 @@ return $default(_that.period,_that.status,_that.totalPayableRoundedCents,_that.c
 @JsonSerializable()
 
 class _HistoryMonth implements HistoryMonth {
-  const _HistoryMonth({required this.period, required this.status, @JsonKey(name: 'total_payable_rounded_cents') required this.totalPayableRoundedCents, @JsonKey(name: 'changed_since_viewed') required this.changedSinceViewed, this.iva, this.isr, @JsonKey(name: 'last_viewed_at') this.lastViewedAt});
+  const _HistoryMonth({required this.period, required this.status, @JsonKey(name: 'total_payable_rounded_cents') required this.totalPayableRoundedCents, @JsonKey(name: 'changed_since_viewed') required this.changedSinceViewed, @JsonKey(includeIfNull: false) this.iva, @JsonKey(includeIfNull: false) this.isr, @JsonKey(includeIfNull: false, name: 'last_viewed_at') this.lastViewedAt});
   factory _HistoryMonth.fromJson(Map<String, dynamic> json) => _$HistoryMonthFromJson(json);
 
 @override final  Period period;
 @override final  HistoryMonthStatus status;
 @override@JsonKey(name: 'total_payable_rounded_cents') final  NonNegativeCents totalPayableRoundedCents;
 @override@JsonKey(name: 'changed_since_viewed') final  bool changedSinceViewed;
-@override final  TaxResult? iva;
-@override final  TaxResult? isr;
-@override@JsonKey(name: 'last_viewed_at') final  DateTime? lastViewedAt;
+@override@JsonKey(includeIfNull: false) final  TaxResult? iva;
+@override@JsonKey(includeIfNull: false) final  TaxResult? isr;
+@override@JsonKey(includeIfNull: false, name: 'last_viewed_at') final  DateTime? lastViewedAt;
 
 /// Create a copy of HistoryMonth
 /// with the given fields replaced by the non-null parameter values.
@@ -291,7 +291,7 @@ abstract mixin class _$HistoryMonthCopyWith<$Res> implements $HistoryMonthCopyWi
   factory _$HistoryMonthCopyWith(_HistoryMonth value, $Res Function(_HistoryMonth) _then) = __$HistoryMonthCopyWithImpl;
 @override @useResult
 $Res call({
- Period period, HistoryMonthStatus status,@JsonKey(name: 'total_payable_rounded_cents') NonNegativeCents totalPayableRoundedCents,@JsonKey(name: 'changed_since_viewed') bool changedSinceViewed, TaxResult? iva, TaxResult? isr,@JsonKey(name: 'last_viewed_at') DateTime? lastViewedAt
+ Period period, HistoryMonthStatus status,@JsonKey(name: 'total_payable_rounded_cents') NonNegativeCents totalPayableRoundedCents,@JsonKey(name: 'changed_since_viewed') bool changedSinceViewed,@JsonKey(includeIfNull: false) TaxResult? iva,@JsonKey(includeIfNull: false) TaxResult? isr,@JsonKey(includeIfNull: false, name: 'last_viewed_at') DateTime? lastViewedAt
 });
 
 

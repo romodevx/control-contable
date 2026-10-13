@@ -18,7 +18,7 @@ abstract class VerifyEmailRequest with _$VerifyEmailRequest {
 
     /// The new account's password (D8). 12-128 characters; the breached/common-password check (offline list, D5) runs server-side.
     required String password,
-    String? name,
+    @JsonKey(includeIfNull: false) String? name,
   }) = _VerifyEmailRequest;
 
   factory VerifyEmailRequest.fromJson(Map<String, Object?> json) =>

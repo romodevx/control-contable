@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ExpensePage {
 
- List<Expense> get items; PeriodTotals get totals;@JsonKey(name: 'next_cursor') String? get nextCursor;
+ List<Expense> get items; PeriodTotals get totals;@JsonKey(includeIfNull: false, name: 'next_cursor') String? get nextCursor;
 /// Create a copy of ExpensePage
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -54,7 +54,7 @@ abstract mixin class $ExpensePageCopyWith<$Res>  {
   factory $ExpensePageCopyWith(ExpensePage value, $Res Function(ExpensePage) _then) = _$ExpensePageCopyWithImpl;
 @useResult
 $Res call({
- List<Expense> items, PeriodTotals totals,@JsonKey(name: 'next_cursor') String? nextCursor
+ List<Expense> items, PeriodTotals totals,@JsonKey(includeIfNull: false, name: 'next_cursor') String? nextCursor
 });
 
 
@@ -170,7 +170,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<Expense> items,  PeriodTotals totals, @JsonKey(name: 'next_cursor')  String? nextCursor)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<Expense> items,  PeriodTotals totals, @JsonKey(includeIfNull: false, name: 'next_cursor')  String? nextCursor)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ExpensePage() when $default != null:
 return $default(_that.items,_that.totals,_that.nextCursor);case _:
@@ -191,7 +191,7 @@ return $default(_that.items,_that.totals,_that.nextCursor);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<Expense> items,  PeriodTotals totals, @JsonKey(name: 'next_cursor')  String? nextCursor)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<Expense> items,  PeriodTotals totals, @JsonKey(includeIfNull: false, name: 'next_cursor')  String? nextCursor)  $default,) {final _that = this;
 switch (_that) {
 case _ExpensePage():
 return $default(_that.items,_that.totals,_that.nextCursor);case _:
@@ -211,7 +211,7 @@ return $default(_that.items,_that.totals,_that.nextCursor);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<Expense> items,  PeriodTotals totals, @JsonKey(name: 'next_cursor')  String? nextCursor)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<Expense> items,  PeriodTotals totals, @JsonKey(includeIfNull: false, name: 'next_cursor')  String? nextCursor)?  $default,) {final _that = this;
 switch (_that) {
 case _ExpensePage() when $default != null:
 return $default(_that.items,_that.totals,_that.nextCursor);case _:
@@ -226,7 +226,7 @@ return $default(_that.items,_that.totals,_that.nextCursor);case _:
 @JsonSerializable()
 
 class _ExpensePage implements ExpensePage {
-  const _ExpensePage({required  List<Expense> items, required this.totals, @JsonKey(name: 'next_cursor') this.nextCursor}): _items = items;
+  const _ExpensePage({required  List<Expense> items, required this.totals, @JsonKey(includeIfNull: false, name: 'next_cursor') this.nextCursor}): _items = items;
   factory _ExpensePage.fromJson(Map<String, dynamic> json) => _$ExpensePageFromJson(json);
 
  final  List<Expense> _items;
@@ -237,7 +237,7 @@ class _ExpensePage implements ExpensePage {
 }
 
 @override final  PeriodTotals totals;
-@override@JsonKey(name: 'next_cursor') final  String? nextCursor;
+@override@JsonKey(includeIfNull: false, name: 'next_cursor') final  String? nextCursor;
 
 /// Create a copy of ExpensePage
 /// with the given fields replaced by the non-null parameter values.
@@ -274,7 +274,7 @@ abstract mixin class _$ExpensePageCopyWith<$Res> implements $ExpensePageCopyWith
   factory _$ExpensePageCopyWith(_ExpensePage value, $Res Function(_ExpensePage) _then) = __$ExpensePageCopyWithImpl;
 @override @useResult
 $Res call({
- List<Expense> items, PeriodTotals totals,@JsonKey(name: 'next_cursor') String? nextCursor
+ List<Expense> items, PeriodTotals totals,@JsonKey(includeIfNull: false, name: 'next_cursor') String? nextCursor
 });
 
 
