@@ -25,6 +25,9 @@ const (
 	RuleCrossModule            Rule = "cross-module"
 	RulePlatformModules        Rule = "platform-modules"
 	RulePurePlatformImports    Rule = "pure-platform-imports"
+	// RuleInnerTransitiveFramework reports an import of a package of this
+	// module that the per-import rules allow but that reaches a framework.
+	RuleInnerTransitiveFramework Rule = "inner-transitive-framework"
 )
 
 // Violation is one forbidden import found in a non-test Go file.
@@ -199,24 +202,18 @@ func isFramework(path string) bool {
 // hidden directories) and returns its Dependency Rule violations, sorted by
 // file and import path.
 func Check(root, modulePath string) ([]Violation, error) {
-	var violations []Violation
-	fset := token.NewFileSet()
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			return skipDir(root, path, d.Name())
-		}
-		if !isProductionGoFile(d.Name()) {
-			return nil
-		}
-		found, err := checkFile(fset, root, path, modulePath)
-		violations = append(violations, found...)
-		return err
-	})
+	files, err := readImports(root, modulePath)
 	if err != nil {
-		return nil, fmt.Errorf("archtest: walk %s: %w", root, err)
+		return nil, err
+	}
+	graph := newImportGraph(modulePath, files)
+	var violations []Violation
+	for _, f := range files {
+		for _, imported := range f.imports {
+			if rule := graph.check(f.importer, imported); rule != "" {
+				violations = append(violations, Violation{File: f.rel, Imported: imported, Rule: rule})
+			}
+		}
 	}
 	slices.SortFunc(violations, func(a, b Violation) int {
 		if c := strings.Compare(a.File, b.File); c != 0 {
@@ -241,31 +238,60 @@ func isProductionGoFile(name string) bool {
 	return strings.HasSuffix(name, ".go") && !strings.HasSuffix(name, "_test.go")
 }
 
-func checkFile(fset *token.FileSet, root, path, modulePath string) ([]Violation, error) {
+// fileImports is the import list of one non-test Go file.
+type fileImports struct {
+	rel      string // slash-separated, relative to the module root
+	importer string // import path of the file's package
+	imports  []string
+}
+
+// readImports parses the imports of every non-test Go file under root.
+func readImports(root, modulePath string) ([]fileImports, error) {
+	var files []fileImports
+	fset := token.NewFileSet()
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return skipDir(root, path, d.Name())
+		}
+		if !isProductionGoFile(d.Name()) {
+			return nil
+		}
+		f, err := readFile(fset, root, path, modulePath)
+		files = append(files, f)
+		return err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("archtest: walk %s: %w", root, err)
+	}
+	return files, nil
+}
+
+func readFile(fset *token.FileSet, root, path, modulePath string) (fileImports, error) {
 	file, err := parser.ParseFile(fset, path, nil, parser.ImportsOnly)
 	if err != nil {
-		return nil, fmt.Errorf("parse %s: %w", path, err)
+		return fileImports{}, fmt.Errorf("parse %s: %w", path, err)
 	}
 	rel, err := filepath.Rel(root, path)
 	if err != nil {
-		return nil, fmt.Errorf("relative path of %s: %w", path, err)
+		return fileImports{}, fmt.Errorf("relative path of %s: %w", path, err)
 	}
 	rel = filepath.ToSlash(rel)
 	importer := modulePath
 	if dir := filepath.ToSlash(filepath.Dir(rel)); dir != "." {
 		importer = modulePath + "/" + dir
 	}
-	var violations []Violation
+	imports := make([]string, 0, len(file.Imports))
 	for _, spec := range file.Imports {
 		imported, err := strconv.Unquote(spec.Path.Value)
 		if err != nil {
-			return nil, fmt.Errorf("import path in %s: %w", path, err)
+			return fileImports{}, fmt.Errorf("import path in %s: %w", path, err)
 		}
-		if rule := checkImport(modulePath, importer, imported); rule != "" {
-			violations = append(violations, Violation{File: rel, Imported: imported, Rule: rule})
-		}
+		imports = append(imports, imported)
 	}
-	return violations, nil
+	return fileImports{rel: rel, importer: importer, imports: imports}, nil
 }
 
 // ErrNoModuleDirective is returned when a go.mod file has no module line.

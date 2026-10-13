@@ -92,6 +92,22 @@ func TestCheckFixtureReportsEveryViolation(t *testing.T) {
 	assert.Equal(t, want, got)
 }
 
+// P0-29: the per-import rules only deny the adapters they name, so a usecase
+// reached GORM through platform/flags/flagsgorm and net/http through the
+// top-level adapter/ tree, directly or through a neutral-looking package.
+func TestCheckReportsFrameworksReachedThroughModulePackages(t *testing.T) {
+	got, err := Check(filepath.Join("testdata", "transitive"), fixtureModule)
+	require.NoError(t, err)
+
+	const usecase = "internal/ledger/usecase/post.go"
+	want := []Violation{
+		{File: usecase, Imported: "example.com/fx/adapter/http/router", Rule: RuleInnerTransitiveFramework},
+		{File: usecase, Imported: "example.com/fx/internal/platform/flags/flagsgorm", Rule: RuleInnerTransitiveFramework},
+		{File: usecase, Imported: "example.com/fx/internal/platform/ports", Rule: RuleInnerTransitiveFramework},
+	}
+	assert.Equal(t, want, got)
+}
+
 func TestBackendModuleRespectsDependencyRule(t *testing.T) {
 	root := filepath.Join("..", "..")
 	modulePath, err := ReadModulePath(filepath.Join(root, "go.mod"))
