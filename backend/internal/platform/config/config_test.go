@@ -44,21 +44,31 @@ func TestLoad(t *testing.T) {
 			name:    "defaults",
 			env:     map[string]string{"APP_ENV": "dev", "DATABASE_URL": dbURL},
 			secrets: nil,
-			want:    config.Config{Env: config.EnvDev, HTTPAddr: ":8080", LogLevel: slog.LevelInfo},
+			want: config.Config{
+				Env: config.EnvDev, HTTPAddr: ":8080", LogLevel: slog.LevelInfo,
+				RateLimit: config.RateLimit{PerSecond: 10, Burst: 20}, TrustedProxyHops: 0,
+			},
 		},
 		{
 			name: "overrides",
 			env: map[string]string{
 				"APP_ENV": "production", "PORT": "9090", "LOG_LEVEL": "debug",
+				"RATE_LIMIT_RPS": "5", "RATE_LIMIT_BURST": "7", "TRUSTED_PROXY_HOPS": "1",
 			},
 			secrets: stubSecrets{},
-			want:    config.Config{Env: config.EnvProduction, HTTPAddr: ":9090", LogLevel: slog.LevelDebug},
+			want: config.Config{
+				Env: config.EnvProduction, HTTPAddr: ":9090", LogLevel: slog.LevelDebug,
+				RateLimit: config.RateLimit{PerSecond: 5, Burst: 7}, TrustedProxyHops: 1,
+			},
 		},
 		{
 			name:    "staging with warn level",
 			env:     map[string]string{"APP_ENV": "staging", "LOG_LEVEL": "WARN"},
 			secrets: stubSecrets{},
-			want:    config.Config{Env: config.EnvStaging, HTTPAddr: ":8080", LogLevel: slog.LevelWarn},
+			want: config.Config{
+				Env: config.EnvStaging, HTTPAddr: ":8080", LogLevel: slog.LevelWarn,
+				RateLimit: config.RateLimit{PerSecond: 10, Burst: 20},
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -112,6 +122,26 @@ func TestLoad_errors(t *testing.T) {
 			name:     "PORT out of range",
 			env:      map[string]string{"APP_ENV": "dev", "PORT": "70000"},
 			wantErrs: []string{`PORT "70000" is not a TCP port`},
+		},
+		{
+			name:     "non-numeric RATE_LIMIT_RPS",
+			env:      map[string]string{"APP_ENV": "dev", "RATE_LIMIT_RPS": "fast"},
+			wantErrs: []string{`RATE_LIMIT_RPS "fast" is not an integer in [1, 10000]`},
+		},
+		{
+			name:     "zero RATE_LIMIT_RPS",
+			env:      map[string]string{"APP_ENV": "dev", "RATE_LIMIT_RPS": "0"},
+			wantErrs: []string{`RATE_LIMIT_RPS "0" is not an integer in [1, 10000]`},
+		},
+		{
+			name:     "RATE_LIMIT_BURST out of range",
+			env:      map[string]string{"APP_ENV": "dev", "RATE_LIMIT_BURST": "10001"},
+			wantErrs: []string{`RATE_LIMIT_BURST "10001" is not an integer in [1, 10000]`},
+		},
+		{
+			name:     "negative TRUSTED_PROXY_HOPS",
+			env:      map[string]string{"APP_ENV": "dev", "TRUSTED_PROXY_HOPS": "-1"},
+			wantErrs: []string{`TRUSTED_PROXY_HOPS "-1" is not an integer in [0, 10]`},
 		},
 		{
 			name:     "missing secret",
