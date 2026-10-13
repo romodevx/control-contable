@@ -76,8 +76,9 @@ linters:
     generated: strict
     presets:
       - std-error-handling
-    paths:
-      - adapter/http/gen
+    # *.gen.go carry the standard "Code generated ... DO NOT EDIT." header, so
+    # `generated: strict` skips them; the hand-written files next to them
+    # (contract_test.go, generate.go) stay linted.
     rules:
       # forbidigo's float/clock bans apply to the domain and to platform/money only.
       - path-except: (^|/)internal/([^/]+/domain|platform/money)/
@@ -93,5 +94,4 @@ formatters:
       local-prefixes:
         - github.com/romodevx/control-contable
   exclusions:
-    paths:
-      - adapter/http/gen
+    generated: strict
