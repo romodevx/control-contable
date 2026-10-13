@@ -12,10 +12,13 @@ part 'register_request.g.dart';
 @Freezed()
 abstract class RegisterRequest with _$RegisterRequest {
   const factory RegisterRequest({
+    /// Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.
     required String email,
 
-    /// Policy enforced server-side (length + breached-password check).
+    /// 12-128 characters; the breached/common-password check (offline list, D5) runs server-side.
     required String password,
+
+    /// The current version of `terms` and of one privacy notice (integral or simplified), as returned by `listLegalDocuments`.
     @JsonKey(name: 'accepted_documents')
     required List<DocumentAcceptance> acceptedDocuments,
     String? name,

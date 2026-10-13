@@ -45,16 +45,27 @@ x-frozen: sha256:<sha256 of the node's canonical JSON, keys sorted, x-frozen exc
 The hash covers the node as written (a `$ref` is hashed as the reference string, not the
 target), so every schema a frozen operation exposes is frozen on its own.
 
-### Frozen today (P0-05)
+### Frozen today
 
-| Node | Why |
-|---|---|
-| `GET /healthz` (`getHealth`) | Liveness/readiness probe used by deploy health checks |
-| `GET /v1/flags` (`listEnabledFlags`) | Feeds the mobile FlagsProvider |
-| `components.schemas.ErrorResponse` | The single error envelope every endpoint returns |
-| `components.schemas.FieldError` | Item of `ErrorResponse.error.details` |
-| `components.schemas.HealthStatus` | `/healthz` body |
-| `components.schemas.EnabledFlags`, `ModuleKey` | `/v1/flags` body |
+| Node | Frozen by | Why |
+|---|---|---|
+| `GET /healthz` (`getHealth`) | P0-05 | Liveness/readiness probe used by deploy health checks |
+| `GET /v1/flags` (`listEnabledFlags`) | P0-05 | Feeds the mobile FlagsProvider |
+| `components.schemas.ErrorResponse` | P0-05 | The single error envelope every endpoint returns |
+| `components.schemas.FieldError` | P0-05 | Item of `ErrorResponse.error.details` |
+| `components.schemas.HealthStatus` | P0-05 | `/healthz` body |
+| `components.schemas.EnabledFlags`, `ModuleKey` | P0-05 | `/v1/flags` body |
+| M1 `module_auth` operations: `register`, `verifyEmail`, `resendVerification`, `login`, `refreshSession`, `logout`, `getMe`, `updateMe`, `deleteMe`, `listLegalDocuments` | M1-01 | [MODULE-auth](../project-specs/MODULE-auth.md) (D1-D7); the backend (M1-05..M1-09) and the Flutter auth screens (M1-11..M1-13) build on it |
+| `components.schemas.RegisterRequest`, `DocumentAcceptance`, `VerificationSent`, `VerifyEmailRequest`, `ResendVerificationRequest`, `LoginRequest`, `RefreshRequest`, `TokenPair`, `AuthSession`, `User`, `UserUpdate`, `DeleteAccountRequest`, `LegalDocumentKind`, `LegalDocument`, `LegalDocumentList` | M1-01 | Bodies of the M1 operations |
+| `components.headers.NoStore` | M1-01 | `Cache-Control: no-store` on every response that carries tokens or account data |
+
+**`FieldError.field` naming (one convention).** A dotted path relative to the request body
+(`password`, `accepted_documents.1.kind`), `body` for the body root, and the bare parameter
+name for path/query/header errors (`taxpayerId`, `period`). It is never a `/`-prefixed JSON
+Pointer, in examples, specs or handlers. `FieldError.code` is the failed JSON Schema keyword
+(`required`, `minLength`, `enum`, `additionalProperties`, …) for request validation, or a
+snake_case domain code from the handler (`password_policy`). The router produces both from
+either kin-openapi engine (`backend/adapter/http/router/fields.go`).
 
 `ErrorCode` is **append-only**, not frozen: modules add codes as they land. Removing or
 renaming a code is a breaking change (rules below). Clients must treat unknown codes as

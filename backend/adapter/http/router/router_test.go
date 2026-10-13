@@ -24,6 +24,10 @@ const (
 	validTaxpayer = "0199d4a2-7c1e-7b3a-9f10-2c5e8a1b4d01"
 	incomesURL    = "/v1/taxpayers/" + validTaxpayer + "/incomes?period=2026-09"
 	validLogin    = `{"email":"ana@example.mx","password":"x"}`
+
+	validNewPassword = "correct-horse-battery"
+	termsAccepted    = `{"kind":"terms","version":"2026-10-01"}`
+	privacyAccepted  = `{"kind":"privacy_notice_integral","version":"2026-10-01"}`
 )
 
 // fakeAPI implements only the operations the tests probe; any other
@@ -220,6 +224,31 @@ func TestValidation_rejectsInputThatBreaksTheContract(t *testing.T) {
 			flags: flagSet{"module_auth": true}, wantFields: []string{"body"}, wantCodes: []string{"invalid"}},
 		{name: "required body missing", method: http.MethodPost, target: "/v1/auth/login",
 			flags: flagSet{"module_auth": true}, wantFields: []string{"body"}, wantCodes: []string{"required"}},
+		// RegisterRequest reaches DocumentAcceptance and LegalDocumentKind through
+		// $ref; the field must still be named, never collapsed into body/invalid.
+		{name: "$ref body: required property missing", method: http.MethodPost, target: "/v1/auth/register",
+			body:  `{"email":"ana@example.mx","accepted_documents":[` + termsAccepted + `,` + privacyAccepted + `]}`,
+			flags: flagSet{"module_auth": true}, wantFields: []string{"password"}, wantCodes: []string{"required"}},
+		{name: "$ref body: property too short", method: http.MethodPost, target: "/v1/auth/register",
+			body:  `{"email":"ana@example.mx","password":"short","accepted_documents":[` + termsAccepted + `,` + privacyAccepted + `]}`,
+			flags: flagSet{"module_auth": true}, wantFields: []string{"password"}, wantCodes: []string{"minLength"}},
+		{name: "$ref body: array too short", method: http.MethodPost, target: "/v1/auth/register",
+			body:  `{"email":"ana@example.mx","password":"` + validNewPassword + `","accepted_documents":[` + termsAccepted + `]}`,
+			flags: flagSet{"module_auth": true}, wantFields: []string{"accepted_documents"}, wantCodes: []string{"minItems"}},
+		{name: "$ref body: enum inside a referenced item", method: http.MethodPost, target: "/v1/auth/register",
+			body:  `{"email":"ana@example.mx","password":"` + validNewPassword + `","accepted_documents":[` + termsAccepted + `,{"kind":"nope","version":"1"}]}`,
+			flags: flagSet{"module_auth": true}, wantFields: []string{"accepted_documents.1.kind"}, wantCodes: []string{"enum"}},
+		{name: "$ref body: property of the wrong type", method: http.MethodPost, target: "/v1/auth/register",
+			body:  `{"email":"ana@example.mx","password":7,"accepted_documents":[` + termsAccepted + `,` + privacyAccepted + `]}`,
+			flags: flagSet{"module_auth": true}, wantFields: []string{"password"}, wantCodes: []string{"type"}},
+		{name: "$ref body: unknown property", method: http.MethodPost, target: "/v1/auth/register",
+			body:  `{"email":"ana@example.mx","password":"` + validNewPassword + `","accepted_documents":[` + termsAccepted + `,` + privacyAccepted + `],"role":"admin"}`,
+			flags: flagSet{"module_auth": true}, wantFields: []string{"role"}, wantCodes: []string{"additionalProperties"}},
+		{name: "$ref body: several errors keep their own fields", method: http.MethodPost, target: "/v1/auth/register",
+			body:  `{"email":"ana@example.mx","accepted_documents":[` + termsAccepted + `]}`,
+			flags: flagSet{"module_auth": true}, wantFields: []string{"accepted_documents", "password"}, wantCodes: []string{"minItems", "required"}},
+		{name: "deleteMe without password is a 400 on the field", method: http.MethodDelete, target: "/v1/me", body: `{}`,
+			flags: flagSet{"module_auth": true}, wantFields: []string{"password"}, wantCodes: []string{"required"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

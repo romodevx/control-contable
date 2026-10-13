@@ -10,7 +10,10 @@ part 'verify_email_request.g.dart';
 @Freezed()
 abstract class VerifyEmailRequest with _$VerifyEmailRequest {
   const factory VerifyEmailRequest({
+    /// Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.
     required String email,
+
+    /// 6-digit emailed code; 15 min TTL, 5 wrong tries.
     required String code,
   }) = _VerifyEmailRequest;
 

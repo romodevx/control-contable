@@ -16,7 +16,9 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$VerifyEmailRequest {
 
- String get email; String get code;
+/// Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.
+ String get email;/// 6-digit emailed code; 15 min TTL, 5 wrong tries.
+ String get code;
 /// Create a copy of VerifyEmailRequest
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -219,7 +221,9 @@ class _VerifyEmailRequest implements VerifyEmailRequest {
   const _VerifyEmailRequest({required this.email, required this.code});
   factory _VerifyEmailRequest.fromJson(Map<String, dynamic> json) => _$VerifyEmailRequestFromJson(json);
 
+/// Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.
 @override final  String email;
+/// 6-digit emailed code; 15 min TTL, 5 wrong tries.
 @override final  String code;
 
 /// Create a copy of VerifyEmailRequest

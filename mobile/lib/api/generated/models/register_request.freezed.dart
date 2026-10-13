@@ -16,8 +16,10 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$RegisterRequest {
 
- String get email;/// Policy enforced server-side (length + breached-password check).
- String get password;@JsonKey(name: 'accepted_documents') List<DocumentAcceptance> get acceptedDocuments; String? get name;
+/// Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.
+ String get email;/// 12-128 characters; the breached/common-password check (offline list, D5) runs server-side.
+ String get password;/// The current version of `terms` and of one privacy notice (integral or simplified), as returned by `listLegalDocuments`.
+@JsonKey(name: 'accepted_documents') List<DocumentAcceptance> get acceptedDocuments; String? get name;
 /// Create a copy of RegisterRequest
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -222,10 +224,13 @@ class _RegisterRequest implements RegisterRequest {
   const _RegisterRequest({required this.email, required this.password, @JsonKey(name: 'accepted_documents') required  List<DocumentAcceptance> acceptedDocuments, this.name}): _acceptedDocuments = acceptedDocuments;
   factory _RegisterRequest.fromJson(Map<String, dynamic> json) => _$RegisterRequestFromJson(json);
 
+/// Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.
 @override final  String email;
-/// Policy enforced server-side (length + breached-password check).
+/// 12-128 characters; the breached/common-password check (offline list, D5) runs server-side.
 @override final  String password;
+/// The current version of `terms` and of one privacy notice (integral or simplified), as returned by `listLegalDocuments`.
  final  List<DocumentAcceptance> _acceptedDocuments;
+/// The current version of `terms` and of one privacy notice (integral or simplified), as returned by `listLegalDocuments`.
 @override@JsonKey(name: 'accepted_documents') List<DocumentAcceptance> get acceptedDocuments {
   if (_acceptedDocuments is EqualUnmodifiableListView) return _acceptedDocuments;
   // ignore: implicit_dynamic_type

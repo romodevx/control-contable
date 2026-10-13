@@ -13,6 +13,8 @@ part 'legal_document.g.dart';
 abstract class LegalDocument with _$LegalDocument {
   const factory LegalDocument({
     required LegalDocumentKind kind,
+
+    /// Opaque version label (data, not code).
     required String version,
     required String url,
     @JsonKey(name: 'published_at') required DateTime publishedAt,

@@ -20,6 +20,7 @@ var pendingOperations = map[string]string{
 	// M1 module_auth
 	"register":           "M1-10",
 	"verifyEmail":        "M1-10",
+	"resendVerification": "M1-10",
 	"login":              "M1-10",
 	"refreshSession":     "M1-10",
 	"logout":             "M1-10",

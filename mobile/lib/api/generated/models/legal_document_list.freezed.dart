@@ -16,6 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$LegalDocumentList {
 
+/// The current version of each kind.
  List<LegalDocument> get items;
 /// Create a copy of LegalDocumentList
 /// with the given fields replaced by the non-null parameter values.
@@ -218,7 +219,9 @@ class _LegalDocumentList implements LegalDocumentList {
   const _LegalDocumentList({required  List<LegalDocument> items}): _items = items;
   factory _LegalDocumentList.fromJson(Map<String, dynamic> json) => _$LegalDocumentListFromJson(json);
 
+/// The current version of each kind.
  final  List<LegalDocument> _items;
+/// The current version of each kind.
 @override List<LegalDocument> get items {
   if (_items is EqualUnmodifiableListView) return _items;
   // ignore: implicit_dynamic_type

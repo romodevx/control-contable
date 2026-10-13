@@ -1,13 +1,13 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'register_accepted.dart';
+part of 'verification_sent.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
-_RegisterAccepted _$RegisterAcceptedFromJson(Map<String, dynamic> json) =>
-    _RegisterAccepted(status: json['status'] as String);
+_VerificationSent _$VerificationSentFromJson(Map<String, dynamic> json) =>
+    _VerificationSent(status: json['status'] as String);
 
-Map<String, dynamic> _$RegisterAcceptedToJson(_RegisterAccepted instance) =>
+Map<String, dynamic> _$VerificationSentToJson(_VerificationSent instance) =>
     <String, dynamic>{'status': instance.status};

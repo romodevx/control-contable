@@ -16,7 +16,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$LegalDocument {
 
- LegalDocumentKind get kind; String get version; String get url;@JsonKey(name: 'published_at') DateTime get publishedAt;
+ LegalDocumentKind get kind;/// Opaque version label (data, not code).
+ String get version; String get url;@JsonKey(name: 'published_at') DateTime get publishedAt;
 /// Create a copy of LegalDocument
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -222,6 +223,7 @@ class _LegalDocument implements LegalDocument {
   factory _LegalDocument.fromJson(Map<String, dynamic> json) => _$LegalDocumentFromJson(json);
 
 @override final  LegalDocumentKind kind;
+/// Opaque version label (data, not code).
 @override final  String version;
 @override final  String url;
 @override@JsonKey(name: 'published_at') final  DateTime publishedAt;

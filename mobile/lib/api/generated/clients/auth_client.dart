@@ -6,14 +6,16 @@ import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 
 import '../models/auth_session.dart';
+import '../models/delete_account_request.dart';
 import '../models/legal_document_list.dart';
 import '../models/login_request.dart';
 import '../models/refresh_request.dart';
-import '../models/register_accepted.dart';
 import '../models/register_request.dart';
+import '../models/resend_verification_request.dart';
 import '../models/token_pair.dart';
 import '../models/user.dart';
 import '../models/user_update.dart';
+import '../models/verification_sent.dart';
 import '../models/verify_email_request.dart';
 
 part 'auth_client.g.dart';
@@ -22,30 +24,43 @@ part 'auth_client.g.dart';
 abstract class AuthClient {
   factory AuthClient(Dio dio, {String? baseUrl}) = _AuthClient;
 
-  /// Start registration (sends a verification code).
+  /// Start registration (emails a 6-digit verification code).
   ///
-  /// Always answers `202` with the same body, whether or not the email exists,.
-  /// so accounts cannot be enumerated (US-A1). Tokens are issued by.
-  /// `verifyEmail`. Requires acceptance of the current legal documents.
-  /// (ADR-0001 OWNER decision 1, option A.).
+  /// Always answers `202 {status: verification_sent}` with the same body and comparable latency, whether the address is new, has a pending sign-up or already belongs to a verified account, so accounts cannot be enumerated (US-A1a). For a verified account no code is created and the owner gets a "someone tried to sign up with your email" notice, at most once per hour (D3). For an email with a live (unexpired) pending sign-up the stored password hash and accepted documents are never changed: the call behaves like `resendVerification` for that email (same generic 202, same cooldown and rate limits), so nobody can set the password of someone else's pending sign-up (D7). Only once the pending sign-up has expired does a new register replace it. Nothing is written to users, consents or entitlements until `verifyEmail` (ADR-0001 OWNER decision 1, option A).
+  /// `accepted_documents` must carry the current version (from `listLegalDocuments`) of `terms` and of one privacy notice (`privacy_notice_integral` or `privacy_notice_simplified`). A stale version or a missing kind answers `400 validation_failed` on `accepted_documents`; a short, weak or breached password answers `400 validation_failed` on `password` (the value is never echoed).
   @POST('/v1/auth/register')
-  Future<RegisterAccepted> register({@Body() required RegisterRequest body});
+  Future<VerificationSent> register({@Body() required RegisterRequest body});
 
-  /// Confirm the emailed code; creates the account, starts the trial, issues tokens
+  /// Confirm the emailed code; creates the account, starts the trial, issues tokens.
+  ///
+  /// In one transaction: creates the user, stores the accepted consents (kind, version, accepted_at), consumes the pending sign-up and starts the trial on the server clock only if the email's keyed hash is not already in the trial registry (an account deleted and created again gets no second trial; same `201`) (US-A1b).
+  /// A wrong, expired, consumed or unknown code, or an unknown email, answers `401` with one generic message. Each wrong try counts against the code; after 5 the code is dead and every try answers `401` until `resendVerification`.
   @POST('/v1/auth/verify-email')
   Future<AuthSession> verifyEmail({@Body() required VerifyEmailRequest body});
 
-  /// Log in with email and password
+  /// Email a new verification code for a pending sign-up.
+  ///
+  /// For a pending sign-up, a new code replaces the old one (attempts reset). Always answers the same `202 {status: verification_sent}`: also when there is no pending sign-up, the email is already verified, or the last resend was less than 60 s ago (the cooldown is silent so it is not an oracle; the app shows a 60 s countdown) (US-A1c, D2). A `register` for an email with a live pending sign-up takes this same path and shares its cooldown and limits; neither call ever changes the pending sign-up's password hash or accepted documents (D7).
+  @POST('/v1/auth/verify-email/resend')
+  Future<VerificationSent> resendVerification({
+    @Body() required ResendVerificationRequest body,
+  });
+
+  /// Log in with email and password (starts a new token family).
+  ///
+  /// A wrong password, an unknown email and a pending (unverified) sign-up all answer the same `401` body with comparable latency (US-A2a). Too many failures for the account or the client answer `429 rate_limited` with `Retry-After`.
   @POST('/v1/auth/login')
   Future<AuthSession> login({@Body() required LoginRequest body});
 
   /// Rotate the refresh token.
   ///
-  /// Reusing an already-rotated token revokes its whole family and returns 401.
+  /// A live refresh token is rotated: the response carries a new pair and the old token is marked rotated (US-A2b). Reusing an already-rotated token revokes its whole family and answers `401`; of two concurrent refreshes with the same token exactly one wins and the other is treated as reuse. An expired (30-day sliding or 90-day absolute), revoked, malformed or foreign token answers `401`.
   @POST('/v1/auth/refresh')
   Future<TokenPair> refreshSession({@Body() required RefreshRequest body});
 
-  /// Revoke the refresh token family
+  /// Revoke the refresh token family.
+  ///
+  /// Revokes the family of the given refresh token (US-A2c). Idempotent: a refresh token that is already revoked or not the caller's also answers `204`, so another user's token state is never revealed. A missing or invalid bearer answers `401`.
   @POST('/v1/auth/logout')
   Future<void> logout({@Body() required RefreshRequest body});
 
@@ -53,19 +68,20 @@ abstract class AuthClient {
   @GET('/v1/me')
   Future<User> getMe();
 
-  /// Update profile
+  /// Update profile (name only; email change is out of scope)
   @PATCH('/v1/me')
   Future<User> updateMe({@Body() required UserUpdate body});
 
-  /// Delete account and all its data (irreversible).
+  /// Delete the account and all its data (irreversible; requires the current password).
   ///
-  /// Deletes the user, taxpayers and records (cascade) and revokes all sessions.
-  /// Does not cancel the store subscription (the app explains how). The keyed.
-  /// email hash stays in the trial registry (no second trial).
+  /// Re-authenticates with the current password (D4), then in one transaction deletes the user and everything it owns (taxpayers, records, consents, refresh tokens, usage, entitlements) and answers `204` (US-A4). Consents are deleted too (D6); only the keyed email hash survives in the trial registry (no second trial). The store subscription is not cancelled (the app explains how). Any later call with the old access token answers `401`.
+  /// A wrong password answers `401`, counts toward the login failure limit and deletes nothing; a body without `password` answers `400 validation_failed`.
   @DELETE('/v1/me')
-  Future<void> deleteMe();
+  Future<void> deleteMe({@Body() required DeleteAccountRequest body});
 
-  /// Current privacy notices and terms
+  /// Current privacy notices and terms.
+  ///
+  /// The current version of each legal document kind (US-A5). The register screen links to them and sends back the versions shown in `accepted_documents`. Versions are data, not code.
   @GET('/v1/legal/documents')
   Future<LegalDocumentList> listLegalDocuments();
 }

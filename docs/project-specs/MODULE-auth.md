@@ -48,12 +48,23 @@ response on duplicate email**; **trial starts at successful verification** (serv
   get the **same 202 body, status and comparable latency** (argon2 still runs); no code is
   created; the existing owner gets a "someone tried to sign up with your email" notice
   through `EmailSender`, at most once per hour (D3).
-- **Given** a pending sign-up for the same email, **when** I register again, **then** the
-  pending row is replaced (new password hash, new code, attempts reset) — upsert, 202.
+- **Given** a live (unexpired) pending sign-up for the same email, **when** anyone registers
+  again, **then** the stored password hash and accepted documents are **not** changed; the
+  call behaves exactly like a resend (US-A1c: new code to the address, attempts reset,
+  same 60 s silent cooldown and §5 limits, shared with resend) and answers the same
+  generic 202 (D7). Otherwise an attacker could set the password before the owner verifies.
+- **Given** an expired pending sign-up for the same email, **when** I register, **then** it
+  is replaced (new password hash, consents, code, attempts reset), 202.
 - **Given** a weak/breached password or a short one, **then** `400 validation_failed` with
-  `FieldError{field:"/password"}` and a generic message (never echo the value).
+  `FieldError{field:"password"}` and a generic message (never echo the value). A short or
+  long one fails the schema (`code: minLength`/`maxLength`); a common or breached one fails
+  the handler's policy check (`code: password_policy`).
 - **Given** an accepted document version that is not the current one, or a missing kind,
-  **then** `400 validation_failed` on `/accepted_documents`.
+  **then** `400 validation_failed` on `accepted_documents` (a bad item names it, e.g.
+  `accepted_documents.1.kind`).
+- `FieldError.field` is the router's dotted path relative to the body (`body` for the root,
+  the parameter name for path/query/header), never a `/`-prefixed JSON Pointer; see
+  `docs/api/CONTRACT.md`.
 - Nothing is written to `users`, `consents` or `entitlements` at this step.
 
 ### US-A1b Verify email (creates the account)
@@ -108,8 +119,12 @@ response on duplicate email**; **trial starts at successful verification** (serv
   cascade (taxpayers, records, consents, refresh tokens, usage, entitlements), and `204`.
   Consents are deleted too (data minimization, D6); only the `trial_registry` HMAC survives. Further use of the old access token: `401` on any
   user-scoped call (user no longer exists), so the 15-min JWT lag is harmless.
-- **Given** a wrong or missing password, **then** `401 unauthorized` (counts toward the login
-  failure limit) and nothing is deleted.
+- **Given** a wrong password, **then** `401 unauthorized` (counts toward the login failure
+  limit) and nothing is deleted.
+- **Given** a body without `password` (or an empty one), **then** `400 validation_failed` on
+  `password` (`code: required`/`minLength`), from request validation before the handler, like
+  every other schema error; it does not count toward the failure limit (no credential was
+  tried) and nothing is deleted. The bearer is checked first, so an anonymous caller gets `401`.
 - The app then shows how to cancel the store subscription (it does not cancel it) and
   returns to the welcome screen with storage wiped.
 
@@ -197,5 +212,6 @@ email provider (M1-06, blocked on OB2), legal text content (OB10).
 | D4 | Account deletion requires **current password re-auth** (`DELETE /v1/me` body `{password}`; contract change in M1-01). |
 | D5 | Breached/common password check uses an **offline embedded list**; no third-party calls. |
 | D6 | Consents are **deleted with the account** (data minimization); only the `trial_registry` HMAC survives. **Flagged for lawyer review** (OB10). |
+| D7 | Register for an email with a **live pending sign-up never overwrites** its password hash or accepted documents (account-takeover found in the PR #34 security review): it behaves like `resendVerification` (generic 202, shared cooldown and rate limits). A new register replaces the pending sign-up only after it expires. Responses stay generic (no enumeration). M1-05 implements and tests it. |
 
 No open questions remain for stage 1.

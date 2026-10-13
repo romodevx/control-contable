@@ -95,16 +95,32 @@ paths:
         '500': { $ref: '#/components/responses/InternalError' }
 
   # ---------------------------------------------------------------- M1 Auth
+  # Frozen at M1-01 (docs/project-specs/MODULE-auth.md, decisions D1-D7). Every M1
+  # operation is gated by `module_auth`: flag OFF answers 404 before decode or authn.
   /v1/auth/register:
     post:
       tags: [Auth]
       operationId: register
-      summary: Start registration (sends a verification code)
-      description: |
-        Always answers `202` with the same body, whether or not the email exists,
-        so accounts cannot be enumerated (US-A1). Tokens are issued by
-        `verifyEmail`. Requires acceptance of the current legal documents.
-        (ADR-0001 OWNER decision 1, option A.)
+      x-frozen: sha256:1daf06f69e7e13de65b8ce329eff69d42e69a050b340a969d4fe7c8f56efa521
+      summary: Start registration (emails a 6-digit verification code)
+      description: >-
+        Always answers `202 {status: verification_sent}` with the same body and comparable
+        latency, whether the address is new, has a pending sign-up or already belongs to a
+        verified account, so accounts cannot be enumerated (US-A1a). For a verified account
+        no code is created and the owner gets a "someone tried to sign up with your email"
+        notice, at most once per hour (D3). For an email with a live (unexpired) pending
+        sign-up the stored password hash and accepted documents are never changed: the call
+        behaves like `resendVerification` for that email (same generic 202, same cooldown and
+        rate limits), so nobody can set the password of someone else's pending sign-up (D7).
+        Only once the pending sign-up has expired does a new register replace it. Nothing is
+        written to users, consents or entitlements until `verifyEmail` (ADR-0001 OWNER
+        decision 1, option A).
+
+        `accepted_documents` must carry the current version (from `listLegalDocuments`) of
+        `terms` and of one privacy notice (`privacy_notice_integral` or
+        `privacy_notice_simplified`). A stale version or a missing kind answers
+        `400 validation_failed` on `accepted_documents`; a short, weak or breached password
+        answers `400 validation_failed` on `password` (the value is never echoed).
       x-module: module_auth
       x-public: true
       security: []
@@ -113,13 +129,58 @@ paths:
         content:
           application/json:
             schema: { $ref: '#/components/schemas/RegisterRequest' }
+            examples:
+              integralNotice:
+                summary: Full privacy notice accepted, with name
+                value:
+                  email: ana.gomez@example.mx
+                  password: '<new-password>'
+                  name: Ana Gómez Ruiz
+                  accepted_documents:
+                    - { kind: privacy_notice_integral, version: '2026-10-01' }
+                    - { kind: terms, version: '2026-10-01' }
+              simplifiedNotice:
+                summary: Simplified privacy notice accepted, no name
+                value:
+                  email: jose.hernandez@example.mx
+                  password: '<new-password>'
+                  accepted_documents:
+                    - { kind: privacy_notice_simplified, version: '2026-10-01' }
+                    - { kind: terms, version: '2026-10-01' }
       responses:
         '202':
-          description: Verification code sent if the address can register.
+          description: Generic acknowledgement; a code was emailed if the address can register.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/RegisterAccepted' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+              schema: { $ref: '#/components/schemas/VerificationSent' }
+        '400':
+          description: Input does not match the contract, the password policy or the current legal document versions.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                weakPassword:
+                  summary: Password common or breached (a short or long one fails the schema first, code minLength/maxLength)
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - field: password
+                          code: password_policy
+                          message: Use at least 12 characters that are not a common or leaked password.
+                staleDocument:
+                  summary: Accepted a legal document version that is no longer current
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - field: accepted_documents
+                          code: document_version_not_current
+                          message: Accept the current privacy notice and terms.
         '404': { $ref: '#/components/responses/NotFound' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
@@ -127,7 +188,17 @@ paths:
     post:
       tags: [Auth]
       operationId: verifyEmail
+      x-frozen: sha256:036a6297a0ac5ee8104ff9f9726912f54500aaa3331b5f4159fef012ff87cbc4
       summary: Confirm the emailed code; creates the account, starts the trial, issues tokens
+      description: >-
+        In one transaction: creates the user, stores the accepted consents (kind, version,
+        accepted_at), consumes the pending sign-up and starts the trial on the server clock
+        only if the email's keyed hash is not already in the trial registry (an account
+        deleted and created again gets no second trial; same `201`) (US-A1b).
+
+        A wrong, expired, consumed or unknown code, or an unknown email, answers `401` with
+        one generic message. Each wrong try counts against the code; after 5 the code is dead
+        and every try answers `401` until `resendVerification`.
       x-module: module_auth
       x-public: true
       security: []
@@ -139,11 +210,51 @@ paths:
       responses:
         '201':
           description: Account created and session started.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthSession' }
         '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
+        '401':
+          description: The code is wrong, expired, consumed or unknown (one generic answer).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error: { code: unauthorized, message: The code is invalid or has expired., request_id: req_01J9Z6Q4X8 }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/auth/verify-email/resend:
+    post:
+      tags: [Auth]
+      operationId: resendVerification
+      x-frozen: sha256:3e1a7e1d9b8af2916ec6c4ebff0d41bf66f1e6070afb317483a4ceec4fc065b3
+      summary: Email a new verification code for a pending sign-up
+      description: >-
+        For a pending sign-up, a new code replaces the old one (attempts reset). Always
+        answers the same `202 {status: verification_sent}`: also when there is no pending
+        sign-up, the email is already verified, or the last resend was less than 60 s ago
+        (the cooldown is silent so it is not an oracle; the app shows a 60 s countdown)
+        (US-A1c, D2). A `register` for an email with a live pending sign-up takes this same
+        path and shares its cooldown and limits; neither call ever changes the pending
+        sign-up's password hash or accepted documents (D7).
+      x-module: module_auth
+      x-public: true
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ResendVerificationRequest' }
+      responses:
+        '202':
+          description: Generic acknowledgement; a new code was emailed if a pending sign-up exists and the cooldown allows it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VerificationSent' }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
@@ -151,7 +262,12 @@ paths:
     post:
       tags: [Auth]
       operationId: login
-      summary: Log in with email and password
+      x-frozen: sha256:9dffed2106f2e9bd3dd9ea386fa5ae4f3f074919cd2fbb535f1eab0da4868756
+      summary: Log in with email and password (starts a new token family)
+      description: >-
+        A wrong password, an unknown email and a pending (unverified) sign-up all answer the
+        same `401` body with comparable latency (US-A2a). Too many failures for the account
+        or the client answer `429 rate_limited` with `Retry-After`.
       x-module: module_auth
       x-public: true
       security: []
@@ -163,11 +279,19 @@ paths:
       responses:
         '200':
           description: Session started.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthSession' }
         '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
+        '401':
+          description: Wrong credentials, unknown email or unverified sign-up (one generic answer).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error: { code: unauthorized, message: Email or password is incorrect., request_id: req_01J9Z6Q4X8 }
         '404': { $ref: '#/components/responses/NotFound' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
@@ -175,8 +299,14 @@ paths:
     post:
       tags: [Auth]
       operationId: refreshSession
+      x-frozen: sha256:db1bfe4ddd6e9309bf123e1e23003c17817f89db9b71e271a258c3b871265264
       summary: Rotate the refresh token
-      description: Reusing an already-rotated token revokes its whole family and returns 401.
+      description: >-
+        A live refresh token is rotated: the response carries a new pair and the old token
+        is marked rotated (US-A2b). Reusing an already-rotated token revokes its whole family
+        and answers `401`; of two concurrent refreshes with the same token exactly one wins
+        and the other is treated as reuse. An expired (30-day sliding or 90-day absolute),
+        revoked, malformed or foreign token answers `401`.
       x-module: module_auth
       x-public: true
       security: []
@@ -188,11 +318,19 @@ paths:
       responses:
         '200':
           description: New token pair.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/TokenPair' }
         '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
+        '401':
+          description: Refresh token expired, revoked, reused, malformed or unknown (one generic answer).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error: { code: unauthorized, message: Your session has ended. Sign in again., request_id: req_01J9Z6Q4X8 }
         '404': { $ref: '#/components/responses/NotFound' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
@@ -200,39 +338,56 @@ paths:
     post:
       tags: [Auth]
       operationId: logout
+      x-frozen: sha256:1c20c237be298e266767840370e767bccd09130ff5aeeef322814885b3d9ab3d
       summary: Revoke the refresh token family
+      description: >-
+        Revokes the family of the given refresh token (US-A2c). Idempotent: a refresh token
+        that is already revoked or not the caller's also answers `204`, so another user's
+        token state is never revealed. A missing or invalid bearer answers `401`.
       x-module: module_auth
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/RefreshRequest' }
       responses:
-        '204': { description: Logged out. }
+        '204': { description: Logged out (also when the token was already revoked or not the caller's). }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
   /v1/me:
     get:
       tags: [Auth]
       operationId: getMe
+      x-frozen: sha256:e176376569713d53dada92cdc1d2c1a3a4aa0ea451ab88ba693039980f5d11ae
       summary: Current user profile
       x-module: module_auth
+      security:
+        - bearerAuth: []
       responses:
         '200':
           description: Profile.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/User' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
     patch:
       tags: [Auth]
       operationId: updateMe
-      summary: Update profile
+      x-frozen: sha256:9eca15091a862adc715f4c1eaec4bd00c218a5253eda2e30e467f2154f6a8feb
+      summary: Update profile (name only; email change is out of scope)
       x-module: module_auth
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -241,38 +396,68 @@ paths:
       responses:
         '200':
           description: Updated profile.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/User' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
     delete:
       tags: [Auth]
       operationId: deleteMe
-      summary: Delete account and all its data (irreversible)
-      description: |
-        Deletes the user, taxpayers and records (cascade) and revokes all sessions.
-        Does not cancel the store subscription (the app explains how). The keyed
-        email hash stays in the trial registry (no second trial).
+      x-frozen: sha256:bf96beb3ef6d74d9c691affd82a9ecda5034278b114667bacdfa40d532c84e3c
+      summary: Delete the account and all its data (irreversible; requires the current password)
+      description: >-
+        Re-authenticates with the current password (D4), then in one transaction deletes the
+        user and everything it owns (taxpayers, records, consents, refresh tokens, usage,
+        entitlements) and answers `204` (US-A4). Consents are deleted too (D6); only the
+        keyed email hash survives in the trial registry (no second trial). The store
+        subscription is not cancelled (the app explains how). Any later call with the old
+        access token answers `401`.
+
+        A wrong password answers `401`, counts toward the login failure limit and deletes
+        nothing; a body without `password` answers `400 validation_failed`.
       x-module: module_auth
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DeleteAccountRequest' }
       responses:
-        '204': { description: Account deleted. }
-        '401': { $ref: '#/components/responses/Unauthorized' }
+        '204': { description: Account and all its data deleted. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401':
+          description: Missing or invalid bearer, or wrong current password; nothing was deleted.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error: { code: unauthorized, message: Authentication required., request_id: req_01J9Z6Q4X8 }
         '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
   /v1/legal/documents:
     get:
       tags: [Auth]
       operationId: listLegalDocuments
+      x-frozen: sha256:0782a5ff83a75262a9959b1d1f65b83d8619ce4ccf8e2d0538eea897e01b19df
       summary: Current privacy notices and terms
+      description: >-
+        The current version of each legal document kind (US-A5). The register screen links to
+        them and sends back the versions shown in `accepted_documents`. Versions are data,
+        not code.
       x-module: module_auth
       x-public: true
       security: []
       responses:
         '200':
-          description: Current versions.
+          description: Current version of each kind.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/LegalDocumentList' }
@@ -1157,6 +1342,13 @@ components:
       description: Must be `true` to perform a destructive or data-affecting action.
       schema: { type: boolean, default: false }
 
+  headers:
+    NoStore:
+      x-frozen: sha256:0e38e657527212cb20ce74557d6a041ed2ba91434f6050d1a2e62d8897cf2496
+      description: Responses carrying tokens or account data must not be stored by any cache (RFC 9111; RFC 6749 section 5.1).
+      required: true
+      schema: { type: string, const: no-store }
+
   responses:
     BadRequest:
       description: Input does not match the contract.
@@ -1386,72 +1578,108 @@ components:
 
     # ------------------------------------------------------------ auth
     RegisterRequest:
+      x-frozen: sha256:7418696b5860f2122c6bf2896e62cdfad3e91e96e8c8ed9ef1d2e46bbb4d64d9
       type: object
       required: [email, password, accepted_documents]
+      additionalProperties: false
       properties:
-        email: { type: string, format: email, maxLength: 254 }
+        email: { type: string, format: email, maxLength: 254, description: 'Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.' }
         password:
           type: string
           minLength: 12
           maxLength: 128
-          description: Policy enforced server-side (length + breached-password check).
-        name: { type: string, maxLength: 120 }
+          description: 12-128 characters; the breached/common-password check (offline list, D5) runs server-side.
+        name: { type: string, minLength: 1, maxLength: 120 }
         accepted_documents:
           type: array
-          minItems: 1
+          minItems: 2
+          maxItems: 3
+          uniqueItems: true
+          description: The current version of `terms` and of one privacy notice (integral or simplified), as returned by `listLegalDocuments`.
           items: { $ref: '#/components/schemas/DocumentAcceptance' }
       examples:
-        - email: ana@example.mx
-          password: correct-horse-battery-staple
-          name: Ana Gómez
+        - email: ana.gomez@example.mx
+          password: '<new-password>'
+          name: Ana Gómez Ruiz
           accepted_documents:
             - { kind: privacy_notice_integral, version: '2026-10-01' }
             - { kind: terms, version: '2026-10-01' }
     DocumentAcceptance:
+      x-frozen: sha256:0353c821ef8d3c5be3b45373a472b50b3cd5c8db332a5e78b0477b01d8503365
       type: object
       required: [kind, version]
+      additionalProperties: false
       properties:
         kind: { $ref: '#/components/schemas/LegalDocumentKind' }
-        version: { type: string }
-    RegisterAccepted:
+        version: { type: string, minLength: 1, maxLength: 64, description: 'Opaque version label (data, not code).' }
+      examples:
+        - { kind: privacy_notice_integral, version: '2026-10-01' }
+    VerificationSent:
+      x-frozen: sha256:5c69c72fc5611bdfce0bd3c54e33602b3d28123cfa6684b6ccd69fd29ec3afc7
       type: object
       required: [status]
+      description: Generic acknowledgement of `register` and `resendVerification`; identical whatever the address's state.
       properties:
         status: { type: string, const: verification_sent }
       examples:
         - status: verification_sent
     VerifyEmailRequest:
+      x-frozen: sha256:b0a7ef87e1db343173ce0d692297569e2f82550ad7273fa06051840b449f08cf
       type: object
       required: [email, code]
+      additionalProperties: false
       properties:
-        email: { type: string, format: email }
-        code: { type: string, pattern: '^[0-9]{6}$' }
+        email: { type: string, format: email, maxLength: 254, description: 'Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.' }
+        code: { type: string, pattern: '^[0-9]{6}$', description: '6-digit emailed code; 15 min TTL, 5 wrong tries.' }
       examples:
-        - { email: ana@example.mx, code: '482913' }
+        - { email: ana.gomez@example.mx, code: '482913' }
+    ResendVerificationRequest:
+      x-frozen: sha256:a0130e2b10bf47a32e5488954601f94bdab9dd24b9b46efba80180351d2eae47
+      type: object
+      required: [email]
+      additionalProperties: false
+      properties:
+        email: { type: string, format: email, maxLength: 254, description: 'Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.' }
+      examples:
+        - { email: ana.gomez@example.mx }
     LoginRequest:
+      x-frozen: sha256:695425ed3e941a780bc2c6b6bfe5889fbe52d709a801997101e1c4dba77f7cb8
       type: object
       required: [email, password]
+      additionalProperties: false
       properties:
-        email: { type: string, format: email }
+        email: { type: string, format: email, maxLength: 254, description: 'Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.' }
         password: { type: string, minLength: 1, maxLength: 128 }
       examples:
-        - email: ana@example.mx
+        - email: ana.gomez@example.mx
           password: '<password>'
     RefreshRequest:
+      x-frozen: sha256:358ce591f5d40dc79593e853cac0eaabc7c550d7ad7eec7decdaceceeb8d54d2
       type: object
       required: [refresh_token]
+      additionalProperties: false
       properties:
-        refresh_token: { type: string, minLength: 40, maxLength: 200 }
+        refresh_token:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: The opaque refresh token from `TokenPair`. A malformed value answers `401`, not `400`.
       examples:
         - refresh_token: 0199d4a2-7c1e-7b3a-9f10-2c5e8a1b4d01.example-refresh-secret
     TokenPair:
+      x-frozen: sha256:b8d1883475a8e91a7644fa37845466380c268c0f6f27e357e6e81fe50a5e09af
       type: object
       required: [access_token, access_expires_in, refresh_token, refresh_expires_in, token_type]
       properties:
-        access_token: { type: string }
-        access_expires_in: { type: integer, description: Seconds. }
-        refresh_token: { type: string, description: 'Opaque, format <user_uuid>.<secret>.' }
-        refresh_expires_in: { type: integer, description: Seconds. }
+        access_token: { type: string, description: EdDSA-signed JWT with a `kid` header. }
+        access_expires_in: { type: integer, minimum: 1, description: Seconds until the access token expires (900). }
+        refresh_token:
+          type: string
+          description: Opaque to clients (format `<user_uuid>.<secret>`); rotated on every refresh. Store only in secure storage.
+        refresh_expires_in:
+          type: integer
+          minimum: 1
+          description: Seconds until the refresh token expires (30-day sliding window, capped by the 90-day absolute limit).
         token_type: { type: string, const: Bearer }
       examples:
         - access_token: example-access-token
@@ -1460,6 +1688,7 @@ components:
           refresh_expires_in: 2592000
           token_type: Bearer
     AuthSession:
+      x-frozen: sha256:bd0301a2712cfce42739746301f43b84924ebe1cdb0c3d74300f3613415ccfe3
       type: object
       required: [user, tokens]
       properties:
@@ -1468,8 +1697,8 @@ components:
       examples:
         - user:
             id: 0199d4a2-7c1e-7b3a-9f10-2c5e8a1b4d01
-            email: ana@example.mx
-            name: Ana Gómez
+            email: ana.gomez@example.mx
+            name: Ana Gómez Ruiz
             created_at: '2026-10-13T16:00:00Z'
           tokens:
             access_token: example-access-token
@@ -1478,52 +1707,79 @@ components:
             refresh_expires_in: 2592000
             token_type: Bearer
     User:
+      x-frozen: sha256:23a6e10affbf947c73378f5ba09576a0daa2dcbad31d5bccf7a19bb9a82258ea
       type: object
       required: [id, email, created_at]
       properties:
         id: { $ref: '#/components/schemas/Uuid' }
-        email: { type: string, format: email }
-        name: { type: [string, 'null'] }
+        email: { type: string, format: email, maxLength: 254 }
+        name: { type: [string, 'null'], maxLength: 120 }
         created_at: { type: string, format: date-time }
       examples:
         - id: 0199d4a2-7c1e-7b3a-9f10-2c5e8a1b4d01
-          email: ana@example.mx
-          name: Ana Gómez
+          email: ana.gomez@example.mx
+          name: Ana Gómez Ruiz
           created_at: '2026-10-13T16:00:00Z'
     UserUpdate:
+      x-frozen: sha256:bf94938d30f177509883fc4b8985c6481c40bfa3dc07e43281a9e080cf6ecc41
       type: object
       minProperties: 1
+      additionalProperties: false
       properties:
-        name: { type: string, maxLength: 120 }
+        name: { type: string, minLength: 1, maxLength: 120 }
       examples:
-        - name: Ana Gómez Ruiz
+        - name: Ana Gómez de la Torre
+    DeleteAccountRequest:
+      x-frozen: sha256:e8c9a9e514ff5d93ea11ebed904c361ca6937bd3ba67703c2cbbf8b57fd51c7c
+      type: object
+      required: [password]
+      additionalProperties: false
+      description: Current password, re-entered to confirm the irreversible deletion (D4).
+      properties:
+        password: { type: string, minLength: 1, maxLength: 128 }
+      examples:
+        - password: '<current-password>'
     LegalDocumentKind:
+      x-frozen: sha256:1004e979fccc8c8ec4ae8788d4108ebf0711749c9ce109a5f25c1cfdfb35f951
       type: string
       enum: [privacy_notice_integral, privacy_notice_simplified, terms]
+      description: LFPDPPP aviso de privacidad (integral or simplificado) and términos y condiciones.
     LegalDocument:
+      x-frozen: sha256:34a7b4e38bd3c797d466554077907983312448016bf3b1d478b062fe96f8173e
       type: object
       required: [kind, version, url, published_at]
       properties:
         kind: { $ref: '#/components/schemas/LegalDocumentKind' }
-        version: { type: string }
+        version: { type: string, minLength: 1, maxLength: 64, description: 'Opaque version label (data, not code).' }
         url: { type: string, format: uri }
         published_at: { type: string, format: date-time }
+      examples:
+        - kind: privacy_notice_integral
+          version: '2026-10-01'
+          url: https://example.mx/legal/aviso-de-privacidad-integral
+          published_at: '2026-10-01T06:00:00Z'
     LegalDocumentList:
+      x-frozen: sha256:d9a7b2319e97fc513745ac806b4e6ea16814cf5dbeba05a09df14a2c3cb2d1d0
       type: object
       required: [items]
       properties:
         items:
           type: array
+          description: The current version of each kind.
           items: { $ref: '#/components/schemas/LegalDocument' }
       examples:
         - items:
             - kind: privacy_notice_integral
               version: '2026-10-01'
-              url: https://example.mx/legal/aviso-de-privacidad
+              url: https://example.mx/legal/aviso-de-privacidad-integral
+              published_at: '2026-10-01T06:00:00Z'
+            - kind: privacy_notice_simplified
+              version: '2026-10-01'
+              url: https://example.mx/legal/aviso-de-privacidad-simplificado
               published_at: '2026-10-01T06:00:00Z'
             - kind: terms
               version: '2026-10-01'
-              url: https://example.mx/legal/terminos
+              url: https://example.mx/legal/terminos-y-condiciones
               published_at: '2026-10-01T06:00:00Z'
 
     # ------------------------------------------------------------ taxpayers

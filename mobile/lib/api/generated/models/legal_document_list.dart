@@ -11,8 +11,10 @@ part 'legal_document_list.g.dart';
 
 @Freezed()
 abstract class LegalDocumentList with _$LegalDocumentList {
-  const factory LegalDocumentList({required List<LegalDocument> items}) =
-      _LegalDocumentList;
+  const factory LegalDocumentList({
+    /// The current version of each kind.
+    required List<LegalDocument> items,
+  }) = _LegalDocumentList;
 
   factory LegalDocumentList.fromJson(Map<String, Object?> json) =>
       _$LegalDocumentListFromJson(json);
