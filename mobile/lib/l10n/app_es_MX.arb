@@ -1,0 +1,4 @@
+{
+  "@@locale": "es_MX",
+  "@@x-note": "es-MX is the app's only locale. Copy lives in app_es.arb; add a key here only when Mexican Spanish must differ from the neutral template."
+}

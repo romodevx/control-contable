@@ -1,0 +1,183 @@
+package main
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"io"
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/getkin/kin-openapi/openapi3filter"
+	"github.com/getkin/kin-openapi/routers"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/romodevx/control-contable/backend/adapter/http/gen"
+	"github.com/romodevx/control-contable/backend/adapter/http/health"
+	"github.com/romodevx/control-contable/backend/adapter/http/middleware"
+	"github.com/romodevx/control-contable/backend/internal/platform/config"
+	"github.com/romodevx/control-contable/backend/internal/platform/logging"
+)
+
+var _ gen.StrictServerInterface = api{}
+
+func testConfig() config.Config {
+	return config.Config{
+		Env:       config.EnvDev,
+		HTTPAddr:  "127.0.0.1:0",
+		RateLimit: config.RateLimit{PerSecond: 1, Burst: 3},
+	}
+}
+
+func newTestHandler(t *testing.T, cfg config.Config, db health.Pinger) http.Handler {
+	t.Helper()
+	h, err := newHandler(cfg, deps{logger: logging.New(io.Discard, nil), db: db, now: time.Now})
+	require.NoError(t, err)
+	return h
+}
+
+type pingOK struct{}
+
+func (pingOK) Ping(context.Context) error { return nil }
+
+// conforms validates rec against the operation and status in the contract.
+func conforms(t *testing.T, req *http.Request, rec *httptest.ResponseRecorder, method, path string) {
+	t.Helper()
+	spec, err := gen.GetSpec()
+	require.NoError(t, err)
+	item := spec.Paths.Value(path)
+	require.NotNil(t, item, path)
+	route := &routers.Route{Spec: spec, Path: path, PathItem: item, Method: method, Operation: item.GetOperation(method)}
+	err = openapi3filter.ValidateResponse(context.Background(), &openapi3filter.ResponseValidationInput{
+		RequestValidationInput: &openapi3filter.RequestValidationInput{Request: req, Route: route},
+		Status:                 rec.Code,
+		Header:                 rec.Header(),
+		Body:                   io.NopCloser(bytes.NewReader(rec.Body.Bytes())),
+		Options:                &openapi3filter.Options{IncludeResponseStatus: true},
+	})
+	assert.NoError(t, err, "response must conform to %s %s in docs/api/openapi.yaml", method, path)
+}
+
+func get(h http.Handler, target string) (*http.Request, *httptest.ResponseRecorder) {
+	req := httptest.NewRequest(http.MethodGet, target, nil)
+	req.RemoteAddr = "203.0.113.10:1234"
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	return req, rec
+}
+
+func TestHealthz(t *testing.T) {
+	tests := []struct {
+		name string
+		db   health.Pinger
+		want gen.HealthStatus
+	}{
+		{name: "database reachable", db: pingOK{},
+			want: gen.HealthStatus{Status: gen.HealthStatusStatusOk, Database: gen.HealthStatusDatabaseOk, Version: version}},
+		{name: "database adapter not wired yet (until P0-12)", db: health.NotWired{},
+			want: gen.HealthStatus{Status: gen.HealthStatusStatusDegraded, Database: gen.HealthStatusDatabaseUnreachable, Version: version}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, rec := get(newTestHandler(t, testConfig(), tt.db), "/healthz")
+
+			require.Equal(t, http.StatusOK, rec.Code)
+			assert.NotEmpty(t, rec.Header().Get(middleware.RequestIDHeader))
+			conforms(t, req, rec, http.MethodGet, "/healthz")
+			var got gen.HealthStatus
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestRateLimit_answers429WithRetryAfter(t *testing.T) {
+	h := newTestHandler(t, testConfig(), pingOK{})
+	for range testConfig().RateLimit.Burst {
+		_, rec := get(h, "/healthz")
+		require.Equal(t, http.StatusOK, rec.Code)
+	}
+
+	req, rec := get(h, "/healthz")
+
+	assert.Equal(t, http.StatusTooManyRequests, rec.Code)
+	assert.Equal(t, "1", rec.Header().Get("Retry-After"))
+	conforms(t, req, rec, http.MethodGet, "/healthz")
+}
+
+func TestFlaggedModulesAreOffByDefault(t *testing.T) {
+	req, rec := get(newTestHandler(t, testConfig(), pingOK{}), "/v1/me")
+
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+	conforms(t, req, rec, http.MethodGet, "/v1/me")
+}
+
+func TestUnbuiltPlatformOperationIsAClean500(t *testing.T) {
+	// listEnabledFlags is platform (never gated) and arrives with P0-15.
+	req, rec := get(newTestHandler(t, testConfig(), pingOK{}), "/v1/flags")
+
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.NotContains(t, rec.Body.String(), "nil pointer")
+	conforms(t, req, rec, http.MethodGet, "/v1/flags")
+}
+
+func TestNewServer_hasTimeouts(t *testing.T) {
+	srv := newServer(http.NotFoundHandler(), ":0", logging.New(io.Discard, nil))
+
+	assert.Positive(t, srv.ReadHeaderTimeout)
+	assert.Positive(t, srv.ReadTimeout)
+	assert.Positive(t, srv.WriteTimeout)
+	assert.Positive(t, srv.IdleTimeout)
+	assert.Positive(t, srv.MaxHeaderBytes)
+	assert.NotNil(t, srv.ErrorLog)
+}
+
+func TestServe_drainsInFlightRequestsOnShutdown(t *testing.T) {
+	started := make(chan struct{})
+	release := make(chan struct{})
+	slow := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		close(started)
+		<-release
+		w.WriteHeader(http.StatusNoContent)
+	})
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	srv := newServer(slow, ln.Addr().String(), logging.New(io.Discard, nil))
+	ctx, cancel := context.WithCancel(context.Background())
+	served := make(chan error, 1)
+	go func() { served <- serve(ctx, srv, ln, logging.New(io.Discard, nil)) }()
+
+	status := make(chan int, 1)
+	go func() {
+		resp, err := http.Get("http://" + ln.Addr().String() + "/")
+		if err != nil {
+			status <- 0
+			return
+		}
+		_ = resp.Body.Close()
+		status <- resp.StatusCode
+	}()
+	<-started
+	cancel()
+	time.AfterFunc(50*time.Millisecond, func() { close(release) })
+
+	assert.Equal(t, http.StatusNoContent, <-status, "the in-flight request completes")
+	assert.NoError(t, <-served, "a requested shutdown is not an error")
+	resp, err := http.Get("http://" + ln.Addr().String() + "/")
+	if err == nil {
+		_ = resp.Body.Close()
+	}
+	assert.Error(t, err, "the listener is closed")
+}
+
+func TestRun_reportsConfigErrors(t *testing.T) {
+	err := run(context.Background(), func(string) (string, bool) { return "", false }, io.Discard)
+
+	require.Error(t, err)
+	assert.True(t, strings.Contains(err.Error(), "APP_ENV"), err.Error())
+}
