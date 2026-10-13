@@ -33,6 +33,9 @@ linters:
           allow:
             - $gostd
             - github.com/romodevx/control-contable/backend/internal
+            # ADR-0004: NFKC password normalization. Exact package only;
+            # internal/archtest pins the same allowlist.
+            - golang.org/x/text/unicode/norm$
           deny:
             - pkg: net/http
               desc: the domain knows nothing of HTTP (ADR-0001 Dependency Rule)

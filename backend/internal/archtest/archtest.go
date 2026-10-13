@@ -55,6 +55,11 @@ const (
 // framework through them.
 var domainPlatformAllowlist = []string{"money"}
 
+// domainExternalAllowlist lists the exact non-stdlib packages a domain may
+// import (ADR-0004): pure algorithms with no I/O and no framework. Pure
+// platform packages stay stdlib-only.
+var domainExternalAllowlist = []string{"golang.org/x/text/unicode/norm"}
+
 // platformAdapters are the platform packages that wrap a framework (the
 // database adapter and its test harness). Use cases reach them only through
 // framework-free ports (internal/platform/tx); infra and cmd/ wire them.
@@ -172,11 +177,12 @@ func checkPlatformImport(from, to location, imported string) Rule {
 }
 
 // checkDomainImport allows only the standard library (minus frameworks), the
-// module's own domain tree and the allow-listed pure platform packages.
+// allow-listed external packages, the module's own domain tree and the
+// allow-listed pure platform packages.
 func checkDomainImport(from, to location, imported string) Rule {
 	switch to.kind {
 	case kindExternal:
-		if isPureStdlib(imported) {
+		if isPureStdlib(imported) || slices.Contains(domainExternalAllowlist, imported) {
 			return ""
 		}
 	case kindModule:
