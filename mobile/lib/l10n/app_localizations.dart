@@ -156,6 +156,84 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ir al inicio'**
   String get notFoundAction;
+
+  /// Splash shown while a deep link waits for the module flags.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando…'**
+  String get bootLoading;
+
+  /// Text mark after the label of an optional field (forms mark the fewer kind).
+  ///
+  /// In es, this message translates to:
+  /// **'(opcional)'**
+  String get formMarkOptional;
+
+  /// Text mark after the label of a required field (forms mark the fewer kind).
+  ///
+  /// In es, this message translates to:
+  /// **'(obligatorio)'**
+  String get formMarkRequired;
+
+  /// Inline error: a required field was left empty. Shown only after submit.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe este dato.'**
+  String get formErrorRequired;
+
+  /// Inline error: the text is not a peso amount.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe un monto, por ejemplo 1,234.50.'**
+  String get formErrorMoney;
+
+  /// Inline error: the text is not a real calendar date (day/month/year).
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe una fecha como 31/01/2026.'**
+  String get formErrorDate;
+
+  /// Heading of the error summary shown at the top of a form after a failed submit.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{Revisa 1 dato antes de guardar} other{Revisa {count} datos antes de guardar}}'**
+  String formErrorSummaryTitle(int count);
+
+  /// One link in the error summary; tapping it moves focus to the field.
+  ///
+  /// In es, this message translates to:
+  /// **'{label}: {error}'**
+  String formErrorSummaryItem(String label, String error);
+
+  /// Primary form button.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar'**
+  String get formSave;
+
+  /// Screen reader label of the primary button while saving.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardando…'**
+  String get formSaving;
+
+  /// Secondary form button on repetitive entry: saves, keeps context fields, clears the rest.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar y crear otro'**
+  String get formSaveAndCreateAnother;
+
+  /// Text button that leaves a form without saving.
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar'**
+  String get formCancel;
+
+  /// Hint inside an empty date field (never a label).
+  ///
+  /// In es, this message translates to:
+  /// **'dd/mm/aaaa'**
+  String get formDateHint;
 }
 
 class _AppLocalizationsDelegate

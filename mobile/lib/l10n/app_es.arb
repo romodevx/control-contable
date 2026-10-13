@@ -39,5 +39,70 @@
   "notFoundAction": "Ir al inicio",
   "@notFoundAction": {
     "description": "Button on the not-found screen that returns to home."
+  },
+  "bootLoading": "Cargando…",
+  "@bootLoading": {
+    "description": "Splash shown while a deep link waits for the module flags."
+  },
+  "formMarkOptional": "(opcional)",
+  "@formMarkOptional": {
+    "description": "Text mark after the label of an optional field (forms mark the fewer kind)."
+  },
+  "formMarkRequired": "(obligatorio)",
+  "@formMarkRequired": {
+    "description": "Text mark after the label of a required field (forms mark the fewer kind)."
+  },
+  "formErrorRequired": "Escribe este dato.",
+  "@formErrorRequired": {
+    "description": "Inline error: a required field was left empty. Shown only after submit."
+  },
+  "formErrorMoney": "Escribe un monto, por ejemplo 1,234.50.",
+  "@formErrorMoney": {
+    "description": "Inline error: the text is not a peso amount."
+  },
+  "formErrorDate": "Escribe una fecha como 31/01/2026.",
+  "@formErrorDate": {
+    "description": "Inline error: the text is not a real calendar date (day/month/year)."
+  },
+  "formErrorSummaryTitle": "{count, plural, =1{Revisa 1 dato antes de guardar} other{Revisa {count} datos antes de guardar}}",
+  "@formErrorSummaryTitle": {
+    "description": "Heading of the error summary shown at the top of a form after a failed submit.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "formErrorSummaryItem": "{label}: {error}",
+  "@formErrorSummaryItem": {
+    "description": "One link in the error summary; tapping it moves focus to the field.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "formSave": "Guardar",
+  "@formSave": {
+    "description": "Primary form button."
+  },
+  "formSaving": "Guardando…",
+  "@formSaving": {
+    "description": "Screen reader label of the primary button while saving."
+  },
+  "formSaveAndCreateAnother": "Guardar y crear otro",
+  "@formSaveAndCreateAnother": {
+    "description": "Secondary form button on repetitive entry: saves, keeps context fields, clears the rest."
+  },
+  "formCancel": "Cancelar",
+  "@formCancel": {
+    "description": "Text button that leaves a form without saving."
+  },
+  "formDateHint": "dd/mm/aaaa",
+  "@formDateHint": {
+    "description": "Hint inside an empty date field (never a label)."
   }
 }

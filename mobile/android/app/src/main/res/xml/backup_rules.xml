@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and lower (API <= 30). Same rule as data_extraction_rules.xml:
+     the session token store in shared preferences is never backed up.
+     Checked by test/platform/android_backup_test.dart. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="."/>
+</full-backup-content>
