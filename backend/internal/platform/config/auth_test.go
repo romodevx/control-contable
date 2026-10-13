@@ -88,6 +88,73 @@ func TestLoadAuth_errors(t *testing.T) {
 	}
 }
 
+func TestLoadAuth_noPreviousAccessTokenKeyByDefault(t *testing.T) {
+	got, err := loadAuth(authEnv())
+
+	require.NoError(t, err)
+	assert.True(t, got.PreviousAccessTokenKey.IsZero())
+	assert.Empty(t, got.PreviousAccessTokenKeyID)
+}
+
+// Key rotation (M1-07): the retired key keeps verifying the tokens it signed
+// until they expire, under its own kid.
+func TestLoadAuth_previousAccessTokenKey(t *testing.T) {
+	env := authEnv()
+	env["AUTH_ACCESS_TOKEN_KEY_ID"] = "k2"
+	env["AUTH_ACCESS_TOKEN_PREVIOUS_KEY"] = hexKey(0x05)
+	env["AUTH_ACCESS_TOKEN_PREVIOUS_KEY_ID"] = "k1"
+
+	got, err := loadAuth(env)
+
+	require.NoError(t, err)
+	assert.Equal(t, bytes.Repeat([]byte{0x05}, 32), got.PreviousAccessTokenKey.RevealBytes())
+	assert.Equal(t, "k1", got.PreviousAccessTokenKeyID)
+	assert.Equal(t, "k2", got.AccessTokenKeyID)
+}
+
+func TestLoadAuth_previousAccessTokenKeyErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		env     map[string]string
+		wantErr string
+	}{
+		{"previous key without its kid", map[string]string{"AUTH_ACCESS_TOKEN_PREVIOUS_KEY": hexKey(0x05)},
+			"AUTH_ACCESS_TOKEN_PREVIOUS_KEY_ID is required with AUTH_ACCESS_TOKEN_PREVIOUS_KEY"},
+		{"kid without the previous key", map[string]string{"AUTH_ACCESS_TOKEN_PREVIOUS_KEY_ID": "k0"},
+			"AUTH_ACCESS_TOKEN_PREVIOUS_KEY_ID is set without AUTH_ACCESS_TOKEN_PREVIOUS_KEY"},
+		{"previous kid equals the active kid", map[string]string{
+			"AUTH_ACCESS_TOKEN_PREVIOUS_KEY": hexKey(0x05), "AUTH_ACCESS_TOKEN_PREVIOUS_KEY_ID": "k1",
+		}, "AUTH_ACCESS_TOKEN_PREVIOUS_KEY_ID must differ from AUTH_ACCESS_TOKEN_KEY_ID"},
+		{"previous kid malformed", map[string]string{
+			"AUTH_ACCESS_TOKEN_PREVIOUS_KEY": hexKey(0x05), "AUTH_ACCESS_TOKEN_PREVIOUS_KEY_ID": "bad kid",
+		}, `AUTH_ACCESS_TOKEN_PREVIOUS_KEY_ID "bad kid"`},
+		{"previous key not a seed", map[string]string{
+			"AUTH_ACCESS_TOKEN_PREVIOUS_KEY": strings.Repeat("ab", 31), "AUTH_ACCESS_TOKEN_PREVIOUS_KEY_ID": "k0",
+		}, "secret AUTH_ACCESS_TOKEN_PREVIOUS_KEY must be exactly 32 bytes"},
+		{"previous key not hex", map[string]string{
+			"AUTH_ACCESS_TOKEN_PREVIOUS_KEY": strings.Repeat("zz", 32), "AUTH_ACCESS_TOKEN_PREVIOUS_KEY_ID": "k0",
+		}, "secret AUTH_ACCESS_TOKEN_PREVIOUS_KEY is not hex"},
+		{"previous key equals the active key", map[string]string{
+			"AUTH_ACCESS_TOKEN_PREVIOUS_KEY": hexKey(0x04), "AUTH_ACCESS_TOKEN_PREVIOUS_KEY_ID": "k0",
+		}, "AUTH_ACCESS_TOKEN_PREVIOUS_KEY must differ from AUTH_ACCESS_TOKEN_KEY"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := authEnv()
+			for k, v := range tt.env {
+				env[k] = v
+			}
+
+			_, err := loadAuth(env)
+
+			require.Error(t, err)
+			assert.ErrorContains(t, err, tt.wantErr)
+			assert.NotContains(t, err.Error(), hexKey(0x05), "a key never reaches the error")
+			assert.NotContains(t, err.Error(), hexKey(0x04), "a key never reaches the error")
+		})
+	}
+}
+
 func TestLoadAuth_reportsEveryProblemAtOnce(t *testing.T) {
 	_, err := loadAuth(map[string]string{})
 
