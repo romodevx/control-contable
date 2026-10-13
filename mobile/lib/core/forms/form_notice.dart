@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:control_contable/core/theme/app_spacing.dart';
 import 'package:control_contable/core/theme/app_tokens.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 /// Width of the notice's leading rule (matches the error summary).
 const _ruleWidth = 3.0;
@@ -15,9 +18,12 @@ enum FormNoticeTone {
 }
 
 /// A form-level message that belongs to no single field: a failure the
-/// user can act on, or a confirmation. Announced when it appears; tone is
-/// carried by the rule color *and* the words, never by color alone.
-class FormNotice extends StatelessWidget {
+/// user can act on, or a confirmation. Announced to screen readers when it
+/// appears and whenever its message changes (assertively for an error,
+/// politely for a confirmation): a live region alone is silent on VoiceOver
+/// and when the text repeats. Tone is carried by the rule color *and* the
+/// words, never by color alone.
+class FormNotice extends StatefulWidget {
   /// A notice reading [message].
   const new({
     required this.message,
@@ -32,8 +38,42 @@ class FormNotice extends StatelessWidget {
   final FormNoticeTone tone;
 
   @override
+  State<FormNotice> createState() => _FormNoticeState();
+}
+
+class _FormNoticeState extends State<FormNotice> {
+  @override
+  void initState() {
+    super.initState();
+    _announceAfterFrame();
+  }
+
+  @override
+  void didUpdateWidget(FormNotice oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.message != oldWidget.message) _announceAfterFrame();
+  }
+
+  void _announceAfterFrame() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(
+        SemanticsService.sendAnnouncement(
+          View.of(context),
+          widget.message,
+          Directionality.of(context),
+          assertiveness: widget.tone == FormNoticeTone.error
+              ? Assertiveness.assertive
+              : Assertiveness.polite,
+        ),
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = context.tokens.colors;
+    final tone = widget.tone;
     final rule = tone == FormNoticeTone.error ? colors.error : colors.primary;
     return Semantics(
       liveRegion: true,
@@ -47,7 +87,10 @@ class FormNotice extends StatelessWidget {
         ),
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
-          child: Text(message, style: Theme.of(context).textTheme.bodyMedium),
+          child: Text(
+            widget.message,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
         ),
       ),
     );
