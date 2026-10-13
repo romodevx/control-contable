@@ -6,6 +6,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -272,14 +273,11 @@ func TestLoadIsBoundedByTheLoadTimeout(t *testing.T) {
 // failingGatedReader blocks every load until release is closed, then fails.
 type failingGatedReader struct {
 	release <-chan struct{}
-	started chan struct{}
-	once    sync.Once
 	loads   atomic.Int64
 }
 
 func (r *failingGatedReader) EnabledKeys(ctx context.Context) ([]string, error) {
 	r.loads.Add(1)
-	r.once.Do(func() { close(r.started) })
 	select {
 	case <-r.release:
 		return nil, errDatabaseDown
@@ -290,56 +288,52 @@ func (r *failingGatedReader) EnabledKeys(ctx context.Context) ([]string, error) 
 
 // Regression (P0-28): callers queued behind a failed load each retried it in
 // turn, so with a slow database the N-th request waited N load timeouts.
+// synctest.Wait proves every caller is queued before the load fails, so the
+// count is exact: one load for all of them (16 before the fix).
 func TestWaitersShareAFailedLoad(t *testing.T) {
-	release := make(chan struct{})
-	reader := &failingGatedReader{release: release, started: make(chan struct{})}
-	svc, _ := newService(t, reader)
+	synctest.Test(t, func(t *testing.T) {
+		release := make(chan struct{})
+		reader := &failingGatedReader{release: release}
+		svc, _ := newService(t, reader)
 
-	const callers = 16
-	var wg sync.WaitGroup
-	results := make([]bool, callers)
-	for i := range callers {
-		wg.Go(func() { results[i] = svc.Enabled(t.Context(), "module_auth") })
-	}
-	<-reader.started
-	// Callers should be queued on the load before it fails. Enabled cannot
-	// signal that, so the scheduler gets a moment, and the assertion tolerates
-	// a straggler that arrives after the failure (it may legitimately reload).
-	// Before the fix every caller retried: 16 loads.
-	time.Sleep(50 * time.Millisecond)
-	close(release)
-	wg.Wait()
+		const callers = 16
+		var wg sync.WaitGroup
+		results := make([]bool, callers)
+		for i := range callers {
+			wg.Go(func() { results[i] = svc.Enabled(t.Context(), "module_auth") })
+		}
+		synctest.Wait()
+		close(release)
+		wg.Wait()
 
-	assert.Less(t, reader.loads.Load(), int64(callers/2), "waiters reuse the failure of the load they waited on")
-	for i, got := range results {
-		assert.False(t, got, "caller %d", i)
-	}
+		assert.Equal(t, int64(1), reader.loads.Load(), "waiters reuse the failure of the load they waited on")
+		for i, got := range results {
+			assert.False(t, got, "caller %d", i)
+		}
+	})
 }
 
 // The load must not depend on the caller that happened to start it: if that
 // client disconnects, the callers waiting on the same load still get flags.
 func TestLoadSurvivesTheCancellationOfTheCallerThatStartedIt(t *testing.T) {
-	release := make(chan struct{})
-	reader := &gatedReader{release: release, started: make(chan struct{}), keys: []string{"module_auth"}}
-	svc, _ := newService(t, reader)
+	synctest.Test(t, func(t *testing.T) {
+		release := make(chan struct{})
+		reader := &gatedReader{release: release, started: make(chan struct{}), keys: []string{"module_auth"}}
+		svc, _ := newService(t, reader)
 
-	first, cancelFirst := context.WithCancel(t.Context())
-	firstDone := make(chan struct{})
-	go func() { defer close(firstDone); svc.Enabled(first, "module_auth") }()
-	<-reader.started
+		first, cancelFirst := context.WithCancel(t.Context())
+		go svc.Enabled(first, "module_auth")
+		synctest.Wait() // first is the one loading
+		second := make(chan bool, 1)
+		go func() { second <- svc.Enabled(t.Context(), "module_auth") }()
+		synctest.Wait() // second is queued behind it
+		cancelFirst()
+		synctest.Wait()
+		close(release)
 
-	second := make(chan bool, 1)
-	go func() { second <- svc.Enabled(t.Context(), "module_auth") }()
-	cancelFirst()
-	close(release)
-	<-firstDone
-
-	select {
-	case got := <-second:
-		assert.True(t, got, "the load completes for the callers still waiting")
-	case <-time.After(hangGuard):
-		t.Fatal("second caller hangs")
-	}
+		assert.True(t, <-second, "the load completes for the callers still waiting")
+		assert.Equal(t, int64(1), reader.loads.Load(), "second shared the first caller's load")
+	})
 }
 
 func TestDefaultLoadTimeoutIsShort(t *testing.T) {
