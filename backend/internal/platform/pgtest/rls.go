@@ -39,6 +39,7 @@ type Table struct {
 	OwnerColumn string
 }
 
+// String returns the table name, so assertion messages and subtest names read naturally.
 func (t Table) String() string { return t.Name }
 
 // IsolationSpec describes one table for AssertIsolation. Insert writes one row owned
