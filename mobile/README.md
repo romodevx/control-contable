@@ -22,6 +22,15 @@ Flutter client for Control Contable. Stack and pins: [ADR-0001](../docs/adr/0001
 | `make mobile-run-mock` | Runs the dev flavor against the Prism mock, `http://localhost:3001` |
 | `make mobile-run FLAVOR=staging API_BASE_URL=https://…` | Runs another flavor |
 | `make mobile-build-apk FLAVOR=prod API_BASE_URL=https://…` | Obfuscated release APK |
+| `make mobile-build-aab FLAVOR=prod API_BASE_URL=https://…` | Obfuscated release app bundle (Play upload) |
+| `make mobile-cover` | Tests with coverage; fails below 80% on non-generated `lib/` code (`tool/coverage_gate.dart`) |
+| `make mobile-artifact-check FLAVOR=prod` | Fails if the release APK/AAB ships symbols, debug info, `.map` files or `sourceMappingURL` (`tools/mobile/check-release-artifact.sh`; macOS: `READELF=<ndk>/llvm-readelf`) |
+
+CI (`.github/workflows/mobile.yml`) runs format, analyze, `mobile-cover`, then the prod APK +
+AAB build and `mobile-artifact-check`. The split debug info (`build/symbols/prod`) is kept as a
+private CI artifact for crash de-obfuscation and never ships in the app. An AAB's
+`BUNDLE-METADATA/` (native symbol tables, R8 `proguard.map`) is Play-only and allowlisted:
+`flutter build appbundle` refuses to finish without it.
 
 An Android emulator reaches the host as `10.0.2.2`: add `API_BASE_URL=http://10.0.2.2:3000`.
 
