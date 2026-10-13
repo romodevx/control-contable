@@ -66,12 +66,20 @@ func (l *AdvisoryLeader) TryLead(ctx context.Context) (bool, error) {
 
 func (l *AdvisoryLeader) confirm(ctx context.Context) (bool, error) {
 	var held bool
-	err := l.conn.QueryRowContext(ctx, lockHeldQuery, l.key>>32, l.key&0xffffffff).Scan(&held)
+	classID, objID := lockOIDs(l.key)
+	err := l.conn.QueryRowContext(ctx, lockHeldQuery, classID, objID).Scan(&held)
 	if err != nil || !held {
 		l.discard()
 		return false, errors.Join(ErrLeadershipLost, err)
 	}
 	return true, nil
+}
+
+// lockOIDs splits key into the two unsigned 32-bit oids pg_locks shows it as
+// (classid: high half, objid: low half). The halves are taken as uint32, so a
+// negative key does not sign-extend into a value no oid can equal.
+func lockOIDs(key int64) (classID, objID int64) {
+	return int64(uint32(uint64(key) >> 32)), int64(uint32(key)) //nolint:gosec // deliberate bit split
 }
 
 func (l *AdvisoryLeader) acquire(ctx context.Context) (bool, error) {

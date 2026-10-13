@@ -105,6 +105,19 @@ func TestAdvisoryLeader_lostConnectionLosesLeadership(t *testing.T) {
 	assert.Len(t, holders(t, killer), 1)
 }
 
+// pg_locks shows a bigint key as two unsigned 32-bit oids, so a key with the
+// high bit set (negative) must still be confirmed, not lost on every heartbeat.
+func TestAdvisoryLeader_confirmsANegativeKey(t *testing.T) {
+	database := pgtest.NewDatabase(t)
+	const negativeKey int64 = -0x1122334455667788
+	l, err := pgdb.NewAdvisoryLeader(database.Connect(t, pgtest.RoleWorker), negativeKey)
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, l.Resign(context.Background())) })
+
+	require.True(t, tryLead(t, l))
+	assert.True(t, tryLead(t, l), "the leader confirms a negative key's lock")
+}
+
 func TestAdvisoryLeader_aStandbyHoldsNoConnection(t *testing.T) {
 	database := pgtest.NewDatabase(t)
 	a := newLeader(t, database)
