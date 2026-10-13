@@ -14,12 +14,14 @@ final AppConfig testConfig = AppConfig.resolve(flavor: AppFlavor.dev);
 
 /// Boots the whole app the way `bootstrap` does, with [overrides] on top of
 /// the test configuration, the platform in [brightness], and the server
-/// answering `GET /v1/flags` with [enabledModules] (none by default).
+/// answering `GET /v1/flags` with [enabledModules] (none by default), or
+/// through [flagsRepository] when a test scripts several answers.
 Future<void> pumpControlContableApp(
   WidgetTester tester, {
   Brightness brightness = Brightness.light,
   List<Override> overrides = const [],
   Set<AppModule> enabledModules = const {},
+  FlagsRepository? flagsRepository,
 }) async {
   tester.platformDispatcher.platformBrightnessTestValue = brightness;
   addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
@@ -28,7 +30,7 @@ Future<void> pumpControlContableApp(
       overrides: [
         appConfigProvider.overrideWithValue(testConfig),
         flagsRepositoryProvider.overrideWithValue(
-          FakeFlagsRepository(enabledModules),
+          flagsRepository ?? FakeFlagsRepository(enabledModules),
         ),
         ...overrides,
       ],

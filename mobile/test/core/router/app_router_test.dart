@@ -1,4 +1,5 @@
 import 'package:control_contable/core/flags/app_module.dart';
+import 'package:control_contable/core/flags/flags_repository.dart';
 import 'package:control_contable/core/router/app_router.dart';
 import 'package:control_contable/core/router/feature_module.dart';
 import 'package:control_contable/core/router/not_found_screen.dart';
@@ -79,4 +80,79 @@ void main() {
       expect(find.text('pantalla de ingresos'), findsOneWidget);
     });
   });
+
+  group('a flag change on resume', () {
+    const incomesLocation = '/ingresos-prueba';
+    final features = [
+      FeatureModule(
+        module: AppModule.incomes,
+        routes: [
+          GoRoute(
+            path: incomesLocation,
+            builder: (context, state) => const Text('pantalla de ingresos'),
+          ),
+        ],
+      ),
+      FeatureModule(
+        module: AppModule.expenses,
+        routes: [
+          GoRoute(
+            path: '/gastos-prueba',
+            builder: (context, state) => const Text('pantalla de gastos'),
+          ),
+        ],
+      ),
+    ];
+
+    Future<void> openIncomesThenResume(
+      WidgetTester tester,
+      Set<AppModule> afterResume,
+    ) async {
+      await pumpControlContableApp(
+        tester,
+        flagsRepository: _SequenceFlagsRepository([
+          {AppModule.incomes},
+          afterResume,
+        ]),
+        overrides: [featureModulesProvider.overrideWithValue(features)],
+      );
+      _routerOf(tester).go(incomesLocation);
+      await tester.pumpAndSettle();
+      expect(find.text('pantalla de ingresos'), findsOneWidget);
+
+      tester.binding
+        ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+        ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('to another module keeps the user where they were', (
+      tester,
+    ) async {
+      await openIncomesThenResume(tester, {
+        AppModule.incomes,
+        AppModule.expenses,
+      });
+
+      expect(find.text('pantalla de ingresos'), findsOneWidget);
+    });
+
+    testWidgets('turning off the open module shows not found', (tester) async {
+      await openIncomesThenResume(tester, const {});
+
+      expect(find.text('pantalla de ingresos'), findsNothing);
+      expect(find.byType(NotFoundScreen), findsOneWidget);
+    });
+  });
+}
+
+/// Answers each fetch with the next set in [_answers].
+class _SequenceFlagsRepository implements FlagsRepository {
+  new(this._answers);
+
+  final List<Set<AppModule>> _answers;
+  int _calls = 0;
+
+  @override
+  Future<Set<AppModule>> fetchEnabled() async => _answers[_calls++];
 }
