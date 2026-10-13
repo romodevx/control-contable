@@ -18,11 +18,12 @@ type Rule string
 
 // The rules enforced by Check. An empty Rule means the import is allowed.
 const (
-	RuleDomainImports     Rule = "domain-imports"
-	RuleUsecaseFrameworks Rule = "usecase-frameworks"
-	RuleUsecaseOuterLayer Rule = "usecase-outer-layer"
-	RuleCrossModule       Rule = "cross-module"
-	RulePlatformModules   Rule = "platform-modules"
+	RuleDomainImports       Rule = "domain-imports"
+	RuleUsecaseFrameworks   Rule = "usecase-frameworks"
+	RuleUsecaseOuterLayer   Rule = "usecase-outer-layer"
+	RuleCrossModule         Rule = "cross-module"
+	RulePlatformModules     Rule = "platform-modules"
+	RulePurePlatformImports Rule = "pure-platform-imports"
 )
 
 // Violation is one forbidden import found in a non-test Go file.
@@ -32,12 +33,11 @@ type Violation struct {
 	Rule     Rule
 }
 
-// Layer names, as directories under internal/<module>/.
+// Inner layer names, as directories under internal/<module>/. The outer layers
+// (adapter, infra) need no constant: the rules only name what is allowed inward.
 const (
 	layerDomain  = "domain"
 	layerUsecase = "usecase"
-	layerAdapter = "adapter"
-	layerInfra   = "infra"
 )
 
 const (
@@ -46,6 +46,8 @@ const (
 )
 
 // domainPlatformAllowlist lists the pure platform packages a domain may import.
+// They are held to the domain's own import rule, so the domain cannot reach a
+// framework through them.
 var domainPlatformAllowlist = []string{"money"}
 
 // frameworkPrefixes are delivery and persistence details that domain and
@@ -100,9 +102,7 @@ func checkImport(modulePath, importer, imported string) Rule {
 	to := locate(modulePath, imported)
 	switch from.kind {
 	case kindPlatform:
-		if to.kind == kindModule {
-			return RulePlatformModules
-		}
+		return checkPlatformImport(from, to, imported)
 	case kindModule:
 		return checkModuleImport(from, to, imported)
 	}
@@ -122,10 +122,28 @@ func checkModuleImport(from, to location, imported string) Rule {
 	if isFramework(imported) {
 		return RuleUsecaseFrameworks
 	}
-	if to.kind == kindModule && (to.layer == layerAdapter || to.layer == layerInfra) {
+	if to.kind == kindModule && to.layer != layerDomain && to.layer != layerUsecase {
 		return RuleUsecaseOuterLayer
 	}
 	return ""
+}
+
+// checkPlatformImport keeps platform free of modules, and keeps the pure
+// platform packages (domainPlatformAllowlist) as clean as the domain itself.
+func checkPlatformImport(from, to location, imported string) Rule {
+	if to.kind == kindModule {
+		return RulePlatformModules
+	}
+	if !isPurePlatform(from) {
+		return ""
+	}
+	if to.kind == kindExternal && isPureStdlib(imported) {
+		return ""
+	}
+	if to.kind == kindPlatform && isPurePlatform(to) {
+		return ""
+	}
+	return RulePurePlatformImports
 }
 
 // checkDomainImport allows only the standard library (minus frameworks), the
@@ -133,7 +151,7 @@ func checkModuleImport(from, to location, imported string) Rule {
 func checkDomainImport(from, to location, imported string) Rule {
 	switch to.kind {
 	case kindExternal:
-		if isStdlib(imported) && !isFramework(imported) {
+		if isPureStdlib(imported) {
 			return ""
 		}
 	case kindModule:
@@ -141,11 +159,20 @@ func checkDomainImport(from, to location, imported string) Rule {
 			return ""
 		}
 	case kindPlatform:
-		if slices.Contains(domainPlatformAllowlist, to.module) {
+		if isPurePlatform(to) {
 			return ""
 		}
 	}
 	return RuleDomainImports
+}
+
+func isPurePlatform(loc location) bool {
+	return loc.kind == kindPlatform && slices.Contains(domainPlatformAllowlist, loc.module)
+}
+
+// isPureStdlib reports a standard-library package that is not a framework.
+func isPureStdlib(path string) bool {
+	return isStdlib(path) && !isFramework(path)
 }
 
 func isStdlib(path string) bool {

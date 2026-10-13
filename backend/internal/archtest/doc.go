@@ -10,10 +10,14 @@
 //     platform packages in domainPlatformAllowlist.
 //   - usecase-frameworks: a usecase never imports net/http, database/sql,
 //     GORM or pgx.
-//   - usecase-outer-layer: a usecase never imports its own adapter or infra.
+//   - usecase-outer-layer: within its module a usecase imports only domain and
+//     usecase packages (never adapter, infra or any other directory).
 //   - cross-module: no module package imports another module. Modules talk
 //     through ports owned by the consumer, wired in cmd/.
 //   - platform-modules: platform never imports a module.
+//   - pure-platform-imports: a package in domainPlatformAllowlist obeys the
+//     domain rule (standard library minus frameworks, other pure platform
+//     packages), so the domain cannot reach a framework through it.
 //
 // The composition root (cmd/) may import anything.
 package archtest

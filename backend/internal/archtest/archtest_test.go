@@ -36,12 +36,22 @@ func TestCheckImport(t *testing.T) {
 		{"usecase may not import its infra", "internal/ledger/usecase", "internal/ledger/infra", RuleUsecaseOuterLayer},
 		{"usecase may not import its adapter", "internal/ledger/usecase", "internal/ledger/adapter/http", RuleUsecaseOuterLayer},
 		{"usecase may not import another module", "internal/ledger/usecase", "internal/billing/usecase", RuleCrossModule},
+		{"usecase may import a usecase subpackage", "internal/ledger/usecase", "internal/ledger/usecase/port", ""},
+		{"usecase may not import an unknown sibling layer", "internal/ledger/usecase", "internal/ledger/app", RuleUsecaseOuterLayer},
+		{"usecase may not import module root package", "internal/ledger/usecase", "internal/ledger", RuleUsecaseOuterLayer},
 		{"infra may import gorm", "internal/ledger/infra", "gorm.io/gorm", ""},
 		{"infra may import its usecase", "internal/ledger/infra", "internal/ledger/usecase", ""},
 		{"infra may not import another module", "internal/ledger/infra", "internal/billing/usecase", RuleCrossModule},
 		{"adapter may not import another module", "internal/ledger/adapter/http", "internal/billing/domain", RuleCrossModule},
 		{"platform may import platform", "internal/platform/tx", "internal/platform/clock", ""},
 		{"platform may not import a module", "internal/platform/money", "internal/ledger/domain", RulePlatformModules},
+		{"impure platform may import gorm", "internal/platform/tx", "gorm.io/gorm", ""},
+		{"pure platform may import stdlib", "internal/platform/money", "math/bits", ""},
+		{"pure platform may import its own subpackages", "internal/platform/money", "internal/platform/money/round", ""},
+		{"pure platform subpackage is pure too", "internal/platform/money/round", "gorm.io/gorm", RulePurePlatformImports},
+		{"pure platform may not import gorm", "internal/platform/money", "gorm.io/gorm", RulePurePlatformImports},
+		{"pure platform may not import net/http", "internal/platform/money", "net/http", RulePurePlatformImports},
+		{"pure platform may not import impure platform", "internal/platform/money", "internal/platform/tx", RulePurePlatformImports},
 		{"composition root may import anything", "cmd/api", "internal/ledger/infra", ""},
 	}
 	for _, tt := range tests {
@@ -73,6 +83,7 @@ func TestCheckFixtureReportsEveryViolation(t *testing.T) {
 		{File: "internal/ledger/usecase/post.go", Imported: "gorm.io/gorm", Rule: RuleUsecaseFrameworks},
 		{File: "internal/ledger/usecase/post.go", Imported: "net/http", Rule: RuleUsecaseFrameworks},
 		{File: "internal/platform/money/money.go", Imported: "example.com/fx/internal/ledger/domain", Rule: RulePlatformModules},
+		{File: "internal/platform/money/money.go", Imported: "gorm.io/gorm", Rule: RulePurePlatformImports},
 	}
 	assert.Equal(t, want, got)
 }
