@@ -21,6 +21,9 @@
 //   - pure-platform-imports: a package in domainPlatformAllowlist obeys the
 //     domain rule (standard library minus frameworks, other pure platform
 //     packages), so the domain cannot reach a framework through it.
+//   - test-harness: no production file anywhere, cmd/ included, imports the
+//     RLS test harness internal/platform/pgtest (superuser logins, fixed
+//     passwords). Only _test.go files and pgtest itself may.
 //
-// The composition root (cmd/) may import anything.
+// Apart from test-harness, the composition root (cmd/) may import anything.
 package archtest

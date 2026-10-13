@@ -25,6 +25,7 @@ const (
 	RuleCrossModule            Rule = "cross-module"
 	RulePlatformModules        Rule = "platform-modules"
 	RulePurePlatformImports    Rule = "pure-platform-imports"
+	RuleTestHarness            Rule = "test-harness"
 )
 
 // Violation is one forbidden import found in a non-test Go file.
@@ -102,17 +103,29 @@ func elementAt(parts []string, i int) string {
 	return ""
 }
 
+// testHarness is the platform package that only tests may link: it starts
+// containers and logs in as superuser with fixed passwords.
+const testHarness = "pgtest"
+
 // checkImport returns the rule that importer → imported breaks, or "" if allowed.
 func checkImport(modulePath, importer, imported string) Rule {
 	from := locate(modulePath, importer)
 	to := locate(modulePath, imported)
+	var rule Rule
 	switch from.kind {
 	case kindPlatform:
-		return checkPlatformImport(from, to, imported)
+		rule = checkPlatformImport(from, to, imported)
 	case kindModule:
-		return checkModuleImport(from, to, imported)
+		rule = checkModuleImport(from, to, imported)
 	}
-	return ""
+	if rule == "" && isTestHarness(to) && !isTestHarness(from) {
+		return RuleTestHarness
+	}
+	return rule
+}
+
+func isTestHarness(loc location) bool {
+	return loc.kind == kindPlatform && loc.module == testHarness
 }
 
 func checkModuleImport(from, to location, imported string) Rule {
