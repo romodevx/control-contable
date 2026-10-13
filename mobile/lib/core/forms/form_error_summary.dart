@@ -1,16 +1,21 @@
+import 'dart:async';
+
 import 'package:control_contable/core/forms/field_error.dart';
 import 'package:control_contable/core/forms/form_controller.dart';
 import 'package:control_contable/core/theme/app_spacing.dart';
 import 'package:control_contable/core/theme/app_tokens.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 /// Width of the error rule on the summary's leading edge.
 const _ruleWidth = 3.0;
 
 /// The error summary at the top of a form: after a failed submit it lists
-/// every field with an error, takes focus (so screen readers announce it),
-/// and each item moves focus to its field. It hides once every error is
+/// every field with an error, takes focus, is announced to screen readers
+/// (every time: input focus does not move TalkBack/VoiceOver focus, and a
+/// live region stays silent when the count repeats), and each item moves
+/// focus to its field. It hides once every error is
 /// fixed and comes back, focused, on the next failed submit.
 class FormErrorSummary extends StatefulWidget {
   /// The summary of [controller]'s errors.
@@ -39,10 +44,24 @@ class _FormErrorSummaryState extends State<FormErrorSummary> {
     _seenFailures = failures;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      _announce();
       _focusNode.requestFocus();
       final summary = _focusNode.context;
       if (summary != null) Scrollable.ensureVisible(summary);
     });
+  }
+
+  void _announce() {
+    final invalid = widget.controller.invalidFields.length;
+    if (invalid == 0) return;
+    unawaited(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        AppLocalizations.of(context).formErrorSummaryTitle(invalid),
+        Directionality.of(context),
+        assertiveness: Assertiveness.assertive,
+      ),
+    );
   }
 
   @override
@@ -80,7 +99,6 @@ class _FormErrorSummaryState extends State<FormErrorSummary> {
                 children: [
                   Semantics(
                     header: true,
-                    liveRegion: true,
                     child: Text(
                       l10n.formErrorSummaryTitle(invalid.length),
                       style: Theme.of(context).textTheme.titleMedium,

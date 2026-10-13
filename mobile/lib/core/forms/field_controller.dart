@@ -71,6 +71,10 @@ class AppFieldController extends ChangeNotifier {
     if (_error == null) _normalize();
   }
 
+  /// Shows [error], found outside the client checks (the server's verdict).
+  /// Like any shown error, it is re-checked once the value changes.
+  void showError(FieldError error) => _setError(error);
+
   /// Clears the value and any error (used by "Guardar y crear otro").
   void reset() {
     _setError(null);

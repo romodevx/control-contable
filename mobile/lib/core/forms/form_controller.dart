@@ -26,6 +26,7 @@ class AppFormController extends ChangeNotifier {
 
   final List<AppFieldController> _fields = [];
   bool _isSaving = false;
+  bool _isDisposed = false;
   int _submitFailures = 0;
 
   /// The fields, in reading order.
@@ -119,6 +120,19 @@ class AppFormController extends ChangeNotifier {
     }
   }
 
+  /// Shows the server's verdict (it is the authority): each field in
+  /// [errors] shows its error, and the summary reacts as to a failed submit.
+  /// An error clears once the user changes that field's value.
+  void showServerErrors(Map<AppFieldController, FieldError> errors) {
+    if (errors.isEmpty) return;
+    for (final MapEntry(key: field, value: error) in errors.entries) {
+      assert(_fields.contains(field), '${field.label} is not in this form.');
+      field.showError(error);
+    }
+    _submitFailures++;
+    notifyListeners();
+  }
+
   /// Readies the form for the next record ("Guardar y crear otro"): keeps
   /// context fields, clears the rest, and focuses the first cleared field.
   void prepareNext() {
@@ -139,12 +153,15 @@ class AppFormController extends ChangeNotifier {
   }
 
   void _setSaving(bool saving) {
+    // A save can outlive its screen (the user leaves while it is in flight).
+    if (_isDisposed) return;
     _isSaving = saving;
     notifyListeners();
   }
 
   @override
   void dispose() {
+    _isDisposed = true;
     for (final field in _fields) {
       field.dispose();
     }

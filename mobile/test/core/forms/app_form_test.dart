@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:control_contable/core/forms/app_form.dart';
 import 'package:control_contable/core/forms/app_text_field.dart';
 import 'package:control_contable/core/forms/field_controller.dart';
+import 'package:control_contable/core/forms/field_error.dart';
 import 'package:control_contable/core/forms/form_controller.dart';
 import 'package:control_contable/core/forms/form_error_summary.dart';
 import 'package:control_contable/core/forms/typed_field_controllers.dart';
@@ -76,6 +77,37 @@ void main() {
       );
       expect(find.text(_missing), findsWidgets, reason: 'inline errors stay');
       expect(saves, 0);
+    });
+
+    testWidgets('every failed submit is announced to screen readers, '
+        'even when the errors are the same', (tester) async {
+      await pumpIncomeForm(tester);
+      tester.takeAnnouncements();
+
+      for (var attempt = 0; attempt < 2; attempt++) {
+        await tester.tap(primary());
+        await tester.pumpAndSettle();
+      }
+
+      final announced = tester.takeAnnouncements().map((a) => a.message);
+      expect(announced, [
+        'Revisa 3 datos antes de guardar',
+        'Revisa 3 datos antes de guardar',
+      ]);
+    });
+
+    testWidgets('server errors fill the summary like a failed submit', (
+      tester,
+    ) async {
+      await pumpIncomeForm(tester);
+
+      form.showServerErrors({
+        amount: const CustomFieldError('Excede el saldo'),
+      });
+      await tester.pumpAndSettle();
+
+      expect(find.text('Monto: Excede el saldo'), findsOneWidget);
+      expect(find.text('Excede el saldo'), findsOneWidget, reason: 'inline');
     });
 
     testWidgets('each summary item moves focus to its field', (tester) async {

@@ -116,6 +116,55 @@ void main() {
       );
       expect(form.isSaving, isFalse);
     });
+
+    test(
+      'a save that outlives its form does not notify after dispose',
+      () async {
+        final screen = AppFormController();
+        screen.textField(label: 'Nombre').text.text = 'Ana';
+        final pending = Completer<void>();
+
+        final saving = screen.submit(() => pending.future);
+        screen.dispose(); // the user leaves while the request is in flight
+        pending.complete();
+
+        expect(await saving, isTrue);
+      },
+    );
+  });
+
+  group('server errors (the server is the authority)', () {
+    test('show on their fields and count as a failed submit', () {
+      final name = form.textField(label: 'Nombre')..text.text = 'Ana';
+      final amount = form.moneyField(label: 'Monto')..text.text = '10';
+
+      form.showServerErrors({
+        amount: const CustomFieldError('Excede el saldo'),
+      });
+
+      expect(
+        amount.error,
+        isA<CustomFieldError>().having(
+          (e) => e.message,
+          'message',
+          'Excede el saldo',
+        ),
+      );
+      expect(name.error, isNull);
+      expect(form.invalidFields, [amount]);
+      expect(form.submitFailures, 1);
+    });
+
+    test('clear once the user changes the value', () {
+      final amount = form.moneyField(label: 'Monto')..text.text = '10';
+      form.showServerErrors({
+        amount: const CustomFieldError('Excede el saldo'),
+      });
+
+      amount.text.text = '9';
+
+      expect(amount.error, isNull);
+    });
   });
 
   test('prepareNext keeps context fields and clears the rest', () {
