@@ -78,7 +78,10 @@ func TestKeyringCopiesKeyMaterial(t *testing.T) {
 
 // TestEncryptKnownAnswer pins the wire format against NIST GCM test case 14
 // (256-bit zero key, zero IV, 16 zero-byte plaintext): key_id(2, big endian)
-// || nonce(12) || ciphertext || tag(16).
+// || nonce(12) || ciphertext || tag(16). The key_id is the GCM additional data
+// (caller aad empty), so the tag differs from the NIST no-AAD tag; it was
+// computed independently with Node's crypto.createCipheriv("aes-256-gcm")
+// and setAAD(0x0007), which also reproduces the NIST tag without the AAD.
 func TestEncryptKnownAnswer(t *testing.T) {
 	kr, err := NewKeyring(7, map[KeyID][]byte{7: make([]byte, KeySize)})
 	require.NoError(t, err)
@@ -90,7 +93,7 @@ func TestEncryptKnownAnswer(t *testing.T) {
 	want := mustHex(t, "0007"+
 		"000000000000000000000000"+
 		"cea7403d4d606b6e074ec5d3baf39d18"+
-		"d0d1c8a799996bf0265b98b5d48ab919")
+		"3b328dc6085fe6a6dc4031eba2669376")
 	assert.Equal(t, want, got)
 }
 
@@ -167,6 +170,10 @@ func TestDecryptRejectsTamperingAndWrongKeys(t *testing.T) {
 	}
 	onlyB, err := NewKeyring(keyIDA, map[KeyID][]byte{keyIDA: testKeyB})
 	require.NoError(t, err)
+	// The key_id is authenticated: relabelling a ciphertext fails even when
+	// the other id maps to identical key material.
+	sameKeyTwice, err := NewKeyring(keyIDA, map[KeyID][]byte{keyIDA: testKeyA, keyIDB: testKeyA})
+	require.NoError(t, err)
 
 	tests := []struct {
 		name    string
@@ -179,6 +186,7 @@ func TestDecryptRejectsTamperingAndWrongKeys(t *testing.T) {
 		{"flipped tag byte", kr, tamper(len(ct) - 1), aad, ErrDecrypt},
 		{"flipped nonce byte", kr, tamper(keyIDSize), aad, ErrDecrypt},
 		{"key id swapped to another known key", kr, withKeyID(keyIDB), aad, ErrDecrypt},
+		{"key id relabelled to an id holding the same key", sameKeyTwice, withKeyID(keyIDB), aad, ErrDecrypt},
 		{"wrong aad", kr, ct, []byte("taxpayer:2"), ErrDecrypt},
 		{"missing aad", kr, ct, nil, ErrDecrypt},
 		{"same key id, different key material", onlyB, ct, aad, ErrDecrypt},

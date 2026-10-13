@@ -16,8 +16,9 @@ import (
 //
 //	key_id (2 bytes, big endian) || nonce (12 bytes) || ciphertext || tag (16 bytes)
 //
-// The key_id is not part of the additional data: swapping it can only select
-// a different key, and GCM authentication then fails.
+// The GCM additional data is key_id || caller aad, so the key_id is
+// authenticated: GCM is not key-committing, and binding the header means a
+// relabelled ciphertext fails even when two ids hold the same key material.
 const (
 	// KeySize is the AES-256 key length in bytes.
 	KeySize = 32
@@ -96,7 +97,7 @@ func (k *Keyring) Encrypt(plaintext, aad []byte) ([]byte, error) {
 	if _, err := io.ReadFull(k.random, nonce); err != nil {
 		return nil, fmt.Errorf("crypto: read nonce: %w", err)
 	}
-	return k.aeads[k.active].Seal(out, nonce, plaintext, aad), nil
+	return k.aeads[k.active].Seal(out, nonce, plaintext, additionalData(out, aad)), nil
 }
 
 // Decrypt opens a ciphertext made by Encrypt with the key its key_id names.
@@ -111,11 +112,19 @@ func (k *Keyring) Decrypt(ciphertext, aad []byte) ([]byte, error) {
 		return nil, fmt.Errorf("%w: %d", ErrUnknownKeyID, id)
 	}
 	nonce, sealed := ciphertext[keyIDSize:HeaderSize], ciphertext[HeaderSize:]
-	plaintext, err := aead.Open(nil, nonce, sealed, aad)
+	plaintext, err := aead.Open(nil, nonce, sealed, additionalData(ciphertext, aad))
 	if err != nil {
 		return nil, fmt.Errorf("%w: key id %d", ErrDecrypt, id)
 	}
 	return plaintext, nil
+}
+
+// additionalData returns the GCM additional data: the key_id prefix of
+// header followed by the caller's aad, in a fresh slice.
+func additionalData(header, aad []byte) []byte {
+	data := make([]byte, 0, keyIDSize+len(aad))
+	data = append(data, header[:keyIDSize]...)
+	return append(data, aad...)
 }
 
 // Format redacts the keyring for every fmt verb (%v, %+v, %#v, %s), so
