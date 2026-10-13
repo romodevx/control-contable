@@ -16,7 +16,7 @@
 | Flag ON/OFF via real binary + `apply-preset demo_core` / `demo_full` | Pass: OFF answers match the unknown-route answer exactly |
 | Exploratory (paths, bodies, rate limit, SIGTERM, DB down) | **1 defect found and fixed** (hung database held gated requests 60 s) |
 | Full suite | Green on the branch; business-logic coverage 92.0% |
-| CI on `dev` | **Not green: environment** (GitHub Actions billing), not code |
+| CI on `dev` | Green on both pipelines after re-running a run that billing had blocked (environment, not code) |
 
 ## 1. Fresh-clone experience
 
@@ -121,9 +121,11 @@ malformed ids and odd methods.
 
 `gh run list --branch dev`: the latest backend run (P0-27 merge, `38450807531`) **failed in
 4 s**. None of its three jobs started: *"recent account payments have failed or your spending
-limit needs to be increased"*. This is an **environment issue, not a code defect**. The previous
-backend run (P0-16) and mobile run (P0-18) are green. Locally, the same pipeline steps all pass
-on `dev` and on this branch:
+limit needs to be increased"*. This is an **environment issue, not a code defect**. It was
+transient: this PR's run went green, and the blocked `dev` run was re-run (`gh run rerun`) and
+went **green** (lint/codegen/vuln, unit, integration + coverage). The latest mobile run on `dev`
+(P0-18 merge) is green, and no mobile path changed after it. Locally, the same pipeline steps
+all pass on `dev` and on this branch:
 
 | Step | `dev` (`78a1b0c`) | branch |
 |---|---|---|
@@ -134,11 +136,12 @@ on `dev` and on this branch:
 | `codegen-check` | no drift | no drift |
 | `vuln` (govulncheck v1.8.0) | no vulnerabilities | not rerun (no dependency change) |
 
-**Owner action:** fix GitHub billing or the spending limit, then re-run CI on `dev` and on this PR.
+**Owner action:** check the GitHub billing/spending limit. One run was blocked by it, and it
+can block the next one.
 
 ## Environment issues (kept apart from app bugs)
 
-- GitHub Actions jobs blocked by billing (section 5).
+- GitHub Actions jobs were blocked by billing once (section 5); the re-run is green.
 - Port 8080 is taken by an unrelated local stack (F2).
 - The local compose stack is shared by every worktree (F3); nothing collided during this run.
 - The local database was wiped (`make db-reset`) and migrated at the start. The test users
