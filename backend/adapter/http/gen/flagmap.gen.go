@@ -49,6 +49,7 @@ var operationModules = map[string]string{
 	"refreshSession":           "module_auth",          // POST /v1/auth/refresh
 	"register":                 "module_auth",          // POST /v1/auth/register
 	"registerDevice":           "module_reminders",     // POST /v1/devices
+	"resendVerification":       "module_auth",          // POST /v1/auth/verify-email/resend
 	"restoreExpense":           "module_expenses",      // POST /v1/taxpayers/{taxpayerId}/expenses/{expenseId}/restore
 	"restoreIncome":            "module_incomes",       // POST /v1/taxpayers/{taxpayerId}/incomes/{incomeId}/restore
 	"syncSubscription":         "module_subscriptions", // POST /v1/subscription/sync
@@ -112,6 +113,7 @@ var routeModules = map[string]string{
 	"POST /v1/auth/refresh":                                          "module_auth",          // refreshSession
 	"POST /v1/auth/register":                                         "module_auth",          // register
 	"POST /v1/auth/verify-email":                                     "module_auth",          // verifyEmail
+	"POST /v1/auth/verify-email/resend":                              "module_auth",          // resendVerification
 	"POST /v1/devices":                                               "module_reminders",     // registerDevice
 	"POST /v1/subscription/sync":                                     "module_subscriptions", // syncSubscription
 	"POST /v1/taxpayers":                                             "module_taxpayers",     // createTaxpayer
