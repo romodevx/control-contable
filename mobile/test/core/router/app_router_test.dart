@@ -171,6 +171,31 @@ void main() {
       });
     }
 
+    testWidgets('a direct visit to the splash also fails closed in time', (
+      tester,
+    ) async {
+      await pumpControlContableApp(
+        tester,
+        flagsRepository: _PendingFlagsRepository(
+          Completer<Set<AppModule>>().future,
+        ),
+        overrides: [featureModulesProvider.overrideWithValue(features)],
+      );
+      _routerOf(tester).go(
+        Uri(
+          path: AppRoutes.splash,
+          queryParameters: {AppRoutes.splashFrom: location},
+        ).toString(),
+      );
+      await tester.pump();
+      expect(find.byType(BootSplashScreen), findsOneWidget);
+
+      await tester.pump(flagsBootTimeout);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NotFoundScreen), findsOneWidget);
+    });
+
     testWidgets('an unowned location does not wait for the flags', (
       tester,
     ) async {

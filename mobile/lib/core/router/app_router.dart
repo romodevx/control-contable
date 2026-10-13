@@ -81,7 +81,10 @@ String? _redirect(
   RouterFlags flags,
 ) {
   if (state.matchedLocation == AppRoutes.splash) {
-    return flags.isResolved ? _waitingLocation(state.uri) : null;
+    if (flags.isResolved) return _waitingLocation(state.uri);
+    // Reached directly (restored state, a stale link): the wait is bounded.
+    flags.startDeadline();
+    return null;
   }
   final owner = owners.ownerOf(state.topRoute);
   if (owner == null) return null;
