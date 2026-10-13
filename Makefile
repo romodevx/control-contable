@@ -51,7 +51,15 @@ MOBILE_SYMBOLS := build/symbols/$(FLAVOR)
 MOBILE_RELEASE_FLAGS := --release --flavor $(FLAVOR) -t lib/main_$(FLAVOR).dart \
 	--obfuscate --split-debug-info=$(MOBILE_SYMBOLS) $(MOBILE_DEFINES)
 
-.PHONY: mobile-check mobile-run mobile-run-mock mobile-require-api-url mobile-build-apk mobile-build-ipa
+# Coverage gate (P0-25): non-generated lib/ code only (mobile/tool/coverage_gate.dart).
+MOBILE_COVER_MIN ?= 80
+# Release outputs of FLAVOR that the artifact gate inspects (paths fixed by the Flutter tool).
+MOBILE_APK := $(MOBILE)/build/app/outputs/flutter-apk/app-$(FLAVOR)-release.apk
+MOBILE_AAB := $(MOBILE)/build/app/outputs/bundle/$(FLAVOR)Release/app-$(FLAVOR)-release.aab
+MOBILE_ARTIFACT_GATE := tools/mobile/check-release-artifact.sh
+
+.PHONY: mobile-check mobile-run mobile-run-mock mobile-require-api-url mobile-build-apk mobile-build-ipa \
+	mobile-build-aab mobile-cover mobile-artifact-check mobile-artifact-check-test
 
 ## mobile-check: format check, analyze (0 issues), widget/unit tests
 mobile-check:
@@ -74,6 +82,22 @@ mobile-require-api-url:
 ## mobile-build-apk: obfuscated release APK for FLAVOR, symbols split out of the artifact
 mobile-build-apk: mobile-require-api-url
 	cd $(MOBILE) && flutter build apk $(MOBILE_RELEASE_FLAGS)
+
+## mobile-build-aab: obfuscated release app bundle (Play upload) for FLAVOR, symbols split out
+mobile-build-aab: mobile-require-api-url
+	cd $(MOBILE) && flutter build appbundle $(MOBILE_RELEASE_FLAGS)
+
+## mobile-cover: tests with coverage, then fail below MOBILE_COVER_MIN% on non-generated lib/ code
+mobile-cover:
+	cd $(MOBILE) && flutter test --coverage && dart run tool/coverage_gate.dart coverage/lcov.info $(MOBILE_COVER_MIN)
+
+## mobile-artifact-check: fail if FLAVOR's release APK/AAB ships symbols, debug info or source maps
+mobile-artifact-check:
+	$(MOBILE_ARTIFACT_GATE) $(MOBILE_APK) $(MOBILE_AAB)
+
+## mobile-artifact-check-test: prove the artifact gate rejects what it should (Linux; see the script for macOS)
+mobile-artifact-check-test:
+	tools/mobile/check-release-artifact_test.sh
 
 ## mobile-build-ipa: obfuscated release IPA for FLAVOR (needs Xcode + the iOS schemes, OB6)
 mobile-build-ipa: mobile-require-api-url

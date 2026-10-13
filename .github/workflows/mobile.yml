@@ -1,0 +1,169 @@
+name: mobile
+
+# P0-25 (ADR-0001, ADR-0003, frontend-build.md): every mobile gate runs on PRs and on pushes to
+# the long-lived branches. docs/api/** is included because the Dart client is generated from
+# the contract (drift). Order fails fast: format/analyze/tests before the release build.
+on:
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - 'docs/api/**'
+      - 'tools/mobile/**'
+      - 'Makefile'
+      - '.github/workflows/mobile.yml'
+  push:
+    branches: [dev, main]
+    paths:
+      - 'mobile/**'
+      - 'docs/api/**'
+      - 'tools/mobile/**'
+      - 'Makefile'
+      - '.github/workflows/mobile.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Pinned toolchain (ADR-0001); bump together with mobile/pubspec.yaml `environment.flutter`.
+  FLUTTER_VERSION: 3.47.7
+  # Dummy endpoint: prod refuses to build without an HTTPS API_BASE_URL (AppConfig); CI never
+  # talks to it. `.invalid` is reserved (RFC 2606) so it can never resolve.
+  CI_API_BASE_URL: https://api.ci.invalid
+
+jobs:
+  check:
+    name: Format, analyze, tests + coverage gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+          # The action keys the pub cache on the SDK only; ours keys on pubspec.lock below.
+          pub-cache: false
+      - name: Pub cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ env.FLUTTER_VERSION }}-${{ hashFiles('mobile/pubspec.lock') }}
+          restore-keys: pub-${{ runner.os }}-${{ env.FLUTTER_VERSION }}-
+      - name: Resolve dependencies (lockfile enforced)
+        working-directory: mobile
+        run: flutter pub get --enforce-lockfile
+      # pub get regenerates lib/l10n; a diff means the committed localizations are stale.
+      - name: Generated localizations are committed
+        run: git diff --exit-code -- mobile
+      - name: dart format
+        working-directory: mobile
+        run: dart format --set-exit-if-changed .
+      - name: flutter analyze
+        working-directory: mobile
+        run: flutter analyze
+      - name: Tests + coverage gate (>= 80% non-generated lib/)
+        run: make mobile-cover
+      - name: Upload coverage
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mobile-coverage
+          path: mobile/coverage/lcov.info
+          if-no-files-found: ignore
+          retention-days: 14
+
+  client:
+    name: Dart client drift + ADR-0003 kind guard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # TODO(P0-23): `make mobile-client` (normalizer + check_generated_kinds.dart, ADR-0003) is
+    # being built concurrently. Each step below runs only once mobile/tool/check_generated_kinds.dart
+    # exists, so this job turns itself on when P0-23 merges; until then it warns and passes.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: P0-23 not on this branch yet
+        if: ${{ hashFiles('mobile/tool/check_generated_kinds.dart') == '' }}
+        run: echo "::warning title=P0-23 pending::make mobile-client is not on this branch; client drift and kind checks skipped"
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        if: ${{ hashFiles('mobile/tool/check_generated_kinds.dart') != '' }}
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+          pub-cache: false
+      - name: Pub cache
+        if: ${{ hashFiles('mobile/tool/check_generated_kinds.dart') != '' }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ env.FLUTTER_VERSION }}-${{ hashFiles('mobile/pubspec.lock') }}
+          restore-keys: pub-${{ runner.os }}-${{ env.FLUTTER_VERSION }}-
+      - name: Regenerate the client (normalizer + kind guard)
+        if: ${{ hashFiles('mobile/tool/check_generated_kinds.dart') != '' }}
+        run: make mobile-client
+      - name: Client drift (generated code matches docs/api/openapi.yaml)
+        if: ${{ hashFiles('mobile/tool/check_generated_kinds.dart') != '' }}
+        run: |
+          git add --intent-to-add --all -- mobile
+          git diff --exit-code -- mobile
+
+  release-android:
+    name: Release build (prod, obfuscated) + artifact gate
+    needs: check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Prove the gate rejects symbols/maps before trusting its verdict on the real build.
+      - name: Artifact gate self-test
+        run: make mobile-artifact-check-test
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+          cache-dependency-path: |
+            mobile/android/*.gradle.kts
+            mobile/android/app/*.gradle.kts
+            mobile/android/gradle/wrapper/gradle-wrapper.properties
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+          pub-cache: false
+      - name: Pub cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ env.FLUTTER_VERSION }}-${{ hashFiles('mobile/pubspec.lock') }}
+          restore-keys: pub-${{ runner.os }}-${{ env.FLUTTER_VERSION }}-
+      - name: Resolve dependencies (lockfile enforced)
+        working-directory: mobile
+        run: flutter pub get --enforce-lockfile
+      - name: Build release APK (prod, --obfuscate --split-debug-info)
+        run: make mobile-build-apk FLAVOR=prod API_BASE_URL="$CI_API_BASE_URL"
+      - name: Build release app bundle (prod, --obfuscate --split-debug-info)
+        run: make mobile-build-aab FLAVOR=prod API_BASE_URL="$CI_API_BASE_URL"
+      - name: Artifact gate (no symbols, debug info or source maps shipped)
+        run: make mobile-artifact-check FLAVOR=prod
+      # Dart symbols for crash de-obfuscation: kept as a private CI artifact, never in the app.
+      # REL-04 replaces this with an upload to crash reporting.
+      - name: Upload split debug info (private)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mobile-prod-debug-symbols
+          path: mobile/build/symbols/prod
+          if-no-files-found: error
+          retention-days: 30
