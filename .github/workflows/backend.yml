@@ -2,19 +2,13 @@ name: backend
 
 # P0-19 (ADR-0001): every backend gate runs on PRs and on pushes to the long-lived
 # branches. docs/api/** is included because the generated server and the flag map
-# are derived from the contract (codegen drift). Contract lint stays in contract.yml.
+# are derived from the contract (codegen drift); infra/local/** because the
+# integration harness bootstraps its roles with infra/local's own scripts (P0-30).
+# Contract lint stays in contract.yml.
 on:
   pull_request:
-    paths:
-      - 'backend/**'
-      - 'docs/api/**'
-      - '.github/workflows/backend.yml'
   push:
     branches: [dev, main]
-    paths:
-      - 'backend/**'
-      - 'docs/api/**'
-      - '.github/workflows/backend.yml'
 
 permissions:
   contents: read
@@ -28,8 +22,41 @@ defaults:
     working-directory: backend
 
 jobs:
+  # Branch protection requires the `-ok` job below, so this workflow runs on every PR
+  # and decides here whether its gates apply (a workflow-level `paths` filter would leave
+  # the required check "expected" forever on PRs that do not touch these paths).
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: .
+    outputs:
+      run: ${{ steps.filter.outputs.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      # On a PR, HEAD is the merge commit and HEAD^1 the base tip, so the diff is exactly
+      # what the PR changes. Pushes to dev/main always run every gate.
+      - name: Paths this workflow gates
+        id: filter
+        env:
+          EVENT: ${{ github.event_name }}
+          PATTERN: '^(backend/|docs/api/|infra/local/|\.github/workflows/backend\.yml$)'
+        run: |
+          if [ "$EVENT" != "pull_request" ] || git diff --name-only HEAD^1 HEAD | grep -qE "$PATTERN"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
   static:
     name: gofmt, golangci-lint, codegen drift, govulncheck
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -49,11 +76,21 @@ jobs:
           working-directory: backend
       - name: Codegen drift (adapter/http/gen vs docs/api/openapi.yaml)
         run: make codegen-check
-      - name: govulncheck
-        run: make vuln
+      # Test and integration code too (P0-30): testcontainers and its tar handling run in
+      # CI, so a vulnerability reachable only from tests still matters.
+      - name: govulncheck (production, test and integration code)
+        run: make vuln PKGS="-test -tags=integration ./..."
+      # infra/local is bootstrapped by the integration harness, so its scripts are gated here.
+      - name: Local-stack scripts (shellcheck + reset-guard tests)
+        working-directory: .
+        run: |
+          shellcheck infra/local/scripts/*.sh infra/local/postgres/initdb/*.sh
+          infra/local/scripts/assert-local_test.sh
 
   unit:
     name: Unit tests (-race)
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -69,6 +106,8 @@ jobs:
 
   integration:
     name: Integration tests (testcontainers) + coverage gate
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -95,3 +134,28 @@ jobs:
           path: backend/coverage.out
           if-no-files-found: error
           retention-days: 14
+
+  # The single required status check for this workflow. It always runs and fails unless
+  # every gate succeeded or was skipped because the PR does not touch this workflow's
+  # paths. A gate skipped because `changes` failed makes `changes` a failure here.
+  ok:
+    name: backend-ok
+    if: ${{ always() }}
+    needs: [changes, static, unit, integration]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - name: Every gate passed or did not apply
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for result in $RESULTS; do
+            case "$result" in
+              success|skipped) ;;
+              *) echo "a gate ended '$result'"; exit 1 ;;
+            esac
+          done
+          echo "results: $RESULTS"
