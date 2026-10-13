@@ -21,10 +21,10 @@ func TestMain(m *testing.M) {
 	os.Exit(pgtest.Main(m))
 }
 
-// Tables of the first (baseline) and the latest (identity) migration.
+// Tables of the first (baseline) and the latest (auth service) migration.
 const (
 	baselineTable = "public.feature_flags"
-	latestTable   = "public.users"
+	latestTable   = "public.trial_registry"
 )
 
 func tableExists(t *testing.T, db *sql.DB, name string) bool {

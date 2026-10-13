@@ -84,16 +84,21 @@ func TestBootstrap_RuntimeRolesArePlainLogins(t *testing.T) {
 // default ACL, so PUBLIC (every runtime role) could log in to "postgres" and
 // "template1" and create temp objects there. The bootstrap revokes that, and
 // no bootstrap role may replicate or reach another role through membership
-// (SET ROLE would hand a NOINHERIT runtime role that role's privileges).
+// (SET ROLE would hand a NOINHERIT runtime role that role's privileges). The one
+// exception: cc_owner may SET ROLE to the NOLOGIN cc_auth_definer, inheriting nothing.
 func TestBootstrap_RolesCannotReachMaintenanceDatabasesOrOtherRoles(t *testing.T) {
 	db := pgtest.NewDatabase(t)
 	for _, role := range []pgtest.Role{pgtest.RoleOwner, pgtest.RoleApp, pgtest.RoleWebhook, pgtest.RoleWorker} {
 		t.Run(string(role), func(t *testing.T) {
 			conn := db.Connect(t, role)
 			var replication, memberOfAny bool
+			// The one allowed membership: cc_owner may SET ROLE to the NOLOGIN definer role
+			// (it hands it the auth definer functions) without inheriting anything (M1-03).
 			require.NoError(t, conn.QueryRowContext(t.Context(), `
 				SELECT r.rolreplication,
-				       EXISTS (SELECT 1 FROM pg_auth_members m WHERE m.member = r.oid)
+				       EXISTS (SELECT 1 FROM pg_auth_members m WHERE m.member = r.oid
+				               AND NOT (r.rolname = 'cc_owner' AND m.roleid = 'cc_auth_definer'::regrole
+				                        AND NOT m.inherit_option AND NOT m.admin_option))
 				FROM pg_roles r WHERE r.rolname = current_user`).Scan(&replication, &memberOfAny))
 			assert.False(t, replication, "REPLICATION")
 			assert.False(t, memberOfAny, "member of another role")

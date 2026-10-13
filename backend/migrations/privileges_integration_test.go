@@ -12,10 +12,10 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/pgtest"
 )
 
-// queryStrings returns the first column of every row of query.
-func queryStrings(t *testing.T, db *sql.DB, query string) []string {
+// queryStrings returns the first column of every row of query (with args bound).
+func queryStrings(t *testing.T, db *sql.DB, query string, args ...any) []string {
 	t.Helper()
-	rows, err := db.QueryContext(t.Context(), query)
+	rows, err := db.QueryContext(t.Context(), query, args...)
 	require.NoError(t, err)
 	defer rows.Close()
 	var out []string
@@ -72,7 +72,9 @@ var unforcedTables = map[string]string{
 	"feature_flags":       "global module flags (baseline)",
 	"flag_presets":        "global presets (baseline)",
 	"flag_preset_flags":   "global presets (baseline)",
-	"email_verifications": "service-only; definer functions owned by cc_owner",
+	"email_verifications": "service-only; reached by cc_auth_definer through its own policy",
+	"trial_registry":      "service-only; reached by cc_auth_definer through its own policy",
+	"legal_documents":     "global legal document versions (M1-03)",
 }
 
 // rlsGapsQuery lists every table in public that lacks ENABLE, or lacks FORCE without

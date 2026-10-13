@@ -83,10 +83,12 @@ erDiagram
         timestamptz accepted_at
     }
     legal_documents {
-        text kind PK
+        text kind PK "privacy_notice_integral|privacy_notice_simplified|terms"
         text version PK
-        text url
-        timestamptz published_at
+        text url "https"
+        bytea content_sha256 "required once approved"
+        timestamptz effective_at UK "unique per kind; API published_at"
+        text review_status "pending_legal_review|approved"
     }
     trial_registry {
         bytea email_hash PK "HMAC; survives account deletion"
@@ -94,7 +96,7 @@ erDiagram
     }
     email_verifications {
         bytea email_hash PK "HMAC; one pending sign-up per email"
-        bytea code_hash "sha256 of the 6-digit code"
+        bytea code_hash "HMAC (server key) of the 6-digit code"
         jsonb pending "password_hash, name, accepted document versions"
         smallint attempts
         timestamptz expires_at
@@ -324,17 +326,25 @@ against `entitlements.ends_at`.
 | `cc_app` | DML on user tables (subject to RLS), SELECT on catalogs. **NOBYPASSRLS, not owner** | API |
 | `cc_webhook` | INSERT/UPDATE `revenuecat_events`; DML on `subscriptions`, `entitlements` (subject to RLS) | Webhook handler (separate pool) |
 | `cc_worker` | EXECUTE `due_reminder_users()`, `purge_soft_deleted()`; DML on reminder tables (subject to RLS) | Worker |
+| `cc_auth_definer` | **NOLOGIN, NOBYPASSRLS.** Owns the auth definer functions; column grants + policies scoped to the email HMAC bound by the running function (`app.auth_email_hash`). `cc_owner` is a member `WITH INHERIT FALSE, SET TRUE` (ownership transfer only) | Auth definer functions (M1-03) |
 
-`SECURITY DEFINER` functions (owned by `cc_owner`, `SET search_path = pg_catalog, public`,
-narrow return types) are the only ways to read across users:
-- `auth_lookup_credentials(email)` returns `(user_id, password_hash)` and is used by login
-  only.
+`SECURITY DEFINER` functions (`SET search_path = pg_catalog, public, pg_temp`, every
+reference schema-qualified, narrow return types) are the only ways to read across users.
+The auth ones (M1-03) are owned by `cc_auth_definer`, not `cc_owner`: under FORCE RLS a
+`cc_owner`-owned function sees no `users` row. Each binds its email HMAC argument to
+`app.auth_email_hash` (transaction-local) and the role's policies match only that row;
+EXECUTE goes to `cc_app` only.
+- `auth_lookup_credentials(email_hash)` returns `(id, password_hash, status)` and is used
+  by login only.
 - `due_reminder_users(ts)` returns user ids only.
 - `purge_soft_deleted(before)` returns a count.
-- `trial_registry_check_and_insert(email_hash)`.
-- `email_verification_upsert(email_hash, code_hash, pending, expires_at)` and
-  `email_verification_consume(email_hash, code_hash)` (bounded attempts; returns the
-  pending sign-up once, then deletes it). `verifyEmail` then creates `users`,
+- `trial_registry_check_and_insert(email_hash)` returns true on an email's first trial
+  only, ever (the registry survives account deletion).
+- `email_verification_upsert(email_hash, code_hash, pending, expires_at)` (expiry within
+  1 hour; a resend replaces the code and resets attempts) and
+  `email_verification_consume(email_hash, code_hash)` returning `(outcome, pending)`:
+  `verified` (row deleted, single use), `invalid`, `expired`, or `locked` after 5 wrong
+  attempts. The caller commits every non-`verified` outcome so the attempt counts. `verifyEmail` then creates `users`,
   `user_usage` (zeroed counters, so the trial-cap UPDATE always finds its row),
   `consents` and the trial `entitlements` row in one transaction under the new
   user's context.
@@ -380,7 +390,8 @@ Every table below has `ENABLE` + `FORCE ROW LEVEL SECURITY` in its first migrati
 
 "owner" = `user_id = (SELECT app_user_id())`.
 
-**No RLS (global, read-only to `cc_app`).** feature_flags, flag_presets, legal_documents,
+**No user-scoped RLS (global, read-only to `cc_app`).** feature_flags, flag_presets, legal_documents
+(ENABLE, one `SELECT TO cc_app` policy; v1 rows are placeholders pending legal review),
 regimes, regime_compatibility, expense_categories, category_regime_rules, holidays. Writes
 happen through migrations only. Flag toggles happen through an admin migration or CLI as
 `cc_owner`.
@@ -394,11 +405,12 @@ owner, but they do ENABLE (not FORCE) row level security as defense in depth:
   junction table, not a `text[]`, so foreign keys keep every preset pointing at real flags.
 
 **Service-only (no grant to `cc_app`).**
-- `trial_registry`: through the definer function only.
+- `trial_registry`: through the definer function only (ENABLE, not FORCE; policies for
+  `cc_auth_definer` only).
 - `email_verifications`: through the definer functions only (pre-account, so no `user_id`
   exists to key RLS on). Rows expire; the purge job removes them. The table ships in P0-11
-  with ENABLE (not FORCE) RLS and no policy, so a mistaken grant still sees no row while
-  cc_owner's definer functions (M1-03) can reach it.
+  with ENABLE (not FORCE) RLS; its only policy (M1-03) is for `cc_auth_definer`, so a
+  mistaken runtime grant still sees no row.
 - `revenuecat_events`: `cc_webhook` only, no RLS. It is not user-readable, and its payload
   holds no RFC or financial data.
 

@@ -6,6 +6,12 @@
 --   cc_app      API. LOGIN, not owner, NOBYPASSRLS. CONNECT + USAGE only here.
 --   cc_webhook  RevenueCat webhook pool. Same posture as cc_app.
 --   cc_worker   Worker. Same posture as cc_app.
+--   cc_auth_definer
+--               NOLOGIN, NOBYPASSRLS. Owns the auth SECURITY DEFINER functions (M1-03)
+--               and reaches only the rows its narrow RLS policies allow. cc_owner is a
+--               member WITH INHERIT FALSE, SET TRUE: it may SET ROLE to it (needed to hand
+--               it the functions and to drop them on Down) but never inherits its
+--               privileges or policies. No runtime role is a member.
 -- Table, sequence and function grants are NOT given here: they belong to the versioned
 -- baseline migration (P0-10), which cc_owner runs, so every environment gets the same grants.
 -- None of the roles is SUPERUSER, CREATEDB, CREATEROLE, REPLICATION or BYPASSRLS.
@@ -20,6 +26,8 @@ CREATE ROLE cc_webhook LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION N
   PASSWORD :'cc_webhook_password';
 CREATE ROLE cc_worker  LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT
   PASSWORD :'cc_worker_password';
+CREATE ROLE cc_auth_definer NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT;
+GRANT cc_auth_definer TO cc_owner WITH INHERIT FALSE, SET TRUE;
 
 -- Runtime roles fail fast instead of piling up on locks or idle transactions.
 ALTER ROLE cc_app     SET statement_timeout = '15s';
