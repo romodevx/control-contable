@@ -89,6 +89,7 @@ type setup struct {
 	denyAuthn bool
 	incomeErr error
 	maxBody   int64
+	notBuilt  []string
 }
 
 func newHarness(t testing.TB, s setup) *harness {
@@ -102,6 +103,7 @@ func newHarness(t testing.TB, s setup) *harness {
 		Authn:        recordingAuthn{deny: s.denyAuthn, paths: &h.authnSeen},
 		Logger:       logging.New(&h.logs, nil),
 		MaxBodyBytes: s.maxBody,
+		NotBuilt:     s.notBuilt,
 	})
 	require.NoError(t, err)
 	return h
@@ -352,6 +354,58 @@ func TestNew_failsClosedWhenARouteHasNoOperation(t *testing.T) {
 	_, err = router.New(fakeAPI{}, &pruned, router.Options{Flags: flagSet{}, Authn: router.NoAuthentication{}, Logger: logging.New(&bytes.Buffer{}, nil)})
 
 	assert.ErrorContains(t, err, "GET /healthz")
+}
+
+// P0-29 FU2: an operation whose module is ON but whose handler is not built
+// yet answers exactly like a hidden module, before authentication, validation
+// or the handler: never a panic, a 500 or a 400 that reveals its schema.
+func TestNotBuilt_answersLikeAHiddenModuleWithTheFlagOn(t *testing.T) {
+	tests := []struct {
+		name, method, target, body string
+	}{
+		{name: "valid request", method: http.MethodPost, target: "/v1/auth/login", body: validLogin},
+		{name: "schema-invalid body", method: http.MethodPost, target: "/v1/auth/login", body: `{"email":1}`},
+		{name: "secured operation", method: http.MethodGet, target: incomesURL},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newHarness(t, setup{
+				flags:     flagSet{"module_auth": true, "module_incomes": true},
+				denyAuthn: true,
+				notBuilt:  []string{"login", "listIncomes"},
+			})
+
+			rec := h.do(tt.method, tt.target, tt.body)
+
+			assert.Equal(t, http.StatusNotFound, rec.Code)
+			body := envelope(t, rec)
+			assert.Equal(t, apperr.CodeNotFound, body.Code)
+			assert.Equal(t, "Not found.", body.Message)
+			assert.Empty(t, h.calls, "the handler never runs")
+			assert.Empty(t, h.authnSeen, "authentication never runs")
+		})
+	}
+}
+
+func TestNotBuilt_leavesTheOtherOperationsAlone(t *testing.T) {
+	h := newHarness(t, setup{flags: flagSet{"module_auth": true}, notBuilt: []string{"listIncomes"}})
+
+	rec := h.do(http.MethodPost, "/v1/auth/login", validLogin)
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code, "the fake login answers 401 itself")
+	assert.Equal(t, []string{"login"}, h.calls)
+}
+
+func TestNew_failsOnANotBuiltOperationTheContractLacks(t *testing.T) {
+	spec, err := gen.GetSpec()
+	require.NoError(t, err)
+
+	_, err = router.New(fakeAPI{}, spec, router.Options{
+		Flags: flagSet{}, Authn: router.NoAuthentication{}, Logger: logging.New(&bytes.Buffer{}, nil),
+		NotBuilt: []string{"login", "noSuchOperation"},
+	})
+
+	assert.ErrorContains(t, err, "noSuchOperation")
 }
 
 func TestDefaults(t *testing.T) {

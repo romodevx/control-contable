@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -47,6 +48,7 @@ func TestLoad(t *testing.T) {
 			want: config.Config{
 				Env: config.EnvDev, HTTPAddr: ":8080", LogLevel: slog.LevelInfo,
 				RateLimit: config.RateLimit{PerSecond: 10, Burst: 20}, TrustedProxyHops: 0,
+				RequestTimeout: 10 * time.Second,
 			},
 		},
 		{
@@ -54,11 +56,13 @@ func TestLoad(t *testing.T) {
 			env: map[string]string{
 				"APP_ENV": "production", "PORT": "9090", "LOG_LEVEL": "debug",
 				"RATE_LIMIT_RPS": "5", "RATE_LIMIT_BURST": "7", "TRUSTED_PROXY_HOPS": "1",
+				"REQUEST_TIMEOUT": "4s",
 			},
 			secrets: stubSecrets{},
 			want: config.Config{
 				Env: config.EnvProduction, HTTPAddr: ":9090", LogLevel: slog.LevelDebug,
 				RateLimit: config.RateLimit{PerSecond: 5, Burst: 7}, TrustedProxyHops: 1,
+				RequestTimeout: 4 * time.Second,
 			},
 		},
 		{
@@ -67,7 +71,8 @@ func TestLoad(t *testing.T) {
 			secrets: stubSecrets{},
 			want: config.Config{
 				Env: config.EnvStaging, HTTPAddr: ":8080", LogLevel: slog.LevelWarn,
-				RateLimit: config.RateLimit{PerSecond: 10, Burst: 20},
+				RateLimit:      config.RateLimit{PerSecond: 10, Burst: 20},
+				RequestTimeout: 10 * time.Second,
 			},
 		},
 	}
@@ -155,6 +160,23 @@ func TestLoad_errors(t *testing.T) {
 			name:     "TRUSTED_PROXY_HOPS empty in production",
 			env:      map[string]string{"APP_ENV": "production", "TRUSTED_PROXY_HOPS": ""},
 			wantErrs: []string{"TRUSTED_PROXY_HOPS is required when APP_ENV is production"},
+		},
+		{
+			name:     "REQUEST_TIMEOUT not a duration",
+			env:      map[string]string{"APP_ENV": "dev", "REQUEST_TIMEOUT": "10"},
+			wantErrs: []string{`REQUEST_TIMEOUT "10" is not a duration in [1s, 25s]`},
+		},
+		{
+			// It must stay under the server's 30 s WriteTimeout, so the client
+			// still receives the 500 the deadline produces.
+			name:     "REQUEST_TIMEOUT above the bound",
+			env:      map[string]string{"APP_ENV": "dev", "REQUEST_TIMEOUT": "30s"},
+			wantErrs: []string{`REQUEST_TIMEOUT "30s" is not a duration in [1s, 25s]`},
+		},
+		{
+			name:     "REQUEST_TIMEOUT below the bound",
+			env:      map[string]string{"APP_ENV": "dev", "REQUEST_TIMEOUT": "500ms"},
+			wantErrs: []string{`REQUEST_TIMEOUT "500ms" is not a duration in [1s, 25s]`},
 		},
 		{
 			name:     "missing secret",

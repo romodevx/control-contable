@@ -71,6 +71,11 @@ type Options struct {
 	Logger *slog.Logger
 	// MaxBodyBytes caps the request body; 0 means DefaultMaxBodyBytes.
 	MaxBodyBytes int64
+	// NotBuilt lists the operationIds whose handler does not exist yet
+	// (P0-29 FU2). They answer the hidden-module 404 whatever their flag,
+	// before authentication, validation or the handler, so turning a module
+	// ON before it is built shows nothing new and never reaches a stub.
+	NotBuilt []string
 }
 
 // New returns the handler serving every operation of spec through si. It
@@ -86,7 +91,11 @@ func New(si gen.StrictServerInterface, spec *openapi3.T, opts Options) (http.Han
 		RequestErrorHandlerFunc:  errs.badRequest,
 		ResponseErrorHandlerFunc: errs.handlerError,
 	})
-	reg := &registrar{mux: http.NewServeMux(), spec: spec, opts: opts, errs: errs}
+	notBuilt, err := knownOperations(spec, opts.NotBuilt)
+	if err != nil {
+		return nil, fmt.Errorf("router: %w", err)
+	}
+	reg := &registrar{mux: http.NewServeMux(), spec: spec, opts: opts, errs: errs, notBuilt: notBuilt}
 	handler := gen.HandlerWithOptions(strict, gen.StdHTTPServerOptions{
 		BaseRouter:       reg,
 		ErrorHandlerFunc: errs.badRequest,
@@ -104,6 +113,7 @@ type registrar struct {
 	spec     *openapi3.T
 	opts     Options
 	errs     errorWriter
+	notBuilt map[string]bool // operationIds answered with the hidden-module 404
 	failures []error
 }
 
@@ -117,6 +127,10 @@ func (g *registrar) HandleFunc(pattern string, handler func(http.ResponseWriter,
 	route, err := findRoute(g.spec, pattern)
 	if err != nil {
 		g.failures = append(g.failures, err)
+		return
+	}
+	if g.notBuilt[route.Operation.OperationID] {
+		g.mux.Handle(pattern, http.HandlerFunc(flaggate.WriteNotFound))
 		return
 	}
 	var next http.Handler = http.HandlerFunc(handler)
@@ -170,6 +184,26 @@ func findRoute(spec *openapi3.T, pattern string) (*routers.Route, error) {
 		return nil, fmt.Errorf("route %q has no operation in the contract", pattern)
 	}
 	return &routers.Route{Spec: spec, Path: path, PathItem: item, Method: method, Operation: item.GetOperation(method)}, nil
+}
+
+// knownOperations returns ids as a set, failing on an id the contract does
+// not declare: a typo would otherwise leave a stub reachable.
+func knownOperations(spec *openapi3.T, ids []string) (map[string]bool, error) {
+	declared := map[string]bool{}
+	for _, item := range spec.Paths.Map() {
+		for _, op := range item.Operations() {
+			declared[op.OperationID] = true
+		}
+	}
+	set := make(map[string]bool, len(ids))
+	var unknown []error
+	for _, id := range ids {
+		if !declared[id] {
+			unknown = append(unknown, fmt.Errorf("not-built operation %q is not in the contract", id))
+		}
+		set[id] = true
+	}
+	return set, errors.Join(unknown...)
 }
 
 // isPublic reports whether the operation opts out of security with

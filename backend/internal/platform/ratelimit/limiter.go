@@ -35,7 +35,16 @@ func New(perSecond, burst int, now func() time.Time) *Limiter {
 	if perSecond < 1 || burst < 1 {
 		panic(fmt.Sprintf("ratelimit: perSecond (%d) and burst (%d) must be positive", perSecond, burst))
 	}
-	interval := time.Second / time.Duration(perSecond)
+	return NewEvery(time.Second/time.Duration(perSecond), burst, now)
+}
+
+// NewEvery returns a Limiter refilling one token every interval up to burst:
+// the form for slow rates such as "once per hour" (interval time.Hour,
+// burst 1). It panics on non-positive settings, like New.
+func NewEvery(interval time.Duration, burst int, now func() time.Time) *Limiter {
+	if interval <= 0 || burst < 1 {
+		panic(fmt.Sprintf("ratelimit: interval (%s) and burst (%d) must be positive", interval, burst))
+	}
 	return &Limiter{
 		interval:  interval,
 		tolerance: interval * time.Duration(burst),
