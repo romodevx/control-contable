@@ -125,6 +125,19 @@ paths:
 			wantErr: []string{"GET /a", "GET /b"},
 		},
 		{
+			// A $ref path item hides its operations from this parser; skipping it
+			// would silently drop them from the flag map (fail open).
+			name: "path item $ref fails instead of dropping its operations",
+			spec: `
+paths:
+  /a:
+    get: { operationId: a, x-module: module_a }
+  /b:
+    $ref: './paths/b.yaml'
+`,
+			wantErr: []string{"/b", "$ref"},
+		},
+		{
 			name:    "a spec without operations fails",
 			spec:    "openapi: 3.1.0\npaths: {}\n",
 			wantErr: []string{"no operations"},
