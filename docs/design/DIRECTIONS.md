@@ -39,8 +39,8 @@ These are fixed. Only the look changes between directions.
   checked separately.
 - **Flutter mapping.** Tokens become a `ThemeExtension<AppTokens>` next to a Material 3
   `ColorScheme` (`primary`, `onPrimary`, `surface`, `onSurface`, `outline`, `error`). Fonts
-  load through the `google_fonts` package and are bundled as assets for release builds
-  (works offline, no runtime fetch). The type scale is set in `TextTheme`, so system text
+  are bundled as plain font assets in `pubspec.yaml` with their OFL notices (no `google_fonts`
+  package; works offline, no runtime fetch). The type scale is set in `TextTheme`, so system text
   scaling still applies; layouts must survive 200 % text.
 
 ## Contrast method
