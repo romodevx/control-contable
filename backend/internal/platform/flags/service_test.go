@@ -249,6 +249,13 @@ func TestWaiterHonorsItsOwnCancellation(t *testing.T) {
 	assert.False(t, svc.Enabled(ctx, "module_auth"), "a canceled waiter gives up instead of queueing")
 }
 
+// Regression: a nil logger made the fail-closed path panic (500, not 404).
+func TestNilLoggerStillFailsClosed(t *testing.T) {
+	svc := flags.NewService(&fakeReader{err: errDatabaseDown}, flags.WithLogger(nil))
+
+	assert.NotPanics(t, func() { assert.False(t, svc.Enabled(t.Context(), "module_auth")) })
+}
+
 func TestDefaultTTLIsShort(t *testing.T) {
 	assert.Positive(t, flags.DefaultTTL)
 	assert.LessOrEqual(t, flags.DefaultTTL, 10*time.Second,

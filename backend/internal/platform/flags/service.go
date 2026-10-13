@@ -39,8 +39,15 @@ func WithTTL(ttl time.Duration) Option { return func(s *Service) { s.ttl = ttl }
 // WithClock replaces the wall clock (tests).
 func WithClock(c clock.Clock) Option { return func(s *Service) { s.clock = c } }
 
-// WithLogger sets where failed reloads are reported.
-func WithLogger(l *slog.Logger) Option { return func(s *Service) { s.logger = l } }
+// WithLogger sets where failed reloads are reported. A nil logger keeps the
+// default (discard): the fail-closed path must never panic.
+func WithLogger(l *slog.Logger) Option {
+	return func(s *Service) {
+		if l != nil {
+			s.logger = l
+		}
+	}
+}
 
 // Service answers "is this module ON?" from a cached snapshot of the enabled
 // flags. It is safe for concurrent use.
