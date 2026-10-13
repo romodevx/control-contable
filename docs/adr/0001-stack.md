@@ -83,12 +83,30 @@ backend/
 | State management | **Riverpod 3** + `riverpod_generator` | flutter_riverpod 3.4.3, riverpod_generator 4.0.9 |
 | Navigation | go_router | 18.0.2 |
 | HTTP | dio | 5.11.1 |
-| API client generation | **swagger_parser** (pure Dart, supports OAS 3.1) → retrofit + json_serializable/freezed | swagger_parser 1.45.0, retrofit 4.10.0, freezed 4.0.2 |
+| API client generation | **swagger_parser** (pure Dart, supports OAS 3.1) → retrofit + json_serializable/freezed | swagger_parser 1.45.0, retrofit 4.10.0, retrofit_generator 10.2.11, freezed 4.0.2 |
 | Token storage | flutter_secure_storage (Keychain / Keystore) | 11.2.0 |
 | IAP | RevenueCat `purchases_flutter` (`appUserID` = our user UUID) | 10.15.2 |
 | Push | firebase_messaging | 16.7.0 |
 | Flags | one `FlagsProvider` (Riverpod) fed by `GET /v1/flags` + a `useFlag` helper. UX only | — |
 | Release | `--obfuscate --split-debug-info`. Symbols are uploaded to crash reporting and never bundled | — |
+
+### Context7 verification (2026-10-13)
+
+P0-21. Each pinned Dart/Flutter library was checked in the Context7 MCP, and each pin was
+re-checked against `pub.dev/api/packages/<name>` the same day. Every pin above is still the
+latest release, except retrofit_generator, deliberately held at 10.2.11 (two-week rule, row below). Toolchain: Flutter 3.47.7, Dart 3.13.5. No API change forces a decision
+change. The owner confirmed **Riverpod** (O5 closed, OB4 resolved).
+
+| Library | Context7 ID | Pin = latest? | API checked | Notes for the first user |
+|---|---|---|---|---|
+| flutter_riverpod / riverpod_generator | `/rrousselgit/riverpod` (docs at v3.0.2) | 3.4.3 / 4.0.9, yes | `@riverpod` class notifiers (`extends _$X`, `build()`), `ProviderScope(overrides: [...overrideWithValue(...)])`, `ProviderContainer.test()` | Use `ProviderContainer.test()` in unit tests (auto-dispose replaces the 2.x `createContainer` helper). Scoped providers need `@Dependencies` or an override, enforced by riverpod_lint: add it in P0-22 |
+| go_router | `/websites/pub_dev_packages_go_router` | 18.0.2, yes | `GoRouter(routes:)`, `MaterialApp.router(routerConfig:)`, top-level `redirect` | Context7 coverage is thin (15 snippets, no `redirect` detail). Read the pub.dev API docs for `redirect`/`refreshListenable` before wiring the auth and flag guards |
+| dio | `/cfug/dio` | 5.11.1, yes | `InterceptorsWrapper`, `QueuedInterceptor`, `DioException.response`, `RequestOptions.copyWith` | Refresh-on-401 goes in a `QueuedInterceptor` so concurrent 401s refresh once. Never retry the re-auth/password endpoints through it (a wrong password must not be sent twice) |
+| swagger_parser | `/carapacik/swagger_parser` | 1.45.0, yes | `swagger_parser.yaml` keys (`json_serializer: freezed`, `use_freezed3`, `unknown_enum_value`, `root_client`); `OAS.v3_1`; `type: [T, "null"]` → `T?` | Spiked against our contract: see [ADR-0003](0003-dart-client-generation.md). Set `use_freezed3: true` (default is `false`, Freezed 2 syntax) |
+| freezed / json_serializable | `/rrousselgit/freezed` | freezed 4.0.2, freezed_annotation 3.1.0, json_serializable 6.14.1, yes | `@freezed sealed/abstract class X with _$X`, `fromJson` via `=>` factory | Since v3 every class needs `sealed` or `abstract`. `fromJson` is generated only when the factory uses `=>` |
+| retrofit (+ retrofit_generator) | via swagger_parser docs | retrofit 4.10.0, yes. retrofit_generator latest is 10.2.12 (published today) | Generated clients compile and analyze clean | **Pin retrofit_generator 10.2.11** (2026-09-04): 10.2.12 is under two weeks old. The spike passed on both |
+| purchases_flutter | `/websites/pub_dev_purchases_flutter` | 10.15.2, yes | `Purchases.configure(PurchasesConfiguration(apiKey)..appUserID = uuid)`, `Purchases.logIn(appUserID)` → `LogInResult` | Configure with our user UUID at sign-in; call `logIn` when the user changes on the same device, never leave an anonymous RevenueCat id behind |
+| firebase_messaging | `/firebase/flutterfire` | 16.7.0, yes | `requestPermission()`, `getToken()`, `onTokenRefresh`, top-level `@pragma('vm:entry-point')` `onBackgroundMessage` | On Apple, call `getToken()` only after `getAPNSToken()` is non-null. FlutterFire `main` already deprecates `getToken`/`onTokenRefresh` in favour of `register()` + `onRegistered` (FID). Not in 16.7.0; M9 must re-check before building device registration |
 
 ## Options considered
 
@@ -118,6 +136,8 @@ backend/
 - **Risk**: we must confirm that `swagger_parser` handles our `oneOf`/`const` constructs. A
   half-day spike in P0 covers this. Fallback: openapi-generator with an overlay that
   downgrades the spec to 3.0.
+- **Spike result (P0-21)**: GO with swagger_parser, with two conditions. See
+  [ADR-0003](0003-dart-client-generation.md).
 
 ### O5. Flutter state management: Riverpod 3 (chosen) vs. flutter_bloc 9.1.1
 - **Riverpod**: compile-safe dependency injection, provider overrides in tests (TDD-friendly),
@@ -204,7 +224,7 @@ still the latest release. No API change forces a decision change.
 
 | Library | Context7 ID | Pin = latest? | API checked | Notes for the first user |
 |---|---|---|---|---|
-| oapi-codegen v2 | `/oapi-codegen/oapi-codegen` | v2.8.0, yes | config `generate: {std-http-server, strict-server, models, embedded-spec}`; OAS 3.1 (`type: [T, "null"]`, `oneOf`+`const` enums, webhooks) | `strict-server` must sit next to a server generator (`std-http-server`). Unused types are pruned by default. Implicit `additionalProperties` are ignored. Use `compatibility.schema-merging-behavior: v2` from the start |
+| oapi-codegen v2 | `/oapi-codegen/oapi-codegen` | v2.8.0, yes | config `generate: {std-http-server, strict-server, models, embedded-spec}`; OAS 3.1 (`type: [T, "null"]`, `oneOf`+`const` enums, webhooks) | `strict-server` must sit next to a server generator (`std-http-server`). Unused types are pruned by default. Implicit `additionalProperties` are ignored. ~~Use `compatibility.schema-merging-behavior: v2`~~ (corrected in P0-06: no such key in v2.8.0; see below) |
 | goose v3 | `/pressly/goose` (docs at v3.28.0) | v3.29.0, yes | `goose.NewProvider(goose.DialectPostgres, *sql.DB, fs.FS, opts...)`, `p.Up(ctx)`, `p.HasPending`, `*goose.PartialError` | Use the **Provider** API (no globals) instead of `SetBaseFS` + `goose.Up`. v3.29.0 is two days old: Context7 docs trail it by one minor; check the changelog before P0 migrations |
 | GORM + driver | `/websites/gorm_io` | gorm v1.31.2, driver v1.6.3, yes | `gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}))`; `WithContext` = `Session{Context}`; `Exec` with `?` placeholders | Build GORM on the same `*sql.DB` (pgx stdlib) that goose uses, so one pool. Set RLS with `SELECT set_config('app.current_user_id', ?, true)` inside the tx (`SET LOCAL` cannot take a bind parameter) |
 | pgx v5 | `/jackc/pgx/v5.11.0` | v5.11.0, yes | `stdlib` driver auto-registered as `"pgx"` / `"pgx/v5"`; `stdlib.OpenDBFromPool(pool)` | `OpenDBFromPool` forces max idle conns to 0 and closing the `*sql.DB` does not close the pool. The source now has a `sql_go1.27.go` file: Go 1.27 is supported |
@@ -218,3 +238,22 @@ Also checked: golangci-lint v2 configuration (`/golangci/golangci-lint`) for dep
 `pattern`). The resulting `backend/.golangci.yml` was proven against probe files: depguard
 rejects `net/http` in `domain/` and `database/sql` in `usecase/`, and forbidigo rejects
 `float64` and `time.Now` in `domain/` but not in `infra/`.
+
+## oapi-codegen and OpenAPI 3.1 (P0-06, 2026-10-13)
+
+Re-checked in Context7 (`/oapi-codegen/oapi-codegen`) and against the v2.8.0 source while
+wiring `make generate`. Config: `backend/adapter/http/gen/oapi-codegen.yaml`; the tool is pinned
+by the `tool` directive in `backend/go.mod` (`go tool oapi-codegen`).
+
+| Caveat | Effect on our contract | Workaround |
+|---|---|---|
+| `compatibility.schema-merging-behavior` does not exist in v2.8.0 (the P0-02 note above was wrong) | Config fails to parse | Dropped. v2.8.0 already merges `allOf` correctly by default; the `old-*` flags only opt back into legacy output |
+| Multi-type unions (`type: [string, boolean, 'null']`) error with `unhandled Schema type` when used as a property. The README says they become `any`; that holds only at top level | `RegimeOptionDef.default` broke generation | Codegen-only **OpenAPI Overlay** (`adapter/http/gen/overlay.yaml`) adds `x-go-type: any` to that property. The contract is unchanged; every new overlay action must be listed here. Prefer `oneOf` or a single type in new schemas |
+| `[T, "null"]` nullability, `oneOf` + `const` enums | Generate fine | None |
+| The embedded spec Go-normalizes `operationId` (`getHealth` → `GetHealth`) | `GetSwagger()` drifts from the contract | `compatibility.preserve-original-operation-id-casing-in-embedded-spec: true` |
+| Strict middlewares receive the Go-normalized name and run **after** the request body is decoded. `StdHTTPServerOptions.Middlewares` run after the wrapper binds path and query parameters. A wrapper outside the mux runs before `r.Pattern` is set. The `ServeMux` answers 405 + `Allow` for another method on a registered path | Each of those placements answers 400 or 405 (not 404) for a disabled module, revealing it | The generated flag map exposes `RouteModule(pattern)` (`"METHOD /path"` → `x-module`, empty `BaseURL`) besides `OperationModule(operationId)`. P0-15 gates **at registration**: a `gen.ServeMux` passed to `HandlerFromMux` wraps each handler by the pattern it registers, panics at startup on a pattern `RouteModule` does not know (fail closed, e.g. a non-empty `BaseURL`), and turns the mux's 404/405 for gated paths into a uniform 404. Pinned by `adapter/http/gen/gate_placement_test.go` |
+
+Drift: `make codegen-check` regenerates and fails if `adapter/http/gen` differs from what is
+committed. `cmd/flagmapgen` fails generation when an operation lacks `operationId` or a valid
+`x-module`, and `adapter/http/gen/contract_test.go` re-checks the embedded spec, the map, the
+`StrictServerInterface` and the ServeMux patterns.

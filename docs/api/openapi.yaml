@@ -346,7 +346,31 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '422':
+          description: |
+            Well-formed but violates a business rule: an invalid regime combination, or
+            `taxpayer_limit_reached` when the user already has the fair-use maximum of
+            taxpayers (PRD Q4). The cap is not an entitlement (402): paying does not lift it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                invalid_regime_combination:
+                  value:
+                    error:
+                      code: invalid_regime_combination
+                      message: RESICO cannot be combined with regime 612 for the same taxpayer.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - field: regimes
+                          code: incompatible
+                          message: 626 is incompatible with 612.
+                taxpayer_limit_reached:
+                  value:
+                    error:
+                      code: taxpayer_limit_reached
+                      message: You have reached the maximum number of taxpayers. Contact support to raise it.
+                      request_id: req_01J9Z6Q4X8
         '500': { $ref: '#/components/responses/InternalError' }
   /v1/taxpayers/{taxpayerId}:
     parameters:
@@ -2271,6 +2295,27 @@ components:
           legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
 
     # ------------------------------------------------------------ subscriptions
+    SubscriptionPlan:
+      type: object
+      description: |
+        Active store plan. A named component (not inline in `SubscriptionStatus.plan`):
+        inline objects inside `oneOf` make the Dart generator name their enums after the
+        bare property, and `period` overwrote the `Period` component (ADR-0003).
+      required: [product_id, period, store, expires_at, will_renew]
+      properties:
+        product_id: { type: string }
+        period: { type: string, enum: [weekly, monthly, yearly] }
+        store: { type: string, enum: [app_store, play_store] }
+        expires_at: { type: string, format: date-time }
+        will_renew: { type: boolean }
+        management_url: { type: [string, 'null'], format: uri }
+      examples:
+        - product_id: cc_pro_monthly
+          period: monthly
+          store: app_store
+          expires_at: '2026-11-13T16:00:00Z'
+          will_renew: true
+          management_url: 'https://apps.apple.com/account/subscriptions'
     SubscriptionStatus:
       type: object
       required: [access]
@@ -2278,15 +2323,7 @@ components:
         access: { $ref: '#/components/schemas/AccessSummary' }
         plan:
           oneOf:
-            - type: object
-              required: [product_id, period, store, expires_at, will_renew]
-              properties:
-                product_id: { type: string }
-                period: { type: string, enum: [weekly, monthly, yearly] }
-                store: { type: string, enum: [app_store, play_store] }
-                expires_at: { type: string, format: date-time }
-                will_renew: { type: boolean }
-                management_url: { type: [string, 'null'], format: uri }
+            - $ref: '#/components/schemas/SubscriptionPlan'
             - type: 'null'
       examples:
         - access: { access: trial, trial_ends_at: '2026-10-20T16:00:00Z', incomes_remaining: 3, expenses_remaining: 5 }

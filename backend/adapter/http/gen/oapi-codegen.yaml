@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/v2.8.0/configuration-schema.json
+# oapi-codegen v2 (pinned by the `tool` directive in backend/go.mod). Regenerate: `make generate`.
+package: gen
+generate:
+  std-http-server: true # Go 1.22+ net/http ServeMux (ADR-0001 O1)
+  strict-server: true   # typed request/response objects; needs a server generator next to it
+  models: true
+  embedded-spec: true   # GetSwagger(): request validation (P0-17) and the x-module contract test
+# v2.8.0 already defaults to the correct allOf merging (old-* flags opt back into
+# legacy output); ADR-0001's P0-02 note naming `schema-merging-behavior: v2` was
+# wrong, that key does not exist in v2.8.0.
+compatibility:
+  # Keep contract operationIds (camelCase) in GetSwagger(); otherwise they are
+  # Go-normalized ("getHealth" -> "GetHealth") and drift from docs/api/openapi.yaml.
+  preserve-original-operation-id-casing-in-embedded-spec: true
+output-options:
+  overlay:
+    path: overlay.yaml # codegen-only OAS 3.1 workarounds (ADR-0001)
+output: api.gen.go
