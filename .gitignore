@@ -31,3 +31,6 @@ build/
 **/ios/Pods/
 **/android/.gradle/
 *.symbols
+
+# Node tooling (contract lint)
+node_modules/

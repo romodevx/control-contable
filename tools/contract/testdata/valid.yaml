@@ -1,0 +1,100 @@
+# expect: (none)
+openapi: 3.1.0
+info:
+  title: Fixture
+  version: 0.0.1
+  summary: Minimal contract that satisfies every rule.
+  description: Fixture for tools/contract/test.js.
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+servers:
+  - url: /
+    description: Same origin.
+security:
+  - bearerAuth: []
+tags:
+  - name: Platform
+    description: Fixture tag.
+paths:
+  /healthz:
+    get:
+      tags: [Platform]
+      operationId: getHealth
+      summary: Liveness
+      description: Public liveness probe.
+      x-module: platform
+      x-public: true
+      security: []
+      responses:
+        '200':
+          description: Up.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Status' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/things:
+    post:
+      tags: [Platform]
+      operationId: createThing
+      summary: Create a thing
+      description: Authenticated create.
+      x-module: module_things
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Status' }
+            example: { status: ok }
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Status' }
+        '400':
+          description: Invalid.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example: { error: { code: validation_failed, message: Invalid. } }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  responses:
+    TooManyRequests:
+      description: Rate limited.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { error: { code: rate_limited, message: Too many requests. } }
+    InternalError:
+      description: Unexpected error.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example: { error: { code: internal_error, message: Something went wrong. } }
+  schemas:
+    Status:
+      x-frozen: sha256:d11e77799e8abdd6046810b8909fb129241695743a7f41fcebc652b7f9afc87d
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [ok] }
+      examples:
+        - { status: ok }
+    ErrorResponse:
+      type: object
+      required: [error]
+      additionalProperties: false
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          additionalProperties: false
+          properties:
+            code: { type: string }
+            message: { type: string }

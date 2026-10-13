@@ -1,0 +1,13 @@
+{
+  "name": "control-contable-contract-tools",
+  "private": true,
+  "description": "Pinned OpenAPI contract tooling. Run through `make contract-lint` from the repo root.",
+  "type": "module",
+  "engines": {
+    "node": ">=24.18.0"
+  },
+  "devDependencies": {
+    "@redocly/cli": "2.62.1",
+    "@stoplight/prism-cli": "5.16.0"
+  }
+}
