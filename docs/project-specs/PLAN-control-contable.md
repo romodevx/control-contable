@@ -78,7 +78,7 @@ Stages: contract tooling (P0-05) → data (P0-10, P0-11) → backend platform �
 | P0-10 | goose v3 runner `cmd/migrate` (embed.FS, timestamped versions) + baseline migration: `app_user_id()`, grants, `feature_flags`, `flag_presets` (global) | db-sr | P0-04, P0-09 | 2.5 | — | `feature/p0-migrations-base` | — | [ ] |
 | P0-11 | Migration `users` (identity root, moved from M1 so P0 FKs resolve) + `entitlements` + `user_usage`, ENABLE+FORCE RLS, isolation tests | db-sr | P0-10 | 3.5 | — | `feature/p0-migrations-identity` | — | [ ] |
 | P0-12 | TxManager: `set_config('app.current_user_id', $1, true)` per tx, RO/RW variants, fail-closed integration tests | backend-sr | P0-11 | 3 | — | `feature/p0-txmanager` | — | [ ] |
-| P0-13 | `platform/money` (Cents, Rate 10^-6, Exact, 128-bit multiply, half-away-from-zero) + Clock port (America/Mexico_City), 100% coverage | backend-sr | P0-03 | 4 | PG-P0-B | `feature/p0-money-clock` | — | [ ] |
+| P0-13 | `platform/money` (Cents, Rate 10^-6, Exact, 128-bit multiply, half-away-from-zero) + Clock port (America/Mexico_City), 100% coverage | backend-sr | P0-03 | 4 | PG-P0-B | `feature/p0-money-clock` | — | [x] |
 | P0-14 | `platform/crypto`: argon2id PHC, AES-256-GCM with key_id (RFC), HMAC-SHA256 peppers (rfc_hash, email_hash) (TDD) | backend-sr | P0-03 | 3 | PG-P0-B | `feature/p0-crypto` | — | [ ] |
 | P0-15 | Flags service + gate middleware (OFF → 404 before handler) + `GET /v1/flags` + flag ON/OFF test helper | backend-sr | P0-06, P0-07, P0-10 | 3.5 | — | `feature/p0-flags` | — | [ ] |
 | P0-16 | AccessPolicy port + infra: trial clock, atomic `ReserveRecord` (UPDATE … RETURNING), trial/pro/comp lookup, read-only after trial (TDD + integration) | backend-sr | P0-12, P0-13 | 4 | — | `feature/p0-access-policy` | — | [ ] |
