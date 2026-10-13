@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ (API 31+). The session (refresh) token store must never leave
+     the device: neither in a cloud backup nor in a device-to-device transfer,
+     which allowBackup="false" does not stop. Shared preferences hold the
+     encrypted token store; restored without their Keystore key they would be
+     unreadable anyway. Checked by test/platform/android_backup_test.dart. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="."/>
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="."/>
+    </device-transfer>
+</data-extraction-rules>

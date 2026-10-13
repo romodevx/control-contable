@@ -2,10 +2,15 @@
     <!-- Release builds talk to the API. The debug/profile manifests only add it
          for `flutter run` tooling (test/platform/android_manifest_test.dart). -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- No backups of the session token store, on any channel
+         (test/platform/android_backup_test.dart). -->
     <application
         android:label="@string/app_name"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules">
         <activity
             android:name=".MainActivity"
             android:exported="true"
