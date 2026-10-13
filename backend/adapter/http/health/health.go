@@ -18,8 +18,10 @@ import (
 )
 
 // DefaultPingTimeout bounds the readiness ping so a hung database cannot
-// hold probe requests open.
-const DefaultPingTimeout = 2 * time.Second
+// hold probe requests open. It stays well under the 1 s default timeout of a
+// Cloud Run liveness probe: a slower answer would fail the probe and restart
+// a process that is alive while the database is not.
+const DefaultPingTimeout = 500 * time.Millisecond
 
 // Pinger is the readiness port: one cheap round trip to the database.
 type Pinger interface {

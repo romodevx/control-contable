@@ -58,6 +58,28 @@ func TestGetHealth(t *testing.T) {
 	}
 }
 
+// cloudRunProbeTimeout is the default timeoutSeconds of a Cloud Run HTTP
+// liveness probe (ADR-0001 hosting).
+const cloudRunProbeTimeout = time.Second
+
+// A hung database must not make /healthz slower than the liveness probe, or
+// the orchestrator restarts a process that is alive (the opposite of what the
+// liveness contract promises).
+func TestGetHealth_defaultPingFitsInsideTheLivenessProbe(t *testing.T) {
+	var budget time.Duration
+	h := health.New(pingFunc(func(ctx context.Context) error {
+		deadline, ok := ctx.Deadline()
+		require.True(t, ok, "the readiness ping must be bounded")
+		budget = time.Until(deadline)
+		return nil
+	}), version, logging.New(&bytes.Buffer{}, nil))
+
+	_, err := h.GetHealth(context.Background(), gen.GetHealthRequestObject{})
+
+	require.NoError(t, err)
+	assert.Less(t, budget, cloudRunProbeTimeout)
+}
+
 func TestGetHealth_logsTheCauseNotTheResponse(t *testing.T) {
 	var logs bytes.Buffer
 	h := health.New(pingFunc(func(context.Context) error { return errors.New("connection refused") }),

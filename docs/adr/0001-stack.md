@@ -271,3 +271,21 @@ Re-checked in Context7 (`/getkin/kin-openapi`) and against the kin-openapi v0.14
 | 2020-12 errors are strings (`at '/password': minLength: …`) that quote the rejected value | Echoing them would leak PII | `FieldError.field` and `.code` are parsed from the location and keyword; `message` is generic |
 | kin compiles the operation schema on every request | ~42 µs per validated POST (M4 Pro, `BenchmarkValidatedRequest`) | Acceptable; revisit if profiling says otherwise |
 | Rate limit (O9) | — | In-process GCRA token bucket per client IP (IPv6 by /64), `RATE_LIMIT_RPS` / `RATE_LIMIT_BURST`; `TRUSTED_PROXY_HOPS` picks the X-Forwarded-For entry (0 = TCP peer) |
+
+### `/healthz`: liveness vs readiness (P0-17 review, 2026-10-13)
+
+`getHealth` is `x-frozen`, so its path, parameters and responses cannot change. Decision:
+
+- **`/healthz` is the liveness and startup probe.** It answers 200 whenever the process can
+  serve; the body (`status`, `database`) is the readiness *report*. The DB ping is bounded at
+  500 ms, under the 1 s default `timeoutSeconds` of a Cloud Run HTTP probe, so a hung database
+  never fails liveness and never triggers a restart loop.
+- **No status-code readiness gate in P0.** Every instance shares one Cloud SQL database:
+  pulling instances out of rotation when it is down serves no one better, it only swaps our
+  503 envelope for Cloud Run's. Handlers keep answering the 503 envelope (C4 failure modes).
+- **Alerting reads the body**: a Cloud Monitoring uptime check on `/healthz` with a content
+  match on `"database":"unreachable"`.
+- **If a status-code readiness signal is ever needed** (Cloud Run readiness probes, a load
+  balancer health check), it is a *new* platform operation (e.g. `GET /readyz`, 200/503, `x-module:
+  platform`, `security: []`) added to the contract with its own ADR row. That is additive: no
+  frozen operation changes. The 503 that `getHealth` already declares stays reserved.
