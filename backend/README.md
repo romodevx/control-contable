@@ -32,6 +32,25 @@ CI (`.github/workflows/backend.yml`) runs `fmt-check`, golangci-lint v2.14.0, `c
 `vuln`, `test`, then `test-integration GOTEST_FLAGS="-covermode=atomic -coverprofile=coverage.out"`
 followed by `cover-check`, and uploads the profile as the `backend-coverage` artifact.
 
+### Running the API
+
+`go run ./cmd/api` (release builds: `-ldflags "-X main.version=<semver>"`). Configuration is
+read from the environment (`internal/platform/config`):
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `APP_ENV` | required | `dev`, `staging` or `production` |
+| `PORT` | `8080` | listen port |
+| `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
+| `DATABASE_URL` | required (secret) | until P0-12 it is only checked for presence |
+| `RATE_LIMIT_RPS` / `RATE_LIMIT_BURST` | `10` / `20` | token bucket per client IP (429 + `Retry-After`) |
+| `TRUSTED_PROXY_HOPS` | `0` in dev; **required** in staging/production | reverse proxies appending to `X-Forwarded-For`; `0` keys by the TCP peer (behind Cloud Run/a load balancer that would be one bucket for every client) |
+
+`GET /healthz` answers 200 while the process serves; the body says whether the database is
+reachable (`degraded`/`unreachable` until the database adapter lands in P0-12). Every flagged
+module answers 404 until the flags service (P0-15) turns it on. SIGINT/SIGTERM drains
+in-flight requests for up to 8 s.
+
 ### Local database
 
 `infra/local/compose.yaml` runs `postgres:18.6` pinned by digest. The first `make db-up`
