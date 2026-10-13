@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"path"
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -128,13 +129,34 @@ func (g *registrar) HandleFunc(pattern string, handler func(http.ResponseWriter,
 
 // ServeHTTP implements http.Handler. A request that matches no pattern gets
 // the 404 envelope; the mux's own 404 text and its 405 + Allow (which would
-// list a disabled module's methods) are never sent.
+// list a disabled module's methods) are never sent. Neither is the mux's 307
+// to the cleaned path ("/v1//auth/login" -> "/v1/auth/login"): ServeMux sends
+// it only when the cleaned path matches a route, so it would reveal disabled
+// routes too. A non-canonical path is a 404 for every route.
 func (g *registrar) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if !isCanonicalPath(r.URL.EscapedPath()) {
+		flaggate.WriteNotFound(w, r)
+		return
+	}
 	if _, pattern := g.mux.Handler(r); pattern == "" {
 		flaggate.WriteNotFound(w, r)
 		return
 	}
 	g.mux.ServeHTTP(w, r)
+}
+
+// isCanonicalPath reports whether p is already in the form ServeMux cleans
+// paths to (rooted; no "//", "." or ".." elements; a trailing slash kept), so
+// the mux never answers with a redirect.
+func isCanonicalPath(p string) bool {
+	if !strings.HasPrefix(p, "/") {
+		return false
+	}
+	clean := path.Clean(p)
+	if strings.HasSuffix(p, "/") && clean != "/" {
+		clean += "/"
+	}
+	return clean == p
 }
 
 // findRoute resolves a ServeMux pattern ("GET /v1/x/{id}") to its operation.
