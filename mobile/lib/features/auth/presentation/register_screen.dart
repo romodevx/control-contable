@@ -68,6 +68,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (!mounted) return;
     final pending = ref.read(pendingSignUpProvider.notifier)
       ..start(fields.draft());
+    // The draft is now the only holder of the password, so its idle
+    // timeout and clear() really forget it (this form stays underneath).
+    fields.password.text.clear();
     unawaited(_openCodeStep(pending));
   }
 

@@ -142,7 +142,8 @@ Every record form is built from `core/forms/`, which encodes
   never persisted nor in a route (process death drops it). The password survives a trip to
   the mail app; it is forgotten after 15 minutes without activity on the code step
   (`signUpIdleTimeout`, on `clockProvider`), and the whole draft on success or on going back
-  to the form.
+  to the form. The sign-up form clears its own password field once the draft holds it, so the
+  draft is the only copy (going back asks for the password again).
 - Verify: the 6-digit code (`AutofillHints.oneTimeCode`, digits only) is sent with the
   draft's password and name, and submits itself when complete (unless the password must be
   typed). A `401` is one generic code message; a `400` lands on its field: `password`
