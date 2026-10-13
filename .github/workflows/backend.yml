@@ -86,6 +86,7 @@ jobs:
         run: |
           shellcheck infra/local/scripts/*.sh infra/local/postgres/initdb/*.sh
           infra/local/scripts/assert-local_test.sh
+          infra/local/scripts/init-env_test.sh
 
   unit:
     name: Unit tests (-race)

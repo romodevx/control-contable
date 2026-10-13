@@ -27,7 +27,7 @@ components: [C4](../docs/architecture/c4.md).
 | `make db-reset` | **LOCAL only**: drop the volume and re-bootstrap (refuses a remote Docker host, a non-loopback `CC_DB_HOST` or a remote `DATABASE_URL`) |
 | `make migrate-up` / `migrate-down` / `migrate-status` | **LOCAL only**: run `cmd/migrate` as `cc_owner` against the local stack (apply pending / roll back the latest / list) |
 | `make api` / `make worker` | **LOCAL only**: run `cmd/api` (as `cc_app`, `APP_ENV=dev`, port `API_PORT`, default 3000) / `cmd/worker` (as `cc_worker`) against the local stack, URLs built from `infra/local/.env` |
-| `make db-roles-check` | log in over TCP as `cc_app`, `cc_webhook`, `cc_worker`; fail if any is SUPERUSER, BYPASSRLS, owner or can DDL |
+| `make db-roles-check` | log in over TCP as `cc_app`, `cc_webhook`, `cc_worker`; fail if any is SUPERUSER, BYPASSRLS, REPLICATION, a member of another role, owner, can DDL, or can CONNECT to `postgres`/`template1` |
 
 CI (`.github/workflows/backend.yml`) runs `fmt-check`, golangci-lint v2.14.0, `codegen-check`,
 `vuln`, `test`, then `test-integration GOTEST_FLAGS="-covermode=atomic -coverprofile=coverage.out"`
@@ -75,8 +75,9 @@ SUPERUSER or BYPASSRLS role, or when the role cannot be verified).
 ### Local database
 
 `infra/local/compose.yaml` runs `postgres:18.6` pinned by digest. The first `make db-up`
-copies `infra/local/.env.example` to `infra/local/.env` (git-ignored; local placeholder
-passwords only). Roles, per [data model](../docs/architecture/data-model.md#database-roles):
+writes `infra/local/.env` from `infra/local/.env.example` (git-ignored, mode 0600) with
+random passwords (`infra/local/scripts/init-env.sh`). If you delete `.env` but keep the data
+volume, run `make db-reset`: the roles keep the passwords they were created with. Roles, per [data model](../docs/architecture/data-model.md#database-roles):
 `cc_owner` owns the database and schema and runs migrations; `cc_app`, `cc_webhook` and
 `cc_worker` get CONNECT + USAGE only and are NOBYPASSRLS. Table grants come from the
 baseline migration (P0-10), so every environment gets the same ones.

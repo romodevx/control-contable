@@ -36,7 +36,7 @@ peppers, flag state, CI gate configuration, release obfuscation symbols.
 | | **T** malformed or oversized input | Contract validation at the edge (kin-openapi), body cap, uniform 400 envelope | OK |
 | | **I** route discovery while a module is off | Uniform 404 before binding, decode and authn; non-canonical paths answer 404 (PR #19 fix); `platform` allow-list now pinned by a test | Small cache-miss timing oracle (accepted, PR #19 FU-1) |
 | | **I** error text leaking internals | `apperr` mapper: unknown errors become `internal_error` and the cause never reaches the wire. `httperr.Write(nil)` no longer panics | `Cache-Control: no-store` on errors needs a contract change (deferred D-6) |
-| | **D** request floods; hung DB | Rate limit with `Retry-After`; `statement_timeout` per role; flag reads bounded at 2 s (PR #27, D1) | Flag-read bound lands with #27 |
+| | **D** request floods; hung DB | Rate limit with `Retry-After`; `statement_timeout` per role; flag reads bounded at 2 s (PR #27, D1) | OK (PR #27 merged) |
 | | **E** unauthenticated access to user data | No user-data route is enabled: every module flag defaults OFF; `module_auth` is not built | M1 gate |
 | API/worker → PostgreSQL | **E** runtime role bypasses RLS | cc_app/cc_webhook/cc_worker: NOSUPERUSER, NOBYPASSRLS, NOREPLICATION, NOINHERIT, no memberships, not owner; `CheckRuntimeRole` refuses to boot outside dev | OK. **Fixed now:** maintenance DBs `postgres`/`template1` were open to PUBLIC (F-1) |
 | | **T/I** cross-user reads through a pooled connection | `set_config('app.current_user_id', $1, true)` first in every tx; UUID validated; foreign-manager nesting refused (PR #21); FORCE RLS sweep (PR #27) | **Fixed now:** the nil UUID was accepted as a user (F-4) |
@@ -71,7 +71,8 @@ taxpayers) and part of their gates.
 | F-6 | Medium | New: CI's govulncheck skipped test code, so GO-2026-6253 (moby/go-archive, path traversal on tar extraction, reached by testcontainers in CI) went unseen; Dependabot alerts #1/#2 | moby/go-archive v0.2.0 → v0.3.3, moby/sys/user v0.4.0 → v0.4.1 (both older than two weeks); CI runs `make vuln PKGS="-test -tags=integration ./..."` | govulncheck: 0 called |
 | F-7 | Low | PR #13 FU-2: workflow `paths` filters plus required checks leave PRs stuck on "expected"; `infra/local/**` (the bootstrap the integration harness runs) did not trigger backend CI at all | Each workflow runs on every PR: a `changes` job (diff of the merge commit vs its base) gates the jobs, and an always-running `<wf>-ok` job fails unless every gate succeeded or was skipped. Backend now also covers `infra/local/**` | n/a (CI config); see the CI run on this PR |
 | F-8 | Info | PR #9 FU-1: `httperr.Write(w, r, m, nil)` panicked | nil maps to `internal_error` | `TestWrite_nilErrorIsInternalError` |
-| F-9 | Info | PR #12 FU-3: nothing stopped production code from importing `pgtest` (superuser logins, fixed passwords) | archtest rule `test-harness` (cmd/ included) | `TestCheckImport` (6 new cases) |
+| F-9 | Info | PR #12 FU-3: nothing stopped production code from importing `pgtest` (superuser logins, fixed passwords) | archtest rule `test-harness` (cmd/ included), direct and transitive on PR #27's import graph | `TestCheckImport` (6 new cases), `TestCheckReportsTestHarnessReachedThroughModulePackages` |
+| F-11 | Low | PR #5 FU-4/5, PR #13 FU-3 (picked up after PR #27 merged): local passwords on an argv, well-known placeholder passwords on first run, unanchored coverage exclusion | `PGPASSWORD` by name; `init-env.sh` random passwords; anchored `COVER_EXCLUDE` | `init-env_test.sh` (9 checks), `TestMakefileCoverExcludeIsAnchoredToTheModule` |
 | F-10 | Info | PR #19 FU-4: a new operation mislabelled `x-module: platform` would ship ungated | Pinned allow-list `{getHealth, listEnabledFlags}` | `TestPlatformOperationsAreAllowListed` |
 
 ## Carried follow-ups: disposition
@@ -81,8 +82,8 @@ taxpayers) and part of their gates.
 | PR #5 | 1 crafted `DATABASE_URL` passes the guard | **Fixed** (F-2) |
 | | 2 runtime roles CONNECT/TEMP on `postgres` | **Fixed** (F-1) |
 | | 3 check script ignores replication and membership | **Fixed** (F-1) |
-| | 4 `PGPASSWORD` on the `docker compose exec` argv | **Deferred D-1.** The fix is in `backend/Makefile`, which PR #27 is changing |
-| | 5 random passwords on first `.env` | **Deferred D-1** (same file); local placeholders on a loopback-bound container |
+| | 4 `PGPASSWORD` on the `docker compose exec` argv | **Fixed** (F-11), after PR #27 merged: exported and passed to `exec -e` by name (checked against the live local stack) |
+| | 5 random passwords on first `.env` | **Fixed** (F-11): `infra/local/scripts/init-env.sh`, 48-hex random passwords, mode 0600, never overwrites; `init-env_test.sh` runs in CI |
 | PR #7 | 3 password length cap | **Fixed**: contract maxLength 128 at the edge plus `MaxPasswordBytes` in the hasher (F-3) |
 | | 4 value receivers | **Fixed** (F-3) |
 | | 5 NFC for EAI emails | **Deferred D-5** |
@@ -96,9 +97,9 @@ taxpayers) and part of their gates.
 | | 3 archtest ban on importing `pgtest` | **Fixed** (F-9) |
 | PR #13 | 1 CODEOWNERS on gate files | **Fixed**: `.github/CODEOWNERS`. Enforced review is D-7 |
 | | 2 `paths` filters vs required checks | **Fixed** (F-7) |
-| | 3 loose `/cmd/` in `COVER_EXCLUDE` | **Deferred D-1** (`backend/Makefile`). No business logic sits under a nested `cmd/` today |
+| | 3 loose `/cmd/` in `COVER_EXCLUDE` | **Fixed** (F-11): anchored to `^github.com/romodevx/control-contable/backend/(adapter/http/gen|cmd)/`; `TestMakefileCoverExcludeIsAnchoredToTheModule` reads the Makefile (red before) |
 | PR #19 | 1 cache-miss timing oracle | **Accepted** (tiny; no data) |
-| | 2 DB down serialises gated requests | **Resolved by PR #27** (D1: 2 s bounded reads, shared failure). Closes when #27 merges |
+| | 2 DB down serialises gated requests | **Closed** by PR #27 (D1: 2 s bounded reads, shared failure), merged |
 | | 3 API asserts it is not privileged | **Closed** in PR #21 (`CheckRuntimeRole`) |
 | | 4 pin the `platform` allow-list | **Fixed** (F-10) |
 | PR #21 | 1 split `tx.Manager` / `SystemManager` | **Deferred D-2** |
@@ -111,7 +112,6 @@ taxpayers) and part of their gates.
 
 | ID | Item | Owner | Target |
 |---|---|---|---|
-| D-1 | `backend/Makefile`: pass `PGPASSWORD` by name (`-e PGPASSWORD`), generate random local passwords when `.env` is first created, anchor `COVER_EXCLUDE` to `^github.com/romodevx/control-contable/backend/(cmd/|adapter/http/gen/)` | devops-sr | First PR after #27 merges |
 | D-2 | Split `tx.Manager` (user) from `tx.SystemManager`; archtest forbids `SystemManager` in `adapter/http` except sign-up | backend-sr + tech-lead | M1-05 (before the first module consumes the port) |
 | D-3 | Lint or archtest rule: repositories under `internal/*/infra` never call `Commit`/`Rollback`/`SavePoint` or run `SET`/`set_config` | tech-lead | M1 first repository PR |
 | D-4 | M2-05 passes the taxpayer row id as GCM AAD (test: a ciphertext moved to another row fails) | backend-sr | M2-05 (blocks its security gate) |

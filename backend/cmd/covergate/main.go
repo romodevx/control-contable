@@ -4,7 +4,7 @@
 //
 // Usage:
 //
-//	go run ./cmd/covergate -profile coverage.out -min 80 -exclude '/adapter/http/gen/|/cmd/'
+//	go run ./cmd/covergate -profile coverage.out -min 80 -exclude '^github.com/romodevx/control-contable/backend/(adapter/http/gen|cmd)/'
 package main
 
 import (
