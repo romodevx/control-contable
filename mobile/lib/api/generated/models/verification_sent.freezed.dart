@@ -3,7 +3,7 @@
 // ignore_for_file: type=lint, type=warning, deprecated_member_use, deprecated_member_use_from_same_package
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
-part of 'register_accepted.dart';
+part of 'verification_sent.dart';
 
 // **************************************************************************
 // FreezedGenerator
@@ -14,44 +14,44 @@ part of 'register_accepted.dart';
 T _$identity<T>(T value) => value;
 
 /// @nodoc
-mixin _$RegisterAccepted {
+mixin _$VerificationSent {
 
  String get status;
-/// Create a copy of RegisterAccepted
+/// Create a copy of VerificationSent
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
-$RegisterAcceptedCopyWith<RegisterAccepted> get copyWith => _$RegisterAcceptedCopyWithImpl<RegisterAccepted>(this as RegisterAccepted, _$identity);
+$VerificationSentCopyWith<VerificationSent> get copyWith => _$VerificationSentCopyWithImpl<VerificationSent>(this as VerificationSent, _$identity);
 
-  /// Serializes this RegisterAccepted to a JSON map.
+  /// Serializes this VerificationSent to a JSON map.
   Map<String, dynamic> toJson();
 
 
 @override
 bool operator ==(Object other) {
-  final _this = this as RegisterAccepted;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RegisterAccepted&&(identical(other.status, _this.status) || other.status == _this.status));
+  final _this = this as VerificationSent;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is VerificationSent&&(identical(other.status, _this.status) || other.status == _this.status));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-  final _this = this as RegisterAccepted;
+  final _this = this as VerificationSent;
   return Object.hash(runtimeType,_this.status);
 }
 
 @override
 String toString() {
-  final _this = this as RegisterAccepted;
-  return 'RegisterAccepted(status: ${_this.status})';
+  final _this = this as VerificationSent;
+  return 'VerificationSent(status: ${_this.status})';
 }
 
 
 }
 
 /// @nodoc
-abstract mixin class $RegisterAcceptedCopyWith<$Res>  {
-  factory $RegisterAcceptedCopyWith(RegisterAccepted value, $Res Function(RegisterAccepted) _then) = _$RegisterAcceptedCopyWithImpl;
+abstract mixin class $VerificationSentCopyWith<$Res>  {
+  factory $VerificationSentCopyWith(VerificationSent value, $Res Function(VerificationSent) _then) = _$VerificationSentCopyWithImpl;
 @useResult
 $Res call({
  String status
@@ -62,17 +62,17 @@ $Res call({
 
 }
 /// @nodoc
-class _$RegisterAcceptedCopyWithImpl<$Res>
-    implements $RegisterAcceptedCopyWith<$Res> {
-  _$RegisterAcceptedCopyWithImpl(this._self, this._then);
+class _$VerificationSentCopyWithImpl<$Res>
+    implements $VerificationSentCopyWith<$Res> {
+  _$VerificationSentCopyWithImpl(this._self, this._then);
 
-  final RegisterAccepted _self;
-  final $Res Function(RegisterAccepted) _then;
+  final VerificationSent _self;
+  final $Res Function(VerificationSent) _then;
 
-/// Create a copy of RegisterAccepted
+/// Create a copy of VerificationSent
 /// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') @override $Res call({Object? status = null,}) {
-  return _then(RegisterAccepted(
+  return _then(VerificationSent(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,
   ));
@@ -81,8 +81,8 @@ as String,
 }
 
 
-/// Adds pattern-matching-related methods to [RegisterAccepted].
-extension RegisterAcceptedPatterns on RegisterAccepted {
+/// Adds pattern-matching-related methods to [VerificationSent].
+extension VerificationSentPatterns on VerificationSent {
 /// A variant of `map` that fallback to returning `orElse`.
 ///
 /// It is equivalent to doing:
@@ -95,10 +95,10 @@ extension RegisterAcceptedPatterns on RegisterAccepted {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _RegisterAccepted value)?  $default,{required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _VerificationSent value)?  $default,{required TResult orElse(),}){
 final _that = this;
 switch (_that) {
-case _RegisterAccepted() when $default != null:
+case _VerificationSent() when $default != null:
 return $default(_that);case _:
   return orElse();
 
@@ -117,10 +117,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _RegisterAccepted value)  $default,){
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _VerificationSent value)  $default,){
 final _that = this;
 switch (_that) {
-case _RegisterAccepted():
+case _VerificationSent():
 return $default(_that);case _:
   throw StateError('Unexpected subclass');
 
@@ -138,10 +138,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _RegisterAccepted value)?  $default,){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _VerificationSent value)?  $default,){
 final _that = this;
 switch (_that) {
-case _RegisterAccepted() when $default != null:
+case _VerificationSent() when $default != null:
 return $default(_that);case _:
   return null;
 
@@ -161,7 +161,7 @@ return $default(_that);case _:
 
 @optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String status)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
-case _RegisterAccepted() when $default != null:
+case _VerificationSent() when $default != null:
 return $default(_that.status);case _:
   return orElse();
 
@@ -182,7 +182,7 @@ return $default(_that.status);case _:
 
 @optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String status)  $default,) {final _that = this;
 switch (_that) {
-case _RegisterAccepted():
+case _VerificationSent():
 return $default(_that.status);case _:
   throw StateError('Unexpected subclass');
 
@@ -202,7 +202,7 @@ return $default(_that.status);case _:
 
 @optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String status)?  $default,) {final _that = this;
 switch (_that) {
-case _RegisterAccepted() when $default != null:
+case _VerificationSent() when $default != null:
 return $default(_that.status);case _:
   return null;
 
@@ -214,26 +214,26 @@ return $default(_that.status);case _:
 /// @nodoc
 @JsonSerializable()
 
-class _RegisterAccepted implements RegisterAccepted {
-  const _RegisterAccepted({required this.status});
-  factory _RegisterAccepted.fromJson(Map<String, dynamic> json) => _$RegisterAcceptedFromJson(json);
+class _VerificationSent implements VerificationSent {
+  const _VerificationSent({required this.status});
+  factory _VerificationSent.fromJson(Map<String, dynamic> json) => _$VerificationSentFromJson(json);
 
 @override final  String status;
 
-/// Create a copy of RegisterAccepted
+/// Create a copy of VerificationSent
 /// with the given fields replaced by the non-null parameter values.
 @override @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
-_$RegisterAcceptedCopyWith<_RegisterAccepted> get copyWith => __$RegisterAcceptedCopyWithImpl<_RegisterAccepted>(this, _$identity);
+_$VerificationSentCopyWith<_VerificationSent> get copyWith => __$VerificationSentCopyWithImpl<_VerificationSent>(this, _$identity);
 
 @override
 Map<String, dynamic> toJson() {
-  return _$RegisterAcceptedToJson(this, );
+  return _$VerificationSentToJson(this, );
 }
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _RegisterAccepted&&(identical(other.status, status) || other.status == status));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _VerificationSent&&(identical(other.status, status) || other.status == status));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -244,15 +244,15 @@ int get hashCode {
 
 @override
 String toString() {
-    return 'RegisterAccepted(status: $status)';
+    return 'VerificationSent(status: $status)';
 }
 
 
 }
 
 /// @nodoc
-abstract mixin class _$RegisterAcceptedCopyWith<$Res> implements $RegisterAcceptedCopyWith<$Res> {
-  factory _$RegisterAcceptedCopyWith(_RegisterAccepted value, $Res Function(_RegisterAccepted) _then) = __$RegisterAcceptedCopyWithImpl;
+abstract mixin class _$VerificationSentCopyWith<$Res> implements $VerificationSentCopyWith<$Res> {
+  factory _$VerificationSentCopyWith(_VerificationSent value, $Res Function(_VerificationSent) _then) = __$VerificationSentCopyWithImpl;
 @override @useResult
 $Res call({
  String status
@@ -263,17 +263,17 @@ $Res call({
 
 }
 /// @nodoc
-class __$RegisterAcceptedCopyWithImpl<$Res>
-    implements _$RegisterAcceptedCopyWith<$Res> {
-  __$RegisterAcceptedCopyWithImpl(this._self, this._then);
+class __$VerificationSentCopyWithImpl<$Res>
+    implements _$VerificationSentCopyWith<$Res> {
+  __$VerificationSentCopyWithImpl(this._self, this._then);
 
-  final _RegisterAccepted _self;
-  final $Res Function(_RegisterAccepted) _then;
+  final _VerificationSent _self;
+  final $Res Function(_VerificationSent) _then;
 
-/// Create a copy of RegisterAccepted
+/// Create a copy of VerificationSent
 /// with the given fields replaced by the non-null parameter values.
 @override @pragma('vm:prefer-inline') $Res call({Object? status = null,}) {
-  return _then(_RegisterAccepted(
+  return _then(_VerificationSent(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,
   ));

@@ -10,6 +10,7 @@ part 'refresh_request.g.dart';
 @Freezed()
 abstract class RefreshRequest with _$RefreshRequest {
   const factory RefreshRequest({
+    /// The opaque refresh token from `TokenPair`. A malformed value answers `401`, not `400`.
     @JsonKey(name: 'refresh_token') required String refreshToken,
   }) = _RefreshRequest;
 

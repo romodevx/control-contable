@@ -13,6 +13,8 @@ part 'document_acceptance.g.dart';
 abstract class DocumentAcceptance with _$DocumentAcceptance {
   const factory DocumentAcceptance({
     required LegalDocumentKind kind,
+
+    /// Opaque version label (data, not code).
     required String version,
   }) = _DocumentAcceptance;
 

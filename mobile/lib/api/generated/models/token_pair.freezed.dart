@@ -16,9 +16,10 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TokenPair {
 
-@JsonKey(name: 'access_token') String get accessToken;/// Seconds.
-@JsonKey(name: 'access_expires_in') int get accessExpiresIn;/// Opaque, format <user_uuid>.<secret>.
-@JsonKey(name: 'refresh_token') String get refreshToken;/// Seconds.
+/// EdDSA-signed JWT with a `kid` header.
+@JsonKey(name: 'access_token') String get accessToken;/// Seconds until the access token expires (900).
+@JsonKey(name: 'access_expires_in') int get accessExpiresIn;/// Opaque to clients (format `<user_uuid>.<secret>`); rotated on every refresh. Store only in secure storage.
+@JsonKey(name: 'refresh_token') String get refreshToken;/// Seconds until the refresh token expires (30-day sliding window, capped by the 90-day absolute limit).
 @JsonKey(name: 'refresh_expires_in') int get refreshExpiresIn;@JsonKey(name: 'token_type') String get tokenType;
 /// Create a copy of TokenPair
 /// with the given fields replaced by the non-null parameter values.
@@ -225,12 +226,13 @@ class _TokenPair implements TokenPair {
   const _TokenPair({@JsonKey(name: 'access_token') required this.accessToken, @JsonKey(name: 'access_expires_in') required this.accessExpiresIn, @JsonKey(name: 'refresh_token') required this.refreshToken, @JsonKey(name: 'refresh_expires_in') required this.refreshExpiresIn, @JsonKey(name: 'token_type') required this.tokenType});
   factory _TokenPair.fromJson(Map<String, dynamic> json) => _$TokenPairFromJson(json);
 
+/// EdDSA-signed JWT with a `kid` header.
 @override@JsonKey(name: 'access_token') final  String accessToken;
-/// Seconds.
+/// Seconds until the access token expires (900).
 @override@JsonKey(name: 'access_expires_in') final  int accessExpiresIn;
-/// Opaque, format <user_uuid>.<secret>.
+/// Opaque to clients (format `<user_uuid>.<secret>`); rotated on every refresh. Store only in secure storage.
 @override@JsonKey(name: 'refresh_token') final  String refreshToken;
-/// Seconds.
+/// Seconds until the refresh token expires (30-day sliding window, capped by the 90-day absolute limit).
 @override@JsonKey(name: 'refresh_expires_in') final  int refreshExpiresIn;
 @override@JsonKey(name: 'token_type') final  String tokenType;
 

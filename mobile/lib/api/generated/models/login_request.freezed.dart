@@ -16,6 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$LoginRequest {
 
+/// Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.
  String get email; String get password;
 /// Create a copy of LoginRequest
 /// with the given fields replaced by the non-null parameter values.
@@ -219,6 +220,7 @@ class _LoginRequest implements LoginRequest {
   const _LoginRequest({required this.email, required this.password});
   factory _LoginRequest.fromJson(Map<String, dynamic> json) => _$LoginRequestFromJson(json);
 
+/// Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.
 @override final  String email;
 @override final  String password;
 

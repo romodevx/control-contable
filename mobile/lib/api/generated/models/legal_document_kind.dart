@@ -4,6 +4,7 @@
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+/// LFPDPPP aviso de privacidad (integral or simplificado) and términos y condiciones.
 @JsonEnum()
 enum LegalDocumentKind {
   @JsonValue('privacy_notice_integral')

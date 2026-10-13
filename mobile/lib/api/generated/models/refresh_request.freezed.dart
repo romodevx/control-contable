@@ -16,6 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$RefreshRequest {
 
+/// The opaque refresh token from `TokenPair`. A malformed value answers `401`, not `400`.
 @JsonKey(name: 'refresh_token') String get refreshToken;
 /// Create a copy of RefreshRequest
 /// with the given fields replaced by the non-null parameter values.
@@ -218,6 +219,7 @@ class _RefreshRequest implements RefreshRequest {
   const _RefreshRequest({@JsonKey(name: 'refresh_token') required this.refreshToken});
   factory _RefreshRequest.fromJson(Map<String, dynamic> json) => _$RefreshRequestFromJson(json);
 
+/// The opaque refresh token from `TokenPair`. A malformed value answers `401`, not `400`.
 @override@JsonKey(name: 'refresh_token') final  String refreshToken;
 
 /// Create a copy of RefreshRequest

@@ -16,7 +16,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$DocumentAcceptance {
 
- LegalDocumentKind get kind; String get version;
+ LegalDocumentKind get kind;/// Opaque version label (data, not code).
+ String get version;
 /// Create a copy of DocumentAcceptance
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -220,6 +221,7 @@ class _DocumentAcceptance implements DocumentAcceptance {
   factory _DocumentAcceptance.fromJson(Map<String, dynamic> json) => _$DocumentAcceptanceFromJson(json);
 
 @override final  LegalDocumentKind kind;
+/// Opaque version label (data, not code).
 @override final  String version;
 
 /// Create a copy of DocumentAcceptance

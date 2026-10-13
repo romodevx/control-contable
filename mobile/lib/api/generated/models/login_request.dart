@@ -10,6 +10,7 @@ part 'login_request.g.dart';
 @Freezed()
 abstract class LoginRequest with _$LoginRequest {
   const factory LoginRequest({
+    /// Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.
     required String email,
     required String password,
   }) = _LoginRequest;
