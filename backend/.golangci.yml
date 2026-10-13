@@ -3,6 +3,9 @@ version: "2"
 run:
   go: "1.27"
   tests: true
+  # Lint the integration-tagged harness and suites too (make test-integration).
+  build-tags:
+    - integration
   relative-path-mode: gomod
 
 linters:

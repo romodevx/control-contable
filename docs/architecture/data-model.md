@@ -51,6 +51,8 @@ erDiagram
     users ||--o{ devices : registers
     users ||--o| reminder_settings : configures
     users ||--o{ notification_log : receives
+    flag_presets ||--o{ flag_preset_flags : "turns on"
+    feature_flags ||--o{ flag_preset_flags : "member of"
 
     users {
         uuid id PK
@@ -115,7 +117,11 @@ erDiagram
     }
     flag_presets {
         text name PK
-        text_array flag_keys
+        text description
+    }
+    flag_preset_flags {
+        text preset_name PK,FK
+        text flag_key PK,FK
     }
     taxpayers {
         uuid id PK
@@ -369,6 +375,14 @@ Every table below has `ENABLE` + `FORCE ROW LEVEL SECURITY` in its first migrati
 regimes, regime_compatibility, expense_categories, category_regime_rules, holidays. Writes
 happen through migrations only. Flag toggles happen through an admin migration or CLI as
 `cc_owner`.
+
+Flag tables (baseline migration, P0-10) have no user-scoped policy, since their rows have no
+owner, but they do ENABLE (not FORCE) row level security as defense in depth:
+- `feature_flags`: `SELECT` granted to `cc_app` (gate, `GET /v1/flags`) and `cc_worker`
+  (skips jobs of disabled modules); one `FOR SELECT TO cc_app, cc_worker USING (true)`
+  policy and no write policy, so a mistaken write grant is still refused. `cc_webhook`: none.
+- `flag_presets`, `flag_preset_flags`: owner-only (no grant, no policy). Membership is a
+  junction table, not a `text[]`, so foreign keys keep every preset pointing at real flags.
 
 **Service-only (no grant to `cc_app`).**
 - `trial_registry`: through the definer function only.

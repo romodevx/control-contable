@@ -1,0 +1,95 @@
+name: backend
+
+# P0-19 (ADR-0001): every backend gate runs on PRs and on pushes to the long-lived
+# branches. docs/api/** is included because the generated server and the flag map
+# are derived from the contract (codegen drift). Contract lint stays in contract.yml.
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'docs/api/**'
+      - '.github/workflows/backend.yml'
+  push:
+    branches: [dev, main]
+    paths:
+      - 'backend/**'
+      - 'docs/api/**'
+      - '.github/workflows/backend.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  static:
+    name: gofmt, golangci-lint, codegen drift, govulncheck
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: gofmt
+        run: make fmt-check
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.14.0
+          working-directory: backend
+      - name: Codegen drift (adapter/http/gen vs docs/api/openapi.yaml)
+        run: make codegen-check
+      - name: govulncheck
+        run: make vuln
+
+  unit:
+    name: Unit tests (-race)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Unit tests
+        run: make test
+
+  integration:
+    name: Integration tests (testcontainers) + coverage gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      # -tags=integration compiles unit and integration tests together, so this one
+      # profile measures both; the gate leaves out generated code and cmd/.
+      - name: Integration tests (unit + integration, with coverage)
+        run: make test-integration GOTEST_FLAGS="-covermode=atomic -coverprofile=coverage.out"
+      - name: Coverage gate (>= 80% business logic)
+        run: make cover-check
+      - name: Upload coverage profile
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: backend-coverage
+          path: backend/coverage.out
+          if-no-files-found: error
+          retention-days: 14
