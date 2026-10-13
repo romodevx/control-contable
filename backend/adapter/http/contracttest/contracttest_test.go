@@ -189,6 +189,34 @@ func TestServe_undeclaredHeaderFailsInStrictMode(t *testing.T) {
 	assert.Contains(t, spy.report(), "X-Debug-Trace")
 }
 
+// Strict mode holds every response to its declared headers, including the
+// ones that declare none. libopenapi-validator's default ignore list lets
+// Cache-Control, ETag, Vary, Last-Modified (and Set-Cookie, always) through
+// undeclared, and each of them changes what a client does.
+func TestServe_undeclaredSemanticHeadersFail(t *testing.T) {
+	tests := []struct {
+		name, header, value string
+	}{
+		{name: "custom header on a response declaring none", header: "X-Debug-Trace", value: "on"},
+		{name: "caching", header: "Cache-Control", value: "max-age=3600"},
+		{name: "validator", header: "Etag", value: `"v1"`},
+		{name: "cache key", header: "Vary", value: "Cookie"},
+		{name: "freshness", header: "Last-Modified", value: "Mon, 12 Oct 2026 00:00:00 GMT"},
+		{name: "cookie", header: "Set-Cookie", value: "session=x; HttpOnly"},
+	}
+	c := contracttest.Load(t)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := respond(http.StatusOK, jsonType, healthOK, tt.header, tt.value)
+
+			spy := run(t, func(tb testing.TB) { c.Serve(tb, h, getHealth()) })
+
+			require.NotEmptyf(t, spy.errors, "an undeclared %s must fail", tt.header)
+			assert.Contains(t, spy.report(), tt.header)
+		})
+	}
+}
+
 func TestServe_pathNotInTheContractFails(t *testing.T) {
 	c := contracttest.Load(t)
 	req := httptest.NewRequest(http.MethodGet, "/v1/not-a-route", nil)
