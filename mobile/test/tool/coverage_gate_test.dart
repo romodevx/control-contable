@@ -104,4 +104,27 @@ end_of_record
       expect(isGeneratedSource('class Generated {}\n'), isFalse);
     });
   });
+
+  group('parseMinPercent', () {
+    test('defaults to 80 when no minimum is given', () {
+      expect(parseMinPercent(null), defaultMinPercent);
+    });
+
+    test('accepts a percentage between 0 and 100', () {
+      expect(parseMinPercent('85.5'), 85.5);
+    });
+
+    test(
+      'rejects values that would turn the gate off or make it unpassable',
+      () {
+        for (final bad in ['-1', '101', 'NaN', 'abc', '']) {
+          expect(
+            () => parseMinPercent(bad),
+            throwsFormatException,
+            reason: bad,
+          );
+        }
+      },
+    );
+  });
 }
