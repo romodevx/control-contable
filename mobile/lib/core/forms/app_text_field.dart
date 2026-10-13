@@ -33,6 +33,10 @@ class AppTextField extends StatelessWidget {
     this.hintText,
     this.prefixText,
     this.inputFormatters,
+    this.helperText,
+    this.obscureText = false,
+    this.suffixIcon,
+    this.onChanged,
     super.key,
   });
 
@@ -59,6 +63,19 @@ class AppTextField extends StatelessWidget {
 
   /// Restricts what can be typed.
   final List<TextInputFormatter>? inputFormatters;
+
+  /// A short rule under the field, such as the minimum length.
+  final String? helperText;
+
+  /// Hides the text (a password); also turns suggestions and autocorrect off
+  /// so the keyboard never learns it.
+  final bool obscureText;
+
+  /// A control at the end of the field, such as a show-password toggle.
+  final Widget? suffixIcon;
+
+  /// Called with the raw text on every change (e.g. submit a complete code).
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -93,6 +110,10 @@ class AppTextField extends StatelessWidget {
                 autofillHints: autofillHints,
                 maxLines: maxLines,
                 inputFormatters: inputFormatters,
+                obscureText: obscureText,
+                enableSuggestions: !obscureText,
+                autocorrect: !obscureText,
+                onChanged: onChanged,
                 style: theme.textTheme.bodyLarge,
                 scrollPadding: const EdgeInsets.fromLTRB(
                   AppSpacing.lg,
@@ -103,6 +124,9 @@ class AppTextField extends StatelessWidget {
                 decoration: InputDecoration(
                   hintText: hintText,
                   prefixText: prefixText,
+                  helperText: helperText,
+                  helperMaxLines: 3,
+                  suffixIcon: suffixIcon,
                   errorText: error == null
                       ? null
                       : describeFieldError(error, l10n),

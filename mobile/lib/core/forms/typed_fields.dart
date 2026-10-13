@@ -1,4 +1,5 @@
 import 'package:control_contable/core/forms/app_text_field.dart';
+import 'package:control_contable/core/forms/field_controller.dart';
 import 'package:control_contable/core/forms/typed_field_controllers.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -48,4 +49,57 @@ class AppDateField extends StatelessWidget {
     hintText: AppLocalizations.of(context).formDateHint,
     inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d/\-. ]'))],
   );
+}
+
+/// A password: hidden text with a labeled show/hide toggle, no suggestions.
+/// [autofillHints] tells the platform whether it is a new password (sign-up)
+/// or the current one (login), so password managers offer the right thing.
+class AppPasswordField extends StatefulWidget {
+  /// A password field for [field].
+  const new({
+    required this.field,
+    required this.textInputAction,
+    required this.autofillHints,
+    this.helperText,
+    super.key,
+  });
+
+  /// The password field.
+  final AppFieldController field;
+
+  /// The IME action key.
+  final TextInputAction textInputAction;
+
+  /// `AutofillHints.newPassword` or `AutofillHints.password`.
+  final Iterable<String> autofillHints;
+
+  /// The password rule shown under the field.
+  final String? helperText;
+
+  @override
+  State<AppPasswordField> createState() => _AppPasswordFieldState();
+}
+
+class _AppPasswordFieldState extends State<AppPasswordField> {
+  bool _isHidden = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return AppTextField(
+      field: widget.field,
+      keyboardType: TextInputType.visiblePassword,
+      textInputAction: widget.textInputAction,
+      autofillHints: widget.autofillHints,
+      helperText: widget.helperText,
+      obscureText: _isHidden,
+      suffixIcon: IconButton(
+        tooltip: _isHidden ? l10n.formShowPassword : l10n.formHidePassword,
+        icon: Icon(
+          _isHidden ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+        ),
+        onPressed: () => setState(() => _isHidden = !_isHidden),
+      ),
+    );
+  }
 }

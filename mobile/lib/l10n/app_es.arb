@@ -104,5 +104,17 @@
   "formDateHint": "dd/mm/aaaa",
   "@formDateHint": {
     "description": "Hint inside an empty date field (never a label)."
+  },
+  "formErrorNotAccepted": "Marca esta casilla para continuar.",
+  "@formErrorNotAccepted": {
+    "description": "Inline error: a required checkbox (a consent) was left unchecked. Shown only after submit."
+  },
+  "formShowPassword": "Mostrar contraseña",
+  "@formShowPassword": {
+    "description": "Tooltip and screen reader label of the toggle that reveals a password."
+  },
+  "formHidePassword": "Ocultar contraseña",
+  "@formHidePassword": {
+    "description": "Tooltip and screen reader label of the toggle that hides a revealed password."
   }
 }

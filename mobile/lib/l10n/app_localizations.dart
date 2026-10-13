@@ -234,6 +234,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'dd/mm/aaaa'**
   String get formDateHint;
+
+  /// Inline error: a required checkbox (a consent) was left unchecked. Shown only after submit.
+  ///
+  /// In es, this message translates to:
+  /// **'Marca esta casilla para continuar.'**
+  String get formErrorNotAccepted;
+
+  /// Tooltip and screen reader label of the toggle that reveals a password.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar contraseña'**
+  String get formShowPassword;
+
+  /// Tooltip and screen reader label of the toggle that hides a revealed password.
+  ///
+  /// In es, this message translates to:
+  /// **'Ocultar contraseña'**
+  String get formHidePassword;
 }
 
 class _AppLocalizationsDelegate

@@ -88,6 +88,15 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get formDateHint => 'dd/mm/aaaa';
+
+  @override
+  String get formErrorNotAccepted => 'Marca esta casilla para continuar.';
+
+  @override
+  String get formShowPassword => 'Mostrar contraseña';
+
+  @override
+  String get formHidePassword => 'Ocultar contraseña';
 }
 
 /// The translations for Spanish Castilian, as used in Mexico (`es_MX`).

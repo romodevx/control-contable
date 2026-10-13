@@ -25,6 +25,12 @@ final class InvalidDate extends FieldError {
   const new();
 }
 
+/// A required box (a consent) was left unchecked.
+final class NotAccepted extends FieldError {
+  /// The error.
+  const new();
+}
+
 /// A screen-specific rule, with copy the screen already localized.
 final class CustomFieldError extends FieldError {
   /// The error with its user-facing [message].
@@ -43,5 +49,6 @@ String describeFieldError(FieldError error, AppLocalizations l10n) =>
       MissingValue() => l10n.formErrorRequired,
       InvalidMoney() => l10n.formErrorMoney,
       InvalidDate() => l10n.formErrorDate,
+      NotAccepted() => l10n.formErrorNotAccepted,
       CustomFieldError(:final message) => message,
     };
