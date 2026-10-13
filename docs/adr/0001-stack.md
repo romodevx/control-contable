@@ -204,7 +204,7 @@ still the latest release. No API change forces a decision change.
 
 | Library | Context7 ID | Pin = latest? | API checked | Notes for the first user |
 |---|---|---|---|---|
-| oapi-codegen v2 | `/oapi-codegen/oapi-codegen` | v2.8.0, yes | config `generate: {std-http-server, strict-server, models, embedded-spec}`; OAS 3.1 (`type: [T, "null"]`, `oneOf`+`const` enums, webhooks) | `strict-server` must sit next to a server generator (`std-http-server`). Unused types are pruned by default. Implicit `additionalProperties` are ignored. Use `compatibility.schema-merging-behavior: v2` from the start |
+| oapi-codegen v2 | `/oapi-codegen/oapi-codegen` | v2.8.0, yes | config `generate: {std-http-server, strict-server, models, embedded-spec}`; OAS 3.1 (`type: [T, "null"]`, `oneOf`+`const` enums, webhooks) | `strict-server` must sit next to a server generator (`std-http-server`). Unused types are pruned by default. Implicit `additionalProperties` are ignored. ~~Use `compatibility.schema-merging-behavior: v2`~~ (corrected in P0-06: no such key in v2.8.0; see below) |
 | goose v3 | `/pressly/goose` (docs at v3.28.0) | v3.29.0, yes | `goose.NewProvider(goose.DialectPostgres, *sql.DB, fs.FS, opts...)`, `p.Up(ctx)`, `p.HasPending`, `*goose.PartialError` | Use the **Provider** API (no globals) instead of `SetBaseFS` + `goose.Up`. v3.29.0 is two days old: Context7 docs trail it by one minor; check the changelog before P0 migrations |
 | GORM + driver | `/websites/gorm_io` | gorm v1.31.2, driver v1.6.3, yes | `gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}))`; `WithContext` = `Session{Context}`; `Exec` with `?` placeholders | Build GORM on the same `*sql.DB` (pgx stdlib) that goose uses, so one pool. Set RLS with `SELECT set_config('app.current_user_id', ?, true)` inside the tx (`SET LOCAL` cannot take a bind parameter) |
 | pgx v5 | `/jackc/pgx/v5.11.0` | v5.11.0, yes | `stdlib` driver auto-registered as `"pgx"` / `"pgx/v5"`; `stdlib.OpenDBFromPool(pool)` | `OpenDBFromPool` forces max idle conns to 0 and closing the `*sql.DB` does not close the pool. The source now has a `sql_go1.27.go` file: Go 1.27 is supported |
@@ -218,3 +218,22 @@ Also checked: golangci-lint v2 configuration (`/golangci/golangci-lint`) for dep
 `pattern`). The resulting `backend/.golangci.yml` was proven against probe files: depguard
 rejects `net/http` in `domain/` and `database/sql` in `usecase/`, and forbidigo rejects
 `float64` and `time.Now` in `domain/` but not in `infra/`.
+
+## oapi-codegen and OpenAPI 3.1 (P0-06, 2026-10-13)
+
+Re-checked in Context7 (`/oapi-codegen/oapi-codegen`) and against the v2.8.0 source while
+wiring `make generate`. Config: `backend/adapter/http/gen/oapi-codegen.yaml`; the tool is pinned
+by the `tool` directive in `backend/go.mod` (`go tool oapi-codegen`).
+
+| Caveat | Effect on our contract | Workaround |
+|---|---|---|
+| `compatibility.schema-merging-behavior` does not exist in v2.8.0 (the P0-02 note above was wrong) | Config fails to parse | Dropped. v2.8.0 already merges `allOf` correctly by default; the `old-*` flags only opt back into legacy output |
+| Multi-type unions (`type: [string, boolean, 'null']`) error with `unhandled Schema type` when used as a property. The README says they become `any`; that holds only at top level | `RegimeOptionDef.default` broke generation | Codegen-only **OpenAPI Overlay** (`adapter/http/gen/overlay.yaml`) adds `x-go-type: any` to that property. The contract is unchanged; every new overlay action must be listed here. Prefer `oneOf` or a single type in new schemas |
+| `[T, "null"]` nullability, `oneOf` + `const` enums | Generate fine | None |
+| The embedded spec Go-normalizes `operationId` (`getHealth` → `GetHealth`) | `GetSwagger()` drifts from the contract | `compatibility.preserve-original-operation-id-casing-in-embedded-spec: true` |
+| Strict middlewares receive the Go-normalized name and run **after** the request body is decoded | A flag gate there would answer 400 (not 404) for a disabled module with a bad body, revealing it | The generated flag map exposes `RouteModule(r.Pattern)` (`"METHOD /path"` → `x-module`) besides `OperationModule(operationId)`. P0-15 gates on the route, before the strict handler runs |
+
+Drift: `make codegen-check` regenerates and fails if `adapter/http/gen` differs from what is
+committed. `cmd/flagmapgen` fails generation when an operation lacks `operationId` or a valid
+`x-module`, and `adapter/http/gen/contract_test.go` re-checks the embedded spec, the map, the
+`StrictServerInterface` and the ServeMux patterns.

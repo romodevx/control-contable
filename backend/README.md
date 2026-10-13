@@ -18,6 +18,8 @@ components: [C4](../docs/architecture/c4.md).
 | `make lint` | golangci-lint (depguard Dependency Rule, forbidigo float/`time.Now` bans in `domain/` and `platform/money`, gosec) |
 | `make test` | unit tests with `-race`, including the `internal/archtest` Dependency Rule check |
 | `make test-integration` | tests behind the `integration` build tag (real PostgreSQL) |
+| `make generate` | regenerate `adapter/http/gen` from `../docs/api/openapi.yaml`: oapi-codegen strict std-http server (pinned via `go tool`) + operationId/route → `x-module` flag map (`cmd/flagmapgen`) |
+| `make codegen-check` | regenerate and fail if the output differs from what is committed (drift check) |
 
 ## Layout
 
@@ -25,6 +27,8 @@ Directories appear with the first task that needs them (no empty placeholders):
 
 ```
 cmd/{api,worker,migrate}/   composition roots
+cmd/flagmapgen/             generator of the operationId → flag-key map (go:generate)
+adapter/http/gen/           generated from the contract; never edited by hand
 internal/platform/          P0 cross-cutting packages (no flag)
 internal/<module>/          domain/ usecase/ adapter/ infra/
 internal/archtest/          machine check of the Dependency Rule
