@@ -107,13 +107,29 @@ Every record form is built from `core/forms/`, which encodes
   rewritten in canonical form on blur. Money is read as integer centavos
   (`1,234.50` / `1234.5` / `$ 1,234.50`); dates as es-MX day/month/year in any common form,
   or ISO (never month-first).
-- `AppForm`: one column, `FormErrorSummary` on top (takes focus on a failed submit; each item
-  focuses its field), a sticky `FormFooter`: *Guardar* (never disabled; busy while saving,
+- The server is the authority: `onSave` reports a rejected field with
+  `AppFormController.showServerErrors`, which shows it inline and in the summary.
+- `AppForm`: one column, `FormErrorSummary` on top (takes focus and is announced to screen
+  readers on every failed submit; each item focuses its field), a sticky `FormFooter`: *Guardar* (never disabled; busy while saving,
   repeat taps ignored), optional *Guardar y crear otro* (keeps `keepForNext` fields, clears
   the rest, refocuses), *Cancelar* as text. Ctrl/Cmd+Enter submits from any field.
 - `AppTextField`: label above the field, the fewer kind (optional by default) marked in text,
   `keyboardType` / `textInputAction` / `autofillHints` required. A single-line field with a
   done/go/send action submits on Enter; `next` moves on; multi-line never submits.
+
+## Session tokens (rule for M1-12)
+
+- The session (refresh) token is stored **only** through `flutter_secure_storage` (ADR-0001:
+  Keystore on Android, Keychain on iOS). Never through the `shared_preferences` plugin: it
+  writes plain XML that a backup, `adb` on a debuggable build or a rooted phone can read.
+  `test/platform/token_storage_test.dart` fails if a file using `shared_preferences` handles
+  a token.
+- On Android, `flutter_secure_storage` keeps the ciphertext in a shared-preferences file and
+  its key in the Keystore. The manifest turns Auto Backup off and the backup rules exclude the
+  whole `sharedpref` domain from cloud backup and device-to-device transfer (Android 12+) and
+  from full backups (Android 11 and lower), so the token never leaves the device and a restore
+  never brings back a store whose key stayed behind (`test/platform/android_backup_test.dart`).
+  A secret stored anywhere outside `sharedpref` needs its own exclusion.
 
 ## Design tokens
 
