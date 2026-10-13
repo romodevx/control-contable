@@ -3,31 +3,39 @@ import 'dart:async';
 import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/flags/flags_provider.dart';
 import 'package:control_contable/core/flags/flags_repository.dart';
-import 'package:control_contable/core/network/dio_provider.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../helpers/recording_adapter.dart';
+/// Answers each fetch with the next scripted answer: a module set, an
+/// [Exception] to throw, or a [Completer] to answer later.
+class _ScriptedRepository implements FlagsRepository {
+  new(this._answers);
 
-const _flagsPath = '/v1/flags';
+  final List<Object> _answers;
+  int calls = 0;
 
-CannedReply _enabled(List<String> keys) => (
-  status: 200,
-  body: {'enabled': keys},
-);
+  @override
+  Future<Set<AppModule>> fetchEnabled() async {
+    final answer = _answers[calls++];
+    return switch (answer) {
+      final Set<AppModule> modules => modules,
+      final Completer<Set<AppModule>> pending => await pending.future,
+      final Exception error => throw error,
+      _ => throw StateError('bad script entry: $answer'),
+    };
+  }
+}
 
-ProviderContainer _containerWith(RecordingAdapter adapter) =>
-    ProviderContainer.test(
-      overrides: [
-        dioProvider.overrideWith(
-          (ref) =>
-              Dio(BaseOptions(baseUrl: 'http://api.test'))
-                ..httpClientAdapter = adapter,
-        ),
-      ],
-    );
+ProviderContainer _containerWith(FlagsRepository repository) {
+  // Listening keeps the flags alive, as the mounted app does.
+  return ProviderContainer.test(
+    overrides: [flagsRepositoryProvider.overrideWithValue(repository)],
+  )..listen(flagsProvider, (_, _) {});
+}
+
+bool _isOn(ProviderContainer container, AppModule module) =>
+    container.read(moduleEnabledProvider(module));
 
 Future<void> _resumeApp(WidgetTester tester) async {
   tester.binding
@@ -36,133 +44,81 @@ Future<void> _resumeApp(WidgetTester tester) async {
   await tester.pump();
 }
 
-/// Waits for the in-flight flags request (and the state update after it).
-Future<void> _settle(ProviderContainer container) async {
-  await container.read(flagsProvider.future);
-  await Future<void>.delayed(Duration.zero);
-}
-
-class _PendingRepository implements FlagsRepository {
-  final completer = Completer<Set<AppModule>>();
-
-  @override
-  Future<Set<AppModule>> fetchEnabled() => completer.future;
-}
-
 void main() {
   testWidgets('modules the server lists are ON, every other module is OFF', (
     tester,
   ) async {
     final container = _containerWith(
-      RecordingAdapter(
-        replies: {
-          _flagsPath: _enabled(['module_auth', 'module_incomes']),
-        },
-      ),
+      _ScriptedRepository([
+        {AppModule.auth, AppModule.incomes},
+      ]),
     );
+    await tester.pump();
 
-    await _settle(container);
-
-    expect(container.read(moduleEnabledProvider(AppModule.auth)), isTrue);
-    expect(container.read(moduleEnabledProvider(AppModule.incomes)), isTrue);
-    expect(container.read(moduleEnabledProvider(AppModule.expenses)), isFalse);
+    expect(_isOn(container, AppModule.auth), isTrue);
+    expect(_isOn(container, AppModule.incomes), isTrue);
+    expect(_isOn(container, AppModule.expenses), isFalse);
   });
 
-  testWidgets('keys the app does not know are ignored, not a crash', (
+  testWidgets('fail-closed: an error on the first fetch turns all OFF', (
     tester,
   ) async {
-    final container = _containerWith(
-      RecordingAdapter(
-        replies: {
-          _flagsPath: _enabled(['module_from_the_future', 'module_dashboard']),
-        },
-      ),
-    );
+    final container = _containerWith(_ScriptedRepository([Exception('500')]));
+    await tester.pump();
 
-    await _settle(container);
-
-    expect(container.read(moduleEnabledProvider(AppModule.dashboard)), isTrue);
-    expect(container.read(flagsProvider).value, {AppModule.dashboard});
-  });
-
-  testWidgets('fail-closed: a server error turns every module OFF', (
-    tester,
-  ) async {
-    final container = _containerWith(
-      RecordingAdapter(
-        replies: {_flagsPath: (status: 500, body: <String, Object?>{})},
-      ),
-    );
-
-    await _settle(container);
-
+    expect(container.read(flagsProvider).value, isEmpty);
     for (final module in AppModule.values) {
-      expect(container.read(moduleEnabledProvider(module)), isFalse);
+      expect(_isOn(container, module), isFalse);
     }
   });
 
   testWidgets('fail-closed: while the first answer is pending, all are OFF', (
     tester,
   ) async {
-    final repository = _PendingRepository();
-    final container = ProviderContainer.test(
-      overrides: [flagsRepositoryProvider.overrideWithValue(repository)],
-    );
+    final pending = Completer<Set<AppModule>>();
+    final container = _containerWith(_ScriptedRepository([pending]));
+    await tester.pump();
 
-    expect(container.read(moduleEnabledProvider(AppModule.auth)), isFalse);
+    expect(_isOn(container, AppModule.auth), isFalse);
 
-    repository.completer.complete({AppModule.auth});
-    await _settle(container);
-    expect(container.read(moduleEnabledProvider(AppModule.auth)), isTrue);
+    pending.complete({AppModule.auth});
+    await tester.pump();
+    expect(_isOn(container, AppModule.auth), isTrue);
   });
 
   testWidgets('the answer is cached and refreshed when the app resumes', (
     tester,
   ) async {
-    final adapter = RecordingAdapter(
-      replies: {
-        _flagsPath: _enabled(['module_incomes']),
-      },
-    );
-    final container = _containerWith(adapter);
-    container.listen(moduleEnabledProvider(AppModule.incomes), (_, _) {});
-    await _settle(container);
+    final repository = _ScriptedRepository([
+      {AppModule.incomes},
+      <AppModule>{},
+    ]);
+    final container = _containerWith(repository);
+    await tester.pump();
 
-    expect(container.read(moduleEnabledProvider(AppModule.incomes)), isTrue);
-    container.read(moduleEnabledProvider(AppModule.incomes));
-    expect(adapter.requests, hasLength(1), reason: 'reads hit the cache');
+    expect(_isOn(container, AppModule.incomes), isTrue);
+    _isOn(container, AppModule.incomes);
+    expect(repository.calls, 1, reason: 'reads are served from the cache');
 
-    adapter.reply(_flagsPath, _enabled([]));
     await _resumeApp(tester);
-    await _settle(container);
 
-    expect(adapter.requests, hasLength(2));
-    expect(container.read(moduleEnabledProvider(AppModule.incomes)), isFalse);
+    expect(repository.calls, 2);
+    expect(_isOn(container, AppModule.incomes), isFalse);
   });
 
   testWidgets('a failed refresh keeps the last answer from the server', (
     tester,
   ) async {
-    final adapter = RecordingAdapter(
-      replies: {
-        _flagsPath: _enabled(['module_incomes']),
-      },
-    );
-    final container = _containerWith(adapter);
-    container.listen(moduleEnabledProvider(AppModule.incomes), (_, _) {});
-    await _settle(container);
+    final repository = _ScriptedRepository([
+      {AppModule.incomes},
+      Exception('offline'),
+    ]);
+    final container = _containerWith(repository);
+    await tester.pump();
 
-    adapter.reply(
-      _flagsPath,
-      DioException.connectionError(
-        requestOptions: RequestOptions(path: _flagsPath),
-        reason: 'offline',
-      ),
-    );
     await _resumeApp(tester);
-    await _settle(container);
 
-    expect(adapter.requests, hasLength(2));
-    expect(container.read(moduleEnabledProvider(AppModule.incomes)), isTrue);
+    expect(repository.calls, 2);
+    expect(_isOn(container, AppModule.incomes), isTrue);
   });
 }

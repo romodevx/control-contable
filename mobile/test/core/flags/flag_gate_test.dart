@@ -30,9 +30,7 @@ Future<void> _pumpMenu(WidgetTester tester, Set<AppModule> enabled) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        flagsRepositoryProvider.overrideWithValue(
-          FakeFlagsRepository(enabled),
-        ),
+        flagsRepositoryProvider.overrideWithValue(FakeFlagsRepository(enabled)),
       ],
       child: const MaterialApp(home: Scaffold(body: _Menu())),
     ),

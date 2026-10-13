@@ -56,12 +56,16 @@ MOBILE_RELEASE_FLAGS := --release --flavor $(FLAVOR) -t lib/main_$(FLAVOR).dart 
 MOBILE_OPENAPI_JSON := build/openapi/openapi.json
 MOBILE_API_DIR := lib/api/generated
 
-.PHONY: mobile-check mobile-client mobile-client-check mobile-run mobile-run-mock \
+.PHONY: mobile-check mobile-test-mock mobile-client mobile-client-check mobile-run mobile-run-mock \
 	mobile-require-api-url mobile-build-apk mobile-build-ipa
 
 ## mobile-check: format check, analyze (0 issues), widget/unit tests
 mobile-check:
 	cd $(MOBILE) && dart format --set-exit-if-changed . && flutter analyze && flutter test
+
+## mobile-test-mock: integration tests against the Prism mock (start it first: make mock)
+mobile-test-mock:
+	cd $(MOBILE) && MOCK_API_URL=http://$(MOCK_HOST):$(MOCK_PORT) flutter test --tags mock
 
 ## mobile-client: regenerate the Dart API client from docs/api/openapi.yaml (normalize →
 ## swagger_parser → build_runner → kind guard → format). Fails on a kind collision.
