@@ -5,8 +5,9 @@
 --
 -- Refresh lookup under RLS (no bypass, no definer function): the token is
 -- `<user_id>.<secret>`. The API parses the user id, sets app.current_user_id to it, and
--- only then looks up sha256(secret) in token_hash. A forged prefix puts the lookup under
--- a user who does not own that hash, so it finds nothing.
+-- only then looks up token_hash = sha256 of the canonical token text (domain
+-- RefreshToken.Hash: it binds the user id too). A forged prefix puts the lookup under a
+-- user who does not own that hash, so it finds nothing.
 --
 -- Rotation (M1-08) is one atomic claim, which also settles concurrent refreshes:
 --   UPDATE refresh_tokens SET rotated_at = now()
@@ -28,10 +29,10 @@
 -- +goose Up
 
 -- ---------------------------------------------------------------------------------------
--- refresh_tokens: one row per issued refresh token. Only the SHA-256 of the 256-bit
--- secret is stored, never the secret. A login starts a family; every rotation inserts a
--- successor in the same family with rotated_from pointing at its parent and the parent's
--- absolute expiry. Account deletion (US-A4) cascades.
+-- refresh_tokens: one row per issued refresh token. Only the SHA-256 of the canonical
+-- "<user_id>.<secret>" text (256-bit secret) is stored, never the token. A login starts
+-- a family; every rotation inserts a successor in the same family with rotated_from
+-- pointing at its parent and the parent's absolute expiry. Account deletion (US-A4) cascades.
 -- ---------------------------------------------------------------------------------------
 CREATE TABLE refresh_tokens (
   id                  uuid        PRIMARY KEY DEFAULT uuidv7(),
@@ -75,7 +76,7 @@ CREATE TABLE refresh_tokens (
         AND coalesce(revoke_reason IN ('logout', 'reuse_detected', 'password_changed', 'admin'), false)))
 );
 COMMENT ON TABLE refresh_tokens IS
-  'Rotating refresh tokens (RLS on user_id). Stores sha256 of the secret only; grouped by family_id.';
+  'Rotating refresh tokens (RLS on user_id). Stores sha256 of the token text only; grouped by family_id.';
 COMMENT ON COLUMN refresh_tokens.created_at IS 'Issued at.';
 
 -- Revoke a family in one statement (data-model.md); the leading user_id matches the RLS
