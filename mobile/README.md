@@ -58,8 +58,10 @@ lib/
   core/
     config/              AppFlavor, AppConfig, appConfigProvider (overridden at boot)
     flags/               AppModule, flagsProvider, ref.useFlag(), FlagGate
+    forms/               AppForm, AppTextField, AppMoneyField, AppDateField (house form rules)
     network/             dioProvider (the one HTTP client), apiClientProvider (generated client)
-    router/              appRouterProvider (go_router), AppRoutes, FeatureModule, NotFoundScreen
+    router/              appRouterProvider (go_router), AppRoutes, FeatureModule, NotFoundScreen,
+                         BootSplashScreen
     theme/               design tokens (ThemeExtension) and the Material mapping
   features/<module>/     one folder per module slice: <module>_routes.dart, presentation/,
                          application/, data/ — a disabled module's routes are unreachable
@@ -87,8 +89,31 @@ once; a location owned by a disabled module redirects to "not found", re-checked
 flag change, so a refresh never resets the user's navigation.
 
 - Fail-closed: loading, a failed first fetch or a key this build does not know ⇒ OFF.
+- A location inside a module opened before the first answer (deep link, notification,
+  post-login redirect) waits on `/cargando`, keeps the requested location and returns to it
+  once flags arrive. After `flagsBootTimeout` (8 s) without an answer it fails closed to
+  "not found".
 - Cached in memory; refreshed when the app resumes. A failed refresh keeps the last answer.
 - UX only: the backend answering `404` for a disabled module is the security boundary.
+
+## Forms
+
+Every record form is built from `core/forms/`, which encodes
+`~/.claude/rules/ui-forms-and-modals.md` once so screens cannot drift:
+
+- `AppFormController` owns the fields (`textField`, `moneyField`, `dateField`) and the
+  policy: required-but-empty errors on submit only; format errors on blur once the field has
+  a value; after an error shows, every change re-checks it. Valid money and dates are
+  rewritten in canonical form on blur. Money is read as integer centavos
+  (`1,234.50` / `1234.5` / `$ 1,234.50`); dates as es-MX day/month/year in any common form,
+  or ISO (never month-first).
+- `AppForm`: one column, `FormErrorSummary` on top (takes focus on a failed submit; each item
+  focuses its field), a sticky `FormFooter`: *Guardar* (never disabled; busy while saving,
+  repeat taps ignored), optional *Guardar y crear otro* (keeps `keepForNext` fields, clears
+  the rest, refocuses), *Cancelar* as text. Ctrl/Cmd+Enter submits from any field.
+- `AppTextField`: label above the field, the fewer kind (optional by default) marked in text,
+  `keyboardType` / `textInputAction` / `autofillHints` required. A single-line field with a
+  done/go/send action submits on Enter; `next` moves on; multi-line never submits.
 
 ## Design tokens
 
