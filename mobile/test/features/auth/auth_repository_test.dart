@@ -11,6 +11,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../helpers/recording_adapter.dart';
+import '../../helpers/synthetic_password.dart';
 
 const CannedReply _verificationSent = (
   status: 202,
@@ -36,10 +37,10 @@ void main() {
     adapter.reply('/v1/auth/register', _verificationSent);
 
     await repository.register(
-      const RegisterRequest(
+      RegisterRequest(
         email: 'ana@example.mx',
-        password: 'una frase larga',
-        acceptedDocuments: [
+        password: syntheticPassword(),
+        acceptedDocuments: const [
           DocumentAcceptance(
             kind: LegalDocumentKind.terms,
             version: '2026-10-01',
@@ -51,7 +52,7 @@ void main() {
     expect(adapter.requests.single.method, 'POST');
     expect(lastBody(), {
       'email': 'ana@example.mx',
-      'password': 'una frase larga',
+      'password': syntheticPassword(),
       'accepted_documents': [
         {'kind': 'terms', 'version': '2026-10-01'},
       ],
@@ -79,10 +80,10 @@ void main() {
 
     await expectLater(
       repository.register(
-        const RegisterRequest(
+        RegisterRequest(
           email: 'ana@example.mx',
-          password: 'password1234',
-          acceptedDocuments: [],
+          password: syntheticPassword(),
+          acceptedDocuments: const [],
         ),
       ),
       throwsA(

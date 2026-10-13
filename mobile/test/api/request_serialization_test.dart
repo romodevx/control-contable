@@ -5,6 +5,8 @@ import 'package:control_contable/api/generated/models/legal_document_kind.dart';
 import 'package:control_contable/api/generated/models/register_request.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../helpers/synthetic_password.dart';
+
 /// The contract's request schemas are `additionalProperties: false`, and an
 /// optional non-nullable property rejects `null` (Prism answers 400). An
 /// unset optional field must be left out of the body, not sent as `null`.
@@ -22,9 +24,9 @@ void main() {
 
   test('an unset optional field is left out of the body', () {
     final body = wire(
-      const RegisterRequest(
+      RegisterRequest(
         email: 'ana@example.mx',
-        password: 'una frase larga',
+        password: syntheticPassword(),
         acceptedDocuments: documents,
       ),
     );
@@ -38,9 +40,9 @@ void main() {
 
   test('a set optional field is sent', () {
     final body = wire(
-      const RegisterRequest(
+      RegisterRequest(
         email: 'ana@example.mx',
-        password: 'una frase larga',
+        password: syntheticPassword(),
         acceptedDocuments: documents,
         name: 'Ana',
       ),

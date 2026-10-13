@@ -16,6 +16,8 @@ import 'package:control_contable/features/auth/data/auth_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../helpers/synthetic_password.dart';
+
 final String _mockUrl = Platform.environment['MOCK_API_URL'] ?? '';
 
 void main() {
@@ -59,7 +61,7 @@ void main() {
           await repository.register(
             RegisterRequest(
               email: 'ana.gomez@example.mx',
-              password: 'una frase larga y propia',
+              password: syntheticPassword(24),
               acceptedDocuments: set.acceptances,
             ),
           );

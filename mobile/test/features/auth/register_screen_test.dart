@@ -9,6 +9,7 @@ import 'package:control_contable/features/auth/auth_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../helpers/synthetic_password.dart';
 import 'pump_auth.dart';
 
 const _name = 'Nombre (opcional)';
@@ -47,7 +48,7 @@ void main() {
   Future<void> fillValid(WidgetTester tester, {String name = ''}) async {
     await tester.enterText(inputLabeled(_name), name);
     await tester.enterText(inputLabeled(_email), '  ana@example.mx ');
-    await tester.enterText(inputLabeled(_password), 'una frase larga ');
+    await tester.enterText(inputLabeled(_password), '${syntheticPassword()} ');
     await check(tester, _privacy);
     await check(tester, _terms);
   }
@@ -136,7 +137,7 @@ void main() {
     ) async {
       await open(tester);
 
-      await tester.enterText(inputLabeled(_password), 'corta');
+      await tester.enterText(inputLabeled(_password), syntheticPassword(5));
       await tester.tap(inputLabeled(_email));
       await tester.pump();
 
@@ -155,7 +156,11 @@ void main() {
 
       final request = harness.repository.registered.single;
       expect(request.email, 'ana@example.mx');
-      expect(request.password, 'una frase larga ', reason: 'never trimmed');
+      expect(
+        request.password,
+        '${syntheticPassword()} ',
+        reason: 'never trimmed',
+      );
       expect(request.name, isNull);
       expect(request.acceptedDocuments.map((d) => (d.kind, d.version)), [
         (LegalDocumentKind.privacyNoticeIntegral, '2026-10-01'),
