@@ -1,4 +1,7 @@
+import 'package:control_contable/app/app.dart';
 import 'package:control_contable/core/router/app_router.dart';
+import 'package:control_contable/core/router/boot_splash_screen.dart';
+import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,6 +30,24 @@ void main() {
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    await expectLater(tester, meetsGuideline(textContrastGuideline));
+    semantics.dispose();
+  });
+
+  testWidgets('the boot splash is announced and meets the guidelines', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(
+      const MaterialApp(
+        locale: appLocale,
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        home: BootSplashScreen(),
+      ),
+    );
+
+    expect(find.bySemanticsLabel('Cargando…'), findsOneWidget);
     await expectLater(tester, meetsGuideline(textContrastGuideline));
     semantics.dispose();
   });

@@ -156,6 +156,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ir al inicio'**
   String get notFoundAction;
+
+  /// Splash shown while a deep link waits for the module flags.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando…'**
+  String get bootLoading;
 }
 
 class _AppLocalizationsDelegate

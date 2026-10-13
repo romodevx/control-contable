@@ -39,6 +39,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get notFoundAction => 'Ir al inicio';
+
+  @override
+  String get bootLoading => 'Cargando…';
 }
 
 /// The translations for Spanish Castilian, as used in Mexico (`es_MX`).

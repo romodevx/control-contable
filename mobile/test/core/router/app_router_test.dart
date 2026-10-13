@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/flags/flags_repository.dart';
 import 'package:control_contable/core/router/app_router.dart';
+import 'package:control_contable/core/router/boot_splash_screen.dart';
 import 'package:control_contable/core/router/feature_module.dart';
 import 'package:control_contable/core/router/not_found_screen.dart';
 import 'package:control_contable/features/home/presentation/home_screen.dart';
@@ -81,6 +84,107 @@ void main() {
     });
   });
 
+  group('a deep link before the flags load (F-01)', () {
+    const location = '/ingresos-prueba';
+    final features = [
+      FeatureModule(
+        module: AppModule.incomes,
+        routes: [
+          GoRoute(
+            path: location,
+            builder: (context, state) => const Text('pantalla de ingresos'),
+          ),
+        ],
+      ),
+    ];
+
+    Future<Completer<Set<AppModule>>> deepLinkWhileLoading(
+      WidgetTester tester,
+    ) async {
+      final pending = Completer<Set<AppModule>>();
+      await pumpControlContableApp(
+        tester,
+        flagsRepository: _PendingFlagsRepository(pending.future),
+        overrides: [featureModulesProvider.overrideWithValue(features)],
+      );
+      _routerOf(tester).go('$location?mes=2026-10');
+      await tester.pump();
+      return pending;
+    }
+
+    testWidgets('waits on the splash instead of not found', (tester) async {
+      final pending = await deepLinkWhileLoading(tester);
+
+      expect(find.byType(BootSplashScreen), findsOneWidget);
+      expect(find.byType(NotFoundScreen), findsNothing);
+
+      pending.complete(const {});
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('lands on the module once its flag arrives ON', (tester) async {
+      final pending = await deepLinkWhileLoading(tester);
+
+      pending.complete({AppModule.incomes});
+      await tester.pumpAndSettle();
+
+      expect(find.text('pantalla de ingresos'), findsOneWidget);
+      final uri = _routerOf(tester).routerDelegate.currentConfiguration.uri;
+      expect(uri.toString(), '$location?mes=2026-10');
+    });
+
+    testWidgets('shows not found once its flag arrives OFF', (tester) async {
+      final pending = await deepLinkWhileLoading(tester);
+
+      pending.complete(const {});
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NotFoundScreen), findsOneWidget);
+    });
+
+    testWidgets('fails closed to not found when the flags never arrive', (
+      tester,
+    ) async {
+      await deepLinkWhileLoading(tester);
+
+      await tester.pump(flagsBootTimeout);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(NotFoundScreen), findsOneWidget);
+      expect(find.text('pantalla de ingresos'), findsNothing);
+    });
+
+    for (final from in ['//evil.example/x', 'https://evil.example', '']) {
+      testWidgets('the splash never leaves the app (desde="$from")', (
+        tester,
+      ) async {
+        await pumpControlContableApp(tester);
+
+        final splash = Uri(
+          path: AppRoutes.splash,
+          queryParameters: {AppRoutes.splashFrom: from},
+        );
+        _routerOf(tester).go(splash.toString());
+        await tester.pumpAndSettle();
+
+        expect(find.byType(HomeScreen), findsOneWidget);
+      });
+    }
+
+    testWidgets('an unowned location does not wait for the flags', (
+      tester,
+    ) async {
+      final pending = await deepLinkWhileLoading(tester);
+      _routerOf(tester).go(AppRoutes.home);
+      await tester.pump();
+
+      expect(find.byType(HomeScreen), findsOneWidget);
+
+      pending.complete(const {});
+      await tester.pumpAndSettle();
+    });
+  });
+
   group('a flag change on resume', () {
     const incomesLocation = '/ingresos-prueba';
     final features = [
@@ -155,4 +259,14 @@ class _SequenceFlagsRepository implements FlagsRepository {
 
   @override
   Future<Set<AppModule>> fetchEnabled() async => _answers[_calls++];
+}
+
+/// Answers every fetch with [_answer], which a test completes when it wants.
+class _PendingFlagsRepository implements FlagsRepository {
+  new(this._answer);
+
+  final Future<Set<AppModule>> _answer;
+
+  @override
+  Future<Set<AppModule>> fetchEnabled() => _answer;
 }

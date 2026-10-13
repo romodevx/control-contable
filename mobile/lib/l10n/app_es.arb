@@ -39,5 +39,9 @@
   "notFoundAction": "Ir al inicio",
   "@notFoundAction": {
     "description": "Button on the not-found screen that returns to home."
+  },
+  "bootLoading": "Cargando…",
+  "@bootLoading": {
+    "description": "Splash shown while a deep link waits for the module flags."
   }
 }
