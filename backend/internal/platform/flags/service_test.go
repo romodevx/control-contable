@@ -6,6 +6,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -247,6 +248,102 @@ func TestWaiterHonorsItsOwnCancellation(t *testing.T) {
 	cancel()
 
 	assert.False(t, svc.Enabled(ctx, "module_auth"), "a canceled waiter gives up instead of queueing")
+}
+
+// hangGuard bounds how long a test waits for a call that must not hang.
+const hangGuard = 5 * time.Second
+
+// Regression (P0-28): a database that hangs instead of refusing (paused,
+// blackholed, overloaded) made every gated request wait for the client to
+// give up. The load is bounded, so the gate still answers 404 promptly.
+func TestLoadIsBoundedByTheLoadTimeout(t *testing.T) {
+	svc := flags.NewService(blockingReader{}, flags.WithLoadTimeout(20*time.Millisecond))
+
+	done := make(chan bool, 1)
+	go func() { done <- svc.Enabled(t.Context(), "module_auth") }()
+
+	select {
+	case got := <-done:
+		assert.False(t, got, "a load that times out fails closed")
+	case <-time.After(hangGuard):
+		t.Fatal("Enabled hangs while the reader hangs: the load is not bounded")
+	}
+}
+
+// failingGatedReader blocks every load until release is closed, then fails.
+type failingGatedReader struct {
+	release <-chan struct{}
+	loads   atomic.Int64
+}
+
+func (r *failingGatedReader) EnabledKeys(ctx context.Context) ([]string, error) {
+	r.loads.Add(1)
+	select {
+	case <-r.release:
+		return nil, errDatabaseDown
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
+// Regression (P0-28): callers queued behind a failed load each retried it in
+// turn, so with a slow database the N-th request waited N load timeouts.
+// synctest.Wait proves every caller is queued before the load fails, so the
+// count is exact: one load for all of them (16 before the fix).
+func TestWaitersShareAFailedLoad(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		release := make(chan struct{})
+		reader := &failingGatedReader{release: release}
+		svc, _ := newService(t, reader)
+
+		const callers = 16
+		var wg sync.WaitGroup
+		results := make([]bool, callers)
+		for i := range callers {
+			wg.Go(func() { results[i] = svc.Enabled(t.Context(), "module_auth") })
+		}
+		synctest.Wait()
+		close(release)
+		wg.Wait()
+
+		assert.Equal(t, int64(1), reader.loads.Load(), "waiters reuse the failure of the load they waited on")
+		for i, got := range results {
+			assert.False(t, got, "caller %d", i)
+		}
+	})
+}
+
+// The load must not depend on the caller that happened to start it: if that
+// client disconnects, the callers waiting on the same load still get flags.
+func TestLoadSurvivesTheCancellationOfTheCallerThatStartedIt(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		release := make(chan struct{})
+		reader := &gatedReader{release: release, started: make(chan struct{}), keys: []string{"module_auth"}}
+		svc, _ := newService(t, reader)
+
+		first, cancelFirst := context.WithCancel(t.Context())
+		go svc.Enabled(first, "module_auth")
+		synctest.Wait() // first is the one loading
+		second := make(chan bool, 1)
+		go func() { second <- svc.Enabled(t.Context(), "module_auth") }()
+		synctest.Wait() // second is queued behind it
+		cancelFirst()
+		synctest.Wait()
+		close(release)
+
+		assert.True(t, <-second, "the load completes for the callers still waiting")
+		assert.Equal(t, int64(1), reader.loads.Load(), "second shared the first caller's load")
+	})
+}
+
+func TestDefaultLoadTimeoutIsShort(t *testing.T) {
+	assert.Positive(t, flags.DefaultLoadTimeout)
+	assert.LessOrEqual(t, flags.DefaultLoadTimeout, 2*time.Second,
+		"a hung database must still let the gate answer 404 well inside the client's patience")
+}
+
+func TestNewServiceRejectsANonPositiveLoadTimeout(t *testing.T) {
+	assert.Panics(t, func() { flags.NewService(&fakeReader{}, flags.WithLoadTimeout(0)) })
 }
 
 // Regression: a nil logger made the fail-closed path panic (500, not 404).

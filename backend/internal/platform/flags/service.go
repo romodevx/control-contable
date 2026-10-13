@@ -24,6 +24,11 @@ import (
 // instances, so the TTL is the propagation guarantee.
 const DefaultTTL = 5 * time.Second
 
+// DefaultLoadTimeout bounds one read of the enabled set. A database that hangs
+// instead of refusing must not hold requests: the gate fails closed (404) once
+// the load times out.
+const DefaultLoadTimeout = 2 * time.Second
+
 // Reader is the port to the flag storage: it returns the keys of the flags
 // that are ON. The Postgres adapter reads them as the runtime role.
 type Reader interface {
@@ -35,6 +40,9 @@ type Option func(*Service)
 
 // WithTTL sets how long a loaded snapshot is served. It must be positive.
 func WithTTL(ttl time.Duration) Option { return func(s *Service) { s.ttl = ttl } }
+
+// WithLoadTimeout bounds each read of the enabled set. It must be positive.
+func WithLoadTimeout(d time.Duration) Option { return func(s *Service) { s.loadTimeout = d } }
 
 // WithClock replaces the wall clock (tests).
 func WithClock(c clock.Clock) Option { return func(s *Service) { s.clock = c } }
@@ -56,6 +64,8 @@ type Service struct {
 	clock  clock.Clock
 	logger *slog.Logger
 	ttl    time.Duration
+	// loadTimeout bounds one reader call.
+	loadTimeout time.Duration
 
 	snap atomic.Pointer[snapshot]
 	// gen is bumped by Invalidate; a snapshot of an older generation is stale.
@@ -63,6 +73,17 @@ type Service struct {
 	// loading is a one-slot semaphore: one caller reloads while concurrent
 	// misses wait for its snapshot (or give up when their context ends).
 	loading chan struct{}
+	// loads counts finished reader calls; failed holds the latest one when it
+	// failed, so callers that waited on it share its error instead of each
+	// retrying behind the semaphore.
+	loads  atomic.Uint64
+	failed atomic.Pointer[loadFailure]
+}
+
+// loadFailure is the error of the reader call numbered seq.
+type loadFailure struct {
+	seq uint64
+	err error
 }
 
 // snapshot is an immutable view of the enabled flags.
@@ -74,20 +95,24 @@ type snapshot struct {
 }
 
 // NewService returns a Service reading through reader. It panics on a
-// non-positive TTL: that is a wiring bug, caught at startup.
+// non-positive TTL or load timeout: that is a wiring bug, caught at startup.
 func NewService(reader Reader, opts ...Option) *Service {
 	s := &Service{
-		reader:  reader,
-		clock:   clock.NewSystem(),
-		logger:  slog.New(slog.DiscardHandler),
-		ttl:     DefaultTTL,
-		loading: make(chan struct{}, 1),
+		reader:      reader,
+		clock:       clock.NewSystem(),
+		logger:      slog.New(slog.DiscardHandler),
+		ttl:         DefaultTTL,
+		loadTimeout: DefaultLoadTimeout,
+		loading:     make(chan struct{}, 1),
 	}
 	for _, opt := range opts {
 		opt(s)
 	}
 	if s.ttl <= 0 {
 		panic(fmt.Sprintf("flags: TTL must be positive, got %s", s.ttl))
+	}
+	if s.loadTimeout <= 0 {
+		panic(fmt.Sprintf("flags: load timeout must be positive, got %s", s.loadTimeout))
 	}
 	return s
 }
@@ -123,6 +148,10 @@ func (s *Service) current(ctx context.Context) (*snapshot, error) {
 	if snap := s.snap.Load(); s.fresh(snap) {
 		return snap, nil
 	}
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("flags: %w", err)
+	}
+	seen := s.loads.Load()
 	select {
 	case s.loading <- struct{}{}:
 	case <-ctx.Done():
@@ -133,14 +162,25 @@ func (s *Service) current(ctx context.Context) (*snapshot, error) {
 	if snap := s.snap.Load(); s.fresh(snap) {
 		return snap, nil
 	}
+	// Or failed to: share that error rather than queue one more slow load.
+	if f := s.failed.Load(); f != nil && f.seq > seen {
+		return nil, f.err
+	}
 	return s.reload(ctx)
 }
 
+// reload reads the enabled set once, bounded by loadTimeout. The read does
+// not inherit the caller's cancellation: other callers may be waiting on it.
 func (s *Service) reload(ctx context.Context) (*snapshot, error) {
 	gen := s.gen.Load()
-	keys, err := s.reader.EnabledKeys(ctx)
+	loadCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), s.loadTimeout)
+	defer cancel()
+	keys, err := s.reader.EnabledKeys(loadCtx)
+	seq := s.loads.Add(1)
 	if err != nil {
-		return nil, fmt.Errorf("flags: read enabled flags: %w", err)
+		err = fmt.Errorf("flags: read enabled flags: %w", err)
+		s.failed.Store(&loadFailure{seq: seq, err: err})
+		return nil, err
 	}
 	snap := newSnapshot(keys, s.clock.Now().Add(s.ttl), gen)
 	// An Invalidate during the read leaves gen behind, so fresh rejects this

@@ -26,6 +26,7 @@ components: [C4](../docs/architecture/c4.md).
 | `make db-down` | stop the local stack, keep the data volume |
 | `make db-reset` | **LOCAL only**: drop the volume and re-bootstrap (refuses a remote Docker host, a non-loopback `CC_DB_HOST` or a remote `DATABASE_URL`) |
 | `make migrate-up` / `migrate-down` / `migrate-status` | **LOCAL only**: run `cmd/migrate` as `cc_owner` against the local stack (apply pending / roll back the latest / list) |
+| `make api` / `make worker` | **LOCAL only**: run `cmd/api` (as `cc_app`, `APP_ENV=dev`, port `API_PORT`, default 3000) / `cmd/worker` (as `cc_worker`) against the local stack, URLs built from `infra/local/.env` |
 | `make db-roles-check` | log in over TCP as `cc_app`, `cc_webhook`, `cc_worker`; fail if any is SUPERUSER, BYPASSRLS, owner or can DDL |
 
 CI (`.github/workflows/backend.yml`) runs `fmt-check`, golangci-lint v2.14.0, `codegen-check`,
@@ -34,8 +35,9 @@ followed by `cover-check`, and uploads the profile as the `backend-coverage` art
 
 ### Running the API
 
-`go run ./cmd/api` (release builds: `-ldflags "-X main.version=<semver>"`). Configuration is
-read from the environment (`internal/platform/config`):
+`go run ./cmd/api` (release builds: `-ldflags "-X main.version=<semver>"`). Locally, from zero:
+`make db-reset && make migrate-up && make api` (then `make worker` in another shell).
+Configuration is read from the environment (`internal/platform/config`):
 
 | Variable | Default | Meaning |
 |---|---|---|
@@ -94,7 +96,8 @@ Every module ships behind a `module_<name>` flag in `feature_flags`, OFF by defa
 
 - `internal/platform/flags`: `Service` (`Enabled`, `EnabledModules`, `Invalidate`) caches the
   enabled set for `flags.DefaultTTL` (5 s) and **fails closed**: if the set cannot be read,
-  every module is OFF. `Admin` validates keys and preset names for the CLI.
+  every module is OFF. Each read is bounded by `flags.DefaultLoadTimeout` (2 s), so a database
+  that hangs still yields a prompt 404; callers queued behind a failed read share its error. `Admin` validates keys and preset names for the CLI.
 - `internal/platform/flags/flagsgorm`: GORM adapter. `Reader` runs as `cc_app` (SELECT only);
   `Store` runs as `cc_owner` and applies a preset in one transaction.
 - `adapter/http/flaggate`: the gate primitive (`Wrap`, `WriteNotFound`). `adapter/http/router`

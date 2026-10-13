@@ -292,6 +292,37 @@ func TestEmailVerifications_ServiceOnly(t *testing.T) {
 	assert.Zero(t, affected)
 }
 
+// P0-28: the deny-all holds for every runtime role, not only cc_app: with a mistaken
+// full grant, cc_webhook and cc_worker still see, change and add nothing.
+func TestEmailVerifications_DenyAllForEveryRuntimeRoleDespiteAGrant(t *testing.T) {
+	db := pgtest.NewDatabase(t)
+	owner := db.Connect(t, pgtest.RoleOwner)
+	_, err := owner.ExecContext(t.Context(), insertVerificationQ)
+	require.NoError(t, err)
+	_, err = owner.ExecContext(t.Context(),
+		"GRANT SELECT, INSERT, UPDATE, DELETE ON email_verifications TO cc_app, cc_webhook, cc_worker")
+	require.NoError(t, err)
+
+	for _, role := range []pgtest.Role{pgtest.RoleApp, pgtest.RoleWebhook, pgtest.RoleWorker} {
+		t.Run(string(role), func(t *testing.T) {
+			conn := db.Connect(t, role)
+
+			var seen int
+			require.NoError(t, conn.QueryRowContext(t.Context(), "SELECT count(*) FROM email_verifications").Scan(&seen))
+			assert.Zero(t, seen, "no policy: no row is visible")
+			for _, write := range []string{"UPDATE email_verifications SET attempts = attempts + 1", "DELETE FROM email_verifications"} {
+				res, err := conn.ExecContext(t.Context(), write)
+				require.NoError(t, err)
+				affected, err := res.RowsAffected()
+				require.NoError(t, err)
+				assert.Zero(t, affected, write)
+			}
+			_, err = conn.ExecContext(t.Context(), insertVerificationQ)
+			requireSQLState(t, err, sqlstateInsufficientPrivilege)
+		})
+	}
+}
+
 // Account deletion (US-A4): deleting the users row removes its usage and entitlements,
 // although cc_app holds no DELETE on either.
 func TestUsers_DeletionCascades(t *testing.T) {

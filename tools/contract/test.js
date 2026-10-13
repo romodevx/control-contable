@@ -52,6 +52,11 @@ const cases = [
     expect: ['rule/operation-x-module'],
   },
   {
+    name: 'x-module the feature_flags key CHECK rejects (trailing underscore)',
+    source: () => mutate('x-module: module_things', 'x-module: module_things_'),
+    expect: ['rule/operation-x-module'],
+  },
+  {
     name: 'missing operationId',
     source: () => mutate('      operationId: createThing\n', ''),
     expect: ['operation-operationId'],

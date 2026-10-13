@@ -14,7 +14,7 @@ COVER_EXCLUDE ?= /adapter/http/gen/|/cmd/
 
 .DEFAULT_GOAL := check
 
-.PHONY: check fmt fmt-check lint test test-integration test-contract cover cover-check vuln tidy generate codegen-check db-up db-down db-reset db-roles-check migrate-up migrate-down migrate-status flags
+.PHONY: check fmt fmt-check lint test test-integration test-contract cover cover-check vuln tidy generate codegen-check db-up db-down db-reset db-roles-check migrate-up migrate-down migrate-status flags api worker
 
 ## check: fmt-check + lint + unit tests (what CI runs)
 check: fmt-check lint test
@@ -132,6 +132,24 @@ migrate-status: $(LOCAL_ENV)
 FLAGS = set -e; . $(LOCAL_ENV); \
 	DATABASE_URL_OWNER="postgres://cc_owner:$${CC_OWNER_PASSWORD}@$${CC_DB_HOST}:$${CC_DB_PORT}/$${CC_DB_NAME}?sslmode=disable" \
 	$(GO) run ./cmd/flags
+
+# Runtime URLs for cmd/api and cmd/worker on the LOCAL stack only, built from
+# infra/local/.env inside the recipe (passwords never echoed). API_PORT 3000 is
+# control-contable's slot in the project registry (8080, the config default for
+# Cloud Run, is often taken locally).
+API_PORT ?= 3000
+RUN_ENV  = set -e; . $(LOCAL_ENV); APP_ENV=dev
+DB_URL   = postgres://$(1):$${$(2)}@$${CC_DB_HOST}:$${CC_DB_PORT}/$${CC_DB_NAME}?sslmode=disable
+
+## api: LOCAL ONLY. Run cmd/api (APP_ENV=dev, PORT=API_PORT) as cc_app against the local stack
+api: $(LOCAL_ENV)
+	@$(ASSERT_LOCAL)
+	@$(RUN_ENV) PORT=$(API_PORT) DATABASE_URL="$(call DB_URL,cc_app,CC_APP_PASSWORD)" $(GO) run ./cmd/api
+
+## worker: LOCAL ONLY. Run cmd/worker (APP_ENV=dev) as cc_worker against the local stack
+worker: $(LOCAL_ENV)
+	@$(ASSERT_LOCAL)
+	@$(RUN_ENV) DATABASE_URL="$(call DB_URL,cc_worker,CC_WORKER_PASSWORD)" $(GO) run ./cmd/worker
 
 ## flags: LOCAL ONLY. Module flag admin as cc_owner, e.g. make flags ARGS="list" | ARGS="enable module_auth" | ARGS="apply-preset demo_core"
 flags: $(LOCAL_ENV)

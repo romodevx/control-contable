@@ -65,6 +65,65 @@ func TestSchemaPublic_RuntimeRolesCannotCreate(t *testing.T) {
 	}
 }
 
+// unforcedTables are the tables allowed to skip FORCE ROW LEVEL SECURITY, each with
+// RLS still ENABLED: global data with no user to key on, or service-only rows the
+// owner's definer functions must reach. Adding a table here needs the security gate.
+var unforcedTables = map[string]string{
+	"feature_flags":       "global module flags (baseline)",
+	"flag_presets":        "global presets (baseline)",
+	"flag_preset_flags":   "global presets (baseline)",
+	"email_verifications": "service-only; definer functions owned by cc_owner",
+}
+
+// rlsGapsQuery lists every table in public that lacks ENABLE, or lacks FORCE without
+// an allow-list entry ($1). goose_db_version is the runner's own bookkeeping.
+const rlsGapsQuery = `
+SELECT c.relname || CASE WHEN NOT c.relrowsecurity THEN ': RLS not enabled' ELSE ': RLS not forced' END
+FROM pg_catalog.pg_class c
+JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p') AND c.relname <> 'goose_db_version'
+  AND (NOT c.relrowsecurity OR (NOT c.relforcerowsecurity AND NOT c.relname = ANY($1)))
+ORDER BY 1`
+
+func rlsGaps(t *testing.T, owner *sql.DB) []string {
+	t.Helper()
+	allowed := make([]string, 0, len(unforcedTables))
+	for name := range unforcedTables {
+		allowed = append(allowed, name)
+	}
+	rows, err := owner.QueryContext(t.Context(), rlsGapsQuery, allowed)
+	require.NoError(t, err)
+	defer rows.Close()
+	var gaps []string
+	for rows.Next() {
+		var g string
+		require.NoError(t, rows.Scan(&g))
+		gaps = append(gaps, g)
+	}
+	require.NoError(t, rows.Err())
+	return gaps
+}
+
+// P0-28: every table a migration adds is fail-closed by default. A new user-scoped
+// table without ENABLE + FORCE fails here even if its own test forgot AssertIsolation.
+func TestSchemaPublic_EveryTableHasRowLevelSecurity(t *testing.T) {
+	db := pgtest.NewDatabase(t)
+	owner := db.Connect(t, pgtest.RoleOwner)
+
+	assert.Empty(t, rlsGaps(t, owner))
+
+	t.Run("the sweep is not vacuous", func(t *testing.T) {
+		for _, ddl := range []string{
+			"CREATE TABLE qa_no_rls (user_id uuid)",
+			"CREATE TABLE qa_not_forced (user_id uuid); ALTER TABLE qa_not_forced ENABLE ROW LEVEL SECURITY",
+		} {
+			_, err := owner.ExecContext(t.Context(), ddl)
+			require.NoError(t, err)
+		}
+		assert.Equal(t, []string{"qa_no_rls: RLS not enabled", "qa_not_forced: RLS not forced"}, rlsGaps(t, owner))
+	})
+}
+
 // A SECURITY DEFINER function in schema public must pin its search_path.
 func TestSchemaPublic_DefinerFunctionsPinSearchPath(t *testing.T) {
 	owner := pgtest.NewDatabase(t).Connect(t, pgtest.RoleOwner)
