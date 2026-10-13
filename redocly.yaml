@@ -1,0 +1,76 @@
+# OpenAPI contract lint ruleset (P0-05). Run: `make contract-lint`.
+# Tool version is pinned in tools/contract/package.json (+ package-lock.json).
+# Policy behind these rules: docs/api/CONTRACT.md.
+apis:
+  control-contable:
+    root: docs/api/openapi.yaml
+
+plugins:
+  - ./tools/contract/plugin.js
+
+extends:
+  - recommended-strict
+
+rules:
+  # --- operationId on every operation, unique and URL-safe
+  operation-operationId: error
+  operation-operationId-unique: error
+  operation-operationId-url-safe: error
+
+  # --- security: every operation is covered by a declared scheme (global or own);
+  #     opting out (`security: []`) requires `x-public: true` (plugin rule).
+  security-defined: error
+  contract/public-operation-explicit: error
+
+  # --- examples must be valid against their schemas
+  no-invalid-media-type-examples:
+    severity: error
+    allowAdditionalProperties: false
+  no-invalid-schema-examples:
+    severity: error
+    allowAdditionalProperties: false
+
+  # --- frozen nodes (x-frozen: sha256:...) must not drift (plugin rule)
+  contract/frozen-unchanged: error
+
+  # --- every operation declares the module (feature flag) that owns it
+  rule/operation-x-module:
+    subject:
+      type: Operation
+      property: x-module
+    message: 'Every operation must declare `x-module` (`platform` or a `module_<name>` flag key).'
+    severity: error
+    assertions:
+      defined: true
+      pattern: /^(platform|module_[a-z][a-z_]*)$/
+
+  # --- single error envelope: every 4xx/5xx/default response has a body ...
+  rule/error-response-has-body:
+    subject:
+      type: Response
+      property: content
+      matchParentKeys: /^([45]\d\d|[45]XX|default)$/
+    message: '4xx/5xx responses must carry the shared ErrorResponse envelope.'
+    severity: error
+    assertions:
+      defined: true
+
+  # ... and that body is the shared ErrorResponse schema, by reference
+  rule/error-response-envelope:
+    subject:
+      type: MediaType
+      property: schema
+    where:
+      - subject:
+          type: Response
+          matchParentKeys: /^([45]\d\d|[45]XX|default)$/
+        assertions:
+          defined: true
+    message: '4xx/5xx responses must use `$ref: #/components/schemas/ErrorResponse` (single error envelope).'
+    severity: error
+    assertions:
+      ref: /^#\/components\/schemas\/ErrorResponse$/
+
+  # --- every request/response body carries an example (media type or referenced schema)
+  contract/body-example: error
+
