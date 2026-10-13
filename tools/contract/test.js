@@ -77,6 +77,16 @@ const cases = [
     expect: ['rule/error-response-has-body'],
   },
   {
+    name: '4xx response with an empty content map',
+    source: () => mutate(ERROR_400_BLOCK, "        '400':\n          description: Invalid.\n          content: {}\n"),
+    expect: ['rule/error-response-has-body'],
+  },
+  {
+    name: '4xx body without a schema',
+    source: () => mutate(ERROR_400_BLOCK, ERROR_400_BLOCK.replace("              schema: { $ref: '#/components/schemas/ErrorResponse' }\n", '')),
+    expect: ['rule/error-response-envelope'],
+  },
+  {
     name: 'body without any example',
     source: () => mutate('      examples:\n        - { status: ok }\n', ''),
     expect: ['contract/body-example', 'contract/frozen-unchanged'],
@@ -99,6 +109,14 @@ const cases = [
   {
     name: 'frozen schema changed',
     source: () => mutate('enum: [ok]', 'enum: [ok, degraded]'),
+    expect: ['contract/frozen-unchanged'],
+  },
+  {
+    name: 'frozen marker outside operations and schemas that does not match',
+    source: () => mutate(
+      '    TooManyRequests:\n      description: Rate limited.',
+      '    TooManyRequests:\n      x-frozen: sha256:0000\n      description: Rate limited.',
+    ),
     expect: ['contract/frozen-unchanged'],
   },
 ];
