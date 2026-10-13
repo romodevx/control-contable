@@ -181,14 +181,18 @@ func TestRunner_theLeaderRunsEachJobWithItsTimeout(t *testing.T) {
 	h.beat(t)
 	require.True(t, h.runner.Leading())
 
+	before := time.Now()
 	h.ticks.Tick(t, jobInterval)
 	ctx := receive(t, j.runs)
+	after := time.Now()
 	h.ticks.Tick(t, jobInterval)
 	receive(t, j.runs)
 
+	// The run's deadline was set between before and after: exact bounds, no tolerance.
 	deadline, ok := ctx.Deadline()
 	require.True(t, ok, "every run is bounded by the job's timeout")
-	assert.WithinDuration(t, time.Now().Add(jobTimeout), deadline, jobTimeout)
+	assert.False(t, deadline.Before(before.Add(jobTimeout)), "deadline %s before %s", deadline, before.Add(jobTimeout))
+	assert.False(t, deadline.After(after.Add(jobTimeout)), "deadline %s after %s", deadline, after.Add(jobTimeout))
 	assert.Contains(t, h.logs.String(), `"msg":"job finished","job":"probe"`)
 }
 
@@ -346,6 +350,11 @@ func TestRunner_logsJobFailuresWithoutPII(t *testing.T) {
 	h := start(t, &fakeElector{lead: true}, j)
 	h.beat(t)
 
+	h.ticks.Tick(t, jobInterval)
+	receive(t, j.runs)
+	// Barrier: the first run is logged before shutdown starts. Without it,
+	// stop can cancel the run's context between the job returning and
+	// logOutcome reading ctx.Err(), and the failure is logged as "job cancelled".
 	h.ticks.Tick(t, jobInterval)
 	receive(t, j.runs)
 	require.NoError(t, h.stop(t))
