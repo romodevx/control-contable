@@ -167,6 +167,28 @@ func TestServe_reportsEveryKindOfViolation(t *testing.T) {
 	}
 }
 
+// Strict mode rejects undeclared headers on a response that declares some
+// (429 declares Retry-After), except the edge-wide headers every response
+// carries; those are transport, not per-operation contract.
+func TestServe_edgeHeadersAreNotOperationContract(t *testing.T) {
+	c := contracttest.Load(t)
+	h := respond(http.StatusTooManyRequests, jsonType, rateLimitBody,
+		"Retry-After", "1", "X-Content-Type-Options", "nosniff", "X-Request-Id", "req_1")
+
+	spy := run(t, func(tb testing.TB) { c.Serve(tb, h, getHealth()) })
+
+	assert.Empty(t, spy.report())
+}
+
+func TestServe_undeclaredHeaderFailsInStrictMode(t *testing.T) {
+	c := contracttest.Load(t)
+	h := respond(http.StatusTooManyRequests, jsonType, rateLimitBody, "Retry-After", "1", "X-Debug-Trace", "on")
+
+	spy := run(t, func(tb testing.TB) { c.Serve(tb, h, getHealth()) })
+
+	assert.Contains(t, spy.report(), "X-Debug-Trace")
+}
+
 func TestServe_pathNotInTheContractFails(t *testing.T) {
 	c := contracttest.Load(t)
 	req := httptest.NewRequest(http.MethodGet, "/v1/not-a-route", nil)
