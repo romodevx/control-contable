@@ -1,0 +1,2150 @@
+openapi: 3.1.0
+info:
+  title: Control Contable API
+  version: 0.1.0
+  summary: Monthly IVA and provisional ISR estimates for Mexican taxpayers.
+  description: |
+    Spec-first contract (single source of truth). Server stubs (oapi-codegen),
+    request validation, contract tests and the Dart client are generated from it.
+
+    Conventions:
+    - Money is `int64` centavos (`*_cents`). Rates travel as decimal strings. No floats.
+    - Periods are `YYYY-MM`. Business dates are `date` (America/Mexico_City calendar).
+    - Every error uses the single `ErrorResponse` envelope.
+    - Every operation declares `x-module`. When that module's flag is OFF the server
+      answers `404 not_found`, indistinguishable from a missing resource.
+    - Resources of other users answer `404` (RLS), never `403`.
+    - Create operations accept a client-generated UUID `id`; retrying the same POST
+      returns the existing resource (idempotent against double submit).
+
+    Status: DRAFT 0.1.0 (Phase 2 Design). Regime-specific shapes (regime options,
+    tax-input keys, breakdown concepts) are generic until
+    `docs/research/tax-regimes-mx-2026.md` lands.
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+servers:
+  - url: /
+    description: Same origin. Local dev is http://localhost:8080; shared environments are set per deployment (ADR-0001 OWNER 2).
+security:
+  - bearerAuth: []
+tags:
+  - name: Platform
+    description: P0 foundation (health, flags). No module flag.
+  - name: Auth
+    description: M1 `module_auth` - registration, sessions, account.
+  - name: Taxpayers
+    description: M2 `module_taxpayers` - regime catalog, taxpayers, regimes.
+  - name: Incomes
+    description: M3 `module_incomes`.
+  - name: Expenses
+    description: M4 `module_expenses`.
+  - name: TaxEngine
+    description: M5 `module_tax_engine` - estimates, breakdown, tax inputs.
+  - name: Dashboard
+    description: M6 `module_dashboard`.
+  - name: Subscriptions
+    description: M7 `module_subscriptions` - RevenueCat.
+  - name: History
+    description: M8 `module_history`.
+  - name: Reminders
+    description: M9 `module_reminders` - devices, settings, tax calendar.
+
+paths:
+  # ---------------------------------------------------------------- P0
+  /healthz:
+    get:
+      tags: [Platform]
+      operationId: getHealth
+      summary: Liveness and readiness
+      x-module: platform
+      security: []
+      responses:
+        '200':
+          description: Service and database reachable.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthStatus' }
+              example: { status: ok, database: ok, version: 0.1.0 }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /v1/flags:
+    get:
+      tags: [Platform]
+      operationId: listEnabledFlags
+      summary: Modules enabled for the client (UX only; server enforces)
+      x-module: platform
+      security: []
+      responses:
+        '200':
+          description: Enabled module keys.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnabledFlags' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  # ---------------------------------------------------------------- M1 Auth
+  /v1/auth/register:
+    post:
+      tags: [Auth]
+      operationId: register
+      summary: Start registration (sends a verification code)
+      description: |
+        Always answers `202` with the same body, whether or not the email exists,
+        so accounts cannot be enumerated (US-A1). Tokens are issued by
+        `verifyEmail`. Requires acceptance of the current legal documents.
+        (ADR-0001 OWNER decision 1, option A.)
+      x-module: module_auth
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '202':
+          description: Verification code sent if the address can register.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RegisterAccepted' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/auth/verify-email:
+    post:
+      tags: [Auth]
+      operationId: verifyEmail
+      summary: Confirm the emailed code; creates the account, starts the trial, issues tokens
+      x-module: module_auth
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VerifyEmailRequest' }
+      responses:
+        '201':
+          description: Account created and session started.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthSession' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/auth/login:
+    post:
+      tags: [Auth]
+      operationId: login
+      summary: Log in with email and password
+      x-module: module_auth
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Session started.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthSession' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/auth/refresh:
+    post:
+      tags: [Auth]
+      operationId: refreshSession
+      summary: Rotate the refresh token
+      description: Reusing an already-rotated token revokes its whole family and returns 401.
+      x-module: module_auth
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshRequest' }
+      responses:
+        '200':
+          description: New token pair.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenPair' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logout
+      summary: Revoke the refresh token family
+      x-module: module_auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshRequest' }
+      responses:
+        '204': { description: Logged out. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/me:
+    get:
+      tags: [Auth]
+      operationId: getMe
+      summary: Current user profile
+      x-module: module_auth
+      responses:
+        '200':
+          description: Profile.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    patch:
+      tags: [Auth]
+      operationId: updateMe
+      summary: Update profile
+      x-module: module_auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UserUpdate' }
+      responses:
+        '200':
+          description: Updated profile.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    delete:
+      tags: [Auth]
+      operationId: deleteMe
+      summary: Delete account and all its data (irreversible)
+      description: |
+        Deletes the user, taxpayers and records (cascade) and revokes all sessions.
+        Does not cancel the store subscription (the app explains how). The keyed
+        email hash stays in the trial registry (no second trial).
+      x-module: module_auth
+      responses:
+        '204': { description: Account deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/legal/documents:
+    get:
+      tags: [Auth]
+      operationId: listLegalDocuments
+      summary: Current privacy notices and terms
+      x-module: module_auth
+      security: []
+      responses:
+        '200':
+          description: Current versions.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LegalDocumentList' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  # ---------------------------------------------------------------- M2 Taxpayers
+  /v1/regimes:
+    get:
+      tags: [Taxpayers]
+      operationId: listRegimes
+      summary: Regime catalog filtered by person type
+      x-module: module_taxpayers
+      parameters:
+        - name: person_type
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/PersonType' }
+      responses:
+        '200':
+          description: Regimes selectable for the person type.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RegimeList' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/taxpayers:
+    get:
+      tags: [Taxpayers]
+      operationId: listTaxpayers
+      summary: Taxpayers managed by the user
+      x-module: module_taxpayers
+      parameters:
+        - name: include_archived
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Taxpayers.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaxpayerList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    post:
+      tags: [Taxpayers]
+      operationId: createTaxpayer
+      summary: Create a taxpayer (onboarding order - person type, RFC, regimes, options)
+      x-module: module_taxpayers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TaxpayerCreate' }
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Taxpayer' }
+        '200':
+          description: Idempotent retry; the taxpayer with this `id` already exists.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Taxpayer' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/taxpayers/{taxpayerId}:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+    get:
+      tags: [Taxpayers]
+      operationId: getTaxpayer
+      summary: Get a taxpayer
+      x-module: module_taxpayers
+      responses:
+        '200':
+          description: Taxpayer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Taxpayer' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    patch:
+      tags: [Taxpayers]
+      operationId: updateTaxpayer
+      summary: Rename a taxpayer (person type and RFC are immutable)
+      x-module: module_taxpayers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TaxpayerUpdate' }
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Taxpayer' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    delete:
+      tags: [Taxpayers]
+      operationId: deleteTaxpayer
+      summary: Permanently delete a taxpayer and its records (irreversible)
+      x-module: module_taxpayers
+      parameters:
+        - $ref: '#/components/parameters/Confirm'
+      responses:
+        '204': { description: Deleted. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/taxpayers/{taxpayerId}/archive:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+    post:
+      tags: [Taxpayers]
+      operationId: archiveTaxpayer
+      summary: Archive (hide) a taxpayer, keeping its data
+      x-module: module_taxpayers
+      responses:
+        '200':
+          description: Archived.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Taxpayer' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/taxpayers/{taxpayerId}/regimes:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+    post:
+      tags: [Taxpayers]
+      operationId: addTaxpayerRegime
+      summary: Add a regime to a taxpayer
+      x-module: module_taxpayers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TaxpayerRegimeCreate' }
+      responses:
+        '201':
+          description: Added.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaxpayerRegime' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+      - $ref: '#/components/parameters/RegimeCodePath'
+    patch:
+      tags: [Taxpayers]
+      operationId: updateTaxpayerRegime
+      summary: Update regime options
+      x-module: module_taxpayers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TaxpayerRegimeUpdate' }
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaxpayerRegime' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    delete:
+      tags: [Taxpayers]
+      operationId: archiveTaxpayerRegime
+      summary: Archive a regime with an end period (records are kept)
+      description: If the regime has records and `confirm` is not `true`, answers `409 regime_has_records`.
+      x-module: module_taxpayers
+      parameters:
+        - $ref: '#/components/parameters/Confirm'
+        - name: end_period
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/Period' }
+      responses:
+        '200':
+          description: Archived.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaxpayerRegime' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  # ---------------------------------------------------------------- M3 Incomes
+  /v1/taxpayers/{taxpayerId}/incomes:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+    get:
+      tags: [Incomes]
+      operationId: listIncomes
+      summary: List a month's incomes (keyset pagination) with period totals
+      x-module: module_incomes
+      parameters:
+        - $ref: '#/components/parameters/PeriodQuery'
+        - $ref: '#/components/parameters/RegimeQuery'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Page of incomes.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IncomePage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    post:
+      tags: [Incomes]
+      operationId: createIncome
+      summary: Record an income (trial cap enforced)
+      x-module: module_incomes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IncomeCreate' }
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Income' }
+        '200':
+          description: Idempotent retry; already created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Income' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/PaymentRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/taxpayers/{taxpayerId}/incomes/{incomeId}:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+      - $ref: '#/components/parameters/IncomeId'
+    get:
+      tags: [Incomes]
+      operationId: getIncome
+      summary: Get an income
+      x-module: module_incomes
+      responses:
+        '200':
+          description: Income.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Income' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    patch:
+      tags: [Incomes]
+      operationId: updateIncome
+      summary: Edit an income (402 when access is read-only)
+      x-module: module_incomes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IncomeUpdate' }
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Income' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/PaymentRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    delete:
+      tags: [Incomes]
+      operationId: deleteIncome
+      summary: Soft-delete an income (undo via restore)
+      x-module: module_incomes
+      responses:
+        '204': { description: Deleted (restorable). }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/taxpayers/{taxpayerId}/incomes/{incomeId}/restore:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+      - $ref: '#/components/parameters/IncomeId'
+    post:
+      tags: [Incomes]
+      operationId: restoreIncome
+      summary: Undo a delete
+      x-module: module_incomes
+      responses:
+        '200':
+          description: Restored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Income' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  # ---------------------------------------------------------------- M4 Expenses
+  /v1/expense-categories:
+    get:
+      tags: [Expenses]
+      operationId: listExpenseCategories
+      summary: Expense categories with deductibility hints per regime
+      x-module: module_expenses
+      parameters:
+        - name: regime
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/RegimeCode' }
+      responses:
+        '200':
+          description: Categories.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExpenseCategoryList' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/taxpayers/{taxpayerId}/expenses:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+    get:
+      tags: [Expenses]
+      operationId: listExpenses
+      summary: List a month's expenses (keyset pagination) with period totals
+      x-module: module_expenses
+      parameters:
+        - $ref: '#/components/parameters/PeriodQuery'
+        - $ref: '#/components/parameters/RegimeQuery'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Page of expenses.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExpensePage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    post:
+      tags: [Expenses]
+      operationId: createExpense
+      summary: Record an expense (trial cap enforced)
+      x-module: module_expenses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExpenseCreate' }
+      responses:
+        '201':
+          description: Created. `warnings` may flag non-deductibility risks.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Expense' }
+        '200':
+          description: Idempotent retry; already created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Expense' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/PaymentRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/taxpayers/{taxpayerId}/expenses/{expenseId}:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+      - $ref: '#/components/parameters/ExpenseId'
+    get:
+      tags: [Expenses]
+      operationId: getExpense
+      summary: Get an expense
+      x-module: module_expenses
+      responses:
+        '200':
+          description: Expense.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Expense' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    patch:
+      tags: [Expenses]
+      operationId: updateExpense
+      summary: Edit an expense
+      x-module: module_expenses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExpenseUpdate' }
+      responses:
+        '200':
+          description: Updated.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Expense' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/PaymentRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    delete:
+      tags: [Expenses]
+      operationId: deleteExpense
+      summary: Soft-delete an expense (undo via restore)
+      x-module: module_expenses
+      responses:
+        '204': { description: Deleted (restorable). }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/taxpayers/{taxpayerId}/expenses/{expenseId}/restore:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+      - $ref: '#/components/parameters/ExpenseId'
+    post:
+      tags: [Expenses]
+      operationId: restoreExpense
+      summary: Undo a delete
+      x-module: module_expenses
+      responses:
+        '200':
+          description: Restored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Expense' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  # ---------------------------------------------------------------- M5 Tax engine
+  /v1/taxpayers/{taxpayerId}/estimates:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+    get:
+      tags: [TaxEngine]
+      operationId: getTaxpayerEstimate
+      summary: Monthly IVA + provisional ISR estimate, per regime and total
+      x-module: module_tax_engine
+      parameters:
+        - $ref: '#/components/parameters/PeriodQuery'
+      responses:
+        '200':
+          description: Estimate (always includes the mandatory legend).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaxpayerEstimate' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/taxpayers/{taxpayerId}/estimates/{period}/breakdown:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+      - $ref: '#/components/parameters/PeriodPath'
+    get:
+      tags: [TaxEngine]
+      operationId: getEstimateBreakdown
+      summary: Step-by-step breakdown with legal basis for one regime
+      x-module: module_tax_engine
+      parameters:
+        - name: regime
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/RegimeCode' }
+      responses:
+        '200':
+          description: Breakdown.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Breakdown' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/tax-inputs:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+      - $ref: '#/components/parameters/RegimeCodePath'
+      - name: fiscal_year
+        in: query
+        required: true
+        schema: { $ref: '#/components/schemas/FiscalYear' }
+    get:
+      tags: [TaxEngine]
+      operationId: getTaxInputs
+      summary: Tax inputs (YTD, coeficiente, losses, prior payments) with which keys are required
+      x-module: module_tax_engine
+      responses:
+        '200':
+          description: Inputs and definitions.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaxInputs' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    put:
+      tags: [TaxEngine]
+      operationId: putTaxInputs
+      summary: Replace tax inputs for the fiscal year
+      x-module: module_tax_engine
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TaxInputsUpdate' }
+      responses:
+        '200':
+          description: Saved.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaxInputs' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/PaymentRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  # ---------------------------------------------------------------- M6 Dashboard
+  /v1/taxpayers/{taxpayerId}/dashboard:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+    get:
+      tags: [Dashboard]
+      operationId: getDashboard
+      summary: Home for the active taxpayer
+      x-module: module_dashboard
+      parameters:
+        - $ref: '#/components/parameters/PeriodQuery'
+        - name: months
+          in: query
+          schema: { type: integer, minimum: 6, maximum: 12, default: 12 }
+      responses:
+        '200':
+          description: Dashboard.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Dashboard' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  # ---------------------------------------------------------------- M7 Subscriptions
+  /v1/subscription:
+    get:
+      tags: [Subscriptions]
+      operationId: getSubscription
+      summary: Access status (trial, pro, comp, read-only) and plan
+      x-module: module_subscriptions
+      responses:
+        '200':
+          description: Status.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubscriptionStatus' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/subscription/sync:
+    post:
+      tags: [Subscriptions]
+      operationId: syncSubscription
+      summary: Pull current state from RevenueCat (post-purchase / restore)
+      x-module: module_subscriptions
+      responses:
+        '200':
+          description: Refreshed status.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubscriptionStatus' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /v1/webhooks/revenuecat:
+    post:
+      tags: [Subscriptions]
+      operationId: receiveRevenueCatWebhook
+      summary: RevenueCat webhook receiver (idempotent by event id)
+      description: |
+        Authenticated by the shared secret configured in RevenueCat, sent as
+        `Authorization: Bearer <secret>`. Duplicate `event.id` returns 200 with no effect.
+        State is re-fetched from RevenueCat, so out-of-order delivery is safe.
+      x-module: module_subscriptions
+      security:
+        - revenueCatWebhookSecret: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RevenueCatWebhook' }
+      responses:
+        '200': { description: Accepted (processed or duplicate). }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  # ---------------------------------------------------------------- M8 History
+  /v1/taxpayers/{taxpayerId}/history:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+    get:
+      tags: [History]
+      operationId: getHistory
+      summary: Monthly summaries for a fiscal year
+      x-module: module_history
+      parameters:
+        - name: fiscal_year
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/FiscalYear' }
+      responses:
+        '200':
+          description: Months of the fiscal year.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HistoryYear' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/taxpayers/{taxpayerId}/history/{period}/viewed:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+      - $ref: '#/components/parameters/PeriodPath'
+    post:
+      tags: [History]
+      operationId: markHistoryViewed
+      summary: Mark a month as viewed (stores the current records fingerprint)
+      x-module: module_history
+      responses:
+        '204': { description: Marked. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  # ---------------------------------------------------------------- M9 Reminders
+  /v1/devices:
+    post:
+      tags: [Reminders]
+      operationId: registerDevice
+      summary: Register or refresh a push token
+      x-module: module_reminders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DeviceCreate' }
+      responses:
+        '201':
+          description: Registered.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Device' }
+        '200':
+          description: Already registered; refreshed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Device' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/devices/{deviceId}:
+    parameters:
+      - name: deviceId
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/Uuid' }
+    delete:
+      tags: [Reminders]
+      operationId: unregisterDevice
+      summary: Remove a push token (logout / opt-out)
+      x-module: module_reminders
+      responses:
+        '204': { description: Removed. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/reminder-settings:
+    get:
+      tags: [Reminders]
+      operationId: getReminderSettings
+      summary: Reminder preferences (defaults if never set)
+      x-module: module_reminders
+      responses:
+        '200':
+          description: Settings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReminderSettings' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    put:
+      tags: [Reminders]
+      operationId: putReminderSettings
+      summary: Replace reminder preferences
+      x-module: module_reminders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReminderSettings' }
+      responses:
+        '200':
+          description: Saved.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReminderSettings' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/tax-calendar:
+    get:
+      tags: [Reminders]
+      operationId: getTaxCalendar
+      summary: Monthly due dates for a year (day 17 moved past weekends/holidays)
+      x-module: module_reminders
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/FiscalYear' }
+      responses:
+        '200':
+          description: Calendar.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaxCalendar' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: EdDSA-signed access token, 15 min TTL (ADR-0001 O6).
+    revenueCatWebhookSecret:
+      type: http
+      scheme: bearer
+      description: Shared secret configured in the RevenueCat dashboard as the Authorization header value.
+
+  parameters:
+    TaxpayerId:
+      name: taxpayerId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Uuid' }
+    IncomeId:
+      name: incomeId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Uuid' }
+    ExpenseId:
+      name: expenseId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Uuid' }
+    RegimeCodePath:
+      name: regimeCode
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/RegimeCode' }
+    PeriodPath:
+      name: period
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Period' }
+    PeriodQuery:
+      name: period
+      in: query
+      required: true
+      schema: { $ref: '#/components/schemas/Period' }
+    RegimeQuery:
+      name: regime
+      in: query
+      required: false
+      schema: { $ref: '#/components/schemas/RegimeCode' }
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: Opaque keyset cursor from `next_cursor`.
+      schema: { type: string, maxLength: 512 }
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+    Confirm:
+      name: confirm
+      in: query
+      required: false
+      description: Must be `true` to perform a destructive or data-affecting action.
+      schema: { type: boolean, default: false }
+
+  responses:
+    BadRequest:
+      description: Input does not match the contract.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            error:
+              code: validation_failed
+              message: One or more fields are invalid.
+              request_id: req_01J9Z6Q4X8
+              details:
+                - field: amount_cents
+                  code: minimum
+                  message: Must be greater than or equal to 0.
+    Unauthorized:
+      description: Missing, invalid or expired credentials.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            error: { code: unauthorized, message: Authentication required., request_id: req_01J9Z6Q4X8 }
+    PaymentRequired:
+      description: Trial ended or cap reached and no active plan (read-only access).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            error: { code: entitlement_required, message: Your trial has ended. Subscribe to keep adding records., request_id: req_01J9Z6Q4X8 }
+    NotFound:
+      description: Resource does not exist, belongs to another user, or its module is disabled.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            error: { code: not_found, message: Not found., request_id: req_01J9Z6Q4X8 }
+    Conflict:
+      description: State conflict (duplicate RFC, regime with records needs confirmation).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            error: { code: rfc_already_registered, message: This RFC is already registered in your account., request_id: req_01J9Z6Q4X8 }
+    UnprocessableEntity:
+      description: Well-formed but violates a business rule.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            error:
+              code: invalid_regime_combination
+              message: RESICO cannot be combined with regime 612 for the same taxpayer.
+              request_id: req_01J9Z6Q4X8
+              details:
+                - field: regimes
+                  code: incompatible
+                  message: 626 is incompatible with 612.
+    TooManyRequests:
+      description: Rate limit exceeded.
+      headers:
+        Retry-After:
+          description: Seconds to wait.
+          schema: { type: integer, minimum: 1 }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            error: { code: rate_limited, message: Too many requests. Try again later., request_id: req_01J9Z6Q4X8 }
+    InternalError:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            error: { code: internal_error, message: Something went wrong., request_id: req_01J9Z6Q4X8 }
+    ServiceUnavailable:
+      description: Dependency unavailable (database, RevenueCat); retry later.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            error: { code: upstream_unavailable, message: Service temporarily unavailable., request_id: req_01J9Z6Q4X8 }
+
+  schemas:
+    # ------------------------------------------------------------ primitives
+    Uuid:
+      type: string
+      format: uuid
+      examples: [0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80]
+    Period:
+      type: string
+      pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$'
+      examples: ['2026-09']
+    FiscalYear:
+      type: integer
+      minimum: 2022
+      maximum: 2100
+      examples: [2026]
+    RegimeCode:
+      type: string
+      pattern: '^[0-9]{3}$'
+      description: SAT c_RegimenFiscal code.
+      examples: ['612']
+    MoneyCents:
+      type: integer
+      format: int64
+      description: Signed amount in MXN centavos.
+      examples: [1250000]
+    NonNegativeCents:
+      type: integer
+      format: int64
+      minimum: 0
+      maximum: 99999999999999
+      description: Amount in MXN centavos (>= 0).
+      examples: [1250000]
+    DecimalRate:
+      type: string
+      pattern: '^[0-9]{1,3}(\.[0-9]{1,6})?$'
+      description: Decimal fraction as string (0.16 = 16%). Never a float.
+      examples: ['0.16']
+    PersonType:
+      type: string
+      enum: [fisica, moral]
+    IvaRate:
+      type: string
+      enum: [rate_16, rate_8, rate_0, exempt]
+      description: |
+        rate_8 is the northern/southern border stimulus rate. Validity is date-ranged
+        tax-parameter data (in force until 2026-12-31 per DOF 31-12-2025); a rate not valid
+        on the record date is rejected with 422 business_rule_violation.
+    Treatment:
+      type: string
+      enum: [full, partial, informational]
+    Legend:
+      type: string
+      const: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
+      description: Mandatory legend; must be shown on every estimate surface.
+    DisclaimerCode:
+      type: string
+      enum:
+        - not_tax_advice
+        - incomplete_inputs
+        - provisional_parameters
+        - informational_regime
+        - deductibility_claimed
+        - no_coefficient_first_year
+    Disclaimer:
+      type: object
+      required: [code, text]
+      description: Text is versioned with the tax parameter set (ADR-0002).
+      properties:
+        code: { $ref: '#/components/schemas/DisclaimerCode' }
+        text: { type: string }
+      examples:
+        - code: not_tax_advice
+          text: Estimación informativa. No sustituye la declaración ante el SAT ni la asesoría de un contador. Cálculo basado en LISR, LIVA, LIF 2026 y Anexo 8 RMF 2026.
+    ModuleKey:
+      type: string
+      pattern: '^module_[a-z_]+$'
+      examples: [module_incomes]
+
+    # ------------------------------------------------------------ errors
+    ErrorResponse:
+      type: object
+      required: [error]
+      additionalProperties: false
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id]
+          additionalProperties: false
+          properties:
+            code: { $ref: '#/components/schemas/ErrorCode' }
+            message:
+              type: string
+              description: Human-readable, safe to show; never contains PII.
+            request_id: { type: string }
+            details:
+              type: array
+              items: { $ref: '#/components/schemas/FieldError' }
+    ErrorCode:
+      type: string
+      enum:
+        - validation_failed
+        - unauthorized
+        - entitlement_required
+        - not_found
+        - conflict
+        - rfc_already_registered
+        - regime_has_records
+        - invalid_regime_combination
+        - business_rule_violation
+        - taxpayer_limit_reached
+        - rate_limited
+        - upstream_unavailable
+        - internal_error
+    FieldError:
+      type: object
+      required: [field, code, message]
+      properties:
+        field: { type: string, description: JSON pointer-ish path of the offending field. }
+        code: { type: string }
+        message: { type: string }
+
+    # ------------------------------------------------------------ platform
+    HealthStatus:
+      type: object
+      required: [status, database, version]
+      properties:
+        status: { type: string, enum: [ok, degraded] }
+        database: { type: string, enum: [ok, unreachable] }
+        version: { type: string }
+    EnabledFlags:
+      type: object
+      required: [enabled]
+      properties:
+        enabled:
+          type: array
+          items: { $ref: '#/components/schemas/ModuleKey' }
+      examples:
+        - enabled: [module_auth, module_taxpayers, module_incomes, module_expenses, module_tax_engine, module_dashboard]
+
+    # ------------------------------------------------------------ auth
+    RegisterRequest:
+      type: object
+      required: [email, password, accepted_documents]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        password:
+          type: string
+          minLength: 12
+          maxLength: 128
+          description: Policy enforced server-side (length + breached-password check).
+        name: { type: string, maxLength: 120 }
+        accepted_documents:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/DocumentAcceptance' }
+      examples:
+        - email: ana@example.mx
+          password: correct-horse-battery-staple
+          name: Ana Gómez
+          accepted_documents:
+            - { kind: privacy_notice_integral, version: '2026-10-01' }
+            - { kind: terms, version: '2026-10-01' }
+    DocumentAcceptance:
+      type: object
+      required: [kind, version]
+      properties:
+        kind: { $ref: '#/components/schemas/LegalDocumentKind' }
+        version: { type: string }
+    RegisterAccepted:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, const: verification_sent }
+    VerifyEmailRequest:
+      type: object
+      required: [email, code]
+      properties:
+        email: { type: string, format: email }
+        code: { type: string, pattern: '^[0-9]{6}$' }
+      examples:
+        - { email: ana@example.mx, code: '482913' }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 1, maxLength: 128 }
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token: { type: string, minLength: 40, maxLength: 200 }
+    TokenPair:
+      type: object
+      required: [access_token, access_expires_in, refresh_token, refresh_expires_in, token_type]
+      properties:
+        access_token: { type: string }
+        access_expires_in: { type: integer, description: Seconds. }
+        refresh_token: { type: string, description: 'Opaque, format <user_uuid>.<secret>.' }
+        refresh_expires_in: { type: integer, description: Seconds. }
+        token_type: { type: string, const: Bearer }
+    AuthSession:
+      type: object
+      required: [user, tokens]
+      properties:
+        user: { $ref: '#/components/schemas/User' }
+        tokens: { $ref: '#/components/schemas/TokenPair' }
+    User:
+      type: object
+      required: [id, email, created_at]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        email: { type: string, format: email }
+        name: { type: [string, 'null'] }
+        created_at: { type: string, format: date-time }
+      examples:
+        - id: 0199d4a2-7c1e-7b3a-9f10-2c5e8a1b4d01
+          email: ana@example.mx
+          name: Ana Gómez
+          created_at: '2026-10-13T16:00:00Z'
+    UserUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        name: { type: string, maxLength: 120 }
+    LegalDocumentKind:
+      type: string
+      enum: [privacy_notice_integral, privacy_notice_simplified, terms]
+    LegalDocument:
+      type: object
+      required: [kind, version, url, published_at]
+      properties:
+        kind: { $ref: '#/components/schemas/LegalDocumentKind' }
+        version: { type: string }
+        url: { type: string, format: uri }
+        published_at: { type: string, format: date-time }
+    LegalDocumentList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/LegalDocument' }
+
+    # ------------------------------------------------------------ taxpayers
+    RegimeOptionDef:
+      type: object
+      required: [key, label, type, required]
+      description: Per-regime option definition (from the research catalog).
+      properties:
+        key: { type: string, examples: [deduction_mode] }
+        label: { type: string }
+        type: { type: string, enum: [enum, multi_enum, rate, boolean] }
+        allowed_values:
+          type: array
+          items: { type: string }
+        default: { type: [string, boolean, 'null'] }
+        required: { type: boolean }
+    Regime:
+      type: object
+      required: [code, name, person_type, treatment, option_defs, required_inputs]
+      description: Catalog key is (code, person_type); e.g. 626 exists as RESICO PF and RESICO PM.
+      properties:
+        code: { $ref: '#/components/schemas/RegimeCode' }
+        name: { type: string }
+        person_type: { $ref: '#/components/schemas/PersonType' }
+        treatment: { $ref: '#/components/schemas/Treatment' }
+        explanation:
+          type: [string, 'null']
+          description: Plain-language reason for partial/informational treatment.
+        option_defs:
+          type: array
+          items: { $ref: '#/components/schemas/RegimeOptionDef' }
+        required_inputs:
+          type: array
+          items: { type: string }
+          description: Tax-input keys the strategy needs (see TaxInputs).
+      examples:
+        - code: '606'
+          name: Arrendamiento
+          person_type: fisica
+          treatment: full
+          explanation: null
+          option_defs:
+            - key: deduction_mode
+              label: Tipo de deducción
+              type: enum
+              allowed_values: [blind_35, actual]
+              default: blind_35
+              required: true
+          required_inputs: []
+    RegimeList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Regime' }
+    RegimeOptions:
+      type: object
+      description: Values keyed by RegimeOptionDef.key; validated server-side against the catalog.
+      additionalProperties:
+        oneOf:
+          - type: string
+          - type: boolean
+          - type: array
+            items: { type: string }
+      examples:
+        - { deduction_mode: blind_35 }
+    TaxpayerRegime:
+      type: object
+      required: [regime_code, name, treatment, options, start_period]
+      properties:
+        regime_code: { $ref: '#/components/schemas/RegimeCode' }
+        name: { type: string }
+        treatment: { $ref: '#/components/schemas/Treatment' }
+        options: { $ref: '#/components/schemas/RegimeOptions' }
+        start_period: { $ref: '#/components/schemas/Period' }
+        end_period:
+          oneOf:
+            - $ref: '#/components/schemas/Period'
+            - type: 'null'
+    TaxpayerRegimeCreate:
+      type: object
+      required: [regime_code]
+      properties:
+        regime_code: { $ref: '#/components/schemas/RegimeCode' }
+        options: { $ref: '#/components/schemas/RegimeOptions' }
+        start_period: { $ref: '#/components/schemas/Period' }
+    TaxpayerRegimeUpdate:
+      type: object
+      required: [options]
+      properties:
+        options: { $ref: '#/components/schemas/RegimeOptions' }
+    Taxpayer:
+      type: object
+      required: [id, person_type, display_name, rfc_masked, regimes, created_at]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        person_type: { $ref: '#/components/schemas/PersonType' }
+        display_name: { type: string }
+        rfc_masked:
+          type: string
+          description: The full RFC is never returned.
+        regimes:
+          type: array
+          items: { $ref: '#/components/schemas/TaxpayerRegime' }
+        archived_at: { type: [string, 'null'], format: date-time }
+        created_at: { type: string, format: date-time }
+      examples:
+        - id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+          person_type: fisica
+          display_name: Ana (personal)
+          rfc_masked: GOMA******AB3
+          regimes:
+            - regime_code: '612'
+              name: Actividad Empresarial y Profesional
+              treatment: full
+              options: {}
+              start_period: '2026-01'
+              end_period: null
+          archived_at: null
+          created_at: '2026-10-13T16:05:00Z'
+    TaxpayerCreate:
+      type: object
+      required: [person_type, rfc, display_name, regimes]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+          description: Optional client-generated id (idempotent retries).
+        person_type: { $ref: '#/components/schemas/PersonType' }
+        rfc:
+          type: string
+          pattern: '^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$'
+          description: 13 chars for fisica, 12 for moral; check digit validated server-side.
+        display_name: { type: string, minLength: 1, maxLength: 80 }
+        regimes:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/TaxpayerRegimeCreate' }
+      examples:
+        - person_type: fisica
+          rfc: GOMA800101AB3
+          display_name: Ana (personal)
+          regimes:
+            - regime_code: '612'
+              start_period: '2026-01'
+    TaxpayerUpdate:
+      type: object
+      required: [display_name]
+      properties:
+        display_name: { type: string, minLength: 1, maxLength: 80 }
+    TaxpayerList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Taxpayer' }
+
+    # ------------------------------------------------------------ records
+    CounterpartyType:
+      type: string
+      enum: [persona_fisica, persona_moral, publico_general, plataforma]
+      description: Determines which withholdings may apply.
+    PeriodTotals:
+      type: object
+      required: [count, amount_cents, iva_cents]
+      properties:
+        count: { type: integer, minimum: 0 }
+        amount_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        iva_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        isr_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        iva_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+    IncomeFields:
+      type: object
+      properties:
+        regime_code: { $ref: '#/components/schemas/RegimeCode' }
+        description: { type: [string, 'null'], maxLength: 200 }
+        counterparty_type: { $ref: '#/components/schemas/CounterpartyType' }
+        amount_cents:
+          $ref: '#/components/schemas/NonNegativeCents'
+          description: Subtotal before IVA.
+        iva_rate: { $ref: '#/components/schemas/IvaRate' }
+        iva_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        isr_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        iva_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        invoiced_on: { type: [string, 'null'], format: date }
+        collected_on:
+          type: [string, 'null']
+          format: date
+          description: Required for cash-basis regimes; may be null for PM 601 (pending collection).
+    IncomeCreate:
+      allOf:
+        - $ref: '#/components/schemas/IncomeFields'
+        - type: object
+          required: [regime_code, amount_cents, iva_rate, iva_cents]
+          properties:
+            id: { $ref: '#/components/schemas/Uuid' }
+      examples:
+        - id: 0199d4a3-1a2b-7d3c-8e4f-5a6b7c8d9e01
+          regime_code: '612'
+          description: Diseño de logotipo
+          counterparty_type: persona_moral
+          amount_cents: 1000000
+          iva_rate: rate_16
+          iva_cents: 160000
+          isr_withheld_cents: 100000
+          iva_withheld_cents: 106667
+          invoiced_on: '2026-09-05'
+          collected_on: '2026-09-10'
+    IncomeUpdate:
+      allOf:
+        - $ref: '#/components/schemas/IncomeFields'
+        - type: object
+          minProperties: 1
+    Income:
+      allOf:
+        - $ref: '#/components/schemas/IncomeFields'
+        - type: object
+          required: [id, taxpayer_id, regime_code, amount_cents, iva_rate, iva_cents, created_at, updated_at]
+          properties:
+            id: { $ref: '#/components/schemas/Uuid' }
+            taxpayer_id: { $ref: '#/components/schemas/Uuid' }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
+    IncomePage:
+      type: object
+      required: [items, totals]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Income' }
+        next_cursor: { type: [string, 'null'] }
+        totals: { $ref: '#/components/schemas/PeriodTotals' }
+    PaymentMethod:
+      type: string
+      enum: [cash, transfer, card_debit, card_credit, check, e_wallet, other]
+    ExpenseWarning:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum: [cash_over_threshold, no_cfdi, not_isr_deductible_in_regime, category_not_deductible]
+        message: { type: string }
+    ExpenseFields:
+      type: object
+      properties:
+        regime_code: { $ref: '#/components/schemas/RegimeCode' }
+        category_code: { type: string, maxLength: 40 }
+        description: { type: [string, 'null'], maxLength: 200 }
+        amount_cents:
+          $ref: '#/components/schemas/NonNegativeCents'
+          description: Subtotal before IVA.
+        iva_rate: { $ref: '#/components/schemas/IvaRate' }
+        iva_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        payment_method: { $ref: '#/components/schemas/PaymentMethod' }
+        has_cfdi: { type: boolean }
+        paid_on: { type: string, format: date }
+        isr_withheld_cents:
+          $ref: '#/components/schemas/NonNegativeCents'
+          description: ISR the taxpayer (typically a PM) withheld from the supplier; must be remitted.
+        iva_withheld_cents:
+          $ref: '#/components/schemas/NonNegativeCents'
+          description: IVA the taxpayer withheld from the supplier (LIVA 1-A); remitted in full, creditable when paid.
+    ExpenseCreate:
+      allOf:
+        - $ref: '#/components/schemas/ExpenseFields'
+        - type: object
+          required: [regime_code, category_code, amount_cents, iva_rate, iva_cents, payment_method, has_cfdi, paid_on]
+          properties:
+            id: { $ref: '#/components/schemas/Uuid' }
+      examples:
+        - regime_code: '612'
+          category_code: software
+          description: Suscripción de diseño
+          amount_cents: 50000
+          iva_rate: rate_16
+          iva_cents: 8000
+          payment_method: card_credit
+          has_cfdi: true
+          paid_on: '2026-09-12'
+    ExpenseUpdate:
+      allOf:
+        - $ref: '#/components/schemas/ExpenseFields'
+        - type: object
+          minProperties: 1
+    Expense:
+      allOf:
+        - $ref: '#/components/schemas/ExpenseFields'
+        - type: object
+          required: [id, taxpayer_id, regime_code, category_code, amount_cents, iva_rate, iva_cents, payment_method, has_cfdi, paid_on, warnings, legend, created_at, updated_at]
+          properties:
+            id: { $ref: '#/components/schemas/Uuid' }
+            taxpayer_id: { $ref: '#/components/schemas/Uuid' }
+            warnings:
+              type: array
+              items: { $ref: '#/components/schemas/ExpenseWarning' }
+            legend: { $ref: '#/components/schemas/Legend' }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
+    ExpensePage:
+      type: object
+      required: [items, totals]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Expense' }
+        next_cursor: { type: [string, 'null'] }
+        totals: { $ref: '#/components/schemas/PeriodTotals' }
+    DeductibilityHint:
+      type: object
+      required: [regime_code, deductibility]
+      properties:
+        regime_code: { $ref: '#/components/schemas/RegimeCode' }
+        deductibility:
+          type: string
+          enum: [deductible, partially_deductible, not_deductible, isr_not_applicable]
+        note: { type: [string, 'null'] }
+        legal_basis: { type: [string, 'null'] }
+    ExpenseCategory:
+      type: object
+      required: [code, name, hints]
+      properties:
+        code: { type: string }
+        name: { type: string }
+        hints:
+          type: array
+          items: { $ref: '#/components/schemas/DeductibilityHint' }
+    ExpenseCategoryList:
+      type: object
+      required: [items, legend]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ExpenseCategory' }
+        legend: { $ref: '#/components/schemas/Legend' }
+
+    # ------------------------------------------------------------ tax engine
+    ParameterSetRef:
+      type: object
+      required: [fiscal_year, version]
+      properties:
+        fiscal_year: { $ref: '#/components/schemas/FiscalYear' }
+        version: { type: integer, minimum: 1 }
+    TaxResult:
+      type: object
+      required: [amount_cents, payable_rounded_cents, outcome]
+      properties:
+        amount_cents:
+          $ref: '#/components/schemas/MoneyCents'
+          description: Exact result; negative = saldo a favor.
+        payable_rounded_cents:
+          $ref: '#/components/schemas/MoneyCents'
+          description: Payment amount. Equals amount_cents (centavo precision) until the CPA confirms CFF art. 20 whole-peso rounding (ADR-0002 §4).
+        outcome: { type: string, enum: [payable, in_favor, zero] }
+    RegimeEstimate:
+      type: object
+      required: [regime_code, regime_name, treatment, status, parameter_set]
+      properties:
+        regime_code: { $ref: '#/components/schemas/RegimeCode' }
+        regime_name: { type: string }
+        treatment: { $ref: '#/components/schemas/Treatment' }
+        status: { type: string, enum: [complete, incomplete, informational] }
+        missing_inputs:
+          type: array
+          items: { type: string }
+        explanation: { type: [string, 'null'] }
+        isr:
+          oneOf:
+            - $ref: '#/components/schemas/TaxResult'
+            - type: 'null'
+        iva_components:
+          oneOf:
+            - $ref: '#/components/schemas/IvaComponents'
+            - type: 'null'
+        withheld_to_remit_cents:
+          $ref: '#/components/schemas/NonNegativeCents'
+          description: ISR/IVA the taxpayer withheld from suppliers in this regime.
+        parameter_set: { $ref: '#/components/schemas/ParameterSetRef' }
+    IvaComponents:
+      type: object
+      description: This regime's contribution; monthly IVA is netted per taxpayer in totals.iva.
+      required: [charged_collected_cents, creditable_paid_cents, withheld_from_taxpayer_cents]
+      properties:
+        charged_collected_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        creditable_paid_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        withheld_from_taxpayer_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        definitive_excluded_cents:
+          $ref: '#/components/schemas/NonNegativeCents'
+          description: IVA already definitive via withholding (e.g. 625 under LIVA 18-M).
+    EstimateTotals:
+      type: object
+      required: [iva, isr, withholdings_to_remit_cents, total_payable_rounded_cents]
+      properties:
+        iva:
+          $ref: '#/components/schemas/TaxResult'
+          description: Monthly IVA consolidated across the taxpayer's regimes.
+        isr:
+          $ref: '#/components/schemas/TaxResult'
+          description: Sum of per-regime provisional ISR (payable parts only; favor balances per regime).
+        withholdings_to_remit_cents:
+          $ref: '#/components/schemas/NonNegativeCents'
+          description: Withheld ISR/IVA to remit in full (not netted against IVA, LIVA 1-A).
+        total_payable_rounded_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+    TaxpayerEstimate:
+      type: object
+      required: [taxpayer_id, period, due_date, legend, disclaimers, regimes, totals, engine_version]
+      properties:
+        taxpayer_id: { $ref: '#/components/schemas/Uuid' }
+        period: { $ref: '#/components/schemas/Period' }
+        due_date: { type: string, format: date }
+        legend: { $ref: '#/components/schemas/Legend' }
+        disclaimers:
+          type: array
+          items: { $ref: '#/components/schemas/Disclaimer' }
+        regimes:
+          type: array
+          items: { $ref: '#/components/schemas/RegimeEstimate' }
+        totals: { $ref: '#/components/schemas/EstimateTotals' }
+        engine_version: { type: string, examples: [1.0.0] }
+      examples:
+        - taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+          period: '2026-03'
+          due_date: '2026-04-17'
+          legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
+          disclaimers:
+            - code: not_tax_advice
+              text: Estimación informativa. No sustituye la declaración ante el SAT ni la asesoría de un contador. Cálculo basado en LISR, LIVA, LIF 2026 y Anexo 8 RMF 2026.
+          regimes:
+            - regime_code: '612'
+              regime_name: Actividades Empresariales y Profesionales
+              treatment: full
+              status: complete
+              missing_inputs: []
+              explanation: null
+              isr: { amount_cents: 15096, payable_rounded_cents: 15096, outcome: payable }
+              iva_components:
+                charged_collected_cents: 480000
+                creditable_paid_cents: 160000
+                withheld_from_taxpayer_cents: 106667
+              withheld_to_remit_cents: 0
+              parameter_set: { fiscal_year: 2026, version: 1 }
+          totals:
+            iva: { amount_cents: 213333, payable_rounded_cents: 213333, outcome: payable }
+            isr: { amount_cents: 15096, payable_rounded_cents: 15096, outcome: payable }
+            withholdings_to_remit_cents: 0
+            total_payable_rounded_cents: 228429
+          engine_version: 1.0.0
+    Citation:
+      type: object
+      required: [law, article]
+      properties:
+        law: { type: string, examples: [LIVA] }
+        article: { type: string, examples: ['1-A'] }
+        note: { type: [string, 'null'] }
+    BreakdownLine:
+      type: object
+      required: [seq, tax, concept, operation, amount_cents, legal_basis]
+      properties:
+        seq: { type: integer, minimum: 1 }
+        tax: { type: string, enum: [iva, isr] }
+        concept: { type: string, description: Human-readable step (Spanish). }
+        operation: { type: string, enum: [input, add, subtract, multiply, lookup, result, rounding_adjustment, info] }
+        amount_cents: { $ref: '#/components/schemas/MoneyCents' }
+        rate:
+          oneOf:
+            - $ref: '#/components/schemas/DecimalRate'
+            - type: 'null'
+        legal_basis:
+          type: array
+          items: { $ref: '#/components/schemas/Citation' }
+    Breakdown:
+      type: object
+      required: [taxpayer_id, period, regime, lines, legend, disclaimers, engine_version]
+      properties:
+        taxpayer_id: { $ref: '#/components/schemas/Uuid' }
+        period: { $ref: '#/components/schemas/Period' }
+        regime: { $ref: '#/components/schemas/RegimeEstimate' }
+        lines:
+          type: array
+          items: { $ref: '#/components/schemas/BreakdownLine' }
+        legend: { $ref: '#/components/schemas/Legend' }
+        disclaimers:
+          type: array
+          items: { $ref: '#/components/schemas/Disclaimer' }
+        engine_version: { type: string }
+      examples:
+        - taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+          period: '2026-03'
+          regime:
+            regime_code: '612'
+            regime_name: Actividades Empresariales y Profesionales
+            treatment: full
+            status: complete
+            withheld_to_remit_cents: 0
+            parameter_set: { fiscal_year: 2026, version: 1 }
+          lines:
+            - { seq: 1, tax: isr, concept: Ingresos cobrados acumulados ene-mar, operation: input, amount_cents: 9000000, rate: null, legal_basis: [{ law: LISR, article: '102', note: null }] }
+            - { seq: 2, tax: isr, concept: Deducciones pagadas acumuladas, operation: subtract, amount_cents: 3000000, rate: null, legal_basis: [{ law: LISR, article: '103', note: null }] }
+            - { seq: 3, tax: isr, concept: Base gravable, operation: result, amount_cents: 6000000, rate: null, legal_basis: [{ law: LISR, article: '106', note: null }] }
+            - { seq: 4, tax: isr, concept: 'Cuota fija (tarifa acumulada marzo, renglón 6)', operation: lookup, amount_cents: 557052, rate: null, legal_basis: [{ law: Anexo 8 RMF 2026, article: B.VI, note: null }] }
+            - { seq: 5, tax: isr, concept: Excedente del límite inferior por tasa, operation: multiply, amount_cents: 158044, rate: '0.2136', legal_basis: [{ law: LISR, article: '106', note: null }] }
+            - { seq: 6, tax: isr, concept: ISR causado acumulado, operation: result, amount_cents: 715096, rate: null, legal_basis: [{ law: LISR, article: '106', note: null }] }
+            - { seq: 7, tax: isr, concept: Pagos provisionales anteriores, operation: subtract, amount_cents: 400000, rate: null, legal_basis: [{ law: LISR, article: '106', note: null }] }
+            - { seq: 8, tax: isr, concept: Retenciones de ISR (10 %) acumuladas, operation: subtract, amount_cents: 300000, rate: null, legal_basis: [{ law: LISR, article: '106', note: párrafo 5 }] }
+            - { seq: 9, tax: isr, concept: ISR a pagar, operation: result, amount_cents: 15096, rate: null, legal_basis: [] }
+          legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
+          disclaimers:
+            - code: not_tax_advice
+              text: Estimación informativa. No sustituye la declaración ante el SAT ni la asesoría de un contador. Cálculo basado en LISR, LIVA, LIF 2026 y Anexo 8 RMF 2026.
+          engine_version: 1.0.0
+    TaxInputDef:
+      type: object
+      required: [key, label, kind, required]
+      properties:
+        key: { type: string, examples: [coeficiente_utilidad] }
+        label: { type: string }
+        kind: { type: string, enum: [money, rate] }
+        required: { type: boolean }
+    TaxInputValue:
+      type: object
+      required: [key]
+      description: Exactly one of value_cents (kind=money) or value_rate (kind=rate).
+      properties:
+        key: { type: string }
+        value_cents:
+          oneOf:
+            - $ref: '#/components/schemas/MoneyCents'
+            - type: 'null'
+        value_rate:
+          oneOf:
+            - $ref: '#/components/schemas/DecimalRate'
+            - type: 'null'
+    TaxInputs:
+      type: object
+      required: [regime_code, fiscal_year, definitions, values]
+      properties:
+        regime_code: { $ref: '#/components/schemas/RegimeCode' }
+        fiscal_year: { $ref: '#/components/schemas/FiscalYear' }
+        definitions:
+          type: array
+          items: { $ref: '#/components/schemas/TaxInputDef' }
+        values:
+          type: array
+          items: { $ref: '#/components/schemas/TaxInputValue' }
+    TaxInputsUpdate:
+      type: object
+      required: [values]
+      properties:
+        values:
+          type: array
+          items: { $ref: '#/components/schemas/TaxInputValue' }
+      examples:
+        - values:
+            - { key: coeficiente_utilidad, value_rate: '0.1234' }
+
+    # ------------------------------------------------------------ dashboard / access
+    AccessSummary:
+      type: object
+      required: [access]
+      properties:
+        access: { type: string, enum: [trial, pro, comp, read_only] }
+        trial_ends_at: { type: [string, 'null'], format: date-time }
+        incomes_remaining: { type: [integer, 'null'], minimum: 0 }
+        expenses_remaining: { type: [integer, 'null'], minimum: 0 }
+    TrendPoint:
+      type: object
+      required: [period, income_cents, expense_cents, tax_payable_rounded_cents]
+      properties:
+        period: { $ref: '#/components/schemas/Period' }
+        income_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        expense_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        tax_payable_rounded_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+    Dashboard:
+      type: object
+      required: [taxpayer_id, period, is_empty, estimate, income_cents, expense_cents, trend, access, legend]
+      properties:
+        taxpayer_id: { $ref: '#/components/schemas/Uuid' }
+        period: { $ref: '#/components/schemas/Period' }
+        is_empty: { type: boolean, description: True when the taxpayer has no records (empty state). }
+        estimate: { $ref: '#/components/schemas/TaxpayerEstimate' }
+        income_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        expense_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        trend:
+          type: array
+          items: { $ref: '#/components/schemas/TrendPoint' }
+        access: { $ref: '#/components/schemas/AccessSummary' }
+        legend: { $ref: '#/components/schemas/Legend' }
+
+    # ------------------------------------------------------------ subscriptions
+    SubscriptionStatus:
+      type: object
+      required: [access]
+      properties:
+        access: { $ref: '#/components/schemas/AccessSummary' }
+        plan:
+          oneOf:
+            - type: object
+              required: [product_id, period, store, expires_at, will_renew]
+              properties:
+                product_id: { type: string }
+                period: { type: string, enum: [weekly, monthly, yearly] }
+                store: { type: string, enum: [app_store, play_store] }
+                expires_at: { type: string, format: date-time }
+                will_renew: { type: boolean }
+                management_url: { type: [string, 'null'], format: uri }
+            - type: 'null'
+      examples:
+        - access: { access: trial, trial_ends_at: '2026-10-20T16:00:00Z', incomes_remaining: 3, expenses_remaining: 5 }
+          plan: null
+    RevenueCatWebhook:
+      type: object
+      required: [api_version, event]
+      description: Subset we rely on; unknown fields are accepted and stored raw.
+      properties:
+        api_version: { type: string, examples: ['1.0'] }
+        event:
+          type: object
+          required: [id, type, app_user_id, event_timestamp_ms]
+          additionalProperties: true
+          properties:
+            id: { type: string }
+            type: { type: string, examples: [INITIAL_PURCHASE, RENEWAL, CANCELLATION, EXPIRATION, TRANSFER, TEST] }
+            app_user_id: { type: string }
+            original_app_user_id: { type: string }
+            product_id: { type: string }
+            entitlement_ids:
+              type: [array, 'null']
+              items: { type: string }
+            environment: { type: string, enum: [SANDBOX, PRODUCTION] }
+            store: { type: string }
+            event_timestamp_ms: { type: integer, format: int64 }
+            expiration_at_ms: { type: [integer, 'null'], format: int64 }
+
+    # ------------------------------------------------------------ history
+    HistoryMonth:
+      type: object
+      required: [period, status, total_payable_rounded_cents, changed_since_viewed]
+      properties:
+        period: { $ref: '#/components/schemas/Period' }
+        status: { type: string, enum: [complete, incomplete, informational, no_records] }
+        iva: { oneOf: [{ $ref: '#/components/schemas/TaxResult' }, { type: 'null' }] }
+        isr: { oneOf: [{ $ref: '#/components/schemas/TaxResult' }, { type: 'null' }] }
+        total_payable_rounded_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        changed_since_viewed: { type: boolean }
+        last_viewed_at: { type: [string, 'null'], format: date-time }
+    HistoryYear:
+      type: object
+      required: [taxpayer_id, fiscal_year, months, legend]
+      properties:
+        taxpayer_id: { $ref: '#/components/schemas/Uuid' }
+        fiscal_year: { $ref: '#/components/schemas/FiscalYear' }
+        months:
+          type: array
+          items: { $ref: '#/components/schemas/HistoryMonth' }
+        legend: { $ref: '#/components/schemas/Legend' }
+
+    # ------------------------------------------------------------ reminders
+    DeviceCreate:
+      type: object
+      required: [id, platform, push_token]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        platform: { type: string, enum: [ios, android] }
+        push_token: { type: string, minLength: 1, maxLength: 4096 }
+        app_version: { type: string, maxLength: 32 }
+    Device:
+      type: object
+      required: [id, platform, created_at]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        platform: { type: string, enum: [ios, android] }
+        created_at: { type: string, format: date-time }
+    ReminderSettings:
+      type: object
+      required: [enabled, on_due_date, send_time, show_amounts]
+      properties:
+        enabled: { type: boolean, default: false }
+        early_day:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 16
+          default: 14
+          description: Day of month for the early reminder; null disables it.
+        on_due_date: { type: boolean, default: true }
+        send_time:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          default: '10:00'
+          description: Local time, America/Mexico_City.
+        show_amounts: { type: boolean, default: false, description: Lock-screen privacy opt-in. }
+      examples:
+        - { enabled: true, early_day: 14, on_due_date: true, send_time: '10:00', show_amounts: false }
+    TaxCalendarEntry:
+      type: object
+      required: [period, obligation, nominal_due_date, due_date]
+      properties:
+        period: { $ref: '#/components/schemas/Period' }
+        obligation: { type: string, enum: [monthly_isr_iva] }
+        nominal_due_date: { type: string, format: date }
+        due_date: { type: string, format: date }
+        moved_reason: { type: [string, 'null'], enum: [weekend, holiday, null] }
+    TaxCalendar:
+      type: object
+      required: [year, entries]
+      properties:
+        year: { $ref: '#/components/schemas/FiscalYear' }
+        entries:
+          type: array
+          items: { $ref: '#/components/schemas/TaxCalendarEntry' }
