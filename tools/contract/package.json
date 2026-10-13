@@ -1,0 +1,12 @@
+{
+  "name": "control-contable-contract-tools",
+  "private": true,
+  "description": "Pinned OpenAPI contract tooling. Run through `make contract-lint` from the repo root.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@redocly/cli": "2.62.1"
+  }
+}
