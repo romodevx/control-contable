@@ -47,7 +47,8 @@ RETURNING floor(extract(epoch FROM expires_at - now()))::bigint AS lifetime_seco
 // index serves it). Rows already revoked keep their first reason (the
 // history trigger forbids changing it). revoked_at uses clock_timestamp():
 // a concurrent rotation may have issued a token after this transaction
-// began (refresh_tokens_revoked_after_issue).
+// began (refresh_tokens_revoked_after_issue). RevokeFamily repeats it until
+// it changes nothing (see there).
 const revokeFamilySQL = `UPDATE refresh_tokens SET revoked_at = clock_timestamp(), revoke_reason = ?
 WHERE revoked_at IS NULL
   AND family_id IN (SELECT family_id FROM refresh_tokens WHERE token_hash = ?)`
@@ -137,13 +138,26 @@ func (RefreshTokenStore) Rotate(ctx context.Context, parent usecase.StoredRefres
 }
 
 // RevokeFamily implements usecase.FamilyRevoker.
+//
+// One UPDATE is not enough under READ COMMITTED: when it waits on a row a
+// concurrent rotation locked, it resumes once that rotation commits but
+// never sees the successor the rotation inserted, which would stay live.
+// So the statement repeats until it revokes nothing: each pass sees what
+// was committed before it began, and the rows already revoked stay locked
+// by this transaction, so any later rotation of them waits and then finds
+// them revoked. It ends once no rotation of the family is in flight.
 func (RefreshTokenStore) RevokeFamily(ctx context.Context, hash domain.TokenHash, reason usecase.RevokeReason) error {
 	db, err := pgdb.Conn(ctx)
 	if err != nil {
 		return err
 	}
-	if err := db.Exec(revokeFamilySQL, string(reason), bytea(hash.Bytes())).Error; err != nil {
-		return fmt.Errorf("auth infra: revoke refresh token family: %w", err)
+	for {
+		res := db.Exec(revokeFamilySQL, string(reason), bytea(hash.Bytes()))
+		if res.Error != nil {
+			return fmt.Errorf("auth infra: revoke refresh token family: %w", res.Error)
+		}
+		if res.RowsAffected == 0 {
+			return nil
+		}
 	}
-	return nil
 }

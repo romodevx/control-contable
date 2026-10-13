@@ -318,6 +318,64 @@ func TestRefresh_concurrentDoubleSubmitHasOneWinnerThenRevokesTheFamily(t *testi
 	}
 }
 
+// Reuse detection racing the family's legitimate rotation: the revocation
+// waits on the row the rotation locked, and the successor that rotation
+// commits must not escape it. A READ COMMITTED UPDATE never sees rows
+// committed after its statement began, so a single statement would leave
+// the successor live: the thief (or the victim) keeps a session the reuse
+// was meant to end.
+func TestRefresh_reuseRevokesASuccessorCommittedWhileItWaited(t *testing.T) {
+	s := newSessionStack(t)
+	stolen := s.session(t, anaEmail).Tokens.Refresh
+	tokens, err := s.refresh.Execute(t.Context(), stolen.Reveal())
+	require.NoError(t, err)
+	current := tokens.Refresh
+	successor, err := domain.NewRefreshToken(current.UserID(), rand.Reader)
+	require.NoError(t, err)
+
+	locked, release, rotated := make(chan struct{}), make(chan struct{}), make(chan error, 1)
+	go func() {
+		rotated <- s.txm.ReadWrite(context.WithoutCancel(t.Context()), current.UserID().String(), func(ctx context.Context) error {
+			stored, found, err := s.store.Lock(ctx, current.Hash())
+			if err != nil || !found {
+				return errors.Join(err, errors.New("current token not found"))
+			}
+			if _, err := s.store.Rotate(ctx, stored, successor, usecase.RefreshSlidingWindow); err != nil {
+				return err
+			}
+			close(locked)
+			<-release
+			return nil
+		})
+	}()
+	<-locked
+	reuse := make(chan error, 1)
+	go func() {
+		_, err := s.refresh.Execute(context.WithoutCancel(t.Context()), stolen.Reveal())
+		reuse <- err
+	}()
+	s.awaitBlockedLock(t)
+	close(release)
+
+	require.NoError(t, <-rotated)
+	require.ErrorIs(t, <-reuse, usecase.ErrTokenReused)
+	for _, r := range s.familyRows(t, current.UserID().String(), s.mustRow(t, current).family) {
+		assert.True(t, r.revoked, "every token of the family is revoked")
+	}
+	_, err = s.refresh.Execute(t.Context(), successor.Reveal())
+	require.ErrorIs(t, err, usecase.ErrTokenRevoked)
+}
+
+// awaitBlockedLock waits until some backend waits on a lock.
+func (s *sessionStack) awaitBlockedLock(t *testing.T) {
+	t.Helper()
+	require.Eventually(t, func() bool {
+		var waiting int
+		err := s.owner.QueryRowContext(t.Context(), "SELECT count(*) FROM pg_locks WHERE NOT granted").Scan(&waiting)
+		return err == nil && waiting > 0
+	}, 10*time.Second, 10*time.Millisecond, "the revocation waits on the rotation's row lock")
+}
+
 // A revocation stamps the statement's clock, not its transaction's start: a
 // transaction that began before a newer token of the family was issued can
 // still revoke it (refresh_tokens_revoked_after_issue would refuse now()).
