@@ -261,7 +261,9 @@ committed. `cmd/flagmapgen` fails generation when an operation lacks `operationI
 ## HTTP server and request validation (P0-17, 2026-10-13)
 
 Re-checked in Context7 (`/getkin/kin-openapi`) and against the kin-openapi v0.142.0 source
-(the version `go.mod` pins; the table above says v0.149.0) while wiring `cmd/api`.
+while wiring `cmd/api`. `go.mod` pinned v0.142.0, which govulncheck flags (GO-2026-6112,
+nil-pointer panic reachable from `openapi3filter.ValidateRequest`); P0-17 bumps it to v0.149.0,
+the version the table above names.
 
 | Finding | Effect | Decision |
 |---|---|---|
