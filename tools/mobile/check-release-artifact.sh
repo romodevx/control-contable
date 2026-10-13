@@ -7,7 +7,8 @@
 # Every entry is checked except an AAB's BUNDLE-METADATA/: Play keeps that directory for
 # crash symbolication and never delivers it to devices. `flutter build appbundle` refuses
 # to finish unless AGP moved libapp.so/libflutter.so symbol tables there (`.sym`, i.e.
-# debugSymbolLevel SYMBOL_TABLE). Only those exact files, R8's proguard.map and AGP's fixed
+# debugSymbolLevel SYMBOL_TABLE); since M1-12 also libdartjni.so's (package:jni, pulled in
+# by flutter_secure_storage 11 on Android). Only those exact files, R8's proguard.map and AGP's fixed
 # build metadata are allowed, and only inside an .aab; full DWARF (`.dbg`) or anything else
 # fails. An ELF the reader cannot parse fails too: the gate fails closed.
 #
@@ -21,7 +22,7 @@ readonly FORBIDDEN_NAMES='\.(map|symbols|sym|dbg|debug|dwo|dSYM)(/|$)|(^|/)mappi
 # ELF sections that leak symbol names or source-level debug info.
 readonly FORBIDDEN_SECTIONS='^\.(symtab|strtab|debug_[a-z_]+|zdebug_[a-z_]+|gnu_debugdata|gnu_debuglink)$'
 # Play-only metadata a Flutter AAB is expected to carry (see header).
-readonly BUNDLE_METADATA_ALLOWED='^BUNDLE-METADATA/(com\.android\.tools\.build\.debugsymbols/(arm64-v8a|armeabi-v7a|x86_64)/lib(app|flutter)\.so\.sym|com\.android\.tools\.build\.obfuscation/proguard\.map|com\.android\.tools\.build\.gradle/app-metadata\.properties|com\.android\.tools\.build\.libraries/dependencies\.pb|com\.android\.tools\.build\.profiles/baseline\.profm?|com\.android\.tools/r8\.json)$'
+readonly BUNDLE_METADATA_ALLOWED='^BUNDLE-METADATA/(com\.android\.tools\.build\.debugsymbols/(arm64-v8a|armeabi-v7a|x86_64)/lib(app|flutter|dartjni)\.so\.sym|com\.android\.tools\.build\.obfuscation/proguard\.map|com\.android\.tools\.build\.gradle/app-metadata\.properties|com\.android\.tools\.build\.libraries/dependencies\.pb|com\.android\.tools\.build\.profiles/baseline\.profm?|com\.android\.tools/r8\.json)$'
 
 problems=0
 report() {
