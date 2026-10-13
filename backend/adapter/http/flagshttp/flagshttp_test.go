@@ -113,7 +113,7 @@ func assertMatchesContract(t *testing.T, rec *httptest.ResponseRecorder) {
 
 func validateAgainstContract(t *testing.T, rec *httptest.ResponseRecorder) error {
 	t.Helper()
-	spec, err := gen.GetSwagger()
+	spec, err := gen.GetSpec()
 	require.NoError(t, err)
 	item := spec.Paths.Value("/v1/flags")
 	require.NotNil(t, item)
