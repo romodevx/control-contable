@@ -90,8 +90,3 @@ func TestGetHealth_logsTheCauseNotTheResponse(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, logs.String(), "connection refused")
 }
-
-func TestNotWired(t *testing.T) {
-	err := health.NotWired{}.Ping(context.Background())
-	assert.ErrorIs(t, err, health.ErrDatabaseNotWired)
-}

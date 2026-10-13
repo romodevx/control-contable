@@ -18,12 +18,13 @@ type Rule string
 
 // The rules enforced by Check. An empty Rule means the import is allowed.
 const (
-	RuleDomainImports       Rule = "domain-imports"
-	RuleUsecaseFrameworks   Rule = "usecase-frameworks"
-	RuleUsecaseOuterLayer   Rule = "usecase-outer-layer"
-	RuleCrossModule         Rule = "cross-module"
-	RulePlatformModules     Rule = "platform-modules"
-	RulePurePlatformImports Rule = "pure-platform-imports"
+	RuleDomainImports          Rule = "domain-imports"
+	RuleUsecaseFrameworks      Rule = "usecase-frameworks"
+	RuleUsecaseOuterLayer      Rule = "usecase-outer-layer"
+	RuleUsecasePlatformAdapter Rule = "usecase-platform-adapter"
+	RuleCrossModule            Rule = "cross-module"
+	RulePlatformModules        Rule = "platform-modules"
+	RulePurePlatformImports    Rule = "pure-platform-imports"
 )
 
 // Violation is one forbidden import found in a non-test Go file.
@@ -49,6 +50,11 @@ const (
 // They are held to the domain's own import rule, so the domain cannot reach a
 // framework through them.
 var domainPlatformAllowlist = []string{"money"}
+
+// platformAdapters are the platform packages that wrap a framework (the
+// database adapter and its test harness). Use cases reach them only through
+// framework-free ports (internal/platform/tx); infra and cmd/ wire them.
+var platformAdapters = []string{"pgdb", "pgtest"}
 
 // frameworkPrefixes are delivery and persistence details that domain and
 // usecase packages must never see.
@@ -124,6 +130,9 @@ func checkModuleImport(from, to location, imported string) Rule {
 	}
 	if to.kind == kindModule && to.layer != layerDomain && to.layer != layerUsecase {
 		return RuleUsecaseOuterLayer
+	}
+	if to.kind == kindPlatform && slices.Contains(platformAdapters, to.module) {
+		return RuleUsecasePlatformAdapter
 	}
 	return ""
 }

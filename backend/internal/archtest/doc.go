@@ -12,6 +12,9 @@
 //     GORM or pgx.
 //   - usecase-outer-layer: within its module a usecase imports only domain and
 //     usecase packages (never adapter, infra or any other directory).
+//   - usecase-platform-adapter: a usecase never imports a platform adapter
+//     (platformAdapters: pgdb, pgtest); it depends on the port in
+//     internal/platform/tx instead.
 //   - cross-module: no module package imports another module. Modules talk
 //     through ports owned by the consumer, wired in cmd/.
 //   - platform-modules: platform never imports a module.
