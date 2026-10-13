@@ -8,12 +8,11 @@ import 'package:dio/dio.dart';
 typedef CannedReply = ({int status, Object? body});
 
 /// A [HttpClientAdapter] that never touches the network: it records every
-/// request and answers from [replies] (by path), or `200 {}` by default.
-/// A path mapped to an [Exception] makes the request fail with it.
+/// request and answers from its canned replies (by path), or `200 {}` by
+/// default. A path mapped to an [Exception] makes the request fail with it.
 class RecordingAdapter implements HttpClientAdapter {
   /// Creates the adapter with optional canned [replies] keyed by path.
-  RecordingAdapter({Map<String, Object> replies = const {}})
-    : _replies = Map.of(replies);
+  new({Map<String, Object> replies = const {}}) : _replies = Map.of(replies);
 
   final Map<String, Object> _replies;
 
@@ -30,7 +29,8 @@ class RecordingAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     requests.add(options);
-    final reply = _replies[options.uri.path] ?? (status: 200, body: {});
+    final reply =
+        _replies[options.uri.path] ?? (status: 200, body: <String, Object?>{});
     if (reply is Exception) throw reply;
     final (:status, :body) = reply as CannedReply;
     return ResponseBody.fromString(

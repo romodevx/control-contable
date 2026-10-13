@@ -18,7 +18,9 @@ Dio _dioFor(AppConfig config) {
 
 void main() {
   test('dio targets the configured API base URL', () {
-    final dio = _dioFor(AppConfig.resolve(flavor: AppFlavor.dev, useMock: true));
+    final dio = _dioFor(
+      AppConfig.resolve(flavor: AppFlavor.dev, useMock: true),
+    );
 
     expect(dio.options.baseUrl, 'http://localhost:3001');
     expect(dio.options.connectTimeout, isNotNull);
@@ -37,16 +39,16 @@ void main() {
 
     setUp(() async {
       served = [];
-      server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-      server.listen((request) async {
-        served.add(request.uri.path);
-        if (request.uri.path == '/v1/flags') {
-          request.response
-            ..statusCode = HttpStatus.found
-            ..headers.set(HttpHeaders.locationHeader, '/landed');
-        }
-        await request.response.close();
-      });
+      server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0)
+        ..listen((request) async {
+          served.add(request.uri.path);
+          if (request.uri.path == '/v1/flags') {
+            request.response
+              ..statusCode = HttpStatus.found
+              ..headers.set(HttpHeaders.locationHeader, '/landed');
+          }
+          await request.response.close();
+        });
     });
 
     tearDown(() => server.close(force: true));
