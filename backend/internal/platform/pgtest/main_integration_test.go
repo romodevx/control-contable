@@ -18,6 +18,10 @@ import (
 //   - notes:        owner-scoped, ENABLE + FORCE RLS, fail-closed helper (the data-model pattern).
 //   - leaky_notes:  same shape, no RLS. Every isolation check must catch it.
 //   - strict_notes: RLS whose policy errors (instead of matching nothing) on an unset context.
+//   - fresh_session_leaky_notes:  leaks every row to a session that never set the context
+//     (current_setting(..., true) IS NULL), e.g. a newly opened pooled connection.
+//   - reused_session_leaky_notes: leaks every row to a session whose transaction-local
+//     context reverted to the empty string (a pooled connection reused after AsUser).
 const fixtureDDL = `
 CREATE FUNCTION app_user_id() RETURNS uuid STABLE LANGUAGE sql
 AS $$ SELECT nullif(current_setting('app.current_user_id', true), '')::uuid $$;
@@ -53,6 +57,30 @@ CREATE POLICY strict_notes_owner ON strict_notes
   USING (user_id = current_setting('app.current_user_id')::uuid)
   WITH CHECK (user_id = current_setting('app.current_user_id')::uuid);
 GRANT SELECT, INSERT, UPDATE, DELETE ON strict_notes TO cc_app;
+
+CREATE TABLE fresh_session_leaky_notes (
+  id      bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id uuid NOT NULL,
+  body    text NOT NULL
+);
+ALTER TABLE fresh_session_leaky_notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE fresh_session_leaky_notes FORCE ROW LEVEL SECURITY;
+CREATE POLICY fresh_session_leaky_notes_owner ON fresh_session_leaky_notes
+  USING (current_setting('app.current_user_id', true) IS NULL OR user_id = (SELECT app_user_id()))
+  WITH CHECK (user_id = (SELECT app_user_id()));
+GRANT SELECT, INSERT, UPDATE, DELETE ON fresh_session_leaky_notes TO cc_app;
+
+CREATE TABLE reused_session_leaky_notes (
+  id      bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id uuid NOT NULL,
+  body    text NOT NULL
+);
+ALTER TABLE reused_session_leaky_notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reused_session_leaky_notes FORCE ROW LEVEL SECURITY;
+CREATE POLICY reused_session_leaky_notes_owner ON reused_session_leaky_notes
+  USING (current_setting('app.current_user_id', true) = '' OR user_id = (SELECT app_user_id()))
+  WITH CHECK (user_id = (SELECT app_user_id()));
+GRANT SELECT, INSERT, UPDATE, DELETE ON reused_session_leaky_notes TO cc_app;
 `
 
 // migratedAs records the role the migrator ran as, so a test can prove it is cc_owner.

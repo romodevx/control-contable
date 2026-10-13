@@ -273,3 +273,38 @@ func TestChecks_RefuseAVacuousProof(t *testing.T) {
 		})
 	}
 }
+
+// A policy may leak only in one of the two "no context" session states: never set
+// (a newly opened connection) or reverted to ” (a pooled connection reused after a
+// transaction-local set_config). The check must catch both, whatever state the
+// caller's pool happens to be in.
+func TestCheckUnsetContextFailsClosed_CatchesLeaksInEverySessionState(t *testing.T) {
+	tables := []pgtest.Table{
+		{Name: "fresh_session_leaky_notes", OwnerColumn: "user_id"},
+		{Name: "reused_session_leaky_notes", OwnerColumn: "user_id"},
+	}
+	pools := []struct {
+		name string
+		open func(t *testing.T, db *pgtest.Database) (seedPool, checkPool *sql.DB)
+	}{
+		{"pool already used", func(t *testing.T, db *pgtest.Database) (*sql.DB, *sql.DB) {
+			app := db.Connect(t, pgtest.RoleApp)
+			return app, app
+		}},
+		{"pool never used", func(t *testing.T, db *pgtest.Database) (*sql.DB, *sql.DB) {
+			return db.Connect(t, pgtest.RoleApp), db.Connect(t, pgtest.RoleApp)
+		}},
+	}
+	for _, table := range tables {
+		for _, pool := range pools {
+			t.Run(table.Name+"/"+pool.name, func(t *testing.T) {
+				seedPool, checkPool := pool.open(t, pgtest.NewDatabase(t))
+				seed(t, seedPool, table, userB)
+
+				err := pgtest.CheckUnsetContextFailsClosed(t.Context(), checkPool, table, userB)
+
+				require.ErrorIs(t, err, pgtest.ErrNotIsolated)
+			})
+		}
+	}
+}
