@@ -32,4 +32,17 @@ const (
 	ErrInvalidVerificationCode Error = "auth: invalid verification code"
 	// ErrRandomSource reports a failure of the injected entropy source.
 	ErrRandomSource Error = "auth: random source failed"
+	// ErrInvalidName reports a display name that is blank, too long, not
+	// valid UTF-8 or holds control characters.
+	ErrInvalidName Error = "auth: invalid name"
+	// ErrDocumentMissing reports an acceptance without the terms or without
+	// a privacy notice.
+	ErrDocumentMissing Error = "auth: a required legal document was not accepted"
+	// ErrDocumentDuplicate reports a legal document kind accepted twice.
+	ErrDocumentDuplicate Error = "auth: a legal document kind was accepted twice"
+	// ErrDocumentUnknown reports a legal document kind that does not exist.
+	ErrDocumentUnknown Error = "auth: unknown legal document kind"
+	// ErrDocumentNotCurrent reports an accepted version that is not the
+	// current version of its document.
+	ErrDocumentNotCurrent Error = "auth: accepted legal document version is not current"
 )

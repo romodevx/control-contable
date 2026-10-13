@@ -7,6 +7,12 @@
 //   - RefreshToken: "<user_uuid>.<secret>" with a 256-bit secret; only its
 //     TokenHash is persisted, compared in constant time.
 //   - VerificationCode: 6 decimal digits drawn without modulo bias.
+//   - Name: optional NFC display name, 1 to 120 characters.
+//   - Acceptance: the legal document versions accepted at sign-up (terms
+//     and a privacy notice), checked against the current catalog.
+//
+// Email rejects non-ASCII, so the NFC step of P0-30 D-5 is moot for the
+// email_hash: no internationalized address ever reaches the index.
 //
 // Randomness is injected as an io.Reader (crypto/rand.Reader in production)
 // so tests are deterministic. The package imports the standard library and

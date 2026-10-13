@@ -2,27 +2,24 @@ package main
 
 import (
 	"github.com/romodevx/control-contable/backend/adapter/http/flagshttp"
-	"github.com/romodevx/control-contable/backend/adapter/http/gen"
 	"github.com/romodevx/control-contable/backend/adapter/http/health"
+	authhttp "github.com/romodevx/control-contable/backend/internal/auth/adapter/http"
 )
 
 // api is the single gen.StrictServerInterface, built by embedding one handler
-// per module (ADR-0001). Each module adds its handler struct here.
+// per module (ADR-0001). Each module adds its handler struct here and deletes
+// the stubs of the operations it builds from notbuilt.go.
 type api struct {
 	notBuilt
 	*health.Handler
 	*flagsHandler
+	*authHandler
 }
 
-// flagsHandler names the embedded GET /v1/flags handler: health.Handler and
-// flagshttp.Handler would otherwise both be the embedded field "Handler".
-type flagsHandler = flagshttp.Handler
-
-// notBuilt stands in for the operations whose module is not built yet. Its
-// interface is nil, so calling one panics and middleware.Recover answers the
-// 500 envelope. Flagged modules only get that far once their flag is ON.
-// Being embedded one level deeper than the module handlers, it never shadows
-// them.
-type notBuilt struct {
-	gen.StrictServerInterface
-}
+// flagsHandler and authHandler name the embedded handlers: health.Handler,
+// flagshttp.Handler and authhttp.Handler would otherwise all be the embedded
+// field "Handler".
+type (
+	flagsHandler = flagshttp.Handler
+	authHandler  = authhttp.Handler
+)
