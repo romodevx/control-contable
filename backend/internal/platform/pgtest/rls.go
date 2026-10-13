@@ -8,7 +8,9 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/stdlib"
 )
 
 var (
@@ -147,10 +149,47 @@ func CheckInsertRejected(ctx context.Context, db *sql.DB, viewer string, insert 
 
 // CheckUnsetContextFailsClosed returns ErrNotIsolated if a transaction without a user
 // context can read any row of t. Zero rows or a fail-closed error both pass.
+//
+// "No context" has two session states and a policy can leak in either one, so both
+// are probed regardless of the state of db's pool: a never-set session (a newly
+// opened connection: current_setting(..., true) IS NULL) and a reverted session (a
+// reused connection after a transaction-local set_config: current_setting is the empty string).
 func CheckUnsetContextFailsClosed(ctx context.Context, db *sql.DB, t Table, owner string) error {
 	if err := requireOwnerRows(ctx, db, t, owner); err != nil {
 		return err
 	}
+	if err := checkNeverSetSession(ctx, db, t); err != nil {
+		return err
+	}
+	return checkRevertedSession(ctx, db, t, owner)
+}
+
+// checkNeverSetSession reads t on a brand-new session cloned from db's settings.
+func checkNeverSetSession(ctx context.Context, db *sql.DB, t Table) error {
+	cfg, err := sessionConfig(ctx, db)
+	if err != nil {
+		return err
+	}
+	fresh := stdlib.OpenDB(*cfg)
+	err = countWithoutContext(ctx, fresh, t, "never-set session")
+	return errors.Join(err, fresh.Close())
+}
+
+// checkRevertedSession pins one session, sets and rolls back a user context on it,
+// then reads t on the same session.
+func checkRevertedSession(ctx context.Context, db *sql.DB, t Table, someUser string) error {
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("pgtest: pin a session: %w", err)
+	}
+	err = probe(ctx, conn, someUser, func(*sql.Tx) error { return nil })
+	if err == nil {
+		err = countWithoutContext(ctx, conn, t, "reverted session")
+	}
+	return errors.Join(err, conn.Close())
+}
+
+func countWithoutContext(ctx context.Context, db txBeginner, t Table, state string) error {
 	var seen int
 	err := probe(ctx, db, "", func(tx *sql.Tx) error {
 		return tx.QueryRowContext(ctx, "SELECT count(*) FROM "+QuoteIdent(t.Name)).Scan(&seen)
@@ -159,12 +198,31 @@ func CheckUnsetContextFailsClosed(ctx context.Context, db *sql.DB, t Table, owne
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("pgtest: select %s without context: %w", t, err)
+		return fmt.Errorf("pgtest: select %s without context (%s): %w", t, state, err)
 	}
 	if seen > 0 {
-		return fmt.Errorf("%w: %d row(s) of %s visible without a user context", ErrNotIsolated, seen, t)
+		return fmt.Errorf("%w: %d row(s) of %s visible without a user context (%s)", ErrNotIsolated, seen, t, state)
 	}
 	return nil
+}
+
+// sessionConfig returns a copy of the connection settings (role, password,
+// database) behind db, which must use the pgx stdlib driver.
+func sessionConfig(ctx context.Context, db *sql.DB) (*pgx.ConnConfig, error) {
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("pgtest: pin a session: %w", err)
+	}
+	var cfg *pgx.ConnConfig
+	err = conn.Raw(func(driverConn any) error {
+		pgxConn, ok := driverConn.(*stdlib.Conn)
+		if !ok {
+			return fmt.Errorf("pgtest: driver connection is %T, want the pgx stdlib driver", driverConn)
+		}
+		cfg = pgxConn.Conn().Config().Copy()
+		return nil
+	})
+	return cfg, errors.Join(err, conn.Close())
 }
 
 // CheckNoBypass returns ErrNotIsolated if the logged-in role is SUPERUSER or

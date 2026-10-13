@@ -37,13 +37,18 @@ func WithoutUser(ctx context.Context, db *sql.DB, fn func(*sql.Tx) error) error 
 	return inTx(ctx, db, "", commit, fn)
 }
 
+// txBeginner is a pool (*sql.DB) or one pinned session (*sql.Conn).
+type txBeginner interface {
+	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
+}
+
 // probe runs fn under userID ("" = unset) and always rolls back, so isolation
 // checks leave no trace even when they find a breach.
-func probe(ctx context.Context, db *sql.DB, userID string, fn func(*sql.Tx) error) error {
+func probe(ctx context.Context, db txBeginner, userID string, fn func(*sql.Tx) error) error {
 	return inTx(ctx, db, userID, rollback, fn)
 }
 
-func inTx(ctx context.Context, db *sql.DB, userID string, end txEnd, fn func(*sql.Tx) error) error {
+func inTx(ctx context.Context, db txBeginner, userID string, end txEnd, fn func(*sql.Tx) error) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("pgtest: begin: %w", err)
