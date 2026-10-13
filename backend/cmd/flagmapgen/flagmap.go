@@ -31,6 +31,11 @@ var moduleKeyPattern = regexp.MustCompile(`^(platform|module_[a-z][a-z_]*)$`)
 // httpMethods are the path-item keys that hold an operation (OpenAPI 3.1 §4.8.9).
 var httpMethods = []string{"get", "put", "post", "delete", "options", "head", "patch", "trace"}
 
+// pathItemRefKey marks a path item defined elsewhere (OpenAPI 3.1 §4.8.9.1).
+// flagmapgen does not resolve references, so it refuses them rather than
+// silently omitting their operations from the flag map.
+const pathItemRefKey = "$ref"
+
 type specDocument struct {
 	Paths map[string]map[string]yaml.Node `yaml:"paths"`
 }
@@ -56,6 +61,10 @@ func ParseOperations(spec []byte) ([]Operation, error) {
 	)
 	for _, path := range sortedKeys(doc.Paths) {
 		item := doc.Paths[path]
+		if _, isRef := item[pathItemRefKey]; isRef {
+			errs = append(errs, fmt.Errorf("%s: path item $ref is not supported; inline the operations so each one is gated", path))
+			continue
+		}
 		for _, method := range httpMethods {
 			node, ok := item[method]
 			if !ok {
