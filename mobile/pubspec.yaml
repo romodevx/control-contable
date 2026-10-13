@@ -15,13 +15,25 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   flutter_riverpod: 3.4.3
+  # Runtime of the generated API client (ADR-0003 pins).
+  freezed_annotation: 3.1.0
   go_router: 18.0.2
   intl: any
+  json_annotation: 4.12.0
+  retrofit: 4.10.0
 
 dev_dependencies:
+  # Client generation toolchain (ADR-0003): `make mobile-client` from the repo root.
+  build_runner: 2.16.2
   flutter_test:
     sdk: flutter
+  freezed: 4.0.2
+  json_serializable: 6.14.1
+  retrofit_generator: 10.2.11
+  swagger_parser: 1.45.0
   very_good_analysis: 11.0.0
+  # Read by tool/normalize_openapi.dart (the contract is YAML).
+  yaml: 3.1.3
 
 flutter:
   uses-material-design: true

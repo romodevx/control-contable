@@ -1,0 +1,15 @@
+# Dart client generation (ADR-0003). Run `make mobile-client` from the repo root, never
+# `dart run swagger_parser` alone: the input is the normalized copy of docs/api/openapi.yaml
+# that tool/normalize_openapi.dart writes, and the kind guard runs afterwards.
+swagger_parser:
+  schema_path: build/openapi/openapi.json
+  output_directory: lib/api/generated
+  name: control_contable_api
+  language: dart
+  json_serializer: freezed
+  use_freezed3: true
+  root_client: true
+  root_client_name: ApiClient
+  put_clients_in_folder: true
+  unknown_enum_value: true
+  mark_files_as_generated: true

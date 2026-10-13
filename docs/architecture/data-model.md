@@ -56,9 +56,12 @@ erDiagram
 
     users {
         uuid id PK
-        citext email UK
+        bytea email_hash UK "HMAC blind index"
+        bytea email_encrypted "AES-256-GCM"
+        smallint email_key_id
         text password_hash "argon2id PHC"
         text name
+        text status "active|suspended"
         timestamptz email_verified_at
         timestamptz created_at
     }
@@ -103,6 +106,8 @@ erDiagram
         timestamptz starts_at
         timestamptz ends_at "null = open (comp)"
         text source "registration|revenuecat|admin"
+        text rc_product_id "revenuecat only"
+        text rc_original_transaction_id "revenuecat only"
     }
     user_usage {
         uuid user_id PK
@@ -287,6 +292,10 @@ in MODULES.md M5 are dropped (MODULES.md updated to match).
 | expenses | `INDEX (user_id, taxpayer_id, paid_on, id) WHERE deleted_at IS NULL` | Same |
 | incomes / expenses | `INDEX (deleted_at) WHERE deleted_at IS NOT NULL` | Purge job |
 | entitlements | `UNIQUE (user_id, kind)` | One trial / pro / comp row each |
+| entitlements | `CHECK (kind, source)` ∈ trial/registration, pro/revenuecat, comp/admin; only comp may be open-ended; trial `ends_at <= starts_at + 168 h`; RevenueCat ids iff `source = 'revenuecat'` | Kind and provenance cannot drift; no trial longer than 7 days (PRD §7) |
+| users | `UNIQUE (email_hash)`; `CHECK` 32-byte hash, ciphertext framed with `email_key_id` as its key_id prefix, argon2id PHC `password_hash` | One account per email; the email is never stored in clear (P0-14 crypto) |
+| user_usage | `CHECK` counters ≥ 0 + `BEFORE UPDATE` trigger refusing any decrease | PRD §7: deleting a record does not return its trial slot |
+| email_verifications | `INDEX (expires_at)` | Purge job range scan |
 | refresh_tokens | `INDEX (family_id)` | Revoke a family in one statement |
 | revenuecat_events | PK `event_id` | Idempotency |
 | notification_log | `UNIQUE (user_id, due_date, kind)` | Exactly-once reminders |
@@ -356,7 +365,7 @@ Every table below has `ENABLE` + `FORCE ROW LEVEL SECURITY` in its first migrati
 | users | `id = app_user_id()` | `id = app_user_id()` | same | same | Registration sets the context to the new UUID before INSERT |
 | refresh_tokens | `user_id = app_user_id()` | same | same | same | Token format `<user_id>.<secret>` sets the context before lookup |
 | consents | owner | owner | — (append-only, no grant) | cascade only | |
-| entitlements | owner | owner | owner | owner | cc_app: SELECT, plus INSERT trial at registration; cc_webhook: DML |
+| entitlements | owner | owner + kind | owner + kind | owner + kind | cc_app: SELECT, INSERT `kind = 'trial'` only, `starts_at` within 5 min of `now()`; cc_webhook: SELECT, DML on `kind = 'pro'` only; cc_owner (FORCE applies): ALL on `kind = 'comp'` only (operator grants) |
 | user_usage | owner | owner | owner | — | |
 | taxpayers | owner | owner | owner | owner | |
 | taxpayer_regimes | owner | owner | owner | owner | |
@@ -387,7 +396,9 @@ owner, but they do ENABLE (not FORCE) row level security as defense in depth:
 **Service-only (no grant to `cc_app`).**
 - `trial_registry`: through the definer function only.
 - `email_verifications`: through the definer functions only (pre-account, so no `user_id`
-  exists to key RLS on). Rows expire; the purge job removes them.
+  exists to key RLS on). Rows expire; the purge job removes them. The table ships in P0-11
+  with ENABLE (not FORCE) RLS and no policy, so a mistaken grant still sees no row while
+  cc_owner's definer functions (M1-03) can reach it.
 - `revenuecat_events`: `cc_webhook` only, no RLS. It is not user-readable, and its payload
   holds no RFC or financial data.
 

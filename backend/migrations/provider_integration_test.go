@@ -14,13 +14,18 @@ import (
 	"github.com/romodevx/control-contable/backend/migrations"
 )
 
-// baselineObjects are what the baseline creates; down must remove every one.
+// baselineObjects are what the migrations create; down must remove every one.
 var baselineObjects = []string{
 	"to_regprocedure('public.app_user_id()')",
 	"to_regprocedure('public.set_updated_at()')",
 	"to_regclass('public.feature_flags')",
 	"to_regclass('public.flag_presets')",
 	"to_regclass('public.flag_preset_flags')",
+	"to_regprocedure('public.user_usage_forbid_decrease()')",
+	"to_regclass('public.users')",
+	"to_regclass('public.user_usage')",
+	"to_regclass('public.entitlements')",
+	"to_regclass('public.email_verifications')",
 }
 
 func remainingObjects(t *testing.T, db *sql.DB) []string {

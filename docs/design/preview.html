@@ -1,0 +1,877 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Control Contable · Direcciones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<style>
+/* ---------- Page chrome (outside the phone frames) ---------- */
+:root {
+  --page-bg: #EEF0F3;
+  --page-text: #15181D;
+  --page-muted: #4F5866;
+  --page-rule: #D3D8DF;
+  --page-chip: #FFFFFF;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page-bg: #101215;
+    --page-text: #ECEFF3;
+    --page-muted: #A6AFBC;
+    --page-rule: #2A2F37;
+    --page-chip: #1A1D22;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --page-bg: #101215;
+  --page-text: #ECEFF3;
+  --page-muted: #A6AFBC;
+  --page-rule: #2A2F37;
+  --page-chip: #1A1D22;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--page-bg);
+  color: var(--page-text);
+  font: 16px/1.5 "Public Sans", system-ui, sans-serif;
+}
+.page { max-width: 1290px; margin: 0 auto; padding: 32px 16px 80px; }
+.intro { max-width: 760px; margin-bottom: 40px; }
+.eyebrow { margin: 0 0 8px; font-size: 14px; color: var(--page-muted); letter-spacing: .02em; }
+.intro h1 { margin: 0 0 12px; font: 700 clamp(28px, 5vw, 40px)/1.15 "Source Serif 4", Georgia, serif; }
+.lede { margin: 0 0 20px; color: var(--page-muted); }
+.lede code { font: 14px "IBM Plex Mono", monospace; }
+.dir-list { list-style: none; margin: 0 0 20px; padding: 0; display: grid; gap: 8px; }
+.dir-list li { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 12px 16px; border: 1px solid var(--page-rule); border-radius: 8px; background: var(--page-chip); }
+.dir-list span { color: var(--page-muted); }
+.jump { display: flex; gap: 12px; flex-wrap: wrap; }
+.jump a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 8px; border: 1px solid var(--page-rule); color: var(--page-text); text-decoration: none; background: var(--page-chip); font-weight: 600; }
+.theme-block > h2 { font: 700 28px/1.2 "Source Serif 4", Georgia, serif; margin: 48px 0 8px; padding-top: 16px; border-top: 1px solid var(--page-rule); }
+.row { margin-top: 24px; }
+.row-title { margin: 0 0 12px; font-size: 18px; font-weight: 600; }
+.row-scroll { display: flex; gap: 24px; overflow-x: auto; padding-bottom: 12px; scroll-snap-type: x mandatory; }
+.col { flex: 0 0 auto; scroll-snap-align: start; }
+.col-label { margin: 0 0 8px; font-size: 14px; font-weight: 600; color: var(--page-muted); }
+.phone { margin: 0; width: min(390px, calc(100vw - 32px)); }
+.frame { border-radius: 36px; padding: 10px; background: #0A0A0A; box-shadow: 0 10px 30px rgba(0,0,0,.18); }
+
+/* ---------- Direction tokens ---------- */
+.d-a { --font-display: "Source Serif 4", Georgia, serif; --font-body: "Public Sans", system-ui, sans-serif; --font-num: "Public Sans", system-ui, sans-serif;
+  --r-sm: 6px; --r-md: 8px; --r-lg: 12px; --stroke: 1.75; --shadow: none; --display-weight: 600; }
+.d-a.t-light { --bg: #F5F7FA; --surface: #FFFFFF; --text: #0E1B2C; --muted: #4A5568; --outline: #7A8797; --border: #E1E6ED;
+  --primary: #1D4E89; --on-primary: #FFFFFF; --iva: #1D4E89; --isr: #2B7470; --favor: #1C7046;
+  --legend-bg: #FFF4D6; --legend-text: #5C3F00; --error: #B42318; --hero-bg: #1D4E89; --hero-text: #FFFFFF; --hero-muted: #C7D7EC; --focus: #1D4E89; }
+.d-a.t-dark { --bg: #0B1420; --surface: #13202F; --text: #E8EEF5; --muted: #A9B6C6; --outline: #6B7D93; --border: #24344A;
+  --primary: #8DB8EC; --on-primary: #0B1420; --iva: #8DB8EC; --isr: #6FC7C0; --favor: #6FD49A;
+  --legend-bg: #2B2310; --legend-text: #F2D58A; --error: #FF8A80; --hero-bg: #16365C; --hero-text: #E8EEF5; --hero-muted: #B4C6DD; --focus: #8DB8EC; }
+
+.d-b { --font-display: "Bricolage Grotesque", system-ui, sans-serif; --font-body: "Figtree", system-ui, sans-serif; --font-num: "Figtree", system-ui, sans-serif;
+  --r-sm: 12px; --r-md: 16px; --r-lg: 22px; --stroke: 2; --display-weight: 700; }
+.d-b.t-light { --bg: #FBF7F2; --surface: #FFFFFF; --text: #2A1F17; --muted: #6B5B4E; --outline: #9A8676; --border: #EFE5DA;
+  --primary: #A13F1C; --on-primary: #FFFFFF; --iva: #A13F1C; --isr: #3E6B5A; --favor: #2A7148;
+  --legend-bg: #FCEFD9; --legend-text: #6E4A12; --error: #B3261E; --hero-bg: #F7E3D3; --hero-text: #2A1F17; --hero-muted: #6B4A38; --focus: #A13F1C;
+  --shadow: 0 1px 2px rgba(60,35,20,.06), 0 6px 18px rgba(60,35,20,.07); }
+.d-b.t-dark { --bg: #1A1411; --surface: #251C17; --text: #F5ECE4; --muted: #C2B2A4; --outline: #8A7768; --border: #3A2D25;
+  --primary: #F0A07E; --on-primary: #1A1411; --iva: #F0A07E; --isr: #8FC5AE; --favor: #7DD3A0;
+  --legend-bg: #33281A; --legend-text: #F3CF92; --error: #FF9A8F; --hero-bg: #3A271C; --hero-text: #F5ECE4; --hero-muted: #D8C2B0; --focus: #F0A07E;
+  --shadow: none; }
+
+.d-c { --font-display: "Manrope", system-ui, sans-serif; --font-body: "Atkinson Hyperlegible", system-ui, sans-serif; --font-num: "IBM Plex Mono", ui-monospace, monospace;
+  --r-sm: 4px; --r-md: 4px; --r-lg: 6px; --stroke: 1.5; --shadow: none; --display-weight: 700; }
+.d-c.t-light { --bg: #FFFFFF; --surface: #F6F6F4; --text: #111111; --muted: #555555; --outline: #8A8A87; --border: #E6E6E3;
+  --primary: #111111; --on-primary: #FFFFFF; --iva: #111111; --isr: #0B7360; --favor: #0B7360;
+  --legend-bg: #EFEFEC; --legend-text: #333333; --error: #C62828; --hero-bg: transparent; --hero-text: #111111; --hero-muted: #555555; --focus: #0B7360; }
+.d-c.t-dark { --bg: #0D0D0D; --surface: #1A1A1A; --text: #F2F2F2; --muted: #A8A8A8; --outline: #6E6E6E; --border: #2A2A2A;
+  --primary: #F2F2F2; --on-primary: #0D0D0D; --iva: #F2F2F2; --isr: #4CC9A8; --favor: #4CC9A8;
+  --legend-bg: #242424; --legend-text: #D6D6D6; --error: #FF8A80; --hero-bg: transparent; --hero-text: #F2F2F2; --hero-muted: #A8A8A8; --focus: #4CC9A8; }
+
+/* ---------- Shared screen components ---------- */
+.screen { position: relative; min-height: 824px; border-radius: 28px; overflow: hidden; background: var(--bg); color: var(--text);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.5; display: flex; flex-direction: column; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.ic { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: var(--stroke); stroke-linecap: round; stroke-linejoin: round; }
+.status { display: flex; justify-content: space-between; padding: 12px 24px 4px; font: 600 14px/1 var(--font-body); }
+.status-r { letter-spacing: 1px; font-size: 12px; }
+
+.app-head { padding: 8px 16px; }
+.switcher { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 6px 8px; margin: 0;
+  border: 0; border-radius: var(--r-md); background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.avatar { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); font-weight: 700; font-size: 15px; }
+.sw-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.sw-name { font-weight: 700; font-size: 17px; }
+.sw-sub { font-size: 14px; color: var(--muted); }
+
+.hero { margin: 4px 16px 0; padding: 20px; border-radius: var(--r-lg); background: var(--hero-bg); color: var(--hero-text); box-shadow: var(--shadow); }
+.hero-label { margin: 0; font-size: 15px; color: var(--hero-muted); }
+.hero-amount { margin: 4px 0 6px; font: var(--display-weight) 44px/1.1 var(--font-display); font-variant-numeric: tabular-nums lining-nums; letter-spacing: -.01em; }
+.cents { font-size: .5em; vertical-align: .62em; margin-left: 1px; }
+.hero-due { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; color: var(--hero-muted); }
+.hero-due .ic { width: 18px; height: 18px; }
+.hero-split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0 0; padding-top: 14px; border-top: 1px solid color-mix(in srgb, var(--hero-text) 22%, transparent); }
+.hero-split div { margin: 0; }
+.hero-split dt { font-size: 14px; color: var(--hero-muted); }
+.hero-split dd { margin: 0; font-size: 20px; font-weight: 600; }
+
+.legend { display: flex; gap: 10px; margin: 12px 16px 0; padding: 12px 14px; border-radius: var(--r-md); background: var(--legend-bg); color: var(--legend-text); font-size: 15px; line-height: 1.45; }
+.ic-legend { width: 20px; height: 20px; margin-top: 1px; }
+
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 16px 0; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; padding: 0 18px; border-radius: var(--r-md);
+  font: 600 17px/1 var(--font-body); text-decoration: none; cursor: pointer; border: 1.5px solid transparent; }
+.btn .ic { width: 20px; height: 20px; }
+.btn-primary { background: var(--primary); color: var(--on-primary); }
+.btn-secondary { background: var(--surface); color: var(--primary); border-color: var(--outline); }
+.btn-text { background: transparent; color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+.btn-block { width: 100%; }
+.btn:focus-visible, .switcher:focus-visible, .icon-btn:focus-visible, .regime-row:focus-visible, .nav-item:focus-visible, summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+.block { margin: 22px 16px 0; }
+.block-title { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font: 700 18px/1.3 var(--font-display); }
+.tag { font: 500 13px/1 var(--font-body); padding: 5px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow); }
+.list { padding: 0; }
+.regime-row { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 12px 12px 14px; color: var(--text); text-decoration: none; border-top: 1px solid var(--border); }
+.regime-row:first-child { border-top: 0; }
+.code { flex: none; display: grid; place-items: center; width: 44px; height: 32px; border-radius: var(--r-sm); background: var(--bg); border: 1px solid var(--border); font: 600 14px/1 var(--font-num); }
+.regime-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.regime-name { font-weight: 600; font-size: 16px; line-height: 1.3; }
+.regime-sub { font-size: 14px; color: var(--muted); }
+.regime-line { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; margin-top: 2px; }
+.regime-total { font-weight: 700; font-size: 17px; }
+.code { align-self: flex-start; margin-top: 2px; }
+.ic-chev { width: 18px; height: 18px; color: var(--muted); }
+.regime-row.is-info .regime-sub { color: var(--muted); }
+
+.chart-card { padding: 14px 16px 12px; }
+.chart-key { display: flex; align-items: center; gap: 16px; list-style: none; margin: 0 0 10px; padding: 0; font-size: 14px; color: var(--muted); }
+.chart-key li { display: flex; align-items: center; gap: 6px; }
+.chart-now { margin-left: auto; color: var(--text); font-weight: 600; }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+.sw-iva { background: var(--iva); }
+.sw-isr { background: var(--isr); }
+.chart { display: block; width: 100%; height: auto; overflow: visible; }
+.m-iva { fill: var(--iva); }
+.m-isr { fill: var(--isr); }
+.m-label { fill: var(--muted); font: 13px var(--font-body); }
+.bar.is-current .m-label { fill: var(--text); font-weight: 700; }
+.m-base { stroke: var(--border); stroke-width: 1; }
+.d-b .chart rect { rx: 5px; }
+.d-c .chart rect { rx: 0; }
+
+.bottom-nav { margin-top: auto; display: grid; grid-template-columns: repeat(5, 1fr); padding: 8px 4px 22px; background: var(--surface); border-top: 1px solid var(--border); }
+.nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 56px; color: var(--muted); text-decoration: none; font-size: 12.5px; font-weight: 500; border-radius: var(--r-md); }
+.nav-item.is-active { color: var(--primary); font-weight: 700; }
+.d-b .nav-item.is-active .ic { background: color-mix(in srgb, var(--primary) 14%, transparent); border-radius: 999px; padding: 2px 12px; width: 48px; box-sizing: content-box; }
+.d-a .nav-item.is-active { box-shadow: inset 0 3px 0 var(--primary); border-radius: 0; }
+
+/* Page header for form + breakdown */
+.page-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px 8px 8px; border-bottom: 1px solid var(--border); }
+.icon-btn { display: grid; place-items: center; width: 48px; height: 48px; border: 0; border-radius: var(--r-md); background: transparent; color: var(--text); cursor: pointer; }
+.page-title { margin: 0; font: 700 20px/1.25 var(--font-display); }
+.page-sub { margin: 0; font-size: 14px; color: var(--muted); }
+
+/* Form */
+.form { display: flex; flex-direction: column; gap: 20px; padding: 20px 16px 24px; flex: 1; }
+.field { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.field > label, .field > legend { font-weight: 600; font-size: 16px; color: var(--text); padding: 0; margin-bottom: 6px; }
+fieldset.field > legend { margin-bottom: 8px; }
+.opt { font-weight: 400; color: var(--muted); }
+.field input, .field select { width: 100%; min-height: 52px; padding: 12px 14px; font: 17px/1.3 var(--font-body); color: var(--text);
+  background: var(--surface); border: 1.5px solid var(--outline); border-radius: var(--r-md); appearance: none; -webkit-appearance: none; }
+.field select { background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 20px) 50%, calc(100% - 14px) 50%; background-size: 6px 6px; background-repeat: no-repeat; padding-right: 40px; }
+.field input:focus, .field select:focus { outline: 3px solid color-mix(in srgb, var(--focus) 35%, transparent); border-color: var(--focus); }
+.input-affix { display: flex; align-items: center; background: var(--surface); border: 1.5px solid var(--outline); border-radius: var(--r-md); }
+.input-affix input { border: 0; background: transparent; font-family: var(--font-num); font-variant-numeric: tabular-nums; padding-left: 4px; }
+.input-affix input:focus { outline: none; }
+.input-affix.is-focus { border-color: var(--focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 30%, transparent); }
+.affix { padding-left: 14px; font: 600 17px var(--font-num); color: var(--muted); }
+.help { margin: 0; font-size: 14px; color: var(--muted); }
+.segs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.seg { position: relative; }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg span { display: flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 12px; border: 1.5px solid var(--outline); border-radius: var(--r-md);
+  background: var(--surface); font-weight: 600; font-size: 16px; }
+.seg input:checked + span { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+.seg input:checked + span::before { content: "✓"; margin-right: 6px; }
+.seg input:focus-visible + span { outline: 3px solid var(--focus); outline-offset: 2px; }
+.more { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 0; }
+.more summary { display: flex; align-items: center; gap: 8px; min-height: 52px; font-weight: 600; cursor: pointer; list-style: none; color: var(--primary); }
+.more summary::-webkit-details-marker { display: none; }
+.more[open] summary .ic { transform: rotate(180deg); }
+.more .help { padding-bottom: 12px; }
+.form-foot { display: flex; flex-direction: column; gap: 10px; margin-top: auto; padding-top: 8px; }
+
+/* Breakdown */
+.sum { margin: 16px 16px 0; }
+.sum .hero-label { color: var(--muted); }
+.sum-amount { margin: 2px 0 0; font: var(--display-weight) 40px/1.1 var(--font-display); font-variant-numeric: tabular-nums lining-nums; }
+.ledger { list-style: none; margin: 0; padding: 4px 14px; }
+.ln { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); }
+.ln:first-child { border-top: 0; }
+.ln-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.ln-c { font-size: 16px; line-height: 1.35; }
+.basis { font-size: 13.5px; color: var(--muted); }
+.ln-amt { font-size: 16px; white-space: nowrap; }
+.ln.is-sub .ln-c { color: var(--muted); }
+.ln.is-result { border-top: 2px solid var(--text); }
+.ln.is-result .ln-c, .ln.is-result .ln-amt { font-weight: 700; font-size: 17px; }
+.meta { margin: 20px 16px 28px; font-size: 13.5px; color: var(--muted); }
+
+/* Direction C: ledger look, no card chrome */
+.d-c .card { background: transparent; border: 0; border-top: 1px solid var(--text); border-radius: 0; }
+.d-c .ledger { padding: 0; }
+.d-c .hero { padding: 8px 0 0; margin: 4px 16px 0; }
+.d-c .hero-split { border-top: 1px solid var(--border); }
+.d-c .legend { border-left: 3px solid var(--isr); border-radius: 0; }
+.d-c .block-title { font-size: 15px; text-transform: uppercase; letter-spacing: .06em; }
+.d-c .nav-item.is-active { color: var(--text); text-decoration: underline; text-underline-offset: 4px; }
+.d-c .code { background: transparent; }
+.d-c .chart-card { padding: 12px 0 0; }
+
+@media (max-width: 440px) {
+  .frame { padding: 0; border-radius: 28px; background: transparent; box-shadow: none; }
+  .screen { border: 1px solid var(--page-rule); }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+ <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></symbol>
+ <symbol id="i-income" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M8 13l4 4 4-4"/></symbol>
+ <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2z"/><path d="M9 8h6M9 12h6"/></symbol>
+ <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></symbol>
+ <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+ <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+ <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+ <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+ <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+ <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+ <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+ <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+</svg>
+<main class="page">
+  <header class="intro">
+    <p class="eyebrow">Control Contable · propuesta visual · 13 oct 2026</p>
+    <h1>Tres direcciones de diseño</h1>
+    <p class="lede">Cada fila compara la misma pantalla en las tres direcciones, a 390 px de ancho. Primero el modo claro, después el oscuro.
+    Los detalles (tokens, contrastes, pros y contras) están en <code>docs/design/DIRECTIONS.md</code>.</p>
+    <ul class="dir-list"><li><strong>A · Confianza sobria</strong><span>Tinta azul institucional, serif para cifras clave, radios contenidos.</span></li><li><strong>B · Fintech cálido</strong><span>Barro y crema, esquinas suaves, tono cercano.</span></li><li><strong>C · Minimal claro</strong><span>Monocromo con un solo verde, reglas finas, cifras monoespaciadas.</span></li></ul>
+    <nav class="jump" aria-label="Saltar a"><a href="#light">Modo claro</a><a href="#dark">Modo oscuro</a></nav>
+  </header>
+  <section class="theme-block" id="light"><h2>Modo claro</h2><section class="row" aria-label="Inicio (dashboard), Modo claro"><h3 class="row-title">Inicio (dashboard)</h3><div class="row-scroll"><div class="col"><p class="col-label">A · Confianza sobria</p><figure class="phone d-a t-light"><div class="frame">
+<div class="screen">
+  <div class="status" aria-hidden="true"><span>9:41</span><span class="status-r">5G ▮▮▮</span></div>
+  <header class="app-head">
+    <button class="switcher" type="button" aria-haspopup="listbox">
+      <span class="avatar" aria-hidden="true">ML</span>
+      <span class="sw-text"><span class="sw-name">María López Ruiz</span>
+      <span class="sw-sub">Persona física · RFC ••••••••A12</span></span><svg class="ic" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+    </button>
+  </header>
+  <section class="hero" aria-labelledby="h-est">
+    <p class="hero-label" id="h-est">Estimado a pagar · octubre 2026</p>
+    <p class="hero-amount num">$8,412<span class="cents">.00</span></p>
+    <p class="hero-due"><svg class="ic" aria-hidden="true"><use href="#i-calendar"/></svg>Vence el lunes 17 de noviembre</p>
+    <dl class="hero-split">
+      <div><dt>IVA</dt><dd class="num">$3,520.00</dd></div>
+      <div><dt>ISR</dt><dd class="num">$4,892.00</dd></div>
+    </dl>
+  </section>
+  <p class="legend"><svg class="ic ic-legend" aria-hidden="true"><use href="#i-info"/></svg><span>Esto es un aproximado. No todos los gastos aplican para tu giro comercial.</span></p>
+  <div class="actions">
+    <a href="#" class="btn btn-primary"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Ingreso</a>
+    <a href="#" class="btn btn-secondary"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Gasto</a>
+  </div>
+  <section class="block">
+    <h3 class="block-title">Por régimen</h3>
+    <div class="card list"><a href="#" class="regime-row"><span class="code">612</span><span class="regime-main"><span class="regime-name">Actividad Empresarial y Profesional</span><span class="regime-line"><span class="regime-sub">IVA $2,880.00 · ISR $3,940.00</span><span class="regime-total num">$6,820.00</span></span></span><svg class="ic ic-chev" aria-hidden="true"><use href="#i-chevron-right"/></svg></a><a href="#" class="regime-row"><span class="code">606</span><span class="regime-main"><span class="regime-name">Arrendamiento</span><span class="regime-line"><span class="regime-sub">IVA $640.00 · ISR $952.00</span><span class="regime-total num">$1,592.00</span></span></span><svg class="ic ic-chev" aria-hidden="true"><use href="#i-chevron-right"/></svg></a><div class="regime-row is-info"><span class="code">605</span><span class="regime-main"><span class="regime-name">Sueldos y Salarios</span><span class="regime-sub">Informativo: tu patrón ya retiene el ISR.</span></span></div></div>
+  </section>
+  <section class="block">
+    <h3 class="block-title">Últimos 6 meses</h3>
+    <div class="card chart-card">
+      <ul class="chart-key"><li><i class="sw sw-iva"></i>IVA</li><li><i class="sw sw-isr"></i>ISR</li>
+      <li class="chart-now num">Oct: $8,412</li></ul>
+      <svg class="chart" viewBox="0 0 318 132" role="img" aria-label="Total estimado por mes, de mayo a octubre de 2026: entre 6,540 y 8,412 pesos. Octubre es el más alto: IVA 3,520 e ISR 4,892."><line class="m-base" x1="0" x2="318" y1="110" y2="110"/><g class="bar"><rect class="m-isr" x="0.0" y="17.8" width="41.3" height="51.6"/><rect class="m-iva" x="0.0" y="71.4" width="41.3" height="38.6"/><text class="m-label" x="20.7" y="128" text-anchor="middle">May</text></g><g class="bar"><rect class="m-isr" x="55.3" y="10.7" width="41.3" height="55.3"/><rect class="m-iva" x="55.3" y="68.0" width="41.3" height="42.0"/><text class="m-label" x="76.0" y="128" text-anchor="middle">Jun</text></g><g class="bar"><rect class="m-isr" x="110.7" y="24.5" width="41.3" height="49.0"/><rect class="m-iva" x="110.7" y="75.5" width="41.3" height="34.5"/><text class="m-label" x="131.3" y="128" text-anchor="middle">Jul</text></g><g class="bar"><rect class="m-isr" x="166.0" y="3.0" width="41.3" height="59.5"/><rect class="m-iva" x="166.0" y="64.5" width="41.3" height="45.5"/><text class="m-label" x="186.7" y="128" text-anchor="middle">Ago</text></g><g class="bar"><rect class="m-isr" x="221.3" y="11.9" width="41.3" height="56.2"/><rect class="m-iva" x="221.3" y="70.1" width="41.3" height="39.9"/><text class="m-label" x="242.0" y="128" text-anchor="middle">Sep</text></g><g class="bar is-current"><rect class="m-isr" x="276.7" y="-0.0" width="41.3" height="62.0"/><rect class="m-iva" x="276.7" y="64.0" width="41.3" height="46.0"/><text class="m-label" x="297.3" y="128" text-anchor="middle">Oct</text></g></svg>
+    </div>
+  </section>
+  <nav class="bottom-nav" aria-label="Principal"><a href="#" class="nav-item is-active" aria-current="page"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg><span>Inicio</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-income"/></svg><span>Ingresos</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-receipt"/></svg><span>Gastos</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-history"/></svg><span>Historial</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg><span>Ajustes</span></a></nav>
+</div></div></figure></div><div class="col"><p class="col-label">B · Fintech cálido</p><figure class="phone d-b t-light"><div class="frame">
+<div class="screen">
+  <div class="status" aria-hidden="true"><span>9:41</span><span class="status-r">5G ▮▮▮</span></div>
+  <header class="app-head">
+    <button class="switcher" type="button" aria-haspopup="listbox">
+      <span class="avatar" aria-hidden="true">ML</span>
+      <span class="sw-text"><span class="sw-name">María López Ruiz</span>
+      <span class="sw-sub">Persona física · RFC ••••••••A12</span></span><svg class="ic" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+    </button>
+  </header>
+  <section class="hero" aria-labelledby="h-est">
+    <p class="hero-label" id="h-est">Estimado a pagar · octubre 2026</p>
+    <p class="hero-amount num">$8,412<span class="cents">.00</span></p>
+    <p class="hero-due"><svg class="ic" aria-hidden="true"><use href="#i-calendar"/></svg>Vence el lunes 17 de noviembre</p>
+    <dl class="hero-split">
+      <div><dt>IVA</dt><dd class="num">$3,520.00</dd></div>
+      <div><dt>ISR</dt><dd class="num">$4,892.00</dd></div>
+    </dl>
+  </section>
+  <p class="legend"><svg class="ic ic-legend" aria-hidden="true"><use href="#i-info"/></svg><span>Esto es un aproximado. No todos los gastos aplican para tu giro comercial.</span></p>
+  <div class="actions">
+    <a href="#" class="btn btn-primary"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Ingreso</a>
+    <a href="#" class="btn btn-secondary"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Gasto</a>
+  </div>
+  <section class="block">
+    <h3 class="block-title">Por régimen</h3>
+    <div class="card list"><a href="#" class="regime-row"><span class="code">612</span><span class="regime-main"><span class="regime-name">Actividad Empresarial y Profesional</span><span class="regime-line"><span class="regime-sub">IVA $2,880.00 · ISR $3,940.00</span><span class="regime-total num">$6,820.00</span></span></span><svg class="ic ic-chev" aria-hidden="true"><use href="#i-chevron-right"/></svg></a><a href="#" class="regime-row"><span class="code">606</span><span class="regime-main"><span class="regime-name">Arrendamiento</span><span class="regime-line"><span class="regime-sub">IVA $640.00 · ISR $952.00</span><span class="regime-total num">$1,592.00</span></span></span><svg class="ic ic-chev" aria-hidden="true"><use href="#i-chevron-right"/></svg></a><div class="regime-row is-info"><span class="code">605</span><span class="regime-main"><span class="regime-name">Sueldos y Salarios</span><span class="regime-sub">Informativo: tu patrón ya retiene el ISR.</span></span></div></div>
+  </section>
+  <section class="block">
+    <h3 class="block-title">Últimos 6 meses</h3>
+    <div class="card chart-card">
+      <ul class="chart-key"><li><i class="sw sw-iva"></i>IVA</li><li><i class="sw sw-isr"></i>ISR</li>
+      <li class="chart-now num">Oct: $8,412</li></ul>
+      <svg class="chart" viewBox="0 0 318 132" role="img" aria-label="Total estimado por mes, de mayo a octubre de 2026: entre 6,540 y 8,412 pesos. Octubre es el más alto: IVA 3,520 e ISR 4,892."><line class="m-base" x1="0" x2="318" y1="110" y2="110"/><g class="bar"><rect class="m-isr" x="0.0" y="17.8" width="41.3" height="51.6"/><rect class="m-iva" x="0.0" y="71.4" width="41.3" height="38.6"/><text class="m-label" x="20.7" y="128" text-anchor="middle">May</text></g><g class="bar"><rect class="m-isr" x="55.3" y="10.7" width="41.3" height="55.3"/><rect class="m-iva" x="55.3" y="68.0" width="41.3" height="42.0"/><text class="m-label" x="76.0" y="128" text-anchor="middle">Jun</text></g><g class="bar"><rect class="m-isr" x="110.7" y="24.5" width="41.3" height="49.0"/><rect class="m-iva" x="110.7" y="75.5" width="41.3" height="34.5"/><text class="m-label" x="131.3" y="128" text-anchor="middle">Jul</text></g><g class="bar"><rect class="m-isr" x="166.0" y="3.0" width="41.3" height="59.5"/><rect class="m-iva" x="166.0" y="64.5" width="41.3" height="45.5"/><text class="m-label" x="186.7" y="128" text-anchor="middle">Ago</text></g><g class="bar"><rect class="m-isr" x="221.3" y="11.9" width="41.3" height="56.2"/><rect class="m-iva" x="221.3" y="70.1" width="41.3" height="39.9"/><text class="m-label" x="242.0" y="128" text-anchor="middle">Sep</text></g><g class="bar is-current"><rect class="m-isr" x="276.7" y="-0.0" width="41.3" height="62.0"/><rect class="m-iva" x="276.7" y="64.0" width="41.3" height="46.0"/><text class="m-label" x="297.3" y="128" text-anchor="middle">Oct</text></g></svg>
+    </div>
+  </section>
+  <nav class="bottom-nav" aria-label="Principal"><a href="#" class="nav-item is-active" aria-current="page"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg><span>Inicio</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-income"/></svg><span>Ingresos</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-receipt"/></svg><span>Gastos</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-history"/></svg><span>Historial</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg><span>Ajustes</span></a></nav>
+</div></div></figure></div><div class="col"><p class="col-label">C · Minimal claro</p><figure class="phone d-c t-light"><div class="frame">
+<div class="screen">
+  <div class="status" aria-hidden="true"><span>9:41</span><span class="status-r">5G ▮▮▮</span></div>
+  <header class="app-head">
+    <button class="switcher" type="button" aria-haspopup="listbox">
+      <span class="avatar" aria-hidden="true">ML</span>
+      <span class="sw-text"><span class="sw-name">María López Ruiz</span>
+      <span class="sw-sub">Persona física · RFC ••••••••A12</span></span><svg class="ic" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+    </button>
+  </header>
+  <section class="hero" aria-labelledby="h-est">
+    <p class="hero-label" id="h-est">Estimado a pagar · octubre 2026</p>
+    <p class="hero-amount num">$8,412<span class="cents">.00</span></p>
+    <p class="hero-due"><svg class="ic" aria-hidden="true"><use href="#i-calendar"/></svg>Vence el lunes 17 de noviembre</p>
+    <dl class="hero-split">
+      <div><dt>IVA</dt><dd class="num">$3,520.00</dd></div>
+      <div><dt>ISR</dt><dd class="num">$4,892.00</dd></div>
+    </dl>
+  </section>
+  <p class="legend"><svg class="ic ic-legend" aria-hidden="true"><use href="#i-info"/></svg><span>Esto es un aproximado. No todos los gastos aplican para tu giro comercial.</span></p>
+  <div class="actions">
+    <a href="#" class="btn btn-primary"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Ingreso</a>
+    <a href="#" class="btn btn-secondary"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Gasto</a>
+  </div>
+  <section class="block">
+    <h3 class="block-title">Por régimen</h3>
+    <div class="card list"><a href="#" class="regime-row"><span class="code">612</span><span class="regime-main"><span class="regime-name">Actividad Empresarial y Profesional</span><span class="regime-line"><span class="regime-sub">IVA $2,880.00 · ISR $3,940.00</span><span class="regime-total num">$6,820.00</span></span></span><svg class="ic ic-chev" aria-hidden="true"><use href="#i-chevron-right"/></svg></a><a href="#" class="regime-row"><span class="code">606</span><span class="regime-main"><span class="regime-name">Arrendamiento</span><span class="regime-line"><span class="regime-sub">IVA $640.00 · ISR $952.00</span><span class="regime-total num">$1,592.00</span></span></span><svg class="ic ic-chev" aria-hidden="true"><use href="#i-chevron-right"/></svg></a><div class="regime-row is-info"><span class="code">605</span><span class="regime-main"><span class="regime-name">Sueldos y Salarios</span><span class="regime-sub">Informativo: tu patrón ya retiene el ISR.</span></span></div></div>
+  </section>
+  <section class="block">
+    <h3 class="block-title">Últimos 6 meses</h3>
+    <div class="card chart-card">
+      <ul class="chart-key"><li><i class="sw sw-iva"></i>IVA</li><li><i class="sw sw-isr"></i>ISR</li>
+      <li class="chart-now num">Oct: $8,412</li></ul>
+      <svg class="chart" viewBox="0 0 318 132" role="img" aria-label="Total estimado por mes, de mayo a octubre de 2026: entre 6,540 y 8,412 pesos. Octubre es el más alto: IVA 3,520 e ISR 4,892."><line class="m-base" x1="0" x2="318" y1="110" y2="110"/><g class="bar"><rect class="m-isr" x="0.0" y="17.8" width="41.3" height="51.6"/><rect class="m-iva" x="0.0" y="71.4" width="41.3" height="38.6"/><text class="m-label" x="20.7" y="128" text-anchor="middle">May</text></g><g class="bar"><rect class="m-isr" x="55.3" y="10.7" width="41.3" height="55.3"/><rect class="m-iva" x="55.3" y="68.0" width="41.3" height="42.0"/><text class="m-label" x="76.0" y="128" text-anchor="middle">Jun</text></g><g class="bar"><rect class="m-isr" x="110.7" y="24.5" width="41.3" height="49.0"/><rect class="m-iva" x="110.7" y="75.5" width="41.3" height="34.5"/><text class="m-label" x="131.3" y="128" text-anchor="middle">Jul</text></g><g class="bar"><rect class="m-isr" x="166.0" y="3.0" width="41.3" height="59.5"/><rect class="m-iva" x="166.0" y="64.5" width="41.3" height="45.5"/><text class="m-label" x="186.7" y="128" text-anchor="middle">Ago</text></g><g class="bar"><rect class="m-isr" x="221.3" y="11.9" width="41.3" height="56.2"/><rect class="m-iva" x="221.3" y="70.1" width="41.3" height="39.9"/><text class="m-label" x="242.0" y="128" text-anchor="middle">Sep</text></g><g class="bar is-current"><rect class="m-isr" x="276.7" y="-0.0" width="41.3" height="62.0"/><rect class="m-iva" x="276.7" y="64.0" width="41.3" height="46.0"/><text class="m-label" x="297.3" y="128" text-anchor="middle">Oct</text></g></svg>
+    </div>
+  </section>
+  <nav class="bottom-nav" aria-label="Principal"><a href="#" class="nav-item is-active" aria-current="page"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg><span>Inicio</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-income"/></svg><span>Ingresos</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-receipt"/></svg><span>Gastos</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-history"/></svg><span>Historial</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg><span>Ajustes</span></a></nav>
+</div></div></figure></div></div></section><section class="row" aria-label="Registrar ingreso, Modo claro"><h3 class="row-title">Registrar ingreso</h3><div class="row-scroll"><div class="col"><p class="col-label">A · Confianza sobria</p><figure class="phone d-a t-light"><div class="frame">
+<div class="screen">
+  <div class="status" aria-hidden="true"><span>9:41</span><span class="status-r">5G ▮▮▮</span></div>
+  <header class="page-head">
+    <button class="icon-btn" type="button" aria-label="Cerrar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
+    <div><h3 class="page-title">Registrar ingreso</h3><p class="page-sub">María López Ruiz</p></div>
+  </header>
+  <form class="form" onsubmit="return false">
+    <div class="field">
+      <label for="reg-alight">Régimen</label>
+      <select id="reg-alight"><option>612 · Actividad Empresarial y Profesional</option>
+      <option>606 · Arrendamiento</option></select>
+    </div>
+    <div class="field">
+      <label for="amt-alight">Monto sin IVA</label>
+      <div class="input-affix is-focus"><span class="affix" aria-hidden="true">$</span>
+      <input id="amt-alight" inputmode="decimal" autocomplete="off" value="45,000.00" aria-describedby="amt-h-alight"></div>
+      <p class="help num" id="amt-h-alight">IVA 16%: $7,200.00 · Total facturado: $52,200.00</p>
+    </div>
+    <fieldset class="field">
+      <legend>Tasa de IVA</legend>
+      <div class="segs"><label class="seg"><input type="radio" name="r-alight" checked><span>16%</span></label><label class="seg"><input type="radio" name="r-alight" ><span>8% frontera</span></label><label class="seg"><input type="radio" name="r-alight" ><span>0%</span></label><label class="seg"><input type="radio" name="r-alight" ><span>Exento</span></label></div>
+    </fieldset>
+    <div class="field">
+      <label for="date-alight">Fecha en que lo cobraste</label>
+      <input id="date-alight" type="text" inputmode="numeric" value="13/10/2026" aria-describedby="date-h-alight">
+      <p class="help" id="date-h-alight">Cuenta para el mes en que entró el dinero.</p>
+    </div>
+    <div class="field">
+      <label for="cli-alight">Cliente o concepto <span class="opt">(opcional)</span></label>
+      <input id="cli-alight" type="text" autocomplete="off">
+    </div>
+    <details class="more">
+      <summary><svg class="ic" aria-hidden="true"><use href="#i-chevron-down"/></svg><span>Retenciones y fecha de factura <span class="opt">(opcional)</span></span></summary>
+      <p class="help">ISR retenido, IVA retenido y fecha de la factura.</p>
+    </details>
+    <div class="form-foot">
+      <button class="btn btn-primary btn-block" type="submit">Guardar</button>
+      <button class="btn btn-secondary btn-block" type="button">Guardar y registrar otro</button>
+      <button class="btn btn-text btn-block" type="button">Cancelar</button>
+    </div>
+  </form>
+</div></div></figure></div><div class="col"><p class="col-label">B · Fintech cálido</p><figure class="phone d-b t-light"><div class="frame">
+<div class="screen">
+  <div class="status" aria-hidden="true"><span>9:41</span><span class="status-r">5G ▮▮▮</span></div>
+  <header class="page-head">
+    <button class="icon-btn" type="button" aria-label="Cerrar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
+    <div><h3 class="page-title">Registrar ingreso</h3><p class="page-sub">María López Ruiz</p></div>
+  </header>
+  <form class="form" onsubmit="return false">
+    <div class="field">
+      <label for="reg-blight">Régimen</label>
+      <select id="reg-blight"><option>612 · Actividad Empresarial y Profesional</option>
+      <option>606 · Arrendamiento</option></select>
+    </div>
+    <div class="field">
+      <label for="amt-blight">Monto sin IVA</label>
+      <div class="input-affix is-focus"><span class="affix" aria-hidden="true">$</span>
+      <input id="amt-blight" inputmode="decimal" autocomplete="off" value="45,000.00" aria-describedby="amt-h-blight"></div>
+      <p class="help num" id="amt-h-blight">IVA 16%: $7,200.00 · Total facturado: $52,200.00</p>
+    </div>
+    <fieldset class="field">
+      <legend>Tasa de IVA</legend>
+      <div class="segs"><label class="seg"><input type="radio" name="r-blight" checked><span>16%</span></label><label class="seg"><input type="radio" name="r-blight" ><span>8% frontera</span></label><label class="seg"><input type="radio" name="r-blight" ><span>0%</span></label><label class="seg"><input type="radio" name="r-blight" ><span>Exento</span></label></div>
+    </fieldset>
+    <div class="field">
+      <label for="date-blight">Fecha en que lo cobraste</label>
+      <input id="date-blight" type="text" inputmode="numeric" value="13/10/2026" aria-describedby="date-h-blight">
+      <p class="help" id="date-h-blight">Cuenta para el mes en que entró el dinero.</p>
+    </div>
+    <div class="field">
+      <label for="cli-blight">Cliente o concepto <span class="opt">(opcional)</span></label>
+      <input id="cli-blight" type="text" autocomplete="off">
+    </div>
+    <details class="more">
+      <summary><svg class="ic" aria-hidden="true"><use href="#i-chevron-down"/></svg><span>Retenciones y fecha de factura <span class="opt">(opcional)</span></span></summary>
+      <p class="help">ISR retenido, IVA retenido y fecha de la factura.</p>
+    </details>
+    <div class="form-foot">
+      <button class="btn btn-primary btn-block" type="submit">Guardar</button>
+      <button class="btn btn-secondary btn-block" type="button">Guardar y registrar otro</button>
+      <button class="btn btn-text btn-block" type="button">Cancelar</button>
+    </div>
+  </form>
+</div></div></figure></div><div class="col"><p class="col-label">C · Minimal claro</p><figure class="phone d-c t-light"><div class="frame">
+<div class="screen">
+  <div class="status" aria-hidden="true"><span>9:41</span><span class="status-r">5G ▮▮▮</span></div>
+  <header class="page-head">
+    <button class="icon-btn" type="button" aria-label="Cerrar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
+    <div><h3 class="page-title">Registrar ingreso</h3><p class="page-sub">María López Ruiz</p></div>
+  </header>
+  <form class="form" onsubmit="return false">
+    <div class="field">
+      <label for="reg-clight">Régimen</label>
+      <select id="reg-clight"><option>612 · Actividad Empresarial y Profesional</option>
+      <option>606 · Arrendamiento</option></select>
+    </div>
+    <div class="field">
+      <label for="amt-clight">Monto sin IVA</label>
+      <div class="input-affix is-focus"><span class="affix" aria-hidden="true">$</span>
+      <input id="amt-clight" inputmode="decimal" autocomplete="off" value="45,000.00" aria-describedby="amt-h-clight"></div>
+      <p class="help num" id="amt-h-clight">IVA 16%: $7,200.00 · Total facturado: $52,200.00</p>
+    </div>
+    <fieldset class="field">
+      <legend>Tasa de IVA</legend>
+      <div class="segs"><label class="seg"><input type="radio" name="r-clight" checked><span>16%</span></label><label class="seg"><input type="radio" name="r-clight" ><span>8% frontera</span></label><label class="seg"><input type="radio" name="r-clight" ><span>0%</span></label><label class="seg"><input type="radio" name="r-clight" ><span>Exento</span></label></div>
+    </fieldset>
+    <div class="field">
+      <label for="date-clight">Fecha en que lo cobraste</label>
+      <input id="date-clight" type="text" inputmode="numeric" value="13/10/2026" aria-describedby="date-h-clight">
+      <p class="help" id="date-h-clight">Cuenta para el mes en que entró el dinero.</p>
+    </div>
+    <div class="field">
+      <label for="cli-clight">Cliente o concepto <span class="opt">(opcional)</span></label>
+      <input id="cli-clight" type="text" autocomplete="off">
+    </div>
+    <details class="more">
+      <summary><svg class="ic" aria-hidden="true"><use href="#i-chevron-down"/></svg><span>Retenciones y fecha de factura <span class="opt">(opcional)</span></span></summary>
+      <p class="help">ISR retenido, IVA retenido y fecha de la factura.</p>
+    </details>
+    <div class="form-foot">
+      <button class="btn btn-primary btn-block" type="submit">Guardar</button>
+      <button class="btn btn-secondary btn-block" type="button">Guardar y registrar otro</button>
+      <button class="btn btn-text btn-block" type="button">Cancelar</button>
+    </div>
+  </form>
+</div></div></figure></div></div></section><section class="row" aria-label="Desglose del cálculo, Modo claro"><h3 class="row-title">Desglose del cálculo</h3><div class="row-scroll"><div class="col"><p class="col-label">A · Confianza sobria</p><figure class="phone d-a t-light"><div class="frame">
+<div class="screen">
+  <div class="status" aria-hidden="true"><span>9:41</span><span class="status-r">5G ▮▮▮</span></div>
+  <header class="page-head">
+    <button class="icon-btn" type="button" aria-label="Regresar"><svg class="ic" aria-hidden="true"><use href="#i-arrow-left"/></svg></button>
+    <div><h3 class="page-title">Desglose · octubre</h3><p class="page-sub">612 · Actividad Empresarial y Profesional</p></div>
+  </header>
+  <section class="sum">
+    <p class="hero-label">Estimado a pagar en este régimen</p>
+    <p class="sum-amount num">$6,820<span class="cents">.00</span></p>
+  </section>
+  <p class="legend"><svg class="ic ic-legend" aria-hidden="true"><use href="#i-info"/></svg><span>Esto es un aproximado. No todos los gastos aplican para tu giro comercial.</span></p>
+  <section class="block">
+    <h3 class="block-title">IVA <span class="tag">flujo de efectivo</span></h3>
+    <ol class="card ledger"><li class="ln "><span class="ln-main"><span class="ln-c">IVA que cobraste (16% de $45,000.00)</span><span class="basis">Art. 1 LIVA</span></span><span class="ln-amt num">$7,200.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">IVA que pagaste en gastos</span><span class="basis">Art. 5 LIVA · acreditable</span></span><span class="ln-amt num">−$4,320.00</span></li><li class="ln is-result"><span class="ln-main"><span class="ln-c">IVA a pagar</span></span><span class="ln-amt num">$2,880.00</span></li></ol>
+  </section>
+  <section class="block">
+    <h3 class="block-title">ISR · pago provisional <span class="tag">acumulado</span></h3>
+    <ol class="card ledger"><li class="ln "><span class="ln-main"><span class="ln-c">Ingresos cobrados ene–oct</span><span class="basis">Art. 106 LISR</span></span><span class="ln-amt num">$430,000.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">Deducciones ene–oct</span><span class="basis">Art. 103 LISR</span></span><span class="ln-amt num">−$250,000.00</span></li><li class="ln is-sub"><span class="ln-main"><span class="ln-c">Utilidad acumulada</span></span><span class="ln-amt num">$180,000.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">ISR según tarifa acumulada</span><span class="basis">Art. 106 LISR · Anexo 8 RMF 2026</span></span><span class="ln-amt num">$35,860.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">Pagos provisionales anteriores</span></span><span class="ln-amt num">−$31,920.00</span></li><li class="ln is-result"><span class="ln-main"><span class="ln-c">ISR a pagar</span></span><span class="ln-amt num">$3,940.00</span></li></ol>
+  </section>
+  <p class="meta">Parámetros fiscales 2026 · versión 1 · motor 0.1.0<br>Cifras ilustrativas para esta propuesta.</p>
+</div></div></figure></div><div class="col"><p class="col-label">B · Fintech cálido</p><figure class="phone d-b t-light"><div class="frame">
+<div class="screen">
+  <div class="status" aria-hidden="true"><span>9:41</span><span class="status-r">5G ▮▮▮</span></div>
+  <header class="page-head">
+    <button class="icon-btn" type="button" aria-label="Regresar"><svg class="ic" aria-hidden="true"><use href="#i-arrow-left"/></svg></button>
+    <div><h3 class="page-title">Desglose · octubre</h3><p class="page-sub">612 · Actividad Empresarial y Profesional</p></div>
+  </header>
+  <section class="sum">
+    <p class="hero-label">Estimado a pagar en este régimen</p>
+    <p class="sum-amount num">$6,820<span class="cents">.00</span></p>
+  </section>
+  <p class="legend"><svg class="ic ic-legend" aria-hidden="true"><use href="#i-info"/></svg><span>Esto es un aproximado. No todos los gastos aplican para tu giro comercial.</span></p>
+  <section class="block">
+    <h3 class="block-title">IVA <span class="tag">flujo de efectivo</span></h3>
+    <ol class="card ledger"><li class="ln "><span class="ln-main"><span class="ln-c">IVA que cobraste (16% de $45,000.00)</span><span class="basis">Art. 1 LIVA</span></span><span class="ln-amt num">$7,200.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">IVA que pagaste en gastos</span><span class="basis">Art. 5 LIVA · acreditable</span></span><span class="ln-amt num">−$4,320.00</span></li><li class="ln is-result"><span class="ln-main"><span class="ln-c">IVA a pagar</span></span><span class="ln-amt num">$2,880.00</span></li></ol>
+  </section>
+  <section class="block">
+    <h3 class="block-title">ISR · pago provisional <span class="tag">acumulado</span></h3>
+    <ol class="card ledger"><li class="ln "><span class="ln-main"><span class="ln-c">Ingresos cobrados ene–oct</span><span class="basis">Art. 106 LISR</span></span><span class="ln-amt num">$430,000.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">Deducciones ene–oct</span><span class="basis">Art. 103 LISR</span></span><span class="ln-amt num">−$250,000.00</span></li><li class="ln is-sub"><span class="ln-main"><span class="ln-c">Utilidad acumulada</span></span><span class="ln-amt num">$180,000.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">ISR según tarifa acumulada</span><span class="basis">Art. 106 LISR · Anexo 8 RMF 2026</span></span><span class="ln-amt num">$35,860.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">Pagos provisionales anteriores</span></span><span class="ln-amt num">−$31,920.00</span></li><li class="ln is-result"><span class="ln-main"><span class="ln-c">ISR a pagar</span></span><span class="ln-amt num">$3,940.00</span></li></ol>
+  </section>
+  <p class="meta">Parámetros fiscales 2026 · versión 1 · motor 0.1.0<br>Cifras ilustrativas para esta propuesta.</p>
+</div></div></figure></div><div class="col"><p class="col-label">C · Minimal claro</p><figure class="phone d-c t-light"><div class="frame">
+<div class="screen">
+  <div class="status" aria-hidden="true"><span>9:41</span><span class="status-r">5G ▮▮▮</span></div>
+  <header class="page-head">
+    <button class="icon-btn" type="button" aria-label="Regresar"><svg class="ic" aria-hidden="true"><use href="#i-arrow-left"/></svg></button>
+    <div><h3 class="page-title">Desglose · octubre</h3><p class="page-sub">612 · Actividad Empresarial y Profesional</p></div>
+  </header>
+  <section class="sum">
+    <p class="hero-label">Estimado a pagar en este régimen</p>
+    <p class="sum-amount num">$6,820<span class="cents">.00</span></p>
+  </section>
+  <p class="legend"><svg class="ic ic-legend" aria-hidden="true"><use href="#i-info"/></svg><span>Esto es un aproximado. No todos los gastos aplican para tu giro comercial.</span></p>
+  <section class="block">
+    <h3 class="block-title">IVA <span class="tag">flujo de efectivo</span></h3>
+    <ol class="card ledger"><li class="ln "><span class="ln-main"><span class="ln-c">IVA que cobraste (16% de $45,000.00)</span><span class="basis">Art. 1 LIVA</span></span><span class="ln-amt num">$7,200.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">IVA que pagaste en gastos</span><span class="basis">Art. 5 LIVA · acreditable</span></span><span class="ln-amt num">−$4,320.00</span></li><li class="ln is-result"><span class="ln-main"><span class="ln-c">IVA a pagar</span></span><span class="ln-amt num">$2,880.00</span></li></ol>
+  </section>
+  <section class="block">
+    <h3 class="block-title">ISR · pago provisional <span class="tag">acumulado</span></h3>
+    <ol class="card ledger"><li class="ln "><span class="ln-main"><span class="ln-c">Ingresos cobrados ene–oct</span><span class="basis">Art. 106 LISR</span></span><span class="ln-amt num">$430,000.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">Deducciones ene–oct</span><span class="basis">Art. 103 LISR</span></span><span class="ln-amt num">−$250,000.00</span></li><li class="ln is-sub"><span class="ln-main"><span class="ln-c">Utilidad acumulada</span></span><span class="ln-amt num">$180,000.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">ISR según tarifa acumulada</span><span class="basis">Art. 106 LISR · Anexo 8 RMF 2026</span></span><span class="ln-amt num">$35,860.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">Pagos provisionales anteriores</span></span><span class="ln-amt num">−$31,920.00</span></li><li class="ln is-result"><span class="ln-main"><span class="ln-c">ISR a pagar</span></span><span class="ln-amt num">$3,940.00</span></li></ol>
+  </section>
+  <p class="meta">Parámetros fiscales 2026 · versión 1 · motor 0.1.0<br>Cifras ilustrativas para esta propuesta.</p>
+</div></div></figure></div></div></section></section>
+  <section class="theme-block" id="dark"><h2>Modo oscuro</h2><section class="row" aria-label="Inicio (dashboard), Modo oscuro"><h3 class="row-title">Inicio (dashboard)</h3><div class="row-scroll"><div class="col"><p class="col-label">A · Confianza sobria</p><figure class="phone d-a t-dark"><div class="frame">
+<div class="screen">
+  <div class="status" aria-hidden="true"><span>9:41</span><span class="status-r">5G ▮▮▮</span></div>
+  <header class="app-head">
+    <button class="switcher" type="button" aria-haspopup="listbox">
+      <span class="avatar" aria-hidden="true">ML</span>
+      <span class="sw-text"><span class="sw-name">María López Ruiz</span>
+      <span class="sw-sub">Persona física · RFC ••••••••A12</span></span><svg class="ic" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+    </button>
+  </header>
+  <section class="hero" aria-labelledby="h-est">
+    <p class="hero-label" id="h-est">Estimado a pagar · octubre 2026</p>
+    <p class="hero-amount num">$8,412<span class="cents">.00</span></p>
+    <p class="hero-due"><svg class="ic" aria-hidden="true"><use href="#i-calendar"/></svg>Vence el lunes 17 de noviembre</p>
+    <dl class="hero-split">
+      <div><dt>IVA</dt><dd class="num">$3,520.00</dd></div>
+      <div><dt>ISR</dt><dd class="num">$4,892.00</dd></div>
+    </dl>
+  </section>
+  <p class="legend"><svg class="ic ic-legend" aria-hidden="true"><use href="#i-info"/></svg><span>Esto es un aproximado. No todos los gastos aplican para tu giro comercial.</span></p>
+  <div class="actions">
+    <a href="#" class="btn btn-primary"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Ingreso</a>
+    <a href="#" class="btn btn-secondary"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Gasto</a>
+  </div>
+  <section class="block">
+    <h3 class="block-title">Por régimen</h3>
+    <div class="card list"><a href="#" class="regime-row"><span class="code">612</span><span class="regime-main"><span class="regime-name">Actividad Empresarial y Profesional</span><span class="regime-line"><span class="regime-sub">IVA $2,880.00 · ISR $3,940.00</span><span class="regime-total num">$6,820.00</span></span></span><svg class="ic ic-chev" aria-hidden="true"><use href="#i-chevron-right"/></svg></a><a href="#" class="regime-row"><span class="code">606</span><span class="regime-main"><span class="regime-name">Arrendamiento</span><span class="regime-line"><span class="regime-sub">IVA $640.00 · ISR $952.00</span><span class="regime-total num">$1,592.00</span></span></span><svg class="ic ic-chev" aria-hidden="true"><use href="#i-chevron-right"/></svg></a><div class="regime-row is-info"><span class="code">605</span><span class="regime-main"><span class="regime-name">Sueldos y Salarios</span><span class="regime-sub">Informativo: tu patrón ya retiene el ISR.</span></span></div></div>
+  </section>
+  <section class="block">
+    <h3 class="block-title">Últimos 6 meses</h3>
+    <div class="card chart-card">
+      <ul class="chart-key"><li><i class="sw sw-iva"></i>IVA</li><li><i class="sw sw-isr"></i>ISR</li>
+      <li class="chart-now num">Oct: $8,412</li></ul>
+      <svg class="chart" viewBox="0 0 318 132" role="img" aria-label="Total estimado por mes, de mayo a octubre de 2026: entre 6,540 y 8,412 pesos. Octubre es el más alto: IVA 3,520 e ISR 4,892."><line class="m-base" x1="0" x2="318" y1="110" y2="110"/><g class="bar"><rect class="m-isr" x="0.0" y="17.8" width="41.3" height="51.6"/><rect class="m-iva" x="0.0" y="71.4" width="41.3" height="38.6"/><text class="m-label" x="20.7" y="128" text-anchor="middle">May</text></g><g class="bar"><rect class="m-isr" x="55.3" y="10.7" width="41.3" height="55.3"/><rect class="m-iva" x="55.3" y="68.0" width="41.3" height="42.0"/><text class="m-label" x="76.0" y="128" text-anchor="middle">Jun</text></g><g class="bar"><rect class="m-isr" x="110.7" y="24.5" width="41.3" height="49.0"/><rect class="m-iva" x="110.7" y="75.5" width="41.3" height="34.5"/><text class="m-label" x="131.3" y="128" text-anchor="middle">Jul</text></g><g class="bar"><rect class="m-isr" x="166.0" y="3.0" width="41.3" height="59.5"/><rect class="m-iva" x="166.0" y="64.5" width="41.3" height="45.5"/><text class="m-label" x="186.7" y="128" text-anchor="middle">Ago</text></g><g class="bar"><rect class="m-isr" x="221.3" y="11.9" width="41.3" height="56.2"/><rect class="m-iva" x="221.3" y="70.1" width="41.3" height="39.9"/><text class="m-label" x="242.0" y="128" text-anchor="middle">Sep</text></g><g class="bar is-current"><rect class="m-isr" x="276.7" y="-0.0" width="41.3" height="62.0"/><rect class="m-iva" x="276.7" y="64.0" width="41.3" height="46.0"/><text class="m-label" x="297.3" y="128" text-anchor="middle">Oct</text></g></svg>
+    </div>
+  </section>
+  <nav class="bottom-nav" aria-label="Principal"><a href="#" class="nav-item is-active" aria-current="page"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg><span>Inicio</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-income"/></svg><span>Ingresos</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-receipt"/></svg><span>Gastos</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-history"/></svg><span>Historial</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg><span>Ajustes</span></a></nav>
+</div></div></figure></div><div class="col"><p class="col-label">B · Fintech cálido</p><figure class="phone d-b t-dark"><div class="frame">
+<div class="screen">
+  <div class="status" aria-hidden="true"><span>9:41</span><span class="status-r">5G ▮▮▮</span></div>
+  <header class="app-head">
+    <button class="switcher" type="button" aria-haspopup="listbox">
+      <span class="avatar" aria-hidden="true">ML</span>
+      <span class="sw-text"><span class="sw-name">María López Ruiz</span>
+      <span class="sw-sub">Persona física · RFC ••••••••A12</span></span><svg class="ic" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+    </button>
+  </header>
+  <section class="hero" aria-labelledby="h-est">
+    <p class="hero-label" id="h-est">Estimado a pagar · octubre 2026</p>
+    <p class="hero-amount num">$8,412<span class="cents">.00</span></p>
+    <p class="hero-due"><svg class="ic" aria-hidden="true"><use href="#i-calendar"/></svg>Vence el lunes 17 de noviembre</p>
+    <dl class="hero-split">
+      <div><dt>IVA</dt><dd class="num">$3,520.00</dd></div>
+      <div><dt>ISR</dt><dd class="num">$4,892.00</dd></div>
+    </dl>
+  </section>
+  <p class="legend"><svg class="ic ic-legend" aria-hidden="true"><use href="#i-info"/></svg><span>Esto es un aproximado. No todos los gastos aplican para tu giro comercial.</span></p>
+  <div class="actions">
+    <a href="#" class="btn btn-primary"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Ingreso</a>
+    <a href="#" class="btn btn-secondary"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Gasto</a>
+  </div>
+  <section class="block">
+    <h3 class="block-title">Por régimen</h3>
+    <div class="card list"><a href="#" class="regime-row"><span class="code">612</span><span class="regime-main"><span class="regime-name">Actividad Empresarial y Profesional</span><span class="regime-line"><span class="regime-sub">IVA $2,880.00 · ISR $3,940.00</span><span class="regime-total num">$6,820.00</span></span></span><svg class="ic ic-chev" aria-hidden="true"><use href="#i-chevron-right"/></svg></a><a href="#" class="regime-row"><span class="code">606</span><span class="regime-main"><span class="regime-name">Arrendamiento</span><span class="regime-line"><span class="regime-sub">IVA $640.00 · ISR $952.00</span><span class="regime-total num">$1,592.00</span></span></span><svg class="ic ic-chev" aria-hidden="true"><use href="#i-chevron-right"/></svg></a><div class="regime-row is-info"><span class="code">605</span><span class="regime-main"><span class="regime-name">Sueldos y Salarios</span><span class="regime-sub">Informativo: tu patrón ya retiene el ISR.</span></span></div></div>
+  </section>
+  <section class="block">
+    <h3 class="block-title">Últimos 6 meses</h3>
+    <div class="card chart-card">
+      <ul class="chart-key"><li><i class="sw sw-iva"></i>IVA</li><li><i class="sw sw-isr"></i>ISR</li>
+      <li class="chart-now num">Oct: $8,412</li></ul>
+      <svg class="chart" viewBox="0 0 318 132" role="img" aria-label="Total estimado por mes, de mayo a octubre de 2026: entre 6,540 y 8,412 pesos. Octubre es el más alto: IVA 3,520 e ISR 4,892."><line class="m-base" x1="0" x2="318" y1="110" y2="110"/><g class="bar"><rect class="m-isr" x="0.0" y="17.8" width="41.3" height="51.6"/><rect class="m-iva" x="0.0" y="71.4" width="41.3" height="38.6"/><text class="m-label" x="20.7" y="128" text-anchor="middle">May</text></g><g class="bar"><rect class="m-isr" x="55.3" y="10.7" width="41.3" height="55.3"/><rect class="m-iva" x="55.3" y="68.0" width="41.3" height="42.0"/><text class="m-label" x="76.0" y="128" text-anchor="middle">Jun</text></g><g class="bar"><rect class="m-isr" x="110.7" y="24.5" width="41.3" height="49.0"/><rect class="m-iva" x="110.7" y="75.5" width="41.3" height="34.5"/><text class="m-label" x="131.3" y="128" text-anchor="middle">Jul</text></g><g class="bar"><rect class="m-isr" x="166.0" y="3.0" width="41.3" height="59.5"/><rect class="m-iva" x="166.0" y="64.5" width="41.3" height="45.5"/><text class="m-label" x="186.7" y="128" text-anchor="middle">Ago</text></g><g class="bar"><rect class="m-isr" x="221.3" y="11.9" width="41.3" height="56.2"/><rect class="m-iva" x="221.3" y="70.1" width="41.3" height="39.9"/><text class="m-label" x="242.0" y="128" text-anchor="middle">Sep</text></g><g class="bar is-current"><rect class="m-isr" x="276.7" y="-0.0" width="41.3" height="62.0"/><rect class="m-iva" x="276.7" y="64.0" width="41.3" height="46.0"/><text class="m-label" x="297.3" y="128" text-anchor="middle">Oct</text></g></svg>
+    </div>
+  </section>
+  <nav class="bottom-nav" aria-label="Principal"><a href="#" class="nav-item is-active" aria-current="page"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg><span>Inicio</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-income"/></svg><span>Ingresos</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-receipt"/></svg><span>Gastos</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-history"/></svg><span>Historial</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg><span>Ajustes</span></a></nav>
+</div></div></figure></div><div class="col"><p class="col-label">C · Minimal claro</p><figure class="phone d-c t-dark"><div class="frame">
+<div class="screen">
+  <div class="status" aria-hidden="true"><span>9:41</span><span class="status-r">5G ▮▮▮</span></div>
+  <header class="app-head">
+    <button class="switcher" type="button" aria-haspopup="listbox">
+      <span class="avatar" aria-hidden="true">ML</span>
+      <span class="sw-text"><span class="sw-name">María López Ruiz</span>
+      <span class="sw-sub">Persona física · RFC ••••••••A12</span></span><svg class="ic" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+    </button>
+  </header>
+  <section class="hero" aria-labelledby="h-est">
+    <p class="hero-label" id="h-est">Estimado a pagar · octubre 2026</p>
+    <p class="hero-amount num">$8,412<span class="cents">.00</span></p>
+    <p class="hero-due"><svg class="ic" aria-hidden="true"><use href="#i-calendar"/></svg>Vence el lunes 17 de noviembre</p>
+    <dl class="hero-split">
+      <div><dt>IVA</dt><dd class="num">$3,520.00</dd></div>
+      <div><dt>ISR</dt><dd class="num">$4,892.00</dd></div>
+    </dl>
+  </section>
+  <p class="legend"><svg class="ic ic-legend" aria-hidden="true"><use href="#i-info"/></svg><span>Esto es un aproximado. No todos los gastos aplican para tu giro comercial.</span></p>
+  <div class="actions">
+    <a href="#" class="btn btn-primary"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Ingreso</a>
+    <a href="#" class="btn btn-secondary"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>Gasto</a>
+  </div>
+  <section class="block">
+    <h3 class="block-title">Por régimen</h3>
+    <div class="card list"><a href="#" class="regime-row"><span class="code">612</span><span class="regime-main"><span class="regime-name">Actividad Empresarial y Profesional</span><span class="regime-line"><span class="regime-sub">IVA $2,880.00 · ISR $3,940.00</span><span class="regime-total num">$6,820.00</span></span></span><svg class="ic ic-chev" aria-hidden="true"><use href="#i-chevron-right"/></svg></a><a href="#" class="regime-row"><span class="code">606</span><span class="regime-main"><span class="regime-name">Arrendamiento</span><span class="regime-line"><span class="regime-sub">IVA $640.00 · ISR $952.00</span><span class="regime-total num">$1,592.00</span></span></span><svg class="ic ic-chev" aria-hidden="true"><use href="#i-chevron-right"/></svg></a><div class="regime-row is-info"><span class="code">605</span><span class="regime-main"><span class="regime-name">Sueldos y Salarios</span><span class="regime-sub">Informativo: tu patrón ya retiene el ISR.</span></span></div></div>
+  </section>
+  <section class="block">
+    <h3 class="block-title">Últimos 6 meses</h3>
+    <div class="card chart-card">
+      <ul class="chart-key"><li><i class="sw sw-iva"></i>IVA</li><li><i class="sw sw-isr"></i>ISR</li>
+      <li class="chart-now num">Oct: $8,412</li></ul>
+      <svg class="chart" viewBox="0 0 318 132" role="img" aria-label="Total estimado por mes, de mayo a octubre de 2026: entre 6,540 y 8,412 pesos. Octubre es el más alto: IVA 3,520 e ISR 4,892."><line class="m-base" x1="0" x2="318" y1="110" y2="110"/><g class="bar"><rect class="m-isr" x="0.0" y="17.8" width="41.3" height="51.6"/><rect class="m-iva" x="0.0" y="71.4" width="41.3" height="38.6"/><text class="m-label" x="20.7" y="128" text-anchor="middle">May</text></g><g class="bar"><rect class="m-isr" x="55.3" y="10.7" width="41.3" height="55.3"/><rect class="m-iva" x="55.3" y="68.0" width="41.3" height="42.0"/><text class="m-label" x="76.0" y="128" text-anchor="middle">Jun</text></g><g class="bar"><rect class="m-isr" x="110.7" y="24.5" width="41.3" height="49.0"/><rect class="m-iva" x="110.7" y="75.5" width="41.3" height="34.5"/><text class="m-label" x="131.3" y="128" text-anchor="middle">Jul</text></g><g class="bar"><rect class="m-isr" x="166.0" y="3.0" width="41.3" height="59.5"/><rect class="m-iva" x="166.0" y="64.5" width="41.3" height="45.5"/><text class="m-label" x="186.7" y="128" text-anchor="middle">Ago</text></g><g class="bar"><rect class="m-isr" x="221.3" y="11.9" width="41.3" height="56.2"/><rect class="m-iva" x="221.3" y="70.1" width="41.3" height="39.9"/><text class="m-label" x="242.0" y="128" text-anchor="middle">Sep</text></g><g class="bar is-current"><rect class="m-isr" x="276.7" y="-0.0" width="41.3" height="62.0"/><rect class="m-iva" x="276.7" y="64.0" width="41.3" height="46.0"/><text class="m-label" x="297.3" y="128" text-anchor="middle">Oct</text></g></svg>
+    </div>
+  </section>
+  <nav class="bottom-nav" aria-label="Principal"><a href="#" class="nav-item is-active" aria-current="page"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg><span>Inicio</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-income"/></svg><span>Ingresos</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-receipt"/></svg><span>Gastos</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-history"/></svg><span>Historial</span></a><a href="#" class="nav-item"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg><span>Ajustes</span></a></nav>
+</div></div></figure></div></div></section><section class="row" aria-label="Registrar ingreso, Modo oscuro"><h3 class="row-title">Registrar ingreso</h3><div class="row-scroll"><div class="col"><p class="col-label">A · Confianza sobria</p><figure class="phone d-a t-dark"><div class="frame">
+<div class="screen">
+  <div class="status" aria-hidden="true"><span>9:41</span><span class="status-r">5G ▮▮▮</span></div>
+  <header class="page-head">
+    <button class="icon-btn" type="button" aria-label="Cerrar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
+    <div><h3 class="page-title">Registrar ingreso</h3><p class="page-sub">María López Ruiz</p></div>
+  </header>
+  <form class="form" onsubmit="return false">
+    <div class="field">
+      <label for="reg-adark">Régimen</label>
+      <select id="reg-adark"><option>612 · Actividad Empresarial y Profesional</option>
+      <option>606 · Arrendamiento</option></select>
+    </div>
+    <div class="field">
+      <label for="amt-adark">Monto sin IVA</label>
+      <div class="input-affix is-focus"><span class="affix" aria-hidden="true">$</span>
+      <input id="amt-adark" inputmode="decimal" autocomplete="off" value="45,000.00" aria-describedby="amt-h-adark"></div>
+      <p class="help num" id="amt-h-adark">IVA 16%: $7,200.00 · Total facturado: $52,200.00</p>
+    </div>
+    <fieldset class="field">
+      <legend>Tasa de IVA</legend>
+      <div class="segs"><label class="seg"><input type="radio" name="r-adark" checked><span>16%</span></label><label class="seg"><input type="radio" name="r-adark" ><span>8% frontera</span></label><label class="seg"><input type="radio" name="r-adark" ><span>0%</span></label><label class="seg"><input type="radio" name="r-adark" ><span>Exento</span></label></div>
+    </fieldset>
+    <div class="field">
+      <label for="date-adark">Fecha en que lo cobraste</label>
+      <input id="date-adark" type="text" inputmode="numeric" value="13/10/2026" aria-describedby="date-h-adark">
+      <p class="help" id="date-h-adark">Cuenta para el mes en que entró el dinero.</p>
+    </div>
+    <div class="field">
+      <label for="cli-adark">Cliente o concepto <span class="opt">(opcional)</span></label>
+      <input id="cli-adark" type="text" autocomplete="off">
+    </div>
+    <details class="more">
+      <summary><svg class="ic" aria-hidden="true"><use href="#i-chevron-down"/></svg><span>Retenciones y fecha de factura <span class="opt">(opcional)</span></span></summary>
+      <p class="help">ISR retenido, IVA retenido y fecha de la factura.</p>
+    </details>
+    <div class="form-foot">
+      <button class="btn btn-primary btn-block" type="submit">Guardar</button>
+      <button class="btn btn-secondary btn-block" type="button">Guardar y registrar otro</button>
+      <button class="btn btn-text btn-block" type="button">Cancelar</button>
+    </div>
+  </form>
+</div></div></figure></div><div class="col"><p class="col-label">B · Fintech cálido</p><figure class="phone d-b t-dark"><div class="frame">
+<div class="screen">
+  <div class="status" aria-hidden="true"><span>9:41</span><span class="status-r">5G ▮▮▮</span></div>
+  <header class="page-head">
+    <button class="icon-btn" type="button" aria-label="Cerrar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
+    <div><h3 class="page-title">Registrar ingreso</h3><p class="page-sub">María López Ruiz</p></div>
+  </header>
+  <form class="form" onsubmit="return false">
+    <div class="field">
+      <label for="reg-bdark">Régimen</label>
+      <select id="reg-bdark"><option>612 · Actividad Empresarial y Profesional</option>
+      <option>606 · Arrendamiento</option></select>
+    </div>
+    <div class="field">
+      <label for="amt-bdark">Monto sin IVA</label>
+      <div class="input-affix is-focus"><span class="affix" aria-hidden="true">$</span>
+      <input id="amt-bdark" inputmode="decimal" autocomplete="off" value="45,000.00" aria-describedby="amt-h-bdark"></div>
+      <p class="help num" id="amt-h-bdark">IVA 16%: $7,200.00 · Total facturado: $52,200.00</p>
+    </div>
+    <fieldset class="field">
+      <legend>Tasa de IVA</legend>
+      <div class="segs"><label class="seg"><input type="radio" name="r-bdark" checked><span>16%</span></label><label class="seg"><input type="radio" name="r-bdark" ><span>8% frontera</span></label><label class="seg"><input type="radio" name="r-bdark" ><span>0%</span></label><label class="seg"><input type="radio" name="r-bdark" ><span>Exento</span></label></div>
+    </fieldset>
+    <div class="field">
+      <label for="date-bdark">Fecha en que lo cobraste</label>
+      <input id="date-bdark" type="text" inputmode="numeric" value="13/10/2026" aria-describedby="date-h-bdark">
+      <p class="help" id="date-h-bdark">Cuenta para el mes en que entró el dinero.</p>
+    </div>
+    <div class="field">
+      <label for="cli-bdark">Cliente o concepto <span class="opt">(opcional)</span></label>
+      <input id="cli-bdark" type="text" autocomplete="off">
+    </div>
+    <details class="more">
+      <summary><svg class="ic" aria-hidden="true"><use href="#i-chevron-down"/></svg><span>Retenciones y fecha de factura <span class="opt">(opcional)</span></span></summary>
+      <p class="help">ISR retenido, IVA retenido y fecha de la factura.</p>
+    </details>
+    <div class="form-foot">
+      <button class="btn btn-primary btn-block" type="submit">Guardar</button>
+      <button class="btn btn-secondary btn-block" type="button">Guardar y registrar otro</button>
+      <button class="btn btn-text btn-block" type="button">Cancelar</button>
+    </div>
+  </form>
+</div></div></figure></div><div class="col"><p class="col-label">C · Minimal claro</p><figure class="phone d-c t-dark"><div class="frame">
+<div class="screen">
+  <div class="status" aria-hidden="true"><span>9:41</span><span class="status-r">5G ▮▮▮</span></div>
+  <header class="page-head">
+    <button class="icon-btn" type="button" aria-label="Cerrar"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
+    <div><h3 class="page-title">Registrar ingreso</h3><p class="page-sub">María López Ruiz</p></div>
+  </header>
+  <form class="form" onsubmit="return false">
+    <div class="field">
+      <label for="reg-cdark">Régimen</label>
+      <select id="reg-cdark"><option>612 · Actividad Empresarial y Profesional</option>
+      <option>606 · Arrendamiento</option></select>
+    </div>
+    <div class="field">
+      <label for="amt-cdark">Monto sin IVA</label>
+      <div class="input-affix is-focus"><span class="affix" aria-hidden="true">$</span>
+      <input id="amt-cdark" inputmode="decimal" autocomplete="off" value="45,000.00" aria-describedby="amt-h-cdark"></div>
+      <p class="help num" id="amt-h-cdark">IVA 16%: $7,200.00 · Total facturado: $52,200.00</p>
+    </div>
+    <fieldset class="field">
+      <legend>Tasa de IVA</legend>
+      <div class="segs"><label class="seg"><input type="radio" name="r-cdark" checked><span>16%</span></label><label class="seg"><input type="radio" name="r-cdark" ><span>8% frontera</span></label><label class="seg"><input type="radio" name="r-cdark" ><span>0%</span></label><label class="seg"><input type="radio" name="r-cdark" ><span>Exento</span></label></div>
+    </fieldset>
+    <div class="field">
+      <label for="date-cdark">Fecha en que lo cobraste</label>
+      <input id="date-cdark" type="text" inputmode="numeric" value="13/10/2026" aria-describedby="date-h-cdark">
+      <p class="help" id="date-h-cdark">Cuenta para el mes en que entró el dinero.</p>
+    </div>
+    <div class="field">
+      <label for="cli-cdark">Cliente o concepto <span class="opt">(opcional)</span></label>
+      <input id="cli-cdark" type="text" autocomplete="off">
+    </div>
+    <details class="more">
+      <summary><svg class="ic" aria-hidden="true"><use href="#i-chevron-down"/></svg><span>Retenciones y fecha de factura <span class="opt">(opcional)</span></span></summary>
+      <p class="help">ISR retenido, IVA retenido y fecha de la factura.</p>
+    </details>
+    <div class="form-foot">
+      <button class="btn btn-primary btn-block" type="submit">Guardar</button>
+      <button class="btn btn-secondary btn-block" type="button">Guardar y registrar otro</button>
+      <button class="btn btn-text btn-block" type="button">Cancelar</button>
+    </div>
+  </form>
+</div></div></figure></div></div></section><section class="row" aria-label="Desglose del cálculo, Modo oscuro"><h3 class="row-title">Desglose del cálculo</h3><div class="row-scroll"><div class="col"><p class="col-label">A · Confianza sobria</p><figure class="phone d-a t-dark"><div class="frame">
+<div class="screen">
+  <div class="status" aria-hidden="true"><span>9:41</span><span class="status-r">5G ▮▮▮</span></div>
+  <header class="page-head">
+    <button class="icon-btn" type="button" aria-label="Regresar"><svg class="ic" aria-hidden="true"><use href="#i-arrow-left"/></svg></button>
+    <div><h3 class="page-title">Desglose · octubre</h3><p class="page-sub">612 · Actividad Empresarial y Profesional</p></div>
+  </header>
+  <section class="sum">
+    <p class="hero-label">Estimado a pagar en este régimen</p>
+    <p class="sum-amount num">$6,820<span class="cents">.00</span></p>
+  </section>
+  <p class="legend"><svg class="ic ic-legend" aria-hidden="true"><use href="#i-info"/></svg><span>Esto es un aproximado. No todos los gastos aplican para tu giro comercial.</span></p>
+  <section class="block">
+    <h3 class="block-title">IVA <span class="tag">flujo de efectivo</span></h3>
+    <ol class="card ledger"><li class="ln "><span class="ln-main"><span class="ln-c">IVA que cobraste (16% de $45,000.00)</span><span class="basis">Art. 1 LIVA</span></span><span class="ln-amt num">$7,200.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">IVA que pagaste en gastos</span><span class="basis">Art. 5 LIVA · acreditable</span></span><span class="ln-amt num">−$4,320.00</span></li><li class="ln is-result"><span class="ln-main"><span class="ln-c">IVA a pagar</span></span><span class="ln-amt num">$2,880.00</span></li></ol>
+  </section>
+  <section class="block">
+    <h3 class="block-title">ISR · pago provisional <span class="tag">acumulado</span></h3>
+    <ol class="card ledger"><li class="ln "><span class="ln-main"><span class="ln-c">Ingresos cobrados ene–oct</span><span class="basis">Art. 106 LISR</span></span><span class="ln-amt num">$430,000.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">Deducciones ene–oct</span><span class="basis">Art. 103 LISR</span></span><span class="ln-amt num">−$250,000.00</span></li><li class="ln is-sub"><span class="ln-main"><span class="ln-c">Utilidad acumulada</span></span><span class="ln-amt num">$180,000.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">ISR según tarifa acumulada</span><span class="basis">Art. 106 LISR · Anexo 8 RMF 2026</span></span><span class="ln-amt num">$35,860.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">Pagos provisionales anteriores</span></span><span class="ln-amt num">−$31,920.00</span></li><li class="ln is-result"><span class="ln-main"><span class="ln-c">ISR a pagar</span></span><span class="ln-amt num">$3,940.00</span></li></ol>
+  </section>
+  <p class="meta">Parámetros fiscales 2026 · versión 1 · motor 0.1.0<br>Cifras ilustrativas para esta propuesta.</p>
+</div></div></figure></div><div class="col"><p class="col-label">B · Fintech cálido</p><figure class="phone d-b t-dark"><div class="frame">
+<div class="screen">
+  <div class="status" aria-hidden="true"><span>9:41</span><span class="status-r">5G ▮▮▮</span></div>
+  <header class="page-head">
+    <button class="icon-btn" type="button" aria-label="Regresar"><svg class="ic" aria-hidden="true"><use href="#i-arrow-left"/></svg></button>
+    <div><h3 class="page-title">Desglose · octubre</h3><p class="page-sub">612 · Actividad Empresarial y Profesional</p></div>
+  </header>
+  <section class="sum">
+    <p class="hero-label">Estimado a pagar en este régimen</p>
+    <p class="sum-amount num">$6,820<span class="cents">.00</span></p>
+  </section>
+  <p class="legend"><svg class="ic ic-legend" aria-hidden="true"><use href="#i-info"/></svg><span>Esto es un aproximado. No todos los gastos aplican para tu giro comercial.</span></p>
+  <section class="block">
+    <h3 class="block-title">IVA <span class="tag">flujo de efectivo</span></h3>
+    <ol class="card ledger"><li class="ln "><span class="ln-main"><span class="ln-c">IVA que cobraste (16% de $45,000.00)</span><span class="basis">Art. 1 LIVA</span></span><span class="ln-amt num">$7,200.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">IVA que pagaste en gastos</span><span class="basis">Art. 5 LIVA · acreditable</span></span><span class="ln-amt num">−$4,320.00</span></li><li class="ln is-result"><span class="ln-main"><span class="ln-c">IVA a pagar</span></span><span class="ln-amt num">$2,880.00</span></li></ol>
+  </section>
+  <section class="block">
+    <h3 class="block-title">ISR · pago provisional <span class="tag">acumulado</span></h3>
+    <ol class="card ledger"><li class="ln "><span class="ln-main"><span class="ln-c">Ingresos cobrados ene–oct</span><span class="basis">Art. 106 LISR</span></span><span class="ln-amt num">$430,000.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">Deducciones ene–oct</span><span class="basis">Art. 103 LISR</span></span><span class="ln-amt num">−$250,000.00</span></li><li class="ln is-sub"><span class="ln-main"><span class="ln-c">Utilidad acumulada</span></span><span class="ln-amt num">$180,000.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">ISR según tarifa acumulada</span><span class="basis">Art. 106 LISR · Anexo 8 RMF 2026</span></span><span class="ln-amt num">$35,860.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">Pagos provisionales anteriores</span></span><span class="ln-amt num">−$31,920.00</span></li><li class="ln is-result"><span class="ln-main"><span class="ln-c">ISR a pagar</span></span><span class="ln-amt num">$3,940.00</span></li></ol>
+  </section>
+  <p class="meta">Parámetros fiscales 2026 · versión 1 · motor 0.1.0<br>Cifras ilustrativas para esta propuesta.</p>
+</div></div></figure></div><div class="col"><p class="col-label">C · Minimal claro</p><figure class="phone d-c t-dark"><div class="frame">
+<div class="screen">
+  <div class="status" aria-hidden="true"><span>9:41</span><span class="status-r">5G ▮▮▮</span></div>
+  <header class="page-head">
+    <button class="icon-btn" type="button" aria-label="Regresar"><svg class="ic" aria-hidden="true"><use href="#i-arrow-left"/></svg></button>
+    <div><h3 class="page-title">Desglose · octubre</h3><p class="page-sub">612 · Actividad Empresarial y Profesional</p></div>
+  </header>
+  <section class="sum">
+    <p class="hero-label">Estimado a pagar en este régimen</p>
+    <p class="sum-amount num">$6,820<span class="cents">.00</span></p>
+  </section>
+  <p class="legend"><svg class="ic ic-legend" aria-hidden="true"><use href="#i-info"/></svg><span>Esto es un aproximado. No todos los gastos aplican para tu giro comercial.</span></p>
+  <section class="block">
+    <h3 class="block-title">IVA <span class="tag">flujo de efectivo</span></h3>
+    <ol class="card ledger"><li class="ln "><span class="ln-main"><span class="ln-c">IVA que cobraste (16% de $45,000.00)</span><span class="basis">Art. 1 LIVA</span></span><span class="ln-amt num">$7,200.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">IVA que pagaste en gastos</span><span class="basis">Art. 5 LIVA · acreditable</span></span><span class="ln-amt num">−$4,320.00</span></li><li class="ln is-result"><span class="ln-main"><span class="ln-c">IVA a pagar</span></span><span class="ln-amt num">$2,880.00</span></li></ol>
+  </section>
+  <section class="block">
+    <h3 class="block-title">ISR · pago provisional <span class="tag">acumulado</span></h3>
+    <ol class="card ledger"><li class="ln "><span class="ln-main"><span class="ln-c">Ingresos cobrados ene–oct</span><span class="basis">Art. 106 LISR</span></span><span class="ln-amt num">$430,000.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">Deducciones ene–oct</span><span class="basis">Art. 103 LISR</span></span><span class="ln-amt num">−$250,000.00</span></li><li class="ln is-sub"><span class="ln-main"><span class="ln-c">Utilidad acumulada</span></span><span class="ln-amt num">$180,000.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">ISR según tarifa acumulada</span><span class="basis">Art. 106 LISR · Anexo 8 RMF 2026</span></span><span class="ln-amt num">$35,860.00</span></li><li class="ln "><span class="ln-main"><span class="ln-c">Pagos provisionales anteriores</span></span><span class="ln-amt num">−$31,920.00</span></li><li class="ln is-result"><span class="ln-main"><span class="ln-c">ISR a pagar</span></span><span class="ln-amt num">$3,940.00</span></li></ol>
+  </section>
+  <p class="meta">Parámetros fiscales 2026 · versión 1 · motor 0.1.0<br>Cifras ilustrativas para esta propuesta.</p>
+</div></div></figure></div></div></section></section>
+</main>
+</body>
+</html>

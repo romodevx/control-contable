@@ -1,0 +1,37 @@
+# The remedy from ADR-0003: the inline object is a named component, so its enum becomes
+# `SubscriptionPlanPeriod` and `Period` stays a String typedef.
+openapi: 3.1.0
+info: { title: fixture, version: 0.0.0 }
+paths:
+  /v1/subscription:
+    get:
+      tags: [Subscriptions]
+      operationId: getSubscription
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubscriptionStatus' }
+components:
+  schemas:
+    Period:
+      type: string
+      pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$'
+    SubscriptionPlan:
+      type: object
+      required: [period]
+      properties:
+        period: { type: string, enum: [weekly, monthly, yearly] }
+    SubscriptionStatus:
+      type: object
+      required: [since, plan]
+      properties:
+        since: { $ref: '#/components/schemas/Period' }
+        plan:
+          oneOf:
+            - $ref: '#/components/schemas/SubscriptionPlan'
+            - type: 'null'
+    RegimeOptions:
+      type: object
+      additionalProperties: { type: string }

@@ -257,3 +257,37 @@ Drift: `make codegen-check` regenerates and fails if `adapter/http/gen` differs 
 committed. `cmd/flagmapgen` fails generation when an operation lacks `operationId` or a valid
 `x-module`, and `adapter/http/gen/contract_test.go` re-checks the embedded spec, the map, the
 `StrictServerInterface` and the ServeMux patterns.
+
+## HTTP server and request validation (P0-17, 2026-10-13)
+
+Re-checked in Context7 (`/getkin/kin-openapi`) and against the kin-openapi v0.142.0 source
+while wiring `cmd/api`. `go.mod` pinned v0.142.0, which govulncheck flags (GO-2026-6112,
+nil-pointer panic reachable from `openapi3filter.ValidateRequest`); P0-17 bumps it to v0.149.0,
+the version the table above names.
+
+| Finding | Effect | Decision |
+|---|---|---|
+| The per-operation pipeline must run after routing but before the generated wrapper (P0-06 note) | A gate or validator outside the mux would answer 400/405 for a disabled module | `adapter/http/router` is the `gen.ServeMux`: it wraps each handler as it is registered with **flag gate → authn → kin-openapi validation**. A route with no `x-module` or no operation in the contract fails `router.New` at startup. Unmatched requests (unknown path, other method) get the same 404 envelope as a disabled module, never the mux's 405 + `Allow` |
+| Gate before authn (C4 listed authn first) | With authn first an anonymous caller gets 401 from an enabled module and 404 from a disabled one | Gate first; C4 updated |
+| For an OAS 3.1 document, `openapi3filter` validates with santhosh-tekuri/jsonschema (2020-12) and does **not** assert `format` (uuid, email, date); there is no option to turn it on | A malformed uuid/email/date passes kin validation | The generated binding still rejects them (typed `openapi_types.UUID`/`Email`/`Date`); `router` maps those errors to the same 400 envelope (`code: format`). Types, required, pattern, length, enum and range come from kin |
+| 2020-12 errors are strings (`at '/password': minLength: …`) that quote the rejected value | Echoing them would leak PII | `FieldError.field` and `.code` are parsed from the location and keyword; `message` is generic |
+| kin compiles the operation schema on every request | ~42 µs per validated POST (M4 Pro, `BenchmarkValidatedRequest`) | Acceptable; revisit if profiling says otherwise |
+| Rate limit (O9) | — | In-process GCRA token bucket per client IP (IPv6 by /64), `RATE_LIMIT_RPS` / `RATE_LIMIT_BURST`; `TRUSTED_PROXY_HOPS` picks the X-Forwarded-For entry (0 = TCP peer) |
+
+### `/healthz`: liveness vs readiness (P0-17 review, 2026-10-13)
+
+`getHealth` is `x-frozen`, so its path, parameters and responses cannot change. Decision:
+
+- **`/healthz` is the liveness and startup probe.** It answers 200 whenever the process can
+  serve; the body (`status`, `database`) is the readiness *report*. The DB ping is bounded at
+  500 ms, under the 1 s default `timeoutSeconds` of a Cloud Run HTTP probe, so a hung database
+  never fails liveness and never triggers a restart loop.
+- **No status-code readiness gate in P0.** Every instance shares one Cloud SQL database:
+  pulling instances out of rotation when it is down serves no one better, it only swaps our
+  503 envelope for Cloud Run's. Handlers keep answering the 503 envelope (C4 failure modes).
+- **Alerting reads the body**: a Cloud Monitoring uptime check on `/healthz` with a content
+  match on `"database":"unreachable"`.
+- **If a status-code readiness signal is ever needed** (Cloud Run readiness probes, a load
+  balancer health check), it is a *new* platform operation (e.g. `GET /readyz`, 200/503, `x-module:
+  platform`, `security: []`) added to the contract with its own ADR row. That is additive: no
+  frozen operation changes. The 503 that `getHealth` already declares stays reserved.

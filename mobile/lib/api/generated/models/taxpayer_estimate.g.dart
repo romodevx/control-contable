@@ -1,0 +1,35 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'taxpayer_estimate.dart';
+
+// **************************************************************************
+// JsonSerializableGenerator
+// **************************************************************************
+
+_TaxpayerEstimate _$TaxpayerEstimateFromJson(Map<String, dynamic> json) =>
+    _TaxpayerEstimate(
+      taxpayerId: json['taxpayer_id'] as String,
+      period: json['period'] as String,
+      dueDate: DateTime.parse(json['due_date'] as String),
+      legend: json['legend'] as String,
+      disclaimers: (json['disclaimers'] as List<dynamic>)
+          .map((e) => Disclaimer.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      regimes: (json['regimes'] as List<dynamic>)
+          .map((e) => RegimeEstimate.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      totals: EstimateTotals.fromJson(json['totals'] as Map<String, dynamic>),
+      engineVersion: json['engine_version'] as String,
+    );
+
+Map<String, dynamic> _$TaxpayerEstimateToJson(_TaxpayerEstimate instance) =>
+    <String, dynamic>{
+      'taxpayer_id': instance.taxpayerId,
+      'period': instance.period,
+      'due_date': instance.dueDate.toIso8601String(),
+      'legend': instance.legend,
+      'disclaimers': instance.disclaimers,
+      'regimes': instance.regimes,
+      'totals': instance.totals,
+      'engine_version': instance.engineVersion,
+    };
