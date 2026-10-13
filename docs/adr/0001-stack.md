@@ -58,6 +58,7 @@ backend/
     <module>/         auth, taxpayers, incomes, expenses, taxengine, dashboard,
                       subscriptions, history, reminders
       domain/         entities, value objects, domain errors. Imports stdlib only
+                      (sole exception: x/text/unicode/norm, ADR-0004)
       usecase/        interactors + the ports they consume (small interfaces)
       adapter/http/   strict-server handlers: DTO <-> domain mapping
       infra/          GORM repositories, external clients (RevenueCat, FCM)
