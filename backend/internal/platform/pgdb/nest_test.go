@@ -19,14 +19,14 @@ const (
 // inUnitOfWork returns a ctx that looks like one inside a running unit of work, so
 // the nesting rules can be proven without a database. The integration suite proves
 // the same rules against PostgreSQL.
-func inUnitOfWork(t *testing.T, userID string, readOnly bool) (context.Context, *gorm.DB) {
+func inUnitOfWork(t *testing.T, owner *TxManager, userID string, readOnly bool) (context.Context, *gorm.DB) {
 	t.Helper()
 	pool, err := Open("postgres://cc_app@127.0.0.1:1/control_contable?sslmode=disable")
 	require.NoError(t, err)
 	t.Cleanup(func() { assert.NoError(t, pool.Close()) })
 	db, err := openGorm(pool)
 	require.NoError(t, err)
-	state := &unitOfWork{db: db, userID: userID, readOnly: readOnly}
+	state := &unitOfWork{owner: owner, db: db, userID: userID, readOnly: readOnly}
 	return context.WithValue(context.Background(), unitOfWorkKey{}, state), db
 }
 
@@ -67,7 +67,7 @@ func TestNestedUnitOfWork(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx, outerDB := inUnitOfWork(t, tt.outer, tt.outerRO)
+			ctx, outerDB := inUnitOfWork(t, m, tt.outer, tt.outerRO)
 			joined := false
 			err := tt.run(ctx, func(inner context.Context) error {
 				joined = true
@@ -83,8 +83,22 @@ func TestNestedUnitOfWork(t *testing.T) {
 }
 
 func TestNestedWorkErrorIsReturnedUnchanged(t *testing.T) {
-	ctx, _ := inUnitOfWork(t, nestUserA, false)
+	m := &TxManager{}
+	ctx, _ := inUnitOfWork(t, m, nestUserA, false)
 	sentinel := assert.AnError
-	err := (&TxManager{}).ReadWrite(ctx, nestUserA, func(context.Context) error { return sentinel })
+	err := m.ReadWrite(ctx, nestUserA, func(context.Context) error { return sentinel })
 	assert.Same(t, sentinel, err)
+}
+
+func TestNestedUnitOfWorkOfAnotherManagerIsRefused(t *testing.T) {
+	ctx, _ := inUnitOfWork(t, &TxManager{}, "", false)
+	other := &TxManager{}
+	work := func(context.Context) error {
+		t.Error("must not join the transaction of another manager")
+		return nil
+	}
+	assert.ErrorIs(t, other.System(ctx, work), tx.ErrForeignTransaction)
+	userCtx, _ := inUnitOfWork(t, &TxManager{}, nestUserA, false)
+	assert.ErrorIs(t, other.ReadWrite(userCtx, nestUserA, work), tx.ErrForeignTransaction)
+	assert.ErrorIs(t, other.ReadOnly(userCtx, nestUserA, work), tx.ErrForeignTransaction)
 }

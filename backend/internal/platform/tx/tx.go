@@ -20,6 +20,8 @@
 //     second one: they commit or roll back with it. A nested call for another
 //     user is ErrUserMismatch; a read-write call nested in a read-only one is
 //     ErrReadOnly. Neither ever switches the outer transaction's context.
+//     A nested call through another Manager (another pool and database role)
+//     is ErrForeignTransaction: it never runs with the other role's grants.
 //   - The work's error, a panic or the cancellation of ctx rolls the
 //     transaction back; only a nil return on a live ctx commits.
 //
@@ -58,4 +60,7 @@ var (
 	ErrUserMismatch = errors.New("tx: nested unit of work for a different user context")
 	// ErrReadOnly reports a read-write unit of work nested in a read-only one.
 	ErrReadOnly = errors.New("tx: read-write unit of work nested in a read-only one")
+	// ErrForeignTransaction reports a unit of work nested in one that another
+	// Manager (another pool, so another database role) is running.
+	ErrForeignTransaction = errors.New("tx: nested unit of work started through another manager")
 )

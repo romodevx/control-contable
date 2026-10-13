@@ -66,6 +66,7 @@ type unitOfWorkKey struct{}
 
 // unitOfWork is the transaction a ctx carries, with the context it was opened for.
 type unitOfWork struct {
+	owner    *TxManager // the manager (pool, so database role) that opened it
 	db       *gorm.DB
 	userID   string // canonical UUID; systemUserContext for System
 	readOnly bool
@@ -109,7 +110,7 @@ func canonicalUserID(userID string) (string, error) {
 
 func (m *TxManager) run(ctx context.Context, userID string, readOnly bool, work tx.Work) error {
 	if outer, ok := ctx.Value(unitOfWorkKey{}).(*unitOfWork); ok {
-		return join(ctx, outer, userID, readOnly, work)
+		return m.join(ctx, outer, userID, readOnly, work)
 	}
 	if err := ctx.Err(); err != nil {
 		return err
@@ -118,8 +119,12 @@ func (m *TxManager) run(ctx context.Context, userID string, readOnly bool, work 
 }
 
 // join runs work inside the outer transaction, as long as that cannot widen or
-// switch what the outer transaction may do.
-func join(ctx context.Context, outer *unitOfWork, userID string, readOnly bool, work tx.Work) error {
+// switch what the outer transaction may do. The outer transaction must be this
+// manager's: another manager's runs on another pool, as another database role.
+func (m *TxManager) join(ctx context.Context, outer *unitOfWork, userID string, readOnly bool, work tx.Work) error {
+	if outer.owner != m {
+		return tx.ErrForeignTransaction
+	}
 	if outer.userID != userID {
 		return tx.ErrUserMismatch
 	}
@@ -151,7 +156,7 @@ func (m *TxManager) begin(ctx context.Context, userID string, readOnly bool, wor
 	if err := gtx.Exec(setUserContext, userID).Error; err != nil {
 		return fmt.Errorf("pgdb: set user context: %w", err)
 	}
-	inner := context.WithValue(ctx, unitOfWorkKey{}, &unitOfWork{db: gtx, userID: userID, readOnly: readOnly})
+	inner := context.WithValue(ctx, unitOfWorkKey{}, &unitOfWork{owner: m, db: gtx, userID: userID, readOnly: readOnly})
 	if err := work(inner); err != nil {
 		return err
 	}

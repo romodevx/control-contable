@@ -382,6 +382,45 @@ func TestNestedUnitsOfWorkShareTheTransaction(t *testing.T) {
 	})
 }
 
+// TestNestedUnitOfWorkNeverJoinsAnotherManager: a process may hold one TxManager per
+// role (cc_app for requests, cc_webhook or cc_worker on their own pools). A unit of
+// work started through one of them inside another's must never run on the other's
+// connection, where it would act with that role's grants believing it has its own.
+func TestNestedUnitOfWorkNeverJoinsAnotherManager(t *testing.T) {
+	database := pgtest.NewDatabase(t)
+	app := connectEnv(t, database, pgtest.RoleApp)
+	worker := connectEnv(t, database, pgtest.RoleWorker)
+	asUserA := func(m *pgdb.TxManager) func(context.Context, tx.Work) error {
+		return func(ctx context.Context, w tx.Work) error { return m.ReadWrite(ctx, userA, w) }
+	}
+	tests := []struct {
+		name          string
+		outer, nested func(context.Context, tx.Work) error
+	}{
+		{"system", worker.txm.System, app.txm.System},
+		{"same user", asUserA(worker.txm), asUserA(app.txm)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.outer(t.Context(), func(ctx context.Context) error {
+				return tt.nested(ctx, func(ctx context.Context) error {
+					conn, err := pgdb.Conn(ctx)
+					if err != nil {
+						return err
+					}
+					var role string
+					if err := conn.Raw("SELECT current_user").Scan(&role).Error; err != nil {
+						return err
+					}
+					t.Errorf("cc_app work joined another manager's transaction (current_user %s)", role)
+					return nil
+				})
+			})
+			assert.ErrorIs(t, err, tx.ErrForeignTransaction)
+		})
+	}
+}
+
 // TestContextNeverLeaksAcrossPooledConnections runs many units of work for different
 // users (and System) on a two-connection pool, sequentially and concurrently, as both
 // cc_app and cc_worker. Every unit of work must see exactly its own context and rows.
