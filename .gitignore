@@ -1,0 +1,33 @@
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Env and secrets (never committed; use the secret manager)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+service-account*.json
+
+# Go
+backend/bin/
+*.test
+*.out
+coverage.*
+go.work
+go.work.sum
+
+# Local tooling
+.claude/worktrees/
+.gstack/
+
+# Flutter / Dart (mobile/)
+.dart_tool/
+build/
+*.iml
+**/ios/Pods/
+**/android/.gradle/
+*.symbols
