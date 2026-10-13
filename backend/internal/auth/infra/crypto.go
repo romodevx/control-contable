@@ -98,6 +98,7 @@ func (s *AccessTokenSigner) Sign(userID domain.UserID, issuedAt time.Time) (stri
 		Subject:   userID.String(),
 		Audience:  jwt.ClaimStrings{AccessTokenAudience},
 		IssuedAt:  jwt.NewNumericDate(issuedAt),
+		NotBefore: jwt.NewNumericDate(issuedAt),
 		ExpiresAt: jwt.NewNumericDate(issuedAt.Add(AccessTokenTTL)),
 		ID:        jti.String(),
 	})

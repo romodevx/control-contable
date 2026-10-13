@@ -1,10 +1,12 @@
 // Package usecase holds the auth module's application logic (MODULE-auth):
-// register, verifyEmail and resendVerification. It owns its ports, which the
-// infra adapters implement and cmd/api wires.
+// register, verifyEmail, resendVerification and login. It owns its ports,
+// which the infra adapters implement and cmd/api wires.
 //
 // Every database access runs in a unit of work: register and resend through
 // tx.SystemManager (no user exists yet; they reach only SECURITY DEFINER
-// functions), verifyEmail through tx.Manager as the account it creates.
+// functions), verifyEmail through tx.Manager as the account it creates, and
+// login through both: the credential lookup (a definer function) with no
+// user context, then the session as the user the password proved.
 package usecase
 
 import (
@@ -32,6 +34,17 @@ type EmailIndex interface {
 // PasswordHasher hashes a new password (crypto.PasswordHasher, argon2id).
 type PasswordHasher interface {
 	Hash(password string) (string, error)
+}
+
+// PasswordVerifier checks a login password against a stored argon2id hash
+// and keeps the stored hashes on the current policy (crypto.PasswordHasher).
+type PasswordVerifier interface {
+	PasswordHasher
+	// Verify reports whether password matches encoded, in constant time.
+	Verify(password, encoded string) (bool, error)
+	// NeedsRehash reports whether encoded was made with parameters other
+	// than the current policy's.
+	NeedsRehash(encoded string) (bool, error)
 }
 
 // CodeHasher computes code_hash: a keyed HMAC of the email hash and the code,
@@ -142,6 +155,34 @@ type Accounts interface {
 	Create(ctx context.Context, account NewAccount) (Account, error)
 }
 
+// Credentials is what login needs of an account (a row of
+// auth_lookup_credentials), never its email or name.
+type Credentials struct {
+	UserID       domain.UserID
+	PasswordHash string
+	// Active is false for an account that may not sign in (suspended, or a
+	// status this code does not know: fail closed).
+	Active bool
+}
+
+// CredentialLookup finds the credentials of the account holding an email
+// hash, across users, through the SECURITY DEFINER lookup.
+type CredentialLookup interface {
+	// Lookup returns found = false when no account holds emailHash.
+	Lookup(ctx context.Context, emailHash []byte) (creds Credentials, found bool, err error)
+}
+
+// LoginAccounts is what login needs of the users table, in the unit of
+// work of the user signing in.
+type LoginAccounts interface {
+	// Find reads the account; ErrAccountNotFound when it does not exist.
+	Find(ctx context.Context, id domain.UserID) (Account, error)
+	// ReplacePasswordHash stores newHash only while the stored hash is still
+	// oldHash, so a concurrent password change is never overwritten. No
+	// matching row is not an error.
+	ReplacePasswordHash(ctx context.Context, id domain.UserID, oldHash, newHash string) error
+}
+
 // TrialStarter starts a user's trial entitlement at startsAt.
 type TrialStarter interface {
 	StartTrial(ctx context.Context, userID domain.UserID, startsAt time.Time) error
@@ -157,6 +198,20 @@ type RefreshTokens interface {
 // AccessTokens signs short-lived access tokens (EdDSA JWT).
 type AccessTokens interface {
 	Sign(userID domain.UserID, issuedAt time.Time) (token string, expiresIn time.Duration, err error)
+}
+
+// AccessClaims is what a verified access token asserts.
+type AccessClaims struct {
+	UserID domain.UserID
+	// TokenID is the token's jti.
+	TokenID   string
+	ExpiresAt time.Time
+}
+
+// AccessTokenVerifier verifies a bearer access token. Every failure wraps
+// ErrInvalidAccessToken.
+type AccessTokenVerifier interface {
+	Verify(token string) (AccessClaims, error)
 }
 
 // EmailSender delivers the auth emails. Implementations never put the
