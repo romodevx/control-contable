@@ -1,4 +1,6 @@
+import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/router/app_router.dart';
+import 'package:control_contable/core/router/feature_module.dart';
 import 'package:control_contable/core/router/not_found_screen.dart';
 import 'package:control_contable/features/home/presentation/home_screen.dart';
 import 'package:flutter/material.dart';
@@ -36,5 +38,45 @@ void main() {
     await tester.tap(find.text('Ir al inicio'));
     await tester.pumpAndSettle();
     expect(find.byType(HomeScreen), findsOneWidget);
+  });
+
+  group('module routes follow the flags', () {
+    const location = '/ingresos-prueba';
+    final incomesFeature = FeatureModule(
+      module: AppModule.incomes,
+      routes: [
+        GoRoute(
+          path: location,
+          builder: (context, state) => const Text('pantalla de ingresos'),
+        ),
+      ],
+    );
+
+    Future<void> visit(WidgetTester tester, Set<AppModule> enabled) async {
+      await pumpControlContableApp(
+        tester,
+        enabledModules: enabled,
+        overrides: [
+          featureModulesProvider.overrideWithValue([incomesFeature]),
+        ],
+      );
+      _routerOf(tester).go(location);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a disabled module registers no routes (not found)', (
+      tester,
+    ) async {
+      await visit(tester, const {});
+
+      expect(find.byType(NotFoundScreen), findsOneWidget);
+      expect(find.text('pantalla de ingresos'), findsNothing);
+    });
+
+    testWidgets('an enabled module registers its routes', (tester) async {
+      await visit(tester, const {AppModule.incomes});
+
+      expect(find.text('pantalla de ingresos'), findsOneWidget);
+    });
   });
 }
