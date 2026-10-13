@@ -42,7 +42,7 @@ read from the environment (`internal/platform/config`):
 | `APP_ENV` | required | `dev`, `staging` or `production` |
 | `PORT` | `8080` | listen port |
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
-| `DATABASE_URL` | required (secret) | the `cc_app` pool; today it serves the flags service (P0-15). The pool connects lazily: an unreachable database hides every flagged module (fail closed) |
+| `DATABASE_URL` | required (secret) | the `cc_app` pool; today it serves the flags service (P0-15). The pool connects lazily: an unreachable database hides every flagged module (fail closed). In staging/production the API **refuses to start** unless the role is verified at boot as a plain runtime login (not SUPERUSER, not BYPASSRLS, owns nothing, not a member of such a role) |
 | `RATE_LIMIT_RPS` / `RATE_LIMIT_BURST` | `10` / `20` | token bucket per client IP (429 + `Retry-After`) |
 | `TRUSTED_PROXY_HOPS` | `0` in dev; **required** in staging/production | reverse proxies appending to `X-Forwarded-For`; `0` keys by the TCP peer (behind Cloud Run/a load balancer that would be one bucket for every client) |
 

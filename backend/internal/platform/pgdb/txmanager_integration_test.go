@@ -538,6 +538,20 @@ func countInSavepoint(ctx context.Context, table pgtest.Table) (int64, error) {
 	return n, err
 }
 
+func TestCheckRuntimeRole(t *testing.T) {
+	database := pgtest.NewDatabase(t)
+	for _, role := range []pgtest.Role{pgtest.RoleApp, pgtest.RoleWebhook, pgtest.RoleWorker} {
+		t.Run(string(role)+" is a plain runtime login", func(t *testing.T) {
+			assert.NoError(t, pgdb.CheckRuntimeRole(t.Context(), database.Connect(t, role)))
+		})
+	}
+	t.Run("the schema owner is refused", func(t *testing.T) {
+		err := pgdb.CheckRuntimeRole(t.Context(), database.Connect(t, pgtest.RoleOwner))
+		require.ErrorIs(t, err, pgdb.ErrPrivilegedRole)
+		assert.Contains(t, err.Error(), "owns")
+	})
+}
+
 func TestPingerReachesDatabase(t *testing.T) {
 	e := newEnv(t, pgtest.RoleApp)
 	assert.NoError(t, pgdb.NewPinger(e.db).Ping(t.Context()))

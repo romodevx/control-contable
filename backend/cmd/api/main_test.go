@@ -264,6 +264,19 @@ func TestRun_reportsMalformedDatabaseURL(t *testing.T) {
 	assert.ErrorIs(t, err, pgdb.ErrInvalidDSN)
 }
 
+// Outside dev a role that cannot be verified is refused: the process does not start.
+func TestRun_refusesToStartWhenTheRuntimeRoleCannotBeVerified(t *testing.T) {
+	env := map[string]string{ //nolint:gosec // G101: fake password of a test fixture; the port is closed.
+		"APP_ENV": "staging", "TRUSTED_PROXY_HOPS": "0",
+		"DATABASE_URL": "postgres://cc_app:s3cr3t-pw@127.0.0.1:1/control_contable?sslmode=disable&connect_timeout=1",
+	}
+	err := run(context.Background(), func(k string) (string, bool) { v, ok := env[k]; return v, ok }, io.Discard)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "runtime database role")
+	assert.NotContains(t, err.Error(), "s3cr3t-pw")
+}
+
 func TestRun_reportsConfigErrors(t *testing.T) {
 	err := run(context.Background(), func(string) (string, bool) { return "", false }, io.Discard)
 

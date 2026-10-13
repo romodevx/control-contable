@@ -122,3 +122,11 @@ func TestPingerReportsUnreachableDatabase(t *testing.T) {
 	require.Error(t, err)
 	assert.NotContains(t, err.Error(), "s3cr3t-pw")
 }
+
+// An unverifiable role is not a verified one: the check fails, without leaking the DSN.
+func TestCheckRuntimeRoleFailsClosedWhenUnreachable(t *testing.T) {
+	err := pgdb.CheckRuntimeRole(t.Context(), openUnreachable(t))
+	require.Error(t, err)
+	assert.NotErrorIs(t, err, pgdb.ErrPrivilegedRole)
+	assert.NotContains(t, err.Error(), "s3cr3t-pw")
+}
