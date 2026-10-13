@@ -1,6 +1,7 @@
 -- Run while connected AS a runtime role (cc_app, cc_webhook, cc_worker).
 -- Fails (ON_ERROR_STOP) unless the role is a plain login: no superuser, no BYPASSRLS,
--- not the database owner, no DDL on schema public.
+-- not the database owner, no DDL on schema public, no REPLICATION, no role membership,
+-- no CONNECT on the maintenance databases.
 \set ON_ERROR_STOP on
 
 SELECT r.rolname, r.rolsuper, r.rolbypassrls, r.rolcreaterole, r.rolcreatedb,
@@ -17,12 +18,21 @@ BEGIN
   IF r.rolsuper THEN RAISE EXCEPTION '% is SUPERUSER', current_user; END IF;
   IF r.rolbypassrls THEN RAISE EXCEPTION '% has BYPASSRLS', current_user; END IF;
   IF r.rolcreaterole OR r.rolcreatedb THEN RAISE EXCEPTION '% can create roles or databases', current_user; END IF;
+  IF r.rolreplication THEN RAISE EXCEPTION '% has REPLICATION', current_user; END IF;
+  -- Any membership lets SET ROLE reach the other role's privileges, NOINHERIT or not.
+  IF EXISTS (SELECT 1 FROM pg_auth_members WHERE member = r.oid) THEN
+    RAISE EXCEPTION '% is a member of another role', current_user;
+  END IF;
+  IF has_database_privilege(current_user, 'postgres', 'CONNECT')
+     OR has_database_privilege(current_user, 'template1', 'CONNECT') THEN
+    RAISE EXCEPTION '% can CONNECT to a maintenance database', current_user;
+  END IF;
   IF (SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname = current_database()) = current_user THEN
     RAISE EXCEPTION '% owns the database', current_user;
   END IF;
   IF has_schema_privilege(current_user, 'public', 'CREATE') THEN
     RAISE EXCEPTION '% can CREATE in schema public', current_user;
   END IF;
-  RAISE NOTICE 'OK: % is NOSUPERUSER, NOBYPASSRLS, not owner, no DDL on public', current_user;
+  RAISE NOTICE 'OK: % is NOSUPERUSER, NOBYPASSRLS, NOREPLICATION, no memberships, not owner, no DDL on public', current_user;
 END
 $$;
