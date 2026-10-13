@@ -53,7 +53,7 @@ lib/
     router/              appRouterProvider (go_router), AppRoutes, FeatureModule, NotFoundScreen
     theme/               design tokens (ThemeExtension) and the Material mapping
   features/<module>/     one folder per module slice: <module>_routes.dart, presentation/,
-                         application/, data/ — a disabled module contributes no routes
+                         application/, data/ — a disabled module's routes are unreachable
   api/generated/         Dart client generated from the contract: never edit by hand
   l10n/                  ARB files (es template, es_MX) + generated AppLocalizations
 ```
@@ -73,8 +73,9 @@ iOS ATS, so the app enforces HTTPS itself.
 
 `GET /v1/flags` feeds `flagsProvider`, the one source of flags. Widgets read it only through
 `ref.useFlag(AppModule.x)` or `FlagGate(module: AppModule.x, child: …)`. A module slice
-registers its routes as a `FeatureModule` in `featureModulesProvider`; the router keeps
-only the enabled ones, so a disabled module's screens answer "not found".
+registers its routes as a `FeatureModule` in `featureModulesProvider`. The router is built
+once; a location owned by a disabled module redirects to "not found", re-checked on every
+flag change, so a refresh never resets the user's navigation.
 
 - Fail-closed: loading, a failed first fetch or a key this build does not know ⇒ OFF.
 - Cached in memory; refreshed when the app resumes. A failed refresh keeps the last answer.
