@@ -115,6 +115,18 @@ func TestRouteModuleMatchesServeMuxPatterns(t *testing.T) {
 	assert.False(t, ok)
 }
 
+// TestOverlayOnlyChangesGoTypes guards overlay.yaml: it may add x-go-type for
+// codegen, but the embedded spec (what request validation uses) must keep the
+// contract's schema. RegimeOptionDef.default stays [string, boolean, null].
+func TestOverlayOnlyChangesGoTypes(t *testing.T) {
+	swagger, err := gen.GetSwagger()
+	require.NoError(t, err)
+
+	def := swagger.Components.Schemas["RegimeOptionDef"].Value.Properties["default"].Value
+	assert.ElementsMatch(t, []string{"string", "boolean", "null"}, def.Type.Slice())
+	assert.Equal(t, "any", def.Extensions["x-go-type"])
+}
+
 func TestOperationModulesReturnsACopy(t *testing.T) {
 	m := gen.OperationModules()
 	m["getHealth"] = "module_tampered"
