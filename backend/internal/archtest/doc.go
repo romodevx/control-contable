@@ -21,6 +21,11 @@
 //   - pure-platform-imports: a package in domainPlatformAllowlist obeys the
 //     domain rule (standard library minus frameworks, other pure platform
 //     packages), so the domain cannot reach a framework through it.
+//   - inner-transitive-framework: a domain or usecase never imports a package
+//     of this module (platform adapter sub-packages such as flagsgorm, the
+//     top-level adapter/ tree, any helper) that reaches net/http,
+//     database/sql, GORM or pgx through this module's own imports. Packages
+//     outside the module are not followed.
 //
 // The composition root (cmd/) may import anything.
 package archtest
