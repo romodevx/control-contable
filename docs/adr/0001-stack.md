@@ -83,7 +83,7 @@ backend/
 | State management | **Riverpod 3** + `riverpod_generator` | flutter_riverpod 3.4.3, riverpod_generator 4.0.9 |
 | Navigation | go_router | 18.0.2 |
 | HTTP | dio | 5.11.1 |
-| API client generation | **swagger_parser** (pure Dart, supports OAS 3.1) → retrofit + json_serializable/freezed | swagger_parser 1.45.0, retrofit 4.10.0, freezed 4.0.2 |
+| API client generation | **swagger_parser** (pure Dart, supports OAS 3.1) → retrofit + json_serializable/freezed | swagger_parser 1.45.0, retrofit 4.10.0, retrofit_generator 10.2.11, freezed 4.0.2 |
 | Token storage | flutter_secure_storage (Keychain / Keystore) | 11.2.0 |
 | IAP | RevenueCat `purchases_flutter` (`appUserID` = our user UUID) | 10.15.2 |
 | Push | firebase_messaging | 16.7.0 |
@@ -94,7 +94,7 @@ backend/
 
 P0-21. Each pinned Dart/Flutter library was checked in the Context7 MCP, and each pin was
 re-checked against `pub.dev/api/packages/<name>` the same day. Every pin above is still the
-latest release. Toolchain: Flutter 3.47.7, Dart 3.13.5. No API change forces a decision
+latest release, except retrofit_generator, deliberately held at 10.2.11 (two-week rule, row below). Toolchain: Flutter 3.47.7, Dart 3.13.5. No API change forces a decision
 change. The owner confirmed **Riverpod** (O5 closed, OB4 resolved).
 
 | Library | Context7 ID | Pin = latest? | API checked | Notes for the first user |

@@ -83,7 +83,8 @@ generated with the right kind (enum / class / typedef).
 is not needed: both failures have small, proven remedies, and the 3.1 constructs we worried
 about (`oneOf`+null, `const`, type lists) all work.
 
-Conditions, entry criteria for P0-22:
+Conditions. Each is tracked in the PLAN: (1), (3) and the upstream issue in P0-23, CI wiring in
+P0-25, (2) is done in this PR:
 
 1. **Pre-step normalizer.** `mobile/tool/normalize_openapi.dart` (the spike's path-parameter
    inliner, with a unit test first) runs before `swagger_parser` and is the only way the
@@ -91,12 +92,14 @@ Conditions, entry criteria for P0-22:
    path-level parameters. File the bug upstream (carapacik/swagger_parser) and delete the
    pre-step once a fixed release is pinned.
 2. **Contract rule: no inline object schemas inside `oneOf`/`anyOf`.** Name them as
-   components. Apply it now to `SubscriptionStatus.plan` → `SubscriptionPlan` (a
-   non-breaking contract change; owner: architect, through the normal contract PR + lint +
-   backend regen). Until that PR merges, the normalizer applies the same extraction.
-3. **CI guard.** A check (the spike's kind-check script) fails the mobile build when a
-   generated type's kind differs from its component schema, so a future inline-enum
-   collision cannot pass silently.
+   components (see `docs/api/CONTRACT.md`). Applied in this PR: `SubscriptionStatus.plan` is
+   now `oneOf: [$ref SubscriptionPlan, null]`. Non-breaking: the wire format is identical, the
+   node is not frozen, and no backend code is generated from it yet. `make contract-lint` passes.
+3. **CI guard.** `mobile/tool/check_generated_kinds.dart` (the spike's kind-check script,
+   test first against a fixture that reproduces the `Period` collision) runs inside
+   `make mobile-client` and fails it when a generated type's kind (enum / class / typedef)
+   differs from its component schema, or two schemas map to one Dart name. Mobile CI (P0-25)
+   runs `make mobile-client`, so a future inline-enum collision cannot pass silently.
 4. **Pins.** Exact versions as above, with **retrofit_generator 10.2.11** (10.2.12 was
    published on 2026-10-13 and is under the two-week rule; the spike passed on both).
 
