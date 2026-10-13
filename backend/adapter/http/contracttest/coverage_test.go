@@ -1,0 +1,106 @@
+package contracttest_test
+
+import (
+	"path/filepath"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/romodevx/control-contable/backend/adapter/http/contracttest"
+)
+
+// pendingOperations are the contract operations with no contract test yet,
+// each with the PLAN task that owns its contract tests. The list only
+// shrinks: when a module's tests call ServeOp(contracttest.Op("<id>"), ...),
+// the meta-test below fails until the id is removed from here. Adding an
+// operation to the contract means adding it here (with its task) or covering
+// it in the same PR.
+var pendingOperations = map[string]string{
+	// M1 module_auth
+	"register":           "M1-10",
+	"verifyEmail":        "M1-10",
+	"login":              "M1-10",
+	"refreshSession":     "M1-10",
+	"logout":             "M1-10",
+	"getMe":              "M1-10",
+	"updateMe":           "M1-10",
+	"deleteMe":           "M1-10",
+	"listLegalDocuments": "M1-10",
+	// M2 module_taxpayers
+	"listRegimes":           "M2-07",
+	"listTaxpayers":         "M2-07",
+	"createTaxpayer":        "M2-07",
+	"getTaxpayer":           "M2-07",
+	"updateTaxpayer":        "M2-07",
+	"deleteTaxpayer":        "M2-07",
+	"archiveTaxpayer":       "M2-07",
+	"addTaxpayerRegime":     "M2-07",
+	"updateTaxpayerRegime":  "M2-07",
+	"archiveTaxpayerRegime": "M2-07",
+	// M3 module_incomes
+	"listIncomes":   "M3-06",
+	"createIncome":  "M3-06",
+	"getIncome":     "M3-06",
+	"updateIncome":  "M3-06",
+	"deleteIncome":  "M3-06",
+	"restoreIncome": "M3-06",
+	// M4 module_expenses
+	"listExpenseCategories": "M4-07",
+	"listExpenses":          "M4-07",
+	"createExpense":         "M4-07",
+	"getExpense":            "M4-07",
+	"updateExpense":         "M4-07",
+	"deleteExpense":         "M4-07",
+	"restoreExpense":        "M4-07",
+	// M5 module_tax_engine
+	"getTaxpayerEstimate":  "M5-23",
+	"getEstimateBreakdown": "M5-23",
+	"getTaxInputs":         "M5-23",
+	"putTaxInputs":         "M5-23",
+	// M6 module_dashboard
+	"getDashboard": "M6-03",
+	// M7 module_subscriptions
+	"getSubscription":          "M7-06",
+	"syncSubscription":         "M7-06",
+	"receiveRevenueCatWebhook": "M7-05",
+	// M8 module_history
+	"getHistory":        "M8-04",
+	"markHistoryViewed": "M8-04",
+	// M9 module_reminders
+	"registerDevice":      "M9-05",
+	"unregisterDevice":    "M9-05",
+	"getReminderSettings": "M9-05",
+	"putReminderSettings": "M9-05",
+	"getTaxCalendar":      "M9-04",
+}
+
+// backendRoot is the Go module root, three levels above this package.
+var backendRoot = filepath.Join("..", "..", "..")
+
+// TestContractCoverage tracks which contract operations have a contract test:
+// every operation is either covered (a ServeOp call with its Op literal
+// somewhere in the backend's tests) or pending, never both and never neither.
+func TestContractCoverage(t *testing.T) {
+	ops := contracttest.Load(t).OperationIDs()
+	covered, err := contracttest.ScanCoverage(backendRoot, ".") // this package's own tests are not contract tests
+	require.NoError(t, err)
+
+	for _, id := range ops {
+		_, isPending := pendingOperations[id]
+		sites, isCovered := covered[id]
+		switch {
+		case isCovered && isPending:
+			t.Errorf("%s is covered (%v): remove it from pendingOperations", id, sites)
+		case !isCovered && !isPending:
+			t.Errorf("%s has no contract test: cover it with ServeOp(contracttest.Op(%q), ...) or add it to pendingOperations with its PLAN task", id, id)
+		}
+	}
+	for id := range pendingOperations {
+		assert.Containsf(t, ops, id, "pendingOperations lists %q, which is not in docs/api/openapi.yaml", id)
+	}
+	for id, sites := range covered {
+		assert.Containsf(t, ops, id, "%v cover %q, which is not in docs/api/openapi.yaml", sites, id)
+	}
+	t.Logf("contract coverage: %d of %d operations covered, %d pending", len(ops)-len(pendingOperations), len(ops), len(pendingOperations))
+}
