@@ -33,13 +33,13 @@ func (f *fakeRegister) Execute(_ context.Context, in usecase.RegisterInput) erro
 }
 
 type fakeVerify struct {
-	email, code string
-	session     usecase.Session
-	err         error
+	got     usecase.VerifyInput
+	session usecase.Session
+	err     error
 }
 
-func (f *fakeVerify) Execute(_ context.Context, email, code string) (usecase.Session, error) {
-	f.email, f.code = email, code
+func (f *fakeVerify) Execute(_ context.Context, in usecase.VerifyInput) (usecase.Session, error) {
+	f.got = in
 	return f.session, f.err
 }
 
@@ -58,11 +58,8 @@ func newHandler(r *fakeRegister, v *fakeVerify, s *fakeResend) *authhttp.Handler
 }
 
 func registerBody() *gen.RegisterJSONRequestBody {
-	name := "Ana Gómez"
 	return &gen.RegisterJSONRequestBody{
-		Email:    openapi_types.Email("ana.gomez@example.mx"),
-		Password: "made-up sample phrase",
-		Name:     &name,
+		Email: openapi_types.Email("ana.gomez@example.mx"),
 		AcceptedDocuments: []gen.DocumentAcceptance{
 			{Kind: gen.PrivacyNoticeIntegral, Version: "v1"},
 			{Kind: gen.Terms, Version: "v1"},
@@ -78,9 +75,6 @@ func TestRegister_answersTheGeneric202(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, gen.Register202JSONResponse{Status: gen.VerificationSentStatusVerificationSent}, resp)
 	assert.Equal(t, "ana.gomez@example.mx", reg.got.Email)
-	assert.Equal(t, "made-up sample phrase", reg.got.Password)
-	require.NotNil(t, reg.got.Name)
-	assert.Equal(t, "Ana Gómez", *reg.got.Name)
 	assert.Equal(t, []domain.DocumentVersion{
 		{Kind: domain.DocumentPrivacyIntegral, Version: "v1"},
 		{Kind: domain.DocumentTerms, Version: "v1"},
@@ -94,11 +88,6 @@ func TestRegister_validationErrorsNameTheField(t *testing.T) {
 		fieldCode string
 	}{
 		{domain.ErrInvalidEmail, "email", "invalid_email"},
-		{domain.ErrPasswordCommon, "password", "password_policy"},
-		{domain.ErrPasswordTooShort, "password", "password_policy"},
-		{domain.ErrPasswordTooLong, "password", "password_policy"},
-		{domain.ErrPasswordMalformed, "password", "password_policy"},
-		{domain.ErrInvalidName, "name", "invalid_name"},
 		{domain.ErrDocumentNotCurrent, "accepted_documents", "document_version_not_current"},
 		{domain.ErrDocumentMissing, "accepted_documents", "document_missing"},
 		{domain.ErrDocumentDuplicate, "accepted_documents", "document_duplicate"},
@@ -174,12 +163,15 @@ func TestVerifyEmail_answers201WithTheSession(t *testing.T) {
 	}}
 
 	resp, err := newHandler(&fakeRegister{}, verify, &fakeResend{}).VerifyEmail(t.Context(), gen.VerifyEmailRequestObject{
-		Body: &gen.VerifyEmailJSONRequestBody{Email: "ana.gomez@example.mx", Code: "482913"},
+		Body: verifyBody(),
 	})
 
 	require.NoError(t, err)
-	assert.Equal(t, "ana.gomez@example.mx", verify.email)
-	assert.Equal(t, "482913", verify.code)
+	require.NotNil(t, verify.got.Name)
+	assert.Equal(t, usecase.VerifyInput{
+		Email: "ana.gomez@example.mx", Code: "482913", Password: "made-up sample phrase", Name: verify.got.Name,
+	}, verify.got, "the password travels with the code (D8)")
+	assert.Equal(t, "Ana Gómez", *verify.got.Name)
 	got, ok := resp.(gen.VerifyEmail201JSONResponse)
 	require.True(t, ok)
 	assert.Equal(t, "no-store", got.Headers.CacheControl)
@@ -199,11 +191,12 @@ func TestVerifyEmail_withoutANameOmitsIt(t *testing.T) {
 	require.NoError(t, err)
 	verify := &fakeVerify{session: usecase.Session{Account: usecase.Account{ID: userID}}}
 
-	resp, err := newHandler(&fakeRegister{}, verify, &fakeResend{}).VerifyEmail(t.Context(), gen.VerifyEmailRequestObject{
-		Body: &gen.VerifyEmailJSONRequestBody{Email: "ana.gomez@example.mx", Code: "482913"},
-	})
+	body := verifyBody()
+	body.Name = nil
+	resp, err := newHandler(&fakeRegister{}, verify, &fakeResend{}).VerifyEmail(t.Context(), gen.VerifyEmailRequestObject{Body: body})
 
 	require.NoError(t, err)
+	assert.Nil(t, verify.got.Name)
 	assert.Nil(t, resp.(gen.VerifyEmail201JSONResponse).Body.User.Name)
 }
 
@@ -211,7 +204,7 @@ func TestVerifyEmail_rejectionIsTheGeneric401(t *testing.T) {
 	h := newHandler(&fakeRegister{}, &fakeVerify{err: usecase.ErrVerificationRejected}, &fakeResend{})
 
 	_, err := h.VerifyEmail(t.Context(), gen.VerifyEmailRequestObject{
-		Body: &gen.VerifyEmailJSONRequestBody{Email: "ana.gomez@example.mx", Code: "000000"},
+		Body: verifyBody(),
 	})
 
 	appErr, ok := errors.AsType[*apperr.Error](err)
@@ -225,10 +218,48 @@ func TestVerifyEmail_serverFaultsStayInternal(t *testing.T) {
 	h := newHandler(&fakeRegister{}, &fakeVerify{err: errBoom}, &fakeResend{})
 
 	_, err := h.VerifyEmail(t.Context(), gen.VerifyEmailRequestObject{
-		Body: &gen.VerifyEmailJSONRequestBody{Email: "ana.gomez@example.mx", Code: "000000"},
+		Body: verifyBody(),
 	})
 
 	assert.Equal(t, apperr.CodeInternalError, apperr.Mapper{}.Resolve(err).Code)
+}
+
+func verifyBody() *gen.VerifyEmailJSONRequestBody {
+	name := "Ana Gómez"
+	return &gen.VerifyEmailJSONRequestBody{
+		Email: "ana.gomez@example.mx", Code: "482913", Password: "made-up sample phrase", Name: &name,
+	}
+}
+
+// The password policy and the name are verifyEmail's validation errors now
+// (D8): each names its field, never the value.
+func TestVerifyEmail_validationErrorsNameTheField(t *testing.T) {
+	tests := []struct {
+		err       error
+		field     string
+		fieldCode string
+	}{
+		{domain.ErrPasswordCommon, "password", "password_policy"},
+		{domain.ErrPasswordTooShort, "password", "password_policy"},
+		{domain.ErrPasswordTooLong, "password", "password_policy"},
+		{domain.ErrPasswordMalformed, "password", "password_policy"},
+		{domain.ErrInvalidName, "name", "invalid_name"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.err.Error(), func(t *testing.T) {
+			h := newHandler(&fakeRegister{}, &fakeVerify{err: fmt.Errorf("verify: %w", tt.err)}, &fakeResend{})
+
+			_, err := h.VerifyEmail(t.Context(), gen.VerifyEmailRequestObject{Body: verifyBody()})
+
+			appErr, ok := errors.AsType[*apperr.Error](err)
+			require.True(t, ok, "a typed error the router renders as is")
+			assert.Equal(t, apperr.CodeValidationFailed, appErr.Code)
+			require.Len(t, appErr.Fields, 1)
+			assert.Equal(t, tt.field, appErr.Fields[0].Field)
+			assert.Equal(t, tt.fieldCode, appErr.Fields[0].Code)
+			assert.NotContains(t, appErr.Fields[0].Message, "made-up sample phrase")
+		})
+	}
 }
 
 // zeroes is a deterministic entropy source.

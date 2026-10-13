@@ -18,12 +18,14 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/pgtest"
 )
 
-// TestAuth_preRegistrationTakeover reproduces the pre-registration account
-// takeover (MODULE-auth D8): an attacker starts a sign-up for the victim's
-// address with a password of the attacker's choosing; the victim then
-// registers too (D7 makes that a resend), reads the code from their own inbox
-// and verifies. The account must end up with the VICTIM's password: whoever
-// proves inbox ownership sets it.
+// TestAuth_preRegistrationTakeover is the regression test of the
+// pre-registration account takeover (MODULE-auth D8): an attacker starts a
+// sign-up for the victim's address and tries to plant a password of the
+// attacker's choosing; the victim then registers too (D7 makes that a
+// resend), reads the code from their own inbox and verifies with their own
+// password. The account must end up with the VICTIM's password: whoever
+// proves inbox ownership sets it. Before D8 register took the password and
+// this test failed (the stored hash verified the attacker's phrase).
 func TestAuth_preRegistrationTakeover(t *testing.T) {
 	const (
 		victim = "victima@example.mx"
@@ -34,13 +36,21 @@ func TestAuth_preRegistrationTakeover(t *testing.T) {
 	env := newContractEnv(t, pingOK{})
 	env.apply(t, []string{"module_auth"}, flagtest.Static{"module_auth": true})
 
-	for _, phrase := range []string{attackerPhrase, victimPhrase} {
-		rec := env.do(env.post("/v1/auth/register", registerJSON(victim, phrase, "v1")))
+	// The attacker cannot put a password into a sign-up at all.
+	planted := `{"email":"` + victim + `","password":"` + attackerPhrase + `",` +
+		`"accepted_documents":[{"kind":"privacy_notice_integral","version":"v1"},{"kind":"terms","version":"v1"}]}`
+	rec := env.do(env.post("/v1/auth/register", planted))
+	require.Equal(t, http.StatusBadRequest, rec.Code, "register refuses a password (D8)")
+	assert.NotContains(t, rec.Body.String(), attackerPhrase)
+
+	// Attacker, then victim, register the victim's address the only way left.
+	for range 2 {
+		rec = env.do(env.post("/v1/auth/register", registerJSON(victim, "v1")))
 		require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 	}
 	code := env.lastCode(t) // the victim's inbox
 
-	rec := env.do(env.post("/v1/auth/verify-email", `{"email":"`+victim+`","code":"`+code+`"}`))
+	rec = env.do(env.post("/v1/auth/verify-email", verifyJSON(victim, code, victimPhrase)))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	var session gen.AuthSession
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &session))
@@ -56,9 +66,9 @@ func TestAuth_preRegistrationTakeover(t *testing.T) {
 	assert.True(t, victimWins, "the victim's password does not open the account they verified")
 }
 
-func (env contractEnv) do(req *http.Request) *httptest.ResponseRecorder {
+func (e contractEnv) do(req *http.Request) *httptest.ResponseRecorder {
 	rec := httptest.NewRecorder()
-	env.handler.ServeHTTP(rec, req)
+	e.handler.ServeHTTP(rec, req)
 	return rec
 }
 

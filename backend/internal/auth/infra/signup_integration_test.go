@@ -30,9 +30,10 @@ const (
 	expireSignUps = "UPDATE email_verifications SET created_at = now() - interval '1 hour', code_sent_at = now() - interval '1 hour', expires_at = now() - interval '1 second'"
 )
 
-func registration(email, phrase string, name *string) usecase.RegisterInput {
+// registration is a register request: email and documents only (D8).
+func registration(email string) usecase.RegisterInput {
 	return usecase.RegisterInput{
-		Email: email, Password: phrase, Name: name,
+		Email: email,
 		AcceptedDocuments: []domain.DocumentVersion{
 			{Kind: domain.DocumentPrivacySimplified, Version: "v1"},
 			{Kind: domain.DocumentTerms, Version: "v1"},
@@ -41,6 +42,12 @@ func registration(email, phrase string, name *string) usecase.RegisterInput {
 }
 
 func ptr(s string) *string { return &s }
+
+// verifying is a verifyEmail request: the code plus the password and optional
+// name the holder of the code chooses (D8).
+func verifying(email, code, phrase string, name *string) usecase.VerifyInput {
+	return usecase.VerifyInput{Email: email, Code: code, Password: phrase, Name: name}
+}
 
 // storedUser is what verifyEmail wrote, read back as the user.
 type storedUser struct {
@@ -109,12 +116,12 @@ func TestSignUp_registerThenVerifyCreatesTheAccount(t *testing.T) {
 	s := newStack(t)
 	ctx := t.Context()
 
-	require.NoError(t, s.register.Execute(ctx, registration("  Ana.Gomez@Example.MX ", firstSample, ptr("Ana Gómez"))))
+	require.NoError(t, s.register.Execute(ctx, registration("  Ana.Gomez@Example.MX ")))
 	var users int
 	require.NoError(t, s.owner.QueryRowContext(ctx, "SELECT count(*) FROM email_verifications").Scan(&users))
 	assert.Equal(t, 1, users, "a pending sign-up, no user yet")
 
-	session, err := s.verify.Execute(ctx, anaEmail, s.inbox.lastCode(t, anaEmail))
+	session, err := s.verify.Execute(ctx, verifying(anaEmail, s.inbox.lastCode(t, anaEmail), firstSample, ptr("Ana Gómez")))
 	require.NoError(t, err)
 
 	userID := session.Account.ID.String()
@@ -128,7 +135,7 @@ func TestSignUp_registerThenVerifyCreatesTheAccount(t *testing.T) {
 	assert.Equal(t, 1, u.keyID)
 	ok, err := s.passwords.Verify(firstSample, u.passwordHash)
 	require.NoError(t, err)
-	assert.True(t, ok, "the registered password")
+	assert.True(t, ok, "the password given with the code")
 	assert.Equal(t, "Ana Gómez", u.name.String)
 	assert.True(t, u.verified)
 	assert.Equal(t, []string{"privacy_notice_simplified:v1", "terms:v1"}, u.consents)
@@ -142,54 +149,74 @@ func TestSignUp_registerThenVerifyCreatesTheAccount(t *testing.T) {
 	assert.WithinDuration(t, time.Now(), session.Account.CreatedAt, time.Minute)
 	assert.NotEmpty(t, session.Tokens.Access)
 
-	_, err = s.verify.Execute(ctx, anaEmail, s.inbox.lastCode(t, anaEmail))
+	_, err = s.verify.Execute(ctx, verifying(anaEmail, s.inbox.lastCode(t, anaEmail), firstSample, nil))
 	assert.ErrorIs(t, err, usecase.ErrVerificationRejected, "a code is single use")
 }
 
 func TestSignUp_withoutANameStoresNull(t *testing.T) {
 	s := newStack(t)
-	require.NoError(t, s.register.Execute(t.Context(), registration(anaEmail, firstSample, nil)))
+	require.NoError(t, s.register.Execute(t.Context(), registration(anaEmail)))
 
-	session, err := s.verify.Execute(t.Context(), anaEmail, s.inbox.lastCode(t, anaEmail))
+	session, err := s.verify.Execute(t.Context(), verifying(anaEmail, s.inbox.lastCode(t, anaEmail), firstSample, nil))
 
 	require.NoError(t, err)
 	assert.False(t, s.readUser(t, session.Account.ID.String()).name.Valid)
 }
 
-// D7 end to end: a second registrant cannot set the password of a live pending
-// sign-up; it only triggers a resend to the address.
-func TestSignUp_secondRegisterOfALivePendingKeepsTheFirstPassword(t *testing.T) {
+// D7 + D8 end to end: a second register of a live pending sign-up only
+// triggers a resend to the address, and the password and name are whatever
+// the holder of the code chooses at verification: a pre-registration sets
+// nothing of the account.
+func TestSignUp_secondRegisterOfALivePendingIsAResendAndTheVerifierSetsThePassword(t *testing.T) {
 	s := newStack(t)
 	ctx := t.Context()
-	require.NoError(t, s.register.Execute(ctx, registration(anaEmail, firstSample, ptr("Ana"))))
+	require.NoError(t, s.register.Execute(ctx, registration(anaEmail)))
 
-	require.NoError(t, s.register.Execute(ctx, registration(anaEmail, secondSample, ptr("Mallory"))))
+	require.NoError(t, s.register.Execute(ctx, registration(anaEmail)))
 	assert.Len(t, s.inbox.codes[anaEmail], 1, "inside the cooldown: silent")
 
 	s.ownerExec(t, pastCooldown)
-	require.NoError(t, s.register.Execute(ctx, registration(anaEmail, secondSample, ptr("Mallory"))))
+	require.NoError(t, s.register.Execute(ctx, registration(anaEmail)))
 	require.Len(t, s.inbox.codes[anaEmail], 2, "after the cooldown: a resend")
 
-	_, err := s.verify.Execute(ctx, anaEmail, s.inbox.codes[anaEmail][0])
+	_, err := s.verify.Execute(ctx, verifying(anaEmail, s.inbox.codes[anaEmail][0], secondSample, nil))
 	require.ErrorIs(t, err, usecase.ErrVerificationRejected, "the resend replaced the code")
-	session, err := s.verify.Execute(ctx, anaEmail, s.inbox.lastCode(t, anaEmail))
+	session, err := s.verify.Execute(ctx, verifying(anaEmail, s.inbox.lastCode(t, anaEmail), secondSample, ptr("Ana")))
 	require.NoError(t, err)
 
 	u := s.readUser(t, session.Account.ID.String())
-	ok, err := s.passwords.Verify(firstSample, u.passwordHash)
+	ok, err := s.passwords.Verify(secondSample, u.passwordHash)
 	require.NoError(t, err)
-	assert.True(t, ok, "the first registrant's password")
+	assert.True(t, ok, "the verifier's password")
 	assert.Equal(t, "Ana", u.name.String)
+}
+
+// No pending sign-up ever stores a password, hashed or not (D8).
+func TestSignUp_pendingSignUpHoldsNoPassword(t *testing.T) {
+	s := newStack(t)
+	require.NoError(t, s.register.Execute(t.Context(), registration(anaEmail)))
+
+	var keys []string
+	rows, err := s.owner.QueryContext(t.Context(), "SELECT jsonb_object_keys(pending) FROM email_verifications ORDER BY 1")
+	require.NoError(t, err)
+	defer rows.Close()
+	for rows.Next() {
+		var key string
+		require.NoError(t, rows.Scan(&key))
+		keys = append(keys, key)
+	}
+	require.NoError(t, rows.Err())
+	assert.Equal(t, []string{"accepted_at", "accepted_documents", "v"}, keys, "no password hash and no name (D8)")
 }
 
 func TestSignUp_expiredPendingIsReplacedByTheNextRegister(t *testing.T) {
 	s := newStack(t)
 	ctx := t.Context()
-	require.NoError(t, s.register.Execute(ctx, registration(anaEmail, firstSample, ptr("Old"))))
+	require.NoError(t, s.register.Execute(ctx, registration(anaEmail)))
 	s.ownerExec(t, expireSignUps)
 
-	require.NoError(t, s.register.Execute(ctx, registration(anaEmail, secondSample, ptr("New"))))
-	session, err := s.verify.Execute(ctx, anaEmail, s.inbox.lastCode(t, anaEmail))
+	require.NoError(t, s.register.Execute(ctx, registration(anaEmail)))
+	session, err := s.verify.Execute(ctx, verifying(anaEmail, s.inbox.lastCode(t, anaEmail), secondSample, ptr("New")))
 	require.NoError(t, err)
 
 	u := s.readUser(t, session.Account.ID.String())
@@ -203,12 +230,12 @@ func TestSignUp_expiredPendingIsReplacedByTheNextRegister(t *testing.T) {
 func TestSignUp_registerOfAVerifiedEmailOnlyNotifies(t *testing.T) {
 	s := newStack(t)
 	ctx := t.Context()
-	require.NoError(t, s.register.Execute(ctx, registration(anaEmail, firstSample, nil)))
-	_, err := s.verify.Execute(ctx, anaEmail, s.inbox.lastCode(t, anaEmail))
+	require.NoError(t, s.register.Execute(ctx, registration(anaEmail)))
+	_, err := s.verify.Execute(ctx, verifying(anaEmail, s.inbox.lastCode(t, anaEmail), firstSample, nil))
 	require.NoError(t, err)
 
-	require.NoError(t, s.register.Execute(ctx, registration(anaEmail, secondSample, nil)))
-	require.NoError(t, s.register.Execute(ctx, registration(anaEmail, secondSample, nil)))
+	require.NoError(t, s.register.Execute(ctx, registration(anaEmail)))
+	require.NoError(t, s.register.Execute(ctx, registration(anaEmail)))
 
 	assert.Len(t, s.inbox.codes[anaEmail], 1, "no new code")
 	assert.Equal(t, 1, s.inbox.notices[anaEmail], "one notice per hour")
@@ -219,7 +246,7 @@ func TestSignUp_registerOfAVerifiedEmailOnlyNotifies(t *testing.T) {
 
 func TestSignUp_staleDocumentVersionIsRejected(t *testing.T) {
 	s := newStack(t)
-	in := registration(anaEmail, firstSample, nil)
+	in := registration(anaEmail)
 	in.AcceptedDocuments[1].Version = "v0"
 
 	err := s.register.Execute(t.Context(), in)
@@ -236,14 +263,14 @@ func TestSignUp_resend(t *testing.T) {
 	require.NoError(t, s.resend.Execute(ctx, anaEmail))
 	assert.Empty(t, s.inbox.codes, "no pending sign-up: silent")
 
-	require.NoError(t, s.register.Execute(ctx, registration(anaEmail, firstSample, nil)))
+	require.NoError(t, s.register.Execute(ctx, registration(anaEmail)))
 	require.NoError(t, s.resend.Execute(ctx, anaEmail))
 	assert.Len(t, s.inbox.codes[anaEmail], 1, "cooldown: silent")
 
 	s.ownerExec(t, pastCooldown)
 	require.NoError(t, s.resend.Execute(ctx, anaEmail))
 	require.Len(t, s.inbox.codes[anaEmail], 2)
-	_, err := s.verify.Execute(ctx, anaEmail, s.inbox.lastCode(t, anaEmail))
+	_, err := s.verify.Execute(ctx, verifying(anaEmail, s.inbox.lastCode(t, anaEmail), firstSample, nil))
 	assert.NoError(t, err, "the resent code verifies")
 }
 
@@ -251,7 +278,7 @@ func TestSignUp_resend(t *testing.T) {
 func TestSignUp_wrongCodesLockTheCode(t *testing.T) {
 	s := newStack(t)
 	ctx := t.Context()
-	require.NoError(t, s.register.Execute(ctx, registration(anaEmail, firstSample, nil)))
+	require.NoError(t, s.register.Execute(ctx, registration(anaEmail)))
 	right := s.inbox.lastCode(t, anaEmail)
 	wrong := "000000"
 	if right == wrong {
@@ -259,10 +286,10 @@ func TestSignUp_wrongCodesLockTheCode(t *testing.T) {
 	}
 
 	for range 5 {
-		_, err := s.verify.Execute(ctx, anaEmail, wrong)
+		_, err := s.verify.Execute(ctx, verifying(anaEmail, wrong, firstSample, nil))
 		require.ErrorIs(t, err, usecase.ErrVerificationRejected)
 	}
-	_, err := s.verify.Execute(ctx, anaEmail, right)
+	_, err := s.verify.Execute(ctx, verifying(anaEmail, right, firstSample, nil))
 
 	assert.ErrorIs(t, err, usecase.ErrVerificationRejected)
 	var attempts int
@@ -275,16 +302,16 @@ func TestSignUp_wrongCodesLockTheCode(t *testing.T) {
 func TestSignUp_trialRegistrySurvivesDeletion(t *testing.T) {
 	s := newStack(t)
 	ctx := t.Context()
-	require.NoError(t, s.register.Execute(ctx, registration(anaEmail, firstSample, nil)))
-	first, err := s.verify.Execute(ctx, anaEmail, s.inbox.lastCode(t, anaEmail))
+	require.NoError(t, s.register.Execute(ctx, registration(anaEmail)))
+	first, err := s.verify.Execute(ctx, verifying(anaEmail, s.inbox.lastCode(t, anaEmail), firstSample, nil))
 	require.NoError(t, err)
 	s.asUser(t, first.Account.ID.String(), func(tx *sql.Tx) error {
 		_, err := tx.ExecContext(ctx, "DELETE FROM users WHERE id = $1", first.Account.ID.String())
 		return err
 	})
 
-	require.NoError(t, s.register.Execute(ctx, registration(anaEmail, secondSample, nil)))
-	again, err := s.verify.Execute(ctx, anaEmail, s.inbox.lastCode(t, anaEmail))
+	require.NoError(t, s.register.Execute(ctx, registration(anaEmail)))
+	again, err := s.verify.Execute(ctx, verifying(anaEmail, s.inbox.lastCode(t, anaEmail), firstSample, nil))
 	require.NoError(t, err)
 
 	u := s.readUser(t, again.Account.ID.String())
@@ -298,8 +325,8 @@ func TestSignUp_rowsAreIsolatedPerUser(t *testing.T) {
 	ctx := t.Context()
 	var ids []string
 	for _, email := range []string{anaEmail, "jose@example.mx"} {
-		require.NoError(t, s.register.Execute(ctx, registration(email, firstSample, nil)))
-		session, err := s.verify.Execute(ctx, email, s.inbox.lastCode(t, email))
+		require.NoError(t, s.register.Execute(ctx, registration(email)))
+		session, err := s.verify.Execute(ctx, verifying(email, s.inbox.lastCode(t, email), firstSample, nil))
 		require.NoError(t, err)
 		ids = append(ids, session.Account.ID.String())
 	}

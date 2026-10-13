@@ -172,6 +172,7 @@ func TestEmailVerificationStartAndResend_RejectBadArguments(t *testing.T) {
 		{"start: email hash not 32 bytes", callStart, []any{[]byte("a"), code, `{}`}},
 		{"start: code hash not 32 bytes", callStart, []any{email, []byte("123456"), `{}`}},
 		{"start: pending not an object", callStart, []any{email, code, `[]`}},
+		{"start: pending carries a password hash (D8)", callStart, []any{email, code, `{"password_hash": "x"}`}},
 		{"start: expiry beyond one hour", "SELECT email_verification_start($1, $2, '{}', now() + interval '61 minutes')", []any{email, code}},
 		{"resend: code hash not 32 bytes", callResend, []any{email, []byte("123456")}},
 		{"resend: expiry in the past", "SELECT email_verification_resend($1, $2, now() - interval '1 second')", []any{email, code}},

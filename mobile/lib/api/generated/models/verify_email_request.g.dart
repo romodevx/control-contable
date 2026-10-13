@@ -10,7 +10,14 @@ _VerifyEmailRequest _$VerifyEmailRequestFromJson(Map<String, dynamic> json) =>
     _VerifyEmailRequest(
       email: json['email'] as String,
       code: json['code'] as String,
+      password: json['password'] as String,
+      name: json['name'] as String?,
     );
 
 Map<String, dynamic> _$VerifyEmailRequestToJson(_VerifyEmailRequest instance) =>
-    <String, dynamic>{'email': instance.email, 'code': instance.code};
+    <String, dynamic>{
+      'email': instance.email,
+      'code': instance.code,
+      'password': instance.password,
+      'name': instance.name,
+    };

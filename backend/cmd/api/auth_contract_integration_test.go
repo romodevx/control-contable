@@ -32,9 +32,16 @@ const (
 
 var loggedCode = regexp.MustCompile(`"verification_code":"([0-9]{6})"`)
 
-func registerJSON(email, phrase, version string) string {
-	return `{"email":"` + email + `","password":"` + phrase + `","name":"Ana Gómez",` +
+// registerJSON is a register body: email and documents only (D8).
+func registerJSON(email, version string) string {
+	return `{"email":"` + email + `",` +
 		`"accepted_documents":[{"kind":"privacy_notice_integral","version":"` + version + `"},{"kind":"terms","version":"v1"}]}`
+}
+
+// verifyJSON is a verify-email body: the code plus the password and name the
+// holder of the code chooses (D8).
+func verifyJSON(email, code, phrase string) string {
+	return `{"email":"` + email + `","code":"` + code + `","password":"` + phrase + `","name":"Ana Gómez"}`
 }
 
 func (e contractEnv) post(target, body string) *http.Request {
@@ -71,8 +78,8 @@ func TestContract_authSignUp(t *testing.T) {
 
 		if !on {
 			for _, req := range []*http.Request{
-				env.post("/v1/auth/register", registerJSON(signUpEmail, acceptableSample, "v1")),
-				env.post("/v1/auth/verify-email", `{"email":"`+signUpEmail+`","code":"123456"}`),
+				env.post("/v1/auth/register", registerJSON(signUpEmail, "v1")),
+				env.post("/v1/auth/verify-email", verifyJSON(signUpEmail, "123456", acceptableSample)),
 				env.post("/v1/auth/verify-email/resend", `{"email":"`+signUpEmail+`"}`),
 			} {
 				flagtest.AssertHidden(t, c.Serve(t, env.handler, req))
@@ -82,24 +89,14 @@ func TestContract_authSignUp(t *testing.T) {
 
 		t.Run("register answers the generic 202", func(t *testing.T) {
 			rec := c.ServeOp(t, contracttest.Op("register"), env.handler,
-				env.post("/v1/auth/register", registerJSON(signUpEmail, acceptableSample, "v1")))
+				env.post("/v1/auth/register", registerJSON(signUpEmail, "v1")))
 			require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 			assert.JSONEq(t, verifiedSent, rec.Body.String())
 		})
 
-		t.Run("a common password names the field, never the value", func(t *testing.T) {
-			rec := c.ServeOp(t, contracttest.Op("register"), env.handler,
-				env.post("/v1/auth/register", registerJSON("jose@example.mx", commonSample, "v1")))
-			require.Equal(t, http.StatusBadRequest, rec.Code)
-			got := fieldError(t, rec)
-			assert.Equal(t, "password", got.Field)
-			assert.Equal(t, "password_policy", got.Code)
-			assert.NotContains(t, rec.Body.String(), commonSample)
-		})
-
 		t.Run("a stale document version is refused", func(t *testing.T) {
 			rec := c.ServeOp(t, contracttest.Op("register"), env.handler,
-				env.post("/v1/auth/register", registerJSON("jose@example.mx", acceptableSample, "v0")))
+				env.post("/v1/auth/register", registerJSON("jose@example.mx", "v0")))
 			require.Equal(t, http.StatusBadRequest, rec.Code)
 			got := fieldError(t, rec)
 			assert.Equal(t, "accepted_documents", got.Field)
@@ -127,16 +124,26 @@ func TestContract_authSignUp(t *testing.T) {
 			wrong = "111111"
 		}
 
+		t.Run("a common password names the field, never the value, and spends no try", func(t *testing.T) {
+			rec := c.ServeOp(t, contracttest.Op("verifyEmail"), env.handler,
+				env.post("/v1/auth/verify-email", verifyJSON(signUpEmail, wrong, commonSample)))
+			require.Equal(t, http.StatusBadRequest, rec.Code)
+			got := fieldError(t, rec)
+			assert.Equal(t, "password", got.Field)
+			assert.Equal(t, "password_policy", got.Code)
+			assert.NotContains(t, rec.Body.String(), commonSample)
+		})
+
 		t.Run("a wrong code is the generic 401", func(t *testing.T) {
 			rec := c.ServeOp(t, contracttest.Op("verifyEmail"), env.handler,
-				env.post("/v1/auth/verify-email", `{"email":"`+signUpEmail+`","code":"`+wrong+`"}`))
+				env.post("/v1/auth/verify-email", verifyJSON(signUpEmail, wrong, acceptableSample)))
 			require.Equal(t, http.StatusUnauthorized, rec.Code)
 			assert.Contains(t, rec.Body.String(), "The code is invalid or has expired.")
 		})
 
 		t.Run("the right code creates the account and a session", func(t *testing.T) {
 			rec := c.ServeOp(t, contracttest.Op("verifyEmail"), env.handler,
-				env.post("/v1/auth/verify-email", `{"email":"`+signUpEmail+`","code":"`+code+`"}`))
+				env.post("/v1/auth/verify-email", verifyJSON(signUpEmail, code, acceptableSample)))
 			require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 			assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
 			var session gen.AuthSession
@@ -151,7 +158,7 @@ func TestContract_authSignUp(t *testing.T) {
 
 		t.Run("register of the verified email answers the same 202", func(t *testing.T) {
 			rec := c.ServeOp(t, contracttest.Op("register"), env.handler,
-				env.post("/v1/auth/register", registerJSON(signUpEmail, acceptableSample, "v1")))
+				env.post("/v1/auth/register", registerJSON(signUpEmail, "v1")))
 			require.Equal(t, http.StatusAccepted, rec.Code)
 			assert.JSONEq(t, verifiedSent, rec.Body.String())
 		})

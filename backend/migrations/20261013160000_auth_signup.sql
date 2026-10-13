@@ -1,7 +1,11 @@
 -- Auth sign-up (M1-05): what register / resendVerification need beyond M1-03.
 --
 -- D7 (MODULE-auth): a register for an email with a LIVE pending sign-up must never replace
--- its password hash or accepted documents; it behaves like a resend. M1-03's
+-- its accepted documents; it behaves like a resend.
+-- D8 (MODULE-auth): a pending sign-up holds NO password. The password is set at
+-- verifyEmail by whoever proves inbox ownership; email_verification_start refuses a
+-- payload carrying a password hash, so not even a buggy or compromised API can bring
+-- the pre-registration takeover back. M1-03's
 -- email_verification_upsert always replaces the whole row, so it cannot express that, and
 -- nothing records when the last code was sent, so the 60 s silent resend cooldown has no
 -- state. This migration:
@@ -61,7 +65,7 @@ GRANT EXECUTE ON FUNCTION auth_check_code_args(bytea, timestamptz) TO cc_auth_de
 --   started    no pending sign-up, or only an expired one: the row now holds the new
 --              code, pending payload and expiry (attempts 0);
 --   resent     a live pending sign-up whose last code is at least 60 s old: new code and
---              expiry, attempts 0, the pending payload (password hash, documents) KEPT;
+--              expiry, attempts 0, the pending payload (accepted documents) KEPT;
 --   unchanged  a live pending sign-up inside the cooldown (or one consumed concurrently):
 --              nothing changed, nothing to send.
 -- The insert races safely: ON CONFLICT DO NOTHING lets exactly one concurrent first call
@@ -85,6 +89,9 @@ BEGIN
   PERFORM public.auth_check_code_args(p_code_hash, p_expires_at);
   IF p_pending IS NULL OR jsonb_typeof(p_pending) <> 'object' THEN
     RAISE EXCEPTION 'pending must be a JSON object' USING ERRCODE = 'invalid_parameter_value';
+  END IF;
+  IF p_pending ? 'password_hash' THEN
+    RAISE EXCEPTION 'a pending sign-up holds no password (D8)' USING ERRCODE = 'invalid_parameter_value';
   END IF;
 
   INSERT INTO public.email_verifications (email_hash, code_hash, pending, expires_at)
@@ -121,7 +128,7 @@ END
 $$;
 -- +goose StatementEnd
 COMMENT ON FUNCTION email_verification_start(bytea, bytea, jsonb, timestamptz) IS
-  'Register: started|resent|unchanged. Never replaces a live pending payload (D7); 60 s cooldown. Definer: cc_auth_definer; EXECUTE: cc_app.';
+  'Register: started|resent|unchanged. Never replaces a live pending payload (D7); refuses a password hash in it (D8); 60 s cooldown. Definer: cc_auth_definer; EXECUTE: cc_app.';
 
 -- ---------------------------------------------------------------------------------------
 -- email_verification_resend: resendVerification. 'resent' (new code and expiry, attempts

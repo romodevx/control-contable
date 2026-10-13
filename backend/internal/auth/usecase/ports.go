@@ -45,12 +45,13 @@ type LegalDocuments interface {
 	CurrentVersions(ctx context.Context) (map[domain.DocumentKind]string, error)
 }
 
-// PendingSignUp is what register keeps until the email is verified.
+// PendingSignUp is what register keeps until the email is verified. It holds
+// no password and no name: verifyEmail takes both from whoever presents the
+// emailed code, so pre-registering someone else's address sets nothing of
+// theirs (D8).
 type PendingSignUp struct {
-	PasswordHash string
-	Name         domain.Name // zero when no name was given
-	Documents    []domain.DocumentVersion
-	AcceptedAt   time.Time
+	Documents  []domain.DocumentVersion
+	AcceptedAt time.Time
 }
 
 // CodeOutcome is what a start or resend did to the pending sign-up.

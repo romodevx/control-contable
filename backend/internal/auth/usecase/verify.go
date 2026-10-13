@@ -21,6 +21,8 @@ type VerifyDeps struct {
 	// NewUserID draws the id of the account to create (UUIDv7 in production).
 	NewUserID func() (domain.UserID, error)
 	Index     EmailIndex
+	// Passwords hashes the password the verifier chose (D8).
+	Passwords PasswordHasher
 	Codes     CodeHasher
 	SignUps   SignUpVerifier
 	Accounts  Accounts
@@ -29,6 +31,16 @@ type VerifyDeps struct {
 	Access    AccessTokens
 	// Logger receives the account_created audit event; nil discards it.
 	Logger *slog.Logger
+}
+
+// VerifyInput is a verification request as the contract carries it. The
+// password and the optional name are chosen here, by whoever holds the
+// emailed code, never at register (D8).
+type VerifyInput struct {
+	Email    string
+	Code     string
+	Password string
+	Name     *string // optional
 }
 
 // VerifyEmail confirms the emailed code and creates the account (US-A1b).
@@ -45,16 +57,24 @@ func NewVerifyEmail(deps VerifyDeps) *VerifyEmail {
 	return &VerifyEmail{deps: deps, sessions: sessionIssuer{entropy: deps.Entropy, refresh: deps.Refresh, access: deps.Access}}
 }
 
-// Execute checks the code and, on a match, creates the user, its consents and
-// counters, starts the trial if the email never had one, and signs the user in,
-// all in one unit of work run as the new user (so RLS admits its rows). Every
-// failure the caller could learn from is ErrVerificationRejected.
-func (uc *VerifyEmail) Execute(ctx context.Context, rawEmail, rawCode string) (Session, error) {
-	email, err := domain.NewEmail(rawEmail)
+// Execute checks the code and, on a match, creates the user with the
+// password given here, its consents and counters, starts the trial if the
+// email never had one, and signs the user in, all in one unit of work run as
+// the new user (so RLS admits its rows).
+//
+// The password policy and the name are checked first and answer their domain
+// errors (a client error that spends no try). Every failure about the email
+// or the code is ErrVerificationRejected.
+func (uc *VerifyEmail) Execute(ctx context.Context, in VerifyInput) (Session, error) {
+	password, name, err := parseCredentials(in)
+	if err != nil {
+		return Session{}, err
+	}
+	email, err := domain.NewEmail(in.Email)
 	if err != nil {
 		return Session{}, ErrVerificationRejected
 	}
-	code, err := domain.ParseVerificationCode(rawCode)
+	code, err := domain.ParseVerificationCode(in.Code)
 	if err != nil {
 		return Session{}, ErrVerificationRejected
 	}
@@ -67,7 +87,10 @@ func (uc *VerifyEmail) Execute(ctx context.Context, rawEmail, rawCode string) (S
 		return Session{}, fmt.Errorf("auth: new user id: %w", err)
 	}
 	now := uc.deps.Clock.Now()
-	attempt := verification{email: email, emailHash: emailHash, codeHash: uc.deps.Codes.HashCode(emailHash, code), userID: userID, now: now}
+	attempt := verification{
+		email: email, emailHash: emailHash, codeHash: uc.deps.Codes.HashCode(emailHash, code),
+		password: password, name: name, userID: userID, now: now,
+	}
 
 	var (
 		session  Session
@@ -89,17 +112,36 @@ func (uc *VerifyEmail) Execute(ctx context.Context, rawEmail, rawCode string) (S
 	return session, nil
 }
 
+// parseCredentials validates what the verifier chooses for the account.
+func parseCredentials(in VerifyInput) (domain.Password, domain.Name, error) {
+	password, err := domain.NewPassword(in.Password)
+	if err != nil {
+		return domain.Password{}, domain.Name{}, err
+	}
+	var name domain.Name
+	if in.Name != nil {
+		if name, err = domain.NewName(*in.Name); err != nil {
+			return domain.Password{}, domain.Name{}, err
+		}
+	}
+	return password, name, nil
+}
+
 // verification is one checked attempt.
 type verification struct {
 	email     domain.Email
 	emailHash []byte
 	codeHash  []byte
+	password  domain.Password
+	name      domain.Name
 	userID    domain.UserID
 	now       time.Time
 }
 
 // verify runs inside the unit of work. A failed outcome returns nil so the
-// unit of work commits: the attempt counter only sticks once committed.
+// unit of work commits: the attempt counter only sticks once committed. The
+// password is hashed only after the code matched, so a wrong guess costs no
+// argon2 run.
 func (uc *VerifyEmail) verify(ctx context.Context, v verification) (Session, bool, error) {
 	outcome, pending, err := uc.deps.SignUps.Consume(ctx, v.emailHash, v.codeHash)
 	if err != nil {
@@ -108,12 +150,16 @@ func (uc *VerifyEmail) verify(ctx context.Context, v verification) (Session, boo
 	if outcome != ConsumeVerified {
 		return Session{}, false, nil
 	}
+	passwordHash, err := uc.deps.Passwords.Hash(v.password.Reveal())
+	if err != nil {
+		return Session{}, false, fmt.Errorf("auth: hash password: %w", err)
+	}
 	account, err := uc.deps.Accounts.Create(ctx, NewAccount{
 		ID:           v.userID,
 		Email:        v.email,
 		EmailHash:    v.emailHash,
-		PasswordHash: pending.PasswordHash,
-		Name:         pending.Name,
+		PasswordHash: passwordHash,
+		Name:         v.name,
 		Consents:     pending.Documents,
 		AcceptedAt:   pending.AcceptedAt,
 		VerifiedAt:   v.now,

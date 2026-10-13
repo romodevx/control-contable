@@ -104,7 +104,7 @@ func newStack(t *testing.T) *stack {
 	signUps := infra.NewSignUpStore()
 
 	s.register = usecase.NewRegister(usecase.RegisterDeps{
-		System: txm, Clock: clock.NewSystem(), Entropy: rand.Reader, Index: s.index, Passwords: s.passwords,
+		System: txm, Clock: clock.NewSystem(), Entropy: rand.Reader, Index: s.index,
 		Codes: codes, Legal: infra.NewLegalDocumentStore(), SignUps: signUps, Email: s.inbox,
 		Notices: ratelimit.NewEvery(time.Hour, 1, time.Now), Logger: logger,
 	})
@@ -114,7 +114,7 @@ func newStack(t *testing.T) *stack {
 	})
 	s.verify = usecase.NewVerifyEmail(usecase.VerifyDeps{
 		Tx: txm, Clock: clock.NewSystem(), Entropy: rand.Reader, NewUserID: newUserID, Index: s.index,
-		Codes: codes, SignUps: signUps, Accounts: infra.NewAccountStore(s.keyring), Trials: infra.NewTrialStore(),
+		Passwords: s.passwords, Codes: codes, SignUps: signUps, Accounts: infra.NewAccountStore(s.keyring), Trials: infra.NewTrialStore(),
 		Refresh: infra.NewRefreshTokenStore(), Access: access, Logger: logger,
 	})
 	return s

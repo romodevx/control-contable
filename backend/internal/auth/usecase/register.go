@@ -12,25 +12,23 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/tx"
 )
 
-// RegisterInput is a registration request as the contract carries it.
+// RegisterInput is a registration request as the contract carries it: no
+// password and no name, both are set at verification (D8).
 type RegisterInput struct {
 	Email             string
-	Password          string
-	Name              *string // optional
 	AcceptedDocuments []domain.DocumentVersion
 }
 
 // RegisterDeps are the ports Register needs.
 type RegisterDeps struct {
-	System    tx.SystemManager
-	Clock     clock.Clock
-	Entropy   io.Reader // crypto/rand.Reader in production
-	Index     EmailIndex
-	Passwords PasswordHasher
-	Codes     CodeHasher
-	Legal     LegalDocuments
-	SignUps   SignUpStarter
-	Email     EmailSender
+	System  tx.SystemManager
+	Clock   clock.Clock
+	Entropy io.Reader // crypto/rand.Reader in production
+	Index   EmailIndex
+	Codes   CodeHasher
+	Legal   LegalDocuments
+	SignUps SignUpStarter
+	Email   EmailSender
 	// Notices throttles the "someone tried to sign up" notice per email (D3).
 	Notices Throttle
 	Logger  *slog.Logger
@@ -38,8 +36,8 @@ type RegisterDeps struct {
 
 // Register starts a sign-up (US-A1a). Its only observable results are a
 // validation error or success: success looks the same for a new email, a
-// pending sign-up and a verified account (no enumeration), and the password
-// is always hashed so the latency matches too.
+// pending sign-up and a verified account (no enumeration). No branch hashes a
+// password (register takes none, D8), so none is slower for it.
 type Register struct {
 	deps   RegisterDeps
 	mailer mailer
@@ -61,17 +59,12 @@ const (
 
 // Execute validates the input, then starts (or, for a live pending sign-up,
 // resends) the sign-up, or notifies the owner of a verified address. The
-// domain validation errors (email, password policy, name, documents) are the
-// only errors a client should see; anything else is a server fault.
+// domain validation errors (email, documents) are the only errors a client
+// should see; anything else is a server fault.
 func (uc *Register) Execute(ctx context.Context, in RegisterInput) error {
 	req, err := parseRegistration(in)
 	if err != nil {
 		return err
-	}
-	// Hash before anything can branch on the email's state (timing parity).
-	passwordHash, err := uc.deps.Passwords.Hash(req.password.Reveal())
-	if err != nil {
-		return fmt.Errorf("auth: hash password: %w", err)
 	}
 	emailHash, err := hashEmail(uc.deps.Index, req.email)
 	if err != nil {
@@ -82,7 +75,7 @@ func (uc *Register) Execute(ctx context.Context, in RegisterInput) error {
 		return err
 	}
 	now := uc.deps.Clock.Now()
-	pending := PendingSignUp{PasswordHash: passwordHash, Name: req.name, Documents: req.acceptance.Documents(), AcceptedAt: now}
+	pending := PendingSignUp{Documents: req.acceptance.Documents(), AcceptedAt: now}
 
 	var outcome registerOutcome
 	err = uc.deps.System.System(ctx, func(ctx context.Context) error {
@@ -135,8 +128,6 @@ func (uc *Register) start(ctx context.Context, acceptance domain.Acceptance, ema
 // registration is a validated RegisterInput.
 type registration struct {
 	email      domain.Email
-	password   domain.Password
-	name       domain.Name
 	acceptance domain.Acceptance
 }
 
@@ -147,14 +138,6 @@ func parseRegistration(in RegisterInput) (registration, error) {
 	)
 	if r.email, err = domain.NewEmail(in.Email); err != nil {
 		return registration{}, err
-	}
-	if r.password, err = domain.NewPassword(in.Password); err != nil {
-		return registration{}, err
-	}
-	if in.Name != nil {
-		if r.name, err = domain.NewName(*in.Name); err != nil {
-			return registration{}, err
-		}
 	}
 	if r.acceptance, err = domain.NewAcceptance(in.AcceptedDocuments); err != nil {
 		return registration{}, err

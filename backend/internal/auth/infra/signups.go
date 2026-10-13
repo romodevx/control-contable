@@ -154,17 +154,18 @@ func (SignUpStore) ClaimTrial(ctx context.Context, emailHash []byte) (bool, erro
 }
 
 // pendingVersion versions the pending payload, so a later shape change can
-// read rows written by this one (they live at most CodeTTL).
-const pendingVersion = 1
+// read rows written by this one (they live at most CodeTTL). Version 1 held a
+// password hash and a name chosen at register; it is refused, never turned
+// into an account (D8).
+const pendingVersion = 2
 
-// pendingJSON is email_verifications.pending. It holds the argon2id hash,
-// never the password, and no email (the row is keyed by its hash).
+// pendingJSON is email_verifications.pending: the accepted documents only.
+// No password (hash or not), no name (D8) and no email (the row is keyed by
+// its hash).
 type pendingJSON struct {
-	Version      int            `json:"v"`
-	PasswordHash string         `json:"password_hash"`
-	Name         *string        `json:"name,omitempty"`
-	Documents    []documentJSON `json:"accepted_documents"`
-	AcceptedAt   time.Time      `json:"accepted_at"`
+	Version    int            `json:"v"`
+	Documents  []documentJSON `json:"accepted_documents"`
+	AcceptedAt time.Time      `json:"accepted_at"`
 }
 
 type documentJSON struct {
@@ -173,11 +174,7 @@ type documentJSON struct {
 }
 
 func encodePending(p usecase.PendingSignUp) (string, error) {
-	doc := pendingJSON{Version: pendingVersion, PasswordHash: p.PasswordHash, AcceptedAt: p.AcceptedAt.UTC()}
-	if !p.Name.IsZero() {
-		name := p.Name.String()
-		doc.Name = &name
-	}
+	doc := pendingJSON{Version: pendingVersion, AcceptedAt: p.AcceptedAt.UTC()}
 	for _, d := range p.Documents {
 		doc.Documents = append(doc.Documents, documentJSON{Kind: string(d.Kind), Version: d.Version})
 	}
@@ -194,17 +191,10 @@ func decodePending(raw string) (usecase.PendingSignUp, error) {
 	dec := json.NewDecoder(bytes.NewReader([]byte(raw)))
 	dec.DisallowUnknownFields()
 	var doc pendingJSON
-	if err := dec.Decode(&doc); err != nil || doc.Version != pendingVersion || doc.PasswordHash == "" {
+	if err := dec.Decode(&doc); err != nil || doc.Version != pendingVersion {
 		return usecase.PendingSignUp{}, ErrCorruptPending
 	}
-	pending := usecase.PendingSignUp{PasswordHash: doc.PasswordHash, AcceptedAt: doc.AcceptedAt}
-	if doc.Name != nil {
-		name, err := domain.NewName(*doc.Name)
-		if err != nil {
-			return usecase.PendingSignUp{}, ErrCorruptPending
-		}
-		pending.Name = name
-	}
+	pending := usecase.PendingSignUp{AcceptedAt: doc.AcceptedAt}
 	documents := make([]domain.DocumentVersion, 0, len(doc.Documents))
 	for _, d := range doc.Documents {
 		documents = append(documents, domain.DocumentVersion{Kind: domain.DocumentKind(d.Kind), Version: d.Version})

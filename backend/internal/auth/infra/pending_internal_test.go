@@ -11,15 +11,8 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/auth/usecase"
 )
 
-// storedHashSample stands in for an argon2id PHC string (made up, not a credential).
-const storedHashSample = "fixture-phc-string"
-
 func TestPending_roundTrips(t *testing.T) {
-	name, err := domain.NewName("Ana Gómez")
-	require.NoError(t, err)
 	in := usecase.PendingSignUp{
-		PasswordHash: storedHashSample,
-		Name:         name,
 		Documents: []domain.DocumentVersion{
 			{Kind: domain.DocumentPrivacyIntegral, Version: "v1"},
 			{Kind: domain.DocumentTerms, Version: "v1"},
@@ -34,33 +27,25 @@ func TestPending_roundTrips(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, in, out)
 	assert.NotContains(t, raw, "email", "the payload never holds the address")
-}
-
-func TestPending_withoutANameRoundTrips(t *testing.T) {
-	raw, err := encodePending(usecase.PendingSignUp{
-		PasswordHash: "h",
-		Documents:    []domain.DocumentVersion{{Kind: domain.DocumentPrivacySimplified, Version: "v1"}, {Kind: domain.DocumentTerms, Version: "v1"}},
-	})
-	require.NoError(t, err)
-
-	out, err := decodePending(raw)
-
-	require.NoError(t, err)
-	assert.True(t, out.Name.IsZero())
-	assert.NotContains(t, raw, `"name"`)
+	assert.NotContains(t, raw, "password", "a pending sign-up holds no password (D8)")
+	assert.NotContains(t, raw, `"name"`, "nor a name (D8)")
 }
 
 // The payload crossed the database boundary: anything this code did not write
-// is refused rather than turned into an account.
+// is refused rather than turned into an account. A v1 payload (with a
+// password hash, before D8) is refused too: its password was chosen by
+// whoever registered, not by whoever verifies.
 func TestPending_refusesWhatItDidNotWrite(t *testing.T) {
 	docs := `"accepted_documents":[{"kind":"terms","version":"v1"},{"kind":"privacy_notice_integral","version":"v1"}]`
 	for name, raw := range map[string]string{
-		"not JSON":         `{`,
-		"unknown version":  `{"v":2,"password_hash":"h",` + docs + `}`,
-		"no password hash": `{"v":1,` + docs + `}`,
-		"unknown field":    `{"v":1,"password_hash":"h","email":"x",` + docs + `}`,
-		"blank name":       `{"v":1,"password_hash":"h","name":" ",` + docs + `}`,
-		"missing terms":    `{"v":1,"password_hash":"h","accepted_documents":[{"kind":"privacy_notice_integral","version":"v1"}]}`,
+		"not JSON":            `{`,
+		"unknown version":     `{"v":3,` + docs + `}`,
+		"pre-D8 payload":      `{"v":1,"password_hash":"h",` + docs + `}`,
+		"password hash at v2": `{"v":2,"password_hash":"h",` + docs + `}`,
+		"name at v2":          `{"v":2,"name":"Ana",` + docs + `}`,
+		"unknown field":       `{"v":2,"email":"x",` + docs + `}`,
+		"missing terms":       `{"v":2,"accepted_documents":[{"kind":"privacy_notice_integral","version":"v1"}]}`,
+		"no documents at all": `{"v":2}`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := decodePending(raw)

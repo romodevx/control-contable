@@ -21,9 +21,10 @@ type Registerer interface {
 	Execute(ctx context.Context, in usecase.RegisterInput) error
 }
 
-// EmailVerifier confirms a code and signs the new account in (usecase.VerifyEmail).
+// EmailVerifier confirms a code, sets the password and signs the new account
+// in (usecase.VerifyEmail).
 type EmailVerifier interface {
-	Execute(ctx context.Context, email, code string) (usecase.Session, error)
+	Execute(ctx context.Context, in usecase.VerifyInput) (usecase.Session, error)
 }
 
 // CodeResender resends a verification code (usecase.ResendVerification).
@@ -57,8 +58,6 @@ func (h *Handler) Register(ctx context.Context, req gen.RegisterRequestObject) (
 	}
 	err := h.register.Execute(ctx, usecase.RegisterInput{
 		Email:             string(body.Email),
-		Password:          body.Password,
-		Name:              body.Name,
 		AcceptedDocuments: documents,
 	})
 	if err != nil {
@@ -76,9 +75,16 @@ func (h *Handler) ResendVerification(ctx context.Context, req gen.ResendVerifica
 	return gen.ResendVerification202JSONResponse(verificationSent), nil
 }
 
-// VerifyEmail implements gen.StrictServerInterface (POST /v1/auth/verify-email).
+// VerifyEmail implements gen.StrictServerInterface (POST /v1/auth/verify-email):
+// the password and the optional name are set here, by whoever holds the code (D8).
 func (h *Handler) VerifyEmail(ctx context.Context, req gen.VerifyEmailRequestObject) (gen.VerifyEmailResponseObject, error) {
-	session, err := h.verify.Execute(ctx, string(req.Body.Email), req.Body.Code)
+	body := req.Body
+	session, err := h.verify.Execute(ctx, usecase.VerifyInput{
+		Email:    string(body.Email),
+		Code:     body.Code,
+		Password: body.Password,
+		Name:     body.Name,
+	})
 	if err != nil {
 		return nil, toAppError(err)
 	}

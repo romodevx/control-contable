@@ -53,7 +53,7 @@ func (stubAuth) Execute(context.Context, usecase.RegisterInput) error {
 
 type stubVerify struct{}
 
-func (stubVerify) Execute(context.Context, string, string) (usecase.Session, error) {
+func (stubVerify) Execute(context.Context, usecase.VerifyInput) (usecase.Session, error) {
 	return usecase.Session{}, errors.New("stub: not wired")
 }
 

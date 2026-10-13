@@ -18,7 +18,8 @@ mixin _$VerifyEmailRequest {
 
 /// Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.
  String get email;/// 6-digit emailed code; 15 min TTL, 5 wrong tries.
- String get code;
+ String get code;/// The new account's password (D8). 12-128 characters; the breached/common-password check (offline list, D5) runs server-side.
+ String get password; String? get name;
 /// Create a copy of VerifyEmailRequest
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -32,20 +33,20 @@ $VerifyEmailRequestCopyWith<VerifyEmailRequest> get copyWith => _$VerifyEmailReq
 @override
 bool operator ==(Object other) {
   final _this = this as VerifyEmailRequest;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is VerifyEmailRequest&&(identical(other.email, _this.email) || other.email == _this.email)&&(identical(other.code, _this.code) || other.code == _this.code));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is VerifyEmailRequest&&(identical(other.email, _this.email) || other.email == _this.email)&&(identical(other.code, _this.code) || other.code == _this.code)&&(identical(other.password, _this.password) || other.password == _this.password)&&(identical(other.name, _this.name) || other.name == _this.name));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as VerifyEmailRequest;
-  return Object.hash(runtimeType,_this.email,_this.code);
+  return Object.hash(runtimeType,_this.email,_this.code,_this.password,_this.name);
 }
 
 @override
 String toString() {
   final _this = this as VerifyEmailRequest;
-  return 'VerifyEmailRequest(email: ${_this.email}, code: ${_this.code})';
+  return 'VerifyEmailRequest(email: ${_this.email}, code: ${_this.code}, password: ${_this.password}, name: ${_this.name})';
 }
 
 
@@ -56,7 +57,7 @@ abstract mixin class $VerifyEmailRequestCopyWith<$Res>  {
   factory $VerifyEmailRequestCopyWith(VerifyEmailRequest value, $Res Function(VerifyEmailRequest) _then) = _$VerifyEmailRequestCopyWithImpl;
 @useResult
 $Res call({
- String email, String code
+ String email, String code, String password, String? name
 });
 
 
@@ -73,11 +74,13 @@ class _$VerifyEmailRequestCopyWithImpl<$Res>
 
 /// Create a copy of VerifyEmailRequest
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? email = null,Object? code = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? email = null,Object? code = null,Object? password = null,Object? name = freezed,}) {
   return _then(VerifyEmailRequest(
 email: null == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
 as String,code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
-as String,
+as String,password: null == password ? _self.password : password // ignore: cast_nullable_to_non_nullable
+as String,name: freezed == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -162,10 +165,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String email,  String code)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String email,  String code,  String password,  String? name)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _VerifyEmailRequest() when $default != null:
-return $default(_that.email,_that.code);case _:
+return $default(_that.email,_that.code,_that.password,_that.name);case _:
   return orElse();
 
 }
@@ -183,10 +186,10 @@ return $default(_that.email,_that.code);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String email,  String code)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String email,  String code,  String password,  String? name)  $default,) {final _that = this;
 switch (_that) {
 case _VerifyEmailRequest():
-return $default(_that.email,_that.code);case _:
+return $default(_that.email,_that.code,_that.password,_that.name);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -203,10 +206,10 @@ return $default(_that.email,_that.code);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String email,  String code)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String email,  String code,  String password,  String? name)?  $default,) {final _that = this;
 switch (_that) {
 case _VerifyEmailRequest() when $default != null:
-return $default(_that.email,_that.code);case _:
+return $default(_that.email,_that.code,_that.password,_that.name);case _:
   return null;
 
 }
@@ -218,13 +221,16 @@ return $default(_that.email,_that.code);case _:
 @JsonSerializable()
 
 class _VerifyEmailRequest implements VerifyEmailRequest {
-  const _VerifyEmailRequest({required this.email, required this.code});
+  const _VerifyEmailRequest({required this.email, required this.code, required this.password, this.name});
   factory _VerifyEmailRequest.fromJson(Map<String, dynamic> json) => _$VerifyEmailRequestFromJson(json);
 
 /// Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.
 @override final  String email;
 /// 6-digit emailed code; 15 min TTL, 5 wrong tries.
 @override final  String code;
+/// The new account's password (D8). 12-128 characters; the breached/common-password check (offline list, D5) runs server-side.
+@override final  String password;
+@override final  String? name;
 
 /// Create a copy of VerifyEmailRequest
 /// with the given fields replaced by the non-null parameter values.
@@ -239,18 +245,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _VerifyEmailRequest&&(identical(other.email, email) || other.email == email)&&(identical(other.code, code) || other.code == code));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _VerifyEmailRequest&&(identical(other.email, email) || other.email == email)&&(identical(other.code, code) || other.code == code)&&(identical(other.password, password) || other.password == password)&&(identical(other.name, name) || other.name == name));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,email,code);
+    return Object.hash(runtimeType,email,code,password,name);
 }
 
 @override
 String toString() {
-    return 'VerifyEmailRequest(email: $email, code: $code)';
+    return 'VerifyEmailRequest(email: $email, code: $code, password: $password, name: $name)';
 }
 
 
@@ -261,7 +267,7 @@ abstract mixin class _$VerifyEmailRequestCopyWith<$Res> implements $VerifyEmailR
   factory _$VerifyEmailRequestCopyWith(_VerifyEmailRequest value, $Res Function(_VerifyEmailRequest) _then) = __$VerifyEmailRequestCopyWithImpl;
 @override @useResult
 $Res call({
- String email, String code
+ String email, String code, String password, String? name
 });
 
 
@@ -278,11 +284,13 @@ class __$VerifyEmailRequestCopyWithImpl<$Res>
 
 /// Create a copy of VerifyEmailRequest
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? email = null,Object? code = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? email = null,Object? code = null,Object? password = null,Object? name = freezed,}) {
   return _then(_VerifyEmailRequest(
 email: null == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
 as String,code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
-as String,
+as String,password: null == password ? _self.password : password // ignore: cast_nullable_to_non_nullable
+as String,name: freezed == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

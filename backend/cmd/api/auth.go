@@ -52,7 +52,7 @@ func newAuthHandler(w authWiring) (*authhttp.Handler, error) {
 	sender := infra.NewLogSender(w.logger, w.env) // M1-06 replaces it with the provider adapter
 
 	register := usecase.NewRegister(usecase.RegisterDeps{
-		System: txm, Clock: clk, Entropy: rand.Reader, Index: keys.index, Passwords: keys.passwords,
+		System: txm, Clock: clk, Entropy: rand.Reader, Index: keys.index,
 		Codes: keys.codes, Legal: infra.NewLegalDocumentStore(), SignUps: signUps, Email: sender,
 		Notices: ratelimit.NewEvery(signUpNoticeInterval, 1, w.now), Logger: w.logger,
 	})
@@ -62,7 +62,7 @@ func newAuthHandler(w authWiring) (*authhttp.Handler, error) {
 	})
 	verify := usecase.NewVerifyEmail(usecase.VerifyDeps{
 		Tx: txm, Clock: clk, Entropy: rand.Reader, NewUserID: newUserID, Index: keys.index,
-		Codes: keys.codes, SignUps: signUps, Accounts: infra.NewAccountStore(keys.emails),
+		Passwords: keys.passwords, Codes: keys.codes, SignUps: signUps, Accounts: infra.NewAccountStore(keys.emails),
 		Trials: infra.NewTrialStore(), Refresh: infra.NewRefreshTokenStore(), Access: keys.access,
 		Logger: w.logger,
 	})
