@@ -31,7 +31,9 @@ app_value() { grep '^CC_APP_' "$work/a.env" | head -1 | cut -d= -f2; }
 check '[[ "$(app_value)" =~ ^[0-9a-f]{48}$ ]]' "48 hex chars from openssl"
 check '[ "$(grep _PASSWORD= "$work/a.env")" != "$(grep _PASSWORD= "$work/b.env")" ]' "two runs differ"
 check '[ "$(grep -c "^CC_APP_" "$work/a.env")" = 1 ]' "one line per variable"
-check 'diff <(grep -v "_PASSWORD=" "$example") <(grep -v "_PASSWORD=" "$work/a.env") >/dev/null' "other lines unchanged"
+check 'diff <(grep -vE "_PASSWORD=|^CC_AUTH_" "$example") <(grep -vE "_PASSWORD=|^CC_AUTH_" "$work/a.env") >/dev/null' "other lines unchanged"
+check '[ "$(grep -c "^CC_AUTH_" "$work/a.env")" = "$(grep -c "^CC_AUTH_" "$example")" ]' "every auth key line kept"
+check '! grep -E "^CC_AUTH_" "$work/a.env" | grep -qvE "^CC_AUTH_[A-Z_]+=[0-9a-f]{64}$"' "auth keys are 32 random bytes as hex"
 check '[ "$(ls -l "$work/a.env" | cut -c1-10)" = "-rw-------" ]' "mode 0600"
 check '! "$init" "$example" "$work/a.env" 2>/dev/null' "never overwrites an existing file"
 

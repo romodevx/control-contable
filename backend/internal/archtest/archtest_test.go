@@ -70,6 +70,13 @@ func TestCheckImport(t *testing.T) {
 		{"platform may not import the test harness", "internal/platform/pgdb", "internal/platform/pgtest", RuleTestHarness},
 		{"top-level package may not import the test harness", "migrations", "internal/platform/pgtest", RuleTestHarness},
 		{"the harness may import its own subpackages", "internal/platform/pgtest", "internal/platform/pgtest/fixture", ""},
+		// P0-30 D-2: HTTP adapters call use cases; they never open units of work
+		// (and so never reach tx.SystemManager, which drops the user context).
+		{"module adapter may not import the unit-of-work port", "internal/ledger/adapter/http", "internal/platform/tx", RuleAdapterUnitOfWork},
+		{"top-level adapter may not import the unit-of-work port", "adapter/http/router", "internal/platform/tx", RuleAdapterUnitOfWork},
+		{"module adapter may import its usecase", "internal/ledger/adapter/http", "internal/ledger/usecase", ""},
+		{"infra may import the unit-of-work port", "internal/ledger/infra", "internal/platform/tx", ""},
+		{"composition root may import the unit-of-work port", "cmd/api", "internal/platform/tx", ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

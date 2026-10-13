@@ -30,6 +30,10 @@
 //     top-level adapter/ tree, any helper) that reaches net/http,
 //     database/sql, GORM or pgx through this module's own imports. Packages
 //     outside the module are not followed.
+//   - adapter-unit-of-work: an HTTP adapter (the top-level adapter/ tree or a
+//     module's adapter layer) never imports internal/platform/tx. Use cases
+//     own units of work, so no handler can open one, least of all a
+//     tx.SystemManager transaction without a user context (P0-30 D-2).
 //
 // Apart from test-harness, the composition root (cmd/) may import anything.
 package archtest

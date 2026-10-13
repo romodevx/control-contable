@@ -4,7 +4,9 @@ package main
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -55,7 +57,12 @@ func TestFlags_endToEndOverPostgres(t *testing.T) {
 	svc.Invalidate() // another process would wait for flags.DefaultTTL
 
 	_, rec = get(h, "/v1/me")
-	assert.NotEqual(t, http.StatusNotFound, rec.Code, "module_auth is ON")
+	flagtest.AssertHidden(t, rec) // getMe is not built yet (P0-29 FU2): hidden even ON
+	resend := httptest.NewRequest(http.MethodPost, "/v1/auth/verify-email/resend", strings.NewReader(`{}`))
+	resend.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, resend)
+	assert.Equal(t, http.StatusBadRequest, rec.Code, "module_auth is ON: a built operation is routed to its validation")
 	req, rec = get(h, "/v1/flags")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"enabled":["module_auth"]}`, rec.Body.String())

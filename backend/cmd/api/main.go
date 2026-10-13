@@ -4,8 +4,9 @@
 // requests.
 //
 // Middleware order (docs/architecture/c4.md): request id → recover → rate
-// limit → routing; then, per operation, flag gate → authentication →
-// contract validation → handler (adapter/http/router).
+// limit → request deadline → routing; then, per operation, flag gate (or the
+// not-built 404) → authentication → contract validation → handler
+// (adapter/http/router).
 package main
 
 import (
@@ -29,6 +30,7 @@ import (
 	"github.com/romodevx/control-contable/backend/adapter/http/health"
 	"github.com/romodevx/control-contable/backend/adapter/http/middleware"
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
+	authhttp "github.com/romodevx/control-contable/backend/internal/auth/adapter/http"
 	"github.com/romodevx/control-contable/backend/internal/platform/config"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagsgorm"
@@ -69,8 +71,10 @@ func runUntilSignal() error {
 
 // run loads the configuration and serves until ctx is done.
 func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
-	cfg, err := config.Load(ctx, lookup, config.NewEnvSecrets(lookup))
-	if err != nil {
+	secrets := config.NewEnvSecrets(lookup)
+	cfg, err := config.Load(ctx, lookup, secrets)
+	authKeys, authErr := config.LoadAuth(ctx, lookup, secrets)
+	if err := errors.Join(err, authErr); err != nil {
 		return err
 	}
 	logger := logging.New(logOut, cfg.LogLevel)
@@ -89,10 +93,15 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err != nil {
 		return err
 	}
+	auth, err := newAuthHandler(authWiring{env: cfg.Env, keys: authKeys, pool: pool, logger: logger, now: time.Now})
+	if err != nil {
+		return err
+	}
 	handler, err := newHandler(cfg, deps{
 		logger: logger,
 		db:     pgdb.NewPinger(pool),
 		flags:  flagSvc,
+		auth:   auth,
 		now:    time.Now,
 	})
 	if err != nil {
@@ -145,6 +154,7 @@ type deps struct {
 	logger *slog.Logger
 	db     health.Pinger
 	flags  flagService
+	auth   *authhttp.Handler
 	now    func() time.Time
 }
 
@@ -174,11 +184,13 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 	server := api{
 		Handler:      health.New(d.db, version, d.logger),
 		flagsHandler: flagshttp.New(d.flags, d.logger),
+		authHandler:  d.auth,
 	}
 	routes, err := router.New(server, spec, router.Options{
-		Flags:  d.flags,
-		Authn:  router.NoAuthentication{}, // JWT authentication arrives with M1-07
-		Logger: d.logger,
+		Flags:    d.flags,
+		Authn:    router.NoAuthentication{}, // JWT authentication arrives with M1-07
+		Logger:   d.logger,
+		NotBuilt: notBuiltOperations(),
 	})
 	if err != nil {
 		return nil, err
@@ -188,6 +200,7 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 		middleware.RequestID,
 		middleware.Recover(d.logger),
 		middleware.RateLimit(limiter, middleware.ClientIP(cfg.TrustedProxyHops)),
+		middleware.Deadline(cfg.RequestTimeout),
 	), nil
 }
 

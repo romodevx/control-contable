@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -40,12 +41,16 @@ const (
 	callConsume = "SELECT outcome, pending::text FROM email_verification_consume($1, $2)"
 )
 
-// authFunctions are every definer function of the migration, by signature.
-var authFunctions = []string{
-	"auth_lookup_credentials(bytea)",
-	"email_verification_consume(bytea,bytea)",
-	"email_verification_upsert(bytea,bytea,jsonb,timestamp with time zone)",
-	"trial_registry_check_and_insert(bytea)",
+// authFunctions are every auth definer function (M1-03 and M1-05), by signature, with
+// the roles that may execute them besides their owner. email_verification_upsert lost
+// cc_app's EXECUTE in M1-05 (D7): register and resend replaced it.
+var authFunctions = map[string][]string{
+	"auth_lookup_credentials(bytea)":                                        {"cc_app"},
+	"email_verification_consume(bytea,bytea)":                               {"cc_app"},
+	"email_verification_upsert(bytea,bytea,jsonb,timestamp with time zone)": nil,
+	"email_verification_start(bytea,bytea,jsonb,timestamp with time zone)":  {"cc_app"},
+	"email_verification_resend(bytea,bytea,timestamp with time zone)":       {"cc_app"},
+	"trial_registry_check_and_insert(bytea)":                                {"cc_app"},
 }
 
 // blindIndex stands in for the app-side HMAC: any 32-byte digest fits the columns.
@@ -71,10 +76,28 @@ func consume(t *testing.T, app *sql.DB, emailHash, codeHash []byte) consumeResul
 	return r
 }
 
-func upsertVerification(t *testing.T, app *sql.DB, emailHash, codeHash []byte, pending, ttl string) {
+// upsertVerification writes a pending sign-up through M1-03's upsert. Since M1-05 cc_app
+// may no longer call it (D7), the fixture runs it as its owner, cc_auth_definer, through
+// an owner connection (cc_owner may SET ROLE to it).
+func upsertVerification(t *testing.T, owner *sql.DB, emailHash, codeHash []byte, pending, ttl string) {
 	t.Helper()
-	_, err := app.ExecContext(t.Context(), callUpsert, emailHash, codeHash, pending, ttl)
+	require.NoError(t, asDefiner(t, owner, callUpsert, emailHash, codeHash, pending, ttl))
+}
+
+// asDefiner runs query as cc_auth_definer in its own committed transaction.
+func asDefiner(t *testing.T, owner *sql.DB, query string, args ...any) error {
+	t.Helper()
+	tx, err := owner.BeginTx(t.Context(), nil)
 	require.NoError(t, err)
+	if _, err := tx.ExecContext(t.Context(), "SET LOCAL ROLE "+definerRole); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	if _, err := tx.ExecContext(t.Context(), query, args...); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	return tx.Commit()
 }
 
 func checkTrial(t *testing.T, app *sql.DB, emailHash []byte) bool {
@@ -123,7 +146,7 @@ func TestAuthFunctions_DefinerOwnedPinnedAndAppOnly(t *testing.T) {
 	db := pgtest.NewDatabase(t)
 	owner := db.Connect(t, pgtest.RoleOwner)
 
-	for _, fn := range authFunctions {
+	for fn, executors := range authFunctions {
 		t.Run(fn, func(t *testing.T) {
 			var fnOwner string
 			var definer bool
@@ -141,7 +164,7 @@ FROM pg_proc WHERE oid = $1::regprocedure`, fn).Scan(&fnOwner, &definer, &config
 SELECT CASE a.grantee WHEN 0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee) END
 FROM pg_proc p CROSS JOIN LATERAL aclexplode(p.proacl) a
 WHERE p.oid = $1::regprocedure AND a.privilege_type = 'EXECUTE' ORDER BY 1`, fn)
-			assert.Equal(t, []string{"cc_app", definerRole}, grantees, "cc_app and the owner itself")
+			assert.Equal(t, append(slices.Clone(executors), definerRole), grantees, "the expected runtime roles and the owner itself")
 		})
 	}
 
@@ -158,9 +181,10 @@ WHERE p.oid = $1::regprocedure AND a.privilege_type = 'EXECUTE' ORDER BY 1`, fn)
 func TestAuthServiceTables_AppCannotReachThemDirectly(t *testing.T) {
 	db := pgtest.NewDatabase(t)
 	app := db.Connect(t, pgtest.RoleApp)
+	fixture := db.Connect(t, pgtest.RoleOwner)
 	seedUsers(t, app, userA, userB)
 	require.True(t, checkTrial(t, app, userEmailHash(userA)))
-	upsertVerification(t, app, blindIndex("pending@x"), blindIndex("123456"), `{"name":"P"}`, "15 minutes")
+	upsertVerification(t, fixture, blindIndex("pending@x"), blindIndex("123456"), `{"name":"P"}`, "15 minutes")
 
 	denied := []string{
 		"SELECT 1 FROM trial_registry",
@@ -296,9 +320,11 @@ func TestTrialRegistry_BlocksASecondTrialEvenAfterAccountDeletion(t *testing.T) 
 }
 
 func TestEmailVerification_CorrectCodeVerifiesOnce(t *testing.T) {
-	app := pgtest.NewDatabase(t).Connect(t, pgtest.RoleApp)
+	db := pgtest.NewDatabase(t)
+	app := db.Connect(t, pgtest.RoleApp)
+	fixture := db.Connect(t, pgtest.RoleOwner)
 	email, code := blindIndex("ana@x"), blindIndex("123456")
-	upsertVerification(t, app, email, code, `{"name": "Ana"}`, "15 minutes")
+	upsertVerification(t, fixture, email, code, `{"name": "Ana"}`, "15 minutes")
 
 	got := consume(t, app, email, code)
 	assert.Equal(t, outcomeVerified, got.outcome)
@@ -312,8 +338,9 @@ func TestEmailVerification_CorrectCodeVerifiesOnce(t *testing.T) {
 func TestEmailVerification_WrongUnknownAndExpiredCodesFail(t *testing.T) {
 	db := pgtest.NewDatabase(t)
 	app := db.Connect(t, pgtest.RoleApp)
+	fixture := db.Connect(t, pgtest.RoleOwner)
 	email, code := blindIndex("ana@x"), blindIndex("123456")
-	upsertVerification(t, app, email, code, `{}`, "15 minutes")
+	upsertVerification(t, fixture, email, code, `{}`, "15 minutes")
 
 	wrong := consume(t, app, email, blindIndex("654321"))
 	assert.Equal(t, outcomeInvalid, wrong.outcome)
@@ -328,9 +355,11 @@ func TestEmailVerification_WrongUnknownAndExpiredCodesFail(t *testing.T) {
 }
 
 func TestEmailVerification_AttemptLimitLocksEvenTheRightCode(t *testing.T) {
-	app := pgtest.NewDatabase(t).Connect(t, pgtest.RoleApp)
+	db := pgtest.NewDatabase(t)
+	app := db.Connect(t, pgtest.RoleApp)
+	fixture := db.Connect(t, pgtest.RoleOwner)
 	email, code := blindIndex("ana@x"), blindIndex("123456")
-	upsertVerification(t, app, email, code, `{}`, "15 minutes")
+	upsertVerification(t, fixture, email, code, `{}`, "15 minutes")
 
 	for i := 1; i < maxVerificationAttempts; i++ {
 		assert.Equal(t, outcomeInvalid, consume(t, app, email, blindIndex("bad")).outcome, "attempt %d", i)
@@ -340,7 +369,7 @@ func TestEmailVerification_AttemptLimitLocksEvenTheRightCode(t *testing.T) {
 
 	t.Run("a resend issues a new code and a fresh budget", func(t *testing.T) {
 		fresh := blindIndex("111111")
-		upsertVerification(t, app, email, fresh, `{"name": "Ana 2"}`, "15 minutes")
+		upsertVerification(t, fixture, email, fresh, `{"name": "Ana 2"}`, "15 minutes")
 		assert.Equal(t, outcomeInvalid, consume(t, app, email, code).outcome, "the old code is replaced")
 		got := consume(t, app, email, fresh)
 		assert.Equal(t, outcomeVerified, got.outcome)
@@ -355,17 +384,18 @@ func TestEmailVerification_AttemptLimitLocksEvenTheRightCode(t *testing.T) {
 func TestEmailVerification_FailuresAcrossResendsAreCappedPerEmail(t *testing.T) {
 	db := pgtest.NewDatabase(t)
 	app := db.Connect(t, pgtest.RoleApp)
+	fixture := db.Connect(t, pgtest.RoleOwner)
 	owner := db.Connect(t, pgtest.RoleOwner)
 	email, code := blindIndex("victim@x"), blindIndex("123456")
 
 	for burned := 0; burned < maxFailuresPerWindow; burned += maxVerificationAttempts {
-		upsertVerification(t, app, email, code, `{}`, "15 minutes")
+		upsertVerification(t, fixture, email, code, `{}`, "15 minutes")
 		for range maxVerificationAttempts {
 			consume(t, app, email, blindIndex("bad"))
 		}
 	}
 
-	upsertVerification(t, app, email, code, `{}`, "15 minutes")
+	upsertVerification(t, fixture, email, code, `{}`, "15 minutes")
 	assert.Equal(t, outcomeLocked, consume(t, app, email, code).outcome, "a fresh code after the per-email cap")
 
 	t.Run("expiry and re-register do not reopen the window", func(t *testing.T) {
@@ -373,7 +403,7 @@ func TestEmailVerification_FailuresAcrossResendsAreCappedPerEmail(t *testing.T) 
 			"UPDATE email_verifications SET created_at = now() - interval '1 hour', expires_at = now() - interval '1 second'")
 		require.NoError(t, err)
 		require.Equal(t, outcomeExpired, consume(t, app, email, code).outcome)
-		upsertVerification(t, app, email, code, `{}`, "15 minutes")
+		upsertVerification(t, fixture, email, code, `{}`, "15 minutes")
 		assert.Equal(t, outcomeLocked, consume(t, app, email, code).outcome)
 	})
 
@@ -381,13 +411,13 @@ func TestEmailVerification_FailuresAcrossResendsAreCappedPerEmail(t *testing.T) 
 		_, err := owner.ExecContext(t.Context(),
 			"UPDATE email_verification_failures SET window_started_at = now() - interval '24 hours 1 second'")
 		require.NoError(t, err)
-		upsertVerification(t, app, email, code, `{}`, "15 minutes")
+		upsertVerification(t, fixture, email, code, `{}`, "15 minutes")
 		assert.Equal(t, outcomeVerified, consume(t, app, email, code).outcome)
 	})
 
 	t.Run("other emails are unaffected", func(t *testing.T) {
 		other := blindIndex("other@x")
-		upsertVerification(t, app, other, code, `{}`, "15 minutes")
+		upsertVerification(t, fixture, other, code, `{}`, "15 minutes")
 		assert.Equal(t, outcomeVerified, consume(t, app, other, code).outcome)
 	})
 }
@@ -396,8 +426,9 @@ func TestEmailVerification_FailuresAcrossResendsAreCappedPerEmail(t *testing.T) 
 func TestEmailVerification_ConcurrentAttemptsAreCountedExactly(t *testing.T) {
 	db := pgtest.NewDatabase(t)
 	app := db.Connect(t, pgtest.RoleApp)
+	fixture := db.Connect(t, pgtest.RoleOwner)
 	email := blindIndex("ana@x")
-	upsertVerification(t, app, email, blindIndex("123456"), `{}`, "15 minutes")
+	upsertVerification(t, fixture, email, blindIndex("123456"), `{}`, "15 minutes")
 
 	const guesses = 3 * maxVerificationAttempts
 	errs := make(chan error, guesses)
@@ -417,7 +448,9 @@ func TestEmailVerification_ConcurrentAttemptsAreCountedExactly(t *testing.T) {
 }
 
 func TestEmailVerificationUpsert_RejectsBadArguments(t *testing.T) {
-	app := pgtest.NewDatabase(t).Connect(t, pgtest.RoleApp)
+	db := pgtest.NewDatabase(t)
+	app := db.Connect(t, pgtest.RoleApp)
+	fixture := db.Connect(t, pgtest.RoleOwner)
 	email, code := blindIndex("ana@x"), blindIndex("123456")
 	bad := []struct {
 		name        string
@@ -433,7 +466,7 @@ func TestEmailVerificationUpsert_RejectsBadArguments(t *testing.T) {
 	}
 	for _, b := range bad {
 		t.Run(b.name, func(t *testing.T) {
-			_, err := app.ExecContext(t.Context(), callUpsert, b.email, b.code, b.pending, b.ttl)
+			err := asDefiner(t, fixture, callUpsert, b.email, b.code, b.pending, b.ttl)
 			requireSQLState(t, err, sqlstateInvalidParameterValue)
 		})
 	}
