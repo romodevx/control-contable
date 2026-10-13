@@ -181,10 +181,24 @@ void main() {
       expect(find.text(_password), findsNothing);
     });
 
-    testWidgets('going to the background forgets the password', (tester) async {
+    testWidgets('a trip to the mail app keeps the password', (tester) async {
       await open(tester);
 
       await backgroundAndReturn(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text(_password), findsNothing, reason: 'not asked again');
+      await tester.enterText(code(), '482913');
+      await tester.pumpAndSettle();
+      expect(harness.repository.verified.single.password, syntheticPassword());
+    });
+
+    testWidgets('15 minutes without activity forget the password', (
+      tester,
+    ) async {
+      await open(tester);
+
+      await harness.elapse(tester, const Duration(minutes: 15));
       await tester.pumpAndSettle();
 
       expect(harness.container.read(pendingSignUpProvider)!.password, isNull);
@@ -199,6 +213,36 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, _confirm));
       await tester.pumpAndSettle();
       expect(harness.repository.verified.single.password, syntheticPassword());
+    });
+
+    testWidgets('activity on the code step postpones the timeout', (
+      tester,
+    ) async {
+      await open(tester);
+
+      await harness.elapse(tester, const Duration(minutes: 10));
+      await tester.enterText(code(), '4');
+      await harness.elapse(tester, const Duration(minutes: 10));
+
+      expect(
+        harness.container.read(pendingSignUpProvider)!.password,
+        isNotNull,
+      );
+      expect(find.text(_password), findsNothing);
+    });
+
+    testWidgets('coming back after the timeout asks for the password', (
+      tester,
+    ) async {
+      await open(tester);
+
+      // Suspended: the timer may not fire, the clock moves on.
+      harness.clock.advance(const Duration(minutes: 16));
+      await backgroundAndReturn(tester);
+      await tester.pumpAndSettle();
+
+      expect(harness.container.read(pendingSignUpProvider)!.password, isNull);
+      expect(find.text(_password), findsOneWidget);
     });
   });
 

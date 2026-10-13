@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:control_contable/core/time/clock.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,8 +15,8 @@ class SignUpDraft {
   /// The address the code was sent to.
   final String email;
 
-  /// The chosen password; `null` once forgotten (the app went to the
-  /// background) and the code screen must ask for it again.
+  /// The chosen password; `null` once forgotten (after [signUpIdleTimeout]
+  /// without activity) and the code screen must ask for it again.
   final String? password;
 
   /// The optional display name.
@@ -23,29 +26,58 @@ class SignUpDraft {
   SignUpDraft withoutPassword() => SignUpDraft(email: email, name: name);
 }
 
+/// How long the password waits without activity on the code step (the
+/// code itself lives 15 minutes).
+const Duration signUpIdleTimeout = Duration(minutes: 15);
+
 /// The sign-up waiting for its code. Held in memory only: never persisted,
-/// never in a route. The password is forgotten as soon as the app goes to
-/// the background, and the whole draft on success or when the person goes
-/// back to the form.
+/// never in a route, so process death drops it. The password survives a
+/// trip to the mail app; it is forgotten after [signUpIdleTimeout] without
+/// activity (on the `clockProvider`, checked by a timer and on every
+/// resume, since a suspended app's timers may not fire), and the whole
+/// draft on success or when the person goes back to the form.
 class PendingSignUp extends Notifier<SignUpDraft?> {
+  Timer? _idleTimer;
+  DateTime? _lastActivity;
+
   @override
   SignUpDraft? build() {
-    final lifecycle = AppLifecycleListener(onPause: _forgetPassword);
-    ref.onDispose(lifecycle.dispose);
+    final lifecycle = AppLifecycleListener(onResume: _forgetPasswordIfIdle);
+    ref.onDispose(() {
+      lifecycle.dispose();
+      _idleTimer?.cancel();
+    });
     return null;
   }
 
   /// Remembers [draft] as the sign-up in progress.
-  // A verb reads better than a setter at the call site.
-  // ignore: use_setters_to_change_properties
-  void start(SignUpDraft draft) => state = draft;
+  void start(SignUpDraft draft) {
+    state = draft;
+    touch();
+  }
+
+  /// Records activity on the code step: the idle timeout starts over.
+  void touch() {
+    if (state?.password == null) return;
+    _lastActivity = ref.read(clockProvider)();
+    _idleTimer?.cancel();
+    _idleTimer = Timer(signUpIdleTimeout, _forgetPasswordIfIdle);
+  }
 
   /// Forgets the whole draft (account created, or back to the form).
-  void clear() => state = null;
+  void clear() {
+    _idleTimer?.cancel();
+    state = null;
+  }
 
-  void _forgetPassword() {
+  void _forgetPasswordIfIdle() {
     final draft = state;
-    if (draft?.password != null) state = draft!.withoutPassword();
+    final lastActivity = _lastActivity;
+    if (draft?.password == null || lastActivity == null) return;
+    final idle = ref.read(clockProvider)().difference(lastActivity);
+    if (idle < signUpIdleTimeout) return;
+    _idleTimer?.cancel();
+    state = draft!.withoutPassword();
   }
 }
 

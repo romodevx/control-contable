@@ -62,6 +62,7 @@ class _CodeStepFormState extends ConsumerState<CodeStepForm> {
   }
 
   void _submitWhenComplete(String text) {
+    ref.read(pendingSignUpProvider.notifier).touch();
     if (text.length == codeLength && fields.isReadyToSend) {
       unawaited(fields.form.submit(_verify));
     }

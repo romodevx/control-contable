@@ -139,13 +139,15 @@ Every record form is built from `core/forms/`, which encodes
   schemes only). `register` sends **only the email and the consents** (exactly the versions
   shown); a stale version unchecks both consents and reloads the documents. The password and
   name wait for the code step (D8) in a `SignUpDraft` (`pendingSignUpProvider`): memory only,
-  never persisted nor in a route; the password is forgotten when the app goes to the
-  background, and the whole draft on success or on going back to the form.
+  never persisted nor in a route (process death drops it). The password survives a trip to
+  the mail app; it is forgotten after 15 minutes without activity on the code step
+  (`signUpIdleTimeout`, on `clockProvider`), and the whole draft on success or on going back
+  to the form.
 - Verify: the 6-digit code (`AutofillHints.oneTimeCode`, digits only) is sent with the
   draft's password and name, and submits itself when complete (unless the password must be
   typed). A `401` is one generic code message; a `400` lands on its field: `password`
   (policy, length) reveals the password field with the error, `code` stays on the code. A
-  forgotten password (app was in the background) shows the password field again. *Enviar otro código* appears after
+  forgotten password (idle timeout) shows the password field again. *Enviar otro código* appears after
   the 60 s cooldown, or after `Retry-After` when longer; the countdown runs on a clock
   deadline, so time in the background counts.
 - The new session goes to `sessionStoreProvider`: in memory until M1-12 brings
