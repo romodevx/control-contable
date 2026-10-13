@@ -27,6 +27,12 @@ installed with `npm ci`. Ruleset: [`redocly.yaml`](../../redocly.yaml); custom r
 | `contract/public-operation-explicit` | `security: []` (public) only together with `x-public: true`, and vice versa |
 | `contract/frozen-unchanged` | Any node marked `x-frozen: sha256:<hash>`, anywhere in the document, still hashes to that value |
 
+## Reviewed conventions (not lint-enforced yet)
+
+| Convention | Why | Backstop |
+|---|---|---|
+| No inline object schemas inside `oneOf`/`anyOf`: name them as components and `$ref` them | swagger_parser names an inline object's enums after the bare property, so `SubscriptionStatus.plan.period` silently overwrote the `Period` component in the Dart client ([ADR-0003](../adr/0003-dart-client-generation.md)) | Mobile kind guard in `make mobile-client` (PLAN P0-23, run in CI by P0-25) |
+
 ## Frozen contract
 
 A frozen node is a published promise: the backend, the generated Dart client and the

@@ -83,12 +83,30 @@ backend/
 | State management | **Riverpod 3** + `riverpod_generator` | flutter_riverpod 3.4.3, riverpod_generator 4.0.9 |
 | Navigation | go_router | 18.0.2 |
 | HTTP | dio | 5.11.1 |
-| API client generation | **swagger_parser** (pure Dart, supports OAS 3.1) → retrofit + json_serializable/freezed | swagger_parser 1.45.0, retrofit 4.10.0, freezed 4.0.2 |
+| API client generation | **swagger_parser** (pure Dart, supports OAS 3.1) → retrofit + json_serializable/freezed | swagger_parser 1.45.0, retrofit 4.10.0, retrofit_generator 10.2.11, freezed 4.0.2 |
 | Token storage | flutter_secure_storage (Keychain / Keystore) | 11.2.0 |
 | IAP | RevenueCat `purchases_flutter` (`appUserID` = our user UUID) | 10.15.2 |
 | Push | firebase_messaging | 16.7.0 |
 | Flags | one `FlagsProvider` (Riverpod) fed by `GET /v1/flags` + a `useFlag` helper. UX only | — |
 | Release | `--obfuscate --split-debug-info`. Symbols are uploaded to crash reporting and never bundled | — |
+
+### Context7 verification (2026-10-13)
+
+P0-21. Each pinned Dart/Flutter library was checked in the Context7 MCP, and each pin was
+re-checked against `pub.dev/api/packages/<name>` the same day. Every pin above is still the
+latest release, except retrofit_generator, deliberately held at 10.2.11 (two-week rule, row below). Toolchain: Flutter 3.47.7, Dart 3.13.5. No API change forces a decision
+change. The owner confirmed **Riverpod** (O5 closed, OB4 resolved).
+
+| Library | Context7 ID | Pin = latest? | API checked | Notes for the first user |
+|---|---|---|---|---|
+| flutter_riverpod / riverpod_generator | `/rrousselgit/riverpod` (docs at v3.0.2) | 3.4.3 / 4.0.9, yes | `@riverpod` class notifiers (`extends _$X`, `build()`), `ProviderScope(overrides: [...overrideWithValue(...)])`, `ProviderContainer.test()` | Use `ProviderContainer.test()` in unit tests (auto-dispose replaces the 2.x `createContainer` helper). Scoped providers need `@Dependencies` or an override, enforced by riverpod_lint: add it in P0-22 |
+| go_router | `/websites/pub_dev_packages_go_router` | 18.0.2, yes | `GoRouter(routes:)`, `MaterialApp.router(routerConfig:)`, top-level `redirect` | Context7 coverage is thin (15 snippets, no `redirect` detail). Read the pub.dev API docs for `redirect`/`refreshListenable` before wiring the auth and flag guards |
+| dio | `/cfug/dio` | 5.11.1, yes | `InterceptorsWrapper`, `QueuedInterceptor`, `DioException.response`, `RequestOptions.copyWith` | Refresh-on-401 goes in a `QueuedInterceptor` so concurrent 401s refresh once. Never retry the re-auth/password endpoints through it (a wrong password must not be sent twice) |
+| swagger_parser | `/carapacik/swagger_parser` | 1.45.0, yes | `swagger_parser.yaml` keys (`json_serializer: freezed`, `use_freezed3`, `unknown_enum_value`, `root_client`); `OAS.v3_1`; `type: [T, "null"]` → `T?` | Spiked against our contract: see [ADR-0003](0003-dart-client-generation.md). Set `use_freezed3: true` (default is `false`, Freezed 2 syntax) |
+| freezed / json_serializable | `/rrousselgit/freezed` | freezed 4.0.2, freezed_annotation 3.1.0, json_serializable 6.14.1, yes | `@freezed sealed/abstract class X with _$X`, `fromJson` via `=>` factory | Since v3 every class needs `sealed` or `abstract`. `fromJson` is generated only when the factory uses `=>` |
+| retrofit (+ retrofit_generator) | via swagger_parser docs | retrofit 4.10.0, yes. retrofit_generator latest is 10.2.12 (published today) | Generated clients compile and analyze clean | **Pin retrofit_generator 10.2.11** (2026-09-04): 10.2.12 is under two weeks old. The spike passed on both |
+| purchases_flutter | `/websites/pub_dev_purchases_flutter` | 10.15.2, yes | `Purchases.configure(PurchasesConfiguration(apiKey)..appUserID = uuid)`, `Purchases.logIn(appUserID)` → `LogInResult` | Configure with our user UUID at sign-in; call `logIn` when the user changes on the same device, never leave an anonymous RevenueCat id behind |
+| firebase_messaging | `/firebase/flutterfire` | 16.7.0, yes | `requestPermission()`, `getToken()`, `onTokenRefresh`, top-level `@pragma('vm:entry-point')` `onBackgroundMessage` | On Apple, call `getToken()` only after `getAPNSToken()` is non-null. FlutterFire `main` already deprecates `getToken`/`onTokenRefresh` in favour of `register()` + `onRegistered` (FID). Not in 16.7.0; M9 must re-check before building device registration |
 
 ## Options considered
 
@@ -118,6 +136,8 @@ backend/
 - **Risk**: we must confirm that `swagger_parser` handles our `oneOf`/`const` constructs. A
   half-day spike in P0 covers this. Fallback: openapi-generator with an overlay that
   downgrades the spec to 3.0.
+- **Spike result (P0-21)**: GO with swagger_parser, with two conditions. See
+  [ADR-0003](0003-dart-client-generation.md).
 
 ### O5. Flutter state management: Riverpod 3 (chosen) vs. flutter_bloc 9.1.1
 - **Riverpod**: compile-safe dependency injection, provider overrides in tests (TDD-friendly),
