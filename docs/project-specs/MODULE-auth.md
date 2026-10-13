@@ -18,7 +18,8 @@ keeps it alive, logs out, reads/edits their profile, and deletes the account in-
 | login | `POST /v1/auth/login` | public | exists |
 | refreshSession | `POST /v1/auth/refresh` | public | exists |
 | logout | `POST /v1/auth/logout` | bearer | exists |
-| getMe / updateMe / deleteMe | `GET / PATCH / DELETE /v1/me` | bearer | exists |
+| getMe / updateMe | `GET / PATCH /v1/me` | bearer | exists |
+| deleteMe | `DELETE /v1/me` | bearer + password re-auth | exists; **body `{password}` added in M1-01** (D4) |
 | listLegalDocuments | `GET /v1/legal/documents` | public | exists |
 
 Owner defaults applied (2026-10-13): verification by **6-digit emailed code**; provider
@@ -45,8 +46,8 @@ response on duplicate email**; **trial starts at successful verification** (serv
   (dev: written to the log adapter, redacted in every other log line).
 - **Given** the email already belongs to a verified account, **when** I register, **then** I
   get the **same 202 body, status and comparable latency** (argon2 still runs); no code is
-  created; the existing owner may get an "you already have an account" notice through
-  `EmailSender` (see Q3).
+  created; the existing owner gets a "someone tried to sign up with your email" notice
+  through `EmailSender`, at most once per hour (D3).
 - **Given** a pending sign-up for the same email, **when** I register again, **then** the
   pending row is replaced (new password hash, new code, attempts reset) — upsert, 202.
 - **Given** a weak/breached password or a short one, **then** `400 validation_failed` with
@@ -102,11 +103,13 @@ response on duplicate email**; **trial starts at successful verification** (serv
   Email change is out of scope.
 
 ### US-A4 Delete account
-- **Given** I confirm in the app (irreversible → confirmation dialog, per house UI rules),
-  **when** `DELETE /v1/me`, **then** in one transaction the user and everything it owns
+- **Given** I confirm in the app (irreversible → confirmation dialog, per house UI rules)
+  and re-enter my current password, **when** `DELETE /v1/me {password}`, **then** in one transaction the user and everything it owns
   cascade (taxpayers, records, consents, refresh tokens, usage, entitlements), and `204`.
-  The `trial_registry` hash survives. Further use of the old access token: `401` on any
+  Consents are deleted too (data minimization, D6); only the `trial_registry` HMAC survives. Further use of the old access token: `401` on any
   user-scoped call (user no longer exists), so the 15-min JWT lag is harmless.
+- **Given** a wrong or missing password, **then** `401 unauthorized` (counts toward the login
+  failure limit) and nothing is deleted.
 - The app then shows how to cancel the store subscription (it does not cancel it) and
   returns to the welcome screen with storage wiped.
 
@@ -150,9 +153,11 @@ flag check (OFF answers 404 first).
    a hanging `tx.Manager` fake. Lands before the first DB-backed handler.
 2. **Replace `notBuilt`** (P0-29 FU2): explicit stub answering 404 like a hidden module; no
    nil `StrictServerInterface`, no reliance on `Recover`.
-3. **Credential lookup under FORCE RLS** — design needed (Q1): `auth_lookup_credentials`
-   owned by `cc_owner` sees no `users` rows because `cc_owner` is subject to FORCE RLS.
-   Must be solved in M1-03 without giving `cc_app` BYPASSRLS and without an unforced table.
+3. **Credential lookup under FORCE RLS** (D1): `auth_lookup_credentials` owned by `cc_owner`
+   sees no `users` rows under FORCE RLS. Fix: a **NOLOGIN definer role** owns the lookup
+   functions and gets a **narrow RLS policy** granting SELECT on only the needed columns/rows
+   (`id`, `password_hash`, by `email_hash`). **No BYPASSRLS role**, no unforced table.
+   Final design owned by db-sr in **M1-03**.
 4. `trial_registry` and `email_verifications`: service-only, reached only through narrow
    definer functions; `code_hash` = HMAC with a server key from Secret Manager (never in repo).
 5. `tx.SystemManager` only for sign-up/login paths; archtest forbids it elsewhere in
@@ -182,13 +187,15 @@ feature), session list/device management, ARCO workflow beyond deletion and prof
 (documented email channel covers the rest), RevenueCat subscriber deletion (M7), real
 email provider (M1-06, blocked on OB2), legal text content (OB10).
 
-## 9. Open questions
+## 9. Decisions (DECIDED 2026-10-13, owner defaults via coordinator)
 
-| # | Question | Proposed default | Who |
-|---|---|---|---|
-| Q1 | How does `auth_lookup_credentials` read `users` under FORCE RLS? | Dedicated NOLOGIN role (e.g. `cc_auth_definer`, BYPASSRLS) owning only the narrow definer functions, returning `(user_id, password_hash)` by `email_hash`; `check-runtime-role.sql` updated to allow exactly that | db-sr + security, before M1-03 |
-| Q2 | Resend: new endpoint or re-POST register? | New `POST /v1/auth/verify-email/resend {email}` (no password re-entry) | architect, M1-01 |
-| Q3 | On duplicate register, email the existing owner a notice? | Yes, "you already have an account — log in" (once per hour) | owner |
-| Q4 | Require password re-entry for `DELETE /v1/me`? | Yes (`{password}` body or recent-login < 5 min) to limit stolen-token damage | owner + security |
-| Q5 | Breached-password check: offline list or HIBP k-anonymity call? | Offline top-100k list embedded (no new processor) | security |
-| Q6 | Do consent records survive account deletion as legal evidence (LFPDPPP)? | Delete with the account; keep only the anonymised trial hash — pending lawyer (OB10) | owner/legal |
+| # | Decision |
+|---|---|
+| D1 | Credential lookup under FORCE RLS: **no BYPASSRLS role**. A NOLOGIN definer role owns the lookup functions, with a narrow RLS policy granting SELECT on only the needed columns/rows. db-sr owns the final design in M1-03. |
+| D2 | Add `POST /v1/auth/verify-email/resend {email}`: rate-limited (§5), always the generic 202. Contract change in M1-01. |
+| D3 | Duplicate register: send the existing owner a "someone tried to sign up with your email" notice; the response stays the generic 202. |
+| D4 | Account deletion requires **current password re-auth** (`DELETE /v1/me` body `{password}`; contract change in M1-01). |
+| D5 | Breached/common password check uses an **offline embedded list**; no third-party calls. |
+| D6 | Consents are **deleted with the account** (data minimization); only the `trial_registry` HMAC survives. **Flagged for lawyer review** (OB10). |
+
+No open questions remain for stage 1.
