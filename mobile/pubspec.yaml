@@ -1,0 +1,47 @@
+name: control_contable
+description: "Control Contable: tax estimates for Mexican taxpayers (Flutter client)."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.5
+  flutter: 3.47.7
+
+# Pins follow ADR-0001 (Context7-verified 2026-10-13). Exact versions: upgrades are deliberate.
+dependencies:
+  dio: 5.11.1
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  flutter_riverpod: 3.4.3
+  go_router: 18.0.2
+  intl: any
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: 11.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true
+  # Direction "A · Confianza sobria" faces, bundled so release builds never fetch fonts at
+  # runtime (docs/design/DIRECTIONS.md). Latin subset, SIL OFL 1.1 (see assets/fonts/).
+  fonts:
+    - family: Public Sans
+      fonts:
+        - asset: assets/fonts/PublicSans-400.ttf
+          weight: 400
+        - asset: assets/fonts/PublicSans-500.ttf
+          weight: 500
+        - asset: assets/fonts/PublicSans-600.ttf
+          weight: 600
+        - asset: assets/fonts/PublicSans-700.ttf
+          weight: 700
+    - family: Source Serif 4
+      fonts:
+        - asset: assets/fonts/SourceSerif4-600.ttf
+          weight: 600
+        - asset: assets/fonts/SourceSerif4-700.ttf
+          weight: 700

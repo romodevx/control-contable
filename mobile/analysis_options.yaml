@@ -1,0 +1,28 @@
+# Strict analysis: very_good_analysis (a superset of flutter_lints/recommended) plus the three
+# strict language modes, and riverpod_lint as an analysis_server_plugin (ADR-0001: Riverpod 3).
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+  errors:
+    missing_required_param: error
+    missing_return: error
+    avoid_print: error
+  exclude:
+    - build/**
+    - lib/l10n/app_localizations*.dart
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - android/**
+    - ios/**
+
+linter:
+  rules:
+    # Production code never prints; logging goes through a logger that release builds silence.
+    avoid_print: true
+
+plugins:
+  riverpod_lint: 3.1.9
