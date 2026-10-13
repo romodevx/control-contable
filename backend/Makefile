@@ -2,6 +2,7 @@ GO            ?= go
 GOLANGCI_LINT ?= golangci-lint
 PKGS          := ./...
 GEN_DIR       := adapter/http/gen
+GEN_FILES     := $(GEN_DIR)/*.gen.go
 
 .DEFAULT_GOAL := check
 
@@ -43,11 +44,11 @@ tidy:
 generate:
 	$(GO) generate ./$(GEN_DIR)/...
 
-## codegen-check: regenerate and fail if the result differs from what is committed (drift check)
+## codegen-check: regenerate and fail if any *.gen.go differs from what is committed (drift check; hand-written files in GEN_DIR are not judged)
 codegen-check: generate
-	@out="$$(git status --porcelain -- $(GEN_DIR))"; if [ -n "$$out" ]; then \
+	@out="$$(git status --porcelain -- '$(GEN_FILES)')"; if [ -n "$$out" ]; then \
 		echo "adapter/http/gen is out of date with docs/api/openapi.yaml; run 'make generate' and commit:"; \
-		echo "$$out"; git --no-pager diff --stat -- $(GEN_DIR); exit 1; fi
+		echo "$$out"; git --no-pager diff --stat -- '$(GEN_FILES)'; exit 1; fi
 
 # ---- Local stack (LOCAL ONLY; infra/local) ---------------------------------------------
 
