@@ -6,7 +6,7 @@ GEN_FILES     := $(GEN_DIR)/*.gen.go
 
 .DEFAULT_GOAL := check
 
-.PHONY: check fmt fmt-check lint test test-integration cover tidy generate codegen-check db-up db-down db-reset db-roles-check
+.PHONY: check fmt fmt-check lint test test-integration cover tidy generate codegen-check db-up db-down db-reset db-roles-check migrate-up migrate-down migrate-status
 
 ## check: fmt-check + lint + unit tests (what CI runs)
 check: fmt-check lint test
@@ -84,3 +84,25 @@ db-roles-check: $(LOCAL_ENV)
 	  $(COMPOSE) exec -T -e PGPASSWORD="$$pw" postgres \
 	    psql --no-psqlrc -h 127.0.0.1 -U $$role -d "$${CC_DB_NAME:-control_contable}" -f /bootstrap/check-runtime-role.sql; \
 	done
+
+# Owner URL for cmd/migrate on the LOCAL stack only, built from infra/local/.env inside the
+# recipe so the password never appears in make's output. Shared environments set
+# MIGRATE_DATABASE_URL from the secret manager instead.
+MIGRATE = set -e; . $(LOCAL_ENV); \
+	MIGRATE_DATABASE_URL="postgres://cc_owner:$${CC_OWNER_PASSWORD}@$${CC_DB_HOST}:$${CC_DB_PORT}/$${CC_DB_NAME}?sslmode=disable" \
+	$(GO) run ./cmd/migrate
+
+## migrate-up: LOCAL ONLY. Apply every pending goose migration as cc_owner
+migrate-up: $(LOCAL_ENV)
+	@$(ASSERT_LOCAL)
+	@$(MIGRATE) up
+
+## migrate-down: LOCAL ONLY. Roll back the most recent migration as cc_owner
+migrate-down: $(LOCAL_ENV)
+	@$(ASSERT_LOCAL)
+	@$(MIGRATE) down
+
+## migrate-status: LOCAL ONLY. List migrations as applied or pending
+migrate-status: $(LOCAL_ENV)
+	@$(ASSERT_LOCAL)
+	@$(MIGRATE) status
