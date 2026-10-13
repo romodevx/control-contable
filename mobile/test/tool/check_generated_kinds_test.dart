@@ -49,11 +49,7 @@ void main() {
     expect(
       findings,
       contains(
-        allOf(
-          contains('Period'),
-          contains('typedef'),
-          contains('enum'),
-        ),
+        allOf(contains('Period'), contains('typedef'), contains('enum')),
       ),
     );
   });
@@ -103,7 +99,7 @@ void main() {
         },
       },
       sources: {
-        'models/error.dart': 'abstract class Error with _\$Error {}',
+        'models/error.dart': r'abstract class Error with _$Error {}',
         'models/error_2.dart': 'enum Error { a, b }',
       },
     );

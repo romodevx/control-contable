@@ -24,7 +24,7 @@ const _parameterRefPrefix = '#/components/parameters/';
 /// Raised when the contract cannot be normalized.
 class OpenApiNormalizeError extends Error {
   /// Creates the error with a [message] for the developer.
-  OpenApiNormalizeError(this.message);
+  new(this.message);
 
   /// What is wrong.
   final String message;
