@@ -95,22 +95,26 @@ paths:
         '500': { $ref: '#/components/responses/InternalError' }
 
   # ---------------------------------------------------------------- M1 Auth
-  # Frozen at M1-01 (docs/project-specs/MODULE-auth.md, decisions D1-D6). Every M1
+  # Frozen at M1-01 (docs/project-specs/MODULE-auth.md, decisions D1-D7). Every M1
   # operation is gated by `module_auth`: flag OFF answers 404 before decode or authn.
   /v1/auth/register:
     post:
       tags: [Auth]
       operationId: register
-      x-frozen: sha256:31bfc19a84b6e4e4f68ba2d7a3d03482d8f1a238eb157696710f9a2984434ff2
+      x-frozen: sha256:1daf06f69e7e13de65b8ce329eff69d42e69a050b340a969d4fe7c8f56efa521
       summary: Start registration (emails a 6-digit verification code)
       description: >-
         Always answers `202 {status: verification_sent}` with the same body and comparable
         latency, whether the address is new, has a pending sign-up or already belongs to a
         verified account, so accounts cannot be enumerated (US-A1a). For a verified account
         no code is created and the owner gets a "someone tried to sign up with your email"
-        notice, at most once per hour (D3). A pending sign-up for the same email is replaced
-        (new password hash, new code, attempts reset). Nothing is written to users, consents
-        or entitlements until `verifyEmail` (ADR-0001 OWNER decision 1, option A).
+        notice, at most once per hour (D3). For an email with a live (unexpired) pending
+        sign-up the stored password hash and accepted documents are never changed: the call
+        behaves like `resendVerification` for that email (same generic 202, same cooldown and
+        rate limits), so nobody can set the password of someone else's pending sign-up (D7).
+        Only once the pending sign-up has expired does a new register replace it. Nothing is
+        written to users, consents or entitlements until `verifyEmail` (ADR-0001 OWNER
+        decision 1, option A).
 
         `accepted_documents` must carry the current version (from `listLegalDocuments`) of
         `terms` and of one privacy notice (`privacy_notice_integral` or
@@ -226,14 +230,16 @@ paths:
     post:
       tags: [Auth]
       operationId: resendVerification
-      x-frozen: sha256:629fb4fddfaf11f6dead25b626857aae120b9f1bb9c7bd3cc38637e8989d8b80
+      x-frozen: sha256:3e1a7e1d9b8af2916ec6c4ebff0d41bf66f1e6070afb317483a4ceec4fc065b3
       summary: Email a new verification code for a pending sign-up
       description: >-
         For a pending sign-up, a new code replaces the old one (attempts reset). Always
         answers the same `202 {status: verification_sent}`: also when there is no pending
         sign-up, the email is already verified, or the last resend was less than 60 s ago
         (the cooldown is silent so it is not an oracle; the app shows a 60 s countdown)
-        (US-A1c, D2).
+        (US-A1c, D2). A `register` for an email with a live pending sign-up takes this same
+        path and shares its cooldown and limits; neither call ever changes the pending
+        sign-up's password hash or accepted documents (D7).
       x-module: module_auth
       x-public: true
       security: []

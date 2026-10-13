@@ -26,7 +26,7 @@ abstract class AuthClient {
 
   /// Start registration (emails a 6-digit verification code).
   ///
-  /// Always answers `202 {status: verification_sent}` with the same body and comparable latency, whether the address is new, has a pending sign-up or already belongs to a verified account, so accounts cannot be enumerated (US-A1a). For a verified account no code is created and the owner gets a "someone tried to sign up with your email" notice, at most once per hour (D3). A pending sign-up for the same email is replaced (new password hash, new code, attempts reset). Nothing is written to users, consents or entitlements until `verifyEmail` (ADR-0001 OWNER decision 1, option A).
+  /// Always answers `202 {status: verification_sent}` with the same body and comparable latency, whether the address is new, has a pending sign-up or already belongs to a verified account, so accounts cannot be enumerated (US-A1a). For a verified account no code is created and the owner gets a "someone tried to sign up with your email" notice, at most once per hour (D3). For an email with a live (unexpired) pending sign-up the stored password hash and accepted documents are never changed: the call behaves like `resendVerification` for that email (same generic 202, same cooldown and rate limits), so nobody can set the password of someone else's pending sign-up (D7). Only once the pending sign-up has expired does a new register replace it. Nothing is written to users, consents or entitlements until `verifyEmail` (ADR-0001 OWNER decision 1, option A).
   /// `accepted_documents` must carry the current version (from `listLegalDocuments`) of `terms` and of one privacy notice (`privacy_notice_integral` or `privacy_notice_simplified`). A stale version or a missing kind answers `400 validation_failed` on `accepted_documents`; a short, weak or breached password answers `400 validation_failed` on `password` (the value is never echoed).
   @POST('/v1/auth/register')
   Future<VerificationSent> register({@Body() required RegisterRequest body});
@@ -40,7 +40,7 @@ abstract class AuthClient {
 
   /// Email a new verification code for a pending sign-up.
   ///
-  /// For a pending sign-up, a new code replaces the old one (attempts reset). Always answers the same `202 {status: verification_sent}`: also when there is no pending sign-up, the email is already verified, or the last resend was less than 60 s ago (the cooldown is silent so it is not an oracle; the app shows a 60 s countdown) (US-A1c, D2).
+  /// For a pending sign-up, a new code replaces the old one (attempts reset). Always answers the same `202 {status: verification_sent}`: also when there is no pending sign-up, the email is already verified, or the last resend was less than 60 s ago (the cooldown is silent so it is not an oracle; the app shows a 60 s countdown) (US-A1c, D2). A `register` for an email with a live pending sign-up takes this same path and shares its cooldown and limits; neither call ever changes the pending sign-up's password hash or accepted documents (D7).
   @POST('/v1/auth/verify-email/resend')
   Future<VerificationSent> resendVerification({
     @Body() required ResendVerificationRequest body,

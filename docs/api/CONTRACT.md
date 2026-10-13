@@ -55,7 +55,7 @@ target), so every schema a frozen operation exposes is frozen on its own.
 | `components.schemas.FieldError` | P0-05 | Item of `ErrorResponse.error.details` |
 | `components.schemas.HealthStatus` | P0-05 | `/healthz` body |
 | `components.schemas.EnabledFlags`, `ModuleKey` | P0-05 | `/v1/flags` body |
-| M1 `module_auth` operations: `register`, `verifyEmail`, `resendVerification`, `login`, `refreshSession`, `logout`, `getMe`, `updateMe`, `deleteMe`, `listLegalDocuments` | M1-01 | [MODULE-auth](../project-specs/MODULE-auth.md) (D1-D6); the backend (M1-05..M1-09) and the Flutter auth screens (M1-11..M1-13) build on it |
+| M1 `module_auth` operations: `register`, `verifyEmail`, `resendVerification`, `login`, `refreshSession`, `logout`, `getMe`, `updateMe`, `deleteMe`, `listLegalDocuments` | M1-01 | [MODULE-auth](../project-specs/MODULE-auth.md) (D1-D7); the backend (M1-05..M1-09) and the Flutter auth screens (M1-11..M1-13) build on it |
 | `components.schemas.RegisterRequest`, `DocumentAcceptance`, `VerificationSent`, `VerifyEmailRequest`, `ResendVerificationRequest`, `LoginRequest`, `RefreshRequest`, `TokenPair`, `AuthSession`, `User`, `UserUpdate`, `DeleteAccountRequest`, `LegalDocumentKind`, `LegalDocument`, `LegalDocumentList` | M1-01 | Bodies of the M1 operations |
 | `components.headers.NoStore` | M1-01 | `Cache-Control: no-store` on every response that carries tokens or account data |
 
