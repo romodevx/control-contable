@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | PROPOSAL, pending owner choice |
+| Status | DECIDED 2026-10-13 — owner chose **A · Confianza sobria** as-is (no B/C borrowings) |
 | Date | 2026-10-13 |
 | Preview | [`preview.html`](preview.html) (open it in a browser; each screen is shown in all three directions, in light and dark mode) |
 | Inputs | [PRD](../project-specs/PRD.md) §3 personas, §6 screens; `~/.claude/rules/ui-forms-and-modals.md` (house form rules, which win over the style catalog); `ui-ux-pro-max` catalog (Banking/Traditional Finance palette, "Corporate Trust" pairing); `design-consultation` method (face selection by audience world and mode) |
@@ -277,3 +277,9 @@ contrast margins are also the widest of the three in both modes.
    per theme.
 3. Bundle the chosen Google Fonts as assets (`google_fonts` with `allowRuntimeFetching = false`
    in release).
+
+## Decision (2026-10-13)
+
+The owner chose **A · Confianza sobria** as presented, without the B/C borrowings suggested
+in the recommendation. The mobile theme tokens in `mobile/` (P0-22) already implement A; any
+later change of direction is a token swap, not a widget change.
