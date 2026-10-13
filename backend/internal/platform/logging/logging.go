@@ -5,9 +5,11 @@
 //   - by key: an attribute (or group) whose key names sensitive data (rfc,
 //     email, password, token, secret, authorization, cookie, api key, curp,
 //     pepper, private key) is replaced by Redacted, whatever its value;
-//   - by value: RFCs, email addresses, bearer credentials, JWTs and refresh
-//     tokens are masked inside the message and every string, error,
-//     fmt.Stringer or other non-scalar value.
+//   - by value: RFCs, CURPs, email addresses, bearer credentials, JWTs,
+//     refresh tokens, URL credentials and credential key/value pairs
+//     ("password=…", "Authorization: Basic …", dumped headers, structs) are
+//     masked inside the message and every string, error, fmt.Stringer or
+//     other non-scalar value.
 //
 // Values implementing slog.LogValuer (config.Secret) are resolved first.
 package logging

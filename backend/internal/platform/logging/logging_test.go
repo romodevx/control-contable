@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -104,7 +105,7 @@ func TestHandler_scrubsSensitiveValues(t *testing.T) {
 		{
 			"struct value",
 			func(l *slog.Logger) { l.Info("m", "payload", struct{ To string }{email}) },
-			"payload", "{[REDACTED]}",
+			"payload", "{To:[REDACTED]}",
 		},
 	}
 	for _, tt := range tests {
@@ -112,6 +113,91 @@ func TestHandler_scrubsSensitiveValues(t *testing.T) {
 			line, _ := logLine(t, tt.log)
 
 			assert.Equal(t, tt.want, line[tt.key])
+		})
+	}
+}
+
+// TestHandler_scrubsCredentialsInText covers secrets that reach a log line
+// under a harmless key, inside free text: error strings, dumped headers,
+// DSNs, JSON bodies and structs printed by fmt.
+func TestHandler_scrubsCredentialsInText(t *testing.T) {
+	const (
+		password   = "hunter2"
+		basicCreds = "dXNlcjpodW50ZXIy" //nolint:gosec // G101: fake fixture the redactor must hide
+		sessionID  = "s3ss10nV4lu3"
+		apiKey     = "ak_live_51Hx" //nolint:gosec // G101: fake fixture the redactor must hide
+		curp       = "GODE561231HDFRRN09"
+	)
+	tests := []struct {
+		name   string
+		log    func(*slog.Logger)
+		secret string
+	}{
+		{
+			"dumped http.Header authorization",
+			func(l *slog.Logger) {
+				l.Info("m", "headers", http.Header{"Authorization": {"Basic " + basicCreds}})
+			},
+			basicCreds,
+		},
+		{
+			"dumped http.Header cookie",
+			func(l *slog.Logger) { l.Info("m", "headers", http.Header{"Cookie": {"session=" + sessionID}}) },
+			sessionID,
+		},
+		{
+			"authorization header line in error",
+			func(l *slog.Logger) {
+				l.Error("m", "err", errors.New("upstream rejected Authorization: Token "+apiKey))
+			},
+			apiKey,
+		},
+		{
+			"password in url userinfo",
+			func(l *slog.Logger) {
+				l.Error("m", "err", errors.New("connect postgres://app:"+password+"@localhost/db: refused"))
+			},
+			password,
+		},
+		{
+			"password in key=value dsn",
+			func(l *slog.Logger) { l.Error("m", "err", errors.New("dsn host=db password="+password+" user=app")) },
+			password,
+		},
+		{
+			"password in json text",
+			func(l *slog.Logger) {
+				l.Error("m", "err", fmt.Errorf("decode: %w", errors.New(`{"password":"`+password+`"}`)))
+			},
+			password,
+		},
+		{
+			"api key in query string",
+			func(l *slog.Logger) { l.Info("m", "url", "https://api.example.com/v1?api_key="+apiKey+"&x=1") },
+			apiKey,
+		},
+		{
+			"struct field",
+			func(l *slog.Logger) { l.Info("m", "payload", struct{ Password string }{password}) },
+			password,
+		},
+		{
+			"map entry",
+			func(l *slog.Logger) { l.Info("m", "payload", map[string]string{"password": password}) },
+			password,
+		},
+		{
+			"whole curp, not only its rfc-shaped prefix",
+			func(l *slog.Logger) { l.Info("m", "detail", "curp "+curp) },
+			"RRN09",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, raw := logLine(t, tt.log)
+
+			assert.NotContains(t, raw, tt.secret)
+			assert.Contains(t, raw, logging.Redacted)
 		})
 	}
 }
