@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/romodevx/control-contable/backend/adapter/http/contracttest"
+	"github.com/romodevx/control-contable/backend/adapter/http/middleware"
 	authhttp "github.com/romodevx/control-contable/backend/internal/auth/adapter/http"
 	"github.com/romodevx/control-contable/backend/internal/auth/domain"
 	"github.com/romodevx/control-contable/backend/internal/auth/usecase"
@@ -112,9 +114,9 @@ func TestAuthenticate_rejectsWithTheGeneric401(t *testing.T) {
 			assert.False(t, next.called, "the protected handler never runs")
 			assert.Equal(t, tt.reachesVerif, len(verifier.calls) == 1)
 			assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
-			// The frozen contract's Unauthorized response declares no
-			// WWW-Authenticate header, and contract tests refuse undeclared ones.
-			assert.Empty(t, rec.Header().Get("WWW-Authenticate"))
+			// RFC 9110 §15.5.2 / RFC 6750 §3: a 401 names the scheme to use.
+			// One fixed challenge, so it says nothing about why.
+			assert.Equal(t, []string{`Bearer realm="control-contable"`}, rec.Header().Values("WWW-Authenticate"))
 			var body struct {
 				Error struct {
 					Code    string `json:"code"`
@@ -130,5 +132,22 @@ func TestAuthenticate_rejectsWithTheGeneric401(t *testing.T) {
 			assert.Equal(t, first, body.Error.Message)
 			assert.NotContains(t, logs.String(), "opaque-value", "a token never reaches the logs")
 		})
+	}
+}
+
+// The refusal the authenticator writes is the contract's Unauthorized
+// response of every secured operation, WWW-Authenticate header included.
+func TestAuthenticate_refusalConformsToTheContract(t *testing.T) {
+	c := contracttest.Load(t)
+	h := middleware.RequestID(authhttp.NewAuthenticator(&fakeVerifier{}, nil).Authenticate(&recordingNext{}))
+	for _, header := range []string{"", "Bearer opaque-value.refused~value"} {
+		req := httptest.NewRequest(http.MethodGet, "/v1/me", nil)
+		if header != "" {
+			req.Header.Set("Authorization", header)
+		}
+
+		rec := c.Serve(t, h, req)
+
+		assert.Equal(t, http.StatusUnauthorized, rec.Code)
 	}
 }

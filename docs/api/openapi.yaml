@@ -1358,6 +1358,14 @@ components:
       description: Responses carrying tokens or account data must not be stored by any cache (RFC 9111; RFC 6749 section 5.1).
       required: true
       schema: { type: string, const: no-store }
+    WWWAuthenticate:
+      x-frozen: sha256:1fb572380b171f3d3847035780f005b1158e8a42950cfd242777120d95b7c79c
+      description: >-
+        The bearer challenge every `401` of a secured operation carries (RFC 9110 section
+        15.5.2; RFC 6750 section 3). One fixed value with no `error` attribute, so it never
+        says why the credentials were refused.
+      required: true
+      schema: { type: string, const: 'Bearer realm="control-contable"' }
 
   responses:
     BadRequest:
@@ -1375,7 +1383,10 @@ components:
                   code: minimum
                   message: Must be greater than or equal to 0.
     Unauthorized:
+      x-frozen: sha256:cecf02689502978ec9e4f2d8fa5e7e31d9a83bb8706fced34b5814fd59f8bb34
       description: Missing, invalid or expired credentials.
+      headers:
+        WWW-Authenticate: { $ref: '#/components/headers/WWWAuthenticate' }
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }

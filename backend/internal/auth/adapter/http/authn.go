@@ -16,6 +16,12 @@ import (
 // Scheme names are case-insensitive (RFC 9110 §11.1).
 const bearerScheme = "bearer"
 
+// bearerChallenge is the WWW-Authenticate value of every 401 the
+// authenticator writes (RFC 9110 §15.5.2, RFC 6750 §3). It is one fixed
+// challenge, without an error attribute, so it never says why the
+// credentials were refused (the contract's WWWAuthenticate header).
+const bearerChallenge = `Bearer realm="control-contable"` //nolint:gosec // G101: an auth challenge, not a credential
+
 // errNoBearer reports a request without exactly one well-formed
 // "Authorization: Bearer <token>" header.
 var errNoBearer = fmt.Errorf("%w: no well-formed bearer credentials", usecase.ErrInvalidAccessToken)
@@ -49,6 +55,7 @@ func (a *Authenticator) Authenticate(next http.Handler) http.Handler {
 			// The reason (never the token) helps debugging; the client
 			// gets the generic answer.
 			a.logger.DebugContext(r.Context(), "authentication refused", slog.String("reason", err.Error()))
+			w.Header().Set("WWW-Authenticate", bearerChallenge)
 			_ = httperr.Write(w, r, ErrorMapper, err)
 			return
 		}
