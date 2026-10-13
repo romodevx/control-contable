@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	// twelveCharSample is a made-up value that meets the policy; not a credential.
-	twelveCharSample   = "tlacuache-87"
+	// twelveCharSample is an obviously synthetic 12-character fixture; not a credential.
+	twelveCharSample   = "not-a-secret"
 	combiningRingAbove = "\u030A"
 	expandsUnderNFKC   = "\uFDFA"       // one code point, 33 bytes under NFKC
 	fullwidthPassword  = "ｐａｓｓｗｏｒｄ１２３４" //nolint:gosec // G101: blocklisted test input; NFKC → "password1234"
@@ -29,11 +29,11 @@ func TestNewPasswordAccepts(t *testing.T) {
 		want string
 	}{
 		{name: "exactly 12 characters", raw: twelveCharSample, want: twelveCharSample},
-		{name: "no composition rules: lowercase only", raw: "mipatoazulvuela", want: "mipatoazulvuela"},
-		{name: "spaces are kept", raw: "  mi pato azul vuela  ", want: "  mi pato azul vuela  "},
-		{name: "unicode and emoji", raw: "contraseña🦆segura", want: "contraseña🦆segura"},
+		{name: "no composition rules: lowercase only", raw: "fixturelowercase", want: "fixturelowercase"},
+		{name: "spaces are kept", raw: "  fixture with spaces  ", want: "  fixture with spaces  "},
+		{name: "unicode and emoji", raw: "fixture-ñ🦆-unicode", want: "fixture-ñ🦆-unicode"},
 		{name: "length counted in characters after NFKC", raw: strings.Repeat("x", 11) + "A" + combiningRingAbove, want: strings.Repeat("x", 11) + "Å"},
-		{name: "ligature decomposed by NFKC", raw: "ﬁesta-en-la-playa", want: "fiesta-en-la-playa"},
+		{name: "ligature decomposed by NFKC", raw: "ﬁxture-ligature", want: "fixture-ligature"},
 		{name: "1024 bytes", raw: strings.Repeat("ab", domain.MaxPasswordBytes/2), want: strings.Repeat("ab", domain.MaxPasswordBytes/2)},
 	}
 	for _, tt := range tests {
@@ -52,11 +52,11 @@ func TestNewPasswordRejects(t *testing.T) {
 		want error
 	}{
 		{name: "empty", raw: "", want: domain.ErrPasswordTooShort},
-		{name: "11 characters", raw: "tlacuache-8", want: domain.ErrPasswordTooShort},
+		{name: "11 characters", raw: "not-a-secre", want: domain.ErrPasswordTooShort},
 		{name: "12 code points but 11 characters after NFKC", raw: strings.Repeat("x", 10) + "A" + combiningRingAbove, want: domain.ErrPasswordTooShort},
 		{name: "over 1024 bytes before normalization", raw: strings.Repeat("a", domain.MaxPasswordBytes+1), want: domain.ErrPasswordTooLong},
 		{name: "over 1024 bytes after NFKC expansion", raw: strings.Repeat(expandsUnderNFKC, 40), want: domain.ErrPasswordTooLong},
-		{name: "invalid UTF-8", raw: "tlacuache-87\xff", want: domain.ErrPasswordMalformed},
+		{name: "invalid UTF-8", raw: twelveCharSample + "\xff", want: domain.ErrPasswordMalformed},
 		{name: "common password", raw: "password1234", want: domain.ErrPasswordCommon},
 		{name: "common password in another case", raw: "PassWord1234", want: domain.ErrPasswordCommon},
 		{name: "common password in fullwidth forms", raw: fullwidthPassword, want: domain.ErrPasswordCommon},
@@ -116,11 +116,11 @@ func TestPasswordNeverPrints(t *testing.T) {
 	accepted, err := domain.NewPassword(twelveCharSample)
 	require.NoError(t, err)
 	for _, verb := range []string{"%v", "%+v", "%#v", "%s", "%q"} {
-		assert.NotContains(t, fmt.Sprintf(verb, accepted), "tlacuache", verb)
+		assert.NotContains(t, fmt.Sprintf(verb, accepted), twelveCharSample, verb)
 	}
 	var buf bytes.Buffer
 	slog.New(slog.NewTextHandler(&buf, nil)).Info("x", "password", accepted)
-	assert.NotContains(t, buf.String(), "tlacuache")
+	assert.NotContains(t, buf.String(), twelveCharSample)
 }
 
 // TestMaxPasswordBytesMatchesTheHasher keeps the domain bound and the argon2id

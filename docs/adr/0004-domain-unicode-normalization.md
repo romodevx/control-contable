@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | PROPOSED (M1-04; tech-lead and security gates of M1 decide) |
+| Status | ACCEPTED (tech-lead, 2026-10-13, PR #35) |
 | Date | 2026-10-13 |
 | Related | [ADR-0001 layout and Dependency Rule](0001-stack.md), [PLAN M1-04](../project-specs/PLAN-control-contable.md), [P0-30 security gate](../reviews/P0-30-security-gate.md) |
 | Owner | backend-sr |
@@ -47,3 +47,12 @@ Any further external package in the domain needs its own ADR.
   theory change the normal form of newly assigned characters; NFKC is stable for
   assigned characters under Unicode's normalization stability policy, so stored hashes
   keep verifying.
+
+## Review
+
+Accepted by tech-lead on 2026-10-13 (PR #35). The exception is one exact import path, its
+only transitive import is `golang.org/x/text/transform` (also pure, no I/O), and both guards
+were probed: a temporary `golang.org/x/text/cases` import in `internal/auth/domain` failed
+depguard (`not allowed from list 'domain'`) and `TestBackendModuleRespectsDependencyRule`.
+Options B and C are rejected for the reason given above: NFKC is part of the password
+policy, and a port would make that policy depend on correct wiring.
