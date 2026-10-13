@@ -120,6 +120,44 @@ Expected kinds: a schema with `enum` → `enum`; with `properties` or `allOf` �
 else (scalars, arrays, maps, `const`) → `typedef`. The guard also fails when two schemas map
 to one Dart name, when one Dart name is declared twice, or when a component was not generated.
 
+## Null on the wire (M1-11, PR #39)
+
+Decided 2026-10-13 by tech-lead as architect delegate. Every request schema in the contract is
+`additionalProperties: false`, and an optional non-nullable property (e.g. `RegisterRequest.name`,
+`UserUpdate.name`) rejects `null`: Prism answers 400, and so would the server's validator.
+json_serializable's default (`include_if_null: true`) sent every unset optional field as
+`null`, so a sign-up without a name failed and any PATCH body nulled every field it did not set.
+
+Decision: the client sends **absent** for "not set" and keeps **`null`** only where the
+contract makes `null` a value the server must receive.
+
+| Contract shape | Dart | Wire when unset / `null` | Config |
+|---|---|---|---|
+| optional, non-nullable | `T?` | absent | `build.yaml`: json_serializable `include_if_null: false` |
+| optional, nullable | `T?`, `@JsonKey(includeIfNull: false)` | absent | swagger_parser `include_if_null: true` |
+| required, nullable | `T?`, `@JsonKey(includeIfNull: true)` | `null` | swagger_parser `include_if_null: true` |
+| nullable with a `default` (swagger_parser makes it required) | `T?` + `@Default`, `includeIfNull: true` | `null` | same |
+
+Checked against the contract (every `requestBody`, `$ref`s followed): no request has a
+required nullable property. The nullable ones are `ExpenseFields.description`,
+`IncomeFields.description` / `invoiced_on` / `collected_on` (create and PATCH),
+`ReminderSettings.early_day` (PUT; `null` turns the early reminder off) and
+`TaxInputValue.value_cents` / `value_rate` (PUT; exactly one is sent).
+
+- `PATCH /v1/me` (`UserUpdate`): only `name`, optional and **not** nullable. Absent means
+  "unchanged"; there is no explicit-null case to preserve. Correct as generated.
+- `PUT /v1/reminder-settings`: `early_day: null` stays on the wire (row 4). Guarded by
+  `mobile/test/api/request_serialization_test.dart`.
+- **Known gap, PATCH of an optional nullable field** (`IncomeUpdate` / `ExpenseUpdate`
+  `description`, `invoiced_on`, `collected_on`): Dart `T?` cannot tell "unset" from "set to
+  `null`", so the generated client cannot clear one of these fields (it omits the key). The
+  backend handlers for those PATCHes do not exist yet, and oapi-codegen's `*T` + `omitempty`
+  reads `null` and absent alike, so nothing is lost today. **Before any mobile screen edits an
+  income or expense**, the incomes/expenses module must decide, in the contract, whether `null`
+  in a PATCH clears the field (merge-patch semantics). If it does, both sides need a tri-state
+  (server: `nullable.Nullable[T]`; client: a hand-written request type or `Map` body for that
+  call, kept in contract tests) and this section is updated.
+
 ## Consequences
 
 - (+) Pure-Dart toolchain, no JVM in mobile CI; idiomatic Freezed 3 + retrofit output;

@@ -9,8 +9,9 @@ global_options:
 
 # Unset optional fields are left out of request bodies, never sent as `null`: the contract's
 # request schemas are `additionalProperties: false`, and an optional non-nullable property
-# (e.g. RegisterRequest.name) rejects `null`. Required nullable fields keep an explicit
-# `includeIfNull: true` from swagger_parser (`include_if_null: true` in swagger_parser.yaml).
+# (e.g. RegisterRequest.name) rejects `null`. Required nullable fields, and nullable fields
+# with a default (swagger_parser makes those required), keep an explicit `includeIfNull: true`
+# from swagger_parser (`include_if_null: true` in swagger_parser.yaml). ADR-0003, "Null on the wire".
 targets:
   $default:
     builders:
