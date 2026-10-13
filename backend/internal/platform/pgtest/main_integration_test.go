@@ -10,10 +10,12 @@ import (
 	"testing"
 
 	"github.com/romodevx/control-contable/backend/internal/platform/pgtest"
+	"github.com/romodevx/control-contable/backend/migrations"
 )
 
-// The throwaway schema these tests prove the helpers against. It stands in for the
-// real migrations (P0-10) and is applied through the same migrator hook they will use.
+// The throwaway schema these tests prove the helpers against. It is applied on top of
+// the real goose migrations (package migrations), through the same migrator hook, so
+// the fixtures use the production app_user_id() helper and grants.
 //
 //   - notes:        owner-scoped, ENABLE + FORCE RLS, fail-closed helper (the data-model pattern).
 //   - leaky_notes:  same shape, no RLS. Every isolation check must catch it.
@@ -23,10 +25,6 @@ import (
 //   - reused_session_leaky_notes: leaks every row to a session whose transaction-local
 //     context reverted to the empty string (a pooled connection reused after AsUser).
 const fixtureDDL = `
-CREATE FUNCTION app_user_id() RETURNS uuid STABLE LANGUAGE sql
-AS $$ SELECT nullif(current_setting('app.current_user_id', true), '')::uuid $$;
-GRANT EXECUTE ON FUNCTION app_user_id() TO cc_app;
-
 CREATE TABLE notes (
   id      bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id uuid NOT NULL,
@@ -89,6 +87,9 @@ var migratedAs string
 func fixtureSchema(ctx context.Context, db *sql.DB) error {
 	if err := db.QueryRowContext(ctx, "SELECT current_user").Scan(&migratedAs); err != nil {
 		return fmt.Errorf("read migrator role: %w", err)
+	}
+	if err := migrations.Up(ctx, db); err != nil {
+		return err
 	}
 	if _, err := db.ExecContext(ctx, fixtureDDL); err != nil {
 		return fmt.Errorf("apply fixture schema: %w", err)

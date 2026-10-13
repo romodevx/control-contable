@@ -21,7 +21,10 @@
 // # Migrations
 //
 // The Migrator hook receives a *sql.DB logged in as cc_owner on the template. The
-// default is NoMigrations; the goose runner (P0-10) plugs in here.
+// default is NoMigrations; suites that need the real schema pass migrations.Up, the
+// same goose migrations cmd/migrate applies:
+//
+//	pgtest.Main(m, pgtest.WithMigrator(migrations.Up))
 //
 // # Running as a role
 //
