@@ -26,6 +26,10 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+  # OFL notices of the bundled faces; registered in the app licenses at boot.
+  assets:
+    - assets/fonts/OFL-PublicSans.txt
+    - assets/fonts/OFL-SourceSerif4.txt
   # Direction "A · Confianza sobria" faces, bundled so release builds never fetch fonts at
   # runtime (docs/design/DIRECTIONS.md). Latin subset, SIL OFL 1.1 (see assets/fonts/).
   fonts:

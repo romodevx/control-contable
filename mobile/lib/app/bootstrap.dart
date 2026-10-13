@@ -1,4 +1,5 @@
 import 'package:control_contable/app/app.dart';
+import 'package:control_contable/app/font_licenses.dart';
 import 'package:control_contable/core/config/app_config.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +12,7 @@ const _useMock = bool.fromEnvironment('USE_MOCK');
 /// fast when it is unusable) and starts the app with it.
 void bootstrap(AppFlavor flavor) {
   WidgetsFlutterBinding.ensureInitialized();
+  registerFontLicenses();
   final config = AppConfig.resolve(
     flavor: flavor,
     // Equals the default only when no define is passed at build time.
