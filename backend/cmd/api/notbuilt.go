@@ -41,10 +41,6 @@ func lowerFirst(s string) string {
 	return string(unicode.ToLower(r)) + s[size:]
 }
 
-func (notBuilt) Login(context.Context, gen.LoginRequestObject) (gen.LoginResponseObject, error) {
-	return nil, errNotBuilt
-}
-
 func (notBuilt) Logout(context.Context, gen.LogoutRequestObject) (gen.LogoutResponseObject, error) {
 	return nil, errNotBuilt
 }

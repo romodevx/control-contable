@@ -16,7 +16,7 @@ import (
 // builtOperations are the operations with a real handler. Building another
 // one means deleting its stub from notbuilt.go (the compiler insists) and
 // adding it here.
-var builtOperations = []string{"getHealth", "listEnabledFlags", "register", "resendVerification", "verifyEmail"}
+var builtOperations = []string{"getHealth", "listEnabledFlags", "register", "resendVerification", "verifyEmail", "login"}
 
 func TestNotBuilt_coversExactlyTheOperationsWithoutAHandler(t *testing.T) {
 	var want []string

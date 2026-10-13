@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/ed25519"
 	"crypto/rand"
 	"database/sql"
 	"fmt"
@@ -37,15 +38,23 @@ type authWiring struct {
 	argon2 crypto.Argon2idParams
 }
 
-// newAuthHandler wires the auth use cases (M1-05) over the cc_app pool.
-func newAuthHandler(w authWiring) (*authhttp.Handler, error) {
+// authModule is the auth module's HTTP side: the handler of its operations
+// and the bearer authenticator every secured operation runs behind.
+type authModule struct {
+	handler *authhttp.Handler
+	authn   *authhttp.Authenticator
+}
+
+// newAuthModule wires the auth use cases (M1-05, M1-07) over the cc_app pool
+// and the access-token authenticator.
+func newAuthModule(w authWiring) (authModule, error) {
 	txm, err := pgdb.NewTxManager(w.pool)
 	if err != nil {
-		return nil, err
+		return authModule{}, err
 	}
 	keys, err := newAuthCrypto(w)
 	if err != nil {
-		return nil, err
+		return authModule{}, err
 	}
 	clk := clock.NewSystem()
 	signUps := infra.NewSignUpStore()
@@ -66,7 +75,52 @@ func newAuthHandler(w authWiring) (*authhttp.Handler, error) {
 		Trials: infra.NewTrialStore(), Refresh: infra.NewRefreshTokenStore(), Access: keys.access,
 		Logger: w.logger,
 	})
-	return authhttp.NewHandler(register, verify, resend), nil
+	login, err := usecase.NewLogin(usecase.LoginDeps{
+		System: txm, Tx: txm, Clock: clk, Entropy: rand.Reader, Index: keys.index, Passwords: keys.passwords,
+		Credentials: infra.NewCredentialStore(), Accounts: infra.NewAccountStore(keys.emails),
+		Refresh: infra.NewRefreshTokenStore(), Access: keys.access, Logger: w.logger,
+	})
+	if err != nil {
+		return authModule{}, err
+	}
+	authn, err := newAuthenticator(w.keys, w.now, w.logger)
+	if err != nil {
+		return authModule{}, err
+	}
+	handler := authhttp.NewHandler(authhttp.UseCases{Register: register, Verify: verify, Resend: resend, Login: login})
+	return authModule{handler: handler, authn: authn}, nil
+}
+
+// newAuthenticator builds the bearer authenticator over the access-token
+// key set: the active key and, during a rotation, the previous one.
+func newAuthenticator(keys config.Auth, now func() time.Time, logger *slog.Logger) (*authhttp.Authenticator, error) {
+	set, err := accessTokenKeySet(keys)
+	if err != nil {
+		return nil, err
+	}
+	verifier, err := infra.NewAccessTokenVerifier(now, set)
+	if err != nil {
+		return nil, fmt.Errorf("auth: access token verifier: %w", err)
+	}
+	return authhttp.NewAuthenticator(verifier, logger), nil
+}
+
+// accessTokenKeySet is the JWKS-style verification set: kid → public key.
+func accessTokenKeySet(keys config.Auth) (map[string]ed25519.PublicKey, error) {
+	active, err := infra.PublicKeyFromSeed(keys.AccessTokenKey.RevealBytes())
+	if err != nil {
+		return nil, fmt.Errorf("auth: access token key: %w", err)
+	}
+	set := map[string]ed25519.PublicKey{keys.AccessTokenKeyID: active}
+	if keys.PreviousAccessTokenKey.IsZero() {
+		return set, nil
+	}
+	previous, err := infra.PublicKeyFromSeed(keys.PreviousAccessTokenKey.RevealBytes())
+	if err != nil {
+		return nil, fmt.Errorf("auth: previous access token key: %w", err)
+	}
+	set[keys.PreviousAccessTokenKeyID] = previous
+	return set, nil
 }
 
 // authCrypto is the auth module's key material, ready to use.

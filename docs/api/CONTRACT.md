@@ -58,6 +58,7 @@ target), so every schema a frozen operation exposes is frozen on its own.
 | M1 `module_auth` operations: `register`, `verifyEmail`, `resendVerification`, `login`, `refreshSession`, `logout`, `getMe`, `updateMe`, `deleteMe`, `listLegalDocuments` | M1-01 (re-frozen by D8, 0.2.0) | [MODULE-auth](../project-specs/MODULE-auth.md) (D1-D8); the backend (M1-05..M1-09) and the Flutter auth screens (M1-11..M1-13) build on it. D8 moved `password`/`name` from `RegisterRequest` to `VerifyEmailRequest` (pre-release breaking change, recorded in MODULE-auth §9) |
 | `components.schemas.RegisterRequest`, `DocumentAcceptance`, `VerificationSent`, `VerifyEmailRequest`, `ResendVerificationRequest`, `LoginRequest`, `RefreshRequest`, `TokenPair`, `AuthSession`, `User`, `UserUpdate`, `DeleteAccountRequest`, `LegalDocumentKind`, `LegalDocument`, `LegalDocumentList` | M1-01 | Bodies of the M1 operations |
 | `components.headers.NoStore` | M1-01 | `Cache-Control: no-store` on every response that carries tokens or account data |
+| `components.responses.Unauthorized`, `components.headers.WWWAuthenticate` | M1-07 (security gate, pre-release addition) | The 401 of every secured operation, with the fixed `WWW-Authenticate: Bearer realm="control-contable"` challenge RFC 9110 §15.5.2 requires; the bearer authenticator writes it |
 
 **`FieldError.field` naming (one convention).** A dotted path relative to the request body
 (`password`, `accepted_documents.1.kind`), `body` for the body root, and the bare parameter

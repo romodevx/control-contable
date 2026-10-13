@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,6 +17,7 @@ import (
 	"github.com/romodevx/control-contable/backend/adapter/http/contracttest"
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagtest"
+	"github.com/romodevx/control-contable/backend/internal/platform/principal"
 )
 
 // Contract tests of M1-05's operations (register, verifyEmail,
@@ -166,6 +168,118 @@ func TestContract_authSignUp(t *testing.T) {
 		t.Run("no log line carries the email address", func(t *testing.T) {
 			assert.NotContains(t, env.logs.String(), signUpEmail)
 			assert.NotContains(t, env.logs.String(), acceptableSample)
+		})
+	})
+}
+
+// loginJSON is a login body.
+func loginJSON(email, phrase string) string {
+	return `{"email":"` + email + `","password":"` + phrase + `"}`
+}
+
+// signUp creates a verified account through register + verify-email.
+func (e contractEnv) signUp(t *testing.T, email, phrase string) gen.AuthSession {
+	t.Helper()
+	rec := e.do(e.post("/v1/auth/register", registerJSON(email, "v1")))
+	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
+	rec = e.do(e.post("/v1/auth/verify-email", verifyJSON(email, e.lastCode(t), phrase)))
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	var session gen.AuthSession
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &session))
+	return session
+}
+
+// bearerUser runs token through the authenticator the composition root
+// wires for the fixture keys and returns the user id it admitted ("" if
+// refused).
+func bearerUser(t *testing.T, token string) string {
+	t.Helper()
+	authn, err := newAuthenticator(testAuthKeys(), time.Now, nil)
+	require.NoError(t, err)
+	var userID string
+	h := authn.Authenticate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userID, _ = principal.UserID(r.Context())
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	req := httptest.NewRequest(http.MethodGet, "/v1/me", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	h.ServeHTTP(httptest.NewRecorder(), req)
+	return userID
+}
+
+// errorOf decodes an error envelope without its request id (unique per call).
+func errorOf(t *testing.T, rec *httptest.ResponseRecorder) (gen.ErrorCode, string) {
+	t.Helper()
+	var body gen.ErrorResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	return body.Error.Code, body.Error.Message
+}
+
+// Contract tests of login (M1-07) through the real composition root over
+// Postgres as cc_app, with module_auth ON and OFF.
+func TestContract_authLogin(t *testing.T) {
+	c := contracttest.Load(t)
+
+	flagtest.OnOff(t, "module_auth", func(t *testing.T, f flagtest.Static, on bool) {
+		env := newContractEnv(t, pingOK{})
+		env.apply(t, []string{"module_auth"}, f)
+
+		if !on {
+			flagtest.AssertHidden(t, c.Serve(t, env.handler, env.post("/v1/auth/login", loginJSON(signUpEmail, acceptableSample))))
+			return
+		}
+		account := env.signUp(t, signUpEmail, acceptableSample)
+		const pending = "pendiente@example.mx"
+		rec := env.do(env.post("/v1/auth/register", registerJSON(pending, "v1")))
+		require.Equal(t, http.StatusAccepted, rec.Code)
+
+		t.Run("the right credentials start a session", func(t *testing.T) {
+			rec := c.ServeOp(t, contracttest.Op("login"), env.handler,
+				env.post("/v1/auth/login", loginJSON("  Ana.Gomez@Example.MX ", acceptableSample)))
+			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+			assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
+			var session gen.AuthSession
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &session))
+			assert.Equal(t, account.User, session.User)
+			assert.Equal(t, 900, session.Tokens.AccessExpiresIn)
+			assert.Equal(t, 2592000, session.Tokens.RefreshExpiresIn)
+			assert.True(t, strings.HasPrefix(session.Tokens.RefreshToken, session.User.Id.String()+"."))
+			assert.NotEqual(t, account.Tokens.RefreshToken, session.Tokens.RefreshToken, "a new token family")
+			assert.Equal(t, session.User.Id.String(), bearerUser(t, session.Tokens.AccessToken),
+				"the access token passes the API's own authenticator as this user")
+		})
+
+		// US-A2a: one answer for every failure, so the response cannot
+		// enumerate accounts.
+		var answers []string
+		for name, body := range map[string]string{
+			"wrong password":             loginJSON(signUpEmail, "otra frase equivocada"),
+			"unknown email":              loginJSON("nadie@example.mx", acceptableSample),
+			"pending (unverified) email": loginJSON(pending, acceptableSample),
+		} {
+			t.Run(name+" is the generic 401", func(t *testing.T) {
+				rec := c.ServeOp(t, contracttest.Op("login"), env.handler, env.post("/v1/auth/login", body))
+				require.Equal(t, http.StatusUnauthorized, rec.Code)
+				code, message := errorOf(t, rec)
+				assert.Equal(t, gen.ErrorCodeUnauthorized, code)
+				answers = append(answers, string(code)+" "+message)
+				assert.Empty(t, rec.Header().Get("Cache-Control"))
+			})
+		}
+		require.Len(t, answers, 3)
+		assert.Equal(t, answers[0], answers[1])
+		assert.Equal(t, answers[1], answers[2])
+		assert.Equal(t, "unauthorized Email or password is incorrect.", answers[0])
+
+		t.Run("a body without the password is a 400", func(t *testing.T) {
+			rec := c.ServeOp(t, contracttest.Op("login"), env.handler, env.post("/v1/auth/login", `{"email":"`+signUpEmail+`"}`))
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+		})
+
+		t.Run("no log line carries the email or the password", func(t *testing.T) {
+			assert.NotContains(t, env.logs.String(), signUpEmail)
+			assert.NotContains(t, env.logs.String(), acceptableSample)
+			assert.Contains(t, env.logs.String(), `"event":"login_failed"`)
 		})
 	})
 }

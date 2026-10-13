@@ -20,9 +20,14 @@ const (
 	secretCodeKey = "AUTH_CODE_KEY" //nolint:gosec // G101: a secret's name, not its value
 	// secretAccessTokenKey is the Ed25519 seed signing access tokens (EdDSA JWT).
 	secretAccessTokenKey = "AUTH_ACCESS_TOKEN_KEY" //nolint:gosec // G101: a name or message, not a credential
+	// secretPreviousAccessTokenKey is the optional Ed25519 seed of the
+	// retired signing key: it only verifies, until its tokens expire.
+	secretPreviousAccessTokenKey = "AUTH_ACCESS_TOKEN_PREVIOUS_KEY" //nolint:gosec // G101: a name or message, not a credential
 
 	keyEmailKeyID       = "AUTH_EMAIL_KEY_ID"
 	keyAccessTokenKeyID = "AUTH_ACCESS_TOKEN_KEY_ID" //nolint:gosec // G101: a name or message, not a credential
+	// keyPreviousAccessTokenKeyID is the kid of the retired signing key.
+	keyPreviousAccessTokenKeyID = "AUTH_ACCESS_TOKEN_PREVIOUS_KEY_ID" //nolint:gosec // G101: a name or message, not a credential
 
 	// keyBytes is the size of the AES-256 key, the Ed25519 seed and the minimum
 	// HMAC key (the SHA-256 output size).
@@ -48,6 +53,12 @@ type Auth struct {
 	AccessTokenKey Secret
 	// AccessTokenKeyID is the JWT "kid" of AccessTokenKey.
 	AccessTokenKeyID string
+	// PreviousAccessTokenKey is the Ed25519 seed of the key AccessTokenKey
+	// replaced (zero when there is none). Tokens it signed keep verifying
+	// under PreviousAccessTokenKeyID until they expire; it never signs.
+	PreviousAccessTokenKey Secret
+	// PreviousAccessTokenKeyID is the kid of PreviousAccessTokenKey.
+	PreviousAccessTokenKeyID string
 }
 
 // keySize says how long a decoded key must be.
@@ -59,8 +70,10 @@ type keySize struct {
 // LoadAuth reads and validates the auth keys: AUTH_EMAIL_PEPPER and
 // AUTH_CODE_KEY (at least 32 bytes), AUTH_EMAIL_KEY and AUTH_ACCESS_TOKEN_KEY
 // (exactly 32 bytes), all hex; AUTH_EMAIL_KEY_ID (default 1) and
-// AUTH_ACCESS_TOKEN_KEY_ID (default k1). The error joins every problem and
-// never contains key material.
+// AUTH_ACCESS_TOKEN_KEY_ID (default k1). For a key rotation,
+// AUTH_ACCESS_TOKEN_PREVIOUS_KEY (32 bytes, hex) and
+// AUTH_ACCESS_TOKEN_PREVIOUS_KEY_ID name the retired key, both or neither.
+// The error joins every problem and never contains key material.
 func LoadAuth(ctx context.Context, lookup Lookup, secrets SecretSource) (Auth, error) {
 	var (
 		cfg  Auth
@@ -86,13 +99,59 @@ func LoadAuth(ctx context.Context, lookup Lookup, secrets SecretSource) (Auth, e
 		errs = append(errs, err)
 	}
 	cfg.AccessTokenKeyID = valueOr(lookup, keyAccessTokenKeyID, defaultAccessTokenKeyID)
-	if !accessTokenKeyIDPattern.MatchString(cfg.AccessTokenKeyID) {
-		errs = append(errs, fmt.Errorf("%s %q is not 1-64 of [A-Za-z0-9._-]", keyAccessTokenKeyID, cfg.AccessTokenKeyID))
+	if err := checkKeyID(keyAccessTokenKeyID, cfg.AccessTokenKeyID); err != nil {
+		errs = append(errs, err)
 	}
+	errs = append(errs, loadPreviousAccessTokenKey(ctx, lookup, secrets, &cfg)...)
 	if len(errs) > 0 {
 		return Auth{}, fmt.Errorf("config: %w", errors.Join(errs...))
 	}
 	return cfg, nil
+}
+
+// loadPreviousAccessTokenKey reads the optional retired signing key into cfg.
+// It runs after the active key is loaded, to compare the two.
+func loadPreviousAccessTokenKey(ctx context.Context, lookup Lookup, secrets SecretSource, cfg *Auth) []error {
+	keyID := valueOr(lookup, keyPreviousAccessTokenKeyID, "")
+	encoded, err := secrets.Secret(ctx, secretPreviousAccessTokenKey)
+	switch {
+	case errors.Is(err, ErrSecretNotFound) && keyID == "":
+		return nil
+	case errors.Is(err, ErrSecretNotFound):
+		return []error{fmt.Errorf("%s is set without %s", keyPreviousAccessTokenKeyID, secretPreviousAccessTokenKey)}
+	case err != nil:
+		return []error{fmt.Errorf("secret %s: %w", secretPreviousAccessTokenKey, err)}
+	case encoded.IsZero():
+		return nil
+	}
+	var errs []error
+	key, err := decodeHexKey(secretPreviousAccessTokenKey, encoded, keySize{bytes: keyBytes, exact: true})
+	if err != nil {
+		errs = append(errs, err)
+	}
+	if !key.IsZero() && key.Reveal() == cfg.AccessTokenKey.Reveal() {
+		errs = append(errs, fmt.Errorf("%s must differ from %s", secretPreviousAccessTokenKey, secretAccessTokenKey))
+	}
+	switch keyID {
+	case "":
+		errs = append(errs, fmt.Errorf("%s is required with %s", keyPreviousAccessTokenKeyID, secretPreviousAccessTokenKey))
+	case cfg.AccessTokenKeyID:
+		errs = append(errs, fmt.Errorf("%s must differ from %s", keyPreviousAccessTokenKeyID, keyAccessTokenKeyID))
+	default:
+		if err := checkKeyID(keyPreviousAccessTokenKeyID, keyID); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	cfg.PreviousAccessTokenKey, cfg.PreviousAccessTokenKeyID = key, keyID
+	return errs
+}
+
+// checkKeyID bounds a JWT kid value.
+func checkKeyID(name, value string) error {
+	if !accessTokenKeyIDPattern.MatchString(value) {
+		return fmt.Errorf("%s %q is not 1-64 of [A-Za-z0-9._-]", name, value)
+	}
+	return nil
 }
 
 func loadHexKey(ctx context.Context, secrets SecretSource, name string, size keySize) (Secret, error) {
@@ -100,6 +159,11 @@ func loadHexKey(ctx context.Context, secrets SecretSource, name string, size key
 	if err != nil {
 		return Secret{}, fmt.Errorf("secret %s: %w", name, err)
 	}
+	return decodeHexKey(name, encoded, size)
+}
+
+// decodeHexKey decodes a hex secret and checks its decoded size.
+func decodeHexKey(name string, encoded Secret, size keySize) (Secret, error) {
 	raw, err := hex.DecodeString(encoded.Reveal())
 	if err != nil {
 		// The decode error quotes the offending byte: never wrap it.

@@ -16,7 +16,7 @@ COVER_EXCLUDE ?= ^github.com/romodevx/control-contable/backend/(adapter/http/gen
 
 .DEFAULT_GOAL := check
 
-.PHONY: check fmt fmt-check lint test test-integration test-contract cover cover-check vuln tidy generate codegen-check init-env db-up db-down db-reset db-roles-check migrate-up migrate-down migrate-status flags api worker
+.PHONY: check fmt fmt-check lint test test-integration test-contract cover cover-check vuln tidy generate codegen-check init-env db-up db-down db-reset db-roles-check migrate-up migrate-down migrate-status flags api worker access-key-rotate
 
 ## check: fmt-check + lint + unit tests (what CI runs)
 check: fmt-check lint test
@@ -157,7 +157,15 @@ api: $(LOCAL_ENV)
 	@$(RUN_ENV) PORT=$(API_PORT) DATABASE_URL="$(call DB_URL,cc_app,CC_APP_PASSWORD)" \
 		AUTH_EMAIL_PEPPER="$${CC_AUTH_EMAIL_PEPPER}" AUTH_EMAIL_KEY="$${CC_AUTH_EMAIL_KEY}" \
 		AUTH_CODE_KEY="$${CC_AUTH_CODE_KEY}" AUTH_ACCESS_TOKEN_KEY="$${CC_AUTH_ACCESS_TOKEN_KEY}" \
+		AUTH_ACCESS_TOKEN_KEY_ID="$${CC_ACCESS_TOKEN_KEY_ID:-k1}" \
+		AUTH_ACCESS_TOKEN_PREVIOUS_KEY="$${CC_AUTH_ACCESS_TOKEN_PREVIOUS_KEY:-}" \
+		AUTH_ACCESS_TOKEN_PREVIOUS_KEY_ID="$${CC_ACCESS_TOKEN_PREVIOUS_KEY_ID:-}" \
 		$(GO) run ./cmd/api
+
+## access-key-rotate: LOCAL ONLY. New access-token signing key + kid in infra/local/.env; the old one only verifies (restart make api)
+access-key-rotate: $(LOCAL_ENV)
+	@$(ASSERT_LOCAL)
+	@$(LOCAL_DIR)/scripts/rotate-access-key.sh $(LOCAL_ENV)
 
 ## worker: LOCAL ONLY. Run cmd/worker (APP_ENV=dev) as cc_worker against the local stack
 worker: $(LOCAL_ENV)

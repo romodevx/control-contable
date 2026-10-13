@@ -44,13 +44,18 @@ func (s server) ListEnabledFlags(ctx context.Context, req gen.ListEnabledFlagsRe
 	return s.Handler.ListEnabledFlags(ctx, req)
 }
 
+// passThrough is a test authenticator admitting everything.
+type passThrough struct{}
+
+func (passThrough) Authenticate(next http.Handler) http.Handler { return next }
+
 func get(t *testing.T, lister flagshttp.Lister) *httptest.ResponseRecorder {
 	t.Helper()
 	spec, err := gen.GetSpec()
 	require.NoError(t, err)
 	h, err := router.New(server{Handler: flagshttp.New(lister, nil)}, spec, router.Options{
 		Flags:  flagtest.Static{}, // every module OFF: /v1/flags is platform
-		Authn:  router.NoAuthentication{},
+		Authn:  passThrough{},     // GET /v1/flags is public
 		Logger: slog.New(slog.DiscardHandler),
 	})
 	require.NoError(t, err)

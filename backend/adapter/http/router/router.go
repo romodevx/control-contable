@@ -51,18 +51,11 @@ func (AllModulesOff) Enabled(context.Context, string) bool { return false }
 
 // Authenticator guards operations that declare a security requirement. It
 // writes the 401 envelope itself or calls next with the principal in the
-// request context. The JWT authenticator (M1-07) implements it.
+// request context. The bearer JWT authenticator (authhttp.Authenticator,
+// M1-07) implements it; there is deliberately no pass-through one.
 type Authenticator interface {
 	Authenticate(next http.Handler) http.Handler
 }
-
-// NoAuthentication is the Authenticator until M1-07: it lets every request
-// through. No secured operation is reachable before then because their
-// modules' flags are OFF.
-type NoAuthentication struct{}
-
-// Authenticate implements Authenticator.
-func (NoAuthentication) Authenticate(next http.Handler) http.Handler { return next }
 
 // Options configures New. Flags, Authn and Logger are required.
 type Options struct {
@@ -83,6 +76,9 @@ type Options struct {
 // operation in spec: an unknown route is a startup error, never an ungated
 // or unvalidated one.
 func New(si gen.StrictServerInterface, spec *openapi3.T, opts Options) (http.Handler, error) {
+	if opts.Authn == nil {
+		return nil, errors.New("router: no authenticator: secured operations would run unauthenticated")
+	}
 	if opts.MaxBodyBytes == 0 {
 		opts.MaxBodyBytes = DefaultMaxBodyBytes
 	}

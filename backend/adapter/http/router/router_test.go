@@ -358,7 +358,7 @@ func TestNew_failsClosedWhenARouteHasNoOperation(t *testing.T) {
 		}
 	}
 
-	_, err = router.New(fakeAPI{}, &pruned, router.Options{Flags: flagSet{}, Authn: router.NoAuthentication{}, Logger: logging.New(&bytes.Buffer{}, nil)})
+	_, err = router.New(fakeAPI{}, &pruned, router.Options{Flags: flagSet{}, Authn: recordingAuthn{paths: new([]string)}, Logger: logging.New(&bytes.Buffer{}, nil)})
 
 	assert.ErrorContains(t, err, "GET /healthz")
 }
@@ -408,8 +408,8 @@ func TestNew_failsOnANotBuiltOperationTheContractLacks(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = router.New(fakeAPI{}, spec, router.Options{
-		Flags: flagSet{}, Authn: router.NoAuthentication{}, Logger: logging.New(&bytes.Buffer{}, nil),
-		NotBuilt: []string{"login", "noSuchOperation"},
+		Flags: flagSet{}, Authn: recordingAuthn{paths: new([]string)}, Logger: logging.New(&bytes.Buffer{}, nil),
+		NotBuilt: []string{"logout", "noSuchOperation"},
 	})
 
 	assert.ErrorContains(t, err, "noSuchOperation")
@@ -417,8 +417,15 @@ func TestNew_failsOnANotBuiltOperationTheContractLacks(t *testing.T) {
 
 func TestDefaults(t *testing.T) {
 	assert.False(t, router.AllModulesOff{}.Enabled(context.Background(), "module_auth"), "flags default OFF")
-	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusTeapot) })
-	rec := httptest.NewRecorder()
-	router.NoAuthentication{}.Authenticate(next).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
-	assert.Equal(t, http.StatusTeapot, rec.Code)
+}
+
+// There is no pass-through authenticator (M1-07): without one, New fails
+// instead of serving secured operations unauthenticated.
+func TestNew_requiresAnAuthenticator(t *testing.T) {
+	spec, err := gen.GetSpec()
+	require.NoError(t, err)
+
+	_, err = router.New(fakeAPI{}, spec, router.Options{Flags: flagSet{}, Logger: logging.New(&bytes.Buffer{}, nil)})
+
+	assert.ErrorContains(t, err, "authenticator")
 }

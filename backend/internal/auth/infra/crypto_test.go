@@ -108,6 +108,8 @@ func TestAccessTokenSigner_signsAnEdDSAJWTThatVerifies(t *testing.T) {
 	claims := parsed.Claims.(*jwt.RegisteredClaims)
 	assert.Equal(t, userID.String(), claims.Subject)
 	assert.Equal(t, issuedAt, claims.IssuedAt.UTC())
+	require.NotNil(t, claims.NotBefore, "nbf is set (M1-07)")
+	assert.Equal(t, issuedAt, claims.NotBefore.UTC())
 	assert.Equal(t, issuedAt.Add(15*time.Minute), claims.ExpiresAt.UTC())
 	assert.NotEmpty(t, claims.ID, "a unique jti")
 }

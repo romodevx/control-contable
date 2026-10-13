@@ -30,7 +30,6 @@ import (
 	"github.com/romodevx/control-contable/backend/adapter/http/health"
 	"github.com/romodevx/control-contable/backend/adapter/http/middleware"
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
-	authhttp "github.com/romodevx/control-contable/backend/internal/auth/adapter/http"
 	"github.com/romodevx/control-contable/backend/internal/platform/config"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagsgorm"
@@ -93,7 +92,7 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err != nil {
 		return err
 	}
-	auth, err := newAuthHandler(authWiring{env: cfg.Env, keys: authKeys, pool: pool, logger: logger, now: time.Now})
+	auth, err := newAuthModule(authWiring{env: cfg.Env, keys: authKeys, pool: pool, logger: logger, now: time.Now})
 	if err != nil {
 		return err
 	}
@@ -154,7 +153,7 @@ type deps struct {
 	logger *slog.Logger
 	db     health.Pinger
 	flags  flagService
-	auth   *authhttp.Handler
+	auth   authModule
 	now    func() time.Time
 }
 
@@ -184,11 +183,14 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 	server := api{
 		Handler:      health.New(d.db, version, d.logger),
 		flagsHandler: flagshttp.New(d.flags, d.logger),
-		authHandler:  d.auth,
+		authHandler:  d.auth.handler,
+	}
+	if d.auth.authn == nil {
+		return nil, errors.New("api: no authenticator: secured operations would run unauthenticated")
 	}
 	routes, err := router.New(server, spec, router.Options{
 		Flags:    d.flags,
-		Authn:    router.NoAuthentication{}, // JWT authentication arrives with M1-07
+		Authn:    d.auth.authn, // bearer EdDSA access tokens (M1-07)
 		Logger:   d.logger,
 		NotBuilt: notBuiltOperations(),
 	})
