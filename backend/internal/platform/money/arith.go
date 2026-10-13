@@ -37,7 +37,12 @@ func mulDiv(a, b, d int64) (int64, error) {
 	}
 	quotient, remainder := bits.Div64(hi, lo, divisor)
 	if remainder >= divisor-remainder { // 2*remainder >= divisor, without overflowing
-		quotient++ // cannot wrap: quotient < 2^64-1 because hi < divisor
+		// hi < divisor only bounds quotient by 2^64-1, so the increment could wrap.
+		// A rounded magnitude above 2^63 fits neither sign: reject it before adding.
+		if quotient >= negativeLimit {
+			return 0, ErrOverflow
+		}
+		quotient++
 	}
 	return withSign(quotient, negative)
 }
