@@ -292,7 +292,7 @@ in MODULES.md M5 are dropped (MODULES.md updated to match).
 | expenses | `INDEX (user_id, taxpayer_id, paid_on, id) WHERE deleted_at IS NULL` | Same |
 | incomes / expenses | `INDEX (deleted_at) WHERE deleted_at IS NOT NULL` | Purge job |
 | entitlements | `UNIQUE (user_id, kind)` | One trial / pro / comp row each |
-| entitlements | `CHECK (kind, source)` ∈ trial/registration, pro/revenuecat, comp/admin; only comp may be open-ended; RevenueCat ids iff `source = 'revenuecat'` | Kind and provenance cannot drift |
+| entitlements | `CHECK (kind, source)` ∈ trial/registration, pro/revenuecat, comp/admin; only comp may be open-ended; trial `ends_at <= starts_at + 168 h`; RevenueCat ids iff `source = 'revenuecat'` | Kind and provenance cannot drift; no trial longer than 7 days (PRD §7) |
 | users | `UNIQUE (email_hash)`; `CHECK` 32-byte hash, ciphertext framed with `email_key_id` as its key_id prefix, argon2id PHC `password_hash` | One account per email; the email is never stored in clear (P0-14 crypto) |
 | user_usage | `CHECK` counters ≥ 0 + `BEFORE UPDATE` trigger refusing any decrease | PRD §7: deleting a record does not return its trial slot |
 | email_verifications | `INDEX (expires_at)` | Purge job range scan |
@@ -365,7 +365,7 @@ Every table below has `ENABLE` + `FORCE ROW LEVEL SECURITY` in its first migrati
 | users | `id = app_user_id()` | `id = app_user_id()` | same | same | Registration sets the context to the new UUID before INSERT |
 | refresh_tokens | `user_id = app_user_id()` | same | same | same | Token format `<user_id>.<secret>` sets the context before lookup |
 | consents | owner | owner | — (append-only, no grant) | cascade only | |
-| entitlements | owner | owner + kind | owner + kind | owner + kind | cc_app: SELECT, INSERT `kind = 'trial'` only; cc_webhook: SELECT, DML on `kind = 'pro'` only; cc_owner (FORCE applies): ALL on `kind = 'comp'` only (operator grants) |
+| entitlements | owner | owner + kind | owner + kind | owner + kind | cc_app: SELECT, INSERT `kind = 'trial'` only, `starts_at` within 5 min of `now()`; cc_webhook: SELECT, DML on `kind = 'pro'` only; cc_owner (FORCE applies): ALL on `kind = 'comp'` only (operator grants) |
 | user_usage | owner | owner | owner | — | |
 | taxpayers | owner | owner | owner | owner | |
 | taxpayer_regimes | owner | owner | owner | owner | |

@@ -168,6 +168,10 @@ CREATE TABLE entitlements (
     (kind, source) IN (('trial', 'registration'), ('pro', 'revenuecat'), ('comp', 'admin'))),
   CONSTRAINT entitlements_period_ordered CHECK (ends_at IS NULL OR ends_at > starts_at),
   CONSTRAINT entitlements_only_comp_open_ended CHECK (kind = 'comp' OR ends_at IS NOT NULL),
+  -- PRD §7: the trial lasts at most 7 days. Hours, not days: timestamptz + '7 days'
+  -- depends on the session TimeZone across a DST change; 168 hours does not.
+  CONSTRAINT entitlements_trial_at_most_7_days CHECK (
+    kind <> 'trial' OR ends_at <= starts_at + interval '168 hours'),
   CONSTRAINT entitlements_revenuecat_ids CHECK (
     CASE WHEN source = 'revenuecat'
       THEN coalesce(btrim(rc_product_id), '') <> '' AND coalesce(btrim(rc_original_transaction_id), '') <> ''
@@ -188,9 +192,14 @@ ALTER TABLE entitlements FORCE ROW LEVEL SECURITY;
 -- app_user_id (our user id) before touching this table.
 CREATE POLICY entitlements_select_own ON entitlements FOR SELECT TO cc_app, cc_webhook
   USING (user_id = (SELECT app_user_id()));
--- Intent: the API only starts the user's own trial (registration).
+-- Intent: the API only starts the user's own trial (registration), and starts it now:
+-- with the 7-day CHECK this keeps a compromised pool from minting a trial that begins
+-- later (and so ends later). 5 minutes absorbs app/DB clock skew and the gap between
+-- the transaction start (now()) and the app's own clock.
 CREATE POLICY entitlements_app_insert_trial ON entitlements FOR INSERT TO cc_app
-  WITH CHECK (user_id = (SELECT app_user_id()) AND kind = 'trial');
+  WITH CHECK (
+    user_id = (SELECT app_user_id()) AND kind = 'trial'
+    AND starts_at BETWEEN now() - interval '5 minutes' AND now() + interval '5 minutes');
 -- Intent: the webhook writes only the context user's pro row.
 CREATE POLICY entitlements_webhook_insert_pro ON entitlements FOR INSERT TO cc_webhook
   WITH CHECK (user_id = (SELECT app_user_id()) AND kind = 'pro');

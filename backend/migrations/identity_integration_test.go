@@ -235,6 +235,34 @@ func TestEntitlements_EachRoleWritesOnlyItsKind(t *testing.T) {
 	assert.Equal(t, []string{"comp", "trial"}, kinds, "cc_app reads every kind of its own")
 }
 
+// PRD §7: the trial lasts 7 days from sign-up. A compromised or buggy API pool must not
+// mint a longer trial (CHECK, every role) nor start one in the future (cc_app policy).
+func TestEntitlements_TrialCannotBeExtended(t *testing.T) {
+	db := pgtest.NewDatabase(t)
+	app := db.Connect(t, pgtest.RoleApp)
+	seedAs(t, app, userA, insertUserSQL)
+	const insertTrialPeriod = "INSERT INTO entitlements (user_id, kind, source, starts_at, ends_at) " +
+		"VALUES ($1, 'trial', 'registration', now() + $2::interval, now() + $2::interval + $3::interval)"
+	refused := []struct {
+		name, startOffset, length, sqlstate string
+	}{
+		{"longer than 7 days", "0", "8 days", sqlstateCheckViolation},
+		{"open-ended by a huge period", "0", "100 years", sqlstateCheckViolation},
+		{"starts in the future", "1 year", "7 days", sqlstateInsufficientPrivilege},
+		{"starts far in the past", "-1 year", "7 days", sqlstateInsufficientPrivilege},
+	}
+	for _, r := range refused {
+		t.Run(r.name, func(t *testing.T) {
+			_, err := execAsUser(t, app, userA, insertTrialPeriod, userA, r.startOffset, r.length)
+			requireSQLState(t, err, r.sqlstate)
+		})
+	}
+
+	affected, err := execAsUser(t, app, userA, insertTrialPeriod, userA, "0", "7 days")
+	require.NoError(t, err, "the regular 7-day trial starting now")
+	assert.EqualValues(t, 1, affected)
+}
+
 // email_verifications has no user to key on: deny-all to every runtime role, even with
 // a mistaken grant, while SECURITY DEFINER functions (owned by cc_owner) can use it.
 func TestEmailVerifications_ServiceOnly(t *testing.T) {
