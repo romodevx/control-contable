@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
@@ -350,11 +351,9 @@ func TestRunner_logsJobFailuresWithoutPII(t *testing.T) {
 	h := start(t, &fakeElector{lead: true}, j)
 	h.beat(t)
 
-	h.ticks.Tick(t, jobInterval)
-	receive(t, j.runs)
-	// Barrier: the first run is logged before shutdown starts. Without it,
-	// stop can cancel the run's context between the job returning and
-	// logOutcome reading ctx.Err(), and the failure is logged as "job cancelled".
+	// No barrier before stop on purpose: shutdown may cancel the run's context
+	// after the job returned, and the failure must still be logged as one
+	// (see TestRunner_classifiesTheOutcomeByTheJobsError).
 	h.ticks.Tick(t, jobInterval)
 	receive(t, j.runs)
 	require.NoError(t, h.stop(t))
@@ -364,6 +363,47 @@ func TestRunner_logsJobFailuresWithoutPII(t *testing.T) {
 	assert.NotContains(t, logs, "ana@example.com")
 	for line := range strings.SplitSeq(strings.TrimSpace(logs), "\n") {
 		assert.True(t, json.Valid([]byte(line)), line)
+	}
+}
+
+// The outcome comes from the error the job returned, not from the state of
+// its context afterwards: a run whose context is cancelled (shutdown or lost
+// leadership) but that returns an unrelated error is a failure, never a
+// cancellation. Regression for the race behind the flaky
+// TestRunner_logsJobFailuresWithoutPII, where cancellation landing after the
+// job returned relabelled a real failure as "job cancelled" at INFO.
+func TestRunner_classifiesTheOutcomeByTheJobsError(t *testing.T) {
+	tests := []struct {
+		name    string
+		onDone  func(ctx context.Context) error
+		wantMsg string
+	}{
+		{
+			name:    "unrelated error after cancellation is a failure",
+			onDone:  func(context.Context) error { return errors.New("ledger write failed") },
+			wantMsg: `"msg":"job failed","job":"probe"`,
+		},
+		{
+			name:    "the context's error, wrapped, is a cancellation",
+			onDone:  func(ctx context.Context) error { return fmt.Errorf("query: %w", ctx.Err()) },
+			wantMsg: `"msg":"job cancelled","job":"probe"`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			j := newProbeJob(func(ctx context.Context) error {
+				<-ctx.Done()
+				return tt.onDone(ctx)
+			})
+			h := start(t, &fakeElector{lead: true}, j)
+			h.beat(t)
+			h.ticks.Tick(t, jobInterval)
+			receive(t, j.runs)
+
+			require.NoError(t, h.stop(t))
+
+			assert.Contains(t, h.logs.String(), tt.wantMsg)
+		})
 	}
 }
 

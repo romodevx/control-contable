@@ -193,6 +193,11 @@ func runRecovering(ctx context.Context, job Job) (err error) {
 
 // logOutcome logs one run. Only the job name, the duration and the error go
 // out, through the redacting logger: no user data.
+//
+// The outcome is read from the job's error. A run counts as timed out or
+// cancelled only when that error is the run context's own error: the context
+// can be cancelled (shutdown, lost leadership) after the job already returned
+// an unrelated error, and that failure must still be logged as one.
 func (r *Runner) logOutcome(ctx context.Context, name string, took time.Duration, err, ctxErr error) {
 	attrs := []any{slog.String("job", name), slog.Duration("duration", took)}
 	switch {
@@ -200,13 +205,19 @@ func (r *Runner) logOutcome(ctx context.Context, name string, took time.Duration
 		r.logger.InfoContext(ctx, "job finished", attrs...)
 	case errors.Is(err, ErrJobPanicked):
 		r.logger.ErrorContext(ctx, "job panicked", append(attrs, slog.Any("error", err))...)
-	case errors.Is(ctxErr, context.DeadlineExceeded):
+	case causedBy(err, ctxErr, context.DeadlineExceeded):
 		r.logger.WarnContext(ctx, "job timed out", append(attrs, slog.Any("error", err))...)
-	case errors.Is(ctxErr, context.Canceled):
+	case causedBy(err, ctxErr, context.Canceled):
 		r.logger.InfoContext(ctx, "job cancelled", append(attrs, slog.Any("error", err))...)
 	default:
 		r.logger.ErrorContext(ctx, "job failed", append(attrs, slog.Any("error", err))...)
 	}
+}
+
+// causedBy reports whether the job's error is the run context's error
+// target: the job returned (or wrapped) it and the context really ended so.
+func causedBy(jobErr, ctxErr, target error) bool {
+	return errors.Is(jobErr, target) && errors.Is(ctxErr, target)
 }
 
 func (r *Runner) names() []string {
