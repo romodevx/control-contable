@@ -1,0 +1,43 @@
+{
+  "@@locale": "es",
+  "appTitle": "Control Contable",
+  "@appTitle": {
+    "description": "App name shown by the OS task switcher."
+  },
+  "navHome": "Inicio",
+  "@navHome": {
+    "description": "Bottom bar item and title of the home screen."
+  },
+  "navIncome": "Ingresos",
+  "@navIncome": {
+    "description": "Bottom bar item: income list."
+  },
+  "navExpenses": "Gastos",
+  "@navExpenses": {
+    "description": "Bottom bar item: expense list."
+  },
+  "navHistory": "Historial",
+  "@navHistory": {
+    "description": "Bottom bar item: monthly history."
+  },
+  "navSettings": "Ajustes",
+  "@navSettings": {
+    "description": "Bottom bar item: settings."
+  },
+  "homePlaceholder": "Aquí aparecerá el estimado del mes.",
+  "@homePlaceholder": {
+    "description": "Scaffold placeholder on the home screen until the dashboard module ships."
+  },
+  "estimateLegend": "Esto es un aproximado. No todos los gastos aplican para tu giro comercial.",
+  "@estimateLegend": {
+    "description": "Mandatory legend under every estimate. Never hidden, never dismissible."
+  },
+  "notFoundTitle": "Página no encontrada",
+  "@notFoundTitle": {
+    "description": "Title of the screen shown for an unknown route."
+  },
+  "notFoundAction": "Ir al inicio",
+  "@notFoundAction": {
+    "description": "Button on the not-found screen that returns to home."
+  }
+}
