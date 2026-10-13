@@ -16,7 +16,7 @@ COVER_EXCLUDE ?= ^github.com/romodevx/control-contable/backend/(adapter/http/gen
 
 .DEFAULT_GOAL := check
 
-.PHONY: check fmt fmt-check lint test test-integration test-contract cover cover-check vuln tidy generate codegen-check db-up db-down db-reset db-roles-check migrate-up migrate-down migrate-status flags api worker
+.PHONY: check fmt fmt-check lint test test-integration test-contract cover cover-check vuln tidy generate codegen-check init-env db-up db-down db-reset db-roles-check migrate-up migrate-down migrate-status flags api worker
 
 ## check: fmt-check + lint + unit tests (what CI runs)
 check: fmt-check lint test
@@ -86,6 +86,9 @@ RUNTIME_ROLES := cc_app cc_webhook cc_worker
 $(LOCAL_ENV):
 	$(LOCAL_DIR)/scripts/init-env.sh $(LOCAL_DIR)/.env.example $@
 	@echo "created $@ with random local passwords"
+
+## init-env: create infra/local/.env with random local passwords if it does not exist (db-up does it too)
+init-env: $(LOCAL_ENV)
 
 ## db-up: start local postgres 18 (loopback only) and wait until healthy
 db-up: $(LOCAL_ENV)

@@ -100,6 +100,16 @@ INSERT INTO legal_documents (kind, version, url, effective_at) VALUES
   ('privacy_notice_simplified', 'v1', 'https://control-contable.invalid/legal/aviso-de-privacidad-simplificado', '2026-10-13T00:00:00Z'),
   ('terms',                     'v1', 'https://control-contable.invalid/legal/terminos',                      '2026-10-13T00:00:00Z');
 
+-- consents (M1-02) now reference the exact version accepted. The FK supersedes M1-02's
+-- provisional kind CHECK ('privacy', 'terms'), which predates the contract's three
+-- LegalDocumentKind values. RESTRICT: an accepted version is evidence and is never
+-- deleted or re-keyed. Referenced-side deletes are migration-only and rare, so no extra
+-- index on consents (document_kind, document_version).
+ALTER TABLE consents DROP CONSTRAINT consents_document_kind_valid;
+ALTER TABLE consents ADD CONSTRAINT consents_legal_document_fkey
+  FOREIGN KEY (document_kind, document_version) REFERENCES legal_documents (kind, version)
+  ON UPDATE RESTRICT ON DELETE RESTRICT;
+
 -- ---------------------------------------------------------------------------------------
 -- trial_registry: one row per email that ever started a trial, keyed by the same HMAC
 -- blind index as users.email_hash (never the email). No FK to users on purpose: it
@@ -412,5 +422,9 @@ DROP TABLE email_verification_failures;
 DROP TABLE trial_registry;
 DROP FUNCTION auth_email_hash();
 DROP FUNCTION auth_bind_email_hash(bytea);
+ALTER TABLE consents DROP CONSTRAINT consents_legal_document_fkey;
+-- NOT VALID: rows accepted under the contract kinds may exist; new rows are checked.
+ALTER TABLE consents ADD CONSTRAINT consents_document_kind_valid
+  CHECK (document_kind IN ('privacy', 'terms')) NOT VALID;
 DROP TABLE legal_documents;
 REVOKE USAGE ON SCHEMA public FROM cc_auth_definer;

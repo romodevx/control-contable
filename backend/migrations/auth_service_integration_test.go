@@ -21,6 +21,7 @@ const (
 	definerRole = "cc_auth_definer"
 
 	sqlstateInvalidParameterValue = "22023"
+	sqlstateRestrictViolation     = "23001"
 
 	// maxVerificationAttempts mirrors the constant inside email_verification_consume.
 	maxVerificationAttempts = 5
@@ -480,5 +481,37 @@ func TestLegalDocuments_SeededPlaceholdersReadOnlyToTheApp(t *testing.T) {
 		_, err := owner.ExecContext(t.Context(), `INSERT INTO legal_documents (kind, version, url, effective_at)
 			SELECT kind, 'v2', url, effective_at FROM legal_documents WHERE kind = 'terms'`)
 		requireSQLState(t, err, sqlstateUniqueViolation)
+	})
+}
+
+// consents reference the exact legal document version a user accepted (LFPDPPP): an
+// unknown kind or version is refused, and an accepted version can never be deleted.
+func TestConsents_ReferenceAnExistingLegalDocumentVersion(t *testing.T) {
+	db := pgtest.NewDatabase(t)
+	app := db.Connect(t, pgtest.RoleApp)
+	seedUsers(t, app, userA)
+	const consent = "INSERT INTO consents (user_id, document_kind, document_version, accepted_at) VALUES ($1, $2, $3, now())"
+
+	for _, kind := range []string{"privacy_notice_integral", "privacy_notice_simplified", "terms"} {
+		t.Run("accepts the seeded "+kind, func(t *testing.T) {
+			_, err := execAsUser(t, app, userA, consent, userA, kind, "v1")
+			require.NoError(t, err)
+		})
+	}
+	refused := []struct{ name, kind, version string }{
+		{"unknown version", "terms", "v9"},
+		{"unknown kind", "cookies", "v1"},
+		{"pre-contract kind", "privacy", "v1"},
+	}
+	for _, r := range refused {
+		t.Run(r.name, func(t *testing.T) {
+			_, err := execAsUser(t, app, userA, consent, userA, r.kind, r.version)
+			requireSQLState(t, err, sqlstateForeignKeyViolation)
+		})
+	}
+	t.Run("an accepted version cannot be deleted", func(t *testing.T) {
+		_, err := db.Connect(t, pgtest.RoleOwner).ExecContext(t.Context(),
+			"DELETE FROM legal_documents WHERE kind = 'terms' AND version = 'v1'")
+		requireSQLState(t, err, sqlstateRestrictViolation)
 	})
 }

@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | DRAFT (Phase 3 Planning), pending owner approval (human checkpoint before execution) |
+| Status | APPROVED (P0-01). P0 Foundation done (MS1 when `feature/p0-docs` merges); M1 next |
 | Date | 2026-10-13 |
 | Author | eng-manager |
 | Inputs | [PRD](PRD.md), [MODULES](MODULES.md), [ADR-0001](../adr/0001-stack.md), [ADR-0002](../adr/0002-tax-engine.md), [C4](../architecture/c4.md), [data model](../architecture/data-model.md), [OpenAPI](../api/openapi.yaml), [research](../research/tax-regimes-mx-2026.md) |
@@ -66,7 +66,7 @@ Stages: contract tooling (P0-05) → data (P0-10, P0-11) → backend platform �
 
 | ID | Task | Owner | Deps | Est (h) | Par | Branch | Blocked by | Done |
 |---|---|---|---|---|---|---|---|---|
-| P0-01 | Owner approves PRD, MODULES, ADR-0001/0002, C4, data model and this plan; merge discovery docs to `dev` | tech-lead | — | 0.5 | — | `feature/project-discovery` | OB0 | [ ] |
+| P0-01 | Owner approves PRD, MODULES, ADR-0001/0002, C4, data model and this plan; merge discovery docs to `dev` | tech-lead | — | 0.5 | — | `feature/project-discovery` | OB0 | [x] |
 | P0-02 | Context7 check of every pinned Go library API (oapi-codegen, goose, GORM, pgx, testcontainers-go, golang-jwt, libopenapi-validator, firebase/go); notes appended to ADR-0001 | backend-sr | P0-01 | 1.5 | — | `feature/p0-skeleton` | — | [x] |
 | P0-03 | Backend skeleton: `go.mod` (go 1.27, toolchain go1.27.2), Clean Architecture layout, Makefile, golangci-lint v2 config with depguard (Dependency Rule) and forbidigo (float/time.Now in domain) | backend-sr | P0-01 | 2 | — | `feature/p0-skeleton` | — | [x] |
 | P0-04 | Local stack: docker compose `postgres:18`, role bootstrap (cc_owner, cc_app NOBYPASSRLS, cc_webhook, cc_worker), `make db-up` / `make db-reset` | devops-sr | P0-03 | 2 | PG-P0-B | `feature/p0-local-stack` | — | [x] |
@@ -74,30 +74,57 @@ Stages: contract tooling (P0-05) → data (P0-10, P0-11) → backend platform �
 | P0-06 | oapi-codegen v2 strict std-http generation into `adapter/http/gen`, drift check, generated operationID→flag map, contract test failing on any operation without `x-module` | backend-sr | P0-03, P0-05 | 3 | PG-P0-C | `feature/p0-codegen` | — | [x] |
 | P0-07 | `platform/errors`: error envelope, domain-error→HTTP mapping (TDD) | backend-sr | P0-03 | 2 | PG-P0-B | `feature/p0-platform-errors-config` | — | [x] |
 | P0-08 | `platform/config` (env + secret source port) and slog JSON handler with PII redaction (RFC, email never logged) (TDD) | backend-sr | P0-03 | 2.5 | PG-P0-B | `feature/p0-platform-errors-config` | — | [x] |
-| P0-09 | Integration test harness: testcontainers-go `postgres:18`, migrations applied, role-switching + RLS assertion helpers (A cannot see B, unset context = 0 rows) | qa-sr | P0-04 | 2.5 | — | `feature/p0-test-harness` | — | [ ] |
-| P0-10 | goose v3 runner `cmd/migrate` (embed.FS, timestamped versions) + baseline migration: `app_user_id()`, grants, `feature_flags`, `flag_presets` (global) | db-sr | P0-04, P0-09 | 2.5 | — | `feature/p0-migrations-base` | — | [ ] |
-| P0-11 | Migration `users` (identity root, moved from M1 so P0 FKs resolve) + `entitlements` + `user_usage`, ENABLE+FORCE RLS, isolation tests | db-sr | P0-10 | 3.5 | — | `feature/p0-migrations-identity` | — | [ ] |
-| P0-12 | TxManager: `set_config('app.current_user_id', $1, true)` per tx, RO/RW variants, fail-closed integration tests | backend-sr | P0-11 | 3 | — | `feature/p0-txmanager` | — | [ ] |
+| P0-09 | Integration test harness: testcontainers-go `postgres:18`, migrations applied, role-switching + RLS assertion helpers (A cannot see B, unset context = 0 rows) | qa-sr | P0-04 | 2.5 | — | `feature/p0-test-harness` | — | [x] |
+| P0-10 | goose v3 runner `cmd/migrate` (embed.FS, timestamped versions) + baseline migration: `app_user_id()`, grants, `feature_flags`, `flag_presets` (global) | db-sr | P0-04, P0-09 | 2.5 | — | `feature/p0-migrations-base` | — | [x] |
+| P0-11 | Migration `users` (identity root, moved from M1 so P0 FKs resolve) + `entitlements` + `user_usage`, ENABLE+FORCE RLS, isolation tests | db-sr | P0-10 | 3.5 | — | `feature/p0-migrations-identity` | — | [x] |
+| P0-12 | TxManager: `set_config('app.current_user_id', $1, true)` per tx, RO/RW variants, fail-closed integration tests | backend-sr | P0-11 | 3 | — | `feature/p0-txmanager` | — | [x] |
 | P0-13 | `platform/money` (Cents, Rate 10^-6, Exact, 128-bit multiply, half-away-from-zero) + Clock port (America/Mexico_City), 100% coverage | backend-sr | P0-03 | 4 | PG-P0-B | `feature/p0-money-clock` | — | [x] |
 | P0-14 | `platform/crypto`: argon2id PHC, AES-256-GCM with key_id (RFC), HMAC-SHA256 peppers (rfc_hash, email_hash) (TDD) | backend-sr | P0-03 | 3 | PG-P0-B | `feature/p0-crypto` | — | [x] |
-| P0-15 | Flags service + gate middleware (OFF → 404 before handler) + `GET /v1/flags` + flag ON/OFF test helper | backend-sr | P0-06, P0-07, P0-10 | 3.5 | — | `feature/p0-flags` | — | [ ] |
-| P0-16 | AccessPolicy port + infra: trial clock, atomic `ReserveRecord` (UPDATE … RETURNING), trial/pro/comp lookup, read-only after trial (TDD + integration) | backend-sr | P0-12, P0-13 | 4 | — | `feature/p0-access-policy` | — | [ ] |
-| P0-17 | Composition root + middleware chain (request-id, recover, token-bucket rate limit, authn slot, flag gate, kin-openapi request validation), `/healthz` liveness/readiness | backend-sr | P0-06, P0-07, P0-08 | 3 | — | `feature/p0-http-server` | — | [ ] |
-| P0-18 | Contract-test harness (libopenapi-validator) wired to integration tests; applied to `/healthz` and `/v1/flags` | qa-sr | P0-15, P0-17 | 2 | — | `feature/p0-contract-tests` | — | [ ] |
-| P0-19 | Backend CI: gofmt, golangci-lint, unit, integration (testcontainers), contract, govulncheck, codegen drift, OpenAPI lint, coverage ≥ 80% gate | devops-sr | P0-06, P0-09 | 3 | — | `feature/p0-ci-backend` | — | [ ] |
-| P0-20 | Flag admin CLI `cmd/flags` (list, enable, disable, apply-preset) running as cc_owner (backs the /flags skill) | backend-sr | P0-15 | 2 | — | `feature/p0-flags` | — | [ ] |
+| P0-15 | Flags service + gate middleware (OFF → 404 before handler) + `GET /v1/flags` + flag ON/OFF test helper | backend-sr | P0-06, P0-07, P0-10 | 3.5 | — | `feature/p0-flags` | — | [x] |
+| P0-16 | AccessPolicy port + infra: trial clock, atomic `ReserveRecord` (UPDATE … RETURNING), trial/pro/comp lookup, read-only after trial (TDD + integration) | backend-sr | P0-12, P0-13 | 4 | — | `feature/p0-access-policy` | — | [x] |
+| P0-17 | Composition root + middleware chain (request-id, recover, token-bucket rate limit, authn slot, flag gate, kin-openapi request validation), `/healthz` liveness/readiness | backend-sr | P0-06, P0-07, P0-08 | 3 | — | `feature/p0-http-server` | — | [x] |
+| P0-18 | Contract-test harness (libopenapi-validator) wired to integration tests; applied to `/healthz` and `/v1/flags` | qa-sr | P0-15, P0-17 | 2 | — | `feature/p0-contract-tests` | — | [x] |
+| P0-19 | Backend CI: gofmt, golangci-lint, unit, integration (testcontainers), contract, govulncheck, codegen drift, OpenAPI lint, coverage ≥ 80% gate | devops-sr | P0-06, P0-09 | 3 | — | `feature/p0-ci-backend` | — | [x] |
+| P0-20 | Flag admin CLI `cmd/flags` (list, enable, disable, apply-preset) running as cc_owner (backs the /flags skill) | backend-sr | P0-15 | 2 | — | `feature/p0-flags` | — | [x] |
 | P0-21 | Context7 check of Dart libs + swagger_parser spike on `openapi.yaml` (oneOf/const); record go/fallback decision (openapi-generator + 3.0 overlay) | frontend-sr | P0-01, P0-05 | 4.5 | PG-P0-C | `feature/p0-dart-client-spike` | — | [x] |
-| P0-22 | Flutter scaffold `mobile/`: flavors dev/staging/prod, go_router, state management, dio, design tokens, es-MX l10n, analysis_options | frontend-sr | P0-21 | 4 | — | `feature/p0-mobile-scaffold` | OB4, OB6 | [ ] |
-| P0-23 | Generated Dart client wiring + `make mobile-client` + drift check. ADR-0003 conditions: (a) `mobile/tool/normalize_openapi.dart` inlines path-level `parameters` into each operation, unit test first, and is the only input `make mobile-client` feeds swagger_parser; (b) CI guard `mobile/tool/check_generated_kinds.dart` runs inside `make mobile-client` and fails it when a generated Dart type's kind (enum/class/typedef) differs from its component schema or two schemas map to one Dart name; its test first feeds a fixture with an inline `oneOf` object holding a `period` enum and must fail on the `Period` collision; (c) file the path-parameter cast bug upstream (carapacik/swagger_parser) and link it in ADR-0003; drop (a) once a fixed release is pinned | frontend-sr | P0-22 | 2 | — | `feature/p0-mobile-client-flags` | — | [ ] |
-| P0-24 | FlagsProvider + `useFlag` helper fed by `GET /v1/flags` (widget tests first) | frontend-sr | P0-23 | 2.5 | — | `feature/p0-mobile-client-flags` | — | [ ] |
-| P0-25 | Mobile CI: `make mobile-client` (normalizer + ADR-0003 kind guard + drift check), analyze, test, release build `--obfuscate --split-debug-info`, artifact gate (no symbols / maps bundled) | devops-sr | P0-22, P0-23 | 3 | — | `feature/p0-ci-mobile` | — | [ ] |
+| P0-22 | Flutter scaffold `mobile/`: flavors dev/staging/prod, go_router, state management, dio, design tokens, es-MX l10n, analysis_options | frontend-sr | P0-21 | 4 | — | `feature/p0-mobile-scaffold` | OB4, OB6 | [x] |
+| P0-23 | Generated Dart client wiring + `make mobile-client` + drift check. ADR-0003 conditions: (a) `mobile/tool/normalize_openapi.dart` inlines path-level `parameters` into each operation, unit test first, and is the only input `make mobile-client` feeds swagger_parser; (b) CI guard `mobile/tool/check_generated_kinds.dart` runs inside `make mobile-client` and fails it when a generated Dart type's kind (enum/class/typedef) differs from its component schema or two schemas map to one Dart name; its test first feeds a fixture with an inline `oneOf` object holding a `period` enum and must fail on the `Period` collision; (c) file the path-parameter cast bug upstream (carapacik/swagger_parser) and link it in ADR-0003; drop (a) once a fixed release is pinned | frontend-sr | P0-22 | 2 | — | `feature/p0-mobile-client-flags` | — | [x] |
+| P0-24 | FlagsProvider + `useFlag` helper fed by `GET /v1/flags` (widget tests first) | frontend-sr | P0-23 | 2.5 | — | `feature/p0-mobile-client-flags` | — | [x] |
+| P0-25 | Mobile CI: `make mobile-client` (normalizer + ADR-0003 kind guard + drift check), analyze, test, release build `--obfuscate --split-debug-info`, artifact gate (no symbols / maps bundled) | devops-sr | P0-22, P0-23 | 3 | — | `feature/p0-ci-mobile` | — | [x] |
 | P0-26 | Prism mock server from `openapi.yaml` (`make mock`) so mobile work starts before backend | devops-sr | P0-05 | 1 | PG-P0-C | `feature/p0-mock-server` | — | [x] |
-| P0-27 | Worker skeleton `cmd/worker`: ticker, `pg_try_advisory_lock` leader election, job registry, graceful shutdown (errgroup) | backend-sr | P0-12, P0-08 | 2.5 | — | `feature/p0-worker` | — | [ ] |
-| P0-28 | QA P0: RLS fail-closed suite, flag ON/OFF on platform routes, CI green on both pipelines | qa-sr | P0-16, P0-18, P0-19, P0-20, P0-27 | 2 | — | `feature/p0-qa-fixes` | — | [ ] |
-| P0-29 | Tech-lead gate P0 backend platform (canon checklist, Dependency Rule, money package review) | tech-lead | P0-28 | 2 | — | (PR review) | — | [ ] |
-| P0-30 | Security gate P0 backend platform (roles, NOBYPASSRLS, crypto params, log redaction, CI scanners) | security | P0-28 | 2.5 | — | (PR review) | — | [ ] |
-| P0-31 | Tech-lead review of mobile foundation (scaffold, client generation, FlagsProvider, mobile CI) | tech-lead | P0-24, P0-25 | 1.5 | — | (PR review) | — | [ ] |
-| P0-32 | Docs P0: README (prereqs, setup, flags), local runbook, platform package docs | doc-writer | P0-29, P0-30 | 2 | — | `feature/p0-docs` | — | [ ] |
+| P0-27 | Worker skeleton `cmd/worker`: ticker, `pg_try_advisory_lock` leader election, job registry, graceful shutdown (errgroup) | backend-sr | P0-12, P0-08 | 2.5 | — | `feature/p0-worker` | — | [x] |
+| P0-28 | QA P0: RLS fail-closed suite, flag ON/OFF on platform routes, CI green on both pipelines | qa-sr | P0-16, P0-18, P0-19, P0-20, P0-27 | 2 | — | `feature/p0-qa-fixes` | — | [x] |
+| P0-29 | Tech-lead gate P0 backend platform (canon checklist, Dependency Rule, money package review) | tech-lead | P0-28 | 2 | — | (PR review) | — | [x] |
+| P0-30 | Security gate P0 backend platform (roles, NOBYPASSRLS, crypto params, log redaction, CI scanners) | security | P0-28 | 2.5 | — | (PR review) | — | [x] |
+| P0-31 | Tech-lead review of mobile foundation (scaffold, client generation, FlagsProvider, mobile CI) | tech-lead | P0-24, P0-25 | 1.5 | — | (PR review) | — | [x] |
+| P0-32 | Docs P0: README (prereqs, setup, flags), local runbook, platform package docs | doc-writer | P0-29, P0-30 | 2 | — | `feature/p0-docs` | — | [x] |
+
+#### P0 follow-ups
+
+Deferred by the P0 gates, none blocking. Each lands with the task in its target column. Sources:
+[P0-29 tech-lead gate](../reviews/P0-29-tech-lead-gate.md) (FU*) and
+[P0-30 security gate](../reviews/P0-30-security-gate.md) (D-*).
+Mobile and QA deferrals keep their own lists: [P0-31 mobile review](../reviews/P0-31-mobile-foundation.md)
+(F-04..F-11) and [P0-28 QA](../reviews/P0-28-qa-foundation.md) (F3, F4).
+
+| ID | Item | Target |
+|---|---|---|
+| FU1 | Request-deadline middleware (about 10 s, under `WriteTimeout`); test with a hanging `tx.Manager` | M1, before the first DB-backed handler |
+| FU2 | Replace `cmd/api` `notBuilt` (nil server, 500 on a flag ON) with an explicit stub | M1, before the first preset demo |
+| FU3 | Move `internal/platform/httperr` to `adapter/http/httperr` | M1 |
+| FU4 | ADR: `platform/access` stays a documented shared-kernel port or becomes `internal/access` | M1, before M1-07 wires it |
+| FU5 | Usecase third-party imports: denylist → allowlist in `archtest` | M1 |
+| FU6 | `flags.Service` clears `failed` after a successful load | Any (backend) |
+| FU7 | Use the generated `gen.ErrorResponse` at the edge instead of the hand-written envelope types | M1, with FU3 |
+| FU8 | `FuzzParseCents` / `FuzzParseRate` fuzz targets for `money` | Before M3 (tax engine) |
+| D-2 | Split `tx.Manager` from `tx.SystemManager`; archtest forbids `SystemManager` in `adapter/http` except sign-up | M1-05 |
+| D-3 | Lint/archtest rule: repositories never `Commit`/`Rollback`/`SavePoint` or run `SET`/`set_config` | M1, first repository PR |
+| D-4 | Taxpayer row id as GCM AAD for the RFC ciphertext | M2-05 (blocks its security gate) |
+| D-5 | NFC normalisation before `email_hash`, if EAI addresses are accepted | M1-05 decision |
+| D-6 | `Cache-Control: no-store` on error responses, contract first | Next contract revision (M1-01) |
+| D-7 | Required code-owner review | When a second account or GitHub App exists |
+| D-8 | npm dev-tooling alerts in `tools/contract` (Prism transitive deps) | Next Dependabot cycle |
+| D-9 | Re-apply required checks `backend-ok`, `mobile-ok`, `contract-ok` on `dev` and `main` | Done: verified on both branches on 2026-10-13 |
 
 ### M1 — Auth & Account (`module_auth`)
 
