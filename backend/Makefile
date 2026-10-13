@@ -5,7 +5,7 @@ GEN_DIR       := adapter/http/gen
 
 .DEFAULT_GOAL := check
 
-.PHONY: check fmt fmt-check lint test test-integration cover tidy generate codegen-check
+.PHONY: check fmt fmt-check lint test test-integration cover tidy generate codegen-check db-up db-down db-reset db-roles-check
 
 ## check: fmt-check + lint + unit tests (what CI runs)
 check: fmt-check lint test
@@ -48,3 +48,38 @@ codegen-check: generate
 	@out="$$(git status --porcelain -- $(GEN_DIR))"; if [ -n "$$out" ]; then \
 		echo "adapter/http/gen is out of date with docs/api/openapi.yaml; run 'make generate' and commit:"; \
 		echo "$$out"; git --no-pager diff --stat -- $(GEN_DIR); exit 1; fi
+
+# ---- Local stack (LOCAL ONLY; infra/local) ---------------------------------------------
+
+LOCAL_DIR    := ../infra/local
+LOCAL_ENV    := $(LOCAL_DIR)/.env
+COMPOSE      := docker compose -f $(LOCAL_DIR)/compose.yaml --env-file $(LOCAL_ENV)
+ASSERT_LOCAL := $(LOCAL_DIR)/scripts/assert-local.sh $(LOCAL_ENV)
+RUNTIME_ROLES := cc_app cc_webhook cc_worker
+
+$(LOCAL_ENV):
+	cp $(LOCAL_DIR)/.env.example $@
+	@echo "created $@ from .env.example (local-only placeholder passwords)"
+
+## db-up: start local postgres 18 (loopback only) and wait until healthy
+db-up: $(LOCAL_ENV)
+	@$(ASSERT_LOCAL)
+	$(COMPOSE) up -d --wait postgres
+
+## db-down: stop the local stack, keeping its data volume
+db-down: $(LOCAL_ENV)
+	$(COMPOSE) down
+
+## db-reset: LOCAL ONLY. Destroy the data volume and re-bootstrap roles from scratch
+db-reset: $(LOCAL_ENV)
+	@$(ASSERT_LOCAL)
+	$(COMPOSE) down --volumes
+	$(COMPOSE) up -d --wait postgres
+
+## db-roles-check: connect over TCP as each runtime role and assert NOSUPERUSER/NOBYPASSRLS/not owner
+db-roles-check: $(LOCAL_ENV)
+	@set -e; . $(LOCAL_ENV); for role in $(RUNTIME_ROLES); do \
+	  case $$role in cc_app) pw=$$CC_APP_PASSWORD;; cc_webhook) pw=$$CC_WEBHOOK_PASSWORD;; cc_worker) pw=$$CC_WORKER_PASSWORD;; esac; \
+	  $(COMPOSE) exec -T -e PGPASSWORD="$$pw" postgres \
+	    psql --no-psqlrc -h 127.0.0.1 -U $$role -d "$${CC_DB_NAME:-control_contable}" -f /bootstrap/check-runtime-role.sql; \
+	done
