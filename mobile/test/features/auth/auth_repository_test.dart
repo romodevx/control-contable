@@ -167,4 +167,62 @@ void main() {
 
     expect(documents.single.kind, LegalDocumentKind.terms);
   });
+
+  group('session', () {
+    const authSession = (
+      status: 200,
+      body: {
+        'user': {
+          'id': '7a1f0c62-1b1e-4c1d-9a55-0f1e2d3c4b5a',
+          'email': 'ana@example.mx',
+          'created_at': '2026-10-13T12:00:00Z',
+        },
+        'tokens': {
+          'access_token': 'a',
+          'access_expires_in': 900,
+          'refresh_token': 'r',
+          'refresh_expires_in': 2592000,
+          'token_type': 'Bearer',
+        },
+      },
+    );
+
+    test('login posts the credentials and returns the session', () async {
+      adapter.reply('/v1/auth/login', authSession);
+
+      final session = await repository.login(
+        email: 'ana@example.mx',
+        password: syntheticPassword(),
+      );
+
+      expect(session.tokens.refreshToken, 'r');
+      expect(lastBody(), {
+        'email': 'ana@example.mx',
+        'password': syntheticPassword(),
+      });
+    });
+
+    test('bad credentials are one generic 401', () async {
+      adapter.reply('/v1/auth/login', (
+        status: 401,
+        body: {
+          'error': {'code': 'unauthorized', 'message': 'Invalid credentials.'},
+        },
+      ));
+
+      await expectLater(
+        repository.login(email: 'ana@example.mx', password: 'x'),
+        throwsA(isA<ApiUnauthorized>()),
+      );
+    });
+
+    test('logout posts the refresh token and accepts the 204', () async {
+      adapter.reply('/v1/auth/logout', (status: 204, body: null));
+
+      await repository.logout('refresh-1');
+
+      expect(adapter.requests.single.method, 'POST');
+      expect(lastBody(), {'refresh_token': 'refresh-1'});
+    });
+  });
 }

@@ -6,11 +6,11 @@ import 'package:control_contable/core/forms/form_notice.dart';
 import 'package:control_contable/core/forms/typed_fields.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/router/app_router.dart';
+import 'package:control_contable/core/session/session.dart';
 import 'package:control_contable/core/theme/app_spacing.dart';
 import 'package:control_contable/core/time/clock.dart';
 import 'package:control_contable/features/auth/application/pending_sign_up.dart';
 import 'package:control_contable/features/auth/application/resend_cooldown.dart';
-import 'package:control_contable/features/auth/application/session_store.dart';
 import 'package:control_contable/features/auth/auth_routes.dart';
 import 'package:control_contable/features/auth/data/auth_repository.dart';
 import 'package:control_contable/features/auth/presentation/auth_copy.dart';
@@ -77,7 +77,8 @@ class _CodeStepFormState extends ConsumerState<CodeStepForm> {
       final session = await ref
           .read(authRepositoryProvider)
           .verifyEmail(fields.request(draft));
-      await ref.read(sessionStoreProvider).save(session);
+      // The contract's 201 carries the tokens: the person is signed in.
+      await ref.read(sessionProvider).start(session.tokens);
     } on ApiUnauthorized {
       return fields.showCodeRejected();
     } on ApiValidationFailure catch (failure) {
@@ -88,8 +89,9 @@ class _CodeStepFormState extends ConsumerState<CodeStepForm> {
     } on ApiFailure catch (failure) {
       return _setNotice(describeAuthFailure(failure, l10n));
     }
-    if (!mounted) return;
-    context.go(AppRoutes.home);
+    // Signed in: the router's guard also leaves this guest screen, so the
+    // draft (password included) is forgotten even if it is already gone.
+    if (mounted) context.go(AppRoutes.home);
     pending.clear();
   }
 

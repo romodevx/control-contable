@@ -99,7 +99,19 @@ class AppLocalizationsEs extends AppLocalizations {
   String get formHidePassword => 'Ocultar contraseña';
 
   @override
-  String get homeCreateAccount => 'Crear cuenta';
+  String get authSignOut => 'Cerrar sesión';
+
+  @override
+  String get authLoginTitle => 'Iniciar sesión';
+
+  @override
+  String get authLoginSubmit => 'Entrar';
+
+  @override
+  String get authLoginRejected => 'Correo o contraseña incorrectos.';
+
+  @override
+  String get authLoginNoAccount => '¿Aún no tienes cuenta?';
 
   @override
   String get authRegisterTitle => 'Crear cuenta';

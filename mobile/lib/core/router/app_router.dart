@@ -3,7 +3,9 @@ import 'package:control_contable/core/router/boot_splash_screen.dart';
 import 'package:control_contable/core/router/feature_module.dart';
 import 'package:control_contable/core/router/not_found_screen.dart';
 import 'package:control_contable/core/router/router_flags.dart';
+import 'package:control_contable/core/session/session.dart';
 import 'package:control_contable/features/home/home_routes.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -22,15 +24,17 @@ abstract final class AppRoutes {
   /// Where a location inside a module waits while the flags load.
   static const splash = '/cargando';
 
-  /// Query parameter of [splash] that keeps the requested location.
+  /// Query parameter of [splash] (and of the sign-in location) that keeps
+  /// the requested location.
   static const splashFrom = 'desde';
 }
 
 /// The app's router, composed from each feature's route list.
 ///
-/// Built once per set of feature slices, never per flag answer: a flag
-/// change re-runs the redirect (`refreshListenable`) instead, so the user's
-/// navigation survives a refresh that flips some other module's flag.
+/// Built once per set of feature slices, never per flag answer: a flag or
+/// session change re-runs the redirect (`refreshListenable`) instead, so
+/// the user's navigation survives a refresh that flips some other module's
+/// flag.
 ///
 /// A location owned by a module:
 /// - waits on [AppRoutes.splash] while the first flags answer is pending,
@@ -39,10 +43,11 @@ abstract final class AppRoutes {
 /// - fails closed after [flagsBootTimeout] if the answer never arrives;
 /// - redirects to [AppRoutes.notFound] while its module is disabled.
 ///
-/// Its entry points are gated by `FlagGate`.
+/// While the slice that signs people in is enabled, the session guards
+/// apply too (see [_Guards]). Entry points are gated by `FlagGate`.
 final appRouterProvider = Provider<GoRouter>((ref) {
   final features = ref.watch(featureModulesProvider);
-  final owners = FeatureRouteOwners(features);
+  final session = ref.watch(sessionProvider);
   final flags = RouterFlags(
     timeout: flagsBootTimeout,
     initial: ref.read(flagsProvider).value,
@@ -52,10 +57,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (next.hasValue) flags.resolve(next.requireValue);
     })
     ..onDispose(flags.dispose);
+  final guards = _Guards(
+    owners: FeatureRouteOwners(features),
+    flags: flags,
+    session: session,
+    signIn: features.where((f) => f.signInLocation != null).firstOrNull,
+  );
 
   final router = GoRouter(
     initialLocation: AppRoutes.home,
-    refreshListenable: flags,
+    refreshListenable: Listenable.merge([flags, session]),
     routes: [
       ...homeRoutes,
       GoRoute(
@@ -66,42 +77,96 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.splash,
         builder: (context, state) => const BootSplashScreen(),
       ),
-      for (final feature in features) ...feature.routes,
+      for (final feature in features) ...feature.allRoutes,
     ],
-    redirect: (context, state) => _redirect(state, owners, flags),
+    redirect: (context, state) => guards.redirect(state),
     errorBuilder: (context, state) => const NotFoundScreen(),
   );
   ref.onDispose(router.dispose);
   return router;
 }, name: 'appRouterProvider');
 
-String? _redirect(
-  GoRouterState state,
-  FeatureRouteOwners owners,
-  RouterFlags flags,
-) {
-  if (state.matchedLocation == AppRoutes.splash) {
-    if (flags.isResolved) return _waitingLocation(state.uri);
-    // Reached directly (restored state, a stale link): the wait is bounded.
-    flags.startDeadline();
-    return null;
+/// The router's redirect rules: module flags first (a disabled module is
+/// not found), then, while the [signIn] slice's module is on, the session:
+/// - while the stored session is being read, the location waits on the
+///   splash;
+/// - signed out, any location but a guest route goes to the sign-in
+///   location, keeping the requested one ([AppRoutes.splashFrom]);
+/// - signed in, a guest route goes on to the kept location (or home).
+///
+/// The server's 401/404 is the security boundary; this is UX.
+class _Guards {
+  new({
+    required this.owners,
+    required this.flags,
+    required this.session,
+    required this.signIn,
+  });
+
+  final FeatureRouteOwners owners;
+  final RouterFlags flags;
+  final Session session;
+  final FeatureModule? signIn;
+
+  String? redirect(GoRouterState state) {
+    final location = state.matchedLocation;
+    if (location == AppRoutes.splash) return _leaveSplash(state.uri);
+    if (location == AppRoutes.notFound) return null;
+    final owner = owners.ownerOf(state.topRoute);
+    final waitsForFlags = owner != null || signIn != null;
+    if (waitsForFlags && !flags.isResolved) return _wait(state.uri);
+    if (owner != null && !flags.isEnabled(owner)) return AppRoutes.notFound;
+    return _sessionRedirect(state);
   }
-  final owner = owners.ownerOf(state.topRoute);
-  if (owner == null) return null;
-  if (!flags.isResolved) {
-    flags.startDeadline();
-    return Uri(
-      path: AppRoutes.splash,
-      queryParameters: {AppRoutes.splashFrom: state.uri.toString()},
-    ).toString();
+
+  /// Leaves the splash once flags (and, when guarded, the session) are known.
+  String? _leaveSplash(Uri splash) {
+    if (!flags.isResolved) {
+      // Reached directly (restored state, a stale link): the wait is bounded.
+      flags.startDeadline();
+      return null;
+    }
+    if (_isGuarded && session.status == SessionStatus.restoring) return null;
+    return _keptLocation(splash);
   }
-  return flags.isEnabled(owner) ? null : AppRoutes.notFound;
+
+  String? _sessionRedirect(GoRouterState state) {
+    final signInLocation = signIn?.signInLocation;
+    if (!_isGuarded || signInLocation == null) return null;
+    if (session.status == SessionStatus.restoring) return _wait(state.uri);
+    final isGuestRoute = owners.isGuest(state.topRoute);
+    if (session.isSignedIn) {
+      return isGuestRoute ? _keptLocation(state.uri) : null;
+    }
+    return isGuestRoute ? null : _withKept(signInLocation, state.uri);
+  }
+
+  bool get _isGuarded {
+    final module = signIn?.module;
+    return module != null && flags.isEnabled(module);
+  }
+
+  String _wait(Uri requested) {
+    flags.startDeadline();
+    return _withKept(AppRoutes.splash, requested);
+  }
 }
 
-/// The in-app location the splash kept; home when it is missing or is not
-/// an app path (never an external or protocol-relative URL).
-String _waitingLocation(Uri splash) {
-  final from = splash.queryParameters[AppRoutes.splashFrom];
+/// [path], keeping [requested] to return to later (home needs no keeping).
+String _withKept(String path, Uri requested) {
+  final isHome = requested.path == AppRoutes.home && !requested.hasQuery;
+  return Uri(
+    path: path,
+    queryParameters: isHome
+        ? null
+        : {AppRoutes.splashFrom: requested.toString()},
+  ).toString();
+}
+
+/// The in-app location kept in [uri]; home when it is missing or is not an
+/// app path (never an external or protocol-relative URL).
+String _keptLocation(Uri uri) {
+  final from = uri.queryParameters[AppRoutes.splashFrom];
   final isAppPath =
       from != null && from.startsWith('/') && !from.startsWith('//');
   return isAppPath ? from : AppRoutes.home;

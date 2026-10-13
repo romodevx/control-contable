@@ -67,6 +67,8 @@ make_zip nolib.apk "assets/a.txt=$work/asset.txt"
 make_zip clean.aab "base/$lib=$work/libapp-stripped.so" \
   "BUNDLE-METADATA/com.android.tools.build.debugsymbols/arm64-v8a/libapp.so.sym=$work/libapp-unstripped.so" \
   "BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map=$work/asset.txt"
+make_zip jni.aab "base/$lib=$work/libapp-stripped.so" \
+  "BUNDLE-METADATA/com.android.tools.build.debugsymbols/arm64-v8a/libdartjni.so.sym=$work/libapp-unstripped.so"
 make_zip notelf.apk "$lib=$work/asset.txt"
 make_zip dbg.aab "base/$lib=$work/libapp-stripped.so" \
   "BUNDLE-METADATA/com.android.tools.build.debugsymbols/arm64-v8a/libapp.so.dbg=$work/libapp-unstripped.so"
@@ -90,6 +92,7 @@ expect fail "an AAB carrying full DWARF (.dbg) in BUNDLE-METADATA fails" dbg.aab
 expect fail "an AAB with symbols of a non-Flutter lib in BUNDLE-METADATA fails" renamed-metadata.aab
 expect fail "the BUNDLE-METADATA exception does not apply to an APK" metadata-in-apk.apk
 expect pass "an AAB with stripped libs and Play-only BUNDLE-METADATA passes" clean.aab
+expect pass "an AAB with the symbol table of package:jni's libdartjni.so passes" jni.aab
 expect fail "an AAB whose delivered libapp.so keeps symbols fails" symtab.aab
 expect fail "an AAB with unknown BUNDLE-METADATA content fails" unknown-metadata.aab
 
