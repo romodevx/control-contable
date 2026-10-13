@@ -13,6 +13,9 @@ info:
     - Every error uses the single `ErrorResponse` envelope.
     - Every operation declares `x-module`. When that module's flag is OFF the server
       answers `404 not_found`, indistinguishable from a missing resource.
+    - Operations without authentication declare `security: []` AND `x-public: true`.
+    - Nodes marked `x-frozen: sha256:<hash>` are frozen; changing them is governed by
+      `docs/api/CONTRACT.md` (lint fails when a frozen node drifts from its hash).
     - Resources of other users answer `404` (RLS), never `403`.
     - Create operations accept a client-generated UUID `id`; retrying the same POST
       returns the existing resource (idempotent against double submit).
@@ -58,8 +61,10 @@ paths:
     get:
       tags: [Platform]
       operationId: getHealth
+      x-frozen: sha256:b4f83c0a29fd89904250bdcf1ba50bf98e991d986b3c131e3f121d41d504aba9
       summary: Liveness and readiness
       x-module: platform
+      x-public: true
       security: []
       responses:
         '200':
@@ -75,8 +80,10 @@ paths:
     get:
       tags: [Platform]
       operationId: listEnabledFlags
+      x-frozen: sha256:4440fb8f1b6af759162efbdfbd0daf5ddc4ddc9af207f4b2fd8f245c4530bad6
       summary: Modules enabled for the client (UX only; server enforces)
       x-module: platform
+      x-public: true
       security: []
       responses:
         '200':
@@ -99,6 +106,7 @@ paths:
         `verifyEmail`. Requires acceptance of the current legal documents.
         (ADR-0001 OWNER decision 1, option A.)
       x-module: module_auth
+      x-public: true
       security: []
       requestBody:
         required: true
@@ -121,6 +129,7 @@ paths:
       operationId: verifyEmail
       summary: Confirm the emailed code; creates the account, starts the trial, issues tokens
       x-module: module_auth
+      x-public: true
       security: []
       requestBody:
         required: true
@@ -144,6 +153,7 @@ paths:
       operationId: login
       summary: Log in with email and password
       x-module: module_auth
+      x-public: true
       security: []
       requestBody:
         required: true
@@ -168,6 +178,7 @@ paths:
       summary: Rotate the refresh token
       description: Reusing an already-rotated token revokes its whole family and returns 401.
       x-module: module_auth
+      x-public: true
       security: []
       requestBody:
         required: true
@@ -257,6 +268,7 @@ paths:
       operationId: listLegalDocuments
       summary: Current privacy notices and terms
       x-module: module_auth
+      x-public: true
       security: []
       responses:
         '200':
@@ -1278,12 +1290,14 @@ components:
         - code: not_tax_advice
           text: Estimación informativa. No sustituye la declaración ante el SAT ni la asesoría de un contador. Cálculo basado en LISR, LIVA, LIF 2026 y Anexo 8 RMF 2026.
     ModuleKey:
+      x-frozen: sha256:bc858cea369b72b8ff0211331c7fa6ed39b19ae3504e8fb51d4607eb82df306f
       type: string
       pattern: '^module_[a-z_]+$'
       examples: [module_incomes]
 
     # ------------------------------------------------------------ errors
     ErrorResponse:
+      x-frozen: sha256:e25753af878a2993d34c47a4d9689b3c8d7bda4605bcb3d845b8144e28aca449
       type: object
       required: [error]
       additionalProperties: false
@@ -1318,6 +1332,7 @@ components:
         - upstream_unavailable
         - internal_error
     FieldError:
+      x-frozen: sha256:8de017f335831a0658c87486c7cb050faa553f4215e6cd7df03de2b74384fc3d
       type: object
       required: [field, code, message]
       properties:
@@ -1327,6 +1342,7 @@ components:
 
     # ------------------------------------------------------------ platform
     HealthStatus:
+      x-frozen: sha256:f042770d3a1748ad5236a9a3f1b42296684507e37420689bf6a61a27e360c9b9
       type: object
       required: [status, database, version]
       properties:
@@ -1334,6 +1350,7 @@ components:
         database: { type: string, enum: [ok, unreachable] }
         version: { type: string }
     EnabledFlags:
+      x-frozen: sha256:3b36d8b2bda2dd7679139e5d371d113f055c1f70b0d219fa0b174d7ecbdca7d1
       type: object
       required: [enabled]
       properties:
@@ -1377,6 +1394,8 @@ components:
       required: [status]
       properties:
         status: { type: string, const: verification_sent }
+      examples:
+        - status: verification_sent
     VerifyEmailRequest:
       type: object
       required: [email, code]
@@ -1391,11 +1410,16 @@ components:
       properties:
         email: { type: string, format: email }
         password: { type: string, minLength: 1, maxLength: 128 }
+      examples:
+        - email: ana@example.mx
+          password: '<password>'
     RefreshRequest:
       type: object
       required: [refresh_token]
       properties:
         refresh_token: { type: string, minLength: 40, maxLength: 200 }
+      examples:
+        - refresh_token: 0199d4a2-7c1e-7b3a-9f10-2c5e8a1b4d01.example-refresh-secret
     TokenPair:
       type: object
       required: [access_token, access_expires_in, refresh_token, refresh_expires_in, token_type]
@@ -1405,12 +1429,30 @@ components:
         refresh_token: { type: string, description: 'Opaque, format <user_uuid>.<secret>.' }
         refresh_expires_in: { type: integer, description: Seconds. }
         token_type: { type: string, const: Bearer }
+      examples:
+        - access_token: example-access-token
+          access_expires_in: 900
+          refresh_token: 0199d4a2-7c1e-7b3a-9f10-2c5e8a1b4d01.example-refresh-secret
+          refresh_expires_in: 2592000
+          token_type: Bearer
     AuthSession:
       type: object
       required: [user, tokens]
       properties:
         user: { $ref: '#/components/schemas/User' }
         tokens: { $ref: '#/components/schemas/TokenPair' }
+      examples:
+        - user:
+            id: 0199d4a2-7c1e-7b3a-9f10-2c5e8a1b4d01
+            email: ana@example.mx
+            name: Ana Gómez
+            created_at: '2026-10-13T16:00:00Z'
+          tokens:
+            access_token: example-access-token
+            access_expires_in: 900
+            refresh_token: 0199d4a2-7c1e-7b3a-9f10-2c5e8a1b4d01.example-refresh-secret
+            refresh_expires_in: 2592000
+            token_type: Bearer
     User:
       type: object
       required: [id, email, created_at]
@@ -1429,6 +1471,8 @@ components:
       minProperties: 1
       properties:
         name: { type: string, maxLength: 120 }
+      examples:
+        - name: Ana Gómez Ruiz
     LegalDocumentKind:
       type: string
       enum: [privacy_notice_integral, privacy_notice_simplified, terms]
@@ -1447,6 +1491,16 @@ components:
         items:
           type: array
           items: { $ref: '#/components/schemas/LegalDocument' }
+      examples:
+        - items:
+            - kind: privacy_notice_integral
+              version: '2026-10-01'
+              url: https://example.mx/legal/aviso-de-privacidad
+              published_at: '2026-10-01T06:00:00Z'
+            - kind: terms
+              version: '2026-10-01'
+              url: https://example.mx/legal/terminos
+              published_at: '2026-10-01T06:00:00Z'
 
     # ------------------------------------------------------------ taxpayers
     RegimeOptionDef:
@@ -1502,6 +1556,21 @@ components:
         items:
           type: array
           items: { $ref: '#/components/schemas/Regime' }
+      examples:
+        - items:
+            - code: '606'
+              name: Arrendamiento
+              person_type: fisica
+              treatment: full
+              explanation: null
+              option_defs:
+                - key: deduction_mode
+                  label: Tipo de deducción
+                  type: enum
+                  allowed_values: [blind_35, actual]
+                  default: blind_35
+                  required: true
+              required_inputs: []
     RegimeOptions:
       type: object
       description: Values keyed by RegimeOptionDef.key; validated server-side against the catalog.
@@ -1526,6 +1595,13 @@ components:
           oneOf:
             - $ref: '#/components/schemas/Period'
             - type: 'null'
+      examples:
+        - regime_code: '606'
+          name: Arrendamiento
+          treatment: full
+          options: { deduction_mode: blind_35 }
+          start_period: '2026-01'
+          end_period: null
     TaxpayerRegimeCreate:
       type: object
       required: [regime_code]
@@ -1533,11 +1609,17 @@ components:
         regime_code: { $ref: '#/components/schemas/RegimeCode' }
         options: { $ref: '#/components/schemas/RegimeOptions' }
         start_period: { $ref: '#/components/schemas/Period' }
+      examples:
+        - regime_code: '606'
+          options: { deduction_mode: blind_35 }
+          start_period: '2026-01'
     TaxpayerRegimeUpdate:
       type: object
       required: [options]
       properties:
         options: { $ref: '#/components/schemas/RegimeOptions' }
+      examples:
+        - options: { deduction_mode: actual }
     Taxpayer:
       type: object
       required: [id, person_type, display_name, rfc_masked, regimes, created_at]
@@ -1596,6 +1678,8 @@ components:
       required: [display_name]
       properties:
         display_name: { type: string, minLength: 1, maxLength: 80 }
+      examples:
+        - display_name: Ana (negocio)
     TaxpayerList:
       type: object
       required: [items]
@@ -1603,6 +1687,21 @@ components:
         items:
           type: array
           items: { $ref: '#/components/schemas/Taxpayer' }
+      examples:
+        - items:
+            - id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+              person_type: fisica
+              display_name: Ana (personal)
+              rfc_masked: GOMA******AB3
+              regimes:
+                - regime_code: '612'
+                  name: Actividad Empresarial y Profesional
+                  treatment: full
+                  options: {}
+                  start_period: '2026-01'
+                  end_period: null
+              archived_at: null
+              created_at: '2026-10-13T16:05:00Z'
 
     # ------------------------------------------------------------ records
     CounterpartyType:
@@ -1660,6 +1759,8 @@ components:
         - $ref: '#/components/schemas/IncomeFields'
         - type: object
           minProperties: 1
+      examples:
+        - description: Diseño de logotipo y manual de marca
     Income:
       allOf:
         - $ref: '#/components/schemas/IncomeFields'
@@ -1670,6 +1771,21 @@ components:
             taxpayer_id: { $ref: '#/components/schemas/Uuid' }
             created_at: { type: string, format: date-time }
             updated_at: { type: string, format: date-time }
+      examples:
+        - id: 0199d4a3-1a2b-7d3c-8e4f-5a6b7c8d9e01
+          taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+          regime_code: '612'
+          description: Diseño de logotipo
+          counterparty_type: persona_moral
+          amount_cents: 1000000
+          iva_rate: rate_16
+          iva_cents: 160000
+          isr_withheld_cents: 100000
+          iva_withheld_cents: 106667
+          invoiced_on: '2026-09-05'
+          collected_on: '2026-09-10'
+          created_at: '2026-09-10T17:00:00Z'
+          updated_at: '2026-09-10T17:00:00Z'
     IncomePage:
       type: object
       required: [items, totals]
@@ -1679,6 +1795,29 @@ components:
           items: { $ref: '#/components/schemas/Income' }
         next_cursor: { type: [string, 'null'] }
         totals: { $ref: '#/components/schemas/PeriodTotals' }
+      examples:
+        - items:
+            - id: 0199d4a3-1a2b-7d3c-8e4f-5a6b7c8d9e01
+              taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+              regime_code: '612'
+              description: Diseño de logotipo
+              counterparty_type: persona_moral
+              amount_cents: 1000000
+              iva_rate: rate_16
+              iva_cents: 160000
+              isr_withheld_cents: 100000
+              iva_withheld_cents: 106667
+              invoiced_on: '2026-09-05'
+              collected_on: '2026-09-10'
+              created_at: '2026-09-10T17:00:00Z'
+              updated_at: '2026-09-10T17:00:00Z'
+          next_cursor: null
+          totals:
+            count: 1
+            amount_cents: 1000000
+            iva_cents: 160000
+            isr_withheld_cents: 100000
+            iva_withheld_cents: 106667
     PaymentMethod:
       type: string
       enum: [cash, transfer, card_debit, card_credit, check, e_wallet, other]
@@ -1732,6 +1871,8 @@ components:
         - $ref: '#/components/schemas/ExpenseFields'
         - type: object
           minProperties: 1
+      examples:
+        - has_cfdi: true
     Expense:
       allOf:
         - $ref: '#/components/schemas/ExpenseFields'
@@ -1746,6 +1887,22 @@ components:
             legend: { $ref: '#/components/schemas/Legend' }
             created_at: { type: string, format: date-time }
             updated_at: { type: string, format: date-time }
+      examples:
+        - id: 0199d4a3-2b3c-7e4d-9f50-6b7c8d9e0f12
+          taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+          regime_code: '612'
+          category_code: software
+          description: Suscripción de diseño
+          amount_cents: 50000
+          iva_rate: rate_16
+          iva_cents: 8000
+          payment_method: card_credit
+          has_cfdi: true
+          paid_on: '2026-09-12'
+          warnings: []
+          legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
+          created_at: '2026-09-12T18:30:00Z'
+          updated_at: '2026-09-12T18:30:00Z'
     ExpensePage:
       type: object
       required: [items, totals]
@@ -1755,6 +1912,28 @@ components:
           items: { $ref: '#/components/schemas/Expense' }
         next_cursor: { type: [string, 'null'] }
         totals: { $ref: '#/components/schemas/PeriodTotals' }
+      examples:
+        - items:
+            - id: 0199d4a3-2b3c-7e4d-9f50-6b7c8d9e0f12
+              taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+              regime_code: '612'
+              category_code: software
+              description: Suscripción de diseño
+              amount_cents: 50000
+              iva_rate: rate_16
+              iva_cents: 8000
+              payment_method: card_credit
+              has_cfdi: true
+              paid_on: '2026-09-12'
+              warnings: []
+              legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
+              created_at: '2026-09-12T18:30:00Z'
+              updated_at: '2026-09-12T18:30:00Z'
+          next_cursor: null
+          totals:
+            count: 1
+            amount_cents: 50000
+            iva_cents: 8000
     DeductibilityHint:
       type: object
       required: [regime_code, deductibility]
@@ -1782,6 +1961,16 @@ components:
           type: array
           items: { $ref: '#/components/schemas/ExpenseCategory' }
         legend: { $ref: '#/components/schemas/Legend' }
+      examples:
+        - items:
+            - code: software
+              name: Software y suscripciones
+              hints:
+                - regime_code: '612'
+                  deductibility: deductible
+                  note: null
+                  legal_basis: LISR 103-III
+          legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
 
     # ------------------------------------------------------------ tax engine
     ParameterSetRef:
@@ -1991,6 +2180,13 @@ components:
         values:
           type: array
           items: { $ref: '#/components/schemas/TaxInputValue' }
+      examples:
+        - regime_code: '601'
+          fiscal_year: 2026
+          definitions:
+            - { key: coeficiente_utilidad, label: Coeficiente de utilidad, kind: rate, required: true }
+          values:
+            - { key: coeficiente_utilidad, value_cents: null, value_rate: '0.1234' }
     TaxInputsUpdate:
       type: object
       required: [values]
@@ -2034,6 +2230,45 @@ components:
           items: { $ref: '#/components/schemas/TrendPoint' }
         access: { $ref: '#/components/schemas/AccessSummary' }
         legend: { $ref: '#/components/schemas/Legend' }
+      examples:
+        - taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+          period: '2026-03'
+          is_empty: false
+          estimate:
+            taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+            period: '2026-03'
+            due_date: '2026-04-17'
+            legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
+            disclaimers:
+              - code: not_tax_advice
+                text: Estimación informativa. No sustituye la declaración ante el SAT ni la asesoría de un contador. Cálculo basado en LISR, LIVA, LIF 2026 y Anexo 8 RMF 2026.
+            regimes:
+              - regime_code: '612'
+                regime_name: Actividades Empresariales y Profesionales
+                treatment: full
+                status: complete
+                missing_inputs: []
+                explanation: null
+                isr: { amount_cents: 15096, payable_rounded_cents: 15096, outcome: payable }
+                iva_components:
+                  charged_collected_cents: 480000
+                  creditable_paid_cents: 160000
+                  withheld_from_taxpayer_cents: 106667
+                withheld_to_remit_cents: 0
+                parameter_set: { fiscal_year: 2026, version: 1 }
+            totals:
+              iva: { amount_cents: 213333, payable_rounded_cents: 213333, outcome: payable }
+              isr: { amount_cents: 15096, payable_rounded_cents: 15096, outcome: payable }
+              withholdings_to_remit_cents: 0
+              total_payable_rounded_cents: 228429
+            engine_version: 1.0.0
+          income_cents: 3000000
+          expense_cents: 1000000
+          trend:
+            - { period: '2026-02', income_cents: 2500000, expense_cents: 900000, tax_payable_rounded_cents: 198000 }
+            - { period: '2026-03', income_cents: 3000000, expense_cents: 1000000, tax_payable_rounded_cents: 228429 }
+          access: { access: pro, trial_ends_at: null, incomes_remaining: null, expenses_remaining: null }
+          legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
 
     # ------------------------------------------------------------ subscriptions
     SubscriptionStatus:
@@ -2079,6 +2314,19 @@ components:
             store: { type: string }
             event_timestamp_ms: { type: integer, format: int64 }
             expiration_at_ms: { type: [integer, 'null'], format: int64 }
+      examples:
+        - api_version: '1.0'
+          event:
+            id: CDD2F2E3-6A2C-4B1F-9E0D-3F5A7B9C1D2E
+            type: INITIAL_PURCHASE
+            app_user_id: 0199d4a2-7c1e-7b3a-9f10-2c5e8a1b4d01
+            original_app_user_id: 0199d4a2-7c1e-7b3a-9f10-2c5e8a1b4d01
+            product_id: cc_pro_monthly
+            entitlement_ids: [pro]
+            environment: SANDBOX
+            store: APP_STORE
+            event_timestamp_ms: 1791907200000
+            expiration_at_ms: 1794585600000
 
     # ------------------------------------------------------------ history
     HistoryMonth:
@@ -2102,6 +2350,25 @@ components:
           type: array
           items: { $ref: '#/components/schemas/HistoryMonth' }
         legend: { $ref: '#/components/schemas/Legend' }
+      examples:
+        - taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+          fiscal_year: 2026
+          months:
+            - period: '2026-01'
+              status: complete
+              iva: { amount_cents: 213333, payable_rounded_cents: 213333, outcome: payable }
+              isr: { amount_cents: 15096, payable_rounded_cents: 15096, outcome: payable }
+              total_payable_rounded_cents: 228429
+              changed_since_viewed: false
+              last_viewed_at: '2026-02-10T18:00:00Z'
+            - period: '2026-02'
+              status: no_records
+              iva: null
+              isr: null
+              total_payable_rounded_cents: 0
+              changed_since_viewed: false
+              last_viewed_at: null
+          legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
 
     # ------------------------------------------------------------ reminders
     DeviceCreate:
@@ -2112,6 +2379,11 @@ components:
         platform: { type: string, enum: [ios, android] }
         push_token: { type: string, minLength: 1, maxLength: 4096 }
         app_version: { type: string, maxLength: 32 }
+      examples:
+        - id: 0199d4a4-3c4d-7f5e-8a61-7c8d9e0f1a23
+          platform: ios
+          push_token: example-fcm-registration-token
+          app_version: 1.0.0
     Device:
       type: object
       required: [id, platform, created_at]
@@ -2119,6 +2391,10 @@ components:
         id: { $ref: '#/components/schemas/Uuid' }
         platform: { type: string, enum: [ios, android] }
         created_at: { type: string, format: date-time }
+      examples:
+        - id: 0199d4a4-3c4d-7f5e-8a61-7c8d9e0f1a23
+          platform: ios
+          created_at: '2026-10-13T16:10:00Z'
     ReminderSettings:
       type: object
       required: [enabled, on_due_date, send_time, show_amounts]
@@ -2156,3 +2432,8 @@ components:
         entries:
           type: array
           items: { $ref: '#/components/schemas/TaxCalendarEntry' }
+      examples:
+        - year: 2026
+          entries:
+            - { period: '2026-01', obligation: monthly_isr_iva, nominal_due_date: '2026-02-17', due_date: '2026-02-17', moved_reason: null }
+            - { period: '2026-04', obligation: monthly_isr_iva, nominal_due_date: '2026-05-17', due_date: '2026-05-18', moved_reason: weekend }

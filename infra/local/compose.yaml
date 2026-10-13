@@ -1,0 +1,45 @@
+# Local development stack (P0-04). LOCAL ONLY: never point this at a shared database.
+# Driven from backend/Makefile: make db-up / db-down / db-reset / db-roles-check.
+name: control-contable
+
+services:
+  postgres:
+    # postgres 18.6 (Debian), pinned by multi-arch index digest. Same major as
+    # testcontainers (postgres:18) and Cloud SQL (ADR-0001). Bump tag and digest together.
+    image: postgres:18.6@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
+    container_name: control-contable-postgres
+    restart: unless-stopped
+    environment:
+      # Bootstrap superuser: used only by the init scripts and the role check.
+      # The app never connects with it (cc_owner migrates, cc_app/cc_webhook/cc_worker run).
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in infra/local/.env}
+      POSTGRES_DB: ${CC_DB_NAME:-control_contable}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=trust --encoding=UTF8 --locale=C.UTF-8"
+      CC_DB_NAME: ${CC_DB_NAME:-control_contable}
+      CC_OWNER_PASSWORD: ${CC_OWNER_PASSWORD:?set CC_OWNER_PASSWORD in infra/local/.env}
+      CC_APP_PASSWORD: ${CC_APP_PASSWORD:?set CC_APP_PASSWORD in infra/local/.env}
+      CC_WEBHOOK_PASSWORD: ${CC_WEBHOOK_PASSWORD:?set CC_WEBHOOK_PASSWORD in infra/local/.env}
+      CC_WORKER_PASSWORD: ${CC_WORKER_PASSWORD:?set CC_WORKER_PASSWORD in infra/local/.env}
+      TZ: UTC
+    ports:
+      # Loopback only: the database is never reachable from the LAN.
+      - "127.0.0.1:${CC_DB_PORT:-5434}:5432"
+    volumes:
+      # PostgreSQL 18 images keep PGDATA under /var/lib/postgresql/18/docker; mount the parent.
+      - pgdata:/var/lib/postgresql
+      - ./postgres/initdb:/docker-entrypoint-initdb.d:ro
+      - ./postgres/bootstrap:/bootstrap:ro
+    healthcheck:
+      # TCP on purpose: during initdb the server listens on the socket only, so the
+      # container turns healthy only after the role bootstrap has finished.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U postgres -d \"$${POSTGRES_DB}\""]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    stop_grace_period: 30s
+
+volumes:
+  pgdata:
+    name: control-contable-pgdata
