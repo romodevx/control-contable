@@ -1,0 +1,97 @@
+version: "2"
+
+run:
+  go: "1.27"
+  tests: true
+  relative-path-mode: gomod
+
+linters:
+  default: standard
+  enable:
+    - bodyclose
+    - depguard
+    - errorlint
+    - forbidigo
+    - gocritic
+    - gosec
+    - misspell
+    - nolintlint
+    - revive
+    - unconvert
+  settings:
+    depguard:
+      rules:
+        # Dependency Rule (ADR-0001): the domain knows nothing of frameworks.
+        # Internal layer and cross-module rules live in internal/archtest.
+        domain:
+          files:
+            - "**/internal/*/domain/**"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/romodevx/control-contable/backend/internal
+          deny:
+            - pkg: net/http
+              desc: the domain knows nothing of HTTP (ADR-0001 Dependency Rule)
+            - pkg: database/sql
+              desc: the domain knows nothing of the database (ADR-0001 Dependency Rule)
+            - pkg: gorm.io
+              desc: GORM lives in infra/ only (ADR-0001 Dependency Rule)
+            - pkg: github.com/jackc
+              desc: the driver lives in infra/ only (ADR-0001 Dependency Rule)
+        usecase:
+          files:
+            - "**/internal/*/usecase/**"
+            - "!$test"
+          deny:
+            - pkg: net/http
+              desc: use cases are delivery-agnostic; HTTP belongs in adapter/http
+            - pkg: database/sql
+              desc: use cases depend on ports; SQL belongs in infra/
+            - pkg: gorm.io
+              desc: use cases depend on ports; GORM belongs in infra/
+            - pkg: github.com/jackc
+              desc: use cases depend on ports; the driver belongs in infra/
+    forbidigo:
+      analyze-types: true
+      forbid:
+        - pattern: ^float(32|64)$
+          msg: money and rates are int64 centavos / fixed-point Rate, never floats (ADR-0001 O7, ADR-0002)
+        - pattern: ^time\.Now$
+          msg: inject the Clock port; the domain never reads the wall clock (ADR-0002)
+    gosec:
+      excludes:
+        - G104 # duplicate of errcheck
+    revive:
+      rules:
+        - name: exported
+        - name: package-comments
+        - name: var-naming
+        - name: error-strings
+        - name: error-naming
+        - name: receiver-naming
+        - name: context-as-argument
+        - name: early-return
+  exclusions:
+    generated: strict
+    presets:
+      - std-error-handling
+    paths:
+      - adapter/http/gen
+    rules:
+      # forbidigo's float/clock bans apply to the domain and to platform/money only.
+      - path-except: (^|/)internal/([^/]+/domain|platform/money)/
+        linters:
+          - forbidigo
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/romodevx/control-contable
+  exclusions:
+    paths:
+      - adapter/http/gen

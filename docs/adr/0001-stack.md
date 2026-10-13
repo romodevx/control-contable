@@ -195,3 +195,26 @@ backend/
 - (−) Library APIs were not checked in Context7 in this session. That check is a P0 entry criterion.
 - Upgrades: Go minor releases monthly. Re-evaluate the Go major version each February and
   August (Go 1.28 is due around 2027-02).
+
+## Context7 verification (2026-10-13)
+
+P0-02. Each pinned Go library was checked in the Context7 MCP (it was available this time)
+and each pin was re-checked against `proxy.golang.org/<module>/@latest`. Every pin above is
+still the latest release. No API change forces a decision change.
+
+| Library | Context7 ID | Pin = latest? | API checked | Notes for the first user |
+|---|---|---|---|---|
+| oapi-codegen v2 | `/oapi-codegen/oapi-codegen` | v2.8.0, yes | config `generate: {std-http-server, strict-server, models, embedded-spec}`; OAS 3.1 (`type: [T, "null"]`, `oneOf`+`const` enums, webhooks) | `strict-server` must sit next to a server generator (`std-http-server`). Unused types are pruned by default. Implicit `additionalProperties` are ignored. Use `compatibility.schema-merging-behavior: v2` from the start |
+| goose v3 | `/pressly/goose` (docs at v3.28.0) | v3.29.0, yes | `goose.NewProvider(goose.DialectPostgres, *sql.DB, fs.FS, opts...)`, `p.Up(ctx)`, `p.HasPending`, `*goose.PartialError` | Use the **Provider** API (no globals) instead of `SetBaseFS` + `goose.Up`. v3.29.0 is two days old: Context7 docs trail it by one minor; check the changelog before P0 migrations |
+| GORM + driver | `/websites/gorm_io` | gorm v1.31.2, driver v1.6.3, yes | `gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}))`; `WithContext` = `Session{Context}`; `Exec` with `?` placeholders | Build GORM on the same `*sql.DB` (pgx stdlib) that goose uses, so one pool. Set RLS with `SELECT set_config('app.current_user_id', ?, true)` inside the tx (`SET LOCAL` cannot take a bind parameter) |
+| pgx v5 | `/jackc/pgx/v5.11.0` | v5.11.0, yes | `stdlib` driver auto-registered as `"pgx"` / `"pgx/v5"`; `stdlib.OpenDBFromPool(pool)` | `OpenDBFromPool` forces max idle conns to 0 and closing the `*sql.DB` does not close the pool. The source now has a `sql_go1.27.go` file: Go 1.27 is supported |
+| testcontainers-go | `/testcontainers/testcontainers-go` | v0.44.0, yes | `postgres.Run(ctx, "postgres:18", WithDatabase/WithUsername/WithPassword/WithInitScripts, postgres.BasicWaitStrategies())`; `Snapshot`/`Restore` | `Restore` drops and re-creates the DB from a template: fast per-test isolation for the RLS suites. `WithSQLDriver("pgx")` is needed for snapshots with pgx. Custom `wait.ForSQL` URL funcs take a `network.Port` |
+| golang-jwt v5 | `/golang-jwt/jwt` | v5.3.1, yes | `jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims).SignedString(ed25519.PrivateKey)`; `ParseWithClaims(..., WithValidMethods([]string{"EdDSA"}), WithIssuer, WithAudience, WithExpirationRequired(), WithLeeway)` | Always pass `WithValidMethods` (alg-confusion guard) and `WithExpirationRequired`. Embed `jwt.RegisteredClaims` in the custom claims type |
+| libopenapi-validator | `/pb33f/libopenapi-validator` | v0.16.1, yes | `validator.NewValidator(libopenapi.Document, opts...) (Validator, []error)`; `ValidateHttpResponse(req, resp)`; `ValidateHttpRequestResponse` | Takes a parsed `libopenapi.Document`, not bytes; returns a slice of build errors; call `Release()` when done. v0.16.1 is two days old (pre-1.0): pin exactly and read release notes on each bump |
+| Firebase Admin Go | `/firebase/firebase-admin-go` | v4.22.0, yes | `firebase.NewApp(ctx, *Config)`, `app.Messaging(ctx)`, `client.Send`, `SendEachForMulticast` (≤ 500 targets), `messaging.IsUnregistered(err)` | `Messaging` fails without a project ID. Use `IsUnregistered` to delete stale device tokens (M9). Batch sends go through `SendEach*` (per-target `BatchResponse`) |
+
+Also checked: golangci-lint v2 configuration (`/golangci/golangci-lint`) for depguard
+`rules.<name>.{files,allow,deny}` and forbidigo `forbid[].pattern` (v2 renamed `p` to
+`pattern`). The resulting `backend/.golangci.yml` was proven against probe files: depguard
+rejects `net/http` in `domain/` and `database/sql` in `usecase/`, and forbidigo rejects
+`float64` and `time.Now` in `domain/` but not in `infra/`.
