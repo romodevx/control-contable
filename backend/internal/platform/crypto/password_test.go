@@ -43,6 +43,29 @@ func TestDefaultParamsRoundTrip(t *testing.T) {
 	assert.True(t, ok)
 }
 
+// Regression (PR #7 follow-up 3): argon2 pre-hashes its input, so an
+// unbounded password only burns CPU. The contract caps it at 128 characters;
+// the hasher refuses anything above MaxPasswordBytes even if a caller skips
+// boundary validation.
+func TestHashAndVerifyRejectOverlongPasswords(t *testing.T) {
+	h := newCheapHasher(t)
+	atLimit := strings.Repeat("a", MaxPasswordBytes)
+	overLimit := atLimit + "a"
+
+	encoded, err := h.Hash(atLimit)
+	require.NoError(t, err)
+	ok, err := h.Verify(atLimit, encoded)
+	require.NoError(t, err)
+	assert.True(t, ok)
+
+	_, err = h.Hash(overLimit)
+	require.ErrorIs(t, err, ErrPasswordTooLong)
+
+	ok, err = h.Verify(overLimit, encoded)
+	require.ErrorIs(t, err, ErrPasswordTooLong)
+	assert.False(t, ok)
+}
+
 func TestNewPasswordHasherRejectsInvalidParams(t *testing.T) {
 	tests := []struct {
 		name   string

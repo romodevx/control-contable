@@ -136,6 +136,11 @@ func CheckCannotDelete(ctx context.Context, db *sql.DB, t Table, viewer, owner s
 // if it succeeds. insert must write a row owned by someone else. Only an RLS or
 // privilege refusal (42501) passes; any other error is returned, since a constraint
 // failure would prove nothing about isolation.
+//
+// Called on its own it is vacuous when the role lacks the INSERT grant: 42501
+// then comes from the missing privilege, not from a policy. AssertIsolation
+// covers this by seeding through the same role first; standalone callers must
+// prove the grant exists.
 func CheckInsertRejected(ctx context.Context, db *sql.DB, viewer string, insert func(context.Context, *sql.Tx) error) error {
 	err := probe(ctx, db, viewer, func(tx *sql.Tx) error { return insert(ctx, tx) })
 	if err == nil {
@@ -226,7 +231,9 @@ func sessionConfig(ctx context.Context, db *sql.DB) (*pgx.ConnConfig, error) {
 }
 
 // CheckNoBypass returns ErrNotIsolated if the logged-in role is SUPERUSER or
-// BYPASSRLS, or can read t after `SET row_security = off`.
+// BYPASSRLS, or can read t after `SET row_security = off`. Like
+// CheckInsertRejected, a missing SELECT grant also yields 42501 and passes, so
+// a standalone caller must prove the grant exists (AssertIsolation does).
 func CheckNoBypass(ctx context.Context, db *sql.DB, t Table) error {
 	var role string
 	var bypass bool

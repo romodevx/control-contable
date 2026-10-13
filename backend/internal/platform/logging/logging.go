@@ -12,6 +12,10 @@
 //     other non-scalar value.
 //
 // Values implementing slog.LogValuer (config.Secret) are resolved first.
+//
+// Value scrubbing is pattern-based and cannot catch everything, so the rule
+// for callers stays: log identifiers (user id, taxpayer id, request id), never
+// payloads (request or response bodies, rows, whole structs).
 package logging
 
 import (

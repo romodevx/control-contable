@@ -37,6 +37,8 @@ var (
 	// ErrInvalidRFC reports a value that is not a 12- or 13-character RFC
 	// after normalization.
 	ErrInvalidRFC = errors.New("crypto: invalid rfc")
+	// ErrPasswordTooLong reports a password above MaxPasswordBytes.
+	ErrPasswordTooLong = errors.New("crypto: password too long")
 )
 
 // redacted is how every secret-holding type renders in fmt and slog.

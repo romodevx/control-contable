@@ -234,6 +234,23 @@ func TestKeyIDOfRejectsShortInput(t *testing.T) {
 	require.ErrorIs(t, err, ErrMalformedCiphertext)
 }
 
+// Regression (PR #7 follow-up 4): with pointer receivers, a dereferenced
+// Keyring had no Format/LogValue, so %v printed its fields: the AEADs and
+// their expanded key schedules.
+func TestKeyringValueNeverPrintsKeyMaterial(t *testing.T) {
+	kr := *newTestKeyring(t, keyIDA)
+	var logged bytes.Buffer
+	slog.New(slog.NewTextHandler(&logged, nil)).Info("boot", "keyring", kr)
+
+	for _, rendered := range []string{
+		fmt.Sprintf("%v", kr), fmt.Sprintf("%+v", kr), fmt.Sprintf("%#v", kr), logged.String(),
+	} {
+		assert.NotContains(t, rendered, "aeads")
+		assert.NotContains(t, rendered, "map[")
+		assert.Contains(t, rendered, "REDACTED")
+	}
+}
+
 func TestKeyringNeverPrintsKeyMaterial(t *testing.T) {
 	kr := newTestKeyring(t, keyIDA)
 	var logged bytes.Buffer

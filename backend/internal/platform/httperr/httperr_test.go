@@ -109,6 +109,24 @@ func TestWrite(t *testing.T) {
 
 // TestNewResponse_shape pins the wire format to the contract's ErrorResponse:
 // exactly one top-level key and only the declared keys inside it.
+// Regression (PR #9 follow-up 1): a nil error dereferenced a nil
+// *apperr.Error and panicked. It is a programming error, answered as a 500
+// internal_error instead of crashing the request.
+func TestWrite_nilErrorIsInternalError(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/v1/x", nil)
+	w := httptest.NewRecorder()
+
+	var resolved *apperr.Error
+	require.NotPanics(t, func() { resolved = httperr.Write(w, r, apperr.Mapper{}, nil) })
+
+	require.NotNil(t, resolved)
+	assert.Equal(t, apperr.CodeInternalError, resolved.Code)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	var got httperr.Response
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &got))
+	assert.Equal(t, apperr.CodeInternalError, got.Error.Code)
+}
+
 func TestNewResponse_shape(t *testing.T) {
 	resp := httperr.NewResponse(apperr.New(apperr.CodeNotFound, "Not found."), "req_1")
 

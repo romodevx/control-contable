@@ -129,10 +129,10 @@ func additionalData(header, aad []byte) []byte {
 
 // Format redacts the keyring for every fmt verb (%v, %+v, %#v, %s), so
 // secret material never reaches a log or an error message.
-func (k *Keyring) Format(f fmt.State, _ rune) { _, _ = io.WriteString(f, redacted) }
+func (k Keyring) Format(f fmt.State, _ rune) { _, _ = io.WriteString(f, redacted) }
 
 // LogValue redacts the keyring in slog.
-func (k *Keyring) LogValue() slog.Value { return slog.StringValue(redacted) }
+func (k Keyring) LogValue() slog.Value { return slog.StringValue(redacted) }
 
 // KeyIDOf returns the key id that sealed ciphertext, without decrypting it.
 // Use it to fill rfc_key_id and to find rows that still need re-encryption.

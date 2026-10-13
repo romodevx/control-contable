@@ -5,6 +5,7 @@ package httperr
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
@@ -68,10 +69,20 @@ func NewResponse(e *apperr.Error, requestID string) Response {
 	return Response{Error: body}
 }
 
+// errNilWrite stands in for a nil error passed to Write: a programming error
+// that is answered as internal_error rather than a panic.
+var errNilWrite = errors.New("httperr: Write called with a nil error")
+
 // Write resolves err with mapper and writes the envelope with its status and
 // the request id from r's context. It returns the resolved error, which still
-// wraps err, so the caller can log the cause.
+// wraps err, so the caller can log the cause. A nil err is a caller bug and
+// is answered as internal_error. A 429
+// needs a Retry-After header, which the caller sets before calling Write
+// (middleware.RateLimit does).
 func Write(w http.ResponseWriter, r *http.Request, mapper apperr.Mapper, err error) *apperr.Error {
+	if err == nil {
+		err = errNilWrite
+	}
 	resolved := mapper.Resolve(err)
 	header := w.Header()
 	header.Set("Content-Type", "application/json")
