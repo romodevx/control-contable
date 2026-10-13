@@ -69,12 +69,13 @@ func TestSchemaPublic_RuntimeRolesCannotCreate(t *testing.T) {
 // RLS still ENABLED: global data with no user to key on, or service-only rows the
 // owner's definer functions must reach. Adding a table here needs the security gate.
 var unforcedTables = map[string]string{
-	"feature_flags":       "global module flags (baseline)",
-	"flag_presets":        "global presets (baseline)",
-	"flag_preset_flags":   "global presets (baseline)",
-	"email_verifications": "service-only; reached by cc_auth_definer through its own policy",
-	"trial_registry":      "service-only; reached by cc_auth_definer through its own policy",
-	"legal_documents":     "global legal document versions (M1-03)",
+	"feature_flags":               "global module flags (baseline)",
+	"flag_presets":                "global presets (baseline)",
+	"flag_preset_flags":           "global presets (baseline)",
+	"email_verifications":         "service-only; reached by cc_auth_definer through its own policy",
+	"trial_registry":              "service-only; reached by cc_auth_definer through its own policy",
+	"email_verification_failures": "service-only; reached by cc_auth_definer through its own policy",
+	"legal_documents":             "global legal document versions (M1-03)",
 }
 
 // rlsGapsQuery lists every table in public that lacks ENABLE, or lacks FORCE without

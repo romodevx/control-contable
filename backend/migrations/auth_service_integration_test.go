@@ -24,6 +24,9 @@ const (
 
 	// maxVerificationAttempts mirrors the constant inside email_verification_consume.
 	maxVerificationAttempts = 5
+	// maxFailuresPerWindow mirrors the per-email cap across resends inside
+	// email_verification_consume: 15 wrong codes per 24 h, whatever the resends.
+	maxFailuresPerWindow = 15
 
 	outcomeVerified = "verified"
 	outcomeInvalid  = "invalid"
@@ -101,6 +104,12 @@ SELECT pg_get_userbyid(m.member) || ' inherit=' || m.inherit_option || ' set=' |
 FROM pg_auth_members m WHERE m.roleid = 'cc_auth_definer'::regrole ORDER BY 1`)
 	assert.Equal(t, []string{"cc_owner inherit=false set=true admin=false"}, members)
 
+	// The relaxed bootstrap check exempts exactly this edge, so pin the other direction:
+	// the definer role reaches no other role.
+	memberOf := queryStrings(t, owner, `
+SELECT pg_get_userbyid(m.roleid) FROM pg_auth_members m WHERE m.member = 'cc_auth_definer'::regrole`)
+	assert.Empty(t, memberOf, "cc_auth_definer is a member of no role")
+
 	var schemaCreate bool
 	require.NoError(t, owner.QueryRowContext(t.Context(),
 		"SELECT has_schema_privilege($1, 'public', 'CREATE')", definerRole).Scan(&schemaCreate))
@@ -158,6 +167,8 @@ func TestAuthServiceTables_AppCannotReachThemDirectly(t *testing.T) {
 		"DELETE FROM trial_registry",
 		"SELECT 1 FROM email_verifications",
 		"UPDATE email_verifications SET attempts = 0",
+		"SELECT 1 FROM email_verification_failures",
+		"DELETE FROM email_verification_failures",
 		"INSERT INTO legal_documents (kind, version, url, effective_at) VALUES ('terms', 'v9', 'https://x.invalid/t', now())",
 		"UPDATE legal_documents SET url = 'https://evil.invalid'",
 		"DELETE FROM legal_documents",
@@ -333,6 +344,50 @@ func TestEmailVerification_AttemptLimitLocksEvenTheRightCode(t *testing.T) {
 		got := consume(t, app, email, fresh)
 		assert.Equal(t, outcomeVerified, got.outcome)
 		assert.JSONEq(t, `{"name": "Ana 2"}`, got.pending.String)
+	})
+}
+
+// A resend (or a new register) resets the per-code budget, so without a per-email cap
+// an attacker could cycle register -> 5 guesses forever and verify an inbox it does not
+// own. The cap counts every wrong code for the email over 24 h and survives resends,
+// expiry and deletion of the pending row; it reopens only when the window ends.
+func TestEmailVerification_FailuresAcrossResendsAreCappedPerEmail(t *testing.T) {
+	db := pgtest.NewDatabase(t)
+	app := db.Connect(t, pgtest.RoleApp)
+	owner := db.Connect(t, pgtest.RoleOwner)
+	email, code := blindIndex("victim@x"), blindIndex("123456")
+
+	for burned := 0; burned < maxFailuresPerWindow; burned += maxVerificationAttempts {
+		upsertVerification(t, app, email, code, `{}`, "15 minutes")
+		for range maxVerificationAttempts {
+			consume(t, app, email, blindIndex("bad"))
+		}
+	}
+
+	upsertVerification(t, app, email, code, `{}`, "15 minutes")
+	assert.Equal(t, outcomeLocked, consume(t, app, email, code).outcome, "a fresh code after the per-email cap")
+
+	t.Run("expiry and re-register do not reopen the window", func(t *testing.T) {
+		_, err := owner.ExecContext(t.Context(),
+			"UPDATE email_verifications SET created_at = now() - interval '1 hour', expires_at = now() - interval '1 second'")
+		require.NoError(t, err)
+		require.Equal(t, outcomeExpired, consume(t, app, email, code).outcome)
+		upsertVerification(t, app, email, code, `{}`, "15 minutes")
+		assert.Equal(t, outcomeLocked, consume(t, app, email, code).outcome)
+	})
+
+	t.Run("the window reopens after 24 hours", func(t *testing.T) {
+		_, err := owner.ExecContext(t.Context(),
+			"UPDATE email_verification_failures SET window_started_at = now() - interval '24 hours 1 second'")
+		require.NoError(t, err)
+		upsertVerification(t, app, email, code, `{}`, "15 minutes")
+		assert.Equal(t, outcomeVerified, consume(t, app, email, code).outcome)
+	})
+
+	t.Run("other emails are unaffected", func(t *testing.T) {
+		other := blindIndex("other@x")
+		upsertVerification(t, app, other, code, `{}`, "15 minutes")
+		assert.Equal(t, outcomeVerified, consume(t, app, other, code).outcome)
 	})
 }
 

@@ -344,7 +344,10 @@ EXECUTE goes to `cc_app` only.
   1 hour; a resend replaces the code and resets attempts) and
   `email_verification_consume(email_hash, code_hash)` returning `(outcome, pending)`:
   `verified` (row deleted, single use), `invalid`, `expired`, or `locked` after 5 wrong
-  attempts. The caller commits every non-`verified` outcome so the attempt counts. `verifyEmail` then creates `users`,
+  attempts on the code, or after 15 wrong codes for the email within 24 h (counted in
+  `email_verification_failures`, which resends, expiry and deletion do not reset, so
+  register-and-guess cycles cannot brute-force the code). The caller commits every
+  non-`verified` outcome so the attempt counts. `verifyEmail` then creates `users`,
   `user_usage` (zeroed counters, so the trial-cap UPDATE always finds its row),
   `consents` and the trial `entitlements` row in one transaction under the new
   user's context.
@@ -407,6 +410,9 @@ owner, but they do ENABLE (not FORCE) row level security as defense in depth:
 **Service-only (no grant to `cc_app`).**
 - `trial_registry`: through the definer function only (ENABLE, not FORCE; policies for
   `cc_auth_definer` only).
+- `email_verification_failures`: per-email wrong-code counter over a 24 h window (M1-03);
+  through `email_verification_consume` only (ENABLE, not FORCE; `cc_auth_definer`
+  policy only). The purge job drops rows whose window ended.
 - `email_verifications`: through the definer functions only (pre-account, so no `user_id`
   exists to key RLS on). Rows expire; the purge job removes them. The table ships in P0-11
   with ENABLE (not FORCE) RLS; its only policy (M1-03) is for `cc_auth_definer`, so a

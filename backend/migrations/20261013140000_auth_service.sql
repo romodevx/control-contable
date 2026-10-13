@@ -178,6 +178,29 @@ GRANT SELECT, DELETE ON email_verifications TO cc_auth_definer;
 GRANT INSERT (email_hash, code_hash, pending, expires_at) ON email_verifications TO cc_auth_definer;
 GRANT UPDATE (code_hash, pending, attempts, expires_at) ON email_verifications TO cc_auth_definer;
 
+-- email_verification_failures: wrong codes per email over a 24 h window. A resend (or a
+-- new register) resets the per-code budget of email_verifications, so without this cap
+-- register -> 5 guesses -> register ... would brute-force the 6-digit code of an inbox
+-- the caller does not own. Kept apart from email_verifications so expiry, deletion or
+-- replacement of the pending row never resets it; the purge job drops rows whose window
+-- ended. Same posture as trial_registry: ENABLE (not FORCE), cc_auth_definer only.
+CREATE TABLE email_verification_failures (
+  email_hash        bytea       PRIMARY KEY,
+  failures          smallint    NOT NULL DEFAULT 1,
+  window_started_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT email_verification_failures_email_hash_size CHECK (octet_length(email_hash) = 32),
+  CONSTRAINT email_verification_failures_failures_positive CHECK (failures > 0)
+);
+COMMENT ON TABLE email_verification_failures IS
+  'Wrong verification codes per email HMAC in a 24 h window (cap across resends). Service-only (definer function).';
+ALTER TABLE email_verification_failures ENABLE ROW LEVEL SECURITY;
+CREATE POLICY email_verification_failures_auth_definer ON email_verification_failures
+  FOR ALL TO cc_auth_definer
+  USING (email_hash = (SELECT auth_email_hash()))
+  WITH CHECK (email_hash = (SELECT auth_email_hash()));
+GRANT SELECT, INSERT (email_hash), UPDATE (failures, window_started_at)
+  ON email_verification_failures TO cc_auth_definer;
+
 -- ---------------------------------------------------------------------------------------
 -- auth_lookup_credentials: login. Returns the one user whose email_hash matches, with
 -- the minimum login needs (no email ciphertext, no name). No row = unknown email; the
@@ -276,7 +299,8 @@ COMMENT ON FUNCTION email_verification_upsert(bytea, bytea, jsonb, timestamptz) 
 --   verified  the code matches: the row is deleted (single use) and pending returned.
 --   invalid   no pending sign-up for the email, or a wrong code (attempts + 1).
 --   expired   past expires_at: the row is deleted.
---   locked    5 wrong attempts reached: even the right code is refused until a resend.
+--   locked    5 wrong attempts on this code (until a resend), or 15 wrong codes for the
+--             email within 24 h (resends do not help): even the right code is refused.
 -- The row is locked FOR UPDATE, so concurrent guesses are counted exactly.
 -- CALLER CONTRACT: commit the transaction on every outcome but "verified" (do not roll
 -- it back), or the attempt counter is undone. On "verified", create the user in the
@@ -290,8 +314,12 @@ CREATE FUNCTION email_verification_consume(p_email_hash bytea, p_code_hash bytea
   SET search_path = pg_catalog, public, pg_temp
 AS $$
 DECLARE
-  max_attempts CONSTANT smallint := 5;
-  row_found    public.email_verifications%ROWTYPE;
+  max_attempts         CONSTANT smallint := 5;
+  max_window_failures  CONSTANT smallint := 15;
+  failure_window       CONSTANT interval := interval '24 hours';
+  row_found            public.email_verifications%ROWTYPE;
+  pending_found        boolean;
+  window_failures      smallint;
 BEGIN
   PERFORM public.auth_bind_email_hash(p_email_hash);
   IF p_code_hash IS NULL OR octet_length(p_code_hash) <> 32 THEN
@@ -303,12 +331,18 @@ BEGIN
   WHERE v.email_hash = p_email_hash
   FOR UPDATE;
 
-  IF NOT FOUND THEN
+  pending_found := FOUND;
+
+  SELECT f.failures INTO window_failures
+  FROM public.email_verification_failures AS f
+  WHERE f.email_hash = p_email_hash AND f.window_started_at > now() - failure_window;
+
+  IF NOT pending_found THEN
     outcome := 'invalid';
   ELSIF row_found.expires_at <= now() THEN
     DELETE FROM public.email_verifications AS v WHERE v.email_hash = p_email_hash;
     outcome := 'expired';
-  ELSIF row_found.attempts >= max_attempts THEN
+  ELSIF row_found.attempts >= max_attempts OR coalesce(window_failures, 0) >= max_window_failures THEN
     outcome := 'locked';
   ELSIF row_found.code_hash = p_code_hash THEN
     DELETE FROM public.email_verifications AS v WHERE v.email_hash = p_email_hash;
@@ -317,7 +351,17 @@ BEGIN
   ELSE
     UPDATE public.email_verifications AS v SET attempts = v.attempts + 1
     WHERE v.email_hash = p_email_hash;
-    outcome := CASE WHEN row_found.attempts + 1 >= max_attempts THEN 'locked' ELSE 'invalid' END;
+    -- Serialized per email by the FOR UPDATE lock above.
+    INSERT INTO public.email_verification_failures AS f (email_hash) VALUES (p_email_hash)
+    ON CONFLICT (email_hash) DO UPDATE
+      SET failures          = CASE WHEN f.window_started_at > now() - failure_window
+                                   THEN f.failures + 1 ELSE 1 END,
+          window_started_at = CASE WHEN f.window_started_at > now() - failure_window
+                                   THEN f.window_started_at ELSE now() END
+    RETURNING f.failures INTO window_failures;
+    outcome := CASE
+      WHEN row_found.attempts + 1 >= max_attempts OR window_failures >= max_window_failures THEN 'locked'
+      ELSE 'invalid' END;
   END IF;
 
   PERFORM set_config('app.auth_email_hash', '', true);
@@ -326,7 +370,7 @@ END
 $$;
 -- +goose StatementEnd
 COMMENT ON FUNCTION email_verification_consume(bytea, bytea) IS
-  'Check a verification code: verified|invalid|expired|locked (5 attempts, single use). Commit non-verified outcomes. Definer: cc_auth_definer; EXECUTE: cc_app.';
+  'Check a verification code: verified|invalid|expired|locked (5 attempts per code, 15 per email per 24 h, single use). Commit non-verified outcomes. Definer: cc_auth_definer; EXECUTE: cc_app.';
 
 -- EXECUTE: cc_app only. Granted while cc_owner still owns the functions; ALTER OWNER
 -- then rewrites the grantor to the new owner.
@@ -364,6 +408,7 @@ REVOKE SELECT, INSERT, UPDATE, DELETE ON email_verifications FROM cc_auth_define
 DROP POLICY email_verifications_auth_definer ON email_verifications;
 REVOKE SELECT ON users FROM cc_auth_definer;
 DROP POLICY users_auth_definer_lookup ON users;
+DROP TABLE email_verification_failures;
 DROP TABLE trial_registry;
 DROP FUNCTION auth_email_hash();
 DROP FUNCTION auth_bind_email_hash(bytea);
