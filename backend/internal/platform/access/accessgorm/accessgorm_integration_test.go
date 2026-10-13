@@ -172,6 +172,9 @@ func TestReserveRecord_TrialCapFifthVersusSixth(t *testing.T) {
 	err := policy.ReserveRecord(t.Context(), userA, access.RecordIncome)
 
 	assertEntitlementRequired(t, err, access.ErrTrialCapReached)
+	appErr, _ := errors.AsType[*apperr.Error](err)
+	require.Len(t, appErr.Fields, 1)
+	assert.Equal(t, "incomes_remaining", appErr.Fields[0].Field, "the 402 names the spent cap")
 	assert.Equal(t, access.Usage{Incomes: access.TrialRecordCap}, e.usage(t, userA))
 	require.NoError(t, policy.ReserveRecord(t.Context(), userA, access.RecordExpense), "caps are per kind")
 }

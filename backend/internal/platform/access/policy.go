@@ -12,9 +12,30 @@ import (
 // Client-safe messages (contract PaymentRequired / taxpayer_limit_reached).
 const (
 	msgTrialEnded  = "Your trial has ended. Subscribe to keep adding records."
-	msgTrialCap    = "You have used every record of your trial. Subscribe to keep adding records."
 	msgTaxpayerCap = "You have reached the maximum number of taxpayers. Contact support to raise it."
 )
+
+// trialCap is, per kind, the client message and the AccessSummary field of a
+// trial-cap refusal.
+var trialCap = map[RecordKind]struct{ field, message string }{
+	RecordIncome: {"incomes_remaining",
+		"You have used every income of your trial. Subscribe to keep adding incomes."},
+	RecordExpense: {"expenses_remaining",
+		"You have used every expense of your trial. Subscribe to keep adding expenses."},
+}
+
+// trialCapError is the 402 for the kind whose trial cap is spent. It names the
+// kind in the message and in details, since the caps are independent.
+func trialCapError(kind RecordKind) error {
+	refusal := trialCap[kind]
+	return apperr.Wrap(fmt.Errorf("%w: %s", ErrTrialCapReached, kind), apperr.CodeEntitlementRequired, refusal.message).
+		WithFields(apperr.FieldError{Field: refusal.field, Code: DetailTrialCapReached, Message: refusal.message})
+}
+
+// DetailTrialCapReached is the details[].code of a trial-cap 402. Its field
+// names the AccessSummary counter that hit zero, so the client knows which
+// cap (income or expense) refused the create; the other may still have slots.
+const DetailTrialCapReached = "trial_cap_reached"
 
 // EntitlementReader is the port to a user's entitlement rows.
 type EntitlementReader interface {
@@ -68,7 +89,7 @@ func (p *Policy) ReserveRecord(ctx context.Context, userID string, kind RecordKi
 			return fmt.Errorf("access: reserve %s: %w", kind, err)
 		}
 		if !reserved {
-			return apperr.Wrap(ErrTrialCapReached, apperr.CodeEntitlementRequired, msgTrialCap)
+			return trialCapError(kind)
 		}
 		return nil
 	})
@@ -90,20 +111,16 @@ func (p *Policy) EnsureWritable(ctx context.Context, userID string) error {
 }
 
 // CheckTaxpayerLimit refuses a new taxpayer when the user already has
-// existing taxpayers and the fair-use cap applies (422). The count belongs to
-// the taxpayers module; it must lock what it counts so two concurrent
-// creates cannot both pass.
-func (p *Policy) CheckTaxpayerLimit(ctx context.Context, userID string, existing int) error {
-	return p.txm.ReadOnly(ctx, userID, func(ctx context.Context) error {
-		status, err := p.status(ctx, userID)
-		if err != nil {
-			return err
-		}
-		if status.Level == LevelTrial || existing < TaxpayerCap {
-			return nil
-		}
-		return apperr.Wrap(ErrTaxpayerLimitReached, apperr.CodeTaxpayerLimitReached, msgTaxpayerCap)
-	})
+// existing taxpayers (422). The fair-use cap applies at every level, trial
+// included (P0-16 decision, PRD §7 "Taxpayers in trial"), so it needs no
+// entitlement lookup. The count belongs to
+// the taxpayers module; it must lock what it counts so two concurrent creates
+// cannot both pass.
+func (p *Policy) CheckTaxpayerLimit(_ context.Context, _ string, existing int) error {
+	if existing < TaxpayerCap {
+		return nil
+	}
+	return apperr.Wrap(ErrTaxpayerLimitReached, apperr.CodeTaxpayerLimitReached, msgTaxpayerCap)
 }
 
 // Summary is the access state shown to the client (contract AccessSummary).

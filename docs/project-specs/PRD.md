@@ -228,7 +228,7 @@ IDs map to modules in MODULES.md. "Mandatory legend" means the exact text
 | Trial end | **Whichever comes first**: 7 days, OR trying to create a 6th income or a 6th expense |
 | Caps scope | **Per user, across all taxpayers** (5 incomes + 5 expenses in total). Per-taxpayer caps would let trial users add taxpayers to multiply free records |
 | Cap counting | Records **created** (deleting does not free a slot) |
-| Taxpayers in trial | Unlimited (the record caps already bound usage) |
+| Taxpayers in trial | Same fair-use cap as paid plans: 10 (Q4). Decided on P0-16 (2026-10-13): an uncapped trial let one account register unbounded RFCs |
 | After trial, no plan | Read-only: existing data, dashboard, history and breakdown stay visible. Creating records shows the paywall |
 | Paid plans | Weekly, monthly, yearly; one entitlement (`pro`); unlimited records and taxpayers (fair-use: see Q4) |
 | Lapse / refund | Back to read-only; data is never deleted for non-payment |

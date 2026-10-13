@@ -13,9 +13,11 @@
 //   - With an active pro or comp entitlement records are unlimited; with
 //     neither, and no running trial, access is read-only: creates, restores
 //     and edits get 402 entitlement_required, while reads and deletes stay.
-//   - A paying (or comp, or lapsed) user holds at most TaxpayerCap taxpayers
-//     (422 taxpayer_limit_reached); the trial is not capped, its record caps
-//     already bound usage (PRD §7 "Taxpayers in trial").
+//   - Every user, trial included, holds at most TaxpayerCap taxpayers (422
+//     taxpayer_limit_reached). Coordinator decision on P0-16; PRD §7 "Taxpayers
+//     in trial" is amended to match.
+//   - A trial-cap 402 names the spent kind (message and details[].field), as the
+//     caps are independent: a refused 6th income leaves expense slots.
 //
 // ReserveRecord is atomic: the counter is bumped by one conditional UPDATE in
 // the caller's transaction, so concurrent creates never overshoot the cap,
@@ -35,7 +37,7 @@ const TrialDuration = 168 * time.Hour
 // trial user may create (PRD §7: the 6th is refused).
 const TrialRecordCap = 5
 
-// TaxpayerCap is the fair-use maximum of taxpayers per non-trial user (PRD Q4).
+// TaxpayerCap is the fair-use maximum of taxpayers per user, trial included (PRD Q4).
 const TaxpayerCap = 10
 
 // Unlimited is the limit passed to UsageCounter.Reserve when no cap applies.

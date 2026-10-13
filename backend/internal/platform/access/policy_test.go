@@ -253,6 +253,44 @@ func TestReserveRecord(t *testing.T) {
 	}
 }
 
+// The client must learn which cap it hit: caps are independent per kind, so a
+// refused 6th income still leaves expense slots.
+func TestReserveRecord_CapErrorNamesTheKind(t *testing.T) {
+	tests := []struct {
+		kind      access.RecordKind
+		usage     access.Usage
+		wantField string
+		wantWord  string
+	}{
+		{access.RecordIncome, access.Usage{Incomes: access.TrialRecordCap}, "incomes_remaining", "income"},
+		{access.RecordExpense, access.Usage{Expenses: access.TrialRecordCap}, "expenses_remaining", "expense"},
+	}
+	for _, tt := range tests {
+		t.Run(string(tt.kind), func(t *testing.T) {
+			store := &fakeStore{entitlements: []access.Entitlement{trial()}, usage: tt.usage}
+			policy, _ := newPolicy(store, registeredAt)
+
+			err := policy.ReserveRecord(t.Context(), userID, tt.kind)
+
+			assertCode(t, err, apperr.CodeEntitlementRequired, access.ErrTrialCapReached)
+			appErr, _ := errors.AsType[*apperr.Error](err)
+			assert.Contains(t, appErr.Message, tt.wantWord)
+			assert.Equal(t, []apperr.FieldError{{
+				Field: tt.wantField, Code: access.DetailTrialCapReached, Message: appErr.Message,
+			}}, appErr.Fields)
+		})
+	}
+}
+
+func TestReserveRecord_SixthIncomeRefusedWhileExpenseSlotsRemain(t *testing.T) {
+	store := &fakeStore{entitlements: []access.Entitlement{trial()}, usage: access.Usage{Incomes: access.TrialRecordCap}}
+	policy, _ := newPolicy(store, registeredAt)
+
+	require.ErrorIs(t, policy.ReserveRecord(t.Context(), userID, access.RecordIncome), access.ErrTrialCapReached)
+	require.NoError(t, policy.ReserveRecord(t.Context(), userID, access.RecordExpense))
+	assert.Equal(t, access.Usage{Incomes: access.TrialRecordCap, Expenses: 1}, store.usage)
+}
+
 func TestReserveRecord_RejectsAnUnknownKind(t *testing.T) {
 	store := &fakeStore{entitlements: []access.Entitlement{trial()}}
 	policy, _ := newPolicy(store, registeredAt)
@@ -335,7 +373,10 @@ func TestCheckTaxpayerLimit(t *testing.T) {
 		{"pro below the cap", []access.Entitlement{pro(registeredAt, trialEnd)}, registeredAt, access.TaxpayerCap - 1, false},
 		{"pro at the cap", []access.Entitlement{pro(registeredAt, trialEnd)}, registeredAt, access.TaxpayerCap, true},
 		{"comp at the cap", []access.Entitlement{comp(registeredAt)}, registeredAt, access.TaxpayerCap, true},
-		{"trial is not capped (PRD 7)", []access.Entitlement{trial()}, registeredAt, 3 * access.TaxpayerCap, false},
+		{"trial below the cap", []access.Entitlement{trial()}, registeredAt, access.TaxpayerCap - 1, false},
+		{"trial at the cap (coordinator decision: trial is capped too)", []access.Entitlement{trial()}, registeredAt, access.TaxpayerCap, true},
+		{"trial far above the cap", []access.Entitlement{trial()}, registeredAt, 3 * access.TaxpayerCap, true},
+		{"entitlement lookup is not needed to refuse", nil, registeredAt, access.TaxpayerCap, true},
 		{"read-only below the cap", []access.Entitlement{trial()}, trialEnd, access.TaxpayerCap - 1, false},
 		{"read-only at the cap", []access.Entitlement{trial()}, trialEnd, access.TaxpayerCap, true},
 	}
