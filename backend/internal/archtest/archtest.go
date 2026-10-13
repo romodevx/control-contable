@@ -29,6 +29,10 @@ const (
 	// RuleInnerTransitiveFramework reports an import of a package of this
 	// module that the per-import rules allow but that reaches a framework.
 	RuleInnerTransitiveFramework Rule = "inner-transitive-framework"
+	// RuleAdapterUnitOfWork reports an HTTP adapter importing the
+	// unit-of-work port (P0-30 D-2): adapters call use cases, which own the
+	// transactions, so no handler can reach tx.SystemManager.
+	RuleAdapterUnitOfWork Rule = "adapter-unit-of-work"
 )
 
 // Violation is one forbidden import found in a non-test Go file.
@@ -111,6 +115,14 @@ func elementAt(parts []string, i int) string {
 	return ""
 }
 
+// unitOfWorkPort is the platform package holding tx.Manager and
+// tx.SystemManager.
+const unitOfWorkPort = "tx"
+
+// adapterDir is the delivery layer's directory, both at the top level
+// (adapter/http/...) and inside a module (internal/<module>/adapter/...).
+const adapterDir = "adapter"
+
 // testHarness is the platform package that only tests may link: it starts
 // containers and logs in as superuser with fixed passwords.
 const testHarness = "pgtest"
@@ -129,7 +141,20 @@ func checkImport(modulePath, importer, imported string) Rule {
 	if rule == "" && isTestHarness(to) && !isTestHarness(from) {
 		return RuleTestHarness
 	}
+	if rule == "" && isAdapter(modulePath, importer, from) && to.kind == kindPlatform && to.module == unitOfWorkPort {
+		return RuleAdapterUnitOfWork
+	}
 	return rule
+}
+
+// isAdapter reports a package of the delivery layer: the top-level adapter/
+// tree or a module's adapter/ layer.
+func isAdapter(modulePath, pkg string, loc location) bool {
+	if loc.kind == kindModule {
+		return loc.layer == adapterDir
+	}
+	rel, ok := strings.CutPrefix(pkg, modulePath+"/")
+	return ok && (rel == adapterDir || strings.HasPrefix(rel, adapterDir+"/"))
 }
 
 func isTestHarness(loc location) bool {
