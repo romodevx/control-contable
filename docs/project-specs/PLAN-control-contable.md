@@ -79,7 +79,7 @@ Stages: contract tooling (P0-05) → data (P0-10, P0-11) → backend platform �
 | P0-11 | Migration `users` (identity root, moved from M1 so P0 FKs resolve) + `entitlements` + `user_usage`, ENABLE+FORCE RLS, isolation tests | db-sr | P0-10 | 3.5 | — | `feature/p0-migrations-identity` | — | [ ] |
 | P0-12 | TxManager: `set_config('app.current_user_id', $1, true)` per tx, RO/RW variants, fail-closed integration tests | backend-sr | P0-11 | 3 | — | `feature/p0-txmanager` | — | [ ] |
 | P0-13 | `platform/money` (Cents, Rate 10^-6, Exact, 128-bit multiply, half-away-from-zero) + Clock port (America/Mexico_City), 100% coverage | backend-sr | P0-03 | 4 | PG-P0-B | `feature/p0-money-clock` | — | [x] |
-| P0-14 | `platform/crypto`: argon2id PHC, AES-256-GCM with key_id (RFC), HMAC-SHA256 peppers (rfc_hash, email_hash) (TDD) | backend-sr | P0-03 | 3 | PG-P0-B | `feature/p0-crypto` | — | [ ] |
+| P0-14 | `platform/crypto`: argon2id PHC, AES-256-GCM with key_id (RFC), HMAC-SHA256 peppers (rfc_hash, email_hash) (TDD) | backend-sr | P0-03 | 3 | PG-P0-B | `feature/p0-crypto` | — | [x] |
 | P0-15 | Flags service + gate middleware (OFF → 404 before handler) + `GET /v1/flags` + flag ON/OFF test helper | backend-sr | P0-06, P0-07, P0-10 | 3.5 | — | `feature/p0-flags` | — | [ ] |
 | P0-16 | AccessPolicy port + infra: trial clock, atomic `ReserveRecord` (UPDATE … RETURNING), trial/pro/comp lookup, read-only after trial (TDD + integration) | backend-sr | P0-12, P0-13 | 4 | — | `feature/p0-access-policy` | — | [ ] |
 | P0-17 | Composition root + middleware chain (request-id, recover, token-bucket rate limit, authn slot, flag gate, kin-openapi request validation), `/healthz` liveness/readiness | backend-sr | P0-06, P0-07, P0-08 | 3 | — | `feature/p0-http-server` | — | [ ] |
@@ -91,7 +91,7 @@ Stages: contract tooling (P0-05) → data (P0-10, P0-11) → backend platform �
 | P0-23 | Generated Dart client wiring + `make mobile-client` + drift check | frontend-sr | P0-22 | 2 | — | `feature/p0-mobile-client-flags` | — | [ ] |
 | P0-24 | FlagsProvider + `useFlag` helper fed by `GET /v1/flags` (widget tests first) | frontend-sr | P0-23 | 2.5 | — | `feature/p0-mobile-client-flags` | — | [ ] |
 | P0-25 | Mobile CI: analyze, test, release build `--obfuscate --split-debug-info`, artifact gate (no symbols / maps bundled) | devops-sr | P0-22 | 3 | — | `feature/p0-ci-mobile` | — | [ ] |
-| P0-26 | Prism mock server from `openapi.yaml` (`make mock`) so mobile work starts before backend | devops-sr | P0-05 | 1 | PG-P0-C | `feature/p0-mock-server` | — | [ ] |
+| P0-26 | Prism mock server from `openapi.yaml` (`make mock`) so mobile work starts before backend | devops-sr | P0-05 | 1 | PG-P0-C | `feature/p0-mock-server` | — | [x] |
 | P0-27 | Worker skeleton `cmd/worker`: ticker, `pg_try_advisory_lock` leader election, job registry, graceful shutdown (errgroup) | backend-sr | P0-12, P0-08 | 2.5 | — | `feature/p0-worker` | — | [ ] |
 | P0-28 | QA P0: RLS fail-closed suite, flag ON/OFF on platform routes, CI green on both pipelines | qa-sr | P0-16, P0-18, P0-19, P0-20, P0-27 | 2 | — | `feature/p0-qa-fixes` | — | [ ] |
 | P0-29 | Tech-lead gate P0 backend platform (canon checklist, Dependency Rule, money package review) | tech-lead | P0-28 | 2 | — | (PR review) | — | [ ] |
