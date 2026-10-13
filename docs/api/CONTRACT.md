@@ -90,8 +90,13 @@ rec = c.Serve(t, handler, req)                                     // serve + va
 ```
 
 - Status, declared response headers and body are checked in **strict mode**: an undeclared
-  property or header fails (edge headers such as `X-Content-Type-Options` and `X-Request-Id`
-  excepted). Formats (`uuid`, `date`, ...) are asserted.
+  property fails, and so does any response header the matched response does not declare,
+  except the transport headers listed (with the reason for each) in `transportHeaders`
+  (`backend/adapter/http/contracttest/headers.go`): `Content-Type`, `Content-Length`, `Date`,
+  `X-Request-Id`, `X-Content-Type-Options`. The header check is the harness's own:
+  libopenapi-validator's strict mode skips responses that declare no headers and ignores
+  `Set-Cookie`, `Cache-Control`, `ETag`, `Vary`, ... by default. A response that needs one of
+  those declares it in this file. Formats (`uuid`, `date`, ...) are asserted.
 - A failure prints the operation, the declared statuses, each violation with its JSON path and
   the response received (status, headers, pretty-printed body).
 - `ServeOp` also fails when the request does not route to the named operation.

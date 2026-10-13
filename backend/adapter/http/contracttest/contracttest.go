@@ -15,7 +15,8 @@
 // claiming coverage, e.g. a disabled module's 404 envelope.
 //
 // Validation runs in strict mode: a property or header the contract does not
-// declare is a failure, so the server cannot leak undocumented fields.
+// declare is a failure, so the server cannot leak undocumented fields. The
+// header check is the harness's own (see transportHeaders).
 package contracttest
 
 import (
@@ -39,11 +40,6 @@ import (
 
 // SpecPath is the contract, relative to the repository root.
 const SpecPath = "docs/api/openapi.yaml"
-
-// edgeHeaders are set on every response by the edge middleware (security
-// headers); strict mode does not hold them to each operation's contract.
-// X-Request-Id is already in the validator's default ignored list.
-var edgeHeaders = []string{"x-content-type-options"}
 
 // Operation names a contract operation by its operationId. Build it with Op
 // and a string literal, so contract coverage can be tracked from the source.
@@ -99,8 +95,7 @@ func load() (*Contract, error) {
 	}
 	opts := []config.Option{
 		config.WithFormatAssertions(),
-		config.WithStrictMode(),
-		config.WithStrictIgnoredHeadersExtra(edgeHeaders...),
+		config.WithStrictMode(), // headers: see transportHeaders
 	}
 	v, errs := validator.NewValidator(doc, opts...)
 	if len(errs) > 0 {
@@ -184,9 +179,10 @@ func (c *Contract) Validate(t testing.TB, req *http.Request, rec *httptest.Respo
 	defer func() { _ = resp.Body.Close() }()
 
 	c.mu.Lock()
-	valid, errs := c.validator.ValidateHttpResponse(req, resp)
+	_, errs := c.validator.ValidateHttpResponse(req, resp)
 	c.mu.Unlock()
-	if !valid {
+	errs = append(withoutLibraryHeaderChecks(errs), undeclaredHeaders(r.operation, rec.Code, rec.Header())...)
+	if len(errs) > 0 {
 		t.Error(report(req, r, rec, errs))
 	}
 }
