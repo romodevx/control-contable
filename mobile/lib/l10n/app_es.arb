@@ -116,5 +116,192 @@
   "formHidePassword": "Ocultar contraseña",
   "@formHidePassword": {
     "description": "Tooltip and screen reader label of the toggle that hides a revealed password."
+  },
+  "homeCreateAccount": "Crear cuenta",
+  "@homeCreateAccount": {
+    "description": "Home entry point to the sign-up form (shown only while module_auth is on)."
+  },
+  "authRegisterTitle": "Crear cuenta",
+  "@authRegisterTitle": {
+    "description": "Title of the sign-up screen."
+  },
+  "authRegisterIntro": "Con una cuenta, los ingresos, gastos y estimados quedan guardados de forma segura.",
+  "@authRegisterIntro": {
+    "description": "One-line reason to sign up, at the top of the sign-up form."
+  },
+  "authRegisterSubmit": "Crear cuenta",
+  "@authRegisterSubmit": {
+    "description": "Primary button of the sign-up form."
+  },
+  "authNameLabel": "Nombre",
+  "@authNameLabel": {
+    "description": "Label of the optional name field on the sign-up form."
+  },
+  "authEmailLabel": "Correo electrónico",
+  "@authEmailLabel": {
+    "description": "Label of the email field."
+  },
+  "authPasswordLabel": "Contraseña",
+  "@authPasswordLabel": {
+    "description": "Label of the password field."
+  },
+  "authPasswordHelp": "Al menos 12 caracteres. Una frase fácil de recordar funciona bien.",
+  "@authPasswordHelp": {
+    "description": "Help under the new-password field: the rule plus a gentle tip."
+  },
+  "authEmailInvalid": "Escribe un correo como nombre@ejemplo.mx.",
+  "@authEmailInvalid": {
+    "description": "Inline error: the email is not a valid address. Shown on blur."
+  },
+  "authNameTooLong": "Escribe un nombre de hasta 120 caracteres.",
+  "@authNameTooLong": {
+    "description": "Inline error: the name is longer than the contract allows."
+  },
+  "authPasswordTooShort": "Usa al menos 12 caracteres.",
+  "@authPasswordTooShort": {
+    "description": "Inline error: the password is shorter than 12 characters."
+  },
+  "authPasswordTooLong": "Usa como máximo 128 caracteres.",
+  "@authPasswordTooLong": {
+    "description": "Inline error: the password is longer than 128 characters."
+  },
+  "authPasswordPolicy": "Esta contraseña es muy común o apareció en una filtración. Elige otra.",
+  "@authPasswordPolicy": {
+    "description": "Inline error from the server: the password is common or breached."
+  },
+  "authFieldRejected": "Revisa este dato.",
+  "@authFieldRejected": {
+    "description": "Inline error from the server for a field without a more specific message."
+  },
+  "authFormRejected": "Revisa los datos e intenta de nuevo.",
+  "@authFormRejected": {
+    "description": "Form-level message when the server rejects something no field shows."
+  },
+  "authConsentsHeading": "Documentos legales",
+  "@authConsentsHeading": {
+    "description": "Heading above the consent checkboxes on the sign-up form."
+  },
+  "authConsentPrivacy": "Acepto el aviso de privacidad",
+  "@authConsentPrivacy": {
+    "description": "Consent checkbox for the privacy notice (required to sign up)."
+  },
+  "authConsentTerms": "Acepto los términos y condiciones",
+  "@authConsentTerms": {
+    "description": "Consent checkbox for the terms and conditions (required to sign up)."
+  },
+  "authReadPrivacy": "Leer el aviso de privacidad",
+  "@authReadPrivacy": {
+    "description": "Link under the privacy consent that opens the current privacy notice."
+  },
+  "authReadTerms": "Leer los términos y condiciones",
+  "@authReadTerms": {
+    "description": "Link under the terms consent that opens the current terms."
+  },
+  "authDocumentsLoading": "Cargando documentos legales…",
+  "@authDocumentsLoading": {
+    "description": "Shown while the legal documents load."
+  },
+  "authDocumentsFailed": "No se pudieron cargar los documentos legales.",
+  "@authDocumentsFailed": {
+    "description": "Shown when the legal documents could not be loaded; a retry button follows."
+  },
+  "authDocumentsNotLoaded": "Los documentos legales no se han cargado. Reintenta para continuar.",
+  "@authDocumentsNotLoaded": {
+    "description": "Form-level message: submit pressed before the legal documents loaded."
+  },
+  "authDocumentsStale": "Los documentos se actualizaron. Revísalos y acéptalos de nuevo.",
+  "@authDocumentsStale": {
+    "description": "Error on the consents: the server published new versions; they must be accepted again."
+  },
+  "authDocumentOpenFailed": "No se pudo abrir el documento. Intenta de nuevo.",
+  "@authDocumentOpenFailed": {
+    "description": "Snack bar: a legal document link could not be opened."
+  },
+  "authRetry": "Reintentar",
+  "@authRetry": {
+    "description": "Button that retries loading something that failed."
+  },
+  "authErrorRateLimited": "{minutes, plural, =1{Demasiados intentos. Espera 1 min y vuelve a intentarlo.} other{Demasiados intentos. Espera {minutes} min y vuelve a intentarlo.}}",
+  "@authErrorRateLimited": {
+    "description": "Form-level message for 429 with a Retry-After, rounded up to minutes.",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "authErrorRateLimitedNoWait": "Demasiados intentos. Espera unos minutos y vuelve a intentarlo.",
+  "@authErrorRateLimitedNoWait": {
+    "description": "Form-level message for 429 without a Retry-After."
+  },
+  "authErrorUnreachable": "No hay conexión con el servidor. Revisa la conexión a internet e intenta de nuevo.",
+  "@authErrorUnreachable": {
+    "description": "Form-level message: offline or timeout."
+  },
+  "authErrorUnavailable": "Este servicio no está disponible por ahora.",
+  "@authErrorUnavailable": {
+    "description": "Form-level message for 404 (the module may be off on the server)."
+  },
+  "authErrorUnexpected": "Algo salió mal. Intenta de nuevo en unos minutos.",
+  "@authErrorUnexpected": {
+    "description": "Form-level message for a server error or an unreadable answer."
+  },
+  "authVerifyTitle": "Confirmar correo",
+  "@authVerifyTitle": {
+    "description": "Title of the verify-email screen."
+  },
+  "authVerifyIntro": "Enviamos un código de 6 dígitos a {email}. Vence en 15 minutos.",
+  "@authVerifyIntro": {
+    "description": "Where the code went and how long it lasts.",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "authVerifySpamHint": "Si no aparece, conviene revisar la carpeta de correo no deseado.",
+  "@authVerifySpamHint": {
+    "description": "Help under the verify intro: check the spam folder."
+  },
+  "authCodeLabel": "Código de verificación",
+  "@authCodeLabel": {
+    "description": "Label of the 6-digit code field."
+  },
+  "authCodeFormat": "Escribe los 6 dígitos del código.",
+  "@authCodeFormat": {
+    "description": "Inline error: the code is not 6 digits. Shown on blur."
+  },
+  "authCodeRejected": "El código no es válido o ya venció. Revisa el correo o pide uno nuevo.",
+  "@authCodeRejected": {
+    "description": "Inline error: the server rejected the code (one generic message: wrong, expired, used up)."
+  },
+  "authVerifySubmit": "Confirmar",
+  "@authVerifySubmit": {
+    "description": "Primary button of the verify-email screen."
+  },
+  "authResend": "Enviar otro código",
+  "@authResend": {
+    "description": "Button that asks for a new code once the cooldown is over."
+  },
+  "authResendWait": "Otro código disponible en {time}.",
+  "@authResendWait": {
+    "description": "Countdown before a new code can be asked for, as m:ss.",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "authResendSent": "Si hay un registro pendiente con ese correo, enviamos un código nuevo.",
+  "@authResendSent": {
+    "description": "Generic confirmation after a resend (never confirms that the email exists)."
+  },
+  "authChangeEmail": "Cambiar correo",
+  "@authChangeEmail": {
+    "description": "Text button that returns to the sign-up form to fix the email."
+  },
+  "authVerifyNoPending": "No hay un registro en curso.",
+  "@authVerifyNoPending": {
+    "description": "Verify screen opened without a sign-up in progress."
   }
 }

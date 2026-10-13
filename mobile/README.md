@@ -117,6 +117,34 @@ Every record form is built from `core/forms/`, which encodes
 - `AppTextField`: label above the field, the fewer kind (optional by default) marked in text,
   `keyboardType` / `textInputAction` / `autofillHints` required. A single-line field with a
   done/go/send action submits on Enter; `next` moves on; multi-line never submits.
+- `AppPasswordField`: hidden text, a labeled show/hide toggle, no suggestions; its field is
+  `verbatim` (never trimmed nor rewritten). `AppCheckboxField` (`checkboxField`): the whole
+  row toggles; a required box left unchecked is listed in the error summary like any field.
+- Leaving a field never re-checks a shown error (changes do), so a server verdict stays
+  until the value changes. `matchServerFieldErrors` maps `ErrorResponse.details` onto fields
+  by dotted path (`accepted_documents.1.kind` → `accepted_documents`); the rest goes to a
+  `FormNotice` (form-level message, announced).
+- `guardApi` (`core/network/api_failure.dart`) turns a generated-client failure into a sealed
+  `ApiFailure` (validation details, 401, 404, 429 with `Retry-After`, unreachable, unexpected);
+  screens own their es-MX copy and never show the server's English `message`.
+
+## Auth (`module_auth`, M1)
+
+`features/auth/` registers `/cuenta/registro` and `/cuenta/verificar` as a `FeatureModule`
+(composed in `app/feature_modules.dart`); home shows *Crear cuenta* only while the flag is on.
+
+- Register: name (optional), email, password, and the two consents. The legal documents are
+  fetched (`legalDocumentsProvider`, no automatic retry; a *Reintentar* button instead); the
+  links open the current version in the in-app browser view (`urlOpenerProvider`, web
+  schemes only), and `register` sends back exactly the versions shown. A stale version
+  unchecks both consents and reloads the documents.
+- Verify: the 6-digit code (`AutofillHints.oneTimeCode`, digits only) submits itself when
+  complete; one generic message for any rejected code. *Enviar otro código* appears after
+  the 60 s cooldown, or after `Retry-After` when longer; the countdown runs on a clock
+  deadline, so time in the background counts. The pending email lives in memory
+  (`pendingSignUpProvider`), never in the route.
+- The new session goes to `sessionStoreProvider`: in memory until M1-12 brings
+  `flutter_secure_storage`.
 
 ## Session tokens (rule for M1-12)
 

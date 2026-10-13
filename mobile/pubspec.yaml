@@ -21,6 +21,8 @@ dependencies:
   intl: any
   json_annotation: 4.12.0
   retrofit: 4.10.0
+  # Opens the legal documents (privacy notice, terms) in the in-app browser view (M1-11).
+  url_launcher: 6.3.2
 
 dev_dependencies:
   # Client generation toolchain (ADR-0003): `make mobile-client` from the repo root.

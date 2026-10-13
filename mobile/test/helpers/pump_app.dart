@@ -1,7 +1,9 @@
 import 'package:control_contable/app/app.dart';
+import 'package:control_contable/app/feature_modules.dart';
 import 'package:control_contable/core/config/app_config.dart';
 import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/flags/flags_repository.dart';
+import 'package:control_contable/core/router/feature_module.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -15,13 +17,15 @@ final AppConfig testConfig = AppConfig.resolve(flavor: AppFlavor.dev);
 /// Boots the whole app the way `bootstrap` does, with [overrides] on top of
 /// the test configuration, the platform in [brightness], and the server
 /// answering `GET /v1/flags` with [enabledModules] (none by default), or
-/// through [flagsRepository] when a test scripts several answers.
+/// through [flagsRepository] when a test scripts several answers. The
+/// module slices are the app's own unless a test passes its [features].
 Future<void> pumpControlContableApp(
   WidgetTester tester, {
   Brightness brightness = Brightness.light,
   List<Override> overrides = const [],
   Set<AppModule> enabledModules = const {},
   FlagsRepository? flagsRepository,
+  List<FeatureModule>? features,
 }) async {
   tester.platformDispatcher.platformBrightnessTestValue = brightness;
   addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
@@ -32,6 +36,7 @@ Future<void> pumpControlContableApp(
         flagsRepositoryProvider.overrideWithValue(
           flagsRepository ?? FakeFlagsRepository(enabledModules),
         ),
+        featureModulesProvider.overrideWithValue(features ?? appFeatureModules),
         ...overrides,
       ],
       child: const ControlContableApp(),
