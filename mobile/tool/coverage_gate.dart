@@ -96,14 +96,24 @@ final _generatedHeader = RegExp(
 /// Whether [content] is a generated source, whatever its path.
 bool isGeneratedSource(String content) => _generatedHeader.hasMatch(content);
 
+/// The minimum from the command line, [defaultMinPercent] when absent.
+/// Throws [FormatException] outside 0..100 (or NaN): a negative floor would
+/// silently turn the gate off, one above 100 could never pass.
+double parseMinPercent(String? raw) {
+  if (raw == null) return defaultMinPercent;
+  final value = double.tryParse(raw);
+  if (value == null || value.isNaN || value < 0 || value > 100) {
+    throw FormatException('coverage minimum must be within 0..100', raw);
+  }
+  return value;
+}
+
 bool _isExcluded(String path, List<RegExp> exclude) =>
     exclude.any((pattern) => pattern.hasMatch(path));
 
 void main(List<String> args) {
   final lcovPath = args.isNotEmpty ? args[0] : 'coverage/lcov.info';
-  final minPercent = args.length > 1
-      ? double.parse(args[1])
-      : defaultMinPercent;
+  final minPercent = parseMinPercent(args.length > 1 ? args[1] : null);
 
   final lcovFile = File(lcovPath);
   if (!lcovFile.existsSync()) {
