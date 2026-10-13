@@ -346,7 +346,31 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '422':
+          description: |
+            Well-formed but violates a business rule: an invalid regime combination, or
+            `taxpayer_limit_reached` when the user already has the fair-use maximum of
+            taxpayers (PRD Q4). The cap is not an entitlement (402): paying does not lift it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                invalid_regime_combination:
+                  value:
+                    error:
+                      code: invalid_regime_combination
+                      message: RESICO cannot be combined with regime 612 for the same taxpayer.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - field: regimes
+                          code: incompatible
+                          message: 626 is incompatible with 612.
+                taxpayer_limit_reached:
+                  value:
+                    error:
+                      code: taxpayer_limit_reached
+                      message: You have reached the maximum number of taxpayers. Contact support to raise it.
+                      request_id: req_01J9Z6Q4X8
         '500': { $ref: '#/components/responses/InternalError' }
   /v1/taxpayers/{taxpayerId}:
     parameters:
