@@ -59,6 +59,14 @@ target), so every schema a frozen operation exposes is frozen on its own.
 | `components.schemas.RegisterRequest`, `DocumentAcceptance`, `VerificationSent`, `VerifyEmailRequest`, `ResendVerificationRequest`, `LoginRequest`, `RefreshRequest`, `TokenPair`, `AuthSession`, `User`, `UserUpdate`, `DeleteAccountRequest`, `LegalDocumentKind`, `LegalDocument`, `LegalDocumentList` | M1-01 | Bodies of the M1 operations |
 | `components.headers.NoStore` | M1-01 | `Cache-Control: no-store` on every response that carries tokens or account data |
 
+**`FieldError.field` naming (one convention).** A dotted path relative to the request body
+(`password`, `accepted_documents.1.kind`), `body` for the body root, and the bare parameter
+name for path/query/header errors (`taxpayerId`, `period`). It is never a `/`-prefixed JSON
+Pointer, in examples, specs or handlers. `FieldError.code` is the failed JSON Schema keyword
+(`required`, `minLength`, `enum`, `additionalProperties`, …) for request validation, or a
+snake_case domain code from the handler (`password_policy`). The router produces both from
+either kin-openapi engine (`backend/adapter/http/router/fields.go`).
+
 `ErrorCode` is **append-only**, not frozen: modules add codes as they land. Removing or
 renaming a code is a breaking change (rules below). Clients must treat unknown codes as
 `internal_error`-like generic failures.

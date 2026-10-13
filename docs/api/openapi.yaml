@@ -101,7 +101,7 @@ paths:
     post:
       tags: [Auth]
       operationId: register
-      x-frozen: sha256:758d84b5fe23a997ebab609be374e7e29f52ee88b6c4ea3b4403edba0a38cc20
+      x-frozen: sha256:31bfc19a84b6e4e4f68ba2d7a3d03482d8f1a238eb157696710f9a2984434ff2
       summary: Start registration (emails a 6-digit verification code)
       description: >-
         Always answers `202 {status: verification_sent}` with the same body and comparable
@@ -156,7 +156,7 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
               examples:
                 weakPassword:
-                  summary: Password too short, common or breached
+                  summary: Password common or breached (a short or long one fails the schema first, code minLength/maxLength)
                   value:
                     error:
                       code: validation_failed
