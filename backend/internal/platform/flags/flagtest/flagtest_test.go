@@ -19,6 +19,18 @@ func TestStatic(t *testing.T) {
 	assert.False(t, f.Enabled(t.Context(), "module_unknown"))
 }
 
+func TestStaticEnabledModulesListsTheONKeysSorted(t *testing.T) {
+	f := flagtest.Static{"module_taxpayers": true, "module_incomes": false, "module_auth": true}
+
+	got, err := f.EnabledModules(t.Context())
+
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"module_auth", "module_taxpayers"}, got)
+	empty, err := flagtest.Static{}.EnabledModules(t.Context())
+	assert.NoError(t, err)
+	assert.NotNil(t, empty)
+}
+
 func TestOnOffRunsTheSuiteOncePerState(t *testing.T) {
 	var seen []bool
 	flagtest.OnOff(t, "module_incomes", func(t *testing.T, f flagtest.Static, on bool) {

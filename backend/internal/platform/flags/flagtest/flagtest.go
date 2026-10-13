@@ -2,7 +2,7 @@
 // (testing rule: flag-aware suites). Typical use in a module's HTTP tests:
 //
 //	flagtest.OnOff(t, "module_incomes", func(t *testing.T, f flagtest.Static, on bool) {
-//		h, err := flaggate.Handler(gen.NewStrictHandler(api, nil), f)
+//		h, err := router.New(api, spec, router.Options{Flags: f, Authn: authn, Logger: logger})
 //		require.NoError(t, err)
 //		rec := httptest.NewRecorder()
 //		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/taxpayers/"+id+"/incomes", nil))
@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,6 +34,19 @@ type Static map[string]bool
 
 // Enabled reports whether module is ON.
 func (s Static) Enabled(_ context.Context, module string) bool { return s[module] }
+
+// EnabledModules returns the ON keys, sorted (the GET /v1/flags source), so a
+// Static can stand in for the whole flags service.
+func (s Static) EnabledModules(context.Context) ([]string, error) {
+	keys := []string{}
+	for k, on := range s {
+		if on {
+			keys = append(keys, k)
+		}
+	}
+	slices.Sort(keys)
+	return keys, nil
+}
 
 // OnOff runs suite twice as subtests, "<module>=ON" then "<module>=OFF". The
 // modules in alsoOn stay ON in both runs (dependencies of the module under

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -21,6 +22,8 @@ import (
 	"github.com/romodevx/control-contable/backend/adapter/http/health"
 	"github.com/romodevx/control-contable/backend/adapter/http/middleware"
 	"github.com/romodevx/control-contable/backend/internal/platform/config"
+	"github.com/romodevx/control-contable/backend/internal/platform/flags"
+	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagtest"
 	"github.com/romodevx/control-contable/backend/internal/platform/logging"
 )
 
@@ -36,10 +39,23 @@ func testConfig() config.Config {
 
 func newTestHandler(t *testing.T, cfg config.Config, db health.Pinger) http.Handler {
 	t.Helper()
-	h, err := newHandler(cfg, deps{logger: logging.New(io.Discard, nil), db: db, now: time.Now})
+	return newFlaggedHandler(t, cfg, db, flagtest.Static{})
+}
+
+func newFlaggedHandler(t *testing.T, cfg config.Config, db health.Pinger, f flagService) http.Handler {
+	t.Helper()
+	h, err := newHandler(cfg, deps{logger: logging.New(io.Discard, nil), db: db, flags: f, now: time.Now})
 	require.NoError(t, err)
 	return h
 }
+
+// keysReader is a flags.Reader returning fixed keys or an error.
+type keysReader struct {
+	keys []string
+	err  error
+}
+
+func (r keysReader) EnabledKeys(context.Context) ([]string, error) { return r.keys, r.err }
 
 type pingOK struct{}
 
@@ -117,13 +133,62 @@ func TestFlaggedModulesAreOffByDefault(t *testing.T) {
 	conforms(t, req, rec, http.MethodGet, "/v1/me")
 }
 
-func TestUnbuiltPlatformOperationIsAClean500(t *testing.T) {
-	// listEnabledFlags is platform (never gated) and arrives with P0-15.
-	req, rec := get(newTestHandler(t, testConfig(), pingOK{}), "/v1/flags")
+// The flags service drives the real router's gate: OFF is the 404 envelope,
+// ON lets the request through to the module (whose handler is not built yet).
+func TestFlagGate_throughTheRealRouter(t *testing.T) {
+	flagtest.OnOff(t, "module_auth", func(t *testing.T, f flagtest.Static, on bool) {
+		svc := flags.NewService(keysReader{keys: enabledKeys(f)})
+		req, rec := get(newFlaggedHandler(t, testConfig(), pingOK{}, svc), "/v1/me")
 
+		if !on {
+			flagtest.AssertHidden(t, rec)
+			conforms(t, req, rec, http.MethodGet, "/v1/me")
+			return
+		}
+		assert.NotEqual(t, http.StatusNotFound, rec.Code, "an enabled module is routed past the gate")
+	})
+}
+
+func TestFlagGate_failsClosedWhenFlagsAreUnreadable(t *testing.T) {
+	svc := flags.NewService(keysReader{err: errors.New("connection refused")})
+	h := newFlaggedHandler(t, testConfig(), pingOK{}, svc)
+
+	req, rec := get(h, "/v1/me")
+	flagtest.AssertHidden(t, rec)
+	conforms(t, req, rec, http.MethodGet, "/v1/me")
+
+	req, rec = get(h, "/v1/flags")
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-	assert.NotContains(t, rec.Body.String(), "nil pointer")
+	assert.NotContains(t, rec.Body.String(), "connection refused")
 	conforms(t, req, rec, http.MethodGet, "/v1/flags")
+}
+
+func TestListEnabledFlags_servesTheFlagsService(t *testing.T) {
+	svc := flags.NewService(keysReader{keys: []string{"module_taxpayers", "module_auth"}})
+
+	req, rec := get(newFlaggedHandler(t, testConfig(), pingOK{}, svc), "/v1/flags")
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"enabled":["module_auth","module_taxpayers"]}`, rec.Body.String())
+	conforms(t, req, rec, http.MethodGet, "/v1/flags")
+}
+
+func TestListEnabledFlags_isNeverGated(t *testing.T) {
+	req, rec := get(newTestHandler(t, testConfig(), pingOK{}), "/v1/flags") // every module OFF
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"enabled":[]}`, rec.Body.String())
+	conforms(t, req, rec, http.MethodGet, "/v1/flags")
+}
+
+func enabledKeys(f flagtest.Static) []string {
+	keys := []string{}
+	for k, on := range f {
+		if on {
+			keys = append(keys, k)
+		}
+	}
+	return keys
 }
 
 func TestNewServer_hasTimeouts(t *testing.T) {

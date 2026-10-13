@@ -42,13 +42,13 @@ read from the environment (`internal/platform/config`):
 | `APP_ENV` | required | `dev`, `staging` or `production` |
 | `PORT` | `8080` | listen port |
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
-| `DATABASE_URL` | required (secret) | until P0-12 it is only checked for presence |
+| `DATABASE_URL` | required (secret) | the `cc_app` pool; today it serves the flags service (P0-15). The pool connects lazily: an unreachable database hides every flagged module (fail closed) |
 | `RATE_LIMIT_RPS` / `RATE_LIMIT_BURST` | `10` / `20` | token bucket per client IP (429 + `Retry-After`) |
 | `TRUSTED_PROXY_HOPS` | `0` in dev; **required** in staging/production | reverse proxies appending to `X-Forwarded-For`; `0` keys by the TCP peer (behind Cloud Run/a load balancer that would be one bucket for every client) |
 
 `GET /healthz` answers 200 while the process serves; the body says whether the database is
 reachable (`degraded`/`unreachable` until the database adapter lands in P0-12). Every flagged
-module answers 404 until the flags service (P0-15) turns it on. SIGINT/SIGTERM drains
+module answers 404 unless its flag is ON in `feature_flags` (see Feature flags). SIGINT/SIGTERM drains
 in-flight requests for up to 8 s.
 
 ### Local database
@@ -78,12 +78,11 @@ Every module ships behind a `module_<name>` flag in `feature_flags`, OFF by defa
   every module is OFF. `Admin` validates keys and preset names for the CLI.
 - `internal/platform/flags/flagsgorm`: GORM adapter. `Reader` runs as `cc_app` (SELECT only);
   `Store` runs as `cc_owner` and applies a preset in one transaction.
-- `adapter/http/flaggate`: the gate. `flaggate.Mux` is the `gen.ServeMux` given to the
-  generated server, so it wraps each route by its pattern (`gen.RouteModule`) **at
-  registration**. A disabled module answers 404 with the standard `ErrorResponse`, before
-  any parameter binding or body decoding. Unmatched requests get the same 404 (never
-  405 + `Allow`). `flaggate.Handler(si, checker)` builds it all; `flaggate.Wrap` gates
-  one handler.
+- `adapter/http/flaggate`: the gate primitive (`Wrap`, `WriteNotFound`). `adapter/http/router`
+  applies it to each route **as the generated server registers it**, keyed by
+  `gen.RouteModule(pattern)`. A disabled module therefore answers 404 with the standard
+  `ErrorResponse` before any parameter binding or body decoding. Unmatched requests get
+  the same 404 (never 405 + `Allow`).
 - `adapter/http/flagshttp`: `GET /v1/flags` (UX only).
 - `internal/platform/flags/flagtest`: `flagtest.OnOff(t, "module_x", suite)` runs a handler
   suite with the flag ON and OFF; `flagtest.AssertHidden` checks the OFF answer.
@@ -92,14 +91,9 @@ Every module ships behind a `module_<name>` flag in `feature_flags`, OFF by defa
   `make flags ARGS="apply-preset demo_core"`. Running API instances see a change within
   the cache TTL.
 
-Wiring in `cmd/api` (composition root):
-
-```go
-flagsDB, _ := flagsgorm.Open(appDB) // the cc_app pool
-flagSvc := flags.NewService(flagsgorm.NewReader(flagsDB), flags.WithLogger(logger))
-// the strict server embeds the handler:  api{..., flagshttp.New(flagSvc, logger)}
-// the router's flag gate is flagSvc (it implements Enabled(ctx, module) bool)
-```
+`cmd/api` wires it: `newFlagService` builds the service over the `cc_app` pool from
+`DATABASE_URL`. The service is both the router's `FlagGate` and the source of
+`flagshttp.Handler`, which is embedded in the strict server.
 
 ### Integration tests
 
