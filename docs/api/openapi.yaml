@@ -2271,6 +2271,27 @@ components:
           legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
 
     # ------------------------------------------------------------ subscriptions
+    SubscriptionPlan:
+      type: object
+      description: |
+        Active store plan. A named component (not inline in `SubscriptionStatus.plan`):
+        inline objects inside `oneOf` make the Dart generator name their enums after the
+        bare property, and `period` overwrote the `Period` component (ADR-0003).
+      required: [product_id, period, store, expires_at, will_renew]
+      properties:
+        product_id: { type: string }
+        period: { type: string, enum: [weekly, monthly, yearly] }
+        store: { type: string, enum: [app_store, play_store] }
+        expires_at: { type: string, format: date-time }
+        will_renew: { type: boolean }
+        management_url: { type: [string, 'null'], format: uri }
+      examples:
+        - product_id: cc_pro_monthly
+          period: monthly
+          store: app_store
+          expires_at: '2026-11-13T16:00:00Z'
+          will_renew: true
+          management_url: 'https://apps.apple.com/account/subscriptions'
     SubscriptionStatus:
       type: object
       required: [access]
@@ -2278,15 +2299,7 @@ components:
         access: { $ref: '#/components/schemas/AccessSummary' }
         plan:
           oneOf:
-            - type: object
-              required: [product_id, period, store, expires_at, will_renew]
-              properties:
-                product_id: { type: string }
-                period: { type: string, enum: [weekly, monthly, yearly] }
-                store: { type: string, enum: [app_store, play_store] }
-                expires_at: { type: string, format: date-time }
-                will_renew: { type: boolean }
-                management_url: { type: [string, 'null'], format: uri }
+            - $ref: '#/components/schemas/SubscriptionPlan'
             - type: 'null'
       examples:
         - access: { access: trial, trial_ends_at: '2026-10-20T16:00:00Z', incomes_remaining: 3, expenses_remaining: 5 }
