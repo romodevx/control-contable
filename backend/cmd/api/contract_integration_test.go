@@ -60,7 +60,7 @@ func newContractEnv(t *testing.T, db health.Pinger) contractEnv {
 	require.NoError(t, err)
 	logs := &syncBuffer{}
 	logger := logging.New(logs, nil)
-	auth, err := newAuthHandler(authWiring{
+	auth, err := newAuthModule(authWiring{
 		env: config.EnvDev, keys: testAuthKeys(), pool: app, logger: logger, now: time.Now, argon2: fastArgon2,
 	})
 	require.NoError(t, err)

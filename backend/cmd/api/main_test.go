@@ -61,8 +61,22 @@ type stubResend struct{}
 
 func (stubResend) Execute(context.Context, string) error { return errors.New("stub: not wired") }
 
-func stubAuthHandler() *authhttp.Handler {
-	return authhttp.NewHandler(stubAuth{}, stubVerify{}, stubResend{})
+type stubLogin struct{}
+
+func (stubLogin) Execute(context.Context, usecase.LoginInput) (usecase.Session, error) {
+	return usecase.Session{}, errors.New("stub: not wired")
+}
+
+// stubAuthModule has stub use cases and the real authenticator over the
+// fixture keys, so a secured operation is never reachable unauthenticated.
+func stubAuthModule(t *testing.T) authModule {
+	t.Helper()
+	authn, err := newAuthenticator(testAuthKeys(), time.Now, nil)
+	require.NoError(t, err)
+	return authModule{
+		handler: authhttp.NewHandler(authhttp.UseCases{Register: stubAuth{}, Verify: stubVerify{}, Resend: stubResend{}, Login: stubLogin{}}),
+		authn:   authn,
+	}
 }
 
 func newTestHandler(t *testing.T, cfg config.Config, db health.Pinger) http.Handler {
@@ -72,10 +86,10 @@ func newTestHandler(t *testing.T, cfg config.Config, db health.Pinger) http.Hand
 
 func newFlaggedHandler(t *testing.T, cfg config.Config, db health.Pinger, f flagService) http.Handler {
 	t.Helper()
-	return newHandlerWith(t, cfg, db, f, stubAuthHandler(), logging.New(io.Discard, nil))
+	return newHandlerWith(t, cfg, db, f, stubAuthModule(t), logging.New(io.Discard, nil))
 }
 
-func newHandlerWith(t *testing.T, cfg config.Config, db health.Pinger, f flagService, auth *authhttp.Handler, logger *slog.Logger) http.Handler {
+func newHandlerWith(t *testing.T, cfg config.Config, db health.Pinger, f flagService, auth authModule, logger *slog.Logger) http.Handler {
 	t.Helper()
 	h, err := newHandler(cfg, deps{logger: logger, db: db, flags: f, auth: auth, now: time.Now})
 	require.NoError(t, err)

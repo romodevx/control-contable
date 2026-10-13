@@ -32,6 +32,8 @@ func TestErrorMapperMapsEveryDomainError(t *testing.T) {
 		{err: domain.ErrDocumentNotCurrent, want: apperr.CodeValidationFailed},
 		{err: usecase.ErrVerificationRejected, want: apperr.CodeUnauthorized},
 		{err: domain.ErrMalformedRefreshToken, want: apperr.CodeUnauthorized},
+		{err: usecase.ErrInvalidCredentials, want: apperr.CodeUnauthorized},
+		{err: usecase.ErrInvalidAccessToken, want: apperr.CodeUnauthorized},
 		{err: domain.ErrInvalidUserID, want: apperr.CodeInternalError},
 		{err: domain.ErrMalformedTokenHash, want: apperr.CodeInternalError},
 		{err: domain.ErrRandomSource, want: apperr.CodeInternalError},

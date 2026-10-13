@@ -24,6 +24,12 @@ const (
 	msgInvalidCode         = "Enter the 6-digit code from the email."
 	msgCodeRejected        = "The code is invalid or has expired."
 	msgInvalidRefreshToken = "Authentication required."
+	// msgAuthenticationRequired is the one answer to a missing or refused
+	// bearer token, whatever the reason (the contract's Unauthorized example).
+	msgAuthenticationRequired = "Authentication required."
+	// msgInvalidCredentials never says which of email or password was wrong
+	// (the contract's login 401 example).
+	msgInvalidCredentials = "Email or password is incorrect."
 )
 
 // ErrorMapper maps auth domain and use case errors to contract error codes.
@@ -44,6 +50,8 @@ var ErrorMapper = apperr.NewMapper(
 	apperr.Rule{Target: domain.ErrInvalidVerificationCode, Code: apperr.CodeValidationFailed, Message: msgInvalidCode},
 	apperr.Rule{Target: usecase.ErrVerificationRejected, Code: apperr.CodeUnauthorized, Message: msgCodeRejected},
 	apperr.Rule{Target: domain.ErrMalformedRefreshToken, Code: apperr.CodeUnauthorized, Message: msgInvalidRefreshToken},
+	apperr.Rule{Target: usecase.ErrInvalidCredentials, Code: apperr.CodeUnauthorized, Message: msgInvalidCredentials},
+	apperr.Rule{Target: usecase.ErrInvalidAccessToken, Code: apperr.CodeUnauthorized, Message: msgAuthenticationRequired},
 )
 
 // fieldRule names the request field (the router's dotted path, CONTRACT.md)

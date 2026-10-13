@@ -32,18 +32,46 @@ type CodeResender interface {
 	Execute(ctx context.Context, email string) error
 }
 
-// Handler implements the auth operations of gen.StrictServerInterface that
-// M1-05 builds: register, verifyEmail and resendVerification. cmd/api embeds
-// it in the API server; the other auth operations stay not built (404).
+// SignIn checks email and password and starts a session (usecase.Login).
+type SignIn interface {
+	Execute(ctx context.Context, in usecase.LoginInput) (usecase.Session, error)
+}
+
+// UseCases are the auth use cases the handler serves. All are required.
+type UseCases struct {
+	Register Registerer
+	Verify   EmailVerifier
+	Resend   CodeResender
+	Login    SignIn
+}
+
+// Handler implements the auth operations of gen.StrictServerInterface built
+// so far: register, verifyEmail and resendVerification (M1-05) and login
+// (M1-07). cmd/api embeds it in the API server; the other auth operations
+// stay not built (404).
 type Handler struct {
 	register Registerer
 	verify   EmailVerifier
 	resend   CodeResender
+	login    SignIn
 }
 
 // NewHandler returns the handler over the use cases.
-func NewHandler(register Registerer, verify EmailVerifier, resend CodeResender) *Handler {
-	return &Handler{register: register, verify: verify, resend: resend}
+func NewHandler(uc UseCases) *Handler {
+	return &Handler{register: uc.Register, verify: uc.Verify, resend: uc.Resend, login: uc.Login}
+}
+
+// Login implements gen.StrictServerInterface (POST /v1/auth/login). Every
+// credential failure is the one generic 401 (US-A2a).
+func (h *Handler) Login(ctx context.Context, req gen.LoginRequestObject) (gen.LoginResponseObject, error) {
+	session, err := h.login.Execute(ctx, usecase.LoginInput{Email: string(req.Body.Email), Password: req.Body.Password})
+	if err != nil {
+		return nil, toAppError(err)
+	}
+	return gen.Login200JSONResponse{
+		Body:    gen.AuthSession{User: toUser(session.Account), Tokens: toTokenPair(session.Tokens)},
+		Headers: gen.Login200ResponseHeaders{CacheControl: noStore},
+	}, nil
 }
 
 var verificationSent = gen.VerificationSent{Status: gen.VerificationSentStatusVerificationSent}

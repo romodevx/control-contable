@@ -53,8 +53,77 @@ func (f *fakeResend) Execute(_ context.Context, email string) error {
 	return f.err
 }
 
+type fakeLogin struct {
+	got     usecase.LoginInput
+	session usecase.Session
+	err     error
+}
+
+func (f *fakeLogin) Execute(_ context.Context, in usecase.LoginInput) (usecase.Session, error) {
+	f.got = in
+	return f.session, f.err
+}
+
 func newHandler(r *fakeRegister, v *fakeVerify, s *fakeResend) *authhttp.Handler {
-	return authhttp.NewHandler(r, v, s)
+	return authhttp.NewHandler(authhttp.UseCases{Register: r, Verify: v, Resend: s, Login: &fakeLogin{}})
+}
+
+func loginHandler(l *fakeLogin) *authhttp.Handler {
+	return authhttp.NewHandler(authhttp.UseCases{Register: &fakeRegister{}, Verify: &fakeVerify{}, Resend: &fakeResend{}, Login: l})
+}
+
+func loginBody() *gen.LoginJSONRequestBody {
+	return &gen.LoginJSONRequestBody{Email: "Ana.Gomez@example.mx", Password: "made-up sample phrase"}
+}
+
+func TestLogin_answers200WithANoStoreSession(t *testing.T) {
+	userID, err := domain.ParseUserID(userIDText)
+	require.NoError(t, err)
+	email, err := domain.NewEmail("ana.gomez@example.mx")
+	require.NoError(t, err)
+	refresh, err := domain.NewRefreshToken(userID, zeroes{})
+	require.NoError(t, err)
+	createdAt := time.Date(2026, 10, 13, 12, 30, 0, 0, time.FixedZone("CST", -6*3600))
+	login := &fakeLogin{session: usecase.Session{
+		Account: usecase.Account{ID: userID, Email: email, CreatedAt: createdAt},
+		Tokens:  usecase.Tokens{Access: "jwt", AccessExpiresIn: 15 * time.Minute, Refresh: refresh, RefreshExpiresIn: 720 * time.Hour},
+	}}
+
+	resp, err := loginHandler(login).Login(t.Context(), gen.LoginRequestObject{Body: loginBody()})
+
+	require.NoError(t, err)
+	assert.Equal(t, usecase.LoginInput{Email: "Ana.Gomez@example.mx", Password: "made-up sample phrase"}, login.got,
+		"normalization is the use case's job")
+	got, ok := resp.(gen.Login200JSONResponse)
+	require.True(t, ok)
+	assert.Equal(t, "no-store", got.Headers.CacheControl)
+	assert.Equal(t, userIDText, got.Body.User.Id.String())
+	assert.Equal(t, openapi_types.Email("ana.gomez@example.mx"), got.Body.User.Email)
+	assert.Nil(t, got.Body.User.Name)
+	assert.Equal(t, createdAt.UTC(), got.Body.User.CreatedAt)
+	assert.Equal(t, gen.TokenPair{
+		AccessToken: "jwt", AccessExpiresIn: 900,
+		RefreshToken: refresh.Reveal(), RefreshExpiresIn: 2592000, TokenType: gen.Bearer,
+	}, got.Body.Tokens)
+}
+
+func TestLogin_invalidCredentialsAreTheGeneric401(t *testing.T) {
+	h := loginHandler(&fakeLogin{err: usecase.ErrInvalidCredentials})
+
+	_, err := h.Login(t.Context(), gen.LoginRequestObject{Body: loginBody()})
+
+	appErr, ok := errors.AsType[*apperr.Error](err)
+	require.True(t, ok)
+	assert.Equal(t, apperr.CodeUnauthorized, appErr.Code)
+	assert.Equal(t, "Email or password is incorrect.", appErr.Message)
+	assert.Empty(t, appErr.Fields, "never which of the two was wrong")
+}
+
+func TestLogin_serverFaultsStayInternal(t *testing.T) {
+	_, err := loginHandler(&fakeLogin{err: errBoom}).Login(t.Context(), gen.LoginRequestObject{Body: loginBody()})
+
+	require.ErrorIs(t, err, errBoom)
+	assert.Equal(t, apperr.CodeInternalError, apperr.Mapper{}.Resolve(err).Code)
 }
 
 func registerBody() *gen.RegisterJSONRequestBody {

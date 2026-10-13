@@ -18,7 +18,6 @@ import (
 // it in the same PR.
 var pendingOperations = map[string]string{
 	// M1 module_auth
-	"login":              "M1-10",
 	"refreshSession":     "M1-10",
 	"logout":             "M1-10",
 	"getMe":              "M1-10",
