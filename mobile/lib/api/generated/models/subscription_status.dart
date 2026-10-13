@@ -14,7 +14,7 @@ part 'subscription_status.g.dart';
 abstract class SubscriptionStatus with _$SubscriptionStatus {
   const factory SubscriptionStatus({
     required AccessSummary access,
-    SubscriptionPlan? plan,
+    @JsonKey(includeIfNull: false) SubscriptionPlan? plan,
   }) = _SubscriptionStatus;
 
   factory SubscriptionStatus.fromJson(Map<String, Object?> json) =>

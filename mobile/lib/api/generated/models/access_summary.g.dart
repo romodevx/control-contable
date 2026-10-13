@@ -19,9 +19,9 @@ _AccessSummary _$AccessSummaryFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$AccessSummaryToJson(_AccessSummary instance) =>
     <String, dynamic>{
       'access': _$AccessSummaryAccessEnumMap[instance.access]!,
-      'trial_ends_at': instance.trialEndsAt?.toIso8601String(),
-      'incomes_remaining': instance.incomesRemaining,
-      'expenses_remaining': instance.expensesRemaining,
+      'trial_ends_at': ?instance.trialEndsAt?.toIso8601String(),
+      'incomes_remaining': ?instance.incomesRemaining,
+      'expenses_remaining': ?instance.expensesRemaining,
     };
 
 const _$AccessSummaryAccessEnumMap = {

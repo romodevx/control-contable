@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TaxInputValue {
 
- String get key;@JsonKey(name: 'value_cents') MoneyCents? get valueCents;@JsonKey(name: 'value_rate') DecimalRate? get valueRate;
+ String get key;@JsonKey(includeIfNull: false, name: 'value_cents') MoneyCents? get valueCents;@JsonKey(includeIfNull: false, name: 'value_rate') DecimalRate? get valueRate;
 /// Create a copy of TaxInputValue
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -54,7 +54,7 @@ abstract mixin class $TaxInputValueCopyWith<$Res>  {
   factory $TaxInputValueCopyWith(TaxInputValue value, $Res Function(TaxInputValue) _then) = _$TaxInputValueCopyWithImpl;
 @useResult
 $Res call({
- String key,@JsonKey(name: 'value_cents') MoneyCents? valueCents,@JsonKey(name: 'value_rate') DecimalRate? valueRate
+ String key,@JsonKey(includeIfNull: false, name: 'value_cents') MoneyCents? valueCents,@JsonKey(includeIfNull: false, name: 'value_rate') DecimalRate? valueRate
 });
 
 
@@ -161,7 +161,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String key, @JsonKey(name: 'value_cents')  MoneyCents? valueCents, @JsonKey(name: 'value_rate')  DecimalRate? valueRate)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String key, @JsonKey(includeIfNull: false, name: 'value_cents')  MoneyCents? valueCents, @JsonKey(includeIfNull: false, name: 'value_rate')  DecimalRate? valueRate)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TaxInputValue() when $default != null:
 return $default(_that.key,_that.valueCents,_that.valueRate);case _:
@@ -182,7 +182,7 @@ return $default(_that.key,_that.valueCents,_that.valueRate);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String key, @JsonKey(name: 'value_cents')  MoneyCents? valueCents, @JsonKey(name: 'value_rate')  DecimalRate? valueRate)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String key, @JsonKey(includeIfNull: false, name: 'value_cents')  MoneyCents? valueCents, @JsonKey(includeIfNull: false, name: 'value_rate')  DecimalRate? valueRate)  $default,) {final _that = this;
 switch (_that) {
 case _TaxInputValue():
 return $default(_that.key,_that.valueCents,_that.valueRate);case _:
@@ -202,7 +202,7 @@ return $default(_that.key,_that.valueCents,_that.valueRate);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String key, @JsonKey(name: 'value_cents')  MoneyCents? valueCents, @JsonKey(name: 'value_rate')  DecimalRate? valueRate)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String key, @JsonKey(includeIfNull: false, name: 'value_cents')  MoneyCents? valueCents, @JsonKey(includeIfNull: false, name: 'value_rate')  DecimalRate? valueRate)?  $default,) {final _that = this;
 switch (_that) {
 case _TaxInputValue() when $default != null:
 return $default(_that.key,_that.valueCents,_that.valueRate);case _:
@@ -217,12 +217,12 @@ return $default(_that.key,_that.valueCents,_that.valueRate);case _:
 @JsonSerializable()
 
 class _TaxInputValue implements TaxInputValue {
-  const _TaxInputValue({required this.key, @JsonKey(name: 'value_cents') this.valueCents, @JsonKey(name: 'value_rate') this.valueRate});
+  const _TaxInputValue({required this.key, @JsonKey(includeIfNull: false, name: 'value_cents') this.valueCents, @JsonKey(includeIfNull: false, name: 'value_rate') this.valueRate});
   factory _TaxInputValue.fromJson(Map<String, dynamic> json) => _$TaxInputValueFromJson(json);
 
 @override final  String key;
-@override@JsonKey(name: 'value_cents') final  MoneyCents? valueCents;
-@override@JsonKey(name: 'value_rate') final  DecimalRate? valueRate;
+@override@JsonKey(includeIfNull: false, name: 'value_cents') final  MoneyCents? valueCents;
+@override@JsonKey(includeIfNull: false, name: 'value_rate') final  DecimalRate? valueRate;
 
 /// Create a copy of TaxInputValue
 /// with the given fields replaced by the non-null parameter values.
@@ -259,7 +259,7 @@ abstract mixin class _$TaxInputValueCopyWith<$Res> implements $TaxInputValueCopy
   factory _$TaxInputValueCopyWith(_TaxInputValue value, $Res Function(_TaxInputValue) _then) = __$TaxInputValueCopyWithImpl;
 @override @useResult
 $Res call({
- String key,@JsonKey(name: 'value_cents') MoneyCents? valueCents,@JsonKey(name: 'value_rate') DecimalRate? valueRate
+ String key,@JsonKey(includeIfNull: false, name: 'value_cents') MoneyCents? valueCents,@JsonKey(includeIfNull: false, name: 'value_rate') DecimalRate? valueRate
 });
 
 

@@ -15,7 +15,7 @@ abstract class ExpensePage with _$ExpensePage {
   const factory ExpensePage({
     required List<Expense> items,
     required PeriodTotals totals,
-    @JsonKey(name: 'next_cursor') String? nextCursor,
+    @JsonKey(includeIfNull: false, name: 'next_cursor') String? nextCursor,
   }) = _ExpensePage;
 
   factory ExpensePage.fromJson(Map<String, Object?> json) =>

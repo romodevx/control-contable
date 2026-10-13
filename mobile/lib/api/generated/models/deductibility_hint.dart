@@ -15,8 +15,8 @@ abstract class DeductibilityHint with _$DeductibilityHint {
   const factory DeductibilityHint({
     @JsonKey(name: 'regime_code') required RegimeCode regimeCode,
     required DeductibilityHintDeductibility deductibility,
-    String? note,
-    @JsonKey(name: 'legal_basis') String? legalBasis,
+    @JsonKey(includeIfNull: false) String? note,
+    @JsonKey(includeIfNull: false, name: 'legal_basis') String? legalBasis,
   }) = _DeductibilityHint;
 
   factory DeductibilityHint.fromJson(Map<String, Object?> json) =>

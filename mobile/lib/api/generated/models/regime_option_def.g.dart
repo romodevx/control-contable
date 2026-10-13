@@ -24,8 +24,8 @@ Map<String, dynamic> _$RegimeOptionDefToJson(_RegimeOptionDef instance) =>
       'label': instance.label,
       'type': _$RegimeOptionDefTypeEnumMap[instance.type]!,
       'required': instance.requiredValue,
-      'allowed_values': instance.allowedValues,
-      'default': instance.defaultValue,
+      'allowed_values': ?instance.allowedValues,
+      'default': ?instance.defaultValue,
     };
 
 const _$RegimeOptionDefTypeEnumMap = {

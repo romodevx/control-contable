@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Event {
 
- String get id; String get type;@JsonKey(name: 'app_user_id') String get appUserId;@JsonKey(name: 'event_timestamp_ms') int get eventTimestampMs;@JsonKey(name: 'original_app_user_id') String? get originalAppUserId;@JsonKey(name: 'product_id') String? get productId;@JsonKey(name: 'entitlement_ids') List<String>? get entitlementIds; Environment? get environment; String? get store;@JsonKey(name: 'expiration_at_ms') int? get expirationAtMs;
+ String get id; String get type;@JsonKey(name: 'app_user_id') String get appUserId;@JsonKey(name: 'event_timestamp_ms') int get eventTimestampMs;@JsonKey(includeIfNull: false, name: 'original_app_user_id') String? get originalAppUserId;@JsonKey(includeIfNull: false, name: 'product_id') String? get productId;@JsonKey(includeIfNull: false, name: 'entitlement_ids') List<String>? get entitlementIds;@JsonKey(includeIfNull: false) Environment? get environment;@JsonKey(includeIfNull: false) String? get store;@JsonKey(includeIfNull: false, name: 'expiration_at_ms') int? get expirationAtMs;
 /// Create a copy of Event
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -54,7 +54,7 @@ abstract mixin class $EventCopyWith<$Res>  {
   factory $EventCopyWith(Event value, $Res Function(Event) _then) = _$EventCopyWithImpl;
 @useResult
 $Res call({
- String id, String type,@JsonKey(name: 'app_user_id') String appUserId,@JsonKey(name: 'event_timestamp_ms') int eventTimestampMs,@JsonKey(name: 'original_app_user_id') String? originalAppUserId,@JsonKey(name: 'product_id') String? productId,@JsonKey(name: 'entitlement_ids') List<String>? entitlementIds, Environment? environment, String? store,@JsonKey(name: 'expiration_at_ms') int? expirationAtMs
+ String id, String type,@JsonKey(name: 'app_user_id') String appUserId,@JsonKey(name: 'event_timestamp_ms') int eventTimestampMs,@JsonKey(includeIfNull: false, name: 'original_app_user_id') String? originalAppUserId,@JsonKey(includeIfNull: false, name: 'product_id') String? productId,@JsonKey(includeIfNull: false, name: 'entitlement_ids') List<String>? entitlementIds,@JsonKey(includeIfNull: false) Environment? environment,@JsonKey(includeIfNull: false) String? store,@JsonKey(includeIfNull: false, name: 'expiration_at_ms') int? expirationAtMs
 });
 
 
@@ -168,7 +168,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String type, @JsonKey(name: 'app_user_id')  String appUserId, @JsonKey(name: 'event_timestamp_ms')  int eventTimestampMs, @JsonKey(name: 'original_app_user_id')  String? originalAppUserId, @JsonKey(name: 'product_id')  String? productId, @JsonKey(name: 'entitlement_ids')  List<String>? entitlementIds,  Environment? environment,  String? store, @JsonKey(name: 'expiration_at_ms')  int? expirationAtMs)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String type, @JsonKey(name: 'app_user_id')  String appUserId, @JsonKey(name: 'event_timestamp_ms')  int eventTimestampMs, @JsonKey(includeIfNull: false, name: 'original_app_user_id')  String? originalAppUserId, @JsonKey(includeIfNull: false, name: 'product_id')  String? productId, @JsonKey(includeIfNull: false, name: 'entitlement_ids')  List<String>? entitlementIds, @JsonKey(includeIfNull: false)  Environment? environment, @JsonKey(includeIfNull: false)  String? store, @JsonKey(includeIfNull: false, name: 'expiration_at_ms')  int? expirationAtMs)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Event() when $default != null:
 return $default(_that.id,_that.type,_that.appUserId,_that.eventTimestampMs,_that.originalAppUserId,_that.productId,_that.entitlementIds,_that.environment,_that.store,_that.expirationAtMs);case _:
@@ -189,7 +189,7 @@ return $default(_that.id,_that.type,_that.appUserId,_that.eventTimestampMs,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String type, @JsonKey(name: 'app_user_id')  String appUserId, @JsonKey(name: 'event_timestamp_ms')  int eventTimestampMs, @JsonKey(name: 'original_app_user_id')  String? originalAppUserId, @JsonKey(name: 'product_id')  String? productId, @JsonKey(name: 'entitlement_ids')  List<String>? entitlementIds,  Environment? environment,  String? store, @JsonKey(name: 'expiration_at_ms')  int? expirationAtMs)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String type, @JsonKey(name: 'app_user_id')  String appUserId, @JsonKey(name: 'event_timestamp_ms')  int eventTimestampMs, @JsonKey(includeIfNull: false, name: 'original_app_user_id')  String? originalAppUserId, @JsonKey(includeIfNull: false, name: 'product_id')  String? productId, @JsonKey(includeIfNull: false, name: 'entitlement_ids')  List<String>? entitlementIds, @JsonKey(includeIfNull: false)  Environment? environment, @JsonKey(includeIfNull: false)  String? store, @JsonKey(includeIfNull: false, name: 'expiration_at_ms')  int? expirationAtMs)  $default,) {final _that = this;
 switch (_that) {
 case _Event():
 return $default(_that.id,_that.type,_that.appUserId,_that.eventTimestampMs,_that.originalAppUserId,_that.productId,_that.entitlementIds,_that.environment,_that.store,_that.expirationAtMs);case _:
@@ -209,7 +209,7 @@ return $default(_that.id,_that.type,_that.appUserId,_that.eventTimestampMs,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String type, @JsonKey(name: 'app_user_id')  String appUserId, @JsonKey(name: 'event_timestamp_ms')  int eventTimestampMs, @JsonKey(name: 'original_app_user_id')  String? originalAppUserId, @JsonKey(name: 'product_id')  String? productId, @JsonKey(name: 'entitlement_ids')  List<String>? entitlementIds,  Environment? environment,  String? store, @JsonKey(name: 'expiration_at_ms')  int? expirationAtMs)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String type, @JsonKey(name: 'app_user_id')  String appUserId, @JsonKey(name: 'event_timestamp_ms')  int eventTimestampMs, @JsonKey(includeIfNull: false, name: 'original_app_user_id')  String? originalAppUserId, @JsonKey(includeIfNull: false, name: 'product_id')  String? productId, @JsonKey(includeIfNull: false, name: 'entitlement_ids')  List<String>? entitlementIds, @JsonKey(includeIfNull: false)  Environment? environment, @JsonKey(includeIfNull: false)  String? store, @JsonKey(includeIfNull: false, name: 'expiration_at_ms')  int? expirationAtMs)?  $default,) {final _that = this;
 switch (_that) {
 case _Event() when $default != null:
 return $default(_that.id,_that.type,_that.appUserId,_that.eventTimestampMs,_that.originalAppUserId,_that.productId,_that.entitlementIds,_that.environment,_that.store,_that.expirationAtMs);case _:
@@ -224,17 +224,17 @@ return $default(_that.id,_that.type,_that.appUserId,_that.eventTimestampMs,_that
 @JsonSerializable()
 
 class _Event implements Event {
-  const _Event({required this.id, required this.type, @JsonKey(name: 'app_user_id') required this.appUserId, @JsonKey(name: 'event_timestamp_ms') required this.eventTimestampMs, @JsonKey(name: 'original_app_user_id') this.originalAppUserId, @JsonKey(name: 'product_id') this.productId, @JsonKey(name: 'entitlement_ids')  List<String>? entitlementIds, this.environment, this.store, @JsonKey(name: 'expiration_at_ms') this.expirationAtMs}): _entitlementIds = entitlementIds;
+  const _Event({required this.id, required this.type, @JsonKey(name: 'app_user_id') required this.appUserId, @JsonKey(name: 'event_timestamp_ms') required this.eventTimestampMs, @JsonKey(includeIfNull: false, name: 'original_app_user_id') this.originalAppUserId, @JsonKey(includeIfNull: false, name: 'product_id') this.productId, @JsonKey(includeIfNull: false, name: 'entitlement_ids')  List<String>? entitlementIds, @JsonKey(includeIfNull: false) this.environment, @JsonKey(includeIfNull: false) this.store, @JsonKey(includeIfNull: false, name: 'expiration_at_ms') this.expirationAtMs}): _entitlementIds = entitlementIds;
   factory _Event.fromJson(Map<String, dynamic> json) => _$EventFromJson(json);
 
 @override final  String id;
 @override final  String type;
 @override@JsonKey(name: 'app_user_id') final  String appUserId;
 @override@JsonKey(name: 'event_timestamp_ms') final  int eventTimestampMs;
-@override@JsonKey(name: 'original_app_user_id') final  String? originalAppUserId;
-@override@JsonKey(name: 'product_id') final  String? productId;
+@override@JsonKey(includeIfNull: false, name: 'original_app_user_id') final  String? originalAppUserId;
+@override@JsonKey(includeIfNull: false, name: 'product_id') final  String? productId;
  final  List<String>? _entitlementIds;
-@override@JsonKey(name: 'entitlement_ids') List<String>? get entitlementIds {
+@override@JsonKey(includeIfNull: false, name: 'entitlement_ids') List<String>? get entitlementIds {
   final value = _entitlementIds;
   if (value == null) return null;
   if (_entitlementIds is EqualUnmodifiableListView) return _entitlementIds;
@@ -242,9 +242,9 @@ class _Event implements Event {
   return EqualUnmodifiableListView(value);
 }
 
-@override final  Environment? environment;
-@override final  String? store;
-@override@JsonKey(name: 'expiration_at_ms') final  int? expirationAtMs;
+@override@JsonKey(includeIfNull: false) final  Environment? environment;
+@override@JsonKey(includeIfNull: false) final  String? store;
+@override@JsonKey(includeIfNull: false, name: 'expiration_at_ms') final  int? expirationAtMs;
 
 /// Create a copy of Event
 /// with the given fields replaced by the non-null parameter values.
@@ -281,7 +281,7 @@ abstract mixin class _$EventCopyWith<$Res> implements $EventCopyWith<$Res> {
   factory _$EventCopyWith(_Event value, $Res Function(_Event) _then) = __$EventCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String type,@JsonKey(name: 'app_user_id') String appUserId,@JsonKey(name: 'event_timestamp_ms') int eventTimestampMs,@JsonKey(name: 'original_app_user_id') String? originalAppUserId,@JsonKey(name: 'product_id') String? productId,@JsonKey(name: 'entitlement_ids') List<String>? entitlementIds, Environment? environment, String? store,@JsonKey(name: 'expiration_at_ms') int? expirationAtMs
+ String id, String type,@JsonKey(name: 'app_user_id') String appUserId,@JsonKey(name: 'event_timestamp_ms') int eventTimestampMs,@JsonKey(includeIfNull: false, name: 'original_app_user_id') String? originalAppUserId,@JsonKey(includeIfNull: false, name: 'product_id') String? productId,@JsonKey(includeIfNull: false, name: 'entitlement_ids') List<String>? entitlementIds,@JsonKey(includeIfNull: false) Environment? environment,@JsonKey(includeIfNull: false) String? store,@JsonKey(includeIfNull: false, name: 'expiration_at_ms') int? expirationAtMs
 });
 
 

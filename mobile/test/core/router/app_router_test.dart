@@ -60,9 +60,7 @@ void main() {
       await pumpControlContableApp(
         tester,
         enabledModules: enabled,
-        overrides: [
-          featureModulesProvider.overrideWithValue([incomesFeature]),
-        ],
+        features: [incomesFeature],
       );
       _routerOf(tester).go(location);
       await tester.pumpAndSettle();
@@ -105,7 +103,7 @@ void main() {
       await pumpControlContableApp(
         tester,
         flagsRepository: _PendingFlagsRepository(pending.future),
-        overrides: [featureModulesProvider.overrideWithValue(features)],
+        features: features,
       );
       _routerOf(tester).go('$location?mes=2026-10');
       await tester.pump();
@@ -179,7 +177,7 @@ void main() {
         flagsRepository: _PendingFlagsRepository(
           Completer<Set<AppModule>>().future,
         ),
-        overrides: [featureModulesProvider.overrideWithValue(features)],
+        features: features,
       );
       _routerOf(tester).go(
         Uri(
@@ -243,7 +241,7 @@ void main() {
           {AppModule.incomes},
           afterResume,
         ]),
-        overrides: [featureModulesProvider.overrideWithValue(features)],
+        features: features,
       );
       _routerOf(tester).go(incomesLocation);
       await tester.pumpAndSettle();

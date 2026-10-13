@@ -18,7 +18,7 @@ mixin _$Regime {
 
  RegimeCode get code; String get name;@JsonKey(name: 'person_type') PersonType get personType; Treatment get treatment;@JsonKey(name: 'option_defs') List<RegimeOptionDef> get optionDefs;/// Tax-input keys the strategy needs (see TaxInputs).
 @JsonKey(name: 'required_inputs') List<String> get requiredInputs;/// Plain-language reason for partial/informational treatment.
- String? get explanation;
+@JsonKey(includeIfNull: false) String? get explanation;
 /// Create a copy of Regime
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -56,7 +56,7 @@ abstract mixin class $RegimeCopyWith<$Res>  {
   factory $RegimeCopyWith(Regime value, $Res Function(Regime) _then) = _$RegimeCopyWithImpl;
 @useResult
 $Res call({
- RegimeCode code, String name,@JsonKey(name: 'person_type') PersonType personType, Treatment treatment,@JsonKey(name: 'option_defs') List<RegimeOptionDef> optionDefs,@JsonKey(name: 'required_inputs') List<String> requiredInputs, String? explanation
+ RegimeCode code, String name,@JsonKey(name: 'person_type') PersonType personType, Treatment treatment,@JsonKey(name: 'option_defs') List<RegimeOptionDef> optionDefs,@JsonKey(name: 'required_inputs') List<String> requiredInputs,@JsonKey(includeIfNull: false) String? explanation
 });
 
 
@@ -167,7 +167,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( RegimeCode code,  String name, @JsonKey(name: 'person_type')  PersonType personType,  Treatment treatment, @JsonKey(name: 'option_defs')  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs')  List<String> requiredInputs,  String? explanation)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( RegimeCode code,  String name, @JsonKey(name: 'person_type')  PersonType personType,  Treatment treatment, @JsonKey(name: 'option_defs')  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs')  List<String> requiredInputs, @JsonKey(includeIfNull: false)  String? explanation)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Regime() when $default != null:
 return $default(_that.code,_that.name,_that.personType,_that.treatment,_that.optionDefs,_that.requiredInputs,_that.explanation);case _:
@@ -188,7 +188,7 @@ return $default(_that.code,_that.name,_that.personType,_that.treatment,_that.opt
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( RegimeCode code,  String name, @JsonKey(name: 'person_type')  PersonType personType,  Treatment treatment, @JsonKey(name: 'option_defs')  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs')  List<String> requiredInputs,  String? explanation)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( RegimeCode code,  String name, @JsonKey(name: 'person_type')  PersonType personType,  Treatment treatment, @JsonKey(name: 'option_defs')  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs')  List<String> requiredInputs, @JsonKey(includeIfNull: false)  String? explanation)  $default,) {final _that = this;
 switch (_that) {
 case _Regime():
 return $default(_that.code,_that.name,_that.personType,_that.treatment,_that.optionDefs,_that.requiredInputs,_that.explanation);case _:
@@ -208,7 +208,7 @@ return $default(_that.code,_that.name,_that.personType,_that.treatment,_that.opt
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( RegimeCode code,  String name, @JsonKey(name: 'person_type')  PersonType personType,  Treatment treatment, @JsonKey(name: 'option_defs')  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs')  List<String> requiredInputs,  String? explanation)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( RegimeCode code,  String name, @JsonKey(name: 'person_type')  PersonType personType,  Treatment treatment, @JsonKey(name: 'option_defs')  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs')  List<String> requiredInputs, @JsonKey(includeIfNull: false)  String? explanation)?  $default,) {final _that = this;
 switch (_that) {
 case _Regime() when $default != null:
 return $default(_that.code,_that.name,_that.personType,_that.treatment,_that.optionDefs,_that.requiredInputs,_that.explanation);case _:
@@ -223,7 +223,7 @@ return $default(_that.code,_that.name,_that.personType,_that.treatment,_that.opt
 @JsonSerializable()
 
 class _Regime implements Regime {
-  const _Regime({required this.code, required this.name, @JsonKey(name: 'person_type') required this.personType, required this.treatment, @JsonKey(name: 'option_defs') required  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs') required  List<String> requiredInputs, this.explanation}): _optionDefs = optionDefs,_requiredInputs = requiredInputs;
+  const _Regime({required this.code, required this.name, @JsonKey(name: 'person_type') required this.personType, required this.treatment, @JsonKey(name: 'option_defs') required  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs') required  List<String> requiredInputs, @JsonKey(includeIfNull: false) this.explanation}): _optionDefs = optionDefs,_requiredInputs = requiredInputs;
   factory _Regime.fromJson(Map<String, dynamic> json) => _$RegimeFromJson(json);
 
 @override final  RegimeCode code;
@@ -247,7 +247,7 @@ class _Regime implements Regime {
 }
 
 /// Plain-language reason for partial/informational treatment.
-@override final  String? explanation;
+@override@JsonKey(includeIfNull: false) final  String? explanation;
 
 /// Create a copy of Regime
 /// with the given fields replaced by the non-null parameter values.
@@ -284,7 +284,7 @@ abstract mixin class _$RegimeCopyWith<$Res> implements $RegimeCopyWith<$Res> {
   factory _$RegimeCopyWith(_Regime value, $Res Function(_Regime) _then) = __$RegimeCopyWithImpl;
 @override @useResult
 $Res call({
- RegimeCode code, String name,@JsonKey(name: 'person_type') PersonType personType, Treatment treatment,@JsonKey(name: 'option_defs') List<RegimeOptionDef> optionDefs,@JsonKey(name: 'required_inputs') List<String> requiredInputs, String? explanation
+ RegimeCode code, String name,@JsonKey(name: 'person_type') PersonType personType, Treatment treatment,@JsonKey(name: 'option_defs') List<RegimeOptionDef> optionDefs,@JsonKey(name: 'required_inputs') List<String> requiredInputs,@JsonKey(includeIfNull: false) String? explanation
 });
 
 

@@ -27,7 +27,7 @@ Map<String, dynamic> _$RegimeToJson(_Regime instance) => <String, dynamic>{
   'treatment': _$TreatmentEnumMap[instance.treatment]!,
   'option_defs': instance.optionDefs,
   'required_inputs': instance.requiredInputs,
-  'explanation': instance.explanation,
+  'explanation': ?instance.explanation,
 };
 
 const _$PersonTypeEnumMap = {

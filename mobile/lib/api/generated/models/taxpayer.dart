@@ -22,7 +22,7 @@ abstract class Taxpayer with _$Taxpayer {
     @JsonKey(name: 'rfc_masked') required String rfcMasked,
     required List<TaxpayerRegime> regimes,
     @JsonKey(name: 'created_at') required DateTime createdAt,
-    @JsonKey(name: 'archived_at') DateTime? archivedAt,
+    @JsonKey(includeIfNull: false, name: 'archived_at') DateTime? archivedAt,
   }) = _Taxpayer;
 
   factory Taxpayer.fromJson(Map<String, Object?> json) =>

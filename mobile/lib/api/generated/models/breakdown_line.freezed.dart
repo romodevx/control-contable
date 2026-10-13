@@ -17,7 +17,7 @@ T _$identity<T>(T value) => value;
 mixin _$BreakdownLine {
 
  int get seq; BreakdownLineTax get tax;/// Human-readable step (Spanish).
- String get concept; BreakdownLineOperation get operation;@JsonKey(name: 'amount_cents') MoneyCents get amountCents;@JsonKey(name: 'legal_basis') List<Citation> get legalBasis; DecimalRate? get rate;
+ String get concept; BreakdownLineOperation get operation;@JsonKey(name: 'amount_cents') MoneyCents get amountCents;@JsonKey(name: 'legal_basis') List<Citation> get legalBasis;@JsonKey(includeIfNull: false) DecimalRate? get rate;
 /// Create a copy of BreakdownLine
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -55,7 +55,7 @@ abstract mixin class $BreakdownLineCopyWith<$Res>  {
   factory $BreakdownLineCopyWith(BreakdownLine value, $Res Function(BreakdownLine) _then) = _$BreakdownLineCopyWithImpl;
 @useResult
 $Res call({
- int seq, BreakdownLineTax tax, String concept, BreakdownLineOperation operation,@JsonKey(name: 'amount_cents') MoneyCents amountCents,@JsonKey(name: 'legal_basis') List<Citation> legalBasis, DecimalRate? rate
+ int seq, BreakdownLineTax tax, String concept, BreakdownLineOperation operation,@JsonKey(name: 'amount_cents') MoneyCents amountCents,@JsonKey(name: 'legal_basis') List<Citation> legalBasis,@JsonKey(includeIfNull: false) DecimalRate? rate
 });
 
 
@@ -166,7 +166,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int seq,  BreakdownLineTax tax,  String concept,  BreakdownLineOperation operation, @JsonKey(name: 'amount_cents')  MoneyCents amountCents, @JsonKey(name: 'legal_basis')  List<Citation> legalBasis,  DecimalRate? rate)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int seq,  BreakdownLineTax tax,  String concept,  BreakdownLineOperation operation, @JsonKey(name: 'amount_cents')  MoneyCents amountCents, @JsonKey(name: 'legal_basis')  List<Citation> legalBasis, @JsonKey(includeIfNull: false)  DecimalRate? rate)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _BreakdownLine() when $default != null:
 return $default(_that.seq,_that.tax,_that.concept,_that.operation,_that.amountCents,_that.legalBasis,_that.rate);case _:
@@ -187,7 +187,7 @@ return $default(_that.seq,_that.tax,_that.concept,_that.operation,_that.amountCe
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int seq,  BreakdownLineTax tax,  String concept,  BreakdownLineOperation operation, @JsonKey(name: 'amount_cents')  MoneyCents amountCents, @JsonKey(name: 'legal_basis')  List<Citation> legalBasis,  DecimalRate? rate)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int seq,  BreakdownLineTax tax,  String concept,  BreakdownLineOperation operation, @JsonKey(name: 'amount_cents')  MoneyCents amountCents, @JsonKey(name: 'legal_basis')  List<Citation> legalBasis, @JsonKey(includeIfNull: false)  DecimalRate? rate)  $default,) {final _that = this;
 switch (_that) {
 case _BreakdownLine():
 return $default(_that.seq,_that.tax,_that.concept,_that.operation,_that.amountCents,_that.legalBasis,_that.rate);case _:
@@ -207,7 +207,7 @@ return $default(_that.seq,_that.tax,_that.concept,_that.operation,_that.amountCe
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int seq,  BreakdownLineTax tax,  String concept,  BreakdownLineOperation operation, @JsonKey(name: 'amount_cents')  MoneyCents amountCents, @JsonKey(name: 'legal_basis')  List<Citation> legalBasis,  DecimalRate? rate)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int seq,  BreakdownLineTax tax,  String concept,  BreakdownLineOperation operation, @JsonKey(name: 'amount_cents')  MoneyCents amountCents, @JsonKey(name: 'legal_basis')  List<Citation> legalBasis, @JsonKey(includeIfNull: false)  DecimalRate? rate)?  $default,) {final _that = this;
 switch (_that) {
 case _BreakdownLine() when $default != null:
 return $default(_that.seq,_that.tax,_that.concept,_that.operation,_that.amountCents,_that.legalBasis,_that.rate);case _:
@@ -222,7 +222,7 @@ return $default(_that.seq,_that.tax,_that.concept,_that.operation,_that.amountCe
 @JsonSerializable()
 
 class _BreakdownLine implements BreakdownLine {
-  const _BreakdownLine({required this.seq, required this.tax, required this.concept, required this.operation, @JsonKey(name: 'amount_cents') required this.amountCents, @JsonKey(name: 'legal_basis') required  List<Citation> legalBasis, this.rate}): _legalBasis = legalBasis;
+  const _BreakdownLine({required this.seq, required this.tax, required this.concept, required this.operation, @JsonKey(name: 'amount_cents') required this.amountCents, @JsonKey(name: 'legal_basis') required  List<Citation> legalBasis, @JsonKey(includeIfNull: false) this.rate}): _legalBasis = legalBasis;
   factory _BreakdownLine.fromJson(Map<String, dynamic> json) => _$BreakdownLineFromJson(json);
 
 @override final  int seq;
@@ -238,7 +238,7 @@ class _BreakdownLine implements BreakdownLine {
   return EqualUnmodifiableListView(_legalBasis);
 }
 
-@override final  DecimalRate? rate;
+@override@JsonKey(includeIfNull: false) final  DecimalRate? rate;
 
 /// Create a copy of BreakdownLine
 /// with the given fields replaced by the non-null parameter values.
@@ -275,7 +275,7 @@ abstract mixin class _$BreakdownLineCopyWith<$Res> implements $BreakdownLineCopy
   factory _$BreakdownLineCopyWith(_BreakdownLine value, $Res Function(_BreakdownLine) _then) = __$BreakdownLineCopyWithImpl;
 @override @useResult
 $Res call({
- int seq, BreakdownLineTax tax, String concept, BreakdownLineOperation operation,@JsonKey(name: 'amount_cents') MoneyCents amountCents,@JsonKey(name: 'legal_basis') List<Citation> legalBasis, DecimalRate? rate
+ int seq, BreakdownLineTax tax, String concept, BreakdownLineOperation operation,@JsonKey(name: 'amount_cents') MoneyCents amountCents,@JsonKey(name: 'legal_basis') List<Citation> legalBasis,@JsonKey(includeIfNull: false) DecimalRate? rate
 });
 
 

@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$SubscriptionStatus {
 
- AccessSummary get access; SubscriptionPlan? get plan;
+ AccessSummary get access;@JsonKey(includeIfNull: false) SubscriptionPlan? get plan;
 /// Create a copy of SubscriptionStatus
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -54,7 +54,7 @@ abstract mixin class $SubscriptionStatusCopyWith<$Res>  {
   factory $SubscriptionStatusCopyWith(SubscriptionStatus value, $Res Function(SubscriptionStatus) _then) = _$SubscriptionStatusCopyWithImpl;
 @useResult
 $Res call({
- AccessSummary access, SubscriptionPlan? plan
+ AccessSummary access,@JsonKey(includeIfNull: false) SubscriptionPlan? plan
 });
 
 
@@ -181,7 +181,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( AccessSummary access,  SubscriptionPlan? plan)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( AccessSummary access, @JsonKey(includeIfNull: false)  SubscriptionPlan? plan)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SubscriptionStatus() when $default != null:
 return $default(_that.access,_that.plan);case _:
@@ -202,7 +202,7 @@ return $default(_that.access,_that.plan);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( AccessSummary access,  SubscriptionPlan? plan)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( AccessSummary access, @JsonKey(includeIfNull: false)  SubscriptionPlan? plan)  $default,) {final _that = this;
 switch (_that) {
 case _SubscriptionStatus():
 return $default(_that.access,_that.plan);case _:
@@ -222,7 +222,7 @@ return $default(_that.access,_that.plan);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( AccessSummary access,  SubscriptionPlan? plan)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( AccessSummary access, @JsonKey(includeIfNull: false)  SubscriptionPlan? plan)?  $default,) {final _that = this;
 switch (_that) {
 case _SubscriptionStatus() when $default != null:
 return $default(_that.access,_that.plan);case _:
@@ -237,11 +237,11 @@ return $default(_that.access,_that.plan);case _:
 @JsonSerializable()
 
 class _SubscriptionStatus implements SubscriptionStatus {
-  const _SubscriptionStatus({required this.access, this.plan});
+  const _SubscriptionStatus({required this.access, @JsonKey(includeIfNull: false) this.plan});
   factory _SubscriptionStatus.fromJson(Map<String, dynamic> json) => _$SubscriptionStatusFromJson(json);
 
 @override final  AccessSummary access;
-@override final  SubscriptionPlan? plan;
+@override@JsonKey(includeIfNull: false) final  SubscriptionPlan? plan;
 
 /// Create a copy of SubscriptionStatus
 /// with the given fields replaced by the non-null parameter values.
@@ -278,7 +278,7 @@ abstract mixin class _$SubscriptionStatusCopyWith<$Res> implements $Subscription
   factory _$SubscriptionStatusCopyWith(_SubscriptionStatus value, $Res Function(_SubscriptionStatus) _then) = __$SubscriptionStatusCopyWithImpl;
 @override @useResult
 $Res call({
- AccessSummary access, SubscriptionPlan? plan
+ AccessSummary access,@JsonKey(includeIfNull: false) SubscriptionPlan? plan
 });
 
 

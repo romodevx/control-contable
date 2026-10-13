@@ -15,4 +15,4 @@ _SubscriptionStatus _$SubscriptionStatusFromJson(Map<String, dynamic> json) =>
     );
 
 Map<String, dynamic> _$SubscriptionStatusToJson(_SubscriptionStatus instance) =>
-    <String, dynamic>{'access': instance.access, 'plan': instance.plan};
+    <String, dynamic>{'access': instance.access, 'plan': ?instance.plan};

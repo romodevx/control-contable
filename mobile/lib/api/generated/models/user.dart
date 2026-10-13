@@ -15,7 +15,7 @@ abstract class User with _$User {
     required Uuid id,
     required String email,
     @JsonKey(name: 'created_at') required DateTime createdAt,
-    String? name,
+    @JsonKey(includeIfNull: false) String? name,
   }) = _User;
 
   factory User.fromJson(Map<String, Object?> json) => _$UserFromJson(json);

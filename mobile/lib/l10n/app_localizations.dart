@@ -234,6 +234,282 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'dd/mm/aaaa'**
   String get formDateHint;
+
+  /// Inline error: a required checkbox (a consent) was left unchecked. Shown only after submit.
+  ///
+  /// In es, this message translates to:
+  /// **'Marca esta casilla para continuar.'**
+  String get formErrorNotAccepted;
+
+  /// Tooltip and screen reader label of the toggle that reveals a password.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar contraseña'**
+  String get formShowPassword;
+
+  /// Tooltip and screen reader label of the toggle that hides a revealed password.
+  ///
+  /// In es, this message translates to:
+  /// **'Ocultar contraseña'**
+  String get formHidePassword;
+
+  /// Home entry point to the sign-up form (shown only while module_auth is on).
+  ///
+  /// In es, this message translates to:
+  /// **'Crear cuenta'**
+  String get homeCreateAccount;
+
+  /// Title of the sign-up screen.
+  ///
+  /// In es, this message translates to:
+  /// **'Crear cuenta'**
+  String get authRegisterTitle;
+
+  /// One-line reason to sign up, at the top of the sign-up form.
+  ///
+  /// In es, this message translates to:
+  /// **'Con una cuenta, los ingresos, gastos y estimados quedan guardados de forma segura.'**
+  String get authRegisterIntro;
+
+  /// Primary button of the sign-up form.
+  ///
+  /// In es, this message translates to:
+  /// **'Crear cuenta'**
+  String get authRegisterSubmit;
+
+  /// Label of the optional name field on the sign-up form.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre'**
+  String get authNameLabel;
+
+  /// Label of the email field.
+  ///
+  /// In es, this message translates to:
+  /// **'Correo electrónico'**
+  String get authEmailLabel;
+
+  /// Label of the password field.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña'**
+  String get authPasswordLabel;
+
+  /// Help under the new-password field: the rule plus a gentle tip.
+  ///
+  /// In es, this message translates to:
+  /// **'Al menos 12 caracteres. Una frase fácil de recordar funciona bien.'**
+  String get authPasswordHelp;
+
+  /// Inline error: the email is not a valid address. Shown on blur.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe un correo como nombre@ejemplo.mx.'**
+  String get authEmailInvalid;
+
+  /// Inline error: the name is longer than the contract allows.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe un nombre de hasta 120 caracteres.'**
+  String get authNameTooLong;
+
+  /// Inline error: the password is shorter than 12 characters.
+  ///
+  /// In es, this message translates to:
+  /// **'Usa al menos 12 caracteres.'**
+  String get authPasswordTooShort;
+
+  /// Inline error: the password is longer than 128 characters.
+  ///
+  /// In es, this message translates to:
+  /// **'Usa como máximo 128 caracteres.'**
+  String get authPasswordTooLong;
+
+  /// Inline error from the server: the password is common or breached.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta contraseña es muy común o apareció en una filtración. Elige otra.'**
+  String get authPasswordPolicy;
+
+  /// Inline error from the server for a field without a more specific message.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa este dato.'**
+  String get authFieldRejected;
+
+  /// Form-level message when the server rejects something no field shows.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa los datos e intenta de nuevo.'**
+  String get authFormRejected;
+
+  /// Heading above the consent checkboxes on the sign-up form.
+  ///
+  /// In es, this message translates to:
+  /// **'Documentos legales'**
+  String get authConsentsHeading;
+
+  /// Consent checkbox for the privacy notice (required to sign up).
+  ///
+  /// In es, this message translates to:
+  /// **'Acepto el aviso de privacidad'**
+  String get authConsentPrivacy;
+
+  /// Consent checkbox for the terms and conditions (required to sign up).
+  ///
+  /// In es, this message translates to:
+  /// **'Acepto los términos y condiciones'**
+  String get authConsentTerms;
+
+  /// Link under the privacy consent that opens the current privacy notice.
+  ///
+  /// In es, this message translates to:
+  /// **'Leer el aviso de privacidad'**
+  String get authReadPrivacy;
+
+  /// Link under the terms consent that opens the current terms.
+  ///
+  /// In es, this message translates to:
+  /// **'Leer los términos y condiciones'**
+  String get authReadTerms;
+
+  /// Shown while the legal documents load.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando documentos legales…'**
+  String get authDocumentsLoading;
+
+  /// Shown when the legal documents could not be loaded; a retry button follows.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar los documentos legales.'**
+  String get authDocumentsFailed;
+
+  /// Form-level message: submit pressed before the legal documents loaded.
+  ///
+  /// In es, this message translates to:
+  /// **'Los documentos legales no se han cargado. Reintenta para continuar.'**
+  String get authDocumentsNotLoaded;
+
+  /// Error on the consents: the server published new versions; they must be accepted again.
+  ///
+  /// In es, this message translates to:
+  /// **'Los documentos se actualizaron. Revísalos y acéptalos de nuevo.'**
+  String get authDocumentsStale;
+
+  /// Snack bar: a legal document link could not be opened.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo abrir el documento. Intenta de nuevo.'**
+  String get authDocumentOpenFailed;
+
+  /// Button that retries loading something that failed.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar'**
+  String get authRetry;
+
+  /// Form-level message for 429 with a Retry-After, rounded up to minutes.
+  ///
+  /// In es, this message translates to:
+  /// **'{minutes, plural, =1{Demasiados intentos. Espera 1 min y vuelve a intentarlo.} other{Demasiados intentos. Espera {minutes} min y vuelve a intentarlo.}}'**
+  String authErrorRateLimited(int minutes);
+
+  /// Form-level message for 429 without a Retry-After.
+  ///
+  /// In es, this message translates to:
+  /// **'Demasiados intentos. Espera unos minutos y vuelve a intentarlo.'**
+  String get authErrorRateLimitedNoWait;
+
+  /// Form-level message: offline or timeout.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay conexión con el servidor. Revisa la conexión a internet e intenta de nuevo.'**
+  String get authErrorUnreachable;
+
+  /// Form-level message for 404 (the module may be off on the server).
+  ///
+  /// In es, this message translates to:
+  /// **'Este servicio no está disponible por ahora.'**
+  String get authErrorUnavailable;
+
+  /// Form-level message for a server error or an unreadable answer.
+  ///
+  /// In es, this message translates to:
+  /// **'Algo salió mal. Intenta de nuevo en unos minutos.'**
+  String get authErrorUnexpected;
+
+  /// Title of the verify-email screen.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar correo'**
+  String get authVerifyTitle;
+
+  /// Where the code went and how long it lasts.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviamos un código de 6 dígitos a {email}. Vence en 15 minutos.'**
+  String authVerifyIntro(String email);
+
+  /// Help under the verify intro: check the spam folder.
+  ///
+  /// In es, this message translates to:
+  /// **'Si no aparece, conviene revisar la carpeta de correo no deseado.'**
+  String get authVerifySpamHint;
+
+  /// Label of the 6-digit code field.
+  ///
+  /// In es, this message translates to:
+  /// **'Código de verificación'**
+  String get authCodeLabel;
+
+  /// Inline error: the code is not 6 digits. Shown on blur.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe los 6 dígitos del código.'**
+  String get authCodeFormat;
+
+  /// Inline error: the server rejected the code (one generic message: wrong, expired, used up).
+  ///
+  /// In es, this message translates to:
+  /// **'El código no es válido o ya venció. Revisa el correo o pide uno nuevo.'**
+  String get authCodeRejected;
+
+  /// Primary button of the verify-email screen.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar'**
+  String get authVerifySubmit;
+
+  /// Button that asks for a new code once the cooldown is over.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar otro código'**
+  String get authResend;
+
+  /// Countdown before a new code can be asked for, as m:ss.
+  ///
+  /// In es, this message translates to:
+  /// **'Otro código disponible en {time}.'**
+  String authResendWait(String time);
+
+  /// Generic confirmation after a resend (never confirms that the email exists).
+  ///
+  /// In es, this message translates to:
+  /// **'Si hay un registro pendiente con ese correo, enviamos un código nuevo.'**
+  String get authResendSent;
+
+  /// Text button that returns to the sign-up form to fix the email.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar correo'**
+  String get authChangeEmail;
+
+  /// Verify screen opened without a sign-up in progress.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay un registro en curso.'**
+  String get authVerifyNoPending;
 }
 
 class _AppLocalizationsDelegate

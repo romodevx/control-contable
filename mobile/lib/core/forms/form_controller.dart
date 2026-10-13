@@ -1,5 +1,7 @@
+import 'package:control_contable/core/forms/checkbox_controller.dart';
 import 'package:control_contable/core/forms/field_controller.dart';
 import 'package:control_contable/core/forms/field_error.dart';
+import 'package:control_contable/core/forms/form_field_model.dart';
 import 'package:control_contable/core/forms/typed_field_controllers.dart';
 import 'package:flutter/foundation.dart';
 
@@ -24,16 +26,16 @@ class AppFormController extends ChangeNotifier {
   /// Which fields carry a requirement mark.
   final RequirementMark marks;
 
-  final List<AppFieldController> _fields = [];
+  final List<AppFormFieldModel> _fields = [];
   bool _isSaving = false;
   bool _isDisposed = false;
   int _submitFailures = 0;
 
   /// The fields, in reading order.
-  List<AppFieldController> get fields => List.unmodifiable(_fields);
+  List<AppFormFieldModel> get fields => List.unmodifiable(_fields);
 
   /// Fields showing an error, in reading order.
-  List<AppFieldController> get invalidFields => [
+  List<AppFormFieldModel> get invalidFields => [
     for (final field in _fields)
       if (field.error != null) field,
   ];
@@ -54,6 +56,7 @@ class AppFormController extends ChangeNotifier {
     bool isRequired = true,
     bool keepForNext = false,
     FieldValidator? validator,
+    bool verbatim = false,
     String initialText = '',
   }) => _add(
     AppFieldController(
@@ -61,6 +64,7 @@ class AppFormController extends ChangeNotifier {
       isRequired: isRequired,
       keepForNext: keepForNext,
       validator: validator,
+      verbatim: verbatim,
       initialText: initialText,
     ),
   );
@@ -95,6 +99,19 @@ class AppFormController extends ChangeNotifier {
     ),
   );
 
+  /// Adds a checkbox (see [AppCheckboxController.new]).
+  AppCheckboxController checkboxField({
+    required String label,
+    bool isRequired = true,
+    bool keepForNext = false,
+  }) => _add(
+    AppCheckboxController(
+      label: label,
+      isRequired: isRequired,
+      keepForNext: keepForNext,
+    ),
+  );
+
   /// Validates every field and, when all pass, runs [save] with the busy
   /// state on. Returns whether [save] ran to completion.
   ///
@@ -123,7 +140,7 @@ class AppFormController extends ChangeNotifier {
   /// Shows the server's verdict (it is the authority): each field in
   /// [errors] shows its error, and the summary reacts as to a failed submit.
   /// An error clears once the user changes that field's value.
-  void showServerErrors(Map<AppFieldController, FieldError> errors) {
+  void showServerErrors(Map<AppFormFieldModel, FieldError> errors) {
     if (errors.isEmpty) return;
     for (final MapEntry(key: field, value: error) in errors.entries) {
       assert(_fields.contains(field), '${field.label} is not in this form.');
@@ -146,7 +163,7 @@ class AppFormController extends ChangeNotifier {
     if (cleared.isNotEmpty) cleared.first.focusNode.requestFocus();
   }
 
-  T _add<T extends AppFieldController>(T field) {
+  T _add<T extends AppFormFieldModel>(T field) {
     _fields.add(field);
     field.addListener(notifyListeners);
     return field;

@@ -15,8 +15,10 @@ abstract class PeriodTotals with _$PeriodTotals {
     required int count,
     @JsonKey(name: 'amount_cents') required NonNegativeCents amountCents,
     @JsonKey(name: 'iva_cents') required NonNegativeCents ivaCents,
-    @JsonKey(name: 'isr_withheld_cents') NonNegativeCents? isrWithheldCents,
-    @JsonKey(name: 'iva_withheld_cents') NonNegativeCents? ivaWithheldCents,
+    @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')
+    NonNegativeCents? isrWithheldCents,
+    @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')
+    NonNegativeCents? ivaWithheldCents,
   }) = _PeriodTotals;
 
   factory PeriodTotals.fromJson(Map<String, Object?> json) =>

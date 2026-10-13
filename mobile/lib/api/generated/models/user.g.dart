@@ -17,5 +17,5 @@ Map<String, dynamic> _$UserToJson(_User instance) => <String, dynamic>{
   'id': instance.id,
   'email': instance.email,
   'created_at': instance.createdAt.toIso8601String(),
-  'name': instance.name,
+  'name': ?instance.name,
 };

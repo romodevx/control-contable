@@ -21,8 +21,8 @@ Map<String, dynamic> _$DeductibilityHintToJson(_DeductibilityHint instance) =>
       'regime_code': instance.regimeCode,
       'deductibility':
           _$DeductibilityHintDeductibilityEnumMap[instance.deductibility]!,
-      'note': instance.note,
-      'legal_basis': instance.legalBasis,
+      'note': ?instance.note,
+      'legal_basis': ?instance.legalBasis,
     };
 
 const _$DeductibilityHintDeductibilityEnumMap = {

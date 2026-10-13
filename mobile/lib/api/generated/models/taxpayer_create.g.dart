@@ -23,7 +23,7 @@ Map<String, dynamic> _$TaxpayerCreateToJson(_TaxpayerCreate instance) =>
       'rfc': instance.rfc,
       'display_name': instance.displayName,
       'regimes': instance.regimes,
-      'id': instance.id,
+      'id': ?instance.id,
     };
 
 const _$PersonTypeEnumMap = {

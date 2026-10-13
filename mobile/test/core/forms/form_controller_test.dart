@@ -4,6 +4,8 @@ import 'package:control_contable/core/forms/field_error.dart';
 import 'package:control_contable/core/forms/form_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../helpers/synthetic_password.dart';
+
 void main() {
   late AppFormController form;
 
@@ -133,7 +135,29 @@ void main() {
     );
   });
 
+  group('verbatim fields (passwords)', () {
+    test('keep surrounding spaces through blur and in their value', () {
+      final password = form.textField(label: 'Contraseña', verbatim: true)
+        ..text.text = ' ${syntheticPassword()} '
+        ..handleBlur();
+
+      expect(password.text.text, ' ${syntheticPassword()} ');
+      expect(password.value, ' ${syntheticPassword()} ');
+    });
+  });
+
   group('server errors (the server is the authority)', () {
+    test('survive leaving the field while the value is unchanged', () {
+      final password = form.textField(label: 'Contraseña')
+        ..text.text = syntheticPassword();
+      form.showServerErrors({password: const CustomFieldError('Filtrada')});
+
+      // The error summary takes focus: the field blurs.
+      password.handleBlur();
+
+      expect(password.error, isA<CustomFieldError>());
+    });
+
     test('show on their fields and count as a failed submit', () {
       final name = form.textField(label: 'Nombre')..text.text = 'Ana';
       final amount = form.moneyField(label: 'Monto')..text.text = '10';

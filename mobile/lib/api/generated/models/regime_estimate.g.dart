@@ -37,11 +37,11 @@ Map<String, dynamic> _$RegimeEstimateToJson(_RegimeEstimate instance) =>
       'treatment': _$TreatmentEnumMap[instance.treatment]!,
       'status': _$RegimeEstimateStatusEnumMap[instance.status]!,
       'parameter_set': instance.parameterSet,
-      'missing_inputs': instance.missingInputs,
-      'explanation': instance.explanation,
-      'isr': instance.isr,
-      'iva_components': instance.ivaComponents,
-      'withheld_to_remit_cents': instance.withheldToRemitCents,
+      'missing_inputs': ?instance.missingInputs,
+      'explanation': ?instance.explanation,
+      'isr': ?instance.isr,
+      'iva_components': ?instance.ivaComponents,
+      'withheld_to_remit_cents': ?instance.withheldToRemitCents,
     };
 
 const _$TreatmentEnumMap = {

@@ -16,8 +16,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$RegimeEstimate {
 
-@JsonKey(name: 'regime_code') RegimeCode get regimeCode;@JsonKey(name: 'regime_name') String get regimeName; Treatment get treatment; RegimeEstimateStatus get status;@JsonKey(name: 'parameter_set') ParameterSetRef get parameterSet;@JsonKey(name: 'missing_inputs') List<String>? get missingInputs; String? get explanation; TaxResult? get isr;@JsonKey(name: 'iva_components') IvaComponents? get ivaComponents;/// ISR/IVA the taxpayer withheld from suppliers in this regime.
-@JsonKey(name: 'withheld_to_remit_cents') NonNegativeCents? get withheldToRemitCents;
+@JsonKey(name: 'regime_code') RegimeCode get regimeCode;@JsonKey(name: 'regime_name') String get regimeName; Treatment get treatment; RegimeEstimateStatus get status;@JsonKey(name: 'parameter_set') ParameterSetRef get parameterSet;@JsonKey(includeIfNull: false, name: 'missing_inputs') List<String>? get missingInputs;@JsonKey(includeIfNull: false) String? get explanation;@JsonKey(includeIfNull: false) TaxResult? get isr;@JsonKey(includeIfNull: false, name: 'iva_components') IvaComponents? get ivaComponents;/// ISR/IVA the taxpayer withheld from suppliers in this regime.
+@JsonKey(includeIfNull: false, name: 'withheld_to_remit_cents') NonNegativeCents? get withheldToRemitCents;
 /// Create a copy of RegimeEstimate
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -55,7 +55,7 @@ abstract mixin class $RegimeEstimateCopyWith<$Res>  {
   factory $RegimeEstimateCopyWith(RegimeEstimate value, $Res Function(RegimeEstimate) _then) = _$RegimeEstimateCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'regime_code') RegimeCode regimeCode,@JsonKey(name: 'regime_name') String regimeName, Treatment treatment, RegimeEstimateStatus status,@JsonKey(name: 'parameter_set') ParameterSetRef parameterSet,@JsonKey(name: 'missing_inputs') List<String>? missingInputs, String? explanation, TaxResult? isr,@JsonKey(name: 'iva_components') IvaComponents? ivaComponents,@JsonKey(name: 'withheld_to_remit_cents') NonNegativeCents? withheldToRemitCents
+@JsonKey(name: 'regime_code') RegimeCode regimeCode,@JsonKey(name: 'regime_name') String regimeName, Treatment treatment, RegimeEstimateStatus status,@JsonKey(name: 'parameter_set') ParameterSetRef parameterSet,@JsonKey(includeIfNull: false, name: 'missing_inputs') List<String>? missingInputs,@JsonKey(includeIfNull: false) String? explanation,@JsonKey(includeIfNull: false) TaxResult? isr,@JsonKey(includeIfNull: false, name: 'iva_components') IvaComponents? ivaComponents,@JsonKey(includeIfNull: false, name: 'withheld_to_remit_cents') NonNegativeCents? withheldToRemitCents
 });
 
 
@@ -202,7 +202,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'regime_code')  RegimeCode regimeCode, @JsonKey(name: 'regime_name')  String regimeName,  Treatment treatment,  RegimeEstimateStatus status, @JsonKey(name: 'parameter_set')  ParameterSetRef parameterSet, @JsonKey(name: 'missing_inputs')  List<String>? missingInputs,  String? explanation,  TaxResult? isr, @JsonKey(name: 'iva_components')  IvaComponents? ivaComponents, @JsonKey(name: 'withheld_to_remit_cents')  NonNegativeCents? withheldToRemitCents)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'regime_code')  RegimeCode regimeCode, @JsonKey(name: 'regime_name')  String regimeName,  Treatment treatment,  RegimeEstimateStatus status, @JsonKey(name: 'parameter_set')  ParameterSetRef parameterSet, @JsonKey(includeIfNull: false, name: 'missing_inputs')  List<String>? missingInputs, @JsonKey(includeIfNull: false)  String? explanation, @JsonKey(includeIfNull: false)  TaxResult? isr, @JsonKey(includeIfNull: false, name: 'iva_components')  IvaComponents? ivaComponents, @JsonKey(includeIfNull: false, name: 'withheld_to_remit_cents')  NonNegativeCents? withheldToRemitCents)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RegimeEstimate() when $default != null:
 return $default(_that.regimeCode,_that.regimeName,_that.treatment,_that.status,_that.parameterSet,_that.missingInputs,_that.explanation,_that.isr,_that.ivaComponents,_that.withheldToRemitCents);case _:
@@ -223,7 +223,7 @@ return $default(_that.regimeCode,_that.regimeName,_that.treatment,_that.status,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'regime_code')  RegimeCode regimeCode, @JsonKey(name: 'regime_name')  String regimeName,  Treatment treatment,  RegimeEstimateStatus status, @JsonKey(name: 'parameter_set')  ParameterSetRef parameterSet, @JsonKey(name: 'missing_inputs')  List<String>? missingInputs,  String? explanation,  TaxResult? isr, @JsonKey(name: 'iva_components')  IvaComponents? ivaComponents, @JsonKey(name: 'withheld_to_remit_cents')  NonNegativeCents? withheldToRemitCents)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'regime_code')  RegimeCode regimeCode, @JsonKey(name: 'regime_name')  String regimeName,  Treatment treatment,  RegimeEstimateStatus status, @JsonKey(name: 'parameter_set')  ParameterSetRef parameterSet, @JsonKey(includeIfNull: false, name: 'missing_inputs')  List<String>? missingInputs, @JsonKey(includeIfNull: false)  String? explanation, @JsonKey(includeIfNull: false)  TaxResult? isr, @JsonKey(includeIfNull: false, name: 'iva_components')  IvaComponents? ivaComponents, @JsonKey(includeIfNull: false, name: 'withheld_to_remit_cents')  NonNegativeCents? withheldToRemitCents)  $default,) {final _that = this;
 switch (_that) {
 case _RegimeEstimate():
 return $default(_that.regimeCode,_that.regimeName,_that.treatment,_that.status,_that.parameterSet,_that.missingInputs,_that.explanation,_that.isr,_that.ivaComponents,_that.withheldToRemitCents);case _:
@@ -243,7 +243,7 @@ return $default(_that.regimeCode,_that.regimeName,_that.treatment,_that.status,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'regime_code')  RegimeCode regimeCode, @JsonKey(name: 'regime_name')  String regimeName,  Treatment treatment,  RegimeEstimateStatus status, @JsonKey(name: 'parameter_set')  ParameterSetRef parameterSet, @JsonKey(name: 'missing_inputs')  List<String>? missingInputs,  String? explanation,  TaxResult? isr, @JsonKey(name: 'iva_components')  IvaComponents? ivaComponents, @JsonKey(name: 'withheld_to_remit_cents')  NonNegativeCents? withheldToRemitCents)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'regime_code')  RegimeCode regimeCode, @JsonKey(name: 'regime_name')  String regimeName,  Treatment treatment,  RegimeEstimateStatus status, @JsonKey(name: 'parameter_set')  ParameterSetRef parameterSet, @JsonKey(includeIfNull: false, name: 'missing_inputs')  List<String>? missingInputs, @JsonKey(includeIfNull: false)  String? explanation, @JsonKey(includeIfNull: false)  TaxResult? isr, @JsonKey(includeIfNull: false, name: 'iva_components')  IvaComponents? ivaComponents, @JsonKey(includeIfNull: false, name: 'withheld_to_remit_cents')  NonNegativeCents? withheldToRemitCents)?  $default,) {final _that = this;
 switch (_that) {
 case _RegimeEstimate() when $default != null:
 return $default(_that.regimeCode,_that.regimeName,_that.treatment,_that.status,_that.parameterSet,_that.missingInputs,_that.explanation,_that.isr,_that.ivaComponents,_that.withheldToRemitCents);case _:
@@ -258,7 +258,7 @@ return $default(_that.regimeCode,_that.regimeName,_that.treatment,_that.status,_
 @JsonSerializable()
 
 class _RegimeEstimate implements RegimeEstimate {
-  const _RegimeEstimate({@JsonKey(name: 'regime_code') required this.regimeCode, @JsonKey(name: 'regime_name') required this.regimeName, required this.treatment, required this.status, @JsonKey(name: 'parameter_set') required this.parameterSet, @JsonKey(name: 'missing_inputs')  List<String>? missingInputs, this.explanation, this.isr, @JsonKey(name: 'iva_components') this.ivaComponents, @JsonKey(name: 'withheld_to_remit_cents') this.withheldToRemitCents}): _missingInputs = missingInputs;
+  const _RegimeEstimate({@JsonKey(name: 'regime_code') required this.regimeCode, @JsonKey(name: 'regime_name') required this.regimeName, required this.treatment, required this.status, @JsonKey(name: 'parameter_set') required this.parameterSet, @JsonKey(includeIfNull: false, name: 'missing_inputs')  List<String>? missingInputs, @JsonKey(includeIfNull: false) this.explanation, @JsonKey(includeIfNull: false) this.isr, @JsonKey(includeIfNull: false, name: 'iva_components') this.ivaComponents, @JsonKey(includeIfNull: false, name: 'withheld_to_remit_cents') this.withheldToRemitCents}): _missingInputs = missingInputs;
   factory _RegimeEstimate.fromJson(Map<String, dynamic> json) => _$RegimeEstimateFromJson(json);
 
 @override@JsonKey(name: 'regime_code') final  RegimeCode regimeCode;
@@ -267,7 +267,7 @@ class _RegimeEstimate implements RegimeEstimate {
 @override final  RegimeEstimateStatus status;
 @override@JsonKey(name: 'parameter_set') final  ParameterSetRef parameterSet;
  final  List<String>? _missingInputs;
-@override@JsonKey(name: 'missing_inputs') List<String>? get missingInputs {
+@override@JsonKey(includeIfNull: false, name: 'missing_inputs') List<String>? get missingInputs {
   final value = _missingInputs;
   if (value == null) return null;
   if (_missingInputs is EqualUnmodifiableListView) return _missingInputs;
@@ -275,11 +275,11 @@ class _RegimeEstimate implements RegimeEstimate {
   return EqualUnmodifiableListView(value);
 }
 
-@override final  String? explanation;
-@override final  TaxResult? isr;
-@override@JsonKey(name: 'iva_components') final  IvaComponents? ivaComponents;
+@override@JsonKey(includeIfNull: false) final  String? explanation;
+@override@JsonKey(includeIfNull: false) final  TaxResult? isr;
+@override@JsonKey(includeIfNull: false, name: 'iva_components') final  IvaComponents? ivaComponents;
 /// ISR/IVA the taxpayer withheld from suppliers in this regime.
-@override@JsonKey(name: 'withheld_to_remit_cents') final  NonNegativeCents? withheldToRemitCents;
+@override@JsonKey(includeIfNull: false, name: 'withheld_to_remit_cents') final  NonNegativeCents? withheldToRemitCents;
 
 /// Create a copy of RegimeEstimate
 /// with the given fields replaced by the non-null parameter values.
@@ -316,7 +316,7 @@ abstract mixin class _$RegimeEstimateCopyWith<$Res> implements $RegimeEstimateCo
   factory _$RegimeEstimateCopyWith(_RegimeEstimate value, $Res Function(_RegimeEstimate) _then) = __$RegimeEstimateCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'regime_code') RegimeCode regimeCode,@JsonKey(name: 'regime_name') String regimeName, Treatment treatment, RegimeEstimateStatus status,@JsonKey(name: 'parameter_set') ParameterSetRef parameterSet,@JsonKey(name: 'missing_inputs') List<String>? missingInputs, String? explanation, TaxResult? isr,@JsonKey(name: 'iva_components') IvaComponents? ivaComponents,@JsonKey(name: 'withheld_to_remit_cents') NonNegativeCents? withheldToRemitCents
+@JsonKey(name: 'regime_code') RegimeCode regimeCode,@JsonKey(name: 'regime_name') String regimeName, Treatment treatment, RegimeEstimateStatus status,@JsonKey(name: 'parameter_set') ParameterSetRef parameterSet,@JsonKey(includeIfNull: false, name: 'missing_inputs') List<String>? missingInputs,@JsonKey(includeIfNull: false) String? explanation,@JsonKey(includeIfNull: false) TaxResult? isr,@JsonKey(includeIfNull: false, name: 'iva_components') IvaComponents? ivaComponents,@JsonKey(includeIfNull: false, name: 'withheld_to_remit_cents') NonNegativeCents? withheldToRemitCents
 });
 
 

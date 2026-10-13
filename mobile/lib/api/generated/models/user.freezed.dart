@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$User {
 
- Uuid get id; String get email;@JsonKey(name: 'created_at') DateTime get createdAt; String? get name;
+ Uuid get id; String get email;@JsonKey(name: 'created_at') DateTime get createdAt;@JsonKey(includeIfNull: false) String? get name;
 /// Create a copy of User
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -54,7 +54,7 @@ abstract mixin class $UserCopyWith<$Res>  {
   factory $UserCopyWith(User value, $Res Function(User) _then) = _$UserCopyWithImpl;
 @useResult
 $Res call({
- Uuid id, String email,@JsonKey(name: 'created_at') DateTime createdAt, String? name
+ Uuid id, String email,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(includeIfNull: false) String? name
 });
 
 
@@ -162,7 +162,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Uuid id,  String email, @JsonKey(name: 'created_at')  DateTime createdAt,  String? name)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Uuid id,  String email, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(includeIfNull: false)  String? name)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _User() when $default != null:
 return $default(_that.id,_that.email,_that.createdAt,_that.name);case _:
@@ -183,7 +183,7 @@ return $default(_that.id,_that.email,_that.createdAt,_that.name);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Uuid id,  String email, @JsonKey(name: 'created_at')  DateTime createdAt,  String? name)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Uuid id,  String email, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(includeIfNull: false)  String? name)  $default,) {final _that = this;
 switch (_that) {
 case _User():
 return $default(_that.id,_that.email,_that.createdAt,_that.name);case _:
@@ -203,7 +203,7 @@ return $default(_that.id,_that.email,_that.createdAt,_that.name);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Uuid id,  String email, @JsonKey(name: 'created_at')  DateTime createdAt,  String? name)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Uuid id,  String email, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(includeIfNull: false)  String? name)?  $default,) {final _that = this;
 switch (_that) {
 case _User() when $default != null:
 return $default(_that.id,_that.email,_that.createdAt,_that.name);case _:
@@ -218,13 +218,13 @@ return $default(_that.id,_that.email,_that.createdAt,_that.name);case _:
 @JsonSerializable()
 
 class _User implements User {
-  const _User({required this.id, required this.email, @JsonKey(name: 'created_at') required this.createdAt, this.name});
+  const _User({required this.id, required this.email, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(includeIfNull: false) this.name});
   factory _User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
 
 @override final  Uuid id;
 @override final  String email;
 @override@JsonKey(name: 'created_at') final  DateTime createdAt;
-@override final  String? name;
+@override@JsonKey(includeIfNull: false) final  String? name;
 
 /// Create a copy of User
 /// with the given fields replaced by the non-null parameter values.
@@ -261,7 +261,7 @@ abstract mixin class _$UserCopyWith<$Res> implements $UserCopyWith<$Res> {
   factory _$UserCopyWith(_User value, $Res Function(_User) _then) = __$UserCopyWithImpl;
 @override @useResult
 $Res call({
- Uuid id, String email,@JsonKey(name: 'created_at') DateTime createdAt, String? name
+ Uuid id, String email,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(includeIfNull: false) String? name
 });
 
 

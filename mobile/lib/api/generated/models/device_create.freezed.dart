@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$DeviceCreate {
 
- Uuid get id; DeviceCreatePlatform get platform;@JsonKey(name: 'push_token') String get pushToken;@JsonKey(name: 'app_version') String? get appVersion;
+ Uuid get id; DeviceCreatePlatform get platform;@JsonKey(name: 'push_token') String get pushToken;@JsonKey(includeIfNull: false, name: 'app_version') String? get appVersion;
 /// Create a copy of DeviceCreate
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -54,7 +54,7 @@ abstract mixin class $DeviceCreateCopyWith<$Res>  {
   factory $DeviceCreateCopyWith(DeviceCreate value, $Res Function(DeviceCreate) _then) = _$DeviceCreateCopyWithImpl;
 @useResult
 $Res call({
- Uuid id, DeviceCreatePlatform platform,@JsonKey(name: 'push_token') String pushToken,@JsonKey(name: 'app_version') String? appVersion
+ Uuid id, DeviceCreatePlatform platform,@JsonKey(name: 'push_token') String pushToken,@JsonKey(includeIfNull: false, name: 'app_version') String? appVersion
 });
 
 
@@ -162,7 +162,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Uuid id,  DeviceCreatePlatform platform, @JsonKey(name: 'push_token')  String pushToken, @JsonKey(name: 'app_version')  String? appVersion)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Uuid id,  DeviceCreatePlatform platform, @JsonKey(name: 'push_token')  String pushToken, @JsonKey(includeIfNull: false, name: 'app_version')  String? appVersion)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _DeviceCreate() when $default != null:
 return $default(_that.id,_that.platform,_that.pushToken,_that.appVersion);case _:
@@ -183,7 +183,7 @@ return $default(_that.id,_that.platform,_that.pushToken,_that.appVersion);case _
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Uuid id,  DeviceCreatePlatform platform, @JsonKey(name: 'push_token')  String pushToken, @JsonKey(name: 'app_version')  String? appVersion)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Uuid id,  DeviceCreatePlatform platform, @JsonKey(name: 'push_token')  String pushToken, @JsonKey(includeIfNull: false, name: 'app_version')  String? appVersion)  $default,) {final _that = this;
 switch (_that) {
 case _DeviceCreate():
 return $default(_that.id,_that.platform,_that.pushToken,_that.appVersion);case _:
@@ -203,7 +203,7 @@ return $default(_that.id,_that.platform,_that.pushToken,_that.appVersion);case _
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Uuid id,  DeviceCreatePlatform platform, @JsonKey(name: 'push_token')  String pushToken, @JsonKey(name: 'app_version')  String? appVersion)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Uuid id,  DeviceCreatePlatform platform, @JsonKey(name: 'push_token')  String pushToken, @JsonKey(includeIfNull: false, name: 'app_version')  String? appVersion)?  $default,) {final _that = this;
 switch (_that) {
 case _DeviceCreate() when $default != null:
 return $default(_that.id,_that.platform,_that.pushToken,_that.appVersion);case _:
@@ -218,13 +218,13 @@ return $default(_that.id,_that.platform,_that.pushToken,_that.appVersion);case _
 @JsonSerializable()
 
 class _DeviceCreate implements DeviceCreate {
-  const _DeviceCreate({required this.id, required this.platform, @JsonKey(name: 'push_token') required this.pushToken, @JsonKey(name: 'app_version') this.appVersion});
+  const _DeviceCreate({required this.id, required this.platform, @JsonKey(name: 'push_token') required this.pushToken, @JsonKey(includeIfNull: false, name: 'app_version') this.appVersion});
   factory _DeviceCreate.fromJson(Map<String, dynamic> json) => _$DeviceCreateFromJson(json);
 
 @override final  Uuid id;
 @override final  DeviceCreatePlatform platform;
 @override@JsonKey(name: 'push_token') final  String pushToken;
-@override@JsonKey(name: 'app_version') final  String? appVersion;
+@override@JsonKey(includeIfNull: false, name: 'app_version') final  String? appVersion;
 
 /// Create a copy of DeviceCreate
 /// with the given fields replaced by the non-null parameter values.
@@ -261,7 +261,7 @@ abstract mixin class _$DeviceCreateCopyWith<$Res> implements $DeviceCreateCopyWi
   factory _$DeviceCreateCopyWith(_DeviceCreate value, $Res Function(_DeviceCreate) _then) = __$DeviceCreateCopyWithImpl;
 @override @useResult
 $Res call({
- Uuid id, DeviceCreatePlatform platform,@JsonKey(name: 'push_token') String pushToken,@JsonKey(name: 'app_version') String? appVersion
+ Uuid id, DeviceCreatePlatform platform,@JsonKey(name: 'push_token') String pushToken,@JsonKey(includeIfNull: false, name: 'app_version') String? appVersion
 });
 
 

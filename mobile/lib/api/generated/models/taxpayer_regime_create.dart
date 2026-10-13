@@ -15,8 +15,8 @@ part 'taxpayer_regime_create.g.dart';
 abstract class TaxpayerRegimeCreate with _$TaxpayerRegimeCreate {
   const factory TaxpayerRegimeCreate({
     @JsonKey(name: 'regime_code') required RegimeCode regimeCode,
-    RegimeOptions? options,
-    @JsonKey(name: 'start_period') Period? startPeriod,
+    @JsonKey(includeIfNull: false) RegimeOptions? options,
+    @JsonKey(includeIfNull: false, name: 'start_period') Period? startPeriod,
   }) = _TaxpayerRegimeCreate;
 
   factory TaxpayerRegimeCreate.fromJson(Map<String, Object?> json) =>

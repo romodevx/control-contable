@@ -18,5 +18,5 @@ Map<String, dynamic> _$ExpensePageToJson(_ExpensePage instance) =>
     <String, dynamic>{
       'items': instance.items,
       'totals': instance.totals,
-      'next_cursor': instance.nextCursor,
+      'next_cursor': ?instance.nextCursor,
     };

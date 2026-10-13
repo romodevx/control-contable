@@ -23,13 +23,15 @@ abstract class RegimeEstimate with _$RegimeEstimate {
     required Treatment treatment,
     required RegimeEstimateStatus status,
     @JsonKey(name: 'parameter_set') required ParameterSetRef parameterSet,
-    @JsonKey(name: 'missing_inputs') List<String>? missingInputs,
-    String? explanation,
-    TaxResult? isr,
-    @JsonKey(name: 'iva_components') IvaComponents? ivaComponents,
+    @JsonKey(includeIfNull: false, name: 'missing_inputs')
+    List<String>? missingInputs,
+    @JsonKey(includeIfNull: false) String? explanation,
+    @JsonKey(includeIfNull: false) TaxResult? isr,
+    @JsonKey(includeIfNull: false, name: 'iva_components')
+    IvaComponents? ivaComponents,
 
     /// ISR/IVA the taxpayer withheld from suppliers in this regime.
-    @JsonKey(name: 'withheld_to_remit_cents')
+    @JsonKey(includeIfNull: false, name: 'withheld_to_remit_cents')
     NonNegativeCents? withheldToRemitCents,
   }) = _RegimeEstimate;
 

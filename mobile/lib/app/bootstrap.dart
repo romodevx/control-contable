@@ -1,6 +1,8 @@
 import 'package:control_contable/app/app.dart';
+import 'package:control_contable/app/feature_modules.dart';
 import 'package:control_contable/app/font_licenses.dart';
 import 'package:control_contable/core/config/app_config.dart';
+import 'package:control_contable/core/router/feature_module.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -24,7 +26,10 @@ void bootstrap(AppFlavor flavor) {
   );
   runApp(
     ProviderScope(
-      overrides: [appConfigProvider.overrideWithValue(config)],
+      overrides: [
+        appConfigProvider.overrideWithValue(config),
+        featureModulesProvider.overrideWithValue(appFeatureModules),
+      ],
       child: const ControlContableApp(),
     ),
   );

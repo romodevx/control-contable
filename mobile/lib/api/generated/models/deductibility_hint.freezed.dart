@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$DeductibilityHint {
 
-@JsonKey(name: 'regime_code') RegimeCode get regimeCode; DeductibilityHintDeductibility get deductibility; String? get note;@JsonKey(name: 'legal_basis') String? get legalBasis;
+@JsonKey(name: 'regime_code') RegimeCode get regimeCode; DeductibilityHintDeductibility get deductibility;@JsonKey(includeIfNull: false) String? get note;@JsonKey(includeIfNull: false, name: 'legal_basis') String? get legalBasis;
 /// Create a copy of DeductibilityHint
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -54,7 +54,7 @@ abstract mixin class $DeductibilityHintCopyWith<$Res>  {
   factory $DeductibilityHintCopyWith(DeductibilityHint value, $Res Function(DeductibilityHint) _then) = _$DeductibilityHintCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'regime_code') RegimeCode regimeCode, DeductibilityHintDeductibility deductibility, String? note,@JsonKey(name: 'legal_basis') String? legalBasis
+@JsonKey(name: 'regime_code') RegimeCode regimeCode, DeductibilityHintDeductibility deductibility,@JsonKey(includeIfNull: false) String? note,@JsonKey(includeIfNull: false, name: 'legal_basis') String? legalBasis
 });
 
 
@@ -162,7 +162,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'regime_code')  RegimeCode regimeCode,  DeductibilityHintDeductibility deductibility,  String? note, @JsonKey(name: 'legal_basis')  String? legalBasis)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'regime_code')  RegimeCode regimeCode,  DeductibilityHintDeductibility deductibility, @JsonKey(includeIfNull: false)  String? note, @JsonKey(includeIfNull: false, name: 'legal_basis')  String? legalBasis)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _DeductibilityHint() when $default != null:
 return $default(_that.regimeCode,_that.deductibility,_that.note,_that.legalBasis);case _:
@@ -183,7 +183,7 @@ return $default(_that.regimeCode,_that.deductibility,_that.note,_that.legalBasis
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'regime_code')  RegimeCode regimeCode,  DeductibilityHintDeductibility deductibility,  String? note, @JsonKey(name: 'legal_basis')  String? legalBasis)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'regime_code')  RegimeCode regimeCode,  DeductibilityHintDeductibility deductibility, @JsonKey(includeIfNull: false)  String? note, @JsonKey(includeIfNull: false, name: 'legal_basis')  String? legalBasis)  $default,) {final _that = this;
 switch (_that) {
 case _DeductibilityHint():
 return $default(_that.regimeCode,_that.deductibility,_that.note,_that.legalBasis);case _:
@@ -203,7 +203,7 @@ return $default(_that.regimeCode,_that.deductibility,_that.note,_that.legalBasis
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'regime_code')  RegimeCode regimeCode,  DeductibilityHintDeductibility deductibility,  String? note, @JsonKey(name: 'legal_basis')  String? legalBasis)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'regime_code')  RegimeCode regimeCode,  DeductibilityHintDeductibility deductibility, @JsonKey(includeIfNull: false)  String? note, @JsonKey(includeIfNull: false, name: 'legal_basis')  String? legalBasis)?  $default,) {final _that = this;
 switch (_that) {
 case _DeductibilityHint() when $default != null:
 return $default(_that.regimeCode,_that.deductibility,_that.note,_that.legalBasis);case _:
@@ -218,13 +218,13 @@ return $default(_that.regimeCode,_that.deductibility,_that.note,_that.legalBasis
 @JsonSerializable()
 
 class _DeductibilityHint implements DeductibilityHint {
-  const _DeductibilityHint({@JsonKey(name: 'regime_code') required this.regimeCode, required this.deductibility, this.note, @JsonKey(name: 'legal_basis') this.legalBasis});
+  const _DeductibilityHint({@JsonKey(name: 'regime_code') required this.regimeCode, required this.deductibility, @JsonKey(includeIfNull: false) this.note, @JsonKey(includeIfNull: false, name: 'legal_basis') this.legalBasis});
   factory _DeductibilityHint.fromJson(Map<String, dynamic> json) => _$DeductibilityHintFromJson(json);
 
 @override@JsonKey(name: 'regime_code') final  RegimeCode regimeCode;
 @override final  DeductibilityHintDeductibility deductibility;
-@override final  String? note;
-@override@JsonKey(name: 'legal_basis') final  String? legalBasis;
+@override@JsonKey(includeIfNull: false) final  String? note;
+@override@JsonKey(includeIfNull: false, name: 'legal_basis') final  String? legalBasis;
 
 /// Create a copy of DeductibilityHint
 /// with the given fields replaced by the non-null parameter values.
@@ -261,7 +261,7 @@ abstract mixin class _$DeductibilityHintCopyWith<$Res> implements $Deductibility
   factory _$DeductibilityHintCopyWith(_DeductibilityHint value, $Res Function(_DeductibilityHint) _then) = __$DeductibilityHintCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'regime_code') RegimeCode regimeCode, DeductibilityHintDeductibility deductibility, String? note,@JsonKey(name: 'legal_basis') String? legalBasis
+@JsonKey(name: 'regime_code') RegimeCode regimeCode, DeductibilityHintDeductibility deductibility,@JsonKey(includeIfNull: false) String? note,@JsonKey(includeIfNull: false, name: 'legal_basis') String? legalBasis
 });
 
 

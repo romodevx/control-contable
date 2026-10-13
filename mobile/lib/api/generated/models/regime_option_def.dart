@@ -19,11 +19,12 @@ abstract class RegimeOptionDef with _$RegimeOptionDef {
 
     /// The name has been replaced because it contains a keyword. Original name: `required`.
     @JsonKey(name: 'required') required bool requiredValue,
-    @JsonKey(name: 'allowed_values') List<String>? allowedValues,
+    @JsonKey(includeIfNull: false, name: 'allowed_values')
+    List<String>? allowedValues,
 
     /// The name has been replaced because it contains a keyword. Original name: `default`.
     /// The name has been replaced because it contains a keyword. Original name: `default`.
-    @JsonKey(name: 'default') dynamic defaultValue,
+    @JsonKey(includeIfNull: false, name: 'default') dynamic defaultValue,
   }) = _RegimeOptionDef;
 
   factory RegimeOptionDef.fromJson(Map<String, Object?> json) =>

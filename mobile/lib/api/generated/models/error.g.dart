@@ -19,7 +19,7 @@ Map<String, dynamic> _$ErrorToJson(_Error instance) => <String, dynamic>{
   'code': _$ErrorCodeEnumMap[instance.code]!,
   'message': instance.message,
   'request_id': instance.requestId,
-  'details': instance.details,
+  'details': ?instance.details,
 };
 
 const _$ErrorCodeEnumMap = {

@@ -23,7 +23,7 @@ Map<String, dynamic> _$SubscriptionPlanToJson(_SubscriptionPlan instance) =>
       'store': _$SubscriptionPlanStoreEnumMap[instance.store]!,
       'expires_at': instance.expiresAt.toIso8601String(),
       'will_renew': instance.willRenew,
-      'management_url': instance.managementUrl,
+      'management_url': ?instance.managementUrl,
     };
 
 const _$SubscriptionPlanPeriodEnumMap = {

@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$SubscriptionPlan {
 
-@JsonKey(name: 'product_id') String get productId; SubscriptionPlanPeriod get period; SubscriptionPlanStore get store;@JsonKey(name: 'expires_at') DateTime get expiresAt;@JsonKey(name: 'will_renew') bool get willRenew;@JsonKey(name: 'management_url') String? get managementUrl;
+@JsonKey(name: 'product_id') String get productId; SubscriptionPlanPeriod get period; SubscriptionPlanStore get store;@JsonKey(name: 'expires_at') DateTime get expiresAt;@JsonKey(name: 'will_renew') bool get willRenew;@JsonKey(includeIfNull: false, name: 'management_url') String? get managementUrl;
 /// Create a copy of SubscriptionPlan
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -54,7 +54,7 @@ abstract mixin class $SubscriptionPlanCopyWith<$Res>  {
   factory $SubscriptionPlanCopyWith(SubscriptionPlan value, $Res Function(SubscriptionPlan) _then) = _$SubscriptionPlanCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'product_id') String productId, SubscriptionPlanPeriod period, SubscriptionPlanStore store,@JsonKey(name: 'expires_at') DateTime expiresAt,@JsonKey(name: 'will_renew') bool willRenew,@JsonKey(name: 'management_url') String? managementUrl
+@JsonKey(name: 'product_id') String productId, SubscriptionPlanPeriod period, SubscriptionPlanStore store,@JsonKey(name: 'expires_at') DateTime expiresAt,@JsonKey(name: 'will_renew') bool willRenew,@JsonKey(includeIfNull: false, name: 'management_url') String? managementUrl
 });
 
 
@@ -164,7 +164,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'product_id')  String productId,  SubscriptionPlanPeriod period,  SubscriptionPlanStore store, @JsonKey(name: 'expires_at')  DateTime expiresAt, @JsonKey(name: 'will_renew')  bool willRenew, @JsonKey(name: 'management_url')  String? managementUrl)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'product_id')  String productId,  SubscriptionPlanPeriod period,  SubscriptionPlanStore store, @JsonKey(name: 'expires_at')  DateTime expiresAt, @JsonKey(name: 'will_renew')  bool willRenew, @JsonKey(includeIfNull: false, name: 'management_url')  String? managementUrl)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SubscriptionPlan() when $default != null:
 return $default(_that.productId,_that.period,_that.store,_that.expiresAt,_that.willRenew,_that.managementUrl);case _:
@@ -185,7 +185,7 @@ return $default(_that.productId,_that.period,_that.store,_that.expiresAt,_that.w
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'product_id')  String productId,  SubscriptionPlanPeriod period,  SubscriptionPlanStore store, @JsonKey(name: 'expires_at')  DateTime expiresAt, @JsonKey(name: 'will_renew')  bool willRenew, @JsonKey(name: 'management_url')  String? managementUrl)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'product_id')  String productId,  SubscriptionPlanPeriod period,  SubscriptionPlanStore store, @JsonKey(name: 'expires_at')  DateTime expiresAt, @JsonKey(name: 'will_renew')  bool willRenew, @JsonKey(includeIfNull: false, name: 'management_url')  String? managementUrl)  $default,) {final _that = this;
 switch (_that) {
 case _SubscriptionPlan():
 return $default(_that.productId,_that.period,_that.store,_that.expiresAt,_that.willRenew,_that.managementUrl);case _:
@@ -205,7 +205,7 @@ return $default(_that.productId,_that.period,_that.store,_that.expiresAt,_that.w
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'product_id')  String productId,  SubscriptionPlanPeriod period,  SubscriptionPlanStore store, @JsonKey(name: 'expires_at')  DateTime expiresAt, @JsonKey(name: 'will_renew')  bool willRenew, @JsonKey(name: 'management_url')  String? managementUrl)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'product_id')  String productId,  SubscriptionPlanPeriod period,  SubscriptionPlanStore store, @JsonKey(name: 'expires_at')  DateTime expiresAt, @JsonKey(name: 'will_renew')  bool willRenew, @JsonKey(includeIfNull: false, name: 'management_url')  String? managementUrl)?  $default,) {final _that = this;
 switch (_that) {
 case _SubscriptionPlan() when $default != null:
 return $default(_that.productId,_that.period,_that.store,_that.expiresAt,_that.willRenew,_that.managementUrl);case _:
@@ -220,7 +220,7 @@ return $default(_that.productId,_that.period,_that.store,_that.expiresAt,_that.w
 @JsonSerializable()
 
 class _SubscriptionPlan implements SubscriptionPlan {
-  const _SubscriptionPlan({@JsonKey(name: 'product_id') required this.productId, required this.period, required this.store, @JsonKey(name: 'expires_at') required this.expiresAt, @JsonKey(name: 'will_renew') required this.willRenew, @JsonKey(name: 'management_url') this.managementUrl});
+  const _SubscriptionPlan({@JsonKey(name: 'product_id') required this.productId, required this.period, required this.store, @JsonKey(name: 'expires_at') required this.expiresAt, @JsonKey(name: 'will_renew') required this.willRenew, @JsonKey(includeIfNull: false, name: 'management_url') this.managementUrl});
   factory _SubscriptionPlan.fromJson(Map<String, dynamic> json) => _$SubscriptionPlanFromJson(json);
 
 @override@JsonKey(name: 'product_id') final  String productId;
@@ -228,7 +228,7 @@ class _SubscriptionPlan implements SubscriptionPlan {
 @override final  SubscriptionPlanStore store;
 @override@JsonKey(name: 'expires_at') final  DateTime expiresAt;
 @override@JsonKey(name: 'will_renew') final  bool willRenew;
-@override@JsonKey(name: 'management_url') final  String? managementUrl;
+@override@JsonKey(includeIfNull: false, name: 'management_url') final  String? managementUrl;
 
 /// Create a copy of SubscriptionPlan
 /// with the given fields replaced by the non-null parameter values.
@@ -265,7 +265,7 @@ abstract mixin class _$SubscriptionPlanCopyWith<$Res> implements $SubscriptionPl
   factory _$SubscriptionPlanCopyWith(_SubscriptionPlan value, $Res Function(_SubscriptionPlan) _then) = __$SubscriptionPlanCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'product_id') String productId, SubscriptionPlanPeriod period, SubscriptionPlanStore store,@JsonKey(name: 'expires_at') DateTime expiresAt,@JsonKey(name: 'will_renew') bool willRenew,@JsonKey(name: 'management_url') String? managementUrl
+@JsonKey(name: 'product_id') String productId, SubscriptionPlanPeriod period, SubscriptionPlanStore store,@JsonKey(name: 'expires_at') DateTime expiresAt,@JsonKey(name: 'will_renew') bool willRenew,@JsonKey(includeIfNull: false, name: 'management_url') String? managementUrl
 });
 
 

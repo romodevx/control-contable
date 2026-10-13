@@ -13,7 +13,7 @@ abstract class ReminderSettings with _$ReminderSettings {
     @Default(false) bool enabled,
 
     /// Day of month for the early reminder; null disables it.
-    @JsonKey(name: 'early_day') @Default(14) int? earlyDay,
+    @JsonKey(includeIfNull: true, name: 'early_day') @Default(14) int? earlyDay,
     @JsonKey(name: 'on_due_date') @Default(true) bool onDueDate,
 
     /// Local time, America/Mexico_City.

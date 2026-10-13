@@ -20,7 +20,7 @@ abstract class TaxpayerRegime with _$TaxpayerRegime {
     required Treatment treatment,
     required RegimeOptions options,
     @JsonKey(name: 'start_period') required Period startPeriod,
-    @JsonKey(name: 'end_period') Period? endPeriod,
+    @JsonKey(includeIfNull: false, name: 'end_period') Period? endPeriod,
   }) = _TaxpayerRegime;
 
   factory TaxpayerRegime.fromJson(Map<String, Object?> json) =>

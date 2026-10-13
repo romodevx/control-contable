@@ -13,9 +13,11 @@ part 'access_summary.g.dart';
 abstract class AccessSummary with _$AccessSummary {
   const factory AccessSummary({
     required AccessSummaryAccess access,
-    @JsonKey(name: 'trial_ends_at') DateTime? trialEndsAt,
-    @JsonKey(name: 'incomes_remaining') int? incomesRemaining,
-    @JsonKey(name: 'expenses_remaining') int? expensesRemaining,
+    @JsonKey(includeIfNull: false, name: 'trial_ends_at') DateTime? trialEndsAt,
+    @JsonKey(includeIfNull: false, name: 'incomes_remaining')
+    int? incomesRemaining,
+    @JsonKey(includeIfNull: false, name: 'expenses_remaining')
+    int? expensesRemaining,
   }) = _AccessSummary;
 
   factory AccessSummary.fromJson(Map<String, Object?> json) =>
