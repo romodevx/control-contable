@@ -12,18 +12,20 @@ import (
 
 // Client-safe messages. They never echo the input or name internals.
 const (
-	msgInvalidInput        = "One or more fields are invalid." // the router's wording for every validation_failed
-	msgInvalidEmail        = "Enter a valid email address."
-	msgPasswordTooShort    = "Password must be at least 12 characters."
-	msgPasswordTooLong     = "Password is too long."
-	msgPasswordMalformed   = "Password contains invalid characters."
-	msgPasswordCommon      = "This password is too common. Choose a different one."
-	msgPasswordPolicy      = "Use at least 12 characters that are not a common or leaked password." //nolint:gosec // G101: a name or message, not a credential
-	msgInvalidName         = "Enter a name of 1 to 120 characters."
-	msgDocuments           = "Accept the current privacy notice and terms."
-	msgInvalidCode         = "Enter the 6-digit code from the email."
-	msgCodeRejected        = "The code is invalid or has expired."
-	msgInvalidRefreshToken = "Authentication required."
+	msgInvalidInput      = "One or more fields are invalid." // the router's wording for every validation_failed
+	msgInvalidEmail      = "Enter a valid email address."
+	msgPasswordTooShort  = "Password must be at least 12 characters."
+	msgPasswordTooLong   = "Password is too long."
+	msgPasswordMalformed = "Password contains invalid characters."
+	msgPasswordCommon    = "This password is too common. Choose a different one."
+	msgPasswordPolicy    = "Use at least 12 characters that are not a common or leaked password." //nolint:gosec // G101: a name or message, not a credential
+	msgInvalidName       = "Enter a name of 1 to 120 characters."
+	msgDocuments         = "Accept the current privacy notice and terms."
+	msgInvalidCode       = "Enter the 6-digit code from the email."
+	msgCodeRejected      = "The code is invalid or has expired."
+	// msgSessionEnded is the one answer to a refresh token that cannot be
+	// used, whatever the reason (the contract's refreshSession 401 example).
+	msgSessionEnded = "Your session has ended. Sign in again."
 	// msgAuthenticationRequired is the one answer to a missing or refused
 	// bearer token, whatever the reason (the contract's Unauthorized example).
 	msgAuthenticationRequired = "Authentication required."
@@ -49,7 +51,8 @@ var ErrorMapper = apperr.NewMapper(
 	apperr.Rule{Target: domain.ErrDocumentNotCurrent, Code: apperr.CodeValidationFailed, Message: msgDocuments},
 	apperr.Rule{Target: domain.ErrInvalidVerificationCode, Code: apperr.CodeValidationFailed, Message: msgInvalidCode},
 	apperr.Rule{Target: usecase.ErrVerificationRejected, Code: apperr.CodeUnauthorized, Message: msgCodeRejected},
-	apperr.Rule{Target: domain.ErrMalformedRefreshToken, Code: apperr.CodeUnauthorized, Message: msgInvalidRefreshToken},
+	apperr.Rule{Target: domain.ErrMalformedRefreshToken, Code: apperr.CodeUnauthorized, Message: msgSessionEnded},
+	apperr.Rule{Target: usecase.ErrRefreshRejected, Code: apperr.CodeUnauthorized, Message: msgSessionEnded},
 	apperr.Rule{Target: usecase.ErrInvalidCredentials, Code: apperr.CodeUnauthorized, Message: msgInvalidCredentials},
 	apperr.Rule{Target: usecase.ErrInvalidAccessToken, Code: apperr.CodeUnauthorized, Message: msgAuthenticationRequired},
 )

@@ -34,6 +34,10 @@ func TestErrorMapperMapsEveryDomainError(t *testing.T) {
 		{err: domain.ErrMalformedRefreshToken, want: apperr.CodeUnauthorized},
 		{err: usecase.ErrInvalidCredentials, want: apperr.CodeUnauthorized},
 		{err: usecase.ErrInvalidAccessToken, want: apperr.CodeUnauthorized},
+		{err: usecase.ErrRefreshRejected, want: apperr.CodeUnauthorized},
+		{err: usecase.ErrTokenReused, want: apperr.CodeUnauthorized},
+		{err: usecase.ErrTokenExpired, want: apperr.CodeUnauthorized},
+		{err: usecase.ErrAccountInactive, want: apperr.CodeUnauthorized},
 		{err: domain.ErrInvalidUserID, want: apperr.CodeInternalError},
 		{err: domain.ErrMalformedTokenHash, want: apperr.CodeInternalError},
 		{err: domain.ErrRandomSource, want: apperr.CodeInternalError},
@@ -57,6 +61,19 @@ func TestErrorMapperMessagesAreClientSafe(t *testing.T) {
 	for _, err := range []error{domain.ErrPasswordCommon, domain.ErrMalformedRefreshToken} {
 		resolved := authhttp.ErrorMapper.Resolve(err)
 		assert.NotContains(t, resolved.Message, "auth:")
+	}
+}
+
+// US-A2b: every refresh refusal is one answer, the contract's example, so
+// the client cannot tell reuse from expiry from a suspended account.
+func TestErrorMapper_everyRefreshRefusalIsTheSameMessage(t *testing.T) {
+	for _, err := range []error{
+		usecase.ErrTokenMalformed, usecase.ErrTokenUnknown, usecase.ErrTokenExpired,
+		usecase.ErrTokenRevoked, usecase.ErrTokenReused, usecase.ErrAccountInactive,
+	} {
+		resolved := authhttp.ErrorMapper.Resolve(err)
+		assert.Equal(t, apperr.CodeUnauthorized, resolved.Code, err)
+		assert.Equal(t, "Your session has ended. Sign in again.", resolved.Message, err)
 	}
 }
 
