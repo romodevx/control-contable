@@ -21,5 +21,5 @@ Map<String, dynamic> _$RegisterRequestToJson(_RegisterRequest instance) =>
       'email': instance.email,
       'password': instance.password,
       'accepted_documents': instance.acceptedDocuments,
-      'name': instance.name,
+      'name': ?instance.name,
     };

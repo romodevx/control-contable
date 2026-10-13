@@ -18,7 +18,8 @@ abstract class TaxCalendarEntry with _$TaxCalendarEntry {
     required TaxCalendarEntryObligation obligation,
     @JsonKey(name: 'nominal_due_date') required DateTime nominalDueDate,
     @JsonKey(name: 'due_date') required DateTime dueDate,
-    @JsonKey(name: 'moved_reason') TaxCalendarEntryMovedReason? movedReason,
+    @JsonKey(includeIfNull: false, name: 'moved_reason')
+    TaxCalendarEntryMovedReason? movedReason,
   }) = _TaxCalendarEntry;
 
   factory TaxCalendarEntry.fromJson(Map<String, Object?> json) =>

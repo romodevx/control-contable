@@ -18,6 +18,6 @@ Map<String, dynamic> _$TaxpayerRegimeCreateToJson(
   _TaxpayerRegimeCreate instance,
 ) => <String, dynamic>{
   'regime_code': instance.regimeCode,
-  'options': instance.options,
-  'start_period': instance.startPeriod,
+  'options': ?instance.options,
+  'start_period': ?instance.startPeriod,
 };

@@ -17,9 +17,9 @@ T _$identity<T>(T value) => value;
 mixin _$RegimeOptionDef {
 
  String get key; String get label; RegimeOptionDefType get type;/// The name has been replaced because it contains a keyword. Original name: `required`.
-@JsonKey(name: 'required') bool get requiredValue;@JsonKey(name: 'allowed_values') List<String>? get allowedValues;/// The name has been replaced because it contains a keyword. Original name: `default`.
+@JsonKey(name: 'required') bool get requiredValue;@JsonKey(includeIfNull: false, name: 'allowed_values') List<String>? get allowedValues;/// The name has been replaced because it contains a keyword. Original name: `default`.
 /// The name has been replaced because it contains a keyword. Original name: `default`.
-@JsonKey(name: 'default') dynamic get defaultValue;
+@JsonKey(includeIfNull: false, name: 'default') dynamic get defaultValue;
 /// Create a copy of RegimeOptionDef
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -57,7 +57,7 @@ abstract mixin class $RegimeOptionDefCopyWith<$Res>  {
   factory $RegimeOptionDefCopyWith(RegimeOptionDef value, $Res Function(RegimeOptionDef) _then) = _$RegimeOptionDefCopyWithImpl;
 @useResult
 $Res call({
- String key, String label, RegimeOptionDefType type,@JsonKey(name: 'required') bool requiredValue,@JsonKey(name: 'allowed_values') List<String>? allowedValues,@JsonKey(name: 'default') dynamic defaultValue
+ String key, String label, RegimeOptionDefType type,@JsonKey(name: 'required') bool requiredValue,@JsonKey(includeIfNull: false, name: 'allowed_values') List<String>? allowedValues,@JsonKey(includeIfNull: false, name: 'default') dynamic defaultValue
 });
 
 
@@ -167,7 +167,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String key,  String label,  RegimeOptionDefType type, @JsonKey(name: 'required')  bool requiredValue, @JsonKey(name: 'allowed_values')  List<String>? allowedValues, @JsonKey(name: 'default')  dynamic defaultValue)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String key,  String label,  RegimeOptionDefType type, @JsonKey(name: 'required')  bool requiredValue, @JsonKey(includeIfNull: false, name: 'allowed_values')  List<String>? allowedValues, @JsonKey(includeIfNull: false, name: 'default')  dynamic defaultValue)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RegimeOptionDef() when $default != null:
 return $default(_that.key,_that.label,_that.type,_that.requiredValue,_that.allowedValues,_that.defaultValue);case _:
@@ -188,7 +188,7 @@ return $default(_that.key,_that.label,_that.type,_that.requiredValue,_that.allow
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String key,  String label,  RegimeOptionDefType type, @JsonKey(name: 'required')  bool requiredValue, @JsonKey(name: 'allowed_values')  List<String>? allowedValues, @JsonKey(name: 'default')  dynamic defaultValue)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String key,  String label,  RegimeOptionDefType type, @JsonKey(name: 'required')  bool requiredValue, @JsonKey(includeIfNull: false, name: 'allowed_values')  List<String>? allowedValues, @JsonKey(includeIfNull: false, name: 'default')  dynamic defaultValue)  $default,) {final _that = this;
 switch (_that) {
 case _RegimeOptionDef():
 return $default(_that.key,_that.label,_that.type,_that.requiredValue,_that.allowedValues,_that.defaultValue);case _:
@@ -208,7 +208,7 @@ return $default(_that.key,_that.label,_that.type,_that.requiredValue,_that.allow
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String key,  String label,  RegimeOptionDefType type, @JsonKey(name: 'required')  bool requiredValue, @JsonKey(name: 'allowed_values')  List<String>? allowedValues, @JsonKey(name: 'default')  dynamic defaultValue)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String key,  String label,  RegimeOptionDefType type, @JsonKey(name: 'required')  bool requiredValue, @JsonKey(includeIfNull: false, name: 'allowed_values')  List<String>? allowedValues, @JsonKey(includeIfNull: false, name: 'default')  dynamic defaultValue)?  $default,) {final _that = this;
 switch (_that) {
 case _RegimeOptionDef() when $default != null:
 return $default(_that.key,_that.label,_that.type,_that.requiredValue,_that.allowedValues,_that.defaultValue);case _:
@@ -223,7 +223,7 @@ return $default(_that.key,_that.label,_that.type,_that.requiredValue,_that.allow
 @JsonSerializable()
 
 class _RegimeOptionDef implements RegimeOptionDef {
-  const _RegimeOptionDef({required this.key, required this.label, required this.type, @JsonKey(name: 'required') required this.requiredValue, @JsonKey(name: 'allowed_values')  List<String>? allowedValues, @JsonKey(name: 'default') this.defaultValue}): _allowedValues = allowedValues;
+  const _RegimeOptionDef({required this.key, required this.label, required this.type, @JsonKey(name: 'required') required this.requiredValue, @JsonKey(includeIfNull: false, name: 'allowed_values')  List<String>? allowedValues, @JsonKey(includeIfNull: false, name: 'default') this.defaultValue}): _allowedValues = allowedValues;
   factory _RegimeOptionDef.fromJson(Map<String, dynamic> json) => _$RegimeOptionDefFromJson(json);
 
 @override final  String key;
@@ -232,7 +232,7 @@ class _RegimeOptionDef implements RegimeOptionDef {
 /// The name has been replaced because it contains a keyword. Original name: `required`.
 @override@JsonKey(name: 'required') final  bool requiredValue;
  final  List<String>? _allowedValues;
-@override@JsonKey(name: 'allowed_values') List<String>? get allowedValues {
+@override@JsonKey(includeIfNull: false, name: 'allowed_values') List<String>? get allowedValues {
   final value = _allowedValues;
   if (value == null) return null;
   if (_allowedValues is EqualUnmodifiableListView) return _allowedValues;
@@ -242,7 +242,7 @@ class _RegimeOptionDef implements RegimeOptionDef {
 
 /// The name has been replaced because it contains a keyword. Original name: `default`.
 /// The name has been replaced because it contains a keyword. Original name: `default`.
-@override@JsonKey(name: 'default') final  dynamic defaultValue;
+@override@JsonKey(includeIfNull: false, name: 'default') final  dynamic defaultValue;
 
 /// Create a copy of RegimeOptionDef
 /// with the given fields replaced by the non-null parameter values.
@@ -279,7 +279,7 @@ abstract mixin class _$RegimeOptionDefCopyWith<$Res> implements $RegimeOptionDef
   factory _$RegimeOptionDefCopyWith(_RegimeOptionDef value, $Res Function(_RegimeOptionDef) _then) = __$RegimeOptionDefCopyWithImpl;
 @override @useResult
 $Res call({
- String key, String label, RegimeOptionDefType type,@JsonKey(name: 'required') bool requiredValue,@JsonKey(name: 'allowed_values') List<String>? allowedValues,@JsonKey(name: 'default') dynamic defaultValue
+ String key, String label, RegimeOptionDefType type,@JsonKey(name: 'required') bool requiredValue,@JsonKey(includeIfNull: false, name: 'allowed_values') List<String>? allowedValues,@JsonKey(includeIfNull: false, name: 'default') dynamic defaultValue
 });
 
 

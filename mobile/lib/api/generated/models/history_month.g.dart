@@ -30,9 +30,9 @@ Map<String, dynamic> _$HistoryMonthToJson(_HistoryMonth instance) =>
       'status': _$HistoryMonthStatusEnumMap[instance.status]!,
       'total_payable_rounded_cents': instance.totalPayableRoundedCents,
       'changed_since_viewed': instance.changedSinceViewed,
-      'iva': instance.iva,
-      'isr': instance.isr,
-      'last_viewed_at': instance.lastViewedAt?.toIso8601String(),
+      'iva': ?instance.iva,
+      'isr': ?instance.isr,
+      'last_viewed_at': ?instance.lastViewedAt?.toIso8601String(),
     };
 
 const _$HistoryMonthStatusEnumMap = {

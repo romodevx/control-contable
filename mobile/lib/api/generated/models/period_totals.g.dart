@@ -20,6 +20,6 @@ Map<String, dynamic> _$PeriodTotalsToJson(_PeriodTotals instance) =>
       'count': instance.count,
       'amount_cents': instance.amountCents,
       'iva_cents': instance.ivaCents,
-      'isr_withheld_cents': instance.isrWithheldCents,
-      'iva_withheld_cents': instance.ivaWithheldCents,
+      'isr_withheld_cents': ?instance.isrWithheldCents,
+      'iva_withheld_cents': ?instance.ivaWithheldCents,
     };

@@ -17,7 +17,7 @@ T _$identity<T>(T value) => value;
 mixin _$Error {
 
  ErrorCode get code;/// Human-readable, safe to show; never contains PII.
- String get message;@JsonKey(name: 'request_id') String get requestId; List<FieldError>? get details;
+ String get message;@JsonKey(name: 'request_id') String get requestId;@JsonKey(includeIfNull: false) List<FieldError>? get details;
 /// Create a copy of Error
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -55,7 +55,7 @@ abstract mixin class $ErrorCopyWith<$Res>  {
   factory $ErrorCopyWith(Error value, $Res Function(Error) _then) = _$ErrorCopyWithImpl;
 @useResult
 $Res call({
- ErrorCode code, String message,@JsonKey(name: 'request_id') String requestId, List<FieldError>? details
+ ErrorCode code, String message,@JsonKey(name: 'request_id') String requestId,@JsonKey(includeIfNull: false) List<FieldError>? details
 });
 
 
@@ -163,7 +163,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( ErrorCode code,  String message, @JsonKey(name: 'request_id')  String requestId,  List<FieldError>? details)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( ErrorCode code,  String message, @JsonKey(name: 'request_id')  String requestId, @JsonKey(includeIfNull: false)  List<FieldError>? details)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Error() when $default != null:
 return $default(_that.code,_that.message,_that.requestId,_that.details);case _:
@@ -184,7 +184,7 @@ return $default(_that.code,_that.message,_that.requestId,_that.details);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( ErrorCode code,  String message, @JsonKey(name: 'request_id')  String requestId,  List<FieldError>? details)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( ErrorCode code,  String message, @JsonKey(name: 'request_id')  String requestId, @JsonKey(includeIfNull: false)  List<FieldError>? details)  $default,) {final _that = this;
 switch (_that) {
 case _Error():
 return $default(_that.code,_that.message,_that.requestId,_that.details);case _:
@@ -204,7 +204,7 @@ return $default(_that.code,_that.message,_that.requestId,_that.details);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( ErrorCode code,  String message, @JsonKey(name: 'request_id')  String requestId,  List<FieldError>? details)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( ErrorCode code,  String message, @JsonKey(name: 'request_id')  String requestId, @JsonKey(includeIfNull: false)  List<FieldError>? details)?  $default,) {final _that = this;
 switch (_that) {
 case _Error() when $default != null:
 return $default(_that.code,_that.message,_that.requestId,_that.details);case _:
@@ -219,7 +219,7 @@ return $default(_that.code,_that.message,_that.requestId,_that.details);case _:
 @JsonSerializable()
 
 class _Error implements Error {
-  const _Error({required this.code, required this.message, @JsonKey(name: 'request_id') required this.requestId,  List<FieldError>? details}): _details = details;
+  const _Error({required this.code, required this.message, @JsonKey(name: 'request_id') required this.requestId, @JsonKey(includeIfNull: false)  List<FieldError>? details}): _details = details;
   factory _Error.fromJson(Map<String, dynamic> json) => _$ErrorFromJson(json);
 
 @override final  ErrorCode code;
@@ -227,7 +227,7 @@ class _Error implements Error {
 @override final  String message;
 @override@JsonKey(name: 'request_id') final  String requestId;
  final  List<FieldError>? _details;
-@override List<FieldError>? get details {
+@override@JsonKey(includeIfNull: false) List<FieldError>? get details {
   final value = _details;
   if (value == null) return null;
   if (_details is EqualUnmodifiableListView) return _details;
@@ -271,7 +271,7 @@ abstract mixin class _$ErrorCopyWith<$Res> implements $ErrorCopyWith<$Res> {
   factory _$ErrorCopyWith(_Error value, $Res Function(_Error) _then) = __$ErrorCopyWithImpl;
 @override @useResult
 $Res call({
- ErrorCode code, String message,@JsonKey(name: 'request_id') String requestId, List<FieldError>? details
+ ErrorCode code, String message,@JsonKey(name: 'request_id') String requestId,@JsonKey(includeIfNull: false) List<FieldError>? details
 });
 
 

@@ -16,6 +16,6 @@ _TaxInputValue _$TaxInputValueFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$TaxInputValueToJson(_TaxInputValue instance) =>
     <String, dynamic>{
       'key': instance.key,
-      'value_cents': instance.valueCents,
-      'value_rate': instance.valueRate,
+      'value_cents': ?instance.valueCents,
+      'value_rate': ?instance.valueRate,
     };

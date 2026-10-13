@@ -16,9 +16,9 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Income {
 
- Uuid get id;@JsonKey(name: 'taxpayer_id') Uuid get taxpayerId;@JsonKey(name: 'created_at') DateTime get createdAt;@JsonKey(name: 'updated_at') DateTime get updatedAt;@JsonKey(name: 'regime_code') RegimeCode? get regimeCode; String? get description;@JsonKey(name: 'counterparty_type') CounterpartyType? get counterpartyType;/// Subtotal before IVA.
-@JsonKey(name: 'amount_cents') NonNegativeCents? get amountCents;@JsonKey(name: 'iva_rate') IvaRate? get ivaRate;@JsonKey(name: 'iva_cents') NonNegativeCents? get ivaCents;@JsonKey(name: 'isr_withheld_cents') NonNegativeCents? get isrWithheldCents;@JsonKey(name: 'iva_withheld_cents') NonNegativeCents? get ivaWithheldCents;@JsonKey(name: 'invoiced_on') DateTime? get invoicedOn;/// Required for cash-basis regimes; may be null for PM 601 (pending collection).
-@JsonKey(name: 'collected_on') DateTime? get collectedOn;
+ Uuid get id;@JsonKey(name: 'taxpayer_id') Uuid get taxpayerId;@JsonKey(name: 'created_at') DateTime get createdAt;@JsonKey(name: 'updated_at') DateTime get updatedAt;@JsonKey(includeIfNull: false, name: 'regime_code') RegimeCode? get regimeCode;@JsonKey(includeIfNull: false) String? get description;@JsonKey(includeIfNull: false, name: 'counterparty_type') CounterpartyType? get counterpartyType;/// Subtotal before IVA.
+@JsonKey(includeIfNull: false, name: 'amount_cents') NonNegativeCents? get amountCents;@JsonKey(includeIfNull: false, name: 'iva_rate') IvaRate? get ivaRate;@JsonKey(includeIfNull: false, name: 'iva_cents') NonNegativeCents? get ivaCents;@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') NonNegativeCents? get isrWithheldCents;@JsonKey(includeIfNull: false, name: 'iva_withheld_cents') NonNegativeCents? get ivaWithheldCents;@JsonKey(includeIfNull: false, name: 'invoiced_on') DateTime? get invoicedOn;/// Required for cash-basis regimes; may be null for PM 601 (pending collection).
+@JsonKey(includeIfNull: false, name: 'collected_on') DateTime? get collectedOn;
 /// Create a copy of Income
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -56,7 +56,7 @@ abstract mixin class $IncomeCopyWith<$Res>  {
   factory $IncomeCopyWith(Income value, $Res Function(Income) _then) = _$IncomeCopyWithImpl;
 @useResult
 $Res call({
- Uuid id,@JsonKey(name: 'taxpayer_id') Uuid taxpayerId,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'updated_at') DateTime updatedAt,@JsonKey(name: 'regime_code') RegimeCode? regimeCode, String? description,@JsonKey(name: 'counterparty_type') CounterpartyType? counterpartyType,@JsonKey(name: 'amount_cents') NonNegativeCents? amountCents,@JsonKey(name: 'iva_rate') IvaRate? ivaRate,@JsonKey(name: 'iva_cents') NonNegativeCents? ivaCents,@JsonKey(name: 'isr_withheld_cents') NonNegativeCents? isrWithheldCents,@JsonKey(name: 'iva_withheld_cents') NonNegativeCents? ivaWithheldCents,@JsonKey(name: 'invoiced_on') DateTime? invoicedOn,@JsonKey(name: 'collected_on') DateTime? collectedOn
+ Uuid id,@JsonKey(name: 'taxpayer_id') Uuid taxpayerId,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'updated_at') DateTime updatedAt,@JsonKey(includeIfNull: false, name: 'regime_code') RegimeCode? regimeCode,@JsonKey(includeIfNull: false) String? description,@JsonKey(includeIfNull: false, name: 'counterparty_type') CounterpartyType? counterpartyType,@JsonKey(includeIfNull: false, name: 'amount_cents') NonNegativeCents? amountCents,@JsonKey(includeIfNull: false, name: 'iva_rate') IvaRate? ivaRate,@JsonKey(includeIfNull: false, name: 'iva_cents') NonNegativeCents? ivaCents,@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') NonNegativeCents? isrWithheldCents,@JsonKey(includeIfNull: false, name: 'iva_withheld_cents') NonNegativeCents? ivaWithheldCents,@JsonKey(includeIfNull: false, name: 'invoiced_on') DateTime? invoicedOn,@JsonKey(includeIfNull: false, name: 'collected_on') DateTime? collectedOn
 });
 
 
@@ -174,7 +174,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Uuid id, @JsonKey(name: 'taxpayer_id')  Uuid taxpayerId, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt, @JsonKey(name: 'regime_code')  RegimeCode? regimeCode,  String? description, @JsonKey(name: 'counterparty_type')  CounterpartyType? counterpartyType, @JsonKey(name: 'amount_cents')  NonNegativeCents? amountCents, @JsonKey(name: 'iva_rate')  IvaRate? ivaRate, @JsonKey(name: 'iva_cents')  NonNegativeCents? ivaCents, @JsonKey(name: 'isr_withheld_cents')  NonNegativeCents? isrWithheldCents, @JsonKey(name: 'iva_withheld_cents')  NonNegativeCents? ivaWithheldCents, @JsonKey(name: 'invoiced_on')  DateTime? invoicedOn, @JsonKey(name: 'collected_on')  DateTime? collectedOn)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Uuid id, @JsonKey(name: 'taxpayer_id')  Uuid taxpayerId, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt, @JsonKey(includeIfNull: false, name: 'regime_code')  RegimeCode? regimeCode, @JsonKey(includeIfNull: false)  String? description, @JsonKey(includeIfNull: false, name: 'counterparty_type')  CounterpartyType? counterpartyType, @JsonKey(includeIfNull: false, name: 'amount_cents')  NonNegativeCents? amountCents, @JsonKey(includeIfNull: false, name: 'iva_rate')  IvaRate? ivaRate, @JsonKey(includeIfNull: false, name: 'iva_cents')  NonNegativeCents? ivaCents, @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')  NonNegativeCents? isrWithheldCents, @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')  NonNegativeCents? ivaWithheldCents, @JsonKey(includeIfNull: false, name: 'invoiced_on')  DateTime? invoicedOn, @JsonKey(includeIfNull: false, name: 'collected_on')  DateTime? collectedOn)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Income() when $default != null:
 return $default(_that.id,_that.taxpayerId,_that.createdAt,_that.updatedAt,_that.regimeCode,_that.description,_that.counterpartyType,_that.amountCents,_that.ivaRate,_that.ivaCents,_that.isrWithheldCents,_that.ivaWithheldCents,_that.invoicedOn,_that.collectedOn);case _:
@@ -195,7 +195,7 @@ return $default(_that.id,_that.taxpayerId,_that.createdAt,_that.updatedAt,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Uuid id, @JsonKey(name: 'taxpayer_id')  Uuid taxpayerId, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt, @JsonKey(name: 'regime_code')  RegimeCode? regimeCode,  String? description, @JsonKey(name: 'counterparty_type')  CounterpartyType? counterpartyType, @JsonKey(name: 'amount_cents')  NonNegativeCents? amountCents, @JsonKey(name: 'iva_rate')  IvaRate? ivaRate, @JsonKey(name: 'iva_cents')  NonNegativeCents? ivaCents, @JsonKey(name: 'isr_withheld_cents')  NonNegativeCents? isrWithheldCents, @JsonKey(name: 'iva_withheld_cents')  NonNegativeCents? ivaWithheldCents, @JsonKey(name: 'invoiced_on')  DateTime? invoicedOn, @JsonKey(name: 'collected_on')  DateTime? collectedOn)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Uuid id, @JsonKey(name: 'taxpayer_id')  Uuid taxpayerId, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt, @JsonKey(includeIfNull: false, name: 'regime_code')  RegimeCode? regimeCode, @JsonKey(includeIfNull: false)  String? description, @JsonKey(includeIfNull: false, name: 'counterparty_type')  CounterpartyType? counterpartyType, @JsonKey(includeIfNull: false, name: 'amount_cents')  NonNegativeCents? amountCents, @JsonKey(includeIfNull: false, name: 'iva_rate')  IvaRate? ivaRate, @JsonKey(includeIfNull: false, name: 'iva_cents')  NonNegativeCents? ivaCents, @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')  NonNegativeCents? isrWithheldCents, @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')  NonNegativeCents? ivaWithheldCents, @JsonKey(includeIfNull: false, name: 'invoiced_on')  DateTime? invoicedOn, @JsonKey(includeIfNull: false, name: 'collected_on')  DateTime? collectedOn)  $default,) {final _that = this;
 switch (_that) {
 case _Income():
 return $default(_that.id,_that.taxpayerId,_that.createdAt,_that.updatedAt,_that.regimeCode,_that.description,_that.counterpartyType,_that.amountCents,_that.ivaRate,_that.ivaCents,_that.isrWithheldCents,_that.ivaWithheldCents,_that.invoicedOn,_that.collectedOn);case _:
@@ -215,7 +215,7 @@ return $default(_that.id,_that.taxpayerId,_that.createdAt,_that.updatedAt,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Uuid id, @JsonKey(name: 'taxpayer_id')  Uuid taxpayerId, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt, @JsonKey(name: 'regime_code')  RegimeCode? regimeCode,  String? description, @JsonKey(name: 'counterparty_type')  CounterpartyType? counterpartyType, @JsonKey(name: 'amount_cents')  NonNegativeCents? amountCents, @JsonKey(name: 'iva_rate')  IvaRate? ivaRate, @JsonKey(name: 'iva_cents')  NonNegativeCents? ivaCents, @JsonKey(name: 'isr_withheld_cents')  NonNegativeCents? isrWithheldCents, @JsonKey(name: 'iva_withheld_cents')  NonNegativeCents? ivaWithheldCents, @JsonKey(name: 'invoiced_on')  DateTime? invoicedOn, @JsonKey(name: 'collected_on')  DateTime? collectedOn)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Uuid id, @JsonKey(name: 'taxpayer_id')  Uuid taxpayerId, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt, @JsonKey(includeIfNull: false, name: 'regime_code')  RegimeCode? regimeCode, @JsonKey(includeIfNull: false)  String? description, @JsonKey(includeIfNull: false, name: 'counterparty_type')  CounterpartyType? counterpartyType, @JsonKey(includeIfNull: false, name: 'amount_cents')  NonNegativeCents? amountCents, @JsonKey(includeIfNull: false, name: 'iva_rate')  IvaRate? ivaRate, @JsonKey(includeIfNull: false, name: 'iva_cents')  NonNegativeCents? ivaCents, @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')  NonNegativeCents? isrWithheldCents, @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')  NonNegativeCents? ivaWithheldCents, @JsonKey(includeIfNull: false, name: 'invoiced_on')  DateTime? invoicedOn, @JsonKey(includeIfNull: false, name: 'collected_on')  DateTime? collectedOn)?  $default,) {final _that = this;
 switch (_that) {
 case _Income() when $default != null:
 return $default(_that.id,_that.taxpayerId,_that.createdAt,_that.updatedAt,_that.regimeCode,_that.description,_that.counterpartyType,_that.amountCents,_that.ivaRate,_that.ivaCents,_that.isrWithheldCents,_that.ivaWithheldCents,_that.invoicedOn,_that.collectedOn);case _:
@@ -230,25 +230,25 @@ return $default(_that.id,_that.taxpayerId,_that.createdAt,_that.updatedAt,_that.
 @JsonSerializable()
 
 class _Income implements Income {
-  const _Income({required this.id, @JsonKey(name: 'taxpayer_id') required this.taxpayerId, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'updated_at') required this.updatedAt, @JsonKey(name: 'regime_code') this.regimeCode, this.description, @JsonKey(name: 'counterparty_type') this.counterpartyType, @JsonKey(name: 'amount_cents') this.amountCents, @JsonKey(name: 'iva_rate') this.ivaRate, @JsonKey(name: 'iva_cents') this.ivaCents, @JsonKey(name: 'isr_withheld_cents') this.isrWithheldCents, @JsonKey(name: 'iva_withheld_cents') this.ivaWithheldCents, @JsonKey(name: 'invoiced_on') this.invoicedOn, @JsonKey(name: 'collected_on') this.collectedOn});
+  const _Income({required this.id, @JsonKey(name: 'taxpayer_id') required this.taxpayerId, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'updated_at') required this.updatedAt, @JsonKey(includeIfNull: false, name: 'regime_code') this.regimeCode, @JsonKey(includeIfNull: false) this.description, @JsonKey(includeIfNull: false, name: 'counterparty_type') this.counterpartyType, @JsonKey(includeIfNull: false, name: 'amount_cents') this.amountCents, @JsonKey(includeIfNull: false, name: 'iva_rate') this.ivaRate, @JsonKey(includeIfNull: false, name: 'iva_cents') this.ivaCents, @JsonKey(includeIfNull: false, name: 'isr_withheld_cents') this.isrWithheldCents, @JsonKey(includeIfNull: false, name: 'iva_withheld_cents') this.ivaWithheldCents, @JsonKey(includeIfNull: false, name: 'invoiced_on') this.invoicedOn, @JsonKey(includeIfNull: false, name: 'collected_on') this.collectedOn});
   factory _Income.fromJson(Map<String, dynamic> json) => _$IncomeFromJson(json);
 
 @override final  Uuid id;
 @override@JsonKey(name: 'taxpayer_id') final  Uuid taxpayerId;
 @override@JsonKey(name: 'created_at') final  DateTime createdAt;
 @override@JsonKey(name: 'updated_at') final  DateTime updatedAt;
-@override@JsonKey(name: 'regime_code') final  RegimeCode? regimeCode;
-@override final  String? description;
-@override@JsonKey(name: 'counterparty_type') final  CounterpartyType? counterpartyType;
+@override@JsonKey(includeIfNull: false, name: 'regime_code') final  RegimeCode? regimeCode;
+@override@JsonKey(includeIfNull: false) final  String? description;
+@override@JsonKey(includeIfNull: false, name: 'counterparty_type') final  CounterpartyType? counterpartyType;
 /// Subtotal before IVA.
-@override@JsonKey(name: 'amount_cents') final  NonNegativeCents? amountCents;
-@override@JsonKey(name: 'iva_rate') final  IvaRate? ivaRate;
-@override@JsonKey(name: 'iva_cents') final  NonNegativeCents? ivaCents;
-@override@JsonKey(name: 'isr_withheld_cents') final  NonNegativeCents? isrWithheldCents;
-@override@JsonKey(name: 'iva_withheld_cents') final  NonNegativeCents? ivaWithheldCents;
-@override@JsonKey(name: 'invoiced_on') final  DateTime? invoicedOn;
+@override@JsonKey(includeIfNull: false, name: 'amount_cents') final  NonNegativeCents? amountCents;
+@override@JsonKey(includeIfNull: false, name: 'iva_rate') final  IvaRate? ivaRate;
+@override@JsonKey(includeIfNull: false, name: 'iva_cents') final  NonNegativeCents? ivaCents;
+@override@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') final  NonNegativeCents? isrWithheldCents;
+@override@JsonKey(includeIfNull: false, name: 'iva_withheld_cents') final  NonNegativeCents? ivaWithheldCents;
+@override@JsonKey(includeIfNull: false, name: 'invoiced_on') final  DateTime? invoicedOn;
 /// Required for cash-basis regimes; may be null for PM 601 (pending collection).
-@override@JsonKey(name: 'collected_on') final  DateTime? collectedOn;
+@override@JsonKey(includeIfNull: false, name: 'collected_on') final  DateTime? collectedOn;
 
 /// Create a copy of Income
 /// with the given fields replaced by the non-null parameter values.
@@ -285,7 +285,7 @@ abstract mixin class _$IncomeCopyWith<$Res> implements $IncomeCopyWith<$Res> {
   factory _$IncomeCopyWith(_Income value, $Res Function(_Income) _then) = __$IncomeCopyWithImpl;
 @override @useResult
 $Res call({
- Uuid id,@JsonKey(name: 'taxpayer_id') Uuid taxpayerId,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'updated_at') DateTime updatedAt,@JsonKey(name: 'regime_code') RegimeCode? regimeCode, String? description,@JsonKey(name: 'counterparty_type') CounterpartyType? counterpartyType,@JsonKey(name: 'amount_cents') NonNegativeCents? amountCents,@JsonKey(name: 'iva_rate') IvaRate? ivaRate,@JsonKey(name: 'iva_cents') NonNegativeCents? ivaCents,@JsonKey(name: 'isr_withheld_cents') NonNegativeCents? isrWithheldCents,@JsonKey(name: 'iva_withheld_cents') NonNegativeCents? ivaWithheldCents,@JsonKey(name: 'invoiced_on') DateTime? invoicedOn,@JsonKey(name: 'collected_on') DateTime? collectedOn
+ Uuid id,@JsonKey(name: 'taxpayer_id') Uuid taxpayerId,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'updated_at') DateTime updatedAt,@JsonKey(includeIfNull: false, name: 'regime_code') RegimeCode? regimeCode,@JsonKey(includeIfNull: false) String? description,@JsonKey(includeIfNull: false, name: 'counterparty_type') CounterpartyType? counterpartyType,@JsonKey(includeIfNull: false, name: 'amount_cents') NonNegativeCents? amountCents,@JsonKey(includeIfNull: false, name: 'iva_rate') IvaRate? ivaRate,@JsonKey(includeIfNull: false, name: 'iva_cents') NonNegativeCents? ivaCents,@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') NonNegativeCents? isrWithheldCents,@JsonKey(includeIfNull: false, name: 'iva_withheld_cents') NonNegativeCents? ivaWithheldCents,@JsonKey(includeIfNull: false, name: 'invoiced_on') DateTime? invoicedOn,@JsonKey(includeIfNull: false, name: 'collected_on') DateTime? collectedOn
 });
 
 

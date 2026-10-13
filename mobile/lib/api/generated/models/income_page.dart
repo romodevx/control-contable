@@ -15,7 +15,7 @@ abstract class IncomePage with _$IncomePage {
   const factory IncomePage({
     required List<Income> items,
     required PeriodTotals totals,
-    @JsonKey(name: 'next_cursor') String? nextCursor,
+    @JsonKey(includeIfNull: false, name: 'next_cursor') String? nextCursor,
   }) = _IncomePage;
 
   factory IncomePage.fromJson(Map<String, Object?> json) =>

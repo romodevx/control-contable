@@ -6,3 +6,14 @@ global_options:
   json_serializable:
     runs_before:
       - retrofit_generator
+
+# Unset optional fields are left out of request bodies, never sent as `null`: the contract's
+# request schemas are `additionalProperties: false`, and an optional non-nullable property
+# (e.g. RegisterRequest.name) rejects `null`. Required nullable fields keep an explicit
+# `includeIfNull: true` from swagger_parser (`include_if_null: true` in swagger_parser.yaml).
+targets:
+  $default:
+    builders:
+      json_serializable:
+        options:
+          include_if_null: false

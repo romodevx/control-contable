@@ -21,7 +21,7 @@ abstract class IvaComponents with _$IvaComponents {
     required NonNegativeCents withheldFromTaxpayerCents,
 
     /// IVA already definitive via withholding (e.g. 625 under LIVA 18-M).
-    @JsonKey(name: 'definitive_excluded_cents')
+    @JsonKey(includeIfNull: false, name: 'definitive_excluded_cents')
     NonNegativeCents? definitiveExcludedCents,
   }) = _IvaComponents;
 

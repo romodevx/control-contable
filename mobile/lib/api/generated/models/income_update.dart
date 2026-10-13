@@ -15,20 +15,25 @@ part 'income_update.g.dart';
 @Freezed()
 abstract class IncomeUpdate with _$IncomeUpdate {
   const factory IncomeUpdate({
-    @JsonKey(name: 'regime_code') RegimeCode? regimeCode,
-    String? description,
-    @JsonKey(name: 'counterparty_type') CounterpartyType? counterpartyType,
+    @JsonKey(includeIfNull: false, name: 'regime_code') RegimeCode? regimeCode,
+    @JsonKey(includeIfNull: false) String? description,
+    @JsonKey(includeIfNull: false, name: 'counterparty_type')
+    CounterpartyType? counterpartyType,
 
     /// Subtotal before IVA.
-    @JsonKey(name: 'amount_cents') NonNegativeCents? amountCents,
-    @JsonKey(name: 'iva_rate') IvaRate? ivaRate,
-    @JsonKey(name: 'iva_cents') NonNegativeCents? ivaCents,
-    @JsonKey(name: 'isr_withheld_cents') NonNegativeCents? isrWithheldCents,
-    @JsonKey(name: 'iva_withheld_cents') NonNegativeCents? ivaWithheldCents,
-    @JsonKey(name: 'invoiced_on') DateTime? invoicedOn,
+    @JsonKey(includeIfNull: false, name: 'amount_cents')
+    NonNegativeCents? amountCents,
+    @JsonKey(includeIfNull: false, name: 'iva_rate') IvaRate? ivaRate,
+    @JsonKey(includeIfNull: false, name: 'iva_cents')
+    NonNegativeCents? ivaCents,
+    @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')
+    NonNegativeCents? isrWithheldCents,
+    @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')
+    NonNegativeCents? ivaWithheldCents,
+    @JsonKey(includeIfNull: false, name: 'invoiced_on') DateTime? invoicedOn,
 
     /// Required for cash-basis regimes; may be null for PM 601 (pending collection).
-    @JsonKey(name: 'collected_on') DateTime? collectedOn,
+    @JsonKey(includeIfNull: false, name: 'collected_on') DateTime? collectedOn,
   }) = _IncomeUpdate;
 
   factory IncomeUpdate.fromJson(Map<String, Object?> json) =>

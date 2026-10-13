@@ -21,7 +21,7 @@ abstract class RegisterRequest with _$RegisterRequest {
     /// The current version of `terms` and of one privacy notice (integral or simplified), as returned by `listLegalDocuments`.
     @JsonKey(name: 'accepted_documents')
     required List<DocumentAcceptance> acceptedDocuments,
-    String? name,
+    @JsonKey(includeIfNull: false) String? name,
   }) = _RegisterRequest;
 
   factory RegisterRequest.fromJson(Map<String, Object?> json) =>

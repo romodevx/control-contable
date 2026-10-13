@@ -10,4 +10,4 @@ _UserUpdate _$UserUpdateFromJson(Map<String, dynamic> json) =>
     _UserUpdate(name: json['name'] as String?);
 
 Map<String, dynamic> _$UserUpdateToJson(_UserUpdate instance) =>
-    <String, dynamic>{'name': instance.name};
+    <String, dynamic>{'name': ?instance.name};

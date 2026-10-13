@@ -16,7 +16,7 @@ abstract class DeviceCreate with _$DeviceCreate {
     required Uuid id,
     required DeviceCreatePlatform platform,
     @JsonKey(name: 'push_token') required String pushToken,
-    @JsonKey(name: 'app_version') String? appVersion,
+    @JsonKey(includeIfNull: false, name: 'app_version') String? appVersion,
   }) = _DeviceCreate;
 
   factory DeviceCreate.fromJson(Map<String, Object?> json) =>

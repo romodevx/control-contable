@@ -19,7 +19,7 @@ mixin _$RegisterRequest {
 /// Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.
  String get email;/// 12-128 characters; the breached/common-password check (offline list, D5) runs server-side.
  String get password;/// The current version of `terms` and of one privacy notice (integral or simplified), as returned by `listLegalDocuments`.
-@JsonKey(name: 'accepted_documents') List<DocumentAcceptance> get acceptedDocuments; String? get name;
+@JsonKey(name: 'accepted_documents') List<DocumentAcceptance> get acceptedDocuments;@JsonKey(includeIfNull: false) String? get name;
 /// Create a copy of RegisterRequest
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -57,7 +57,7 @@ abstract mixin class $RegisterRequestCopyWith<$Res>  {
   factory $RegisterRequestCopyWith(RegisterRequest value, $Res Function(RegisterRequest) _then) = _$RegisterRequestCopyWithImpl;
 @useResult
 $Res call({
- String email, String password,@JsonKey(name: 'accepted_documents') List<DocumentAcceptance> acceptedDocuments, String? name
+ String email, String password,@JsonKey(name: 'accepted_documents') List<DocumentAcceptance> acceptedDocuments,@JsonKey(includeIfNull: false) String? name
 });
 
 
@@ -165,7 +165,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String email,  String password, @JsonKey(name: 'accepted_documents')  List<DocumentAcceptance> acceptedDocuments,  String? name)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String email,  String password, @JsonKey(name: 'accepted_documents')  List<DocumentAcceptance> acceptedDocuments, @JsonKey(includeIfNull: false)  String? name)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RegisterRequest() when $default != null:
 return $default(_that.email,_that.password,_that.acceptedDocuments,_that.name);case _:
@@ -186,7 +186,7 @@ return $default(_that.email,_that.password,_that.acceptedDocuments,_that.name);c
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String email,  String password, @JsonKey(name: 'accepted_documents')  List<DocumentAcceptance> acceptedDocuments,  String? name)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String email,  String password, @JsonKey(name: 'accepted_documents')  List<DocumentAcceptance> acceptedDocuments, @JsonKey(includeIfNull: false)  String? name)  $default,) {final _that = this;
 switch (_that) {
 case _RegisterRequest():
 return $default(_that.email,_that.password,_that.acceptedDocuments,_that.name);case _:
@@ -206,7 +206,7 @@ return $default(_that.email,_that.password,_that.acceptedDocuments,_that.name);c
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String email,  String password, @JsonKey(name: 'accepted_documents')  List<DocumentAcceptance> acceptedDocuments,  String? name)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String email,  String password, @JsonKey(name: 'accepted_documents')  List<DocumentAcceptance> acceptedDocuments, @JsonKey(includeIfNull: false)  String? name)?  $default,) {final _that = this;
 switch (_that) {
 case _RegisterRequest() when $default != null:
 return $default(_that.email,_that.password,_that.acceptedDocuments,_that.name);case _:
@@ -221,7 +221,7 @@ return $default(_that.email,_that.password,_that.acceptedDocuments,_that.name);c
 @JsonSerializable()
 
 class _RegisterRequest implements RegisterRequest {
-  const _RegisterRequest({required this.email, required this.password, @JsonKey(name: 'accepted_documents') required  List<DocumentAcceptance> acceptedDocuments, this.name}): _acceptedDocuments = acceptedDocuments;
+  const _RegisterRequest({required this.email, required this.password, @JsonKey(name: 'accepted_documents') required  List<DocumentAcceptance> acceptedDocuments, @JsonKey(includeIfNull: false) this.name}): _acceptedDocuments = acceptedDocuments;
   factory _RegisterRequest.fromJson(Map<String, dynamic> json) => _$RegisterRequestFromJson(json);
 
 /// Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.
@@ -237,7 +237,7 @@ class _RegisterRequest implements RegisterRequest {
   return EqualUnmodifiableListView(_acceptedDocuments);
 }
 
-@override final  String? name;
+@override@JsonKey(includeIfNull: false) final  String? name;
 
 /// Create a copy of RegisterRequest
 /// with the given fields replaced by the non-null parameter values.
@@ -274,7 +274,7 @@ abstract mixin class _$RegisterRequestCopyWith<$Res> implements $RegisterRequest
   factory _$RegisterRequestCopyWith(_RegisterRequest value, $Res Function(_RegisterRequest) _then) = __$RegisterRequestCopyWithImpl;
 @override @useResult
 $Res call({
- String email, String password,@JsonKey(name: 'accepted_documents') List<DocumentAcceptance> acceptedDocuments, String? name
+ String email, String password,@JsonKey(name: 'accepted_documents') List<DocumentAcceptance> acceptedDocuments,@JsonKey(includeIfNull: false) String? name
 });
 
 

@@ -21,5 +21,5 @@ Map<String, dynamic> _$IvaComponentsToJson(_IvaComponents instance) =>
       'charged_collected_cents': instance.chargedCollectedCents,
       'creditable_paid_cents': instance.creditablePaidCents,
       'withheld_from_taxpayer_cents': instance.withheldFromTaxpayerCents,
-      'definitive_excluded_cents': instance.definitiveExcludedCents,
+      'definitive_excluded_cents': ?instance.definitiveExcludedCents,
     };

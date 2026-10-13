@@ -26,7 +26,7 @@ abstract class Regime with _$Regime {
     @JsonKey(name: 'required_inputs') required List<String> requiredInputs,
 
     /// Plain-language reason for partial/informational treatment.
-    String? explanation,
+    @JsonKey(includeIfNull: false) String? explanation,
   }) = _Regime;
 
   factory Regime.fromJson(Map<String, Object?> json) => _$RegimeFromJson(json);

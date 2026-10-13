@@ -30,18 +30,18 @@ _ExpenseCreate _$ExpenseCreateFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$ExpenseCreateToJson(_ExpenseCreate instance) =>
     <String, dynamic>{
-      'regime_code': instance.regimeCode,
-      'category_code': instance.categoryCode,
-      'description': instance.description,
-      'amount_cents': instance.amountCents,
-      'iva_rate': _$IvaRateEnumMap[instance.ivaRate],
-      'iva_cents': instance.ivaCents,
-      'payment_method': _$PaymentMethodEnumMap[instance.paymentMethod],
-      'has_cfdi': instance.hasCfdi,
-      'paid_on': instance.paidOn?.toIso8601String(),
-      'isr_withheld_cents': instance.isrWithheldCents,
-      'iva_withheld_cents': instance.ivaWithheldCents,
-      'id': instance.id,
+      'regime_code': ?instance.regimeCode,
+      'category_code': ?instance.categoryCode,
+      'description': ?instance.description,
+      'amount_cents': ?instance.amountCents,
+      'iva_rate': ?_$IvaRateEnumMap[instance.ivaRate],
+      'iva_cents': ?instance.ivaCents,
+      'payment_method': ?_$PaymentMethodEnumMap[instance.paymentMethod],
+      'has_cfdi': ?instance.hasCfdi,
+      'paid_on': ?instance.paidOn?.toIso8601String(),
+      'isr_withheld_cents': ?instance.isrWithheldCents,
+      'iva_withheld_cents': ?instance.ivaWithheldCents,
+      'id': ?instance.id,
     };
 
 const _$IvaRateEnumMap = {

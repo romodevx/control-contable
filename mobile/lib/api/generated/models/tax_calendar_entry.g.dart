@@ -25,7 +25,7 @@ Map<String, dynamic> _$TaxCalendarEntryToJson(
   'obligation': _$TaxCalendarEntryObligationEnumMap[instance.obligation]!,
   'nominal_due_date': instance.nominalDueDate.toIso8601String(),
   'due_date': instance.dueDate.toIso8601String(),
-  'moved_reason': _$TaxCalendarEntryMovedReasonEnumMap[instance.movedReason],
+  'moved_reason': ?_$TaxCalendarEntryMovedReasonEnumMap[instance.movedReason],
 };
 
 const _$TaxCalendarEntryObligationEnumMap = {

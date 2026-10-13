@@ -28,19 +28,20 @@ _IncomeFields _$IncomeFieldsFromJson(Map<String, dynamic> json) =>
           : DateTime.parse(json['collected_on'] as String),
     );
 
-Map<String, dynamic> _$IncomeFieldsToJson(_IncomeFields instance) =>
-    <String, dynamic>{
-      'regime_code': instance.regimeCode,
-      'description': instance.description,
-      'counterparty_type': _$CounterpartyTypeEnumMap[instance.counterpartyType],
-      'amount_cents': instance.amountCents,
-      'iva_rate': _$IvaRateEnumMap[instance.ivaRate],
-      'iva_cents': instance.ivaCents,
-      'isr_withheld_cents': instance.isrWithheldCents,
-      'iva_withheld_cents': instance.ivaWithheldCents,
-      'invoiced_on': instance.invoicedOn?.toIso8601String(),
-      'collected_on': instance.collectedOn?.toIso8601String(),
-    };
+Map<String, dynamic> _$IncomeFieldsToJson(
+  _IncomeFields instance,
+) => <String, dynamic>{
+  'regime_code': ?instance.regimeCode,
+  'description': ?instance.description,
+  'counterparty_type': ?_$CounterpartyTypeEnumMap[instance.counterpartyType],
+  'amount_cents': ?instance.amountCents,
+  'iva_rate': ?_$IvaRateEnumMap[instance.ivaRate],
+  'iva_cents': ?instance.ivaCents,
+  'isr_withheld_cents': ?instance.isrWithheldCents,
+  'iva_withheld_cents': ?instance.ivaWithheldCents,
+  'invoiced_on': ?instance.invoicedOn?.toIso8601String(),
+  'collected_on': ?instance.collectedOn?.toIso8601String(),
+};
 
 const _$CounterpartyTypeEnumMap = {
   CounterpartyType.personaFisica: 'persona_fisica',
