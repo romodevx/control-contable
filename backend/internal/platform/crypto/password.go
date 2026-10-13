@@ -23,10 +23,13 @@ const (
 )
 
 // Bounds accepted for the policy and for stored hashes. The upper bounds stop
-// a tampered row from turning a login into a memory or CPU exhaustion attack.
+// a tampered row from turning a login into a memory or CPU exhaustion attack:
+// one Verify costs at most 256 MiB and 256 MiB·passes (memory × time), which
+// still admits every OWASP option and the RFC 9106 m=64MiB,t=3 setting.
 const (
 	minMemoryPerThreadKiB = 8 // argon2 needs 8 KiB per lane
-	maxMemoryKiB          = 1 << 20
+	maxMemoryKiB          = 256 * 1024
+	maxCostKiB            = 256 * 1024 // memory (KiB) × time
 	maxTime               = 16
 	maxThreads            = 16
 	minSaltLen            = 8
@@ -70,6 +73,8 @@ func (p Argon2idParams) validate() error {
 		return fmt.Errorf("%w: threads %d not in [1, %d]", ErrInvalidParams, p.Threads, maxThreads)
 	case p.Memory < minMemoryPerThreadKiB*uint32(p.Threads) || p.Memory > maxMemoryKiB:
 		return fmt.Errorf("%w: memory %d KiB out of bounds", ErrInvalidParams, p.Memory)
+	case uint64(p.Memory)*uint64(p.Time) > maxCostKiB:
+		return fmt.Errorf("%w: memory × time above %d KiB", ErrInvalidParams, maxCostKiB)
 	case p.SaltLen < minSaltLen || p.SaltLen > maxSaltLen:
 		return fmt.Errorf("%w: salt length %d not in [%d, %d]", ErrInvalidParams, p.SaltLen, minSaltLen, maxSaltLen)
 	case p.KeyLen < minKeyLen || p.KeyLen > maxKeyLen:

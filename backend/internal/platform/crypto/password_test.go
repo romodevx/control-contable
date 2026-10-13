@@ -72,6 +72,59 @@ func TestNewPasswordHasherRejectsInvalidParams(t *testing.T) {
 	}
 }
 
+// The cost caps bound what one Verify of a stored (possibly tampered) hash can
+// cost: at most 256 MiB of memory and 256 MiB·passes (memory × time). They
+// still admit every OWASP option and the RFC 9106 second recommendation.
+func TestArgon2idCostCaps(t *testing.T) {
+	const mib = 1024
+	tests := []struct {
+		name    string
+		memory  uint32
+		time    uint32
+		threads uint8
+		wantErr error
+	}{
+		{"OWASP m=46MiB t=1", 46 * mib, 1, 1, nil},
+		{"OWASP m=19MiB t=2", 19 * mib, 2, 1, nil},
+		{"OWASP m=7MiB t=5", 7 * mib, 5, 1, nil},
+		{"RFC 9106 m=64MiB t=3 p=4", 64 * mib, 3, 4, nil},
+		{"memory at cap", 256 * mib, 1, 1, nil},
+		{"memory above cap (1 GiB)", 1024 * mib, 1, 1, ErrInvalidParams},
+		{"memory x time above cap", 64 * mib, 5, 1, ErrInvalidParams},
+		{"max time with large memory", 128 * mib, 16, 1, ErrInvalidParams},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := Argon2idParams{Memory: tt.memory, Time: tt.time, Threads: tt.threads, SaltLen: 16, KeyLen: 32}
+
+			_, err := NewPasswordHasher(p)
+
+			if tt.wantErr != nil {
+				require.ErrorIs(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
+// Regression: a stored hash whose cost exceeds the caps is rejected while
+// parsing, before any argon2 work, so a tampered row cannot exhaust memory.
+func TestParsePHCRejectsCostBombs(t *testing.T) {
+	const salt, key = "c2FsdHNhbHRzYWx0c2FsdA", "a2V5a2V5a2V5a2V5a2V5a2V5a2V5a2V5a2V5a2U"
+	for name, params := range map[string]string{
+		"1 GiB memory":       "m=1048576,t=1,p=1",
+		"1 GiB with t=16":    "m=1048576,t=16,p=16",
+		"memory x time bomb": "m=131072,t=16,p=1",
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := parsePHC("$argon2id$v=19$" + params + "$" + salt + "$" + key)
+
+			require.ErrorIs(t, err, ErrMalformedHash)
+		})
+	}
+}
+
 func TestHashProducesPHCStringWithFreshSalt(t *testing.T) {
 	h := newCheapHasher(t)
 
