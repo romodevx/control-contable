@@ -10,6 +10,7 @@ import (
 
 	authhttp "github.com/romodevx/control-contable/backend/internal/auth/adapter/http"
 	"github.com/romodevx/control-contable/backend/internal/auth/domain"
+	"github.com/romodevx/control-contable/backend/internal/auth/usecase"
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
 )
 
@@ -24,6 +25,12 @@ func TestErrorMapperMapsEveryDomainError(t *testing.T) {
 		{err: domain.ErrPasswordMalformed, want: apperr.CodeValidationFailed},
 		{err: domain.ErrPasswordCommon, want: apperr.CodeValidationFailed},
 		{err: domain.ErrInvalidVerificationCode, want: apperr.CodeValidationFailed},
+		{err: domain.ErrInvalidName, want: apperr.CodeValidationFailed},
+		{err: domain.ErrDocumentMissing, want: apperr.CodeValidationFailed},
+		{err: domain.ErrDocumentDuplicate, want: apperr.CodeValidationFailed},
+		{err: domain.ErrDocumentUnknown, want: apperr.CodeValidationFailed},
+		{err: domain.ErrDocumentNotCurrent, want: apperr.CodeValidationFailed},
+		{err: usecase.ErrVerificationRejected, want: apperr.CodeUnauthorized},
 		{err: domain.ErrMalformedRefreshToken, want: apperr.CodeUnauthorized},
 		{err: domain.ErrInvalidUserID, want: apperr.CodeInternalError},
 		{err: domain.ErrMalformedTokenHash, want: apperr.CodeInternalError},

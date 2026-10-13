@@ -3,6 +3,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,6 +23,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/flags"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagsgorm"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagtest"
+	"github.com/romodevx/control-contable/backend/internal/platform/logging"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgtest"
 )
 
@@ -41,19 +44,33 @@ type contractEnv struct {
 	handler http.Handler
 	store   flagsgorm.Store
 	flags   *flags.Service
+	logs    *syncBuffer // the API's log output (the dev email adapter writes codes here)
+	owner   *sql.DB     // cc_owner on the same database, for fixtures
+	app     *sql.DB     // cc_app, the API's own pool, for reading rows as a user
 }
 
 func newContractEnv(t *testing.T, db health.Pinger) contractEnv {
 	t.Helper()
 	pg := pgtest.NewDatabase(t)
-	owner, err := flagsgorm.Open(pg.Connect(t, pgtest.RoleOwner))
+	ownerDB := pg.Connect(t, pgtest.RoleOwner)
+	owner, err := flagsgorm.Open(ownerDB)
 	require.NoError(t, err)
-	svc, err := newFlagService(pg.Connect(t, pgtest.RoleApp), nil)
+	app := pg.Connect(t, pgtest.RoleApp)
+	svc, err := newFlagService(app, nil)
+	require.NoError(t, err)
+	logs := &syncBuffer{}
+	logger := logging.New(logs, nil)
+	auth, err := newAuthHandler(authWiring{
+		env: config.EnvDev, keys: testAuthKeys(), pool: app, logger: logger, now: time.Now, argon2: fastArgon2,
+	})
 	require.NoError(t, err)
 	return contractEnv{
-		handler: newFlaggedHandler(t, contractConfig(), db, svc),
+		handler: newHandlerWith(t, contractConfig(), db, svc, auth, logger),
 		store:   flagsgorm.NewStore(owner),
 		flags:   svc,
+		logs:    logs,
+		owner:   ownerDB,
+		app:     app,
 	}
 }
 
@@ -108,12 +125,13 @@ func TestContract_platformOperations(t *testing.T) {
 }
 
 // assertGate checks one flagged operation: OFF is the contract's 404
-// envelope; ON is routed past the gate (the module's own contract tests
-// take it from there).
+// envelope, and so is ON for an operation not built yet (P0-29 FU2); a built
+// operation that is ON is routed past the gate (the module's own contract
+// tests take it from there).
 func assertGate(t *testing.T, c *contracttest.Contract, env contractEnv, op gatedOperation, on bool) {
 	t.Helper()
 	req := env.request(op.method, op.path)
-	if on {
+	if on && slices.Contains(builtOperations, op.id) {
 		rec := httptest.NewRecorder()
 		env.handler.ServeHTTP(rec, req)
 		assert.NotEqualf(t, http.StatusNotFound, rec.Code, "%s (%s) is ON: routed past the gate", op.id, op.module)
@@ -121,7 +139,7 @@ func assertGate(t *testing.T, c *contracttest.Contract, env contractEnv, op gate
 	}
 	rec := c.Serve(t, env.handler, req)
 	if !flagtest.CheckHidden(t, rec) {
-		t.Errorf("%s %s (%s, %s OFF) is not hidden", op.method, op.path, op.id, op.module)
+		t.Errorf("%s %s (%s, %s on=%v) is not hidden", op.method, op.path, op.id, op.module, on)
 	}
 }
 

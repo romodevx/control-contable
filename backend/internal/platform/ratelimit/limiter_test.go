@@ -149,3 +149,39 @@ func TestNew_rejectsNonPositiveSettings(t *testing.T) {
 	assert.Panics(t, func() { ratelimit.New(0, 1, now) })
 	assert.Panics(t, func() { ratelimit.New(1, 0, now) })
 }
+
+// NewEvery expresses slow rates (one per hour) that a per-second rate cannot.
+func TestNewEvery_slowRate(t *testing.T) {
+	clk := newFakeClock()
+	l := ratelimit.NewEvery(time.Hour, 1, clk.Now)
+
+	ok, _ := l.Allow("k")
+	require.True(t, ok, "the first one passes")
+	ok, wait := l.Allow("k")
+	require.False(t, ok, "a second one within the hour is denied")
+	assert.Equal(t, time.Hour, wait)
+	ok, _ = l.Allow("other")
+	assert.True(t, ok, "keys are independent")
+
+	clk.Advance(time.Hour)
+	ok, _ = l.Allow("k")
+	assert.True(t, ok, "one more after the interval")
+}
+
+func TestNewEvery_burstThenOnePerInterval(t *testing.T) {
+	clk := newFakeClock()
+	l := ratelimit.NewEvery(12*time.Minute, 5, clk.Now)
+	for i := range 5 {
+		ok, _ := l.Allow("k")
+		require.True(t, ok, "burst %d", i)
+	}
+	ok, wait := l.Allow("k")
+	require.False(t, ok)
+	assert.Equal(t, 12*time.Minute, wait)
+}
+
+func TestNewEvery_rejectsNonPositiveSettings(t *testing.T) {
+	now := newFakeClock().Now
+	assert.Panics(t, func() { ratelimit.NewEvery(0, 1, now) })
+	assert.Panics(t, func() { ratelimit.NewEvery(time.Second, 0, now) })
+}

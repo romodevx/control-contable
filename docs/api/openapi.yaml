@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Control Contable API
-  version: 0.1.0
+  version: 0.2.0
   summary: Monthly IVA and provisional ISR estimates for Mexican taxpayers.
   description: |
     Spec-first contract (single source of truth). Server stubs (oapi-codegen),
@@ -95,32 +95,32 @@ paths:
         '500': { $ref: '#/components/responses/InternalError' }
 
   # ---------------------------------------------------------------- M1 Auth
-  # Frozen at M1-01 (docs/project-specs/MODULE-auth.md, decisions D1-D7). Every M1
+  # Frozen at M1-01 (docs/project-specs/MODULE-auth.md, decisions D1-D8). Every M1
   # operation is gated by `module_auth`: flag OFF answers 404 before decode or authn.
   /v1/auth/register:
     post:
       tags: [Auth]
       operationId: register
-      x-frozen: sha256:1daf06f69e7e13de65b8ce329eff69d42e69a050b340a969d4fe7c8f56efa521
+      x-frozen: sha256:db5c1b18ec847f9a65dbf6ab38503c52cdfd7272926de451d7460e71931b1e77
       summary: Start registration (emails a 6-digit verification code)
       description: >-
         Always answers `202 {status: verification_sent}` with the same body and comparable
         latency, whether the address is new, has a pending sign-up or already belongs to a
         verified account, so accounts cannot be enumerated (US-A1a). For a verified account
         no code is created and the owner gets a "someone tried to sign up with your email"
-        notice, at most once per hour (D3). For an email with a live (unexpired) pending
-        sign-up the stored password hash and accepted documents are never changed: the call
-        behaves like `resendVerification` for that email (same generic 202, same cooldown and
-        rate limits), so nobody can set the password of someone else's pending sign-up (D7).
-        Only once the pending sign-up has expired does a new register replace it. Nothing is
-        written to users, consents or entitlements until `verifyEmail` (ADR-0001 OWNER
-        decision 1, option A).
+        notice, at most once per hour (D3). Register takes no password and no name: both are
+        set at `verifyEmail` by whoever proves they own the inbox, so pre-registering someone
+        else's address gives the attacker nothing (D8). For an email with a live (unexpired)
+        pending sign-up the stored accepted documents are never changed: the call behaves
+        like `resendVerification` for that email (same generic 202, same cooldown and rate
+        limits) (D7). Only once the pending sign-up has expired does a new register replace
+        it. Nothing is written to users, consents or entitlements until `verifyEmail`
+        (ADR-0001 OWNER decision 1, option A).
 
         `accepted_documents` must carry the current version (from `listLegalDocuments`) of
         `terms` and of one privacy notice (`privacy_notice_integral` or
         `privacy_notice_simplified`). A stale version or a missing kind answers
-        `400 validation_failed` on `accepted_documents`; a short, weak or breached password
-        answers `400 validation_failed` on `password` (the value is never echoed).
+        `400 validation_failed` on `accepted_documents`.
       x-module: module_auth
       x-public: true
       security: []
@@ -131,19 +131,16 @@ paths:
             schema: { $ref: '#/components/schemas/RegisterRequest' }
             examples:
               integralNotice:
-                summary: Full privacy notice accepted, with name
+                summary: Full privacy notice accepted
                 value:
                   email: ana.gomez@example.mx
-                  password: '<new-password>'
-                  name: Ana Gómez Ruiz
                   accepted_documents:
                     - { kind: privacy_notice_integral, version: '2026-10-01' }
                     - { kind: terms, version: '2026-10-01' }
               simplifiedNotice:
-                summary: Simplified privacy notice accepted, no name
+                summary: Simplified privacy notice accepted
                 value:
                   email: jose.hernandez@example.mx
-                  password: '<new-password>'
                   accepted_documents:
                     - { kind: privacy_notice_simplified, version: '2026-10-01' }
                     - { kind: terms, version: '2026-10-01' }
@@ -154,22 +151,11 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/VerificationSent' }
         '400':
-          description: Input does not match the contract, the password policy or the current legal document versions.
+          description: Input does not match the contract or the current legal document versions.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
               examples:
-                weakPassword:
-                  summary: Password common or breached (a short or long one fails the schema first, code minLength/maxLength)
-                  value:
-                    error:
-                      code: validation_failed
-                      message: One or more fields are invalid.
-                      request_id: req_01J9Z6Q4X8
-                      details:
-                        - field: password
-                          code: password_policy
-                          message: Use at least 12 characters that are not a common or leaked password.
                 staleDocument:
                   summary: Accepted a legal document version that is no longer current
                   value:
@@ -188,17 +174,24 @@ paths:
     post:
       tags: [Auth]
       operationId: verifyEmail
-      x-frozen: sha256:036a6297a0ac5ee8104ff9f9726912f54500aaa3331b5f4159fef012ff87cbc4
-      summary: Confirm the emailed code; creates the account, starts the trial, issues tokens
+      x-frozen: sha256:e80e17aa2968ea8a6e26c727feb4dc2f8fdc4d86cce7d578ab0f372d3589f4cc
+      summary: Confirm the emailed code and set the password; creates the account, starts the trial, issues tokens
       description: >-
-        In one transaction: creates the user, stores the accepted consents (kind, version,
-        accepted_at), consumes the pending sign-up and starts the trial on the server clock
-        only if the email's keyed hash is not already in the trial registry (an account
-        deleted and created again gets no second trial; same `201`) (US-A1b).
+        The password (and the optional name) is chosen here, by whoever holds the emailed
+        code, never at `register`: an attacker who pre-registers someone else's address
+        cannot choose the password of the account the owner later verifies (D8).
 
-        A wrong, expired, consumed or unknown code, or an unknown email, answers `401` with
-        one generic message. Each wrong try counts against the code; after 5 the code is dead
-        and every try answers `401` until `resendVerification`.
+        In one transaction: creates the user with this password, stores the accepted consents
+        (kind, version, accepted_at), consumes the pending sign-up and starts the trial on
+        the server clock only if the email's keyed hash is not already in the trial registry
+        (an account deleted and created again gets no second trial; same `201`) (US-A1b).
+
+        The body, the password policy and the name are checked before the code: a short,
+        long, common or breached password answers `400 validation_failed` on `password` (the
+        value is never echoed) and does not count as a try. A wrong, expired, consumed or
+        unknown code, or an unknown email, answers `401` with one generic message. Each wrong
+        try counts against the code; after 5 the code is dead and every try answers `401`
+        until `resendVerification`.
       x-module: module_auth
       x-public: true
       security: []
@@ -215,7 +208,23 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthSession' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+        '400':
+          description: Input does not match the contract or the password policy (checked before the code; not a try).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                weakPassword:
+                  summary: Password common or breached (a short or long one fails the schema first, code minLength/maxLength)
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - field: password
+                          code: password_policy
+                          message: Use at least 12 characters that are not a common or leaked password.
         '401':
           description: The code is wrong, expired, consumed or unknown (one generic answer).
           content:
@@ -230,7 +239,7 @@ paths:
     post:
       tags: [Auth]
       operationId: resendVerification
-      x-frozen: sha256:3e1a7e1d9b8af2916ec6c4ebff0d41bf66f1e6070afb317483a4ceec4fc065b3
+      x-frozen: sha256:e83bde2ac5502dc09ef43322bcc0529adc421e3453b06ef86fb181cfb25d9bb1
       summary: Email a new verification code for a pending sign-up
       description: >-
         For a pending sign-up, a new code replaces the old one (attempts reset). Always
@@ -239,7 +248,8 @@ paths:
         (the cooldown is silent so it is not an oracle; the app shows a 60 s countdown)
         (US-A1c, D2). A `register` for an email with a live pending sign-up takes this same
         path and shares its cooldown and limits; neither call ever changes the pending
-        sign-up's password hash or accepted documents (D7).
+        sign-up's accepted documents (D7). A pending sign-up holds no password: it is set at
+        `verifyEmail` (D8).
       x-module: module_auth
       x-public: true
       security: []
@@ -1578,18 +1588,13 @@ components:
 
     # ------------------------------------------------------------ auth
     RegisterRequest:
-      x-frozen: sha256:7418696b5860f2122c6bf2896e62cdfad3e91e96e8c8ed9ef1d2e46bbb4d64d9
+      x-frozen: sha256:5aa24b9a1ba128130ece0e1d0043c934c126205da11e57c3a5e8d5380d46fcc1
       type: object
-      required: [email, password, accepted_documents]
+      required: [email, accepted_documents]
       additionalProperties: false
+      description: No password and no name (D8); both go in `VerifyEmailRequest`.
       properties:
         email: { type: string, format: email, maxLength: 254, description: 'Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.' }
-        password:
-          type: string
-          minLength: 12
-          maxLength: 128
-          description: 12-128 characters; the breached/common-password check (offline list, D5) runs server-side.
-        name: { type: string, minLength: 1, maxLength: 120 }
         accepted_documents:
           type: array
           minItems: 2
@@ -1599,8 +1604,6 @@ components:
           items: { $ref: '#/components/schemas/DocumentAcceptance' }
       examples:
         - email: ana.gomez@example.mx
-          password: '<new-password>'
-          name: Ana Gómez Ruiz
           accepted_documents:
             - { kind: privacy_notice_integral, version: '2026-10-01' }
             - { kind: terms, version: '2026-10-01' }
@@ -1624,15 +1627,24 @@ components:
       examples:
         - status: verification_sent
     VerifyEmailRequest:
-      x-frozen: sha256:b0a7ef87e1db343173ce0d692297569e2f82550ad7273fa06051840b449f08cf
+      x-frozen: sha256:7e8f356efba1abf886669add85205441432ac94514d8e8fa347374605f81b451
       type: object
-      required: [email, code]
+      required: [email, code, password]
       additionalProperties: false
       properties:
         email: { type: string, format: email, maxLength: 254, description: 'Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.' }
         code: { type: string, pattern: '^[0-9]{6}$', description: '6-digit emailed code; 15 min TTL, 5 wrong tries.' }
+        password:
+          type: string
+          minLength: 12
+          maxLength: 128
+          description: The new account's password (D8). 12-128 characters; the breached/common-password check (offline list, D5) runs server-side.
+        name: { type: string, minLength: 1, maxLength: 120 }
       examples:
-        - { email: ana.gomez@example.mx, code: '482913' }
+        - email: ana.gomez@example.mx
+          code: '482913'
+          password: '<new-password>'
+          name: Ana Gómez Ruiz
     ResendVerificationRequest:
       x-frozen: sha256:a0130e2b10bf47a32e5488954601f94bdab9dd24b9b46efba80180351d2eae47
       type: object

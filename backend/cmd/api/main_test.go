@@ -1,14 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -19,7 +22,10 @@ import (
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
 	"github.com/romodevx/control-contable/backend/adapter/http/health"
 	"github.com/romodevx/control-contable/backend/adapter/http/middleware"
+	authhttp "github.com/romodevx/control-contable/backend/internal/auth/adapter/http"
+	"github.com/romodevx/control-contable/backend/internal/auth/usecase"
 	"github.com/romodevx/control-contable/backend/internal/platform/config"
+	"github.com/romodevx/control-contable/backend/internal/platform/crypto"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagtest"
 	"github.com/romodevx/control-contable/backend/internal/platform/logging"
@@ -30,10 +36,33 @@ var _ gen.StrictServerInterface = api{}
 
 func testConfig() config.Config {
 	return config.Config{
-		Env:       config.EnvDev,
-		HTTPAddr:  "127.0.0.1:0",
-		RateLimit: config.RateLimit{PerSecond: 1, Burst: 3},
+		Env:            config.EnvDev,
+		HTTPAddr:       "127.0.0.1:0",
+		RateLimit:      config.RateLimit{PerSecond: 1, Burst: 3},
+		RequestTimeout: 10 * time.Second,
 	}
+}
+
+// stubAuth is an auth use case that must not be reached by the platform
+// tests; contract and integration tests wire the real ones.
+type stubAuth struct{}
+
+func (stubAuth) Execute(context.Context, usecase.RegisterInput) error {
+	return errors.New("stub: not wired")
+}
+
+type stubVerify struct{}
+
+func (stubVerify) Execute(context.Context, usecase.VerifyInput) (usecase.Session, error) {
+	return usecase.Session{}, errors.New("stub: not wired")
+}
+
+type stubResend struct{}
+
+func (stubResend) Execute(context.Context, string) error { return errors.New("stub: not wired") }
+
+func stubAuthHandler() *authhttp.Handler {
+	return authhttp.NewHandler(stubAuth{}, stubVerify{}, stubResend{})
 }
 
 func newTestHandler(t *testing.T, cfg config.Config, db health.Pinger) http.Handler {
@@ -43,9 +72,44 @@ func newTestHandler(t *testing.T, cfg config.Config, db health.Pinger) http.Hand
 
 func newFlaggedHandler(t *testing.T, cfg config.Config, db health.Pinger, f flagService) http.Handler {
 	t.Helper()
-	h, err := newHandler(cfg, deps{logger: logging.New(io.Discard, nil), db: db, flags: f, now: time.Now})
+	return newHandlerWith(t, cfg, db, f, stubAuthHandler(), logging.New(io.Discard, nil))
+}
+
+func newHandlerWith(t *testing.T, cfg config.Config, db health.Pinger, f flagService, auth *authhttp.Handler, logger *slog.Logger) http.Handler {
+	t.Helper()
+	h, err := newHandler(cfg, deps{logger: logger, db: db, flags: f, auth: auth, now: time.Now})
 	require.NoError(t, err)
 	return h
+}
+
+// testAuthKeys are fixture keys (all one byte each), never real ones.
+func testAuthKeys() config.Auth {
+	key := func(b byte) config.Secret { return config.NewSecret(strings.Repeat(string(rune(b)), 32)) }
+	return config.Auth{
+		EmailPepper: key(0x11), EmailKey: key(0x22), EmailKeyID: 1,
+		CodeKey: key(0x33), AccessTokenKey: key(0x44), AccessTokenKeyID: "k1",
+	}
+}
+
+// fastArgon2 keeps password hashing cheap in tests (production: OWASP defaults).
+var fastArgon2 = crypto.Argon2idParams{Memory: 8 * 1024, Time: 1, Threads: 1, SaltLen: 16, KeyLen: 32}
+
+// syncBuffer is a bytes.Buffer safe for the concurrent writes of a logger.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
 }
 
 // keysReader is a flags.Reader returning fixed keys or an error.
@@ -122,19 +186,36 @@ func TestFlaggedModulesAreOffByDefault(t *testing.T) {
 }
 
 // The flags service drives the real router's gate: OFF is the 404 envelope,
-// ON lets the request through to the module (whose handler is not built yet).
+// ON lets the request through to the module (here to its contract validation).
 func TestFlagGate_throughTheRealRouter(t *testing.T) {
 	flagtest.OnOff(t, "module_auth", func(t *testing.T, f flagtest.Static, on bool) {
 		svc := flags.NewService(keysReader{keys: enabledKeys(f)})
-		req, rec := get(newFlaggedHandler(t, testConfig(), pingOK{}, svc), "/v1/me")
+		req := httptest.NewRequest(http.MethodPost, "/v1/auth/verify-email/resend", strings.NewReader(`{}`))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		newFlaggedHandler(t, testConfig(), pingOK{}, svc).ServeHTTP(rec, req)
 
 		if !on {
 			flagtest.AssertHidden(t, rec)
 			conforms(t, req, rec)
 			return
 		}
-		assert.NotEqual(t, http.StatusNotFound, rec.Code, "an enabled module is routed past the gate")
+		assert.Equal(t, http.StatusBadRequest, rec.Code, "an enabled module is routed past the gate")
+		conforms(t, req, rec)
 	})
+}
+
+// P0-29 FU2: an operation of an enabled module that is not built yet answers
+// exactly like a hidden module: no panic, no 500, nothing about its schema.
+func TestNotBuilt_isHiddenEvenWithItsModuleOn(t *testing.T) {
+	svc := flags.NewService(keysReader{keys: []string{"module_auth", "module_taxpayers"}})
+	h := newFlaggedHandler(t, testConfig(), pingOK{}, svc)
+
+	for _, target := range []string{"/v1/me", "/v1/taxpayers", "/v1/legal/documents"} {
+		req, rec := get(h, target)
+		flagtest.AssertHidden(t, rec)
+		conforms(t, req, rec)
+	}
 }
 
 func TestFlagGate_failsClosedWhenFlagsAreUnreadable(t *testing.T) {
@@ -244,8 +325,16 @@ func TestOpenDatabase_rejectsMalformedURL(t *testing.T) {
 	assert.ErrorIs(t, err, pgdb.ErrInvalidDSN)
 }
 
+// withAuthKeys adds fixture auth keys (hex, all one byte) to env.
+func withAuthKeys(env map[string]string) map[string]string {
+	for i, name := range []string{"AUTH_EMAIL_PEPPER", "AUTH_EMAIL_KEY", "AUTH_CODE_KEY", "AUTH_ACCESS_TOKEN_KEY"} {
+		env[name] = strings.Repeat(string("0123456789"[i])+"a", 32)
+	}
+	return env
+}
+
 func TestRun_reportsMalformedDatabaseURL(t *testing.T) {
-	env := map[string]string{"APP_ENV": "dev", "DATABASE_URL": "postgres://u:pw@host:notaport/db"}
+	env := withAuthKeys(map[string]string{"APP_ENV": "dev", "DATABASE_URL": "postgres://u:pw@host:notaport/db"})
 	err := run(context.Background(), func(k string) (string, bool) { v, ok := env[k]; return v, ok }, io.Discard)
 
 	assert.ErrorIs(t, err, pgdb.ErrInvalidDSN)
@@ -253,10 +342,10 @@ func TestRun_reportsMalformedDatabaseURL(t *testing.T) {
 
 // Outside dev a role that cannot be verified is refused: the process does not start.
 func TestRun_refusesToStartWhenTheRuntimeRoleCannotBeVerified(t *testing.T) {
-	env := map[string]string{ //nolint:gosec // G101: fake password of a test fixture; the port is closed.
+	env := withAuthKeys(map[string]string{ //nolint:gosec // G101: fake password of a test fixture; the port is closed.
 		"APP_ENV": "staging", "TRUSTED_PROXY_HOPS": "0",
 		"DATABASE_URL": "postgres://cc_app:s3cr3t-pw@127.0.0.1:1/control_contable?sslmode=disable&connect_timeout=1",
-	}
+	})
 	err := run(context.Background(), func(k string) (string, bool) { v, ok := env[k]; return v, ok }, io.Discard)
 
 	require.Error(t, err)
@@ -269,4 +358,5 @@ func TestRun_reportsConfigErrors(t *testing.T) {
 
 	require.Error(t, err)
 	assert.True(t, strings.Contains(err.Error(), "APP_ENV"), err.Error())
+	assert.Contains(t, err.Error(), "AUTH_EMAIL_PEPPER", "the auth keys are reported in the same error")
 }

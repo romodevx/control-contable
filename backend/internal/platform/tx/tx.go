@@ -40,8 +40,9 @@ import (
 // carries the transaction.
 type Work func(ctx context.Context) error
 
-// Manager runs units of work. Implementations are safe for concurrent use;
-// a single unit of work is not (one goroutine at a time per transaction).
+// Manager runs units of work as a user. Implementations are safe for
+// concurrent use; a single unit of work is not (one goroutine at a time per
+// transaction).
 type Manager interface {
 	// ReadWrite runs work in a read-write transaction as userID.
 	ReadWrite(ctx context.Context, userID string, work Work) error
@@ -50,6 +51,14 @@ type Manager interface {
 	// only a hint there: the nested work can write. Never rely on ReadOnly
 	// as a security boundary.
 	ReadOnly(ctx context.Context, userID string, work Work) error
+}
+
+// SystemManager runs units of work with no user context (P0-30 D-2). It is a
+// separate port so that only the code that needs it (sign-up's definer calls,
+// the worker's cross-user jobs) can be handed one; a use case that holds only
+// a Manager cannot drop the user context. HTTP adapters import neither port
+// (archtest rule adapter-unit-of-work): they call use cases.
+type SystemManager interface {
 	// System runs work in a read-write transaction with no user context.
 	System(ctx context.Context, work Work) error
 }

@@ -7,8 +7,10 @@
 // info), RATE_LIMIT_RPS and RATE_LIMIT_BURST (per-client-IP token bucket;
 // default 10 and 20), TRUSTED_PROXY_HOPS (reverse proxies in front of the
 // server that append to X-Forwarded-For; 0 trusts only the TCP peer address;
-// defaults to 0 in dev and is required in staging and production). Secrets:
-// DATABASE_URL.
+// defaults to 0 in dev and is required in staging and production),
+// REQUEST_TIMEOUT (per-request deadline as a Go duration, 1s to 25s, under the
+// server's 30 s WriteTimeout; default 10s). Secrets: DATABASE_URL. The auth
+// module's keys load separately (LoadAuth).
 //
 // cmd/worker loads WorkerConfig instead (LoadWorker): APP_ENV, LOG_LEVEL and
 // DATABASE_URL only, since it serves no HTTP.
@@ -21,6 +23,7 @@ import (
 	"log/slog"
 	"slices"
 	"strconv"
+	"time"
 )
 
 // Lookup reads one environment variable; os.LookupEnv in production.
@@ -46,6 +49,7 @@ const (
 	keyRateRPS     = "RATE_LIMIT_RPS"
 	keyRateBurst   = "RATE_LIMIT_BURST"
 	keyProxyHops   = "TRUSTED_PROXY_HOPS"
+	keyReqTimeout  = "REQUEST_TIMEOUT"
 	secretDatabase = "DATABASE_URL"
 )
 
@@ -60,6 +64,12 @@ const (
 
 	defaultProxyHops = 0
 	maxProxyHops     = 10
+
+	// The per-request deadline (P0-29 FU1) stays below cmd/api's 30 s
+	// WriteTimeout, so the 500 it produces still reaches the client.
+	defaultRequestTimeout = 10 * time.Second
+	minRequestTimeout     = time.Second
+	maxRequestTimeout     = 25 * time.Second
 )
 
 // RateLimit configures the per-client token bucket: PerSecond tokens are
@@ -79,6 +89,8 @@ type Config struct {
 	// TrustedProxyHops is how many reverse proxies append to X-Forwarded-For
 	// in front of the server; 0 trusts only the TCP peer address.
 	TrustedProxyHops int
+	// RequestTimeout is the deadline of every request's context.
+	RequestTimeout time.Duration
 }
 
 // Load reads and validates the configuration. The error joins every problem
@@ -105,6 +117,9 @@ func Load(ctx context.Context, lookup Lookup, secrets SecretSource) (Config, err
 		errs = append(errs, err)
 	}
 	if cfg.TrustedProxyHops, err = parseProxyHops(lookup, cfg.Env); err != nil {
+		errs = append(errs, err)
+	}
+	if cfg.RequestTimeout, err = parseRequestTimeout(lookup); err != nil {
 		errs = append(errs, err)
 	}
 	if cfg.DatabaseURL, err = secrets.Secret(ctx, secretDatabase); err != nil {
@@ -154,6 +169,15 @@ func parseProxyHops(lookup Lookup, env Environment) (int, error) {
 		return 0, fmt.Errorf("%s is required when %s is %s", keyProxyHops, keyAppEnv, env)
 	}
 	return parseIntInRange(lookup, keyProxyHops, defaultProxyHops, 0, maxProxyHops)
+}
+
+func parseRequestTimeout(lookup Lookup) (time.Duration, error) {
+	raw := valueOr(lookup, keyReqTimeout, defaultRequestTimeout.String())
+	d, err := time.ParseDuration(raw)
+	if err != nil || d < minRequestTimeout || d > maxRequestTimeout {
+		return 0, fmt.Errorf("%s %q is not a duration in [%s, %s]", keyReqTimeout, raw, minRequestTimeout, maxRequestTimeout)
+	}
+	return d, nil
 }
 
 func parseIntInRange(lookup Lookup, key string, fallback, minValue, maxValue int) (int, error) {

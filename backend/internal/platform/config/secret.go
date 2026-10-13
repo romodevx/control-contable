@@ -33,6 +33,10 @@ func NewSecret(value string) Secret { return Secret{value: value} }
 // Reveal returns the secret value. Call it only at the point of use.
 func (s Secret) Reveal() string { return s.value }
 
+// RevealBytes returns the secret value as a new byte slice (decoded key
+// material). Call it only at the point of use.
+func (s Secret) RevealBytes() []byte { return []byte(s.value) }
+
 // IsZero reports whether the secret is empty.
 func (s Secret) IsZero() bool { return s.value == "" }
 

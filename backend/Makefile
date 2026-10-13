@@ -154,7 +154,10 @@ DB_URL   = postgres://$(1):$${$(2)}@$${CC_DB_HOST}:$${CC_DB_PORT}/$${CC_DB_NAME}
 ## api: LOCAL ONLY. Run cmd/api (APP_ENV=dev, PORT=API_PORT) as cc_app against the local stack
 api: $(LOCAL_ENV)
 	@$(ASSERT_LOCAL)
-	@$(RUN_ENV) PORT=$(API_PORT) DATABASE_URL="$(call DB_URL,cc_app,CC_APP_PASSWORD)" $(GO) run ./cmd/api
+	@$(RUN_ENV) PORT=$(API_PORT) DATABASE_URL="$(call DB_URL,cc_app,CC_APP_PASSWORD)" \
+		AUTH_EMAIL_PEPPER="$${CC_AUTH_EMAIL_PEPPER}" AUTH_EMAIL_KEY="$${CC_AUTH_EMAIL_KEY}" \
+		AUTH_CODE_KEY="$${CC_AUTH_CODE_KEY}" AUTH_ACCESS_TOKEN_KEY="$${CC_AUTH_ACCESS_TOKEN_KEY}" \
+		$(GO) run ./cmd/api
 
 ## worker: LOCAL ONLY. Run cmd/worker (APP_ENV=dev) as cc_worker against the local stack
 worker: $(LOCAL_ENV)

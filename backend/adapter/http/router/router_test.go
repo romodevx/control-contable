@@ -89,6 +89,7 @@ type setup struct {
 	denyAuthn bool
 	incomeErr error
 	maxBody   int64
+	notBuilt  []string
 }
 
 func newHarness(t testing.TB, s setup) *harness {
@@ -102,6 +103,7 @@ func newHarness(t testing.TB, s setup) *harness {
 		Authn:        recordingAuthn{deny: s.denyAuthn, paths: &h.authnSeen},
 		Logger:       logging.New(&h.logs, nil),
 		MaxBodyBytes: s.maxBody,
+		NotBuilt:     s.notBuilt,
 	})
 	require.NoError(t, err)
 	return h
@@ -227,26 +229,33 @@ func TestValidation_rejectsInputThatBreaksTheContract(t *testing.T) {
 		// RegisterRequest reaches DocumentAcceptance and LegalDocumentKind through
 		// $ref; the field must still be named, never collapsed into body/invalid.
 		{name: "$ref body: required property missing", method: http.MethodPost, target: "/v1/auth/register",
-			body:  `{"email":"ana@example.mx","accepted_documents":[` + termsAccepted + `,` + privacyAccepted + `]}`,
+			body:  `{"accepted_documents":[` + termsAccepted + `,` + privacyAccepted + `]}`,
+			flags: flagSet{"module_auth": true}, wantFields: []string{"email"}, wantCodes: []string{"required"}},
+		// D8: the password is set at verifyEmail; register refuses one outright.
+		{name: "$ref body: register refuses a password (D8)", method: http.MethodPost, target: "/v1/auth/register",
+			body:  `{"email":"ana@example.mx","password":"` + validNewPassword + `","accepted_documents":[` + termsAccepted + `,` + privacyAccepted + `]}`,
+			flags: flagSet{"module_auth": true}, wantFields: []string{"password"}, wantCodes: []string{"additionalProperties"}},
+		{name: "$ref body: verifyEmail requires the password (D8)", method: http.MethodPost, target: "/v1/auth/verify-email",
+			body:  `{"email":"ana@example.mx","code":"123456"}`,
 			flags: flagSet{"module_auth": true}, wantFields: []string{"password"}, wantCodes: []string{"required"}},
-		{name: "$ref body: property too short", method: http.MethodPost, target: "/v1/auth/register",
-			body:  `{"email":"ana@example.mx","password":"short","accepted_documents":[` + termsAccepted + `,` + privacyAccepted + `]}`,
+		{name: "$ref body: property too short", method: http.MethodPost, target: "/v1/auth/verify-email",
+			body:  `{"email":"ana@example.mx","code":"123456","password":"short"}`,
 			flags: flagSet{"module_auth": true}, wantFields: []string{"password"}, wantCodes: []string{"minLength"}},
 		{name: "$ref body: array too short", method: http.MethodPost, target: "/v1/auth/register",
-			body:  `{"email":"ana@example.mx","password":"` + validNewPassword + `","accepted_documents":[` + termsAccepted + `]}`,
+			body:  `{"email":"ana@example.mx","accepted_documents":[` + termsAccepted + `]}`,
 			flags: flagSet{"module_auth": true}, wantFields: []string{"accepted_documents"}, wantCodes: []string{"minItems"}},
 		{name: "$ref body: enum inside a referenced item", method: http.MethodPost, target: "/v1/auth/register",
-			body:  `{"email":"ana@example.mx","password":"` + validNewPassword + `","accepted_documents":[` + termsAccepted + `,{"kind":"nope","version":"1"}]}`,
+			body:  `{"email":"ana@example.mx","accepted_documents":[` + termsAccepted + `,{"kind":"nope","version":"1"}]}`,
 			flags: flagSet{"module_auth": true}, wantFields: []string{"accepted_documents.1.kind"}, wantCodes: []string{"enum"}},
-		{name: "$ref body: property of the wrong type", method: http.MethodPost, target: "/v1/auth/register",
-			body:  `{"email":"ana@example.mx","password":7,"accepted_documents":[` + termsAccepted + `,` + privacyAccepted + `]}`,
+		{name: "$ref body: property of the wrong type", method: http.MethodPost, target: "/v1/auth/verify-email",
+			body:  `{"email":"ana@example.mx","code":"123456","password":7}`,
 			flags: flagSet{"module_auth": true}, wantFields: []string{"password"}, wantCodes: []string{"type"}},
 		{name: "$ref body: unknown property", method: http.MethodPost, target: "/v1/auth/register",
-			body:  `{"email":"ana@example.mx","password":"` + validNewPassword + `","accepted_documents":[` + termsAccepted + `,` + privacyAccepted + `],"role":"admin"}`,
+			body:  `{"email":"ana@example.mx","accepted_documents":[` + termsAccepted + `,` + privacyAccepted + `],"role":"admin"}`,
 			flags: flagSet{"module_auth": true}, wantFields: []string{"role"}, wantCodes: []string{"additionalProperties"}},
 		{name: "$ref body: several errors keep their own fields", method: http.MethodPost, target: "/v1/auth/register",
-			body:  `{"email":"ana@example.mx","accepted_documents":[` + termsAccepted + `]}`,
-			flags: flagSet{"module_auth": true}, wantFields: []string{"accepted_documents", "password"}, wantCodes: []string{"minItems", "required"}},
+			body:  `{"accepted_documents":[` + termsAccepted + `]}`,
+			flags: flagSet{"module_auth": true}, wantFields: []string{"accepted_documents", "email"}, wantCodes: []string{"minItems", "required"}},
 		{name: "deleteMe without password is a 400 on the field", method: http.MethodDelete, target: "/v1/me", body: `{}`,
 			flags: flagSet{"module_auth": true}, wantFields: []string{"password"}, wantCodes: []string{"required"}},
 	}
@@ -352,6 +361,58 @@ func TestNew_failsClosedWhenARouteHasNoOperation(t *testing.T) {
 	_, err = router.New(fakeAPI{}, &pruned, router.Options{Flags: flagSet{}, Authn: router.NoAuthentication{}, Logger: logging.New(&bytes.Buffer{}, nil)})
 
 	assert.ErrorContains(t, err, "GET /healthz")
+}
+
+// P0-29 FU2: an operation whose module is ON but whose handler is not built
+// yet answers exactly like a hidden module, before authentication, validation
+// or the handler: never a panic, a 500 or a 400 that reveals its schema.
+func TestNotBuilt_answersLikeAHiddenModuleWithTheFlagOn(t *testing.T) {
+	tests := []struct {
+		name, method, target, body string
+	}{
+		{name: "valid request", method: http.MethodPost, target: "/v1/auth/login", body: validLogin},
+		{name: "schema-invalid body", method: http.MethodPost, target: "/v1/auth/login", body: `{"email":1}`},
+		{name: "secured operation", method: http.MethodGet, target: incomesURL},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newHarness(t, setup{
+				flags:     flagSet{"module_auth": true, "module_incomes": true},
+				denyAuthn: true,
+				notBuilt:  []string{"login", "listIncomes"},
+			})
+
+			rec := h.do(tt.method, tt.target, tt.body)
+
+			assert.Equal(t, http.StatusNotFound, rec.Code)
+			body := envelope(t, rec)
+			assert.Equal(t, apperr.CodeNotFound, body.Code)
+			assert.Equal(t, "Not found.", body.Message)
+			assert.Empty(t, h.calls, "the handler never runs")
+			assert.Empty(t, h.authnSeen, "authentication never runs")
+		})
+	}
+}
+
+func TestNotBuilt_leavesTheOtherOperationsAlone(t *testing.T) {
+	h := newHarness(t, setup{flags: flagSet{"module_auth": true}, notBuilt: []string{"listIncomes"}})
+
+	rec := h.do(http.MethodPost, "/v1/auth/login", validLogin)
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code, "the fake login answers 401 itself")
+	assert.Equal(t, []string{"login"}, h.calls)
+}
+
+func TestNew_failsOnANotBuiltOperationTheContractLacks(t *testing.T) {
+	spec, err := gen.GetSpec()
+	require.NoError(t, err)
+
+	_, err = router.New(fakeAPI{}, spec, router.Options{
+		Flags: flagSet{}, Authn: router.NoAuthentication{}, Logger: logging.New(&bytes.Buffer{}, nil),
+		NotBuilt: []string{"login", "noSuchOperation"},
+	})
+
+	assert.ErrorContains(t, err, "noSuchOperation")
 }
 
 func TestDefaults(t *testing.T) {

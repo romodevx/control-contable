@@ -40,25 +40,21 @@ response on duplicate email**; **trial starts at successful verification** (serv
 ## 3. User stories and acceptance criteria
 
 ### US-A1a Register (start)
-- **Given** the current legal documents, **when** I POST email, password, optional name and
-  `accepted_documents` covering the current `privacy_notice_integral` (or simplified) and
-  `terms` versions, **then** I get `202 {status: verification_sent}` and a code is "sent"
-  (dev: written to the log adapter, redacted in every other log line).
+- **Given** the current legal documents, **when** I POST email and `accepted_documents`
+  covering the current `privacy_notice_integral` (or simplified) and `terms` versions,
+  **then** I get `202 {status: verification_sent}` and a code is "sent" (dev: written to the
+  log adapter, redacted in every other log line). Register takes **no password and no name**
+  (D8): a body carrying either is `400` (`additionalProperties`).
 - **Given** the email already belongs to a verified account, **when** I register, **then** I
-  get the **same 202 body, status and comparable latency** (argon2 still runs); no code is
-  created; the existing owner gets a "someone tried to sign up with your email" notice
-  through `EmailSender`, at most once per hour (D3).
+  get the **same 202 body, status and comparable latency** (no branch hashes a password);
+  no code is created; the existing owner gets a "someone tried to sign up with your email"
+  notice through `EmailSender`, at most once per hour (D3).
 - **Given** a live (unexpired) pending sign-up for the same email, **when** anyone registers
-  again, **then** the stored password hash and accepted documents are **not** changed; the
-  call behaves exactly like a resend (US-A1c: new code to the address, attempts reset,
-  same 60 s silent cooldown and §5 limits, shared with resend) and answers the same
-  generic 202 (D7). Otherwise an attacker could set the password before the owner verifies.
+  again, **then** the stored accepted documents are **not** changed; the call behaves
+  exactly like a resend (US-A1c: new code to the address, attempts reset, same 60 s silent
+  cooldown and §5 limits, shared with resend) and answers the same generic 202 (D7).
 - **Given** an expired pending sign-up for the same email, **when** I register, **then** it
-  is replaced (new password hash, consents, code, attempts reset), 202.
-- **Given** a weak/breached password or a short one, **then** `400 validation_failed` with
-  `FieldError{field:"password"}` and a generic message (never echo the value). A short or
-  long one fails the schema (`code: minLength`/`maxLength`); a common or breached one fails
-  the handler's policy check (`code: password_policy`).
+  is replaced (consents, code, attempts reset), 202.
 - **Given** an accepted document version that is not the current one, or a missing kind,
   **then** `400 validation_failed` on `accepted_documents` (a bad item names it, e.g.
   `accepted_documents.1.kind`).
@@ -68,11 +64,17 @@ response on duplicate email**; **trial starts at successful verification** (serv
 - Nothing is written to `users`, `consents` or `entitlements` at this step.
 
 ### US-A1b Verify email (creates the account)
-- **Given** a live pending sign-up and the right code, **when** I POST `{email, code}`,
-  **then** in one transaction: the user row is created, consents (kind, version, accepted_at)
-  are stored, the pending row is consumed, `trial_registry_check_and_insert` runs, the
-  trial entitlement starts (server clock) **only if the email hash was not in the
-  registry**, and I get `201 AuthSession`.
+- **Given** a live pending sign-up and the right code, **when** I POST
+  `{email, code, password, name?}`, **then** in one transaction: the user row is created
+  **with this password** (argon2id, hashed only once the code matched) and name, consents
+  (kind, version, accepted_at) are stored, the pending row is consumed,
+  `trial_registry_check_and_insert` runs, the trial entitlement starts (server clock)
+  **only if the email hash was not in the registry**, and I get `201 AuthSession` (D8).
+- **Given** a weak/breached password or a short one, **then** `400 validation_failed` with
+  `FieldError{field:"password"}` and a generic message (never echo the value), checked
+  **before** the code, so it spends no try. A short or long one fails the schema
+  (`code: minLength`/`maxLength`); a common or breached one fails the handler's policy
+  check (`code: password_policy`). A blank name is `400` on `name`.
 - **Given** the email hash is already in `trial_registry` (deleted and came back), **then**
   the account is created with **no trial** (read-only until a plan) — same 201.
 - **Given** a wrong, expired, consumed or unknown code (or unknown email), **then**
@@ -212,6 +214,7 @@ email provider (M1-06, blocked on OB2), legal text content (OB10).
 | D4 | Account deletion requires **current password re-auth** (`DELETE /v1/me` body `{password}`; contract change in M1-01). |
 | D5 | Breached/common password check uses an **offline embedded list**; no third-party calls. |
 | D6 | Consents are **deleted with the account** (data minimization); only the `trial_registry` HMAC survives. **Flagged for lawyer review** (OB10). |
-| D7 | Register for an email with a **live pending sign-up never overwrites** its password hash or accepted documents (account-takeover found in the PR #34 security review): it behaves like `resendVerification` (generic 202, shared cooldown and rate limits). A new register replaces the pending sign-up only after it expires. Responses stay generic (no enumeration). M1-05 implements and tests it. |
+| D7 | Register for an email with a **live pending sign-up never overwrites** its password hash or accepted documents (account-takeover found in the PR #34 security review): it behaves like `resendVerification` (generic 202, shared cooldown and rate limits). A new register replaces the pending sign-up only after it expires. Responses stay generic (no enumeration). M1-05 implements and tests it. Superseded in part by D8: a pending sign-up no longer holds a password. |
+| D8 | **The password is set at verification, by whoever proves inbox ownership** (DECIDED 2026-10-13, coordinator; PR #40 security gate). D7 alone left a pre-registration takeover: an attacker registers the victim's email with the attacker's password, the victim's own register is only a resend, the victim verifies with the code from their inbox, and the account is created with the attacker's password. Contract change (authorized pre-release change of the M1-01 frozen nodes, `info.version` 0.1.0 → 0.2.0): `RegisterRequest` drops `password` and `name` (email + `accepted_documents` only); `VerifyEmailRequest` gains required `password` (12-128, policy checked server-side before the code, a policy failure spends no try) and optional `name`. Pending sign-ups store no password hash and no name; `email_verification_start` refuses a payload with `password_hash`. Regression: `TestAuth_preRegistrationTakeover`. Mobile (PR #39) adapts its sign-up flow: the password field moves to the code screen. |
 
 No open questions remain for stage 1.

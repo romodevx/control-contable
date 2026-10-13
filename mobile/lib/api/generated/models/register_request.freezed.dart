@@ -17,9 +17,8 @@ T _$identity<T>(T value) => value;
 mixin _$RegisterRequest {
 
 /// Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.
- String get email;/// 12-128 characters; the breached/common-password check (offline list, D5) runs server-side.
- String get password;/// The current version of `terms` and of one privacy notice (integral or simplified), as returned by `listLegalDocuments`.
-@JsonKey(name: 'accepted_documents') List<DocumentAcceptance> get acceptedDocuments; String? get name;
+ String get email;/// The current version of `terms` and of one privacy notice (integral or simplified), as returned by `listLegalDocuments`.
+@JsonKey(name: 'accepted_documents') List<DocumentAcceptance> get acceptedDocuments;
 /// Create a copy of RegisterRequest
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -33,20 +32,20 @@ $RegisterRequestCopyWith<RegisterRequest> get copyWith => _$RegisterRequestCopyW
 @override
 bool operator ==(Object other) {
   final _this = this as RegisterRequest;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RegisterRequest&&(identical(other.email, _this.email) || other.email == _this.email)&&(identical(other.password, _this.password) || other.password == _this.password)&&const DeepCollectionEquality().equals(other.acceptedDocuments, _this.acceptedDocuments)&&(identical(other.name, _this.name) || other.name == _this.name));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RegisterRequest&&(identical(other.email, _this.email) || other.email == _this.email)&&const DeepCollectionEquality().equals(other.acceptedDocuments, _this.acceptedDocuments));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as RegisterRequest;
-  return Object.hash(runtimeType,_this.email,_this.password,const DeepCollectionEquality().hash(_this.acceptedDocuments),_this.name);
+  return Object.hash(runtimeType,_this.email,const DeepCollectionEquality().hash(_this.acceptedDocuments));
 }
 
 @override
 String toString() {
   final _this = this as RegisterRequest;
-  return 'RegisterRequest(email: ${_this.email}, password: ${_this.password}, acceptedDocuments: ${_this.acceptedDocuments}, name: ${_this.name})';
+  return 'RegisterRequest(email: ${_this.email}, acceptedDocuments: ${_this.acceptedDocuments})';
 }
 
 
@@ -57,7 +56,7 @@ abstract mixin class $RegisterRequestCopyWith<$Res>  {
   factory $RegisterRequestCopyWith(RegisterRequest value, $Res Function(RegisterRequest) _then) = _$RegisterRequestCopyWithImpl;
 @useResult
 $Res call({
- String email, String password,@JsonKey(name: 'accepted_documents') List<DocumentAcceptance> acceptedDocuments, String? name
+ String email,@JsonKey(name: 'accepted_documents') List<DocumentAcceptance> acceptedDocuments
 });
 
 
@@ -74,13 +73,11 @@ class _$RegisterRequestCopyWithImpl<$Res>
 
 /// Create a copy of RegisterRequest
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? email = null,Object? password = null,Object? acceptedDocuments = null,Object? name = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? email = null,Object? acceptedDocuments = null,}) {
   return _then(RegisterRequest(
 email: null == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
-as String,password: null == password ? _self.password : password // ignore: cast_nullable_to_non_nullable
 as String,acceptedDocuments: null == acceptedDocuments ? _self.acceptedDocuments : acceptedDocuments // ignore: cast_nullable_to_non_nullable
-as List<DocumentAcceptance>,name: freezed == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
-as String?,
+as List<DocumentAcceptance>,
   ));
 }
 
@@ -165,10 +162,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String email,  String password, @JsonKey(name: 'accepted_documents')  List<DocumentAcceptance> acceptedDocuments,  String? name)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String email, @JsonKey(name: 'accepted_documents')  List<DocumentAcceptance> acceptedDocuments)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RegisterRequest() when $default != null:
-return $default(_that.email,_that.password,_that.acceptedDocuments,_that.name);case _:
+return $default(_that.email,_that.acceptedDocuments);case _:
   return orElse();
 
 }
@@ -186,10 +183,10 @@ return $default(_that.email,_that.password,_that.acceptedDocuments,_that.name);c
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String email,  String password, @JsonKey(name: 'accepted_documents')  List<DocumentAcceptance> acceptedDocuments,  String? name)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String email, @JsonKey(name: 'accepted_documents')  List<DocumentAcceptance> acceptedDocuments)  $default,) {final _that = this;
 switch (_that) {
 case _RegisterRequest():
-return $default(_that.email,_that.password,_that.acceptedDocuments,_that.name);case _:
+return $default(_that.email,_that.acceptedDocuments);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -206,10 +203,10 @@ return $default(_that.email,_that.password,_that.acceptedDocuments,_that.name);c
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String email,  String password, @JsonKey(name: 'accepted_documents')  List<DocumentAcceptance> acceptedDocuments,  String? name)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String email, @JsonKey(name: 'accepted_documents')  List<DocumentAcceptance> acceptedDocuments)?  $default,) {final _that = this;
 switch (_that) {
 case _RegisterRequest() when $default != null:
-return $default(_that.email,_that.password,_that.acceptedDocuments,_that.name);case _:
+return $default(_that.email,_that.acceptedDocuments);case _:
   return null;
 
 }
@@ -221,13 +218,11 @@ return $default(_that.email,_that.password,_that.acceptedDocuments,_that.name);c
 @JsonSerializable()
 
 class _RegisterRequest implements RegisterRequest {
-  const _RegisterRequest({required this.email, required this.password, @JsonKey(name: 'accepted_documents') required  List<DocumentAcceptance> acceptedDocuments, this.name}): _acceptedDocuments = acceptedDocuments;
+  const _RegisterRequest({required this.email, @JsonKey(name: 'accepted_documents') required  List<DocumentAcceptance> acceptedDocuments}): _acceptedDocuments = acceptedDocuments;
   factory _RegisterRequest.fromJson(Map<String, dynamic> json) => _$RegisterRequestFromJson(json);
 
 /// Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.
 @override final  String email;
-/// 12-128 characters; the breached/common-password check (offline list, D5) runs server-side.
-@override final  String password;
 /// The current version of `terms` and of one privacy notice (integral or simplified), as returned by `listLegalDocuments`.
  final  List<DocumentAcceptance> _acceptedDocuments;
 /// The current version of `terms` and of one privacy notice (integral or simplified), as returned by `listLegalDocuments`.
@@ -237,7 +232,6 @@ class _RegisterRequest implements RegisterRequest {
   return EqualUnmodifiableListView(_acceptedDocuments);
 }
 
-@override final  String? name;
 
 /// Create a copy of RegisterRequest
 /// with the given fields replaced by the non-null parameter values.
@@ -252,18 +246,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _RegisterRequest&&(identical(other.email, email) || other.email == email)&&(identical(other.password, password) || other.password == password)&&const DeepCollectionEquality().equals(other.acceptedDocuments, _acceptedDocuments)&&(identical(other.name, name) || other.name == name));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _RegisterRequest&&(identical(other.email, email) || other.email == email)&&const DeepCollectionEquality().equals(other.acceptedDocuments, _acceptedDocuments));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,email,password,const DeepCollectionEquality().hash(_acceptedDocuments),name);
+    return Object.hash(runtimeType,email,const DeepCollectionEquality().hash(_acceptedDocuments));
 }
 
 @override
 String toString() {
-    return 'RegisterRequest(email: $email, password: $password, acceptedDocuments: $acceptedDocuments, name: $name)';
+    return 'RegisterRequest(email: $email, acceptedDocuments: $acceptedDocuments)';
 }
 
 
@@ -274,7 +268,7 @@ abstract mixin class _$RegisterRequestCopyWith<$Res> implements $RegisterRequest
   factory _$RegisterRequestCopyWith(_RegisterRequest value, $Res Function(_RegisterRequest) _then) = __$RegisterRequestCopyWithImpl;
 @override @useResult
 $Res call({
- String email, String password,@JsonKey(name: 'accepted_documents') List<DocumentAcceptance> acceptedDocuments, String? name
+ String email,@JsonKey(name: 'accepted_documents') List<DocumentAcceptance> acceptedDocuments
 });
 
 
@@ -291,13 +285,11 @@ class __$RegisterRequestCopyWithImpl<$Res>
 
 /// Create a copy of RegisterRequest
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? email = null,Object? password = null,Object? acceptedDocuments = null,Object? name = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? email = null,Object? acceptedDocuments = null,}) {
   return _then(_RegisterRequest(
 email: null == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
-as String,password: null == password ? _self.password : password // ignore: cast_nullable_to_non_nullable
 as String,acceptedDocuments: null == acceptedDocuments ? _self._acceptedDocuments : acceptedDocuments // ignore: cast_nullable_to_non_nullable
-as List<DocumentAcceptance>,name: freezed == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
-as String?,
+as List<DocumentAcceptance>,
   ));
 }
 

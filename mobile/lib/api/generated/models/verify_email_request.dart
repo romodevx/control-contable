@@ -15,6 +15,10 @@ abstract class VerifyEmailRequest with _$VerifyEmailRequest {
 
     /// 6-digit emailed code; 15 min TTL, 5 wrong tries.
     required String code,
+
+    /// The new account's password (D8). 12-128 characters; the breached/common-password check (offline list, D5) runs server-side.
+    required String password,
+    String? name,
   }) = _VerifyEmailRequest;
 
   factory VerifyEmailRequest.fromJson(Map<String, Object?> json) =>

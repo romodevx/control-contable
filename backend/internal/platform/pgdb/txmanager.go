@@ -27,12 +27,16 @@ const systemUserContext = ""
 // ErrNoTransaction reports database access outside a unit of work.
 var ErrNoTransaction = errors.New("pgdb: no transaction in context; run the work through tx.Manager")
 
-// TxManager implements tx.Manager on a GORM handle over a pgx pool.
+// TxManager implements tx.Manager and tx.SystemManager on a GORM handle over
+// a pgx pool.
 type TxManager struct {
 	db *gorm.DB
 }
 
-var _ tx.Manager = (*TxManager)(nil)
+var (
+	_ tx.Manager       = (*TxManager)(nil)
+	_ tx.SystemManager = (*TxManager)(nil)
+)
 
 // NewTxManager builds a TxManager on pool (normally from Open), the same pool
 // the rest of the process uses.
@@ -82,7 +86,7 @@ func (m *TxManager) ReadOnly(ctx context.Context, userID string, work tx.Work) e
 	return m.runAsUser(ctx, userID, true, work)
 }
 
-// System implements tx.Manager.
+// System implements tx.SystemManager.
 func (m *TxManager) System(ctx context.Context, work tx.Work) error {
 	return m.run(ctx, systemUserContext, false, work)
 }
