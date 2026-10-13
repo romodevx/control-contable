@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,9 +14,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/romodevx/control-contable/backend/adapter/http/flaggate"
 	"github.com/romodevx/control-contable/backend/adapter/http/flagshttp"
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
+	"github.com/romodevx/control-contable/backend/adapter/http/router"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagtest"
 	"github.com/romodevx/control-contable/backend/internal/platform/requestid"
@@ -45,8 +46,13 @@ func (s server) ListEnabledFlags(ctx context.Context, req gen.ListEnabledFlagsRe
 
 func get(t *testing.T, lister flagshttp.Lister) *httptest.ResponseRecorder {
 	t.Helper()
-	si := gen.NewStrictHandler(server{Handler: flagshttp.New(lister, nil)}, nil)
-	h, err := flaggate.Handler(si, flagtest.Static{}) // every module OFF: /v1/flags is platform
+	spec, err := gen.GetSpec()
+	require.NoError(t, err)
+	h, err := router.New(server{Handler: flagshttp.New(lister, nil)}, spec, router.Options{
+		Flags:  flagtest.Static{}, // every module OFF: /v1/flags is platform
+		Authn:  router.NoAuthentication{},
+		Logger: slog.New(slog.DiscardHandler),
+	})
 	require.NoError(t, err)
 	req := httptest.NewRequest(http.MethodGet, "/v1/flags", nil)
 	req = req.WithContext(requestid.With(req.Context(), testRequestID))

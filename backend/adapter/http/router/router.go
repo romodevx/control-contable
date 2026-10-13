@@ -27,16 +27,13 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/routers"
 
+	"github.com/romodevx/control-contable/backend/adapter/http/flaggate"
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
-	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
-	"github.com/romodevx/control-contable/backend/internal/platform/httperr"
 )
 
 // DefaultMaxBodyBytes caps request bodies read for validation. The largest
 // request in the contract (an income or expense) is well under 64 KiB.
 const DefaultMaxBodyBytes int64 = 1 << 20
-
-const notFoundMessage = "Not found."
 
 // FlagGate reports whether a module's feature flag is ON. The flags service
 // (P0-15) implements it; it must fail closed (OFF) when it cannot tell.
@@ -44,8 +41,8 @@ type FlagGate interface {
 	Enabled(ctx context.Context, module string) bool
 }
 
-// AllModulesOff is the FlagGate until the flags service exists: flags
-// default OFF, so every flagged module answers 404.
+// AllModulesOff is a FlagGate with every module OFF (flags default OFF), for
+// tests. cmd/api wires the flags service (*flags.Service).
 type AllModulesOff struct{}
 
 // Enabled implements FlagGate.
@@ -126,10 +123,7 @@ func (g *registrar) HandleFunc(pattern string, handler func(http.ResponseWriter,
 	if !isPublic(route) {
 		next = g.opts.Authn.Authenticate(next)
 	}
-	if module != gen.ModulePlatform {
-		next = gate(g.opts.Flags, module, next)
-	}
-	g.mux.Handle(pattern, next)
+	g.mux.Handle(pattern, flaggate.Wrap(g.opts.Flags, module, next))
 }
 
 // ServeHTTP implements http.Handler. A request that matches no pattern gets
@@ -137,24 +131,10 @@ func (g *registrar) HandleFunc(pattern string, handler func(http.ResponseWriter,
 // list a disabled module's methods) are never sent.
 func (g *registrar) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if _, pattern := g.mux.Handler(r); pattern == "" {
-		writeNotFound(w, r)
+		flaggate.WriteNotFound(w, r)
 		return
 	}
 	g.mux.ServeHTTP(w, r)
-}
-
-func gate(flags FlagGate, module string, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !flags.Enabled(r.Context(), module) {
-			writeNotFound(w, r)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-func writeNotFound(w http.ResponseWriter, r *http.Request) {
-	_ = httperr.Write(w, r, apperr.Mapper{}, apperr.New(apperr.CodeNotFound, notFoundMessage))
 }
 
 // findRoute resolves a ServeMux pattern ("GET /v1/x/{id}") to its operation.
