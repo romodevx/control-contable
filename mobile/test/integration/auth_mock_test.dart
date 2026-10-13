@@ -49,30 +49,27 @@ void main() {
         expect(Uri.parse(set!.terms.url).isScheme('https'), isTrue);
       });
 
-      test(
-        'register without a name is accepted (no null on the wire)',
-        () async {
-          final set = LegalDocumentSet.pick(
-            await repository.listLegalDocuments(),
-          )!;
+      test('register with email and consents only is accepted (D8)', () async {
+        final set = LegalDocumentSet.pick(
+          await repository.listLegalDocuments(),
+        )!;
 
-          // Prism rejects a body that breaks the schema (400 with
-          // sl-violations); a 202 means the request matched the contract.
-          await repository.register(
-            RegisterRequest(
-              email: 'ana.gomez@example.mx',
-              password: syntheticPassword(24),
-              acceptedDocuments: set.acceptances,
-            ),
-          );
-        },
-      );
+        // Prism rejects a body that breaks the schema (400 with
+        // sl-violations); a 202 means the request matched the contract.
+        await repository.register(
+          RegisterRequest(
+            email: 'ana.gomez@example.mx',
+            acceptedDocuments: set.acceptances,
+          ),
+        );
+      });
 
       test('verify returns a session and resend the generic 202', () async {
         final session = await repository.verifyEmail(
-          const VerifyEmailRequest(
+          VerifyEmailRequest(
             email: 'ana.gomez@example.mx',
             code: '482913',
+            password: syntheticPassword(24),
           ),
         );
 

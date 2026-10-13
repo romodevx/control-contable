@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:control_contable/api/generated/models/field_error.dart' as api;
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/router/app_router.dart';
 import 'package:control_contable/features/auth/application/pending_sign_up.dart';
@@ -8,11 +9,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../helpers/synthetic_password.dart';
 import 'pump_auth.dart';
 
 const _email = 'ana@example.mx';
 const _code = 'Código de verificación';
 const _confirm = 'Confirmar';
+const _password = 'Contraseña';
+const _policy =
+    'Esta contraseña es muy común o apareció en una filtración. Elige otra.';
 const _resend = 'Enviar otro código';
 const _rejected =
     'El código no es válido o ya venció. Revisa el correo o pide uno nuevo.';
@@ -22,17 +27,35 @@ void main() {
 
   setUp(() => harness = AuthHarness());
 
+  /// The draft a successful register leaves behind.
+  void startDraft() => harness.container
+      .read(pendingSignUpProvider.notifier)
+      .start(
+        SignUpDraft(email: _email, password: syntheticPassword(), name: 'Ana'),
+      );
+
   /// Opens the code screen the way a successful register does.
-  Future<void> open(WidgetTester tester, {String? pending = _email}) async {
+  Future<void> open(WidgetTester tester, {bool pending = true}) async {
     await harness.pump(tester);
-    if (pending != null) {
-      harness.container.read(pendingSignUpProvider.notifier).start(pending);
-    }
+    if (pending) startDraft();
     harness.container.read(appRouterProvider).go(AuthRoutes.verifyEmail);
     await tester.pumpAndSettle();
   }
 
   Finder code() => inputLabeled(_code);
+
+  /// Leaves the app (e.g. to read the code in the mail app) and comes back.
+  Future<void> backgroundAndReturn(WidgetTester tester) async {
+    [
+      AppLifecycleState.inactive,
+      AppLifecycleState.hidden,
+      AppLifecycleState.paused,
+      AppLifecycleState.hidden,
+      AppLifecycleState.inactive,
+      AppLifecycleState.resumed,
+    ].forEach(tester.binding.handleAppLifecycleStateChanged);
+    await tester.pump();
+  }
 
   testWidgets('says where the code went and how long it lasts', (tester) async {
     await open(tester);
@@ -70,6 +93,8 @@ void main() {
 
     final request = harness.repository.verified.single;
     expect((request.email, request.code), (_email, '482913'));
+    expect(request.password, syntheticPassword(), reason: 'D8: set here');
+    expect(request.name, 'Ana');
     expect(harness.sessions.saved, hasLength(1));
     expect(harness.container.read(pendingSignUpProvider), isNull);
     expect(find.text('Inicio'), findsOneWidget, reason: 'home');
@@ -110,6 +135,71 @@ void main() {
     expect(find.text(_rejected), findsOneWidget, reason: 'inline');
     expect(find.text('$_code: $_rejected'), findsOneWidget);
     expect(harness.sessions.saved, isEmpty);
+  });
+
+  group('password chosen at sign-up (D8)', () {
+    testWidgets('a rejected password reveals its field; the code is kept', (
+      tester,
+    ) async {
+      harness.repository.verifyError = const ApiValidationFailure([
+        api.FieldError(
+          field: 'password',
+          code: 'password_policy',
+          message: 'Use at least 12 characters.',
+        ),
+      ]);
+      await open(tester);
+      expect(find.text(_password), findsNothing, reason: 'hidden at first');
+
+      await tester.enterText(code(), '482913');
+      await tester.pumpAndSettle();
+
+      expect(find.text('$_password: $_policy'), findsOneWidget);
+      expect(find.text(_policy), findsOneWidget, reason: 'inline');
+      expect(find.text(_rejected), findsNothing, reason: 'not a code error');
+      expect(find.text('482913'), findsOneWidget);
+
+      harness.repository.verifyError = null;
+      await tester.enterText(inputLabeled(_password), syntheticPassword(20));
+      await tester.tap(find.widgetWithText(FilledButton, _confirm));
+      await tester.pumpAndSettle();
+
+      expect(harness.repository.verified.last.password, syntheticPassword(20));
+      expect(harness.sessions.saved, hasLength(1));
+    });
+
+    testWidgets('a 400 on the code stays on the code field', (tester) async {
+      harness.repository.verifyError = const ApiValidationFailure([
+        api.FieldError(field: 'code', code: 'pattern', message: 'Bad code.'),
+      ]);
+      await open(tester);
+
+      await tester.enterText(code(), '482913');
+      await tester.pumpAndSettle();
+
+      expect(find.text('$_code: Escribe los 6 dígitos del código.'), findsOne);
+      expect(find.text(_password), findsNothing);
+    });
+
+    testWidgets('going to the background forgets the password', (tester) async {
+      await open(tester);
+
+      await backgroundAndReturn(tester);
+      await tester.pumpAndSettle();
+
+      expect(harness.container.read(pendingSignUpProvider)!.password, isNull);
+      expect(harness.container.read(pendingSignUpProvider)!.email, _email);
+      expect(find.text(_password), findsOneWidget, reason: 'asked again');
+
+      await tester.enterText(code(), '482913');
+      await tester.pumpAndSettle();
+      expect(harness.repository.verified, isEmpty, reason: 'waits for it');
+
+      await tester.enterText(inputLabeled(_password), syntheticPassword());
+      await tester.tap(find.widgetWithText(FilledButton, _confirm));
+      await tester.pumpAndSettle();
+      expect(harness.repository.verified.single.password, syntheticPassword());
+    });
   });
 
   group('resend', () {
@@ -157,7 +247,7 @@ void main() {
 
   testWidgets('"Cambiar correo" goes back to the sign-up form', (tester) async {
     await harness.pump(tester, location: AuthRoutes.register);
-    harness.container.read(pendingSignUpProvider.notifier).start(_email);
+    startDraft();
     unawaited(
       harness.container
           .read(appRouterProvider)
@@ -174,7 +264,7 @@ void main() {
   testWidgets('without a sign-up in progress it points back to register', (
     tester,
   ) async {
-    await open(tester, pending: null);
+    await open(tester, pending: false);
 
     expect(find.text('No hay un registro en curso.'), findsOneWidget);
     await tester.tap(find.widgetWithText(FilledButton, 'Crear cuenta'));
@@ -188,7 +278,7 @@ void main() {
         '(${brightness.name})', (tester) async {
       final semantics = tester.ensureSemantics();
       await harness.pump(tester, brightness: brightness);
-      harness.container.read(pendingSignUpProvider.notifier).start(_email);
+      startDraft();
       harness.container.read(appRouterProvider).go(AuthRoutes.verifyEmail);
       await tester.pumpAndSettle();
       await harness.elapse(tester, const Duration(seconds: 60));

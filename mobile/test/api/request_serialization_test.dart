@@ -1,10 +1,8 @@
 import 'dart:convert';
 
-import 'package:control_contable/api/generated/models/document_acceptance.dart';
 import 'package:control_contable/api/generated/models/income_update.dart';
-import 'package:control_contable/api/generated/models/legal_document_kind.dart';
-import 'package:control_contable/api/generated/models/register_request.dart';
 import 'package:control_contable/api/generated/models/reminder_settings.dart';
+import 'package:control_contable/api/generated/models/verify_email_request.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/synthetic_password.dart';
@@ -16,36 +14,25 @@ void main() {
   Map<String, Object?> wire(Object request) =>
       jsonDecode(jsonEncode(request)) as Map<String, Object?>;
 
-  const documents = [
-    DocumentAcceptance(
-      kind: LegalDocumentKind.privacyNoticeIntegral,
-      version: '2026-10-01',
-    ),
-    DocumentAcceptance(kind: LegalDocumentKind.terms, version: '2026-10-01'),
-  ];
-
   test('an unset optional field is left out of the body', () {
     final body = wire(
-      RegisterRequest(
+      VerifyEmailRequest(
         email: 'ana@example.mx',
+        code: '482913',
         password: syntheticPassword(),
-        acceptedDocuments: documents,
       ),
     );
 
     expect(body.containsKey('name'), isFalse);
-    expect(body['accepted_documents'], [
-      {'kind': 'privacy_notice_integral', 'version': '2026-10-01'},
-      {'kind': 'terms', 'version': '2026-10-01'},
-    ]);
+    expect(body.keys, {'email', 'code', 'password'});
   });
 
   test('a set optional field is sent', () {
     final body = wire(
-      RegisterRequest(
+      VerifyEmailRequest(
         email: 'ana@example.mx',
+        code: '482913',
         password: syntheticPassword(),
-        acceptedDocuments: documents,
         name: 'Ana',
       ),
     );

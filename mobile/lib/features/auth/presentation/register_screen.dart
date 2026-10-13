@@ -66,8 +66,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       return _showNotice(describeAuthFailure(failure, l10n));
     }
     if (!mounted) return;
-    ref.read(pendingSignUpProvider.notifier).start(fields.email.value);
-    unawaited(context.push<void>(AuthRoutes.verifyEmail));
+    final pending = ref.read(pendingSignUpProvider.notifier)
+      ..start(fields.draft());
+    unawaited(_openCodeStep(pending));
+  }
+
+  /// Opens the code screen; once it closes (success or back) the draft,
+  /// password included, is forgotten.
+  Future<void> _openCodeStep(PendingSignUp pending) async {
+    await context.push<void>(AuthRoutes.verifyEmail);
+    pending.clear();
   }
 
   void _showNotice(String? message) {

@@ -37,10 +37,9 @@ void main() {
     adapter.reply('/v1/auth/register', _verificationSent);
 
     await repository.register(
-      RegisterRequest(
+      const RegisterRequest(
         email: 'ana@example.mx',
-        password: syntheticPassword(),
-        acceptedDocuments: const [
+        acceptedDocuments: [
           DocumentAcceptance(
             kind: LegalDocumentKind.terms,
             version: '2026-10-01',
@@ -52,7 +51,6 @@ void main() {
     expect(adapter.requests.single.method, 'POST');
     expect(lastBody(), {
       'email': 'ana@example.mx',
-      'password': syntheticPassword(),
       'accepted_documents': [
         {'kind': 'terms', 'version': '2026-10-01'},
       ],
@@ -80,11 +78,7 @@ void main() {
 
     await expectLater(
       repository.register(
-        RegisterRequest(
-          email: 'ana@example.mx',
-          password: syntheticPassword(),
-          acceptedDocuments: const [],
-        ),
+        const RegisterRequest(email: 'ana@example.mx', acceptedDocuments: []),
       ),
       throwsA(
         isA<ApiValidationFailure>().having(
@@ -116,11 +110,19 @@ void main() {
     ));
 
     final session = await repository.verifyEmail(
-      const VerifyEmailRequest(email: 'ana@example.mx', code: '482913'),
+      VerifyEmailRequest(
+        email: 'ana@example.mx',
+        code: '482913',
+        password: syntheticPassword(),
+      ),
     );
 
     expect(session.user.email, 'ana@example.mx');
-    expect(lastBody(), {'email': 'ana@example.mx', 'code': '482913'});
+    expect(lastBody(), {
+      'email': 'ana@example.mx',
+      'code': '482913',
+      'password': syntheticPassword(),
+    });
   });
 
   test('a wrong code is unauthorized', () async {
@@ -128,7 +130,11 @@ void main() {
 
     await expectLater(
       repository.verifyEmail(
-        const VerifyEmailRequest(email: 'ana@example.mx', code: '000000'),
+        VerifyEmailRequest(
+          email: 'ana@example.mx',
+          code: '000000',
+          password: syntheticPassword(),
+        ),
       ),
       throwsA(isA<ApiUnauthorized>()),
     );

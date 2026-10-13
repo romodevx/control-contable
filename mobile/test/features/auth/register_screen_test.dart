@@ -155,19 +155,41 @@ void main() {
       await tapPrimary(tester);
 
       final request = harness.repository.registered.single;
+      expect(request.toJson().keys, {'email', 'accepted_documents'});
       expect(request.email, 'ana@example.mx');
-      expect(
-        request.password,
-        '${syntheticPassword()} ',
-        reason: 'never trimmed',
-      );
-      expect(request.name, isNull);
       expect(request.acceptedDocuments.map((d) => (d.kind, d.version)), [
         (LegalDocumentKind.privacyNoticeIntegral, '2026-10-01'),
         (LegalDocumentKind.terms, '2026-10-01'),
       ]);
       expect(find.text('Confirmar correo'), findsOneWidget);
-      expect(harness.container.read(pendingSignUpProvider), 'ana@example.mx');
+    });
+
+    testWidgets('keeps password and name in memory for the code step (D8)', (
+      tester,
+    ) async {
+      await open(tester);
+      await fillValid(tester);
+
+      await tapPrimary(tester);
+
+      final draft = harness.container.read(pendingSignUpProvider)!;
+      expect(draft.email, 'ana@example.mx');
+      expect(draft.password, '${syntheticPassword()} ', reason: 'not trimmed');
+      expect(draft.name, isNull);
+    });
+
+    testWidgets('going back from the code screen forgets the draft', (
+      tester,
+    ) async {
+      await open(tester);
+      await fillValid(tester);
+      await tapPrimary(tester);
+
+      await tester.tap(find.widgetWithText(TextButton, 'Cambiar correo'));
+      await tester.pumpAndSettle();
+
+      expect(find.text(_email), findsOneWidget, reason: 'back on the form');
+      expect(harness.container.read(pendingSignUpProvider), isNull);
     });
 
     testWidgets('sends the name trimmed when given', (tester) async {
@@ -176,7 +198,7 @@ void main() {
 
       await tapPrimary(tester);
 
-      expect(harness.repository.registered.single.name, 'Ana Gómez');
+      expect(harness.container.read(pendingSignUpProvider)!.name, 'Ana Gómez');
     });
 
     testWidgets('shows busy and ignores repeat taps while sending', (
@@ -201,14 +223,14 @@ void main() {
   });
 
   group('server verdicts', () {
-    testWidgets('a weak password shows on its field, in Spanish', (
+    testWidgets('a rejected email shows on its field, in Spanish', (
       tester,
     ) async {
       harness.repository.registerError = const ApiValidationFailure([
         api.FieldError(
-          field: 'password',
-          code: 'password_policy',
-          message: 'Use at least 12 characters.',
+          field: 'email',
+          code: 'format',
+          message: 'Must be a valid email.',
         ),
       ]);
       await open(tester);
@@ -216,12 +238,9 @@ void main() {
 
       await tapPrimary(tester);
 
-      const policy =
-          'Esta contraseña es muy común o apareció en una filtración. '
-          'Elige otra.';
-      expect(find.text('$_password: $policy'), findsOneWidget);
-      expect(find.text(policy), findsOneWidget, reason: 'inline');
-      expect(find.textContaining('Use at least'), findsNothing);
+      const invalid = 'Escribe un correo como nombre@ejemplo.mx.';
+      expect(find.text('$_email: $invalid'), findsOneWidget);
+      expect(find.textContaining('Must be'), findsNothing);
       expect(find.text('Confirmar correo'), findsNothing);
     });
 
