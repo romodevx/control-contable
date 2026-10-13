@@ -10,7 +10,9 @@ GOTEST_FLAGS  ?=
 # Coverage gate (P0-19): business logic only; generated code and commands are left out.
 COVER_PROFILE ?= coverage.out
 COVER_MIN     ?= 80
-COVER_EXCLUDE ?= /adapter/http/gen/|/cmd/
+# Anchored to the module path: only the top-level cmd/ and the generated server are left
+# out, never a business package that happens to have a cmd/ or gen/ directory (P0-30).
+COVER_EXCLUDE ?= ^github.com/romodevx/control-contable/backend/(adapter/http/gen|cmd)/
 
 .DEFAULT_GOAL := check
 
@@ -78,9 +80,12 @@ COMPOSE      := docker compose -f $(LOCAL_DIR)/compose.yaml --env-file $(LOCAL_E
 ASSERT_LOCAL := $(LOCAL_DIR)/scripts/assert-local.sh $(LOCAL_ENV)
 RUNTIME_ROLES := cc_app cc_webhook cc_worker
 
+# First run only: random passwords (never the well-known placeholders), mode 0600. The
+# roles get them when the data volume is first initialised; an older volume keeps its old
+# passwords, so run `make db-reset` after deleting .env.
 $(LOCAL_ENV):
-	cp $(LOCAL_DIR)/.env.example $@
-	@echo "created $@ from .env.example (local-only placeholder passwords)"
+	$(LOCAL_DIR)/scripts/init-env.sh $(LOCAL_DIR)/.env.example $@
+	@echo "created $@ with random local passwords"
 
 ## db-up: start local postgres 18 (loopback only) and wait until healthy
 db-up: $(LOCAL_ENV)
@@ -97,11 +102,13 @@ db-reset: $(LOCAL_ENV)
 	$(COMPOSE) down --volumes
 	$(COMPOSE) up -d --wait postgres
 
-## db-roles-check: connect over TCP as each runtime role and assert NOSUPERUSER/NOBYPASSRLS/not owner
+## db-roles-check: connect over TCP as each runtime role and assert NOSUPERUSER/NOBYPASSRLS/NOREPLICATION/no memberships/not owner/no maintenance-DB access
+# PGPASSWORD is exported and passed to `exec -e` by name, so it never appears on an argv.
 db-roles-check: $(LOCAL_ENV)
 	@set -e; . $(LOCAL_ENV); for role in $(RUNTIME_ROLES); do \
 	  case $$role in cc_app) pw=$$CC_APP_PASSWORD;; cc_webhook) pw=$$CC_WEBHOOK_PASSWORD;; cc_worker) pw=$$CC_WORKER_PASSWORD;; esac; \
-	  $(COMPOSE) exec -T -e PGPASSWORD="$$pw" postgres \
+	  PGPASSWORD="$$pw"; export PGPASSWORD; \
+	  $(COMPOSE) exec -T -e PGPASSWORD postgres \
 	    psql --no-psqlrc -h 127.0.0.1 -U $$role -d "$${CC_DB_NAME:-control_contable}" -f /bootstrap/check-runtime-role.sql; \
 	done
 

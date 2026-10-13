@@ -1,0 +1,23 @@
+# Gate configuration (P0-30, PR #13 follow-up 1). A PR that edits any of these can weaken a
+# security or quality gate (coverage threshold and excludes, scanners, lint rules, the
+# artifact gate, the role bootstrap, the Dependency Rule), so the owner reviews it.
+# Branch protection on dev/main requires backend-ok, mobile-ok and contract-ok.
+
+/.github/                                   @romodevx
+/SECURITY.md                                @romodevx
+/Makefile                                   @romodevx
+/redocly.yaml                               @romodevx
+/tools/                                     @romodevx
+
+/backend/Makefile                           @romodevx
+/backend/.golangci.yml                      @romodevx
+/backend/cmd/covergate/                     @romodevx
+/backend/internal/archtest/                 @romodevx
+/backend/internal/platform/crypto/          @romodevx
+/backend/internal/platform/logging/         @romodevx
+/backend/internal/platform/pgdb/roleguard.go @romodevx
+/backend/migrations/                        @romodevx
+
+/infra/                                     @romodevx
+
+/mobile/android/app/src/main/res/xml/       @romodevx

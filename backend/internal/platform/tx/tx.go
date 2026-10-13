@@ -9,8 +9,9 @@
 //
 // Rules every implementation keeps:
 //
-//   - A user unit of work needs a user id. An empty id is ErrNoUser, never a
-//     transaction without context: callers cannot fail open by accident.
+//   - A user unit of work needs a user id. An empty id (or the nil UUID) is
+//     ErrNoUser, never a transaction without context: callers cannot fail
+//     open by accident.
 //   - System runs with the user context explicitly empty, so user-scoped
 //     tables show and accept no rows. It is for work that has no user yet or
 //     spans users only through SECURITY DEFINER functions (the worker's
@@ -44,7 +45,10 @@ type Work func(ctx context.Context) error
 type Manager interface {
 	// ReadWrite runs work in a read-write transaction as userID.
 	ReadWrite(ctx context.Context, userID string, work Work) error
-	// ReadOnly runs work in a READ ONLY transaction as userID.
+	// ReadOnly runs work in a READ ONLY transaction as userID. Nested inside
+	// a ReadWrite unit of work it joins that transaction, so READ ONLY is
+	// only a hint there: the nested work can write. Never rely on ReadOnly
+	// as a security boundary.
 	ReadOnly(ctx context.Context, userID string, work Work) error
 	// System runs work in a read-write transaction with no user context.
 	System(ctx context.Context, work Work) error

@@ -63,10 +63,10 @@ func (b *BlindIndex) Hash(value string) ([]byte, error) {
 
 // Format redacts the index for every fmt verb (%v, %+v, %#v, %s), so
 // secret material never reaches a log or an error message.
-func (b *BlindIndex) Format(f fmt.State, _ rune) { _, _ = io.WriteString(f, redacted) }
+func (b BlindIndex) Format(f fmt.State, _ rune) { _, _ = io.WriteString(f, redacted) }
 
 // LogValue redacts the index in slog.
-func (b *BlindIndex) LogValue() slog.Value { return slog.StringValue(redacted) }
+func (b BlindIndex) LogValue() slog.Value { return slog.StringValue(redacted) }
 
 // rfcPattern is the RFC shape: 3 (moral) or 4 (física) letters from
 // A-Z, Ñ and &, a yymmdd date, and a 3-character homoclave. Ñ must be the

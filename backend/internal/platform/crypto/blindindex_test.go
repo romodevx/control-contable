@@ -144,6 +144,23 @@ func TestBlindIndexCopiesPepper(t *testing.T) {
 	assert.Equal(t, wantRFCHash, hex.EncodeToString(got))
 }
 
+// Regression (PR #7 follow-up 4): a dereferenced BlindIndex printed its pepper.
+func TestBlindIndexValueNeverPrintsPepper(t *testing.T) {
+	ptr, err := NewEmailIndex([]byte(testEmailPepper))
+	require.NoError(t, err)
+	idx := *ptr
+	var logged bytes.Buffer
+	slog.New(slog.NewTextHandler(&logged, nil)).Info("boot", "index", idx)
+
+	for _, rendered := range []string{
+		fmt.Sprintf("%v", idx), fmt.Sprintf("%+v", idx), fmt.Sprintf("%#v", idx), logged.String(),
+	} {
+		assert.NotContains(t, rendered, "test-pepper")
+		assert.NotContains(t, rendered, "116 101 115 116") // "test" as %v bytes
+		assert.Contains(t, rendered, "REDACTED")
+	}
+}
+
 func TestBlindIndexNeverPrintsPepper(t *testing.T) {
 	idx, err := NewEmailIndex([]byte(testEmailPepper))
 	require.NoError(t, err)

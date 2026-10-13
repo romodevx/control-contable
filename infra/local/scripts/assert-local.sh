@@ -29,10 +29,30 @@ case "$db_host" in
   *) fail "CC_DB_HOST='$db_host' in $env_file is not loopback" ;;
 esac
 
+# url_host prints the host of a postgres:// or postgresql:// URL, or nothing if it is
+# not one. The authority ends at the first / ? or #; the userinfo ends at its LAST @
+# (a raw @ may sit in a password); an IPv6 host keeps its brackets; the port goes.
+# Matching a glob on the whole URL is not enough: "@localhost/" could sit in the query.
+url_host() {
+  local rest authority host
+  case "$1" in
+    postgres://*) rest="${1#postgres://}" ;;
+    postgresql://*) rest="${1#postgresql://}" ;;
+    *) return 0 ;;
+  esac
+  authority="${rest%%[/?#]*}"
+  host="${authority##*@}"
+  case "$host" in
+    \[*\]*) host="${host%%]*}]" ;;
+    *) host="${host%%:*}" ;;
+  esac
+  printf '%s' "$host"
+}
+
 # An exported DATABASE_URL to a remote host is a sign the shell targets a shared env.
 if [ -n "${DATABASE_URL:-}" ]; then
-  case "$DATABASE_URL" in
-    *@127.0.0.1:*|*@127.0.0.1/*|*@localhost:*|*@localhost/*|*@\[::1\]*) ;;
+  case "$(url_host "$DATABASE_URL")" in
+    127.0.0.1|localhost|\[::1\]) ;;
     *) fail "DATABASE_URL points to a non-loopback host; unset it first" ;;
   esac
 fi

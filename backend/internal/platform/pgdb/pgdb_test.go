@@ -54,6 +54,9 @@ func TestUserUnitOfWorkRejectsBadUserBeforeConnecting(t *testing.T) {
 		wantErr error
 	}{
 		{"empty id fails closed", "", tx.ErrNoUser},
+		// PR #21 follow-up 4: the nil UUID is nobody, so it is no user.
+		{"nil uuid is no user", "00000000-0000-0000-0000-000000000000", tx.ErrNoUser},
+		{"nil uuid, braced", "{00000000-0000-0000-0000-000000000000}", tx.ErrNoUser},
 		{"not a uuid", "not-a-uuid", tx.ErrInvalidUser},
 		{"sql injection attempt", "' OR true --", tx.ErrInvalidUser},
 	}

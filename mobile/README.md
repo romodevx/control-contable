@@ -27,8 +27,9 @@ Flutter client for Control Contable. Stack and pins: [ADR-0001](../docs/adr/0001
 | `make mobile-artifact-check FLAVOR=prod` | Fails if the release APK/AAB ships symbols, debug info, `.map` files or `sourceMappingURL` (`tools/mobile/check-release-artifact.sh`; macOS: `READELF=<ndk>/llvm-readelf`) |
 
 CI (`.github/workflows/mobile.yml`) runs format, analyze, `mobile-cover`, then the prod APK +
-AAB build and `mobile-artifact-check`. The split debug info (`build/symbols/prod`) is kept as a
-private CI artifact for crash de-obfuscation and never ships in the app. An AAB's
+AAB build and `mobile-artifact-check`. The split debug info (`build/symbols/prod`) never ships in
+the app and is not uploaded as a CI artifact either: the repository is public, so artifacts are
+public too (P0-30). Release symbols go to crash reporting in REL-04. An AAB's
 `BUNDLE-METADATA/` (native symbol tables, R8 `proguard.map`) is Play-only and allowlisted:
 `flutter build appbundle` refuses to finish without it.
 

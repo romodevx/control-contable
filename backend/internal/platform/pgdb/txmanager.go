@@ -96,7 +96,8 @@ func (m *TxManager) runAsUser(ctx context.Context, userID string, readOnly bool,
 }
 
 // canonicalUserID rejects an empty or malformed id and returns the lower-case
-// canonical spelling, so the same user always compares equal.
+// canonical spelling, so the same user always compares equal. The nil UUID
+// names nobody, so it is ErrNoUser like the empty id.
 func canonicalUserID(userID string) (string, error) {
 	if userID == "" {
 		return "", tx.ErrNoUser
@@ -104,6 +105,9 @@ func canonicalUserID(userID string) (string, error) {
 	id, err := uuid.Parse(userID)
 	if err != nil {
 		return "", tx.ErrInvalidUser
+	}
+	if id == uuid.Nil {
+		return "", tx.ErrNoUser
 	}
 	return id.String(), nil
 }

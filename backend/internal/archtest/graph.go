@@ -10,6 +10,8 @@ type importGraph struct {
 	// reaches memoizes reachesFramework. A package is marked false before
 	// its imports are visited, which also ends any (invalid) import cycle.
 	reaches map[string]bool
+	// harness memoizes reachesHarness the same way.
+	harness map[string]bool
 }
 
 func newImportGraph(modulePath string, files []fileImports) *importGraph {
@@ -17,6 +19,7 @@ func newImportGraph(modulePath string, files []fileImports) *importGraph {
 		modulePath: modulePath,
 		imports:    make(map[string][]string),
 		reaches:    make(map[string]bool),
+		harness:    make(map[string]bool),
 	}
 	for _, f := range files {
 		g.imports[f.importer] = append(g.imports[f.importer], f.imports...)
@@ -33,10 +36,35 @@ func (g *importGraph) check(importer, imported string) Rule {
 	if rule := checkImport(g.modulePath, importer, imported); rule != "" {
 		return rule
 	}
-	if isInnerLayer(locate(g.modulePath, importer)) && g.reachesFramework(imported) {
+	from := locate(g.modulePath, importer)
+	if isInnerLayer(from) && g.reachesFramework(imported) {
 		return RuleInnerTransitiveFramework
 	}
+	if !isTestHarness(from) && g.reachesHarness(imported) {
+		return RuleTestHarness
+	}
 	return ""
+}
+
+// reachesHarness reports whether pkg, a package of this module outside the
+// test harness, imports the harness directly or through other packages of
+// this module. The direct import is reported at its own file by checkImport;
+// this catches every production importer further up the chain.
+func (g *importGraph) reachesHarness(pkg string) bool {
+	if !g.inModule(pkg) || isTestHarness(locate(g.modulePath, pkg)) {
+		return false
+	}
+	if reached, seen := g.harness[pkg]; seen {
+		return reached
+	}
+	g.harness[pkg] = false
+	for _, imported := range g.imports[pkg] {
+		if isTestHarness(locate(g.modulePath, imported)) || g.reachesHarness(imported) {
+			g.harness[pkg] = true
+			return true
+		}
+	}
+	return false
 }
 
 func isInnerLayer(loc location) bool {

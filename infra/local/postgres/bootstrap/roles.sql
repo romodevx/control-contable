@@ -33,6 +33,12 @@ ALTER DATABASE :"db_name" OWNER TO cc_owner;
 REVOKE ALL ON DATABASE :"db_name" FROM PUBLIC;
 GRANT CONNECT ON DATABASE :"db_name" TO cc_app, cc_webhook, cc_worker;
 
+-- The maintenance databases keep PostgreSQL's default ACL (PUBLIC: CONNECT, TEMP),
+-- which would let every cc_* role log in there and create temp objects. Only the
+-- bootstrap superuser needs them (P0-30, PR #5 follow-up 2).
+REVOKE ALL ON DATABASE postgres FROM PUBLIC;
+REVOKE ALL ON DATABASE template1 FROM PUBLIC;
+
 \connect :"db_name"
 
 ALTER SCHEMA public OWNER TO cc_owner;

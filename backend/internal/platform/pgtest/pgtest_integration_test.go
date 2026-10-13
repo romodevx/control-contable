@@ -80,6 +80,36 @@ func TestBootstrap_RuntimeRolesArePlainLogins(t *testing.T) {
 	}
 }
 
+// Regression (PR #5 follow-ups 2 and 3): the maintenance databases kept the
+// default ACL, so PUBLIC (every runtime role) could log in to "postgres" and
+// "template1" and create temp objects there. The bootstrap revokes that, and
+// no bootstrap role may replicate or reach another role through membership
+// (SET ROLE would hand a NOINHERIT runtime role that role's privileges).
+func TestBootstrap_RolesCannotReachMaintenanceDatabasesOrOtherRoles(t *testing.T) {
+	db := pgtest.NewDatabase(t)
+	for _, role := range []pgtest.Role{pgtest.RoleOwner, pgtest.RoleApp, pgtest.RoleWebhook, pgtest.RoleWorker} {
+		t.Run(string(role), func(t *testing.T) {
+			conn := db.Connect(t, role)
+			var replication, memberOfAny bool
+			require.NoError(t, conn.QueryRowContext(t.Context(), `
+				SELECT r.rolreplication,
+				       EXISTS (SELECT 1 FROM pg_auth_members m WHERE m.member = r.oid)
+				FROM pg_roles r WHERE r.rolname = current_user`).Scan(&replication, &memberOfAny))
+			assert.False(t, replication, "REPLICATION")
+			assert.False(t, memberOfAny, "member of another role")
+
+			for _, maintenance := range []string{"postgres", "template1"} {
+				var canConnect, canTemp bool
+				require.NoError(t, conn.QueryRowContext(t.Context(),
+					"SELECT has_database_privilege(current_user, $1, 'CONNECT'), has_database_privilege(current_user, $1, 'TEMP')",
+					maintenance).Scan(&canConnect, &canTemp))
+				assert.False(t, canConnect, "CONNECT on %s", maintenance)
+				assert.False(t, canTemp, "TEMP on %s", maintenance)
+			}
+		})
+	}
+}
+
 func TestNewDatabase_KeepsBootstrapOwnershipAndRevokesPublicConnect(t *testing.T) {
 	db := pgtest.NewDatabase(t)
 	owner := db.Connect(t, pgtest.RoleOwner)

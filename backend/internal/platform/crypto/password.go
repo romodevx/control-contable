@@ -38,6 +38,12 @@ const (
 	maxKeyLen             = 64
 )
 
+// MaxPasswordBytes caps the input of Hash and Verify. The contract already
+// limits passwords to 128 characters (up to 512 bytes of UTF-8); this is the
+// defense-in-depth bound for callers that skip boundary validation, since a
+// longer input only costs CPU without adding security.
+const MaxPasswordBytes = 1024
+
 const (
 	phcAlgorithm  = "argon2id"
 	phcFieldCount = 6 // "", algorithm, version, params, salt, hash
@@ -98,9 +104,13 @@ func NewPasswordHasher(params Argon2idParams) (*PasswordHasher, error) {
 	return &PasswordHasher{params: params, random: rand.Reader}, nil
 }
 
-// Hash returns the PHC string of password under a fresh random salt:
+// Hash returns the PHC string of password under a fresh random salt
+// (ErrPasswordTooLong above MaxPasswordBytes):
 // $argon2id$v=19$m=<KiB>,t=<time>,p=<threads>$<salt>$<hash>.
 func (h *PasswordHasher) Hash(password string) (string, error) {
+	if len(password) > MaxPasswordBytes {
+		return "", ErrPasswordTooLong
+	}
 	salt := make([]byte, h.params.SaltLen)
 	if _, err := io.ReadFull(h.random, salt); err != nil {
 		return "", fmt.Errorf("crypto: read salt: %w", err)
@@ -114,8 +124,12 @@ func (h *PasswordHasher) Hash(password string) (string, error) {
 
 // Verify reports whether password matches encoded, using the parameters
 // stored in encoded. A mismatch is (false, nil); an unparsable hash is
-// ErrMalformedHash. The comparison runs in constant time.
+// ErrMalformedHash; a password above MaxPasswordBytes is ErrPasswordTooLong.
+// The comparison runs in constant time.
 func (h *PasswordHasher) Verify(password, encoded string) (bool, error) {
+	if len(password) > MaxPasswordBytes {
+		return false, ErrPasswordTooLong
+	}
 	stored, err := parsePHC(encoded)
 	if err != nil {
 		return false, err

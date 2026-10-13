@@ -57,6 +57,14 @@ func TestCheckImport(t *testing.T) {
 		{"pure platform may not import net/http", "internal/platform/money", "net/http", RulePurePlatformImports},
 		{"pure platform may not import impure platform", "internal/platform/money", "internal/platform/tx", RulePurePlatformImports},
 		{"composition root may import anything", "cmd/api", "internal/ledger/infra", ""},
+		// PR #12 follow-up 3: the RLS harness logs in as superuser with fixed
+		// passwords; it must never be linked into a production binary.
+		{"composition root may not import the test harness", "cmd/api", "internal/platform/pgtest", RuleTestHarness},
+		{"infra may not import the test harness", "internal/ledger/infra", "internal/platform/pgtest", RuleTestHarness},
+		{"adapter may not import the test harness", "internal/ledger/adapter/http", "internal/platform/pgtest", RuleTestHarness},
+		{"platform may not import the test harness", "internal/platform/pgdb", "internal/platform/pgtest", RuleTestHarness},
+		{"top-level package may not import the test harness", "migrations", "internal/platform/pgtest", RuleTestHarness},
+		{"the harness may import its own subpackages", "internal/platform/pgtest", "internal/platform/pgtest/fixture", ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -104,6 +112,20 @@ func TestCheckReportsFrameworksReachedThroughModulePackages(t *testing.T) {
 		{File: usecase, Imported: "example.com/fx/adapter/http/router", Rule: RuleInnerTransitiveFramework},
 		{File: usecase, Imported: "example.com/fx/internal/platform/flags/flagsgorm", Rule: RuleInnerTransitiveFramework},
 		{File: usecase, Imported: "example.com/fx/internal/platform/ports", Rule: RuleInnerTransitiveFramework},
+	}
+	assert.Equal(t, want, got)
+}
+
+// P0-30: the test harness must not reach a production binary through a
+// neutral-looking package either. cmd/api imports seed, which imports pgtest;
+// pgtest importing its own sub-package is fine.
+func TestCheckReportsTestHarnessReachedThroughModulePackages(t *testing.T) {
+	got, err := Check(filepath.Join("testdata", "harness"), fixtureModule)
+	require.NoError(t, err)
+
+	want := []Violation{
+		{File: "cmd/api/main.go", Imported: "example.com/fx/internal/platform/seed", Rule: RuleTestHarness},
+		{File: "internal/platform/seed/seed.go", Imported: "example.com/fx/internal/platform/pgtest", Rule: RuleTestHarness},
 	}
 	assert.Equal(t, want, got)
 }

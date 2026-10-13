@@ -2,12 +2,6 @@ name: contract
 
 on:
   pull_request:
-    paths:
-      - 'docs/api/**'
-      - 'redocly.yaml'
-      - 'tools/contract/**'
-      - 'Makefile'
-      - '.github/workflows/contract.yml'
 
 permissions:
   contents: read
@@ -17,8 +11,38 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Branch protection requires the `-ok` job below, so this workflow runs on every PR
+  # and decides here whether its gates apply (a workflow-level `paths` filter would leave
+  # the required check "expected" forever on PRs that do not touch these paths).
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.filter.outputs.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      # On a PR, HEAD is the merge commit and HEAD^1 the base tip, so the diff is exactly
+      # what the PR changes. Pushes to dev/main always run every gate.
+      - name: Paths this workflow gates
+        id: filter
+        env:
+          EVENT: ${{ github.event_name }}
+          PATTERN: '^(docs/api/|redocly\.yaml$|tools/contract/|Makefile$|\.github/workflows/contract\.yml$)'
+        run: |
+          if [ "$EVENT" != "pull_request" ] || git diff --name-only HEAD^1 HEAD | grep -qE "$PATTERN"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
   lint:
     name: OpenAPI contract lint
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -34,3 +58,25 @@ jobs:
         run: make contract-lint-test
       - name: Lint docs/api/openapi.yaml
         run: make contract-lint
+
+  # The single required status check for this workflow. It always runs and fails unless
+  # every gate succeeded or was skipped because the PR does not touch this workflow's
+  # paths. A gate skipped because `changes` failed makes `changes` a failure here.
+  ok:
+    name: contract-ok
+    if: ${{ always() }}
+    needs: [changes, lint]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Every gate passed or did not apply
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for result in $RESULTS; do
+            case "$result" in
+              success|skipped) ;;
+              *) echo "a gate ended '$result'"; exit 1 ;;
+            esac
+          done
+          echo "results: $RESULTS"
