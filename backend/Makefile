@@ -1,10 +1,11 @@
 GO            ?= go
 GOLANGCI_LINT ?= golangci-lint
 PKGS          := ./...
+GEN_DIR       := adapter/http/gen
 
 .DEFAULT_GOAL := check
 
-.PHONY: check fmt fmt-check lint test test-integration cover tidy
+.PHONY: check fmt fmt-check lint test test-integration cover tidy generate codegen-check
 
 ## check: fmt-check + lint + unit tests (what CI runs)
 check: fmt-check lint test
@@ -37,3 +38,13 @@ cover:
 ## tidy: go mod tidy
 tidy:
 	$(GO) mod tidy
+
+## generate: regenerate adapter/http/gen from ../docs/api/openapi.yaml (oapi-codegen strict std-http server + flag map)
+generate:
+	$(GO) generate ./$(GEN_DIR)/...
+
+## codegen-check: regenerate and fail if the result differs from what is committed (drift check)
+codegen-check: generate
+	@out="$$(git status --porcelain -- $(GEN_DIR))"; if [ -n "$$out" ]; then \
+		echo "adapter/http/gen is out of date with docs/api/openapi.yaml; run 'make generate' and commit:"; \
+		echo "$$out"; git --no-pager diff --stat -- $(GEN_DIR); exit 1; fi

@@ -1,0 +1,16 @@
+# OpenAPI Overlay 1.0 applied by oapi-codegen before generation (see oapi-codegen.yaml).
+# Codegen-only workarounds for OpenAPI 3.1 features oapi-codegen v2.8.0 cannot map.
+# The contract (docs/api/openapi.yaml) stays the source of truth and is not changed.
+# Every action here is recorded in ADR-0001 ("oapi-codegen and OpenAPI 3.1").
+overlay: 1.0.0
+info:
+  title: control-contable codegen workarounds
+  version: 1.0.0
+actions:
+  # Multi-type union `type: [string, boolean, 'null']`: v2.8.0 fails with
+  # "unhandled Schema type: &[string boolean]" (its README says unions become `any`,
+  # but only top-level ones do). Map the property to `any` explicitly; the
+  # handler validates it against RegimeOptionDef.type.
+  - target: $.components.schemas.RegimeOptionDef.properties.default
+    update:
+      x-go-type: any
