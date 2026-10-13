@@ -74,6 +74,21 @@ Expect `"msg":"worker started"` and `"msg":"leadership acquired"`. No job is reg
 
 Run on another port with `make -C backend api API_PORT=3010`.
 
+### Access-token signing key (M1-07)
+
+`make init-env` writes a random Ed25519 seed to `infra/local/.env` (`CC_AUTH_ACCESS_TOKEN_KEY`,
+kid `CC_ACCESS_TOKEN_KEY_ID=k1`; the file is git-ignored, never commit it). Access tokens are
+EdDSA JWTs with that `kid`, valid 15 min; the API accepts `Authorization: Bearer <token>` only.
+
+```sh
+make -C backend access-key-rotate   # new key + kid; the old pair stays as the verify-only previous key
+```
+
+Restart `make -C backend api` afterwards. Tokens signed by the previous key keep working until
+they expire; a second rotation drops it. Shared environments set `AUTH_ACCESS_TOKEN_KEY`,
+`AUTH_ACCESS_TOKEN_KEY_ID` and, while rotating, `AUTH_ACCESS_TOKEN_PREVIOUS_KEY` /
+`AUTH_ACCESS_TOKEN_PREVIOUS_KEY_ID` from the secret manager.
+
 ## 4. Feature flags
 
 ```sh
