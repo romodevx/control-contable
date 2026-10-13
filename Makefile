@@ -51,11 +51,39 @@ MOBILE_SYMBOLS := build/symbols/$(FLAVOR)
 MOBILE_RELEASE_FLAGS := --release --flavor $(FLAVOR) -t lib/main_$(FLAVOR).dart \
 	--obfuscate --split-debug-info=$(MOBILE_SYMBOLS) $(MOBILE_DEFINES)
 
-.PHONY: mobile-check mobile-run mobile-run-mock mobile-require-api-url mobile-build-apk mobile-build-ipa
+# Generated Dart client (ADR-0003). Paths are relative to $(MOBILE). swagger_parser reads the
+# normalized copy (mobile/swagger_parser.yaml), never the contract directly.
+MOBILE_OPENAPI_JSON := build/openapi/openapi.json
+MOBILE_API_DIR := lib/api/generated
+
+.PHONY: mobile-check mobile-test-mock mobile-client mobile-client-check mobile-run mobile-run-mock \
+	mobile-require-api-url mobile-build-apk mobile-build-ipa
 
 ## mobile-check: format check, analyze (0 issues), widget/unit tests
 mobile-check:
 	cd $(MOBILE) && dart format --set-exit-if-changed . && flutter analyze && flutter test
+
+## mobile-test-mock: integration tests against the Prism mock (start it first: make mock)
+mobile-test-mock:
+	cd $(MOBILE) && MOCK_API_URL=http://$(MOCK_HOST):$(MOCK_PORT) flutter test --tags mock
+
+## mobile-client: regenerate the Dart API client from docs/api/openapi.yaml (normalize →
+## swagger_parser → build_runner → kind guard → format). Fails on a kind collision.
+mobile-client:
+	cd $(MOBILE) && dart run tool/normalize_openapi.dart ../$(OPENAPI_SPEC) $(MOBILE_OPENAPI_JSON)
+	cd $(MOBILE) && rm -rf $(MOBILE_API_DIR) && dart run swagger_parser
+	cd $(MOBILE) && dart run build_runner build --delete-conflicting-outputs
+	cd $(MOBILE) && dart run tool/check_generated_kinds.dart $(MOBILE_OPENAPI_JSON) $(MOBILE_API_DIR)
+	cd $(MOBILE) && dart format $(MOBILE_API_DIR)
+
+## mobile-client-check: drift check; fails when the committed client differs from the contract
+mobile-client-check: mobile-client
+	@drift="$$(git status --porcelain -- $(MOBILE)/$(MOBILE_API_DIR))"; \
+	if [ -n "$$drift" ]; then \
+	  echo "$$drift"; \
+	  echo "Generated client is out of date: run 'make mobile-client' and commit $(MOBILE)/$(MOBILE_API_DIR)" >&2; \
+	  exit 1; \
+	fi
 
 ## mobile-run: run FLAVOR (dev|staging|prod) on the connected device
 mobile-run:

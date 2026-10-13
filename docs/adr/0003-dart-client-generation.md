@@ -89,8 +89,10 @@ P0-25, (2) is done in this PR:
 1. **Pre-step normalizer.** `mobile/tool/normalize_openapi.dart` (the spike's path-parameter
    inliner, with a unit test first) runs before `swagger_parser` and is the only way the
    client is generated (`make mobile-client` or equivalent). The contract keeps its
-   path-level parameters. File the bug upstream (carapacik/swagger_parser) and delete the
-   pre-step once a fixed release is pinned.
+   path-level parameters. Upstream bug: already filed as
+   [Carapacik/swagger_parser#374](https://github.com/Carapacik/swagger_parser/issues/374)
+   (open; a commenter traced it to path-level `parameters`; still present in 1.45.0), so no
+   duplicate was opened. Delete the pre-step once a release that fixes #374 is pinned.
 2. **Contract rule: no inline object schemas inside `oneOf`/`anyOf`.** Name them as
    components (see `docs/api/CONTRACT.md`). Applied in this PR: `SubscriptionStatus.plan` is
    now `oneOf: [$ref SubscriptionPlan, null]`. Non-breaking: the wire format is identical, the
@@ -102,6 +104,21 @@ P0-25, (2) is done in this PR:
    runs `make mobile-client`, so a future inline-enum collision cannot pass silently.
 4. **Pins.** Exact versions as above, with **retrofit_generator 10.2.11** (10.2.12 was
    published on 2026-10-13 and is under the two-week rule; the spike passed on both).
+
+## Implementation (P0-23)
+
+| Piece | Where |
+|---|---|
+| Normalizer (condition 1), unit-tested | `mobile/tool/normalize_openapi.dart`, `mobile/tool/src/openapi_normalizer.dart`, `mobile/test/tool/normalize_openapi_test.dart` |
+| Kind guard (condition 3) | `mobile/tool/check_generated_kinds.dart`, `mobile/tool/src/generated_kinds.dart`. Its test runs the real swagger_parser (in memory, with `mobile/swagger_parser.yaml`) over `test/tool/fixtures/inline_enum_collision.yaml` and must report the `Period` typedef/enum collision; the named-component fixture must pass |
+| Generator config | `mobile/swagger_parser.yaml` (input: the normalized JSON in `mobile/build/openapi/`), `mobile/build.yaml` |
+| Pipeline | `make mobile-client`: normalize → swagger_parser → build_runner → kind guard → `dart format`. Output committed in `mobile/lib/api/generated/` |
+| Drift check | `make mobile-client-check`: regenerates and fails if `mobile/lib/api/generated/` differs from what is committed (P0-25 runs it in CI) |
+| Wiring | `apiClientProvider` (`mobile/lib/core/network/api_client_provider.dart`) builds the generated `ApiClient` on the single `dioProvider` (per-flavor base URL) |
+
+Expected kinds: a schema with `enum` → `enum`; with `properties` or `allOf` → class; anything
+else (scalars, arrays, maps, `const`) → `typedef`. The guard also fails when two schemas map
+to one Dart name, when one Dart name is declared twice, or when a component was not generated.
 
 ## Consequences
 
