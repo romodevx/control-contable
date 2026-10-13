@@ -19,7 +19,11 @@ MOCK_DYNAMIC ?= false
 PRISM_MOCK_FLAGS := --host $(MOCK_HOST) --port $(MOCK_PORT) --dynamic=$(MOCK_DYNAMIC) \
 	--json-schema-faker-fillProperties=false --errors=false
 
-.PHONY: contract-tools contract-lint contract-lint-test mock
+# Generated API reference (P0-32): static HTML rendered from the contract, never written by
+# hand. build/ is git-ignored: publish the file, do not commit it.
+API_DOCS_OUT ?= build/api-docs/index.html
+
+.PHONY: contract-tools contract-lint contract-lint-test mock api-docs
 
 $(CONTRACT_TOOLS_INSTALLED): $(CONTRACT_TOOLS)/package.json $(CONTRACT_TOOLS)/package-lock.json
 	npm ci --prefix $(CONTRACT_TOOLS) --ignore-scripts --no-audit --no-fund
@@ -35,6 +39,11 @@ contract-lint: $(CONTRACT_TOOLS_INSTALLED)
 ## contract-lint-test: prove every contract rule rejects what it should
 contract-lint-test: $(CONTRACT_TOOLS_INSTALLED)
 	node --test $(CONTRACT_TOOLS)/test.js
+
+## api-docs: render docs/api/openapi.yaml to one static HTML page (Redoc) at API_DOCS_OUT
+api-docs: $(CONTRACT_TOOLS_INSTALLED)
+	$(REDOCLY_ENV) $(REDOCLY) build-docs $(OPENAPI_SPEC) --config redocly.yaml \
+		--output $(API_DOCS_OUT) --title "Control Contable API" --disableGoogleFont
 
 ## mock: serve docs/api/openapi.yaml with Prism on MOCK_HOST:MOCK_PORT (MOCK_DYNAMIC=true for generated bodies)
 mock: $(CONTRACT_TOOLS_INSTALLED)
