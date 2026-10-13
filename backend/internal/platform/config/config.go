@@ -6,8 +6,9 @@
 // 8080, as set by Cloud Run), LOG_LEVEL (debug, info, warn, error; default
 // info), RATE_LIMIT_RPS and RATE_LIMIT_BURST (per-client-IP token bucket;
 // default 10 and 20), TRUSTED_PROXY_HOPS (reverse proxies in front of the
-// server that append to X-Forwarded-For; default 0, which trusts only the TCP
-// peer address). Secrets: DATABASE_URL.
+// server that append to X-Forwarded-For; 0 trusts only the TCP peer address;
+// defaults to 0 in dev and is required in staging and production). Secrets:
+// DATABASE_URL.
 package config
 
 import (
@@ -100,7 +101,7 @@ func Load(ctx context.Context, lookup Lookup, secrets SecretSource) (Config, err
 	if cfg.RateLimit.Burst, err = parseIntInRange(lookup, keyRateBurst, defaultRateBurst, 1, maxRate); err != nil {
 		errs = append(errs, err)
 	}
-	if cfg.TrustedProxyHops, err = parseIntInRange(lookup, keyProxyHops, defaultProxyHops, 0, maxProxyHops); err != nil {
+	if cfg.TrustedProxyHops, err = parseProxyHops(lookup, cfg.Env); err != nil {
 		errs = append(errs, err)
 	}
 	if cfg.DatabaseURL, err = secrets.Secret(ctx, secretDatabase); err != nil {
@@ -140,6 +141,16 @@ func parseLogLevel(lookup Lookup) (slog.Level, error) {
 		return 0, fmt.Errorf("%s %q: %w", keyLogLevel, raw, err)
 	}
 	return level, nil
+}
+
+// parseProxyHops requires TRUSTED_PROXY_HOPS outside dev: behind a load
+// balancer every request shares the proxy's peer address, so the dev default
+// of 0 would put every client in one rate-limit bucket.
+func parseProxyHops(lookup Lookup, env Environment) (int, error) {
+	if v, ok := lookup(keyProxyHops); (!ok || v == "") && env != EnvDev && env != "" {
+		return 0, fmt.Errorf("%s is required when %s is %s", keyProxyHops, keyAppEnv, env)
+	}
+	return parseIntInRange(lookup, keyProxyHops, defaultProxyHops, 0, maxProxyHops)
 }
 
 func parseIntInRange(lookup Lookup, key string, fallback, minValue, maxValue int) (int, error) {

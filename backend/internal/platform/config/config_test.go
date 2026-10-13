@@ -63,7 +63,7 @@ func TestLoad(t *testing.T) {
 		},
 		{
 			name:    "staging with warn level",
-			env:     map[string]string{"APP_ENV": "staging", "LOG_LEVEL": "WARN"},
+			env:     map[string]string{"APP_ENV": "staging", "LOG_LEVEL": "WARN", "TRUSTED_PROXY_HOPS": "0"},
 			secrets: stubSecrets{},
 			want: config.Config{
 				Env: config.EnvStaging, HTTPAddr: ":8080", LogLevel: slog.LevelWarn,
@@ -142,6 +142,19 @@ func TestLoad_errors(t *testing.T) {
 			name:     "negative TRUSTED_PROXY_HOPS",
 			env:      map[string]string{"APP_ENV": "dev", "TRUSTED_PROXY_HOPS": "-1"},
 			wantErrs: []string{`TRUSTED_PROXY_HOPS "-1" is not an integer in [0, 10]`},
+		},
+		{
+			// Behind a load balancer every request shares the proxy's peer
+			// address, so a silent default of 0 would put all clients in one
+			// rate-limit bucket. Outside dev the hop count must be explicit.
+			name:     "TRUSTED_PROXY_HOPS unset in staging",
+			env:      map[string]string{"APP_ENV": "staging"},
+			wantErrs: []string{"TRUSTED_PROXY_HOPS is required when APP_ENV is staging"},
+		},
+		{
+			name:     "TRUSTED_PROXY_HOPS empty in production",
+			env:      map[string]string{"APP_ENV": "production", "TRUSTED_PROXY_HOPS": ""},
+			wantErrs: []string{"TRUSTED_PROXY_HOPS is required when APP_ENV is production"},
 		},
 		{
 			name:     "missing secret",

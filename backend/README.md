@@ -31,6 +31,7 @@ components: [C4](../docs/architecture/c4.md).
 CI (`.github/workflows/backend.yml`) runs `fmt-check`, golangci-lint v2.14.0, `codegen-check`,
 `vuln`, `test`, then `test-integration GOTEST_FLAGS="-covermode=atomic -coverprofile=coverage.out"`
 followed by `cover-check`, and uploads the profile as the `backend-coverage` artifact.
+
 ### Running the API
 
 `go run ./cmd/api` (release builds: `-ldflags "-X main.version=<semver>"`). Configuration is
@@ -43,7 +44,7 @@ read from the environment (`internal/platform/config`):
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
 | `DATABASE_URL` | required (secret) | until P0-12 it is only checked for presence |
 | `RATE_LIMIT_RPS` / `RATE_LIMIT_BURST` | `10` / `20` | token bucket per client IP (429 + `Retry-After`) |
-| `TRUSTED_PROXY_HOPS` | `0` | reverse proxies appending to `X-Forwarded-For`; `0` keys by the TCP peer |
+| `TRUSTED_PROXY_HOPS` | `0` in dev; **required** in staging/production | reverse proxies appending to `X-Forwarded-For`; `0` keys by the TCP peer (behind Cloud Run/a load balancer that would be one bucket for every client) |
 
 `GET /healthz` answers 200 while the process serves; the body says whether the database is
 reachable (`degraded`/`unreachable` until the database adapter lands in P0-12). Every flagged
