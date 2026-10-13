@@ -85,6 +85,8 @@ func TestExactMulRatio(t *testing.T) {
 		{"negative two thirds", -pesos(1_600), 2, 3, -1_066_666_667, nil},
 		{"zero denominator", pesos(1), 1, 0, 0, ErrInvalidDivisor},
 		{"overflow", math.MaxInt64, 3, 2, 0, ErrOverflow},
+		// 31 * 1190112520884487201 / 2 = 2^64 - 0.5: rounding must not wrap to 0.
+		{"overflow when rounding crosses 2^64", 31, 1_190_112_520_884_487_201, 2, 0, ErrOverflow},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

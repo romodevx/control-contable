@@ -42,6 +42,10 @@ func TestMulDiv(t *testing.T) {
 		{"negative tie rounding lands exactly on min", -4_294_967_295, 4_294_967_297, 2, math.MinInt64, nil},
 		// 274177 * 67280421310721 = 2^64+1, so /2 = 2^63 remainder 1: the tie rounds to 2^63+1.
 		{"negative tie rounding past min overflows", -274_177, 67_280_421_310_721, 2, 0, ErrOverflow},
+		// 31 * 1190112520884487201 = 2^65-1, so /2 = 2^64-1 remainder 1: the round-up
+		// must report overflow, not wrap the 64-bit quotient to zero.
+		{"round-up of a 2^64-1 quotient overflows", 31, 1_190_112_520_884_487_201, 2, 0, ErrOverflow},
+		{"negative round-up of a 2^64-1 quotient overflows", -31, 1_190_112_520_884_487_201, 2, 0, ErrOverflow},
 		{"exactly min int64 from a negative product", math.MinInt64 / 2, 2, 1, math.MinInt64, nil},
 		{"exact near min", math.MinInt64 + 1, 2, 2, math.MinInt64 + 1, nil},
 		{"zero divisor", 1, 1, 0, 0, ErrInvalidDivisor},
