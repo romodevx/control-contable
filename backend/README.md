@@ -34,6 +34,23 @@ passwords only). Roles, per [data model](../docs/architecture/data-model.md#data
 `cc_worker` get CONNECT + USAGE only and are NOBYPASSRLS. Table grants come from the
 baseline migration (P0-10), so every environment gets the same ones.
 
+### Integration tests
+
+`make test-integration` runs the suites behind the `integration` build tag against a real
+PostgreSQL through `internal/platform/pgtest`:
+
+- one container per test package (`pgtest.Main` from `TestMain`), same image and digest as
+  `infra/local/compose.yaml`, bootstrapped with the same `10-roles.sh` + `roles.sql`;
+- a pluggable `Migrator` run once as `cc_owner` on a template database (default
+  `NoMigrations`; the goose runner plugs in with P0-10);
+- `pgtest.NewDatabase(t)` clones the template per test (isolated, parallel-safe, dropped at
+  cleanup); `db.Connect(t, pgtest.RoleApp)` logs in as the real role;
+- `pgtest.AsUser` / `WithoutUser` run a transaction with or without
+  `set_config('app.current_user_id', id, true)`;
+- `pgtest.AssertIsolation` runs the data model's mandatory RLS checks on one table (ENABLE +
+  FORCE, A cannot see/update/delete B, cross-user insert rejected, unset context fails
+  closed, no bypass). Each check refuses a vacuous proof (owner without rows).
+
 ## Layout
 
 Directories appear with the first task that needs them (no empty placeholders):
