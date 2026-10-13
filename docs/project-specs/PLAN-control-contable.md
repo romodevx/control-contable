@@ -105,7 +105,7 @@ Stages: contract tooling (P0-05) → data (P0-10, P0-11) → backend platform �
 |---|---|---|---|---|---|---|---|---|
 | M1-01 | Contract freeze: `/v1/auth/*`, `/v1/me`, `/v1/legal/documents` (verification flow per owner decision), lint | architect | P0-05 | 1.5 | — | `feature/auth-contract` | OB2 | [ ] |
 | M1-02 | Migration `refresh_tokens` + `consents` with RLS + isolation tests | db-sr | P0-11 | 3 | — | `feature/auth-migrations` | — | [ ] |
-| M1-03 | Migration `legal_documents` (global seed) + `trial_registry` (service-only) + definer fns `auth_lookup_credentials`, `trial_registry_check_and_insert` + tests | db-sr | P0-11 | 3 | — | `feature/auth-migrations` | — | [ ] |
+| M1-03 | Migration `legal_documents` (global seed) + `trial_registry` and `email_verifications` (service-only) + definer fns `auth_lookup_credentials`, `trial_registry_check_and_insert`, `email_verification_upsert` / `_consume` + tests | db-sr | P0-11 | 3 | — | `feature/auth-migrations` | — | [ ] |
 | M1-04 | Auth domain: email, password policy, refresh token VO `<uuid>.<secret>` (TDD) | backend-sr | P0-03 | 2 | — | `feature/auth-domain` | — | [ ] |
 | M1-05 | Register + verify-email use cases: EmailSender port (dev log adapter), generic duplicate response, consents, trial start via TrialStarter (TDD) | backend-sr | M1-01, M1-02, M1-03, M1-04, P0-29, P0-30 | 4.5 | — | `feature/auth-register` | — | [ ] |
 | M1-06 | Email provider adapter (SES / Postmark / Resend) behind EmailSender | backend-sr | M1-05 | 2 | — | `feature/auth-email-provider` | OB2 | [ ] |

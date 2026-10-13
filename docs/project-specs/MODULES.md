@@ -29,7 +29,7 @@ read-only reference data with no RLS.
   (trial clock + per-user usage counters + `pro` entitlement lookup, including comp); CI
   (lint, tests, contract tests, govulncheck, a release-build artifact check).
 - **Endpoints**: `GET /healthz`, `GET /v1/flags` (enabled modules for the client).
-- **Tables**: `feature_flags`, `flag_presets` (global); `user_usage` (RLS; created-records counters); `entitlements` (RLS; trial/pro/comp, end date).
+- **Tables**: `feature_flags`, `flag_presets` (global); `users` (RLS; identity root, moved here from M1 per PLAN decision 1 so P0 FKs resolve); `user_usage` (RLS; created-records counters); `entitlements` (RLS; trial/pro/comp, end date).
 - **Depends on**: nothing.
 
 ## Product modules (delivery order)
@@ -54,9 +54,9 @@ can run in parallel with M5/M6.
 - **Scope**: register (with privacy and terms consent), login, refresh with rotation and
   reuse detection, logout, user profile, in-app account deletion, current legal documents.
   The trial starts at registration (writes to `entitlements`).
-- **Endpoints**: `POST /v1/auth/register`, `POST /v1/auth/login`, `POST /v1/auth/refresh`,
+- **Endpoints**: `POST /v1/auth/register` (202 + emailed code), `POST /v1/auth/verify-email` (creates the account, issues tokens; ADR-0001 OWNER 1, option A), `POST /v1/auth/login`, `POST /v1/auth/refresh`,
   `POST /v1/auth/logout`, `GET|PATCH /v1/me`, `DELETE /v1/me`, `GET /v1/legal/documents`.
-- **Tables**: `users`, `refresh_tokens` (RLS), `consents` (RLS), `legal_documents` (global), `trial_registry` (keyed email hash; no RLS, service-only access).
+- **Tables**: `refresh_tokens` (RLS), `consents` (RLS), `legal_documents` (global), `trial_registry` (keyed email hash; no RLS, service-only access), `email_verifications` (pending sign-ups; no RLS, service-only access). `users` is created in P0; M1 owns its behaviour.
 - **Out of scope**: social login, 2FA, password reset by SMS (email reset is Should).
 
 ### M2 — Taxpayers & Onboarding (`module_taxpayers`)
@@ -97,7 +97,7 @@ can run in parallel with M5/M6.
 - **Endpoints**: `GET /v1/taxpayers/{taxpayerId}/estimates?period=YYYY-MM`,
   `GET /v1/taxpayers/{taxpayerId}/estimates/{period}/breakdown?regime=`,
   `GET|PUT /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/tax-inputs?fiscal_year=`.
-- **Tables**: `tax_parameter_sets`, `tax_tables` (global, versioned), `taxpayer_tax_inputs` (RLS).
+- **Tables**: `taxpayer_tax_inputs` (RLS). Tax parameters (tariffs, rates) are versioned YAML embedded in the binary, not tables (ADR-0002; supersedes the earlier `tax_parameter_sets` / `tax_tables`).
 
 ### M6 — Dashboard (`module_dashboard`)
 - **Scope**: Home for the active taxpayer: this month's estimate, income vs. expenses,

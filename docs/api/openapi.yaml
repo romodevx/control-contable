@@ -16,6 +16,8 @@ info:
     - Resources of other users answer `404` (RLS), never `403`.
     - Create operations accept a client-generated UUID `id`; retrying the same POST
       returns the existing resource (idempotent against double submit).
+      Reusing an `id` with a different body, or an `id` that already exists outside
+      the caller's scope, answers `409 conflict` (never reveals the other row).
 
     Status: DRAFT 0.1.0 (Phase 2 Design). Regime-specific shapes (regime options,
     tax-input keys, breakdown concepts) are generic until
@@ -67,6 +69,7 @@ paths:
               schema: { $ref: '#/components/schemas/HealthStatus' }
               example: { status: ok, database: ok, version: 0.1.0 }
         '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/InternalError' }
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
   /v1/flags:
     get:
@@ -262,6 +265,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/LegalDocumentList' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
 
   # ---------------------------------------------------------------- M2 Taxpayers
@@ -523,6 +527,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '402': { $ref: '#/components/responses/PaymentRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/UnprocessableEntity' }
         '500': { $ref: '#/components/responses/InternalError' }
   /v1/taxpayers/{taxpayerId}/incomes/{incomeId}:
@@ -664,6 +669,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '402': { $ref: '#/components/responses/PaymentRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/UnprocessableEntity' }
         '500': { $ref: '#/components/responses/InternalError' }
   /v1/taxpayers/{taxpayerId}/expenses/{expenseId}:
@@ -882,6 +888,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/InternalError' }
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
   /v1/webhooks/revenuecat:
     post:
@@ -905,6 +912,7 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
 
   # ---------------------------------------------------------------- M8 History
@@ -1150,7 +1158,7 @@ components:
           example:
             error: { code: not_found, message: Not found., request_id: req_01J9Z6Q4X8 }
     Conflict:
-      description: State conflict (duplicate RFC, regime with records needs confirmation).
+      description: State conflict (duplicate RFC, regime with records needs confirmation, client `id` reused with a different body).
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }

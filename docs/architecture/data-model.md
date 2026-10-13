@@ -87,6 +87,13 @@ erDiagram
         bytea email_hash PK "HMAC; survives account deletion"
         timestamptz first_trial_at
     }
+    email_verifications {
+        bytea email_hash PK "HMAC; one pending sign-up per email"
+        bytea code_hash "sha256 of the 6-digit code"
+        jsonb pending "password_hash, name, accepted document versions"
+        smallint attempts
+        timestamptz expires_at
+    }
     entitlements {
         uuid id PK
         uuid user_id FK
@@ -257,8 +264,8 @@ erDiagram
 ```
 
 Tax parameters (tariffs, rates) are **not** tables. Per ADR-0002 they are versioned YAML
-embedded in the binary. This deviates from MODULES.md M5: its `tax_parameter_sets` and
-`tax_tables` tables are dropped.
+embedded in the binary. The `tax_parameter_sets` and `tax_tables` tables first proposed
+in MODULES.md M5 are dropped (MODULES.md updated to match).
 
 ## Key constraints and indexes
 
@@ -267,7 +274,7 @@ embedded in the binary. This deviates from MODULES.md M5: its `tax_parameter_set
 | taxpayers | `UNIQUE (user_id, rfc_hash)`; `UNIQUE (id, user_id)` | US-T2 no duplicate RFC per user; composite-FK target |
 | taxpayers | `CHECK person_type IN ('fisica','moral')`; `UNIQUE (id, user_id, person_type)` | person_type is immutable (no UPDATE grant on the column) |
 | taxpayer_regimes | FK `(taxpayer_id, user_id, person_type) → taxpayers(id, user_id, person_type)`; FK `(regime_code, person_type) → regimes` | Ownership integrity. A moral can never hold a física-only regime, and 626 resolves to RESICO PF or PM |
-| incomes / expenses | FK `(taxpayer_id, regime_code, user_id) → taxpayer_regimes` | A record must belong to a regime its taxpayer holds |
+| incomes / expenses | FK `(taxpayer_id, regime_code, user_id) → taxpayer_regimes`; taxpayer_tax_inputs: same FK | A record must belong to a regime its taxpayer holds |
 | incomes / expenses | `CHECK amount_cents >= 0`, `iva_cents >= 0`, withholdings ≥ 0 | Whether an `iva_rate` is valid on the record date (e.g. `rate_8` until 2026-12-31) is checked in the use case through the engine's `RateCatalog` port, because validity is date-ranged parameter data (ADR-0002 §3), not a DB constraint |
 | incomes | `CHECK collected_on IS NOT NULL OR invoiced_on IS NOT NULL` | Per-regime requirement (cash vs. accrual) enforced in the use case |
 | incomes | `INDEX (user_id, taxpayer_id, collected_on, id) WHERE deleted_at IS NULL` + same on `invoiced_on` | Period aggregates; keyset pagination `(date DESC, id DESC)` |
@@ -310,6 +317,12 @@ narrow return types) are the only ways to read across users:
 - `due_reminder_users(ts)` returns user ids only.
 - `purge_soft_deleted(before)` returns a count.
 - `trial_registry_check_and_insert(email_hash)`.
+- `email_verification_upsert(email_hash, code_hash, pending, expires_at)` and
+  `email_verification_consume(email_hash, code_hash)` (bounded attempts; returns the
+  pending sign-up once, then deletes it). `verifyEmail` then creates `users`,
+  `user_usage` (zeroed counters, so the trial-cap UPDATE always finds its row),
+  `consents` and the trial `entitlements` row in one transaction under the new
+  user's context.
 
 ## RLS policy outline
 
@@ -344,7 +357,7 @@ Every table below has `ENABLE` + `FORCE ROW LEVEL SECURITY` in its first migrati
 | taxpayer_tax_inputs | owner | owner | owner | owner | |
 | incomes | owner | owner | owner | owner | Soft delete = UPDATE |
 | expenses | owner | owner | owner | owner | |
-| subscriptions | owner | owner (cc_webhook) | owner (cc_webhook) | — | cc_app: SELECT only |
+| subscriptions | owner | owner (cc_webhook) | owner (cc_webhook) | — | cc_app: SELECT only. The webhook sets `app.current_user_id` to the event's `app_user_id` (our user id) before touching `subscriptions` / `entitlements` |
 | estimate_views | owner | owner | owner | owner | |
 | devices | owner | owner | owner | owner | Re-login of a token owned by another user: `DELETE` through a definer function `claim_push_token(token)` |
 | reminder_settings | owner | owner | owner | — | |
@@ -359,6 +372,8 @@ happen through migrations only. Flag toggles happen through an admin migration o
 
 **Service-only (no grant to `cc_app`).**
 - `trial_registry`: through the definer function only.
+- `email_verifications`: through the definer functions only (pre-account, so no `user_id`
+  exists to key RLS on). Rows expire; the purge job removes them.
 - `revenuecat_events`: `cc_webhook` only, no RLS. It is not user-readable, and its payload
   holds no RFC or financial data.
 
