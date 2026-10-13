@@ -192,6 +192,29 @@ void main() {
       expect(harness.container.read(pendingSignUpProvider), isNull);
     });
 
+    testWidgets('the form keeps no copy of the password behind the code step', (
+      tester,
+    ) async {
+      await open(tester);
+      await fillValid(tester);
+      await tapPrimary(tester);
+
+      await tester.tap(find.widgetWithText(TextButton, 'Cambiar correo'));
+      await tester.pumpAndSettle();
+
+      final password = tester.widget<TextField>(inputLabeled(_password));
+      expect(
+        password.controller!.text,
+        isEmpty,
+        reason: 'the draft is the only holder, so idle/back really forget it',
+      );
+      expect(
+        tester.widget<TextField>(inputLabeled(_email)).controller!.text,
+        isNotEmpty,
+        reason: 'the rest of the form survives a change of email',
+      );
+    });
+
     testWidgets('sends the name trimmed when given', (tester) async {
       await open(tester);
       await fillValid(tester, name: '  Ana Gómez ');
