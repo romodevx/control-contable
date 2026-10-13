@@ -133,7 +133,29 @@ void main() {
     );
   });
 
+  group('verbatim fields (passwords)', () {
+    test('keep surrounding spaces through blur and in their value', () {
+      final password = form.textField(label: 'Contraseña', verbatim: true)
+        ..text.text = ' frase larga '
+        ..handleBlur();
+
+      expect(password.text.text, ' frase larga ');
+      expect(password.value, ' frase larga ');
+    });
+  });
+
   group('server errors (the server is the authority)', () {
+    test('survive leaving the field while the value is unchanged', () {
+      final password = form.textField(label: 'Contraseña')
+        ..text.text = 'frase larga';
+      form.showServerErrors({password: const CustomFieldError('Filtrada')});
+
+      // The error summary takes focus: the field blurs.
+      password.handleBlur();
+
+      expect(password.error, isA<CustomFieldError>());
+    });
+
     test('show on their fields and count as a failed submit', () {
       final name = form.textField(label: 'Nombre')..text.text = 'Ana';
       final amount = form.moneyField(label: 'Monto')..text.text = '10';

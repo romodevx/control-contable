@@ -56,6 +56,7 @@ class AppFormController extends ChangeNotifier {
     bool isRequired = true,
     bool keepForNext = false,
     FieldValidator? validator,
+    bool verbatim = false,
     String initialText = '',
   }) => _add(
     AppFieldController(
@@ -63,6 +64,7 @@ class AppFormController extends ChangeNotifier {
       isRequired: isRequired,
       keepForNext: keepForNext,
       validator: validator,
+      verbatim: verbatim,
       initialText: initialText,
     ),
   );
