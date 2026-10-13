@@ -32,8 +32,8 @@ var (
 // insertInto returns an insert step that writes one row owned by ownerID into table.
 func insertInto(table pgtest.Table) func(ctx context.Context, tx *sql.Tx, ownerID string) error {
 	return func(ctx context.Context, tx *sql.Tx, ownerID string) error {
-		_, err := tx.ExecContext(ctx,
-			"INSERT INTO "+pgtest.QuoteIdent(table.Name)+" (user_id, body) VALUES ($1, 'note')", ownerID)
+		query := "INSERT INTO " + pgtest.QuoteIdent(table.Name) + " (user_id, body) VALUES ($1, 'note')" //nolint:gosec // G202: the table name is quoted; the owner id is a bind parameter
+		_, err := tx.ExecContext(ctx, query, ownerID)
 		return err
 	}
 }
@@ -184,6 +184,7 @@ type check struct {
 }
 
 var isolationChecks = []check{
+	{"rls enabled and forced", pgtest.CheckRLSForced},
 	{"cannot see", func(ctx context.Context, db *sql.DB, tb pgtest.Table) error {
 		return pgtest.CheckCannotSee(ctx, db, tb, userA, userB)
 	}},
@@ -202,9 +203,7 @@ var isolationChecks = []check{
 	{"unset context fails closed", func(ctx context.Context, db *sql.DB, tb pgtest.Table) error {
 		return pgtest.CheckUnsetContextFailsClosed(ctx, db, tb, userB)
 	}},
-	{"no bypass", func(ctx context.Context, db *sql.DB, tb pgtest.Table) error {
-		return pgtest.CheckNoBypass(ctx, db, tb)
-	}},
+	{"no bypass", pgtest.CheckNoBypass},
 }
 
 func TestChecks_PassOnIsolatedTablesAndCatchLeakyOnes(t *testing.T) {
@@ -237,12 +236,26 @@ func TestChecks_PassOnIsolatedTablesAndCatchLeakyOnes(t *testing.T) {
 func TestChecks_LeaveTheOwnersRowsUntouched(t *testing.T) {
 	app := pgtest.NewDatabase(t).Connect(t, pgtest.RoleApp)
 	seed(t, app, leakyNotes, userB)
+	before := snapshot(t, app, leakyNotes)
 
 	for _, c := range isolationChecks {
 		_ = c.run(t.Context(), app, leakyNotes) // breaches expected; only the side effects matter here
 	}
 
-	assert.Equal(t, 1, countAs(t, app, userB, leakyNotes), "checks must roll back their probes")
+	assert.Equal(t, before, snapshot(t, app, leakyNotes), "checks must roll back their probes")
+}
+
+// snapshot returns every row of table as text, ordered by id: a delete followed by
+// a re-insert changes it even though the row count stays the same.
+func snapshot(t *testing.T, db *sql.DB, table pgtest.Table) string {
+	t.Helper()
+	var rows string
+	require.NoError(t, pgtest.WithoutUser(t.Context(), db, func(tx *sql.Tx) error {
+		return tx.QueryRowContext(t.Context(),
+			"SELECT coalesce(string_agg(t::text, ';' ORDER BY id), '') FROM "+pgtest.QuoteIdent(table.Name)+" t").
+			Scan(&rows)
+	}))
+	return rows
 }
 
 func TestChecks_RefuseAVacuousProof(t *testing.T) {

@@ -13,7 +13,7 @@ import (
 func TestImage_MatchesTheLocalComposePin(t *testing.T) {
 	root, err := repoRoot()
 	require.NoError(t, err)
-	compose, err := os.ReadFile(filepath.Join(root, "infra", "local", "compose.yaml"))
+	compose, err := os.ReadFile(filepath.Join(root, "infra", "local", "compose.yaml")) //nolint:gosec // G304: fixed repo path
 	require.NoError(t, err)
 
 	assert.Contains(t, string(compose), "image: "+Image+"\n")
