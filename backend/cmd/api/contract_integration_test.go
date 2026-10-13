@@ -46,6 +46,7 @@ type contractEnv struct {
 	flags   *flags.Service
 	logs    *syncBuffer // the API's log output (the dev email adapter writes codes here)
 	owner   *sql.DB     // cc_owner on the same database, for fixtures
+	app     *sql.DB     // cc_app, the API's own pool, for reading rows as a user
 }
 
 func newContractEnv(t *testing.T, db health.Pinger) contractEnv {
@@ -69,6 +70,7 @@ func newContractEnv(t *testing.T, db health.Pinger) contractEnv {
 		flags:   svc,
 		logs:    logs,
 		owner:   ownerDB,
+		app:     app,
 	}
 }
 
