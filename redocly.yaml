@@ -44,16 +44,8 @@ rules:
       defined: true
       pattern: /^(platform|module_[a-z][a-z_]*)$/
 
-  # --- single error envelope: every 4xx/5xx/default response has a body ...
-  rule/error-response-has-body:
-    subject:
-      type: Response
-      property: content
-      matchParentKeys: /^([45]\d\d|[45]XX|default)$/
-    message: '4xx/5xx responses must carry the shared ErrorResponse envelope.'
-    severity: error
-    assertions:
-      defined: true
+  # --- single error envelope: every 4xx/5xx/default response has a non-empty body (plugin rule) ...
+  contract/error-response-has-body: error
 
   # ... and that body is the shared ErrorResponse schema, by reference
   rule/error-response-envelope:
@@ -69,6 +61,7 @@ rules:
     message: '4xx/5xx responses must use `$ref: #/components/schemas/ErrorResponse` (single error envelope).'
     severity: error
     assertions:
+      defined: true
       ref: /^#\/components\/schemas\/ErrorResponse$/
 
   # --- every request/response body carries an example (media type or referenced schema)

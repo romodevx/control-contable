@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 const FROZEN_KEY = 'x-frozen';
 const PUBLIC_KEY = 'x-public';
 const HASH_PREFIX = 'sha256:';
-const HTTP_METHODS = ['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace'];
+const ERROR_STATUS = /^([45]\d\d|[45]XX|default)$/;
 
 // Canonical JSON: object keys sorted, so key order in YAML does not change the hash.
 function canonical(value) {
@@ -23,16 +23,18 @@ export function frozenHash(node) {
   return HASH_PREFIX + createHash('sha256').update(canonical(node)).digest('hex');
 }
 
-function* frozenCandidates(root) {
-  for (const [path, item] of Object.entries(root.paths ?? {})) {
-    for (const method of HTTP_METHODS) {
-      if (item?.[method]) {
-        yield { node: item[method], pointer: ['paths', path, method] };
-      }
-    }
+// Every object in the document that carries an x-frozen marker, wherever it sits
+// (operations, schemas, responses, parameters, path items...). A marker the rule cannot
+// see would be a freeze that guards nothing.
+function* frozenNodes(node, pointer = []) {
+  if (node === null || typeof node !== 'object') {
+    return;
   }
-  for (const [name, schema] of Object.entries(root.components?.schemas ?? {})) {
-    yield { node: schema, pointer: ['components', 'schemas', name] };
+  if (!Array.isArray(node) && FROZEN_KEY in node) {
+    yield { node, pointer };
+  }
+  for (const [key, child] of Object.entries(node)) {
+    yield* frozenNodes(child, [...pointer, Array.isArray(node) ? Number(key) : key]);
   }
 }
 
@@ -43,10 +45,7 @@ function FrozenUnchanged() {
   return {
     Root: {
       leave(root, ctx) {
-        for (const { node, pointer } of frozenCandidates(root)) {
-          if (!node || !(FROZEN_KEY in node)) {
-            continue;
-          }
+        for (const { node, pointer } of frozenNodes(root)) {
           const declared = node[FROZEN_KEY];
           const actual = frozenHash(node);
           if (declared !== actual) {
@@ -79,6 +78,29 @@ function PublicOperationExplicit() {
           message: 'Operation is marked `x-public: true` but does not declare `security: []`.',
           location: ctx.location.child([PUBLIC_KEY]),
         });
+      }
+    },
+  };
+}
+
+// error-response-has-body: every 4xx/5xx/default response, inline or referenced, declares at
+// least one media type. `content: {}` is not a body; without this the single-envelope rule
+// (rule/error-response-envelope, per media type) would have nothing to check.
+function ErrorResponseHasBody() {
+  return {
+    Responses(responses, ctx) {
+      for (const [status, response] of Object.entries(responses)) {
+        if (!ERROR_STATUS.test(status)) {
+          continue;
+        }
+        const content = ctx.resolve(response).node?.content;
+        const hasMediaType = content !== null && typeof content === 'object' && Object.keys(content).length > 0;
+        if (!hasMediaType) {
+          ctx.report({
+            message: '4xx/5xx responses must carry the shared ErrorResponse envelope (no body declared).',
+            location: ctx.location.child([status]),
+          });
+        }
       }
     },
   };
@@ -117,6 +139,7 @@ export default function contractPlugin() {
         'frozen-unchanged': FrozenUnchanged,
         'public-operation-explicit': PublicOperationExplicit,
         'body-example': BodyExample,
+        'error-response-has-body': ErrorResponseHasBody,
       },
     },
   };

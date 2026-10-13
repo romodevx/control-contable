@@ -19,13 +19,13 @@ installed with `npm ci`. Ruleset: [`redocly.yaml`](../../redocly.yaml); custom r
 | `recommended-strict` | Redocly's recommended set, every rule as an error |
 | `operation-operationId` (+ `-unique`, `-url-safe`) | Every operation has a unique, URL-safe `operationId` (codegen and the operationID→flag map depend on it) |
 | `rule/operation-x-module` | Every operation declares `x-module`: `platform` or a `module_<name>` flag key |
-| `rule/error-response-has-body` | Every `4xx`/`5xx`/`default` response has a body |
-| `rule/error-response-envelope` | That body is `$ref: '#/components/schemas/ErrorResponse'` (single error envelope) |
+| `contract/error-response-has-body` | Every `4xx`/`5xx`/`default` response (inline or `$ref`) has at least one media type |
+| `rule/error-response-envelope` | Every media type of that body has a schema, and it is `$ref: '#/components/schemas/ErrorResponse'` (single error envelope) |
 | `contract/body-example` | Every request/response body has an example, on the media type or on the schema it references |
 | `no-invalid-media-type-examples`, `no-invalid-schema-examples` | Every example validates against its schema (no extra properties) |
 | `security-defined` | Every operation is covered by a declared security scheme (global or its own) |
 | `contract/public-operation-explicit` | `security: []` (public) only together with `x-public: true`, and vice versa |
-| `contract/frozen-unchanged` | A node marked `x-frozen: sha256:<hash>` still hashes to that value |
+| `contract/frozen-unchanged` | Any node marked `x-frozen: sha256:<hash>`, anywhere in the document, still hashes to that value |
 
 ## Frozen contract
 

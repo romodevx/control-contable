@@ -74,12 +74,12 @@ const cases = [
   {
     name: '4xx response without a body',
     source: () => mutate(ERROR_400_BLOCK, "        '400':\n          description: Invalid.\n"),
-    expect: ['rule/error-response-has-body'],
+    expect: ['contract/error-response-has-body'],
   },
   {
     name: '4xx response with an empty content map',
     source: () => mutate(ERROR_400_BLOCK, "        '400':\n          description: Invalid.\n          content: {}\n"),
-    expect: ['rule/error-response-has-body'],
+    expect: ['contract/error-response-has-body'],
   },
   {
     name: '4xx body without a schema',
