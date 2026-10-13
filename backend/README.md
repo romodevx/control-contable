@@ -50,6 +50,38 @@ baseline migration (P0-10), so every environment gets the same ones.
 any role but `cc_owner`. A PostgreSQL advisory lock serializes concurrent runners. Never
 `AutoMigrate`.
 
+### Feature flags
+
+Every module ships behind a `module_<name>` flag in `feature_flags`, OFF by default.
+
+- `internal/platform/flags`: `Service` (`Enabled`, `EnabledModules`, `Invalidate`) caches the
+  enabled set for `flags.DefaultTTL` (5 s) and **fails closed**: if the set cannot be read,
+  every module is OFF. `Admin` validates keys and preset names for the CLI.
+- `internal/platform/flags/flagsgorm`: GORM adapter. `Reader` runs as `cc_app` (SELECT only);
+  `Store` runs as `cc_owner` and applies a preset in one transaction.
+- `adapter/http/flaggate`: the gate. `flaggate.Mux` is the `gen.ServeMux` given to the
+  generated server, so it wraps each route by its pattern (`gen.RouteModule`) **at
+  registration**. A disabled module answers 404 with the standard `ErrorResponse`, before
+  any parameter binding or body decoding. Unmatched requests get the same 404 (never
+  405 + `Allow`). `flaggate.Handler(si, checker)` builds it all; `flaggate.Wrap` gates
+  one handler.
+- `adapter/http/flagshttp`: `GET /v1/flags` (UX only).
+- `internal/platform/flags/flagtest`: `flagtest.OnOff(t, "module_x", suite)` runs a handler
+  suite with the flag ON and OFF; `flagtest.AssertHidden` checks the OFF answer.
+- `cmd/flags list | enable <key> | disable <key> | apply-preset <name> | presets` runs as
+  `cc_owner` from `DATABASE_URL_OWNER` and refuses any other role. Locally:
+  `make flags ARGS="apply-preset demo_core"`. Running API instances see a change within
+  the cache TTL.
+
+Wiring in `cmd/api` (composition root):
+
+```go
+flagsDB, _ := flagsgorm.Open(appDB) // the cc_app pool
+flagSvc := flags.NewService(flagsgorm.NewReader(flagsDB), flags.WithLogger(logger))
+// the strict server embeds the handler:  api{..., flagshttp.New(flagSvc, logger)}
+// the router's flag gate is flagSvc (it implements Enabled(ctx, module) bool)
+```
+
 ### Integration tests
 
 `make test-integration` runs the suites behind the `integration` build tag against a real
