@@ -257,3 +257,17 @@ Drift: `make codegen-check` regenerates and fails if `adapter/http/gen` differs 
 committed. `cmd/flagmapgen` fails generation when an operation lacks `operationId` or a valid
 `x-module`, and `adapter/http/gen/contract_test.go` re-checks the embedded spec, the map, the
 `StrictServerInterface` and the ServeMux patterns.
+
+## HTTP server and request validation (P0-17, 2026-10-13)
+
+Re-checked in Context7 (`/getkin/kin-openapi`) and against the kin-openapi v0.142.0 source
+(the version `go.mod` pins; the table above says v0.149.0) while wiring `cmd/api`.
+
+| Finding | Effect | Decision |
+|---|---|---|
+| The per-operation pipeline must run after routing but before the generated wrapper (P0-06 note) | A gate or validator outside the mux would answer 400/405 for a disabled module | `adapter/http/router` is the `gen.ServeMux`: it wraps each handler as it is registered with **flag gate → authn → kin-openapi validation**. A route with no `x-module` or no operation in the contract fails `router.New` at startup. Unmatched requests (unknown path, other method) get the same 404 envelope as a disabled module, never the mux's 405 + `Allow` |
+| Gate before authn (C4 listed authn first) | With authn first an anonymous caller gets 401 from an enabled module and 404 from a disabled one | Gate first; C4 updated |
+| For an OAS 3.1 document, `openapi3filter` validates with santhosh-tekuri/jsonschema (2020-12) and does **not** assert `format` (uuid, email, date); there is no option to turn it on | A malformed uuid/email/date passes kin validation | The generated binding still rejects them (typed `openapi_types.UUID`/`Email`/`Date`); `router` maps those errors to the same 400 envelope (`code: format`). Types, required, pattern, length, enum and range come from kin |
+| 2020-12 errors are strings (`at '/password': minLength: …`) that quote the rejected value | Echoing them would leak PII | `FieldError.field` and `.code` are parsed from the location and keyword; `message` is generic |
+| kin compiles the operation schema on every request | ~42 µs per validated POST (M4 Pro, `BenchmarkValidatedRequest`) | Acceptable; revisit if profiling says otherwise |
+| Rate limit (O9) | — | In-process GCRA token bucket per client IP (IPv6 by /64), `RATE_LIMIT_RPS` / `RATE_LIMIT_BURST`; `TRUSTED_PROXY_HOPS` picks the X-Forwarded-For entry (0 = TCP peer) |

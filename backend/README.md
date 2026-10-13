@@ -25,6 +25,25 @@ components: [C4](../docs/architecture/c4.md).
 | `make db-reset` | **LOCAL only**: drop the volume and re-bootstrap (refuses a remote Docker host, a non-loopback `CC_DB_HOST` or a remote `DATABASE_URL`) |
 | `make db-roles-check` | log in over TCP as `cc_app`, `cc_webhook`, `cc_worker`; fail if any is SUPERUSER, BYPASSRLS, owner or can DDL |
 
+### Running the API
+
+`go run ./cmd/api` (release builds: `-ldflags "-X main.version=<semver>"`). Configuration is
+read from the environment (`internal/platform/config`):
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `APP_ENV` | required | `dev`, `staging` or `production` |
+| `PORT` | `8080` | listen port |
+| `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
+| `DATABASE_URL` | required (secret) | until P0-12 it is only checked for presence |
+| `RATE_LIMIT_RPS` / `RATE_LIMIT_BURST` | `10` / `20` | token bucket per client IP (429 + `Retry-After`) |
+| `TRUSTED_PROXY_HOPS` | `0` | reverse proxies appending to `X-Forwarded-For`; `0` keys by the TCP peer |
+
+`GET /healthz` answers 200 while the process serves; the body says whether the database is
+reachable (`degraded`/`unreachable` until the database adapter lands in P0-12). Every flagged
+module answers 404 until the flags service (P0-15) turns it on. SIGINT/SIGTERM drains
+in-flight requests for up to 8 s.
+
 ### Local database
 
 `infra/local/compose.yaml` runs `postgres:18.6` pinned by digest. The first `make db-up`
