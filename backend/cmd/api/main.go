@@ -10,6 +10,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"io"
@@ -21,11 +22,16 @@ import (
 	"syscall"
 	"time"
 
+	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" database/sql driver
+
+	"github.com/romodevx/control-contable/backend/adapter/http/flagshttp"
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
 	"github.com/romodevx/control-contable/backend/adapter/http/health"
 	"github.com/romodevx/control-contable/backend/adapter/http/middleware"
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
 	"github.com/romodevx/control-contable/backend/internal/platform/config"
+	"github.com/romodevx/control-contable/backend/internal/platform/flags"
+	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagsgorm"
 	"github.com/romodevx/control-contable/backend/internal/platform/logging"
 	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit"
 )
@@ -65,9 +71,21 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 		return err
 	}
 	logger := logging.New(logOut, cfg.LogLevel)
+	// The runtime pool (cc_app). sql.Open does not connect: an unreachable
+	// database makes every flagged module OFF (fail closed), not a crash.
+	db, err := sql.Open(driverName, cfg.DatabaseURL.Reveal())
+	if err != nil {
+		return fmt.Errorf("open database: %w", err)
+	}
+	defer func() { _ = db.Close() }()
+	flagSvc, err := newFlagService(db, logger)
+	if err != nil {
+		return err
+	}
 	handler, err := newHandler(cfg, deps{
 		logger: logger,
-		db:     health.NotWired{}, // the database adapter arrives with P0-12
+		db:     health.NotWired{}, // the database health probe arrives with P0-12
+		flags:  flagSvc,
 		now:    time.Now,
 	})
 	if err != nil {
@@ -82,11 +100,30 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	return serve(ctx, newServer(handler, cfg.HTTPAddr, logger), ln, logger)
 }
 
+const driverName = "pgx"
+
 // deps are the adapters newHandler wires; tests substitute them.
 type deps struct {
 	logger *slog.Logger
 	db     health.Pinger
+	flags  flagService
 	now    func() time.Time
+}
+
+// flagService is what the HTTP layer needs from the flags service: the
+// router's gate and the GET /v1/flags source. *flags.Service implements it.
+type flagService interface {
+	router.FlagGate
+	flagshttp.Lister
+}
+
+// newFlagService builds the cached, fail-closed flags service over db (cc_app).
+func newFlagService(db *sql.DB, logger *slog.Logger) (*flags.Service, error) {
+	g, err := flagsgorm.Open(db)
+	if err != nil {
+		return nil, err
+	}
+	return flags.NewService(flagsgorm.NewReader(g), flags.WithLogger(logger)), nil
 }
 
 // newHandler builds the full handler: the edge middlewares around the
@@ -96,9 +133,12 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load embedded contract: %w", err)
 	}
-	server := api{Handler: health.New(d.db, version, d.logger)}
+	server := api{
+		Handler:      health.New(d.db, version, d.logger),
+		flagsHandler: flagshttp.New(d.flags, d.logger),
+	}
 	routes, err := router.New(server, spec, router.Options{
-		Flags:  router.AllModulesOff{},    // the flags service arrives with P0-15
+		Flags:  d.flags,
 		Authn:  router.NoAuthentication{}, // JWT authentication arrives with M1-07
 		Logger: d.logger,
 	})

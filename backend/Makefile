@@ -14,7 +14,7 @@ COVER_EXCLUDE ?= /adapter/http/gen/|/cmd/
 
 .DEFAULT_GOAL := check
 
-.PHONY: check fmt fmt-check lint test test-integration cover cover-check vuln tidy generate codegen-check db-up db-down db-reset db-roles-check migrate-up migrate-down migrate-status
+.PHONY: check fmt fmt-check lint test test-integration cover cover-check vuln tidy generate codegen-check db-up db-down db-reset db-roles-check migrate-up migrate-down migrate-status flags
 
 ## check: fmt-check + lint + unit tests (what CI runs)
 check: fmt-check lint test
@@ -122,3 +122,14 @@ migrate-down: $(LOCAL_ENV)
 migrate-status: $(LOCAL_ENV)
 	@$(ASSERT_LOCAL)
 	@$(MIGRATE) status
+
+# Owner URL for cmd/flags on the LOCAL stack only (same construction as MIGRATE). Shared
+# environments set DATABASE_URL_OWNER from the secret manager instead.
+FLAGS = set -e; . $(LOCAL_ENV); \
+	DATABASE_URL_OWNER="postgres://cc_owner:$${CC_OWNER_PASSWORD}@$${CC_DB_HOST}:$${CC_DB_PORT}/$${CC_DB_NAME}?sslmode=disable" \
+	$(GO) run ./cmd/flags
+
+## flags: LOCAL ONLY. Module flag admin as cc_owner, e.g. make flags ARGS="list" | ARGS="enable module_auth" | ARGS="apply-preset demo_core"
+flags: $(LOCAL_ENV)
+	@$(ASSERT_LOCAL)
+	@$(FLAGS) $(or $(ARGS),list)
