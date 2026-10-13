@@ -42,6 +42,7 @@ type authWiring struct {
 // and the bearer authenticator every secured operation runs behind.
 type authModule struct {
 	handler *authhttp.Handler
+	account *authhttp.AccountHandler
 	authn   *authhttp.Authenticator
 }
 
@@ -88,7 +89,7 @@ func newAuthModule(w authWiring) (authModule, error) {
 		return authModule{}, err
 	}
 	handler := authhttp.NewHandler(authhttp.UseCases{Register: register, Verify: verify, Resend: resend, Login: login})
-	return authModule{handler: handler, authn: authn}, nil
+	return authModule{handler: handler, account: newAccountHandler(txm, keys, w.logger), authn: authn}, nil
 }
 
 // newAuthenticator builds the bearer authenticator over the access-token
