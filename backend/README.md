@@ -51,6 +51,25 @@ reachable (a bounded `SELECT 1` on the cc_app pool; `degraded`/`unreachable` whe
 module answers 404 unless its flag is ON in `feature_flags` (see Feature flags). SIGINT/SIGTERM drains
 in-flight requests for up to 8 s.
 
+### Running the worker
+
+`go run ./cmd/worker` runs the background jobs (`internal/platform/worker`, ADR-0001 O8). It
+reads `APP_ENV`, `LOG_LEVEL` and the `DATABASE_URL` secret, logged in as **`cc_worker`**, and
+applies the same startup role check as the API (outside dev it refuses to start as an owner,
+SUPERUSER or BYPASSRLS role, or when the role cannot be verified).
+
+- **Leader election**: every instance campaigns at start and every 10 s with
+  `pg_try_advisory_lock(pgdb.WorkerLeaderLockKey)` on a connection it reserves from its pool
+  while it leads. The leader re-verifies the lock in `pg_locks` on each heartbeat; a dead
+  connection is a lost leadership (PostgreSQL releases the session lock, a standby takes over
+  at its next heartbeat). Standbys hold no connection between attempts.
+- **Jobs** register in `cmd/worker` with a name, an interval and a per-run timeout. Only the
+  leader runs them; each run's context is cancelled on timeout, on lost leadership and on
+  shutdown. A panic is recovered and logged; logs carry the job name, outcome and duration only.
+- **Shutdown** (SIGINT/SIGTERM) cancels running jobs, waits for them, then unlocks.
+- Jobs stay idempotent: two instances may briefly both act as leader between a leader's
+  session dying and its next heartbeat. No production job is registered yet (M9 adds them).
+
 ### Local database
 
 `infra/local/compose.yaml` runs `postgres:18.6` pinned by digest. The first `make db-up`

@@ -9,6 +9,9 @@
 // server that append to X-Forwarded-For; 0 trusts only the TCP peer address;
 // defaults to 0 in dev and is required in staging and production). Secrets:
 // DATABASE_URL.
+//
+// cmd/worker loads WorkerConfig instead (LoadWorker): APP_ENV, LOG_LEVEL and
+// DATABASE_URL only, since it serves no HTTP.
 package config
 
 import (
