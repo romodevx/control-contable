@@ -47,7 +47,7 @@ read from the environment (`internal/platform/config`):
 | `TRUSTED_PROXY_HOPS` | `0` in dev; **required** in staging/production | reverse proxies appending to `X-Forwarded-For`; `0` keys by the TCP peer (behind Cloud Run/a load balancer that would be one bucket for every client) |
 
 `GET /healthz` answers 200 while the process serves; the body says whether the database is
-reachable (`degraded`/`unreachable` until the database adapter lands in P0-12). Every flagged
+reachable (a bounded `SELECT 1` on the cc_app pool; `degraded`/`unreachable` when it fails). Every flagged
 module answers 404 unless its flag is ON in `feature_flags` (see Feature flags). SIGINT/SIGTERM drains
 in-flight requests for up to 8 s.
 

@@ -33,6 +33,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/flags"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagsgorm"
 	"github.com/romodevx/control-contable/backend/internal/platform/logging"
+	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
 	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit"
 )
 
@@ -71,20 +72,21 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 		return err
 	}
 	logger := logging.New(logOut, cfg.LogLevel)
-	// The runtime pool (cc_app). sql.Open does not connect: an unreachable
-	// database makes every flagged module OFF (fail closed), not a crash.
-	db, err := sql.Open(driverName, cfg.DatabaseURL.Reveal())
+	// The runtime pool (cc_app). Opening does not connect: an unreachable
+	// database makes every flagged module OFF (fail closed) and /healthz
+	// "degraded", not a crash loop.
+	pool, err := openDatabase(cfg)
 	if err != nil {
-		return fmt.Errorf("open database: %w", err)
+		return err
 	}
-	defer func() { _ = db.Close() }()
-	flagSvc, err := newFlagService(db, logger)
+	defer closeDatabase(pool, logger)
+	flagSvc, err := newFlagService(pool, logger)
 	if err != nil {
 		return err
 	}
 	handler, err := newHandler(cfg, deps{
 		logger: logger,
-		db:     health.NotWired{}, // the database health probe arrives with P0-12
+		db:     pgdb.NewPinger(pool),
 		flags:  flagSvc,
 		now:    time.Now,
 	})
@@ -100,7 +102,20 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	return serve(ctx, newServer(handler, cfg.HTTPAddr, logger), ln, logger)
 }
 
-const driverName = "pgx"
+// openDatabase opens the cc_app pool (pgx) without connecting.
+func openDatabase(cfg config.Config) (*sql.DB, error) {
+	pool, err := pgdb.Open(cfg.DatabaseURL.Reveal())
+	if err != nil {
+		return nil, fmt.Errorf("open database: %w", err)
+	}
+	return pool, nil
+}
+
+func closeDatabase(pool *sql.DB, logger *slog.Logger) {
+	if err := pool.Close(); err != nil {
+		logger.Warn("close database pool", slog.Any("error", err))
+	}
+}
 
 // deps are the adapters newHandler wires; tests substitute them.
 type deps struct {

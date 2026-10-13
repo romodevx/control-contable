@@ -25,6 +25,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/flags"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagtest"
 	"github.com/romodevx/control-contable/backend/internal/platform/logging"
+	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
 )
 
 var _ gen.StrictServerInterface = api{}
@@ -95,7 +96,7 @@ func TestHealthz(t *testing.T) {
 	}{
 		{name: "database reachable", db: pingOK{},
 			want: gen.HealthStatus{Status: gen.HealthStatusStatusOk, Database: gen.HealthStatusDatabaseOk, Version: version}},
-		{name: "database adapter not wired yet (until P0-12)", db: health.NotWired{},
+		{name: "database unreachable", db: unreachableDatabase(t),
 			want: gen.HealthStatus{Status: gen.HealthStatusStatusDegraded, Database: gen.HealthStatusDatabaseUnreachable, Version: version}},
 	}
 	for _, tt := range tests {
@@ -238,6 +239,29 @@ func TestServe_drainsInFlightRequestsOnShutdown(t *testing.T) {
 		_ = resp.Body.Close()
 	}
 	assert.Error(t, err, "the listener is closed")
+}
+
+// unreachableDatabase is the real readiness adapter over a pool whose server
+// refuses connections.
+func unreachableDatabase(t *testing.T) health.Pinger {
+	t.Helper()
+	pool, err := openDatabase(config.Config{DatabaseURL: config.NewSecret(
+		"postgres://cc_app:pw@127.0.0.1:1/control_contable?sslmode=disable&connect_timeout=1")})
+	require.NoError(t, err, "opening the pool must not need the database")
+	t.Cleanup(func() { assert.NoError(t, pool.Close()) })
+	return pgdb.NewPinger(pool)
+}
+
+func TestOpenDatabase_rejectsMalformedURL(t *testing.T) {
+	_, err := openDatabase(config.Config{DatabaseURL: config.NewSecret("postgres://u:pw@host:notaport/db")})
+	assert.ErrorIs(t, err, pgdb.ErrInvalidDSN)
+}
+
+func TestRun_reportsMalformedDatabaseURL(t *testing.T) {
+	env := map[string]string{"APP_ENV": "dev", "DATABASE_URL": "postgres://u:pw@host:notaport/db"}
+	err := run(context.Background(), func(k string) (string, bool) { v, ok := env[k]; return v, ok }, io.Discard)
+
+	assert.ErrorIs(t, err, pgdb.ErrInvalidDSN)
 }
 
 func TestRun_reportsConfigErrors(t *testing.T) {
