@@ -12,6 +12,10 @@ abstract interface class RefreshTokenStore {
 
   /// Forgets the refresh token.
   Future<void> delete();
+
+  /// Forgets everything the app keeps in this store: the last resort when
+  /// [delete] keeps failing, so a refresh token never outlives a sign-out.
+  Future<void> wipeAll();
 }
 
 /// [RefreshTokenStore] over `flutter_secure_storage`: the Keychain on iOS,
@@ -45,6 +49,9 @@ class SecureRefreshTokenStore implements RefreshTokenStore {
 
   @override
   Future<void> delete() => _storage.delete(key: _key);
+
+  @override
+  Future<void> wipeAll() => _storage.deleteAll();
 }
 
 /// The refresh token store. Tests override it with an in-memory store.

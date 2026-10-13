@@ -32,8 +32,17 @@ void main() {
   setUp(() {
     store = InMemoryRefreshTokenStore();
     rotation = _Rotation();
-    session = Session(store: store, rotate: rotation.call);
+    session = Session(
+      store: store,
+      rotate: rotation.call,
+      storageRetryDelays: _noWait,
+    );
     addTearDown(session.dispose);
+  });
+
+  test('retries a failed store call twice before giving up', () {
+    expect(storageAttempts, 3);
+    expect(defaultStorageRetryDelays, hasLength(storageAttempts - 1));
   });
 
   group('restore', () {
@@ -200,4 +209,133 @@ void main() {
 
     expect(session.status, SessionStatus.signedIn);
   });
+
+  group('a failed save after a rotation (PR #42 follow-up b)', () {
+    setUp(() async {
+      await session.start(tokenPair(access: 'access-1', refresh: 'refresh-1'));
+      store.written.clear();
+    });
+
+    test('retries the save until the store takes it', () async {
+      store.failingWrites = 1;
+
+      expect(await session.refresh(), 'access-2');
+
+      expect(store.token, 'refresh-2');
+      expect(store.written, ['refresh-2', 'refresh-2']);
+    });
+
+    test('keeps the session in memory and surfaces no secret', () async {
+      store.failingWrites = _always;
+
+      // Never throws: the PlatformException echoes the token it failed on.
+      expect(await session.refresh(), 'access-2');
+
+      expect(session.status, SessionStatus.signedIn);
+      expect(session.accessToken, 'access-2');
+      expect(store.written, hasLength(storageAttempts));
+    });
+
+    test('the next rotation sends the unsaved token, never the dead '
+        'one still on disk (that would be reuse)', () async {
+      store.failingWrites = _always;
+      await session.refresh();
+      rotation.next = tokenPair(access: 'access-3', refresh: 'refresh-3');
+
+      await session.refresh();
+
+      expect(store.token, 'refresh-1', reason: 'the disk still lags');
+      expect(rotation.received, ['refresh-1', 'refresh-2']);
+    });
+
+    test('once the store works again, the newest token is saved', () async {
+      store.failingWrites = storageAttempts;
+      await session.refresh();
+      rotation.next = tokenPair(access: 'access-3', refresh: 'refresh-3');
+
+      await session.refresh();
+
+      expect(store.token, 'refresh-3');
+      expect(await session.readRefreshToken(), 'refresh-3');
+    });
+
+    test('logout reads the unsaved token', () async {
+      store.failingWrites = _always;
+      await session.refresh();
+
+      expect(await session.readRefreshToken(), 'refresh-2');
+    });
+
+    test('a failed save at sign-in still signs in, in memory', () async {
+      await session.end();
+      store.failingWrites = _always;
+
+      await session.start(tokenPair(access: 'access-9', refresh: 'refresh-9'));
+
+      expect(session.status, SessionStatus.signedIn);
+      expect(await session.readRefreshToken(), 'refresh-9');
+    });
+  });
+
+  group('a failed delete at sign-out (PR #42 follow-up c)', () {
+    setUp(
+      () => session.start(tokenPair(access: 'access-1', refresh: 'refresh-1')),
+    );
+
+    test('retries the delete', () async {
+      store.failingDeletes = 1;
+
+      await session.end();
+
+      expect(store.token, isNull);
+      expect(store.wipes, 0);
+      expect(session.tokenLeftOnDevice, isFalse);
+    });
+
+    test('wipes the whole namespace when the delete keeps failing', () async {
+      store.failingDeletes = _always;
+
+      await session.end();
+
+      expect(store.wipes, 1);
+      expect(store.token, isNull);
+      expect(session.tokenLeftOnDevice, isFalse);
+    });
+
+    test('never fails silently: reports a token left on the device', () async {
+      store
+        ..failingDeletes = _always
+        ..wipeError = PlatformException(code: 'wipe');
+      var notified = 0;
+      session.addListener(() => notified++);
+
+      await session.end();
+
+      expect(session.status, SessionStatus.signedOut);
+      expect(session.accessToken, isNull);
+      expect(session.tokenLeftOnDevice, isTrue);
+      expect(notified, 2, reason: 'signed out, then the warning');
+    });
+
+    test('the next sign-in retries the wipe and clears the warning', () async {
+      store
+        ..failingDeletes = _always
+        ..wipeError = PlatformException(code: 'wipe');
+      await session.end();
+      store
+        ..failingDeletes = 0
+        ..wipeError = null;
+
+      await session.start(tokenPair(access: 'a', refresh: 'r'));
+
+      expect(session.tokenLeftOnDevice, isFalse);
+      expect(store.token, 'r');
+    });
+  });
 }
+
+/// Retries at once: the waits are not what these tests are about.
+const List<Duration> _noWait = [Duration.zero, Duration.zero];
+
+/// Enough failures to outlast every retry.
+const int _always = 1 << 20;

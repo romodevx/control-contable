@@ -9,9 +9,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// built on it): the hardened transport of [buildApiDio] plus the session's
 /// [AuthInterceptor] (bearer on each request, one refresh on a 401).
 final dioProvider = Provider<Dio>((ref) {
-  final dio = buildApiDio(ref.watch(appConfigProvider));
+  final config = ref.watch(appConfigProvider);
+  final dio = buildApiDio(config);
   dio.interceptors.add(
-    AuthInterceptor(session: ref.watch(sessionProvider), dio: dio),
+    AuthInterceptor(
+      session: ref.watch(sessionProvider),
+      dio: dio,
+      apiBase: config.apiBaseUrl,
+    ),
   );
   ref.onDispose(dio.close);
   return dio;
