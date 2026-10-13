@@ -105,6 +105,60 @@ func (s *AccountStore) Create(ctx context.Context, a usecase.NewAccount) (usecas
 	return usecase.Account{ID: a.ID, Email: a.Email, Name: a.Name, CreatedAt: user.CreatedAt}, nil
 }
 
+var _ usecase.LoginAccounts = (*AccountStore)(nil)
+
+// Find implements usecase.LoginAccounts: the account as the API shows it,
+// its email opened with the keyring. RLS hides every row but the unit of
+// work's user, so another user's id is ErrAccountNotFound.
+func (s *AccountStore) Find(ctx context.Context, id domain.UserID) (usecase.Account, error) {
+	db, err := pgdb.Conn(ctx)
+	if err != nil {
+		return usecase.Account{}, err
+	}
+	var rows []userRow
+	if err := db.Where("id = ?", id.String()).Limit(1).Find(&rows).Error; err != nil {
+		return usecase.Account{}, fmt.Errorf("auth infra: read user: %w", err)
+	}
+	if len(rows) == 0 {
+		return usecase.Account{}, usecase.ErrAccountNotFound
+	}
+	return s.toAccount(id, rows[0])
+}
+
+func (s *AccountStore) toAccount(id domain.UserID, row userRow) (usecase.Account, error) {
+	plain, err := s.emails.Decrypt(row.EmailEncrypted, emailAAD(id))
+	if err != nil {
+		return usecase.Account{}, fmt.Errorf("auth infra: open email: %w", err)
+	}
+	email, err := domain.NewEmail(string(plain))
+	if err != nil {
+		return usecase.Account{}, fmt.Errorf("auth infra: stored email: %w", err)
+	}
+	var name domain.Name
+	if row.Name != nil {
+		if name, err = domain.NewName(*row.Name); err != nil {
+			return usecase.Account{}, fmt.Errorf("auth infra: stored name: %w", err)
+		}
+	}
+	return usecase.Account{ID: id, Email: email, Name: name, CreatedAt: row.CreatedAt}, nil
+}
+
+// ReplacePasswordHash implements usecase.LoginAccounts: a compare-and-set on
+// the stored hash, so a password changed since the login read it stays.
+func (s *AccountStore) ReplacePasswordHash(ctx context.Context, id domain.UserID, oldHash, newHash string) error {
+	db, err := pgdb.Conn(ctx)
+	if err != nil {
+		return err
+	}
+	err = db.Model(&userRow{}).
+		Where("id = ? AND password_hash = ?", id.String(), oldHash).
+		Update("password_hash", newHash).Error
+	if err != nil {
+		return fmt.Errorf("auth infra: replace password hash: %w", err)
+	}
+	return nil
+}
+
 func insertConsents(ctx context.Context, userID string, documents []domain.DocumentVersion, acceptedAt time.Time) error {
 	if len(documents) == 0 {
 		return nil
