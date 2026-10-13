@@ -86,7 +86,7 @@ Stages: contract tooling (P0-05) → data (P0-10, P0-11) → backend platform �
 | P0-18 | Contract-test harness (libopenapi-validator) wired to integration tests; applied to `/healthz` and `/v1/flags` | qa-sr | P0-15, P0-17 | 2 | — | `feature/p0-contract-tests` | — | [ ] |
 | P0-19 | Backend CI: gofmt, golangci-lint, unit, integration (testcontainers), contract, govulncheck, codegen drift, OpenAPI lint, coverage ≥ 80% gate | devops-sr | P0-06, P0-09 | 3 | — | `feature/p0-ci-backend` | — | [ ] |
 | P0-20 | Flag admin CLI `cmd/flags` (list, enable, disable, apply-preset) running as cc_owner (backs the /flags skill) | backend-sr | P0-15 | 2 | — | `feature/p0-flags` | — | [ ] |
-| P0-21 | Context7 check of Dart libs + swagger_parser spike on `openapi.yaml` (oneOf/const); record go/fallback decision (openapi-generator + 3.0 overlay) | frontend-sr | P0-01, P0-05 | 4.5 | PG-P0-C | `feature/p0-dart-client-spike` | — | [ ] |
+| P0-21 | Context7 check of Dart libs + swagger_parser spike on `openapi.yaml` (oneOf/const); record go/fallback decision (openapi-generator + 3.0 overlay) | frontend-sr | P0-01, P0-05 | 4.5 | PG-P0-C | `feature/p0-dart-client-spike` | — | [x] |
 | P0-22 | Flutter scaffold `mobile/`: flavors dev/staging/prod, go_router, state management, dio, design tokens, es-MX l10n, analysis_options | frontend-sr | P0-21 | 4 | — | `feature/p0-mobile-scaffold` | OB4, OB6 | [ ] |
 | P0-23 | Generated Dart client wiring + `make mobile-client` + drift check | frontend-sr | P0-22 | 2 | — | `feature/p0-mobile-client-flags` | — | [ ] |
 | P0-24 | FlagsProvider + `useFlag` helper fed by `GET /v1/flags` (widget tests first) | frontend-sr | P0-23 | 2.5 | — | `feature/p0-mobile-client-flags` | — | [ ] |
