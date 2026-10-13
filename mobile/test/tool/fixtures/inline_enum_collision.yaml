@@ -1,0 +1,32 @@
+# Reproduces the ADR-0003 collision: the inline object inside `oneOf` holds a `period` enum,
+# swagger_parser names it `Period` and overwrites the component `Period` (a YYYY-MM string).
+openapi: 3.1.0
+info: { title: fixture, version: 0.0.0 }
+paths:
+  /v1/subscription:
+    get:
+      tags: [Subscriptions]
+      operationId: getSubscription
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubscriptionStatus' }
+components:
+  schemas:
+    Period:
+      type: string
+      pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$'
+    SubscriptionStatus:
+      type: object
+      required: [since, plan]
+      properties:
+        since: { $ref: '#/components/schemas/Period' }
+        plan:
+          oneOf:
+            - type: object
+              required: [period]
+              properties:
+                period: { type: string, enum: [weekly, monthly, yearly] }
+            - type: 'null'
