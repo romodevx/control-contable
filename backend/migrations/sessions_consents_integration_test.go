@@ -43,7 +43,7 @@ VALUES ($4, $1, $3, sha256(convert_to($2::text, 'UTF8')), $5, now() + interval '
 
 const insertConsentSQL = `
 INSERT INTO consents (user_id, document_kind, document_version, accepted_at)
-VALUES ($1, 'privacy', '2026-10-01', now())`
+VALUES ($1, 'privacy_notice_integral', 'v1', now())`
 
 const (
 	familyA  = "00000000-0000-4000-8000-0000000000fa"
@@ -264,9 +264,9 @@ func TestSessionsConsents_RejectInvalidRows(t *testing.T) {
 		{"absolute expiry beyond 90 days", session + "uuidv7(), sha256('n3'), now() + interval '1 day', now() + interval '91 days', NULL)", sqlstateCheckViolation},
 		{"sliding expiry past the absolute one", session + "uuidv7(), sha256('n4'), now() + interval '2 days', now() + interval '1 day', NULL)", sqlstateCheckViolation},
 		{"parent in another family", session + "uuidv7(), sha256('n5'), now() + interval '1 day', now() + interval '2 days', '" + tokenA1 + "')", sqlstateForeignKeyViolation},
-		{"unknown document kind", consent + "'cookies', '2026-10-01', now())", sqlstateCheckViolation},
+		{"unknown document kind", consent + "'cookies', 'v1', now())", sqlstateForeignKeyViolation},
 		{"blank document version", consent + "'terms', '  ', now())", sqlstateCheckViolation},
-		{"accepted in the future", consent + "'terms', '2026-10-01', now() + interval '1 day')", sqlstateCheckViolation},
+		{"accepted in the future", consent + "'terms', 'v1', now() + interval '1 day')", sqlstateCheckViolation},
 		{"same version accepted twice", insertConsentSQL, sqlstateUniqueViolation},
 	}
 	for _, b := range bad {
