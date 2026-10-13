@@ -94,6 +94,28 @@ paths:
 			wantErr: []string{"module_Auth"},
 		},
 		{
+			// P0-29: the feature_flags CHECK rejects these keys, so a route
+			// tagged with one could never be enabled (silently 404 forever).
+			name: "x-module the feature_flags key format rejects fails",
+			spec: `
+paths:
+  /v1/a:
+    get: { operationId: a, x-module: module_auth_ }
+  /v1/b:
+    get: { operationId: b, x-module: module_a__b }
+`,
+			wantErr: []string{"module_auth_", "module_a__b"},
+		},
+		{
+			name: "x-module with a digit is a valid flag key",
+			spec: `
+paths:
+  /v1/a:
+    get: { operationId: a, x-module: module_m2 }
+`,
+			want: []Operation{{ID: "a", Method: "GET", Path: "/v1/a", Module: "module_m2"}},
+		},
+		{
 			name: "operation without operationId fails",
 			spec: `
 paths:

@@ -5,12 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"go/format"
-	"regexp"
 	"slices"
 	"strings"
 	"text/template"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/romodevx/control-contable/backend/internal/platform/flags"
 )
 
 // Operation is one OpenAPI operation and the module (feature flag) that owns it.
@@ -25,8 +26,15 @@ type Operation struct {
 // std-http server registers for the operation.
 func (o Operation) Route() string { return o.Method + " " + o.Path }
 
-// moduleKeyPattern mirrors rule/operation-x-module in redocly.yaml.
-var moduleKeyPattern = regexp.MustCompile(`^(platform|module_[a-z][a-z_]*)$`)
+// validModule reports an x-module the gate can serve: platform, or a key the
+// feature_flags CHECK accepts (flags.ValidKey, the single source of the
+// grammar; rule/operation-x-module in redocly.yaml mirrors it).
+func validModule(module string) bool {
+	return module == platformModule || flags.ValidKey(module)
+}
+
+// platformModule is the x-module of the always-on platform operations.
+const platformModule = "platform"
 
 // httpMethods are the path-item keys that hold an operation (OpenAPI 3.1 §4.8.9).
 var httpMethods = []string{"get", "put", "post", "delete", "options", "head", "patch", "trace"}
@@ -107,7 +115,7 @@ func parseOperation(method, path string, node *yaml.Node) (Operation, error) {
 	switch {
 	case raw.Module == "":
 		errs = append(errs, fmt.Errorf("%s (%s): missing x-module (platform or a module_<name> flag key)", where, raw.OperationID))
-	case !moduleKeyPattern.MatchString(raw.Module):
+	case !validModule(raw.Module):
 		errs = append(errs, fmt.Errorf("%s (%s): x-module %q is neither platform nor a module_<name> flag key", where, raw.OperationID, raw.Module))
 	}
 	if err := errors.Join(errs...); err != nil {
