@@ -43,10 +43,11 @@ printf '{"version":3}\n' >"$work/map.json"
 printf 'plain asset\n' >"$work/asset.txt"
 
 failures=0
-# expect <pass|fail> <description> <artifact>
+# expect <pass|fail> <description> <artifact> [VAR=value...]: runs the gate with the extra env.
 expect() {
   local want="$1" description="$2" artifact="$3" got
-  if "$gate" "$work/$artifact" >"$work/out.log" 2>&1; then got=pass; else got=fail; fi
+  shift 3
+  if env "$@" "$gate" "$work/$artifact" >"$work/out.log" 2>&1; then got=pass; else got=fail; fi
   if [[ "$got" == "$want" ]]; then
     echo "ok   - $description"
   else
@@ -66,6 +67,13 @@ make_zip nolib.apk "assets/a.txt=$work/asset.txt"
 make_zip clean.aab "base/$lib=$work/libapp-stripped.so" \
   "BUNDLE-METADATA/com.android.tools.build.debugsymbols/arm64-v8a/libapp.so.sym=$work/libapp-unstripped.so" \
   "BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map=$work/asset.txt"
+make_zip notelf.apk "$lib=$work/asset.txt"
+make_zip dbg.aab "base/$lib=$work/libapp-stripped.so" \
+  "BUNDLE-METADATA/com.android.tools.build.debugsymbols/arm64-v8a/libapp.so.dbg=$work/libapp-unstripped.so"
+make_zip renamed-metadata.aab "base/$lib=$work/libapp-stripped.so" \
+  "BUNDLE-METADATA/com.android.tools.build.debugsymbols/arm64-v8a/libother.so.sym=$work/libapp-unstripped.so"
+make_zip metadata-in-apk.apk "$lib=$work/libapp-stripped.so" \
+  "BUNDLE-METADATA/com.android.tools.build.debugsymbols/arm64-v8a/libapp.so.sym=$work/libapp-unstripped.so"
 make_zip symtab.aab "base/$lib=$work/libapp-unstripped.so"
 make_zip unknown-metadata.aab "base/$lib=$work/libapp-stripped.so" \
   "BUNDLE-METADATA/com.example/app.android-arm64.symbols=$work/asset.txt"
@@ -76,6 +84,11 @@ expect fail "an APK carrying a .map file fails" map.apk
 expect fail "an APK carrying split-debug-info .symbols fails" symbols.apk
 expect fail "an APK with a sourceMappingURL comment fails" url.apk
 expect fail "an APK without libapp.so fails (nothing was inspected)" nolib.apk
+expect fail "a libapp.so the ELF reader cannot parse fails (fail closed)" notelf.apk
+expect fail "a missing ELF reader fails instead of skipping the section check" clean.apk READELF=/nonexistent/readelf
+expect fail "an AAB carrying full DWARF (.dbg) in BUNDLE-METADATA fails" dbg.aab
+expect fail "an AAB with symbols of a non-Flutter lib in BUNDLE-METADATA fails" renamed-metadata.aab
+expect fail "the BUNDLE-METADATA exception does not apply to an APK" metadata-in-apk.apk
 expect pass "an AAB with stripped libs and Play-only BUNDLE-METADATA passes" clean.aab
 expect fail "an AAB whose delivered libapp.so keeps symbols fails" symtab.aab
 expect fail "an AAB with unknown BUNDLE-METADATA content fails" unknown-metadata.aab
