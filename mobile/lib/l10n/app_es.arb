@@ -117,9 +117,25 @@
   "@formHidePassword": {
     "description": "Tooltip and screen reader label of the toggle that hides a revealed password."
   },
-  "homeCreateAccount": "Crear cuenta",
-  "@homeCreateAccount": {
-    "description": "Home entry point to the sign-up form (shown only while module_auth is on)."
+  "authSignOut": "Cerrar sesión",
+  "@authSignOut": {
+    "description": "Home app-bar action that ends the session (shown only while module_auth is on). Works offline: the device forgets the session even when the server cannot be told."
+  },
+  "authLoginTitle": "Iniciar sesión",
+  "@authLoginTitle": {
+    "description": "Title of the login screen, where a signed-out user is sent."
+  },
+  "authLoginSubmit": "Entrar",
+  "@authLoginSubmit": {
+    "description": "Primary button of the login form."
+  },
+  "authLoginRejected": "Correo o contraseña incorrectos.",
+  "@authLoginRejected": {
+    "description": "Login 401: one generic message for a wrong password, an unknown email or an unverified sign-up (no account enumeration)."
+  },
+  "authLoginNoAccount": "¿Aún no tienes cuenta?",
+  "@authLoginNoAccount": {
+    "description": "Lead-in before the link from the login form to the sign-up form."
   },
   "authRegisterTitle": "Crear cuenta",
   "@authRegisterTitle": {

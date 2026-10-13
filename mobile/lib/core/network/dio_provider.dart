@@ -1,34 +1,18 @@
 import 'package:control_contable/core/config/app_config.dart';
-import 'package:control_contable/core/network/https_only_interceptor.dart';
+import 'package:control_contable/core/network/api_dio.dart';
+import 'package:control_contable/core/network/auth_interceptor.dart';
+import 'package:control_contable/core/session/session.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-const _connectTimeout = Duration(seconds: 10);
-const _receiveTimeout = Duration(seconds: 20);
-
-/// The single HTTP client. The generated API client (`apiClientProvider`) and
-/// the auth interceptors (M1) are built on top of this instance.
-///
-/// Redirects are never followed: the API does not redirect, and a followed
-/// 3xx could downgrade HTTPS to HTTP inside the platform `HttpClient`, out of
-/// reach of interceptors. A 3xx surfaces as a `DioException` instead. When
-/// the base URL is HTTPS, `HttpsOnlyInterceptor` also refuses any `http://`
-/// request.
+/// The single HTTP client the app's calls share (`apiClientProvider` is
+/// built on it): the hardened transport of [buildApiDio] plus the session's
+/// [AuthInterceptor] (bearer on each request, one refresh on a 401).
 final dioProvider = Provider<Dio>((ref) {
-  final config = ref.watch(appConfigProvider);
-  final dio = Dio(
-    BaseOptions(
-      baseUrl: config.apiBaseUrl.toString(),
-      connectTimeout: _connectTimeout,
-      receiveTimeout: _receiveTimeout,
-      contentType: Headers.jsonContentType,
-      followRedirects: false,
-      maxRedirects: 0,
-    ),
+  final dio = buildApiDio(ref.watch(appConfigProvider));
+  dio.interceptors.add(
+    AuthInterceptor(session: ref.watch(sessionProvider), dio: dio),
   );
-  if (config.apiBaseUrl.isScheme('https')) {
-    dio.interceptors.add(HttpsOnlyInterceptor());
-  }
   ref.onDispose(dio.close);
   return dio;
 }, name: 'dioProvider');

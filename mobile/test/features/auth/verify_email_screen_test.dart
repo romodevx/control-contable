@@ -95,7 +95,7 @@ void main() {
     expect((request.email, request.code), (_email, '482913'));
     expect(request.password, syntheticPassword(), reason: 'D8: set here');
     expect(request.name, 'Ana');
-    expect(harness.sessions.saved, hasLength(1));
+    expect(harness.tokens.token, 'refresh', reason: 'session kept');
     expect(harness.container.read(pendingSignUpProvider), isNull);
     expect(find.text('Inicio'), findsOneWidget, reason: 'home');
   });
@@ -134,7 +134,7 @@ void main() {
 
     expect(find.text(_rejected), findsOneWidget, reason: 'inline');
     expect(find.text('$_code: $_rejected'), findsOneWidget);
-    expect(harness.sessions.saved, isEmpty);
+    expect(harness.tokens.token, isNull);
   });
 
   group('password chosen at sign-up (D8)', () {
@@ -165,7 +165,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(harness.repository.verified.last.password, syntheticPassword(20));
-      expect(harness.sessions.saved, hasLength(1));
+      expect(harness.tokens.token, 'refresh', reason: 'session kept');
     });
 
     testWidgets('a 400 on the code stays on the code field', (tester) async {
