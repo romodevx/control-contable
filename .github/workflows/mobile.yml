@@ -83,35 +83,31 @@ jobs:
     name: Dart client drift + ADR-0003 kind guard
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    # TODO(P0-23): `make mobile-client` (normalizer + check_generated_kinds.dart, ADR-0003) is
-    # being built concurrently. Each step below runs only once mobile/tool/check_generated_kinds.dart
-    # exists, so this job turns itself on when P0-23 merges; until then it warns and passes.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: P0-23 not on this branch yet
-        if: ${{ hashFiles('mobile/tool/check_generated_kinds.dart') == '' }}
-        run: echo "::warning title=P0-23 pending::make mobile-client is not on this branch; client drift and kind checks skipped"
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
-        if: ${{ hashFiles('mobile/tool/check_generated_kinds.dart') != '' }}
         with:
           channel: stable
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
           pub-cache: false
       - name: Pub cache
-        if: ${{ hashFiles('mobile/tool/check_generated_kinds.dart') != '' }}
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.pub-cache
           key: pub-${{ runner.os }}-${{ env.FLUTTER_VERSION }}-${{ hashFiles('mobile/pubspec.lock') }}
           restore-keys: pub-${{ runner.os }}-${{ env.FLUTTER_VERSION }}-
-      - name: Regenerate the client (normalizer + kind guard)
-        if: ${{ hashFiles('mobile/tool/check_generated_kinds.dart') != '' }}
-        run: make mobile-client
+      - name: Resolve dependencies (lockfile enforced)
+        working-directory: mobile
+        run: flutter pub get --enforce-lockfile
+      # Regenerates the client (normalizer + kind guard, fails on a collision) and fails when
+      # the committed lib/api/generated differs from docs/api/openapi.yaml.
       - name: Client drift (generated code matches docs/api/openapi.yaml)
-        if: ${{ hashFiles('mobile/tool/check_generated_kinds.dart') != '' }}
+        run: make mobile-client-check
+      # Anything else the generator touched (e.g. new untracked files outside lib/api).
+      - name: No other generated drift
         run: |
           git add --intent-to-add --all -- mobile
           git diff --exit-code -- mobile
@@ -166,4 +162,5 @@ jobs:
           name: mobile-prod-debug-symbols
           path: mobile/build/symbols/prod
           if-no-files-found: error
-          retention-days: 30
+          # Short-lived: symbols de-obfuscate the build, so they are kept no longer than triage needs.
+          retention-days: 14
