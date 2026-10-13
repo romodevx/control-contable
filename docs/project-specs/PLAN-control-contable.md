@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | DRAFT (Phase 3 Planning), pending owner approval (human checkpoint before execution) |
+| Status | APPROVED (P0-01). P0 Foundation done (MS1 when `feature/p0-docs` merges); M1 next |
 | Date | 2026-10-13 |
 | Author | eng-manager |
 | Inputs | [PRD](PRD.md), [MODULES](MODULES.md), [ADR-0001](../adr/0001-stack.md), [ADR-0002](../adr/0002-tax-engine.md), [C4](../architecture/c4.md), [data model](../architecture/data-model.md), [OpenAPI](../api/openapi.yaml), [research](../research/tax-regimes-mx-2026.md) |
@@ -104,6 +104,8 @@ Stages: contract tooling (P0-05) → data (P0-10, P0-11) → backend platform �
 Deferred by the P0 gates, none blocking. Each lands with the task in its target column. Sources:
 [P0-29 tech-lead gate](../reviews/P0-29-tech-lead-gate.md) (FU*) and
 [P0-30 security gate](../reviews/P0-30-security-gate.md) (D-*).
+Mobile and QA deferrals keep their own lists: [P0-31 mobile review](../reviews/P0-31-mobile-foundation.md)
+(F-04..F-11) and [P0-28 QA](../reviews/P0-28-qa-foundation.md) (F3, F4).
 
 | ID | Item | Target |
 |---|---|---|
