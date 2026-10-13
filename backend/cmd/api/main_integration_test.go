@@ -43,11 +43,11 @@ func TestFlags_endToEndOverPostgres(t *testing.T) {
 
 	req, rec := get(h, "/v1/me")
 	flagtest.AssertHidden(t, rec)
-	conforms(t, req, rec, http.MethodGet, "/v1/me")
+	conforms(t, req, rec)
 	req, rec = get(h, "/v1/flags")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"enabled":[]}`, rec.Body.String())
-	conforms(t, req, rec, http.MethodGet, "/v1/flags")
+	conforms(t, req, rec)
 
 	_, err = store.SetEnabled(t.Context(), "module_auth", true)
 	require.NoError(t, err)
@@ -58,7 +58,7 @@ func TestFlags_endToEndOverPostgres(t *testing.T) {
 	req, rec = get(h, "/v1/flags")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"enabled":["module_auth"]}`, rec.Body.String())
-	conforms(t, req, rec, http.MethodGet, "/v1/flags")
+	conforms(t, req, rec)
 }
 
 // A runtime role without SELECT on feature_flags (cc_webhook) cannot read the
@@ -77,5 +77,5 @@ func TestFlags_unreadableFlagsFailClosed(t *testing.T) {
 	flagtest.AssertHidden(t, rec)
 	req, rec := get(h, "/v1/flags")
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-	conforms(t, req, rec, http.MethodGet, "/v1/flags")
+	conforms(t, req, rec)
 }

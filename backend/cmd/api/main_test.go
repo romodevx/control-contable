@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -13,11 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/getkin/kin-openapi/openapi3filter"
-	"github.com/getkin/kin-openapi/routers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/romodevx/control-contable/backend/adapter/http/contracttest"
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
 	"github.com/romodevx/control-contable/backend/adapter/http/health"
 	"github.com/romodevx/control-contable/backend/adapter/http/middleware"
@@ -61,22 +59,11 @@ type pingOK struct{}
 
 func (pingOK) Ping(context.Context) error { return nil }
 
-// conforms validates rec against the operation and status in the contract.
-func conforms(t *testing.T, req *http.Request, rec *httptest.ResponseRecorder, method, path string) {
+// conforms validates rec against docs/api/openapi.yaml (the contract-test
+// harness), as the operation req routes to.
+func conforms(t *testing.T, req *http.Request, rec *httptest.ResponseRecorder) {
 	t.Helper()
-	spec, err := gen.GetSpec()
-	require.NoError(t, err)
-	item := spec.Paths.Value(path)
-	require.NotNil(t, item, path)
-	route := &routers.Route{Spec: spec, Path: path, PathItem: item, Method: method, Operation: item.GetOperation(method)}
-	err = openapi3filter.ValidateResponse(context.Background(), &openapi3filter.ResponseValidationInput{
-		RequestValidationInput: &openapi3filter.RequestValidationInput{Request: req, Route: route},
-		Status:                 rec.Code,
-		Header:                 rec.Header(),
-		Body:                   io.NopCloser(bytes.NewReader(rec.Body.Bytes())),
-		Options:                &openapi3filter.Options{IncludeResponseStatus: true},
-	})
-	assert.NoError(t, err, "response must conform to %s %s in docs/api/openapi.yaml", method, path)
+	contracttest.Load(t).Validate(t, req, rec)
 }
 
 func get(h http.Handler, target string) (*http.Request, *httptest.ResponseRecorder) {
@@ -104,7 +91,7 @@ func TestHealthz(t *testing.T) {
 
 			require.Equal(t, http.StatusOK, rec.Code)
 			assert.NotEmpty(t, rec.Header().Get(middleware.RequestIDHeader))
-			conforms(t, req, rec, http.MethodGet, "/healthz")
+			conforms(t, req, rec)
 			var got gen.HealthStatus
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
 			assert.Equal(t, tt.want, got)
@@ -123,14 +110,14 @@ func TestRateLimit_answers429WithRetryAfter(t *testing.T) {
 
 	assert.Equal(t, http.StatusTooManyRequests, rec.Code)
 	assert.Equal(t, "1", rec.Header().Get("Retry-After"))
-	conforms(t, req, rec, http.MethodGet, "/healthz")
+	conforms(t, req, rec)
 }
 
 func TestFlaggedModulesAreOffByDefault(t *testing.T) {
 	req, rec := get(newTestHandler(t, testConfig(), pingOK{}), "/v1/me")
 
 	assert.Equal(t, http.StatusNotFound, rec.Code)
-	conforms(t, req, rec, http.MethodGet, "/v1/me")
+	conforms(t, req, rec)
 }
 
 // The flags service drives the real router's gate: OFF is the 404 envelope,
@@ -142,7 +129,7 @@ func TestFlagGate_throughTheRealRouter(t *testing.T) {
 
 		if !on {
 			flagtest.AssertHidden(t, rec)
-			conforms(t, req, rec, http.MethodGet, "/v1/me")
+			conforms(t, req, rec)
 			return
 		}
 		assert.NotEqual(t, http.StatusNotFound, rec.Code, "an enabled module is routed past the gate")
@@ -155,12 +142,12 @@ func TestFlagGate_failsClosedWhenFlagsAreUnreadable(t *testing.T) {
 
 	req, rec := get(h, "/v1/me")
 	flagtest.AssertHidden(t, rec)
-	conforms(t, req, rec, http.MethodGet, "/v1/me")
+	conforms(t, req, rec)
 
 	req, rec = get(h, "/v1/flags")
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	assert.NotContains(t, rec.Body.String(), "connection refused")
-	conforms(t, req, rec, http.MethodGet, "/v1/flags")
+	conforms(t, req, rec)
 }
 
 func TestListEnabledFlags_servesTheFlagsService(t *testing.T) {
@@ -170,7 +157,7 @@ func TestListEnabledFlags_servesTheFlagsService(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"enabled":["module_auth","module_taxpayers"]}`, rec.Body.String())
-	conforms(t, req, rec, http.MethodGet, "/v1/flags")
+	conforms(t, req, rec)
 }
 
 func TestListEnabledFlags_isNeverGated(t *testing.T) {
@@ -178,7 +165,7 @@ func TestListEnabledFlags_isNeverGated(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"enabled":[]}`, rec.Body.String())
-	conforms(t, req, rec, http.MethodGet, "/v1/flags")
+	conforms(t, req, rec)
 }
 
 func enabledKeys(f flagtest.Static) []string {
