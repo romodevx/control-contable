@@ -20,11 +20,17 @@ components: [C4](../docs/architecture/c4.md).
 | `make test-integration` | tests behind the `integration` build tag (real PostgreSQL) |
 | `make generate` | regenerate `adapter/http/gen` from `../docs/api/openapi.yaml`: oapi-codegen strict std-http server (pinned via `go tool`) + operationId/route → `x-module` flag map (`cmd/flagmapgen`) |
 | `make codegen-check` | regenerate and fail if the output differs from what is committed (drift check) |
+| `make cover-check` | fail if `COVER_PROFILE` (default `coverage.out`) is below `COVER_MIN`% (default 80) on business logic; `adapter/http/gen` and `cmd/` are left out (`cmd/covergate`) |
+| `make vuln` | govulncheck, pinned version (same in CI) |
 | `make db-up` | local PostgreSQL 18 on `127.0.0.1:5434`, roles bootstrapped, waits for healthy |
 | `make db-down` | stop the local stack, keep the data volume |
 | `make db-reset` | **LOCAL only**: drop the volume and re-bootstrap (refuses a remote Docker host, a non-loopback `CC_DB_HOST` or a remote `DATABASE_URL`) |
 | `make migrate-up` / `migrate-down` / `migrate-status` | **LOCAL only**: run `cmd/migrate` as `cc_owner` against the local stack (apply pending / roll back the latest / list) |
 | `make db-roles-check` | log in over TCP as `cc_app`, `cc_webhook`, `cc_worker`; fail if any is SUPERUSER, BYPASSRLS, owner or can DDL |
+
+CI (`.github/workflows/backend.yml`) runs `fmt-check`, golangci-lint v2.14.0, `codegen-check`,
+`vuln`, `test`, then `test-integration GOTEST_FLAGS="-covermode=atomic -coverprofile=coverage.out"`
+followed by `cover-check`, and uploads the profile as the `backend-coverage` artifact.
 
 ### Local database
 
