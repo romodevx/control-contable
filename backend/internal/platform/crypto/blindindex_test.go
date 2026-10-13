@@ -158,3 +158,73 @@ func TestBlindIndexNeverPrintsPepper(t *testing.T) {
 		assert.Contains(t, rendered, "REDACTED")
 	}
 }
+
+// Regression: strings.ToLower/ToUpper apply Unicode case mappings that fold
+// distinct non-ASCII runes onto ASCII ones (KELVIN SIGN -> "k", LATIN SMALL
+// LETTER LONG S -> "S", DOTLESS I -> "I"). A blind index built on them lets an
+// attacker-chosen value collide with a victim's ASCII email or RFC.
+func TestEmailIndexDoesNotFoldUnicodeOntoASCII(t *testing.T) {
+	idx, err := NewEmailIndex([]byte(testEmailPepper))
+	require.NoError(t, err)
+	victim, err := idx.Hash("kevin@example.com")
+	require.NoError(t, err)
+
+	for name, lookalike := range map[string]string{
+		"kelvin sign":  "Kevin@example.com",
+		"dotted I":     "kevİn@example.com",
+		"kelvin upper": "KEVIN@EXAMPLE.COM",
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, err := idx.Hash(lookalike)
+
+			require.NoError(t, err)
+			assert.NotEqual(t, victim, got)
+		})
+	}
+}
+
+func TestRFCIndexRejectsValuesThatAreNotAnRFC(t *testing.T) {
+	idx, err := NewRFCIndex([]byte(testRFCPepper))
+	require.NoError(t, err)
+
+	for name, input := range map[string]string{
+		"long s folds to S":    "GOMſ800101AB3",
+		"dotless i folds to I": "GOMı800101AB3",
+		"decomposed N tilde":   "ÑAN800101AB3",
+		"internal space":       "GOMA 800101AB3",
+		"too short":            "GOM80010AB3",
+		"too long":             "GOMAX800101AB3",
+		"letter in date":       "GOMA8001O1AB3",
+		"digit in name":        "G0MA800101AB3",
+		"symbol in homoclave":  "GOMA800101A-3",
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, err := idx.Hash(input)
+
+			require.ErrorIs(t, err, ErrInvalidRFC)
+			assert.Nil(t, got)
+			assert.NotContains(t, err.Error(), input, "errors never carry the RFC")
+		})
+	}
+}
+
+func TestRFCIndexAcceptsBothRFCShapes(t *testing.T) {
+	idx, err := NewRFCIndex([]byte(testRFCPepper))
+	require.NoError(t, err)
+
+	for name, input := range map[string]string{
+		"persona fisica, 13 chars": "GOMA800101AB3",
+		"persona moral, 12 chars":  "ABC800101AB3",
+		"ampersand":                "A&C800101AB3",
+		"enie":                     "ÑAÑO800101AB3",
+		"lowercase enie":           "ñaño800101ab3",
+		"generic publico general":  "XAXX010101000",
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, err := idx.Hash(input)
+
+			require.NoError(t, err)
+			assert.Len(t, got, HashSize)
+		})
+	}
+}

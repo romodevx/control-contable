@@ -34,6 +34,9 @@ var (
 	ErrInvalidPepper = errors.New("crypto: invalid pepper")
 	// ErrEmptyInput reports a value that is empty after normalization.
 	ErrEmptyInput = errors.New("crypto: empty input")
+	// ErrInvalidRFC reports a value that is not a 12- or 13-character RFC
+	// after normalization.
+	ErrInvalidRFC = errors.New("crypto: invalid rfc")
 )
 
 // redacted is how every secret-holding type renders in fmt and slog.
