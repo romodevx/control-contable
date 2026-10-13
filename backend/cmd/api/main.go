@@ -184,6 +184,8 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 		Handler:      health.New(d.db, version, d.logger),
 		flagsHandler: flagshttp.New(d.flags, d.logger),
 		authHandler:  d.auth.handler,
+
+		SessionHandler: d.auth.sessions,
 	}
 	if d.auth.authn == nil {
 		return nil, errors.New("api: no authenticator: secured operations would run unauthenticated")

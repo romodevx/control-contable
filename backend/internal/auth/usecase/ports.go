@@ -1,12 +1,15 @@
 // Package usecase holds the auth module's application logic (MODULE-auth):
-// register, verifyEmail, resendVerification and login. It owns its ports,
+// register, verifyEmail, resendVerification, login, refreshSession and
+// logout. It owns its ports,
 // which the infra adapters implement and cmd/api wires.
 //
 // Every database access runs in a unit of work: register and resend through
 // tx.SystemManager (no user exists yet; they reach only SECURITY DEFINER
 // functions), verifyEmail through tx.Manager as the account it creates, and
 // login through both: the credential lookup (a definer function) with no
-// user context, then the session as the user the password proved.
+// user context, then the session as the user the password proved. Refresh
+// runs as the user the token's own prefix names (no RLS bypass) and logout
+// as the bearer token's user.
 package usecase
 
 import (
@@ -193,6 +196,60 @@ type RefreshTokens interface {
 	// StartFamily stores token as the first of a new family, expiring after
 	// sliding and at most absolute after issue (database clock).
 	StartFamily(ctx context.Context, token domain.RefreshToken, sliding, absolute time.Duration) error
+}
+
+// RevokeReason is why a token family was revoked (refresh_tokens.revoke_reason).
+type RevokeReason string
+
+// The revocation reasons the auth use cases record.
+const (
+	RevokeLogout        RevokeReason = "logout"
+	RevokeReuseDetected RevokeReason = "reuse_detected"
+)
+
+// StoredRefreshToken is a refresh token row as rotation sees it, locked
+// until the unit of work ends.
+type StoredRefreshToken struct {
+	// ID is the store's opaque row id.
+	ID string
+	// Hash is the stored token hash; the use case compares it with the
+	// presented token's in constant time.
+	Hash    domain.TokenHash
+	Rotated bool
+	Revoked bool
+	// Expired is true past the sliding or the absolute expiry, by the
+	// database clock.
+	Expired bool
+}
+
+// FamilyRevoker revokes token families (logout, reuse detection).
+type FamilyRevoker interface {
+	// RevokeFamily revokes every token not yet revoked in the family of the
+	// unit of work user's token with hash; earlier revocations keep their
+	// reason. No such token is not an error (logout is idempotent).
+	RevokeFamily(ctx context.Context, hash domain.TokenHash, reason RevokeReason) error
+}
+
+// RefreshRotation is what refreshing a session needs of refresh_tokens, in
+// the unit of work of the token's user.
+type RefreshRotation interface {
+	FamilyRevoker
+	// Lock reads the unit of work user's token with hash and locks its row
+	// (SELECT ... FOR UPDATE) until the unit of work ends, so concurrent
+	// refreshes of one token run one after the other. found = false when
+	// there is no such token.
+	Lock(ctx context.Context, hash domain.TokenHash) (token StoredRefreshToken, found bool, err error)
+	// Rotate marks parent rotated and stores successor in parent's family
+	// with the family's absolute expiry. It returns the successor's
+	// lifetime: sliding, or less when the absolute expiry comes first.
+	Rotate(ctx context.Context, parent StoredRefreshToken, successor domain.RefreshToken, sliding time.Duration) (time.Duration, error)
+}
+
+// AccountStatus tells whether an account may still hold a session.
+type AccountStatus interface {
+	// CanSignIn reports whether the account exists and its status lets it
+	// sign in (fail closed on any other status).
+	CanSignIn(ctx context.Context, id domain.UserID) (bool, error)
 }
 
 // AccessTokens signs short-lived access tokens (EdDSA JWT).
