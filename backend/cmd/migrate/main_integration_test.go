@@ -21,11 +21,22 @@ func TestMain(m *testing.M) {
 	os.Exit(pgtest.Main(m))
 }
 
-func flagsTableExists(t *testing.T, db *sql.DB) bool {
+// Tables of the first (baseline) and the latest (identity) migration.
+const (
+	baselineTable = "public.feature_flags"
+	latestTable   = "public.users"
+)
+
+func tableExists(t *testing.T, db *sql.DB, name string) bool {
 	t.Helper()
 	var found sql.NullString
-	require.NoError(t, db.QueryRowContext(t.Context(), "SELECT to_regclass('public.feature_flags')::text").Scan(&found))
+	require.NoError(t, db.QueryRowContext(t.Context(), "SELECT to_regclass($1)::text", name).Scan(&found))
 	return found.Valid
+}
+
+func flagsTableExists(t *testing.T, db *sql.DB) bool {
+	t.Helper()
+	return tableExists(t, db, baselineTable)
 }
 
 func TestExecute_UpStatusDownUp(t *testing.T) {
@@ -48,14 +59,15 @@ func TestExecute_UpStatusDownUp(t *testing.T) {
 	out.Reset()
 	require.NoError(t, execute(t.Context(), cmdDown, owner, &out))
 	assert.Contains(t, out.String(), "down")
-	assert.False(t, flagsTableExists(t, owner), "down removed the baseline")
+	assert.False(t, tableExists(t, owner, latestTable), "down rolled back the latest migration")
+	assert.True(t, flagsTableExists(t, owner), "and only that one")
 
 	out.Reset()
 	require.NoError(t, execute(t.Context(), cmdStatus, owner, &out))
 	assert.Contains(t, out.String(), "pending")
 
 	require.NoError(t, execute(t.Context(), cmdUp, owner, &bytes.Buffer{}), "up after down")
-	assert.True(t, flagsTableExists(t, owner))
+	assert.True(t, tableExists(t, owner, latestTable))
 }
 
 func TestExecute_RefusesARuntimeRole(t *testing.T) {
