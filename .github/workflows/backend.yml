@@ -81,6 +81,8 @@ jobs:
           cache-dependency-path: backend/go.sum
       # -tags=integration compiles unit and integration tests together, so this one
       # profile measures both; the gate leaves out generated code and cmd/.
+      # It includes the contract tests (P0-18): real responses validated against
+      # docs/api/openapi.yaml, and TestContractCoverage (covered or pending).
       - name: Integration tests (unit + integration, with coverage)
         run: make test-integration GOTEST_FLAGS="-covermode=atomic -coverprofile=coverage.out"
       - name: Coverage gate (>= 80% business logic)

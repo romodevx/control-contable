@@ -14,7 +14,7 @@ COVER_EXCLUDE ?= /adapter/http/gen/|/cmd/
 
 .DEFAULT_GOAL := check
 
-.PHONY: check fmt fmt-check lint test test-integration cover cover-check vuln tidy generate codegen-check db-up db-down db-reset db-roles-check migrate-up migrate-down migrate-status flags
+.PHONY: check fmt fmt-check lint test test-integration test-contract cover cover-check vuln tidy generate codegen-check db-up db-down db-reset db-roles-check migrate-up migrate-down migrate-status flags
 
 ## check: fmt-check + lint + unit tests (what CI runs)
 check: fmt-check lint test
@@ -35,9 +35,13 @@ lint:
 test:
 	$(GO) test -race -count=1 $(GOTEST_FLAGS) $(PKGS)
 
-## test-integration: tests behind the `integration` build tag (real PostgreSQL via testcontainers-go; needs Docker)
+## test-integration: tests behind the `integration` build tag (real PostgreSQL via testcontainers-go; needs Docker), contract tests included
 test-integration:
 	$(GO) test -race -count=1 -tags=integration $(GOTEST_FLAGS) $(PKGS)
+
+## test-contract: only the contract suites (responses vs ../docs/api/openapi.yaml + coverage meta-test; needs Docker)
+test-contract:
+	$(GO) test -race -count=1 -tags=integration -run 'Contract' $(PKGS)
 
 ## cover: unit tests with a coverage summary
 cover:
