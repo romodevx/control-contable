@@ -73,6 +73,9 @@ func TestMeasureRejectsMalformedProfiles(t *testing.T) {
 		{name: "non-numeric statements", profile: "mode: set\n" + modPrefix + "internal/a/a.go:1.1,2.2 x 1\n"},
 		{name: "non-numeric count", profile: "mode: set\n" + modPrefix + "internal/a/a.go:1.1,2.2 1 y\n"},
 		{name: "every block excluded", profile: "mode: set\n" + modPrefix + "cmd/t/main.go:1.1,2.2 1 1\n"},
+		{name: "negative statements", profile: "mode: set\n" + modPrefix + "internal/a/a.go:1.1,2.2 -100 0\n" + modPrefix + "internal/a/b.go:1.1,2.2 1 1\n"},
+		{name: "negative count", profile: "mode: set\n" + modPrefix + "internal/a/a.go:1.1,2.2 1 -1\n"},
+		{name: "no statements to measure", profile: "mode: set\n" + modPrefix + "internal/a/a.go:1.1,2.2 0 0\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

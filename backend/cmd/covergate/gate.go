@@ -36,6 +36,9 @@ func (c Coverage) String() string {
 	return fmt.Sprintf("%d.%d%% (%d/%d statements)", tenths/10, tenths%10, c.Covered, c.Total)
 }
 
+// errNoStatements keeps the gate failing closed: an empty measurement is never a pass.
+var errNoStatements = errors.New("profile has no statements left after exclusions")
+
 type block struct {
 	statements int64
 	covered    bool
@@ -50,15 +53,15 @@ func Measure(r io.Reader, exclude *regexp.Regexp) (Coverage, error) {
 	if err != nil {
 		return Coverage{}, err
 	}
-	if len(blocks) == 0 {
-		return Coverage{}, errors.New("profile has no statements left after exclusions")
-	}
 	var c Coverage
 	for _, b := range blocks {
 		c.Total += b.statements
 		if b.covered {
 			c.Covered += b.statements
 		}
+	}
+	if c.Total == 0 {
+		return Coverage{}, errNoStatements
 	}
 	return c, nil
 }
@@ -95,13 +98,15 @@ func parseLine(line string) (string, block, error) {
 	if len(fields) != profileFields {
 		return "", block{}, fmt.Errorf("want %d fields, got %d", profileFields, len(fields))
 	}
-	statements, err := strconv.ParseInt(fields[1], 10, 64)
+	// Negative values never come from `go test`; accepting them would let a
+	// crafted profile shrink Total and pass the gate.
+	statements, err := strconv.ParseUint(fields[1], 10, 63)
 	if err != nil {
 		return "", block{}, fmt.Errorf("statements: %w", err)
 	}
-	count, err := strconv.ParseInt(fields[2], 10, 64)
+	count, err := strconv.ParseUint(fields[2], 10, 63)
 	if err != nil {
 		return "", block{}, fmt.Errorf("count: %w", err)
 	}
-	return fields[0], block{statements: statements, covered: count > 0}, nil
+	return fields[0], block{statements: int64(statements), covered: count > 0}, nil
 }
