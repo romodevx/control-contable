@@ -70,7 +70,7 @@ func parameterErrors(name string, err error) []apperr.FieldError {
 	}
 	out := make([]apperr.FieldError, 0, len(leaves))
 	for _, leaf := range leaves {
-		_, code := classify(leaf.Reason)
+		_, code := classify(leaf)
 		out = append(out, fieldError(name, code))
 	}
 	return out
@@ -90,7 +90,7 @@ func bodyErrors(err error) []apperr.FieldError {
 	}
 	var out []apperr.FieldError
 	for _, leaf := range leaves {
-		fields, code := classify(leaf.Reason)
+		fields, code := classify(leaf)
 		for _, f := range fields {
 			out = append(out, fieldError(f, code))
 		}
@@ -100,6 +100,15 @@ func bodyErrors(err error) []apperr.FieldError {
 
 // schemaLeaves returns the innermost schema errors under err.
 func schemaLeaves(err error) []*openapi3.SchemaError {
+	// The legacy validator hands back a bare MultiError of siblings; errors.As
+	// would stop at the first one, so each sibling is walked on its own.
+	if multi, ok := err.(openapi3.MultiError); ok { //nolint:errorlint // see above
+		var leaves []*openapi3.SchemaError
+		for _, e := range multi {
+			leaves = append(leaves, schemaLeaves(e)...)
+		}
+		return leaves
+	}
 	var schemaErr *openapi3.SchemaError
 	if !errors.As(err, &schemaErr) {
 		return nil
@@ -115,13 +124,18 @@ func schemaLeaves(err error) []*openapi3.SchemaError {
 	return leaves
 }
 
-// classify reads a leaf message into the offending field paths (dotted,
-// relative to the body; "body" for the root) and a contract code named after
-// the JSON Schema keyword that failed.
-func classify(reason string) (fields []string, code string) {
-	m := leafPattern.FindStringSubmatch(reason)
+// classify reads a leaf into the offending field paths (dotted, relative to
+// the body; "body" for the root) and a contract code named after the JSON
+// Schema keyword that failed.
+//
+// kin-openapi validates with two engines: the JSON Schema 2020-12 one, whose
+// leaves only carry "at '<pointer>': <message>" text, and its legacy
+// validator, which it falls back to when the schema reaches a $ref. Legacy
+// leaves carry the pointer and the keyword as structured fields instead.
+func classify(leaf *openapi3.SchemaError) (fields []string, code string) {
+	m := leafPattern.FindStringSubmatch(leaf.Reason)
 	if m == nil {
-		return []string{fieldBody}, codeInvalid
+		return classifyLegacy(leaf)
 	}
 	pointer, message := m[1], m[2]
 	switch {
@@ -142,6 +156,51 @@ func classify(reason string) (fields []string, code string) {
 		return []string{dotted(pointer)}, k[1]
 	}
 	return []string{dotted(pointer)}, codeInvalid
+}
+
+// legacyCodes maps a legacy SchemaField to the contract code: the keyword
+// the JSON Schema 2020-12 engine reports for the same failure.
+var legacyCodes = map[string]string{
+	"required":         codeRequired,
+	"properties":       "additionalProperties",
+	"type":             "type",
+	"nullable":         "type",
+	"enum":             "enum",
+	"const":            "const",
+	"pattern":          "pattern",
+	"format":           "format",
+	"minLength":        "minLength",
+	"maxLength":        "maxLength",
+	"minItems":         "minItems",
+	"maxItems":         "maxItems",
+	"uniqueItems":      "uniqueItems",
+	"minimum":          "minimum",
+	"maximum":          "maximum",
+	"exclusiveMinimum": "exclusiveMinimum",
+	"exclusiveMaximum": "exclusiveMaximum",
+	"multipleOf":       "multipleOf",
+	"minProperties":    "minProperties",
+	"maxProperties":    "maxProperties",
+}
+
+// unsupportedProperty reads the name out of the legacy
+// `property "<name>" is unsupported` reason, whose pointer names the parent.
+var unsupportedProperty = regexp.MustCompile(`^property "([^"]+)" is unsupported$`)
+
+// classifyLegacy reads a leaf of kin-openapi's legacy validator.
+func classifyLegacy(leaf *openapi3.SchemaError) (fields []string, code string) {
+	code, known := legacyCodes[leaf.SchemaField]
+	if !known {
+		code = codeInvalid
+	}
+	pointer := ""
+	if path := leaf.JSONPointer(); len(path) > 0 {
+		pointer = "/" + strings.Join(path, "/")
+	}
+	if m := unsupportedProperty.FindStringSubmatch(leaf.Reason); m != nil {
+		pointer += "/" + m[1]
+	}
+	return []string{dotted(pointer)}, code
 }
 
 // childFields names each property quoted in message under pointer.
