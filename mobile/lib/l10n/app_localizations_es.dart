@@ -1316,9 +1316,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get taxInputsTitle => 'Datos fiscales';
 
   @override
-  String get comingSoon => 'Disponible pronto.';
-
-  @override
   String get breakdownLoading => 'Cargando el desglose…';
 
   @override
@@ -1389,6 +1386,78 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get breakdownRegimeNotActive => 'No tenías este régimen en ese mes.';
+
+  @override
+  String get taxInputsLoading => 'Cargando tus datos fiscales…';
+
+  @override
+  String get taxInputsLoadFailed => 'No se pudieron cargar tus datos fiscales.';
+
+  @override
+  String taxInputsSubtitle(String code, String year) {
+    return 'Régimen $code · Ejercicio $year';
+  }
+
+  @override
+  String get taxInputsIntro =>
+      'Datos del ejercicio que tu estimado necesita y no puede sacar de tus registros. Lo que no captures se calcula con cero y el estimado queda Incompleto.';
+
+  @override
+  String get taxInputsNeeded => 'Tu estimado lo necesita.';
+
+  @override
+  String get taxInputsMonthlyHelp =>
+      'Lo que pagaste cada mes, no el estimado. Escribe 0 si no pagaste; un mes vacío cuenta como dato faltante.';
+
+  @override
+  String get taxInputsNoMonthsYet =>
+      'Aún no hay meses pagados en este ejercicio.';
+
+  @override
+  String taxInputsMonthLabel(String month) {
+    return 'Pago de $month';
+  }
+
+  @override
+  String taxInputsMonthsRange(String first, String last) {
+    return '$first a $last';
+  }
+
+  @override
+  String get taxInputsSaved => 'Guardamos tus datos. Tu estimado ya los usa.';
+
+  @override
+  String get taxInputsSaveFailed =>
+      'No se pudieron guardar tus datos. Inténtalo de nuevo.';
+
+  @override
+  String get taxInputsArchived =>
+      'Este contribuyente está archivado: sus datos fiscales no se pueden cambiar.';
+
+  @override
+  String get taxInputsRegimeNotActive =>
+      'No tienes este régimen en ese ejercicio.';
+
+  @override
+  String get taxInputsUnknownInput => 'Este dato no aplica a este régimen.';
+
+  @override
+  String get taxInputsNegative => 'El monto no puede ser negativo.';
+
+  @override
+  String get taxInputsInvalid => 'Revisa este dato.';
+
+  @override
+  String get taxInputsDiscardTitle => '¿Descartar los cambios?';
+
+  @override
+  String get taxInputsDiscardBody => 'Lo que escribiste se perderá.';
+
+  @override
+  String get taxInputsDiscardKeep => 'Seguir editando';
+
+  @override
+  String get taxInputsDiscardConfirm => 'Descartar';
 }
 
 /// The translations for Spanish Castilian, as used in Mexico (`es_MX`).

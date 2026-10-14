@@ -1720,10 +1720,6 @@
   "@taxInputsTitle": {
     "description": "App bar title of the tax-inputs form (M5-27)."
   },
-  "comingSoon": "Disponible pronto.",
-  "@comingSoon": {
-    "description": "Placeholder body of a screen still being built."
-  },
   "breakdownLoading": "Cargando el desglose…",
   "@breakdownLoading": {
     "description": "Announced while the breakdown loads."
@@ -1841,5 +1837,111 @@
   "breakdownRegimeNotActive": "No tenías este régimen en ese mes.",
   "@breakdownRegimeNotActive": {
     "description": "422 regime_not_active on the breakdown."
+  },
+  "taxInputsLoading": "Cargando tus datos fiscales…",
+  "@taxInputsLoading": {
+    "description": "Announced while the tax-inputs form loads."
+  },
+  "taxInputsLoadFailed": "No se pudieron cargar tus datos fiscales.",
+  "@taxInputsLoadFailed": {
+    "description": "The tax inputs could not be loaded (generic)."
+  },
+  "taxInputsSubtitle": "Régimen {code} · Ejercicio {year}",
+  "@taxInputsSubtitle": {
+    "description": "Tax-inputs form header: the regime code and the fiscal year.",
+    "placeholders": {
+      "code": {
+        "type": "String",
+        "example": "612"
+      },
+      "year": {
+        "type": "String",
+        "example": "2026"
+      }
+    }
+  },
+  "taxInputsIntro": "Datos del ejercicio que tu estimado necesita y no puede sacar de tus registros. Lo que no captures se calcula con cero y el estimado queda Incompleto.",
+  "@taxInputsIntro": {
+    "description": "Intro of the tax-inputs form: every field is optional."
+  },
+  "taxInputsNeeded": "Tu estimado lo necesita.",
+  "@taxInputsNeeded": {
+    "description": "Helper of an input the estimate can require."
+  },
+  "taxInputsMonthlyHelp": "Lo que pagaste cada mes, no el estimado. Escribe 0 si no pagaste; un mes vacío cuenta como dato faltante.",
+  "@taxInputsMonthlyHelp": {
+    "description": "Help of the monthly prior provisional payments."
+  },
+  "taxInputsNoMonthsYet": "Aún no hay meses pagados en este ejercicio.",
+  "@taxInputsNoMonthsYet": {
+    "description": "Monthly payments in January of the current year: no month is due yet."
+  },
+  "taxInputsMonthLabel": "Pago de {month}",
+  "@taxInputsMonthLabel": {
+    "description": "Label of one month's amount in the monthly payments grid.",
+    "placeholders": {
+      "month": {
+        "type": "String",
+        "example": "enero"
+      }
+    }
+  },
+  "taxInputsMonthsRange": "{first} a {last}",
+  "@taxInputsMonthsRange": {
+    "description": "Title of a half of the monthly payments grid (e.g. 'Enero a junio').",
+    "placeholders": {
+      "first": {
+        "type": "String",
+        "example": "Enero"
+      },
+      "last": {
+        "type": "String",
+        "example": "junio"
+      }
+    }
+  },
+  "taxInputsSaved": "Guardamos tus datos. Tu estimado ya los usa.",
+  "@taxInputsSaved": {
+    "description": "Toast after the tax inputs are saved."
+  },
+  "taxInputsSaveFailed": "No se pudieron guardar tus datos. Inténtalo de nuevo.",
+  "@taxInputsSaveFailed": {
+    "description": "The save failed (429 or unexpected)."
+  },
+  "taxInputsArchived": "Este contribuyente está archivado: sus datos fiscales no se pueden cambiar.",
+  "@taxInputsArchived": {
+    "description": "422 taxpayer_archived on save."
+  },
+  "taxInputsRegimeNotActive": "No tienes este régimen en ese ejercicio.",
+  "@taxInputsRegimeNotActive": {
+    "description": "422 regime_not_active on the tax inputs."
+  },
+  "taxInputsUnknownInput": "Este dato no aplica a este régimen.",
+  "@taxInputsUnknownInput": {
+    "description": "Server verdict unknown_input on a value."
+  },
+  "taxInputsNegative": "El monto no puede ser negativo.",
+  "@taxInputsNegative": {
+    "description": "Server verdict minimum on an amount."
+  },
+  "taxInputsInvalid": "Revisa este dato.",
+  "@taxInputsInvalid": {
+    "description": "Server verdict on a value with no more specific copy."
+  },
+  "taxInputsDiscardTitle": "¿Descartar los cambios?",
+  "@taxInputsDiscardTitle": {
+    "description": "Leaving the tax-inputs form with unsaved changes."
+  },
+  "taxInputsDiscardBody": "Lo que escribiste se perderá.",
+  "@taxInputsDiscardBody": {
+    "description": "Body of the discard dialog."
+  },
+  "taxInputsDiscardKeep": "Seguir editando",
+  "@taxInputsDiscardKeep": {
+    "description": "Stays on the form."
+  },
+  "taxInputsDiscardConfirm": "Descartar",
+  "@taxInputsDiscardConfirm": {
+    "description": "Leaves the form without saving."
   }
 }

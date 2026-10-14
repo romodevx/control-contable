@@ -2256,12 +2256,6 @@ abstract class AppLocalizations {
   /// **'Datos fiscales'**
   String get taxInputsTitle;
 
-  /// Placeholder body of a screen still being built.
-  ///
-  /// In es, this message translates to:
-  /// **'Disponible pronto.'**
-  String get comingSoon;
-
   /// Announced while the breakdown loads.
   ///
   /// In es, this message translates to:
@@ -2375,6 +2369,126 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No tenías este régimen en ese mes.'**
   String get breakdownRegimeNotActive;
+
+  /// Announced while the tax-inputs form loads.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando tus datos fiscales…'**
+  String get taxInputsLoading;
+
+  /// The tax inputs could not be loaded (generic).
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar tus datos fiscales.'**
+  String get taxInputsLoadFailed;
+
+  /// Tax-inputs form header: the regime code and the fiscal year.
+  ///
+  /// In es, this message translates to:
+  /// **'Régimen {code} · Ejercicio {year}'**
+  String taxInputsSubtitle(String code, String year);
+
+  /// Intro of the tax-inputs form: every field is optional.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos del ejercicio que tu estimado necesita y no puede sacar de tus registros. Lo que no captures se calcula con cero y el estimado queda Incompleto.'**
+  String get taxInputsIntro;
+
+  /// Helper of an input the estimate can require.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu estimado lo necesita.'**
+  String get taxInputsNeeded;
+
+  /// Help of the monthly prior provisional payments.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que pagaste cada mes, no el estimado. Escribe 0 si no pagaste; un mes vacío cuenta como dato faltante.'**
+  String get taxInputsMonthlyHelp;
+
+  /// Monthly payments in January of the current year: no month is due yet.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay meses pagados en este ejercicio.'**
+  String get taxInputsNoMonthsYet;
+
+  /// Label of one month's amount in the monthly payments grid.
+  ///
+  /// In es, this message translates to:
+  /// **'Pago de {month}'**
+  String taxInputsMonthLabel(String month);
+
+  /// Title of a half of the monthly payments grid (e.g. 'Enero a junio').
+  ///
+  /// In es, this message translates to:
+  /// **'{first} a {last}'**
+  String taxInputsMonthsRange(String first, String last);
+
+  /// Toast after the tax inputs are saved.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardamos tus datos. Tu estimado ya los usa.'**
+  String get taxInputsSaved;
+
+  /// The save failed (429 or unexpected).
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron guardar tus datos. Inténtalo de nuevo.'**
+  String get taxInputsSaveFailed;
+
+  /// 422 taxpayer_archived on save.
+  ///
+  /// In es, this message translates to:
+  /// **'Este contribuyente está archivado: sus datos fiscales no se pueden cambiar.'**
+  String get taxInputsArchived;
+
+  /// 422 regime_not_active on the tax inputs.
+  ///
+  /// In es, this message translates to:
+  /// **'No tienes este régimen en ese ejercicio.'**
+  String get taxInputsRegimeNotActive;
+
+  /// Server verdict unknown_input on a value.
+  ///
+  /// In es, this message translates to:
+  /// **'Este dato no aplica a este régimen.'**
+  String get taxInputsUnknownInput;
+
+  /// Server verdict minimum on an amount.
+  ///
+  /// In es, this message translates to:
+  /// **'El monto no puede ser negativo.'**
+  String get taxInputsNegative;
+
+  /// Server verdict on a value with no more specific copy.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa este dato.'**
+  String get taxInputsInvalid;
+
+  /// Leaving the tax-inputs form with unsaved changes.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Descartar los cambios?'**
+  String get taxInputsDiscardTitle;
+
+  /// Body of the discard dialog.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que escribiste se perderá.'**
+  String get taxInputsDiscardBody;
+
+  /// Stays on the form.
+  ///
+  /// In es, this message translates to:
+  /// **'Seguir editando'**
+  String get taxInputsDiscardKeep;
+
+  /// Leaves the form without saving.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar'**
+  String get taxInputsDiscardConfirm;
 }
 
 class _AppLocalizationsDelegate

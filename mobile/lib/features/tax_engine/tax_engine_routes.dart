@@ -1,9 +1,8 @@
 import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/router/feature_module.dart';
 import 'package:control_contable/features/tax_engine/presentation/breakdown_screen.dart';
-import 'package:control_contable/features/tax_engine/presentation/coming_soon_screen.dart';
 import 'package:control_contable/features/tax_engine/presentation/estimate_screen.dart';
-import 'package:control_contable/l10n/app_localizations.dart';
+import 'package:control_contable/features/tax_engine/presentation/tax_inputs_screen.dart';
 import 'package:go_router/go_router.dart';
 
 const String _taxpayerId = 'taxpayerId';
@@ -23,7 +22,7 @@ abstract final class TaxEngineRoutes {
       '$estimate/$taxpayerId/$period/regimenes/$regime';
 
   /// One regime's tax inputs for [fiscalYear], opened at [field] (the
-  /// first missing key; M5-27, a placeholder until then).
+  /// first missing key; M5-27).
   static String taxInputs(
     String taxpayerId,
     String regime, {
@@ -58,8 +57,12 @@ final FeatureModule taxEngineFeature = FeatureModule(
     ),
     GoRoute(
       path: '${TaxEngineRoutes.estimate}/:$_taxpayerId/datos/:$_regimeCode',
-      builder: (context, state) =>
-          ComingSoonScreen(title: AppLocalizations.of(context).taxInputsTitle),
+      builder: (context, state) => TaxInputsScreen(
+        taxpayerId: state.pathParameters[_taxpayerId]!,
+        regime: state.pathParameters[_regimeCode]!,
+        fiscalYear: int.tryParse(state.uri.queryParameters[_fiscalYear] ?? ''),
+        focusKey: state.uri.queryParameters[_field],
+      ),
     ),
   ],
 );

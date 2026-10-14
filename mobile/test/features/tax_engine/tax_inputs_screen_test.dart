@@ -245,6 +245,8 @@ void main() {
     final estimateReads = harness.repository.calls.length;
 
     await _type(tester, 'Coeficiente de utilidad', '0.15');
+    await tester.ensureVisible(find.byKey(AppCheckboxField.rowKey));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(AppCheckboxField.rowKey));
     await _type(tester, 'Pago de febrero', '1,500');
     await _tapSave(tester);
@@ -295,7 +297,7 @@ void main() {
     await tester.tap(find.text('Entendido'));
     await tester.pumpAndSettle();
     expect(harness.location, _inputs('612'));
-    expect(_textOf(tester, 'Pago de febrero'), '500');
+    expect(_textOf(tester, 'Pago de febrero'), '500.00');
   });
 
   testWidgets("the server's verdict lands on the field it names", (
@@ -367,7 +369,7 @@ void main() {
     await _open(harness, tester);
     await _type(tester, 'PTU pagada en el ejercicio', '100');
 
-    await tester.pageBack();
+    await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
     expect(find.text('¿Descartar los cambios?'), findsOneWidget);
     await tester.tap(find.text('Descartar'));
