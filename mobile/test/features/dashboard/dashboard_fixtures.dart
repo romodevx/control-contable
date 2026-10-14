@@ -92,6 +92,5 @@ Map<String, Object?> dashboardJson({
 };
 
 /// [json] decoded the way the generated client decodes a response.
-Dashboard dashboardFrom(Map<String, Object?> json) => Dashboard.fromJson(
-  jsonDecode(jsonEncode(json)) as Map<String, Object?>,
-);
+Dashboard dashboardFrom(Map<String, Object?> json) =>
+    Dashboard.fromJson(jsonDecode(jsonEncode(json)) as Map<String, Object?>);

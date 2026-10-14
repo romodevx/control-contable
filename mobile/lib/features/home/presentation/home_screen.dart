@@ -3,6 +3,7 @@ import 'package:control_contable/core/flags/flag_gate.dart';
 import 'package:control_contable/core/theme/app_spacing.dart';
 import 'package:control_contable/features/auth/presentation/account_button.dart';
 import 'package:control_contable/features/auth/presentation/sign_out_button.dart';
+import 'package:control_contable/features/dashboard/presentation/dashboard_home.dart';
 import 'package:control_contable/features/expenses/presentation/expenses_entry_button.dart';
 import 'package:control_contable/features/incomes/presentation/incomes_entry_button.dart';
 import 'package:control_contable/features/tax_engine/presentation/open_estimate_button.dart';
@@ -13,11 +14,12 @@ import 'package:control_contable/features/taxpayers/presentation/taxpayer_switch
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
-/// Placeholder home until the dashboard module (M6) ships. Offers sign-out
-/// while `module_auth` is on (the router only shows home to a signed-in
-/// user then). With `module_taxpayers` on, its title is the active-taxpayer
-/// switcher, a user with no taxpayer is sent to the onboarding, and one
-/// whose active taxpayer has no regime in effect is offered to add one.
+/// Home. With `module_dashboard` on it is the dashboard of the active
+/// taxpayer (M6); off, the previous placeholder home stays. Offers
+/// sign-out while `module_auth` is on (the router only shows home to a
+/// signed-in user then). With `module_taxpayers` on, its title is the
+/// active-taxpayer switcher and a user with no taxpayer is sent to the
+/// onboarding.
 class HomeScreen extends StatelessWidget {
   /// Creates the screen.
   const new({super.key});
@@ -33,55 +35,68 @@ class HomeScreen extends StatelessWidget {
           FlagGate(module: AppModule.auth, child: SignOutButton()),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(AppSpacing.gutter),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // The placeholder talks about the estimate, so it is part of
-            // the tax engine slice: hidden with it (MODULE-tax-engine §7).
-            FlagGate(
-              module: AppModule.taxEngine,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    l10n.homePlaceholder,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  const OpenEstimateButton(),
-                ],
-              ),
+      body: const FlagGate(
+        module: AppModule.dashboard,
+        fallback: _PlaceholderHome(),
+        child: DashboardHome(),
+      ),
+    );
+  }
+}
+
+/// The home before the dashboard: entry buttons into each module, and the
+/// add-a-regime prompt when no regime is in effect.
+class _PlaceholderHome extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.gutter),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // The placeholder talks about the estimate, so it is part of
+          // the tax engine slice: hidden with it (MODULE-tax-engine §7).
+          FlagGate(
+            module: AppModule.taxEngine,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  l10n.homePlaceholder,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                const OpenEstimateButton(),
+              ],
             ),
-            const FlagGate(
-              module: AppModule.taxpayers,
-              child: NoRegimePrompt(),
+          ),
+          const FlagGate(module: AppModule.taxpayers, child: NoRegimePrompt()),
+          const FlagGate(
+            module: AppModule.incomes,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: AppSpacing.xs),
+              child: IncomesEntryButton(),
             ),
-            const FlagGate(
-              module: AppModule.incomes,
-              child: Padding(
-                padding: EdgeInsets.only(bottom: AppSpacing.xs),
-                child: IncomesEntryButton(),
-              ),
+          ),
+          const FlagGate(
+            module: AppModule.expenses,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: AppSpacing.xs),
+              child: ExpensesEntryButton(),
             ),
-            const FlagGate(
-              module: AppModule.expenses,
-              child: Padding(
-                padding: EdgeInsets.only(bottom: AppSpacing.xs),
-                child: ExpensesEntryButton(),
-              ),
-            ),
-            const FlagGate(
-              module: AppModule.taxpayers,
-              child: AddTaxpayerButton(),
-            ),
-            const FlagGate(
-              module: AppModule.taxpayers,
-              child: OnboardingLauncher(),
-            ),
-          ],
-        ),
+          ),
+          const FlagGate(
+            module: AppModule.taxpayers,
+            child: AddTaxpayerButton(),
+          ),
+          const FlagGate(
+            module: AppModule.taxpayers,
+            child: OnboardingLauncher(),
+          ),
+        ],
       ),
     );
   }

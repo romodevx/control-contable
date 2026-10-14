@@ -129,15 +129,17 @@ void main() {
   });
 
   test('isFlagged marks incomplete and partial months only', () {
-    TrendPoint withStatus(String status) => _trend([
-      trendPointJson('2026-03', tax: trendTaxJson(status: status)),
-    ]).single;
+    TrendPoint withStatus(String status) =>
+        _trend([trendPointJson('2026-03', tax: trendTaxJson(status: status))])
+            .single;
     expect(isFlagged(withStatus('incomplete')), isTrue);
     expect(isFlagged(withStatus('partial')), isTrue);
     expect(isFlagged(withStatus('complete')), isFalse);
     expect(isFlagged(withStatus('none')), isFalse);
-    expect(isFlagged(_trend([trendPointJson('2026-03', tax: null)]).single),
-        isFalse);
+    expect(
+      isFlagged(_trend([trendPointJson('2026-03', tax: null)]).single),
+      isFalse,
+    );
   });
 
   test('heroStatusOf is the status of the last point', () {

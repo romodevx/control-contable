@@ -1867,6 +1867,161 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get taxInputsDiscardConfirm => 'Descartar';
+
+  @override
+  String get dashboardLoading => 'Cargando el inicio…';
+
+  @override
+  String get dashboardLoadFailed => 'No se pudo cargar el inicio.';
+
+  @override
+  String get dashboardNoTaxpayer =>
+      'Registre un contribuyente para ver su inicio.';
+
+  @override
+  String get dashboardCompleteOnboarding => 'Completar registro';
+
+  @override
+  String get dashboardEmpty =>
+      'Aún no hay ingresos ni gastos registrados. El estimado aparece con el primer registro.';
+
+  @override
+  String get dashboardRegisterIncome => 'Registrar ingreso';
+
+  @override
+  String get dashboardRegisterExpense => 'Registrar gasto';
+
+  @override
+  String get dashboardSeeDetail => 'Ver detalle';
+
+  @override
+  String get dashboardCompleteData => 'Completa tus datos';
+
+  @override
+  String get dashboardInformational =>
+      'Este régimen es informativo: la app no estima su impuesto';
+
+  @override
+  String get dashboardMonthTitle => 'Este mes';
+
+  @override
+  String get dashboardIncomeCollected => 'Ingresos cobrados';
+
+  @override
+  String get dashboardExpensePaid => 'Gastos pagados';
+
+  @override
+  String get dashboardDifference => 'Diferencia';
+
+  @override
+  String get dashboardBeforeIva =>
+      'Montos antes de IVA, por fecha de cobro y de pago.';
+
+  @override
+  String dashboardTrendTitle(int count) {
+    return 'Últimos $count meses';
+  }
+
+  @override
+  String get dashboardViewTaxes => 'Impuestos';
+
+  @override
+  String get dashboardViewIncomeExpense => 'Ingresos y gastos';
+
+  @override
+  String get dashboardSeriesIva => 'IVA';
+
+  @override
+  String get dashboardSeriesIsr => 'ISR';
+
+  @override
+  String get dashboardSeriesWithholdings => 'Retenciones';
+
+  @override
+  String get dashboardTotal => 'Total';
+
+  @override
+  String get dashboardIvaInFavor => 'IVA: saldo a favor';
+
+  @override
+  String get dashboardMarkerKey => '▲ Mes incompleto o parcial';
+
+  @override
+  String get dashboardShowTable => 'Ver como tabla';
+
+  @override
+  String get dashboardShowChart => 'Ver como gráfica';
+
+  @override
+  String dashboardTaxSummary(
+    int count,
+    String month,
+    String amount,
+    String status,
+  ) {
+    return 'Impuestos estimados, últimos $count meses. $month: $amount$status.';
+  }
+
+  @override
+  String dashboardTaxPeak(String month, String amount) {
+    return ' Mes más alto: $month, $amount.';
+  }
+
+  @override
+  String dashboardIncomeExpenseSummary(
+    int count,
+    String month,
+    String current,
+    String window,
+  ) {
+    return 'Ingresos y gastos, últimos $count meses. $month: $current. En el periodo: $window.';
+  }
+
+  @override
+  String dashboardTrialBanner(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'quedan $days días',
+      one: 'queda 1 día',
+    );
+    return 'Prueba gratuita: $_temp0';
+  }
+
+  @override
+  String dashboardTrialRecords(int incomes, int expenses) {
+    String _temp0 = intl.Intl.pluralLogic(
+      incomes,
+      locale: localeName,
+      other: '$incomes ingresos',
+      one: '1 ingreso',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      expenses,
+      locale: localeName,
+      other: '$expenses gastos',
+      one: '1 gasto',
+    );
+    return ' · $_temp0 y $_temp1';
+  }
+
+  @override
+  String get dashboardTrialScope =>
+      'Los registros disponibles se cuentan entre todos sus contribuyentes.';
+
+  @override
+  String get dashboardReadOnlyBanner =>
+      'Modo lectura: los datos siguen visibles. Para registrar, contrate un plan.';
+
+  @override
+  String get dashboardSeePlans => 'Ver planes';
+
+  @override
+  String get dashboardPlansTitle => 'Planes';
+
+  @override
+  String get dashboardPlansBody =>
+      'La contratación de planes estará disponible próximamente.';
 }
 
 /// The translations for Spanish Castilian, as used in Mexico (`es_MX`).
