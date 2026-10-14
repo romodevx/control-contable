@@ -64,12 +64,18 @@ enum OnboardingStep {
 class OnboardingFlow extends ChangeNotifier {
   /// A flow writing through `repository`. [newId] makes the client id of
   /// the create (stable across retries); `clock` dates the fiscal year.
+  /// [knownReadOnly] (the server already answered `402` this session)
+  /// starts at the paywall: nothing to fill that could not be saved.
   new({
     required this._repository,
     required String Function() newId,
     required this._clock,
     required this.taxEngineEnabled,
-  }) : _clientId = newId();
+    bool knownReadOnly = false,
+  }) : _clientId = newId(),
+       _step = knownReadOnly
+           ? OnboardingStep.readOnly
+           : OnboardingStep.personType;
 
   final TaxpayersRepository _repository;
   final Clock _clock;
@@ -79,7 +85,7 @@ class OnboardingFlow extends ChangeNotifier {
   /// screen keeps it in step with the flag; it notifies nobody.
   bool taxEngineEnabled;
 
-  OnboardingStep _step = OnboardingStep.personType;
+  OnboardingStep _step;
   int _page = 0;
   PersonType? _personType;
   String _displayName = '';
@@ -190,9 +196,13 @@ class OnboardingFlow extends ChangeNotifier {
     _go(OnboardingStep.regimes);
   }
 
+  /// Keeps the step 3 choice as picked (no rebuild): going back keeps it.
+  void rememberRegimes(List<Regime> chosen) =>
+      _regimes = List.unmodifiable(chosen);
+
   /// Step 3 done: options next, or the create when none has options.
   Future<void> submitRegimes(List<Regime> chosen) async {
-    _regimes = List.unmodifiable(chosen);
+    rememberRegimes(chosen);
     if (optionRegimes.isNotEmpty) return _go(OnboardingStep.options);
     await _create();
   }

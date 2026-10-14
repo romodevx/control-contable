@@ -108,11 +108,15 @@ class _RegimesFormState extends State<_RegimesForm> {
         conflictError: CustomFieldError(l10n.onboardingRegimesConflict),
         initial: _flow.regimes,
       ),
-    );
+    )..addListener(_remember);
   }
+
+  /// Keeps the pick in the flow as it changes: going back keeps it.
+  void _remember() => _flow.rememberRegimes(_selection.selected);
 
   @override
   void dispose() {
+    _selectionField?.removeListener(_remember);
     _form.dispose();
     super.dispose();
   }

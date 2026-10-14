@@ -153,6 +153,18 @@ void main() {
       expect(flow.rfc, 'GOMA');
     });
 
+    test('regimes picked but not submitted survive going back', () {
+      fillIdentity();
+      final picked = [_byCode(fisicaCatalog, '626')];
+
+      flow.rememberRegimes(picked);
+      expect(flow.back(), isTrue);
+      flow.submitIdentity(displayName: 'Ana', rfc: 'GOMA800101AB6');
+
+      expect(flow.regimes, picked);
+      expect(repository.creates, isEmpty, reason: 'remembering never creates');
+    });
+
     test(
       'changing the person type drops the regimes of the other one',
       () async {
@@ -261,6 +273,24 @@ void main() {
 
       expect(flow.step, OnboardingStep.readOnly);
       expect(flow.back(), isFalse);
+    });
+
+    test('a user already known read-only sees the paywall before step 1: '
+        'nothing to fill, nothing sent', () {
+      final known = OnboardingFlow(
+        repository: repository,
+        newId: () => _clientId,
+        clock: () => now,
+        taxEngineEnabled: false,
+        knownReadOnly: true,
+      );
+      addTearDown(known.dispose);
+
+      expect(known.step, OnboardingStep.readOnly);
+      expect(known.stepNumber, isNull);
+      expect(known.back(), isFalse);
+      expect(repository.creates, isEmpty);
+      expect(repository.catalogCalls, isEmpty);
     });
 
     test(

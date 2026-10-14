@@ -1,3 +1,4 @@
+import 'package:control_contable/core/access/read_only_access.dart';
 import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/flags/flags_provider.dart';
 import 'package:control_contable/core/router/app_router.dart';
@@ -42,11 +43,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     newId: ref.read(clientIdProvider),
     clock: ref.read(clockProvider),
     taxEngineEnabled: false,
+    knownReadOnly: ref.read(readOnlyAccessProvider),
   )..addListener(_handleStepChanged);
 
   bool _isLeaving = false;
 
   void _handleStepChanged() {
+    if (_flow.step == OnboardingStep.readOnly) {
+      ref.read(readOnlyAccessProvider.notifier).markReadOnly();
+    }
     if (_flow.step == OnboardingStep.done) _leave();
   }
 

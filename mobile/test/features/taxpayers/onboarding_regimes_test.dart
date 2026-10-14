@@ -322,6 +322,38 @@ void main() {
       expect(find.byType(OnboardingScreen), findsNothing);
     });
 
+    testWidgets('after a 402, opening the onboarding again shows the paywall '
+        'at once: no step to fill, no second create', (tester) async {
+      harness.repository.createAnswers.add(const ApiEntitlementRequired());
+      await openRegimes(tester);
+      await _pick(tester, '626');
+      await tapText(tester, _create);
+      await tapText(tester, 'Volver al inicio');
+
+      await tapText(tester, 'Registrar contribuyente');
+
+      expect(find.text('Tu cuenta es de solo consulta'), findsOneWidget);
+      expect(find.text('Persona física'), findsNothing);
+      expect(find.textContaining('Paso 1'), findsNothing);
+      expect(harness.repository.creates, hasLength(1));
+    });
+
+    testWidgets('back from regimes keeps a pick not yet submitted', (
+      tester,
+    ) async {
+      await openRegimes(tester);
+      await _pick(tester, '626');
+
+      await tester.tap(find.byTooltip('Atrás'));
+      await tester.pumpAndSettle();
+      await tapText(tester, _next);
+
+      final row = tester.widget<Checkbox>(
+        find.descendant(of: _regimeRow('626'), matching: find.byType(Checkbox)),
+      );
+      expect(row.value, isTrue);
+    });
+
     testWidgets('409 duplicate RFC: back on step 2 with the field error', (
       tester,
     ) async {
