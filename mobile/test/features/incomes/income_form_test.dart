@@ -10,9 +10,9 @@ import 'package:control_contable/api/generated/models/treatment.dart';
 import 'package:control_contable/api/generated/models/warning.dart';
 import 'package:control_contable/api/generated/models/warning_code.dart';
 import 'package:control_contable/core/access/read_only_access.dart';
+import 'package:control_contable/core/forms/form_footer.dart';
 import 'package:control_contable/core/forms/money.dart';
 import 'package:control_contable/core/network/api_failure.dart';
-import 'package:control_contable/core/forms/form_footer.dart';
 import 'package:control_contable/core/router/app_router.dart';
 import 'package:control_contable/features/incomes/incomes_routes.dart';
 import 'package:flutter/material.dart';
@@ -393,7 +393,15 @@ void main() {
 
     await _saveAndAnother(tester);
 
-    final toast = tester.getRect(find.byType(SnackBar));
+    // The visible surface: a floating SnackBar's own box includes its margin.
+    final toast = tester.getRect(
+      find
+          .descendant(
+            of: find.byType(SnackBar),
+            matching: find.byType(Material),
+          )
+          .first,
+    );
     final footer = tester.getRect(find.byType(FormFooter));
     expect(toast.bottom, lessThanOrEqualTo(footer.top));
   });

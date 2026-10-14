@@ -5,8 +5,8 @@ import 'package:control_contable/api/generated/models/payment_method.dart';
 import 'package:control_contable/api/generated/models/taxpayer.dart';
 import 'package:control_contable/api/generated/models/warning.dart';
 import 'package:control_contable/api/generated/models/warning_code.dart';
-import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/forms/form_footer.dart';
+import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/router/app_router.dart';
 import 'package:control_contable/features/expenses/expenses_routes.dart';
 import 'package:control_contable/features/expenses/presentation/expense_category_field.dart';
@@ -477,7 +477,15 @@ void main() {
 
       await tapText(tester, 'Guardar y crear otro');
 
-      final toast = tester.getRect(find.byType(SnackBar));
+      // The visible surface: a floating SnackBar's own box includes its margin.
+      final toast = tester.getRect(
+        find
+            .descendant(
+              of: find.byType(SnackBar),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
       final footer = tester.getRect(find.byType(FormFooter));
       expect(toast.bottom, lessThanOrEqualTo(footer.top));
     });

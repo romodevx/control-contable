@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:control_contable/api/generated/models/warning.dart';
 import 'package:control_contable/core/access/paywall_sheet.dart';
+import 'package:control_contable/core/forms/form_scope.dart';
 import 'package:control_contable/core/records/record_save.dart';
 import 'package:control_contable/features/incomes/presentation/income_form_copy.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
@@ -33,12 +34,14 @@ String incomeSaveNoticeText(RecordSaveNotice notice, AppLocalizations l10n) =>
 
 /// Confirms a save ([updated] for an edit) on [messenger]. Warnings never
 /// block: they are read in the toast, which then stays until closed so
-/// they are not missed.
+/// they are not missed. [overForm]: the form stays open (*Guardar y crear
+/// otro*), so the toast floats above its footer.
 void showIncomeSavedToast(
   ScaffoldMessengerState messenger,
   AppLocalizations l10n,
   List<Warning> warnings, {
   bool updated = false,
+  bool overForm = false,
 }) {
   final hasWarnings = warnings.isNotEmpty;
   final notes = [for (final w in warnings) describeIncomeWarning(w, l10n)];
@@ -55,6 +58,8 @@ void showIncomeSavedToast(
         }),
         persist: hasWarnings,
         showCloseIcon: hasWarnings,
+        behavior: overForm ? SnackBarBehavior.floating : null,
+        margin: overForm ? toastClearOfFormFooter : null,
       ),
     );
 }
