@@ -261,7 +261,7 @@ M3 and M4 run side by side (different tables, packages and screens). Their Flutt
 | M3-10 | Register flag `module_incomes` | backend-sr | M3-06, M3-07, M3-09 | 0.5 | — | `feature/incomes-flag` | — | [ ] |
 | M3-11 | QA M3 (CRUD, undo, trial cap, flag OFF) | qa-sr | M3-10 | 2.5 | — | `feature/incomes-qa-fixes` | OB6 | [ ] |
 | M3-12 | Tech-lead gate M3 | tech-lead | M3-11 | 1 | — | (PR review) | — | [ ] |
-| M3-13 | Security gate M3 | security | M3-11 | 1.5 | — | (PR review) | — | [ ] |
+| M3-13 | Security gate M3 | security | M3-11 | 1.5 | — | `feature/incomes-expenses-security-gate` | — | [x] |
 | M3-14 | Docs M3 | doc-writer | M3-12, M3-13 | 1 | — | `feature/incomes-docs` | — | [ ] |
 
 ### M4 — Expenses (`module_expenses`)
@@ -281,7 +281,7 @@ M3 and M4 run side by side (different tables, packages and screens). Their Flutt
 | M4-11 | Register flag `module_expenses` | backend-sr | M4-07, M4-08, M4-10 | 0.5 | — | `feature/expenses-flag` | — | [ ] |
 | M4-12 | QA M4 | qa-sr | M4-11 | 2.5 | — | `feature/expenses-qa-fixes` | OB6 | [ ] |
 | M4-13 | Tech-lead gate M4 | tech-lead | M4-12 | 1 | — | (PR review) | — | [ ] |
-| M4-14 | Security gate M4 | security | M4-12 | 1.5 | — | (PR review) | — | [ ] |
+| M4-14 | Security gate M4 | security | M4-12 | 1.5 | — | `feature/incomes-expenses-security-gate` | — | [x] |
 | M4-15 | Docs M4 | doc-writer | M4-13, M4-14 | 1 | — | `feature/expenses-docs` | — | [ ] |
 
 ### M5 — Tax Engine (`module_tax_engine`)
