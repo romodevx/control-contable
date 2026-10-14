@@ -2,6 +2,7 @@ package domain
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
@@ -39,6 +40,7 @@ const (
 	generalPMLinePayable             LineCode = "isr.payable"
 	generalPMLineFirstFiscalYear     LineCode = "isr.first_fiscal_year"
 	generalPMLineISRWithheldToRemit  LineCode = "withholding.isr_to_remit"
+	generalPMLineWithheldToRemit     LineCode = "withholding.to_remit"
 )
 
 // The legal basis of each 601 step (MODULE-tax-engine §2.5 citation
@@ -64,6 +66,8 @@ var (
 		{Law: "LISR", Article: "116", Note: "párrafo quinto"},
 		{Law: "LISR", Article: "113-J"},
 	}
+	generalPMBasisToRemit = append(slices.Clone(generalPMBasisISRRemit),
+		Citation{Law: "LIVA", Article: "1-A", Note: "entero de la retención"})
 )
 
 // GeneralPMStrategy is régimen 601, General de Ley Personas Morales
@@ -144,10 +148,7 @@ func (s GeneralPMStrategy) Estimate(in Input, p *taxparams.Params) (RegimeEstima
 	est.CPATopics = append(est.CPATopics, iva.CPATopics...)
 
 	isrToRemit := in.Sums.Month(in.Period.Month()).Expenses.ISRWithheldToRemit
-	if est.WithheldToRemit, err = iva.WithheldToRemit.Add(isrToRemit); err != nil {
-		return RegimeEstimate{}, fmt.Errorf("601 withholdings to remit %s: %w", in.Period, err)
-	}
-	generalPMISRToRemit(l, isrToRemit)
+	est.WithheldToRemit = generalPMWithholdingsToRemit(l, iva.WithheldToRemit, isrToRemit)
 
 	if est.Lines, err = l.Lines(); err != nil {
 		return RegimeEstimate{}, fmt.Errorf("601 %s: %w", in.Period, err)
@@ -258,21 +259,36 @@ func generalPMUpTo(deduction, profit money.Exact) money.Exact {
 	return max(min(deduction, profit), 0)
 }
 
-// generalPMISRToRemit traces the ISR the company withheld from its PF
-// suppliers (fees, rent, RESICO PF), a segment of its own.
-func generalPMISRToRemit(l *Ledger, amount money.Cents) {
-	if amount == 0 {
-		return
+// generalPMWithholdingsToRemit closes the withholdings-to-remit group and
+// returns its total, read from the ledger so the amount and the breakdown
+// cannot drift (ADR-0002 §1). The group is apart from the company's own ISR
+// and IVA: ComputeIVA has already anchored the IVA it withheld from PF
+// suppliers (LIVA 1-A), and the ISR it withheld (fees, rent, RESICO PF) is
+// added to it and closed by one total line. Without IVA to remit, the ISR
+// starts the group itself, so it never lands on the IVA's running value;
+// a group of one line needs no total. On a ledger error it returns zero and
+// Lines reports the error.
+func generalPMWithholdingsToRemit(l *Ledger, ivaToRemit, isrToRemit money.Cents) money.Cents {
+	if isrToRemit == 0 {
+		return ivaToRemit
 	}
-	exact, err := amount.Exact()
-	if err != nil {
-		l.fail(Step{Code: generalPMLineISRWithheldToRemit}, err)
-		return
-	}
-	l.Input(Step{
+	isrStep := Step{
 		Tax: TaxWithholding, Code: generalPMLineISRWithheldToRemit, Label: LabelKey(generalPMLineISRWithheldToRemit),
 		Source: SourceRecords(), Basis: generalPMBasisISRRemit,
-	}, exact)
+	}
+	exact, err := isrToRemit.Exact()
+	if l.fail(isrStep, err) {
+		return 0
+	}
+	if ivaToRemit == 0 {
+		l.Input(isrStep, exact)
+		return isrToRemit
+	}
+	l.Add(isrStep, exact)
+	return l.Result(Step{
+		Tax: TaxWithholding, Code: generalPMLineWithheldToRemit, Label: LabelKey(generalPMLineWithheldToRemit),
+		Source: SourceComputed(), Basis: generalPMBasisToRemit,
+	}).Round()
 }
 
 func generalPMStep(code LineCode, source Source, basis []Citation) Step {
