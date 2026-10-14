@@ -28,8 +28,8 @@ const (
 	rentModeBlind  = "blind_35"
 	rentModeActual = "actual"
 
-	rentParamBlind  taxparams.Key = "isr.rent.blind_deduction"
-	rentParamTariff taxparams.Key = "isr.art116.monthly"
+	rentParamBlind  = taxparams.Key("isr.rent.blind_deduction")
+	rentParamTariff = taxparams.Key("isr.art116.monthly")
 )
 
 // The ISR line codes of the 606 PF strategy, in order; a mode shows either

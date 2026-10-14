@@ -1,0 +1,4 @@
+# Exact-fingerprint ignores only. Never a path or a fixture (see .gitleaks.toml).
+# PR #87: generic-api-key false positive on a tax-parameter id (a typed const of
+# taxparams.Key) in a commit already pushed; the code no longer has that shape.
+84134fc3eeaf3a109097937ae64effea740e226b:backend/internal/taxengine/domain/rent_pf.go:generic-api-key:32
