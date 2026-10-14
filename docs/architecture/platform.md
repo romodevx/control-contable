@@ -115,6 +115,13 @@ Invariants (gating):
   paths get the same 404, never 405.
 - **One key grammar.** `flags.ValidKey` (`module_[a-z][a-z0-9]*(_[a-z0-9]+)*`) is shared by the
   database CHECK, `cmd/flagmapgen` and the Redocly `x-module` rule.
+- **Prerequisites.** `flags.Prerequisites` declares, once, the modules whose data a module's
+  routes read (`module_tax_engine` → `module_taxpayers`, MODULE-tax-engine §7). `Service` builds
+  each snapshot from the effective set (`EffectiveModules`): a module whose prerequisite is OFF is
+  OFF for the route gate (404) and absent from `GET /v1/flags`, from one snapshot. The graph is
+  tested to be well-formed and acyclic (`CheckPrerequisites`); `cmd/flags list` shows the
+  `REQUIRES` column and a `hidden` state; every seeded preset is prerequisite-closed. New
+  dependencies are added to the map, never as a check inside a handler.
 - `GET /v1/flags` is UX only. Clients never enforce anything with it.
 - `flagsgorm.Reader` runs as `cc_app` (SELECT only). `flagsgorm.Store` runs as `cc_owner` for the
   CLI and applies a preset in one transaction. `Admin` validates keys and preset names.
