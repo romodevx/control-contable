@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Control Contable API
-  version: 0.5.0
+  version: 0.6.0
   summary: Monthly IVA and provisional ISR estimates for Mexican taxpayers.
   description: |
     Spec-first contract (single source of truth). Server stubs (oapi-codegen),
@@ -2205,26 +2205,219 @@ paths:
         '500': { $ref: '#/components/responses/RecordInternalError' }
 
   # ---------------------------------------------------------------- M5 Tax engine
+  # Frozen at M5-01 (docs/project-specs/MODULE-tax-engine.md §9, OQ-T1..OQ-T10 DECIDED).
   /v1/taxpayers/{taxpayerId}/estimates:
     parameters:
       - $ref: '#/components/parameters/TaxpayerId'
     get:
       tags: [TaxEngine]
       operationId: getTaxpayerEstimate
-      summary: Monthly IVA + provisional ISR estimate, per regime and total
+      x-frozen: sha256:48ad5deca4348a78105c0081d26a26199f3835673b99184b9444ea43f5cb24ca
+      summary: Monthly IVA + provisional ISR estimate of one month, per regime and total
+      description: >-
+        Informational estimate for the taxpayer and `period`, derived from the current
+        records and tax inputs on every read (never stored, ADR-0002 §5). `period` is
+        optional: absent means the current month in America/Mexico_City. Past months back to
+        the first fiscal year with published parameters (2026) are allowed; the current,
+        still-open month estimates with the records so far.
+
+
+        **Content.** One `RegimeEstimate` per regime held in the period (archived regimes
+        included for periods up to their `end_period`), in catalog order. A taxpayer with no
+        regime in the period answers `200` with `regimes: []` and zero totals. Monthly IVA is
+        consolidated per taxpayer in `totals.iva` (`Σ charged_collected − Σ
+        definitive_excluded − Σ creditable_paid − Σ withheld_from_taxpayer` over every
+        regime, OQ-T2); it is never presented per regime as an amount to pay. A negative
+        result is `in_favor` (saldo a favor, not carried to the next month, OQ-T5) and is not
+        counted in `total_payable_rounded_cents`. `totals.isr` sums the payable per-regime ISR
+        only (favor balances stay per regime, OQ-T10). Withholdings the taxpayer made to its
+        suppliers are `withholdings_to_remit_cents`, never netted against IVA (LIVA 1-A).
+
+
+        **Status per regime** (precedence `informational` > `incomplete` > `partial` >
+        `complete`): `incomplete` computes with zero for every missing input and lists them in
+        `missing_inputs` (the CTA opens `getTaxInputs` for that regime and fiscal year at the
+        first missing key); `partial` estimates only some taxes and explains the rest;
+        `informational` carries the explanation and no amount. A missing input is never an
+        error. Rules a CPA has not validated still run with their documented default, set
+        `cpa_review_pending`, list `cpa_topics` and add the `cpa_review_pending` disclaimer
+        (severity `strong`, OQ-T8).
+
+
+        `legend` is the mandatory constant; the client renders the server field. Reads are
+        allowed for a read-only user and for an archived taxpayer.
+
+
+        `FieldError.code` values beyond JSON Schema keywords: `period` → `out_of_range` (a
+        future month, America/Mexico_City). `422 business_rule_violation` details: `period`
+        → `parameters_unavailable` (before 2026, the first fiscal year with transcribed
+        parameters, OQ-T9).
       x-module: module_tax_engine
+      security:
+        - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/PeriodQuery'
+        - name: period
+          in: query
+          required: false
+          description: Month to estimate (`YYYY-MM`). Absent → the current month (America/Mexico_City).
+          schema: { $ref: '#/components/schemas/Period' }
       responses:
         '200':
-          description: Estimate (always includes the mandatory legend).
+          description: Estimate (always carries the mandatory legend and `not_tax_advice`).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/TaxpayerEstimate' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+              examples:
+                complete612:
+                  summary: 612 PF, March 2026, every input present (TX-612-TOTAL-01)
+                  value:
+                    taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                    period: '2026-03'
+                    due_date: '2026-04-17'
+                    legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
+                    disclaimers:
+                      - code: not_tax_advice
+                        severity: info
+                        text: Estimación informativa. No sustituye la declaración ante el SAT ni la asesoría de un contador. Cálculo basado en LISR, LIVA, LIF 2026 y Anexo 8 RMF 2026.
+                      - code: deductibility_claimed
+                        severity: info
+                        text: Tomamos como deducibles los gastos que marcaste así; el SAT puede no aceptarlos todos.
+                    regimes:
+                      - regime_code: '612'
+                        regime_name: Actividades Empresariales y Profesionales
+                        treatment: full
+                        status: complete
+                        missing_inputs: []
+                        explanation: null
+                        isr: { amount_cents: 15096, payable_rounded_cents: 15096, outcome: payable }
+                        iva_components:
+                          charged_collected_cents: 480000
+                          creditable_paid_cents: 160000
+                          withheld_from_taxpayer_cents: 106667
+                          definitive_excluded_cents: 0
+                        withheld_to_remit_cents: 0
+                        cpa_review_pending: false
+                        cpa_topics: []
+                        parameter_set: { fiscal_year: 2026, version: 1 }
+                    totals:
+                      iva: { amount_cents: 213333, payable_rounded_cents: 213333, outcome: payable }
+                      isr: { amount_cents: 15096, payable_rounded_cents: 15096, outcome: payable }
+                      withholdings_to_remit_cents: 0
+                      total_payable_rounded_cents: 228429
+                    parameter_set: { fiscal_year: 2026, version: 1 }
+                    records_fingerprint: 3f6c2a9e8d7b1c4f5a0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a
+                    engine_version: 1.0.0
+                incomplete612:
+                  summary: Same month without the January and February prior payments (TX-612-INC-01)
+                  value:
+                    taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                    period: '2026-03'
+                    due_date: '2026-04-17'
+                    legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
+                    disclaimers:
+                      - code: not_tax_advice
+                        severity: info
+                        text: Estimación informativa. No sustituye la declaración ante el SAT ni la asesoría de un contador. Cálculo basado en LISR, LIVA, LIF 2026 y Anexo 8 RMF 2026.
+                      - code: incomplete_inputs
+                        severity: warning
+                        text: Faltan datos para este cálculo; se usaron ceros. Complétalos para un resultado más preciso.
+                      - code: deductibility_claimed
+                        severity: info
+                        text: Tomamos como deducibles los gastos que marcaste así; el SAT puede no aceptarlos todos.
+                    regimes:
+                      - regime_code: '612'
+                        regime_name: Actividades Empresariales y Profesionales
+                        treatment: full
+                        status: incomplete
+                        missing_inputs:
+                          - key: prior_provisional_payments
+                            label: Pagos provisionales anteriores del ejercicio
+                            months: ['2026-01', '2026-02']
+                        explanation: null
+                        isr: { amount_cents: 415096, payable_rounded_cents: 415096, outcome: payable }
+                        iva_components:
+                          charged_collected_cents: 480000
+                          creditable_paid_cents: 160000
+                          withheld_from_taxpayer_cents: 106667
+                          definitive_excluded_cents: 0
+                        withheld_to_remit_cents: 0
+                        cpa_review_pending: false
+                        cpa_topics: []
+                        parameter_set: { fiscal_year: 2026, version: 1 }
+                    totals:
+                      iva: { amount_cents: 213333, payable_rounded_cents: 213333, outcome: payable }
+                      isr: { amount_cents: 415096, payable_rounded_cents: 415096, outcome: payable }
+                      withholdings_to_remit_cents: 0
+                      total_payable_rounded_cents: 628429
+                    parameter_set: { fiscal_year: 2026, version: 1 }
+                    records_fingerprint: 9b1d4e7a2c5f8e0b3d6a9c2f5e8b1d4a7c0f3e6b9d2a5c8f1e4b7d0a3c6f9e2b
+                    engine_version: 1.0.0
+                crossRegimeIva:
+                  summary: 612 + 606 PF, IVA netted across regimes, pending CPA (TX-NET-01)
+                  value:
+                    taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                    period: '2026-03'
+                    due_date: '2026-04-17'
+                    legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
+                    disclaimers:
+                      - code: not_tax_advice
+                        severity: info
+                        text: Estimación informativa. No sustituye la declaración ante el SAT ni la asesoría de un contador. Cálculo basado en LISR, LIVA, LIF 2026 y Anexo 8 RMF 2026.
+                      - code: cpa_review_pending
+                        severity: strong
+                        text: 'Este cálculo usa reglas que un contador aún no valida: compensación del IVA entre regímenes. Tómalo con mayor reserva.'
+                      - code: deductibility_claimed
+                        severity: info
+                        text: Tomamos como deducibles los gastos que marcaste así; el SAT puede no aceptarlos todos.
+                    regimes:
+                      - regime_code: '606'
+                        regime_name: Arrendamiento
+                        treatment: full
+                        status: complete
+                        missing_inputs: []
+                        explanation: null
+                        isr: { amount_cents: -92400, payable_rounded_cents: 0, outcome: in_favor }
+                        iva_components:
+                          charged_collected_cents: 320000
+                          creditable_paid_cents: 300000
+                          withheld_from_taxpayer_cents: 213333
+                          definitive_excluded_cents: 0
+                        withheld_to_remit_cents: 0
+                        cpa_review_pending: true
+                        cpa_topics: [cross_regime_iva_netting]
+                        parameter_set: { fiscal_year: 2026, version: 1 }
+                      - regime_code: '612'
+                        regime_name: Actividades Empresariales y Profesionales
+                        treatment: full
+                        status: complete
+                        missing_inputs: []
+                        explanation: null
+                        isr: { amount_cents: 15096, payable_rounded_cents: 15096, outcome: payable }
+                        iva_components:
+                          charged_collected_cents: 480000
+                          creditable_paid_cents: 160000
+                          withheld_from_taxpayer_cents: 106667
+                          definitive_excluded_cents: 0
+                        withheld_to_remit_cents: 0
+                        cpa_review_pending: true
+                        cpa_topics: [cross_regime_iva_netting]
+                        parameter_set: { fiscal_year: 2026, version: 1 }
+                    totals:
+                      iva: { amount_cents: 20000, payable_rounded_cents: 20000, outcome: payable }
+                      isr: { amount_cents: 15096, payable_rounded_cents: 15096, outcome: payable }
+                      withholdings_to_remit_cents: 0
+                      total_payable_rounded_cents: 35096
+                    parameter_set: { fiscal_year: 2026, version: 1 }
+                    records_fingerprint: 5e2a8c1f4b7d0e3a6c9f2b5e8d1a4c7f0b3e6a9d2c5f8b1e4a7d0c3f6b9e2a5d
+                    engine_version: 1.0.0
+        '400': { $ref: '#/components/responses/TaxEngineBadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '404': { $ref: '#/components/responses/TaxEngineNotFound' }
+        '422': { $ref: '#/components/responses/TaxEngineParametersUnavailable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
   /v1/taxpayers/{taxpayerId}/estimates/{period}/breakdown:
     parameters:
       - $ref: '#/components/parameters/TaxpayerId'
@@ -2232,8 +2425,31 @@ paths:
     get:
       tags: [TaxEngine]
       operationId: getEstimateBreakdown
-      summary: Step-by-step breakdown with legal basis for one regime
+      x-frozen: sha256:962cbaf0bb631a75186692f79542018e52e33699e25651ecc7bbc7a32fe7afe6
+      summary: Step-by-step computation of one regime's estimate, with legal basis
+      description: >-
+        The computation trace of `regime` in `period` (ADR-0002 §1: strategies compute only
+        by appending lines, so the explanation cannot drift from the math). `period` is
+        required here and follows the rules of `getTaxpayerEstimate` (no future month,
+        nothing before 2026). `lines` are in `seq` order: the regime's ISR lines, its IVA
+        component lines, the taxpayer's consolidated IVA lines (`tax: iva`, LIVA 5-D, with
+        `needs_cpa_review` when two or more regimes contribute IVA) and its withholdings to
+        remit (`tax: withholding`). Every line except `info` and `rounding_adjustment` cites
+        at least one legal basis, and `source` says where its figure comes from. Lines are
+        displayed rounded to the centavo; when the displayed lines of a result do not add up
+        to its rounded value, one `rounding_adjustment` line ("Ajuste por redondeo")
+        reconciles them: never a hidden centavo. An `informational` regime answers its
+        explanation with `lines: []`. The header is `regime.parameter_set` and
+        `engine_version`. Reads are allowed for a read-only user and an archived taxpayer.
+
+
+        `FieldError.code` values beyond JSON Schema keywords: `period` → `out_of_range` (a
+        future month). `422 business_rule_violation` details: `period` →
+        `parameters_unavailable` (before 2026); `regime` → `regime_not_active` (the taxpayer
+        does not hold the regime in that period).
       x-module: module_tax_engine
+      security:
+        - bearerAuth: []
       parameters:
         - name: regime
           in: query
@@ -2242,13 +2458,42 @@ paths:
       responses:
         '200':
           description: Breakdown.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Breakdown' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+        '400': { $ref: '#/components/responses/TaxEngineBadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '404': { $ref: '#/components/responses/TaxEngineNotFound' }
+        '422':
+          description: >-
+            The period is before 2026 (`parameters_unavailable`), or the taxpayer does not hold
+            the regime in that period (`regime_not_active`).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                regimeNotActive:
+                  value:
+                    error:
+                      code: business_rule_violation
+                      message: The taxpayer does not hold this regime in that period.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: regime, code: regime_not_active, message: No tienes este régimen en ese mes. }
+                parametersUnavailable:
+                  value:
+                    error:
+                      code: business_rule_violation
+                      message: There are no tax parameters for that period.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: period, code: parameters_unavailable, message: Sólo podemos estimar desde enero de 2026. }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
   /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/tax-inputs:
     parameters:
       - $ref: '#/components/parameters/TaxpayerId'
@@ -2256,27 +2501,134 @@ paths:
       - name: fiscal_year
         in: query
         required: true
+        description: Fiscal year of the inputs; 2026 … the current year (America/Mexico_City).
         schema: { $ref: '#/components/schemas/FiscalYear' }
     get:
       tags: [TaxEngine]
       operationId: getTaxInputs
-      summary: Tax inputs (YTD, coeficiente, losses, prior payments) with which keys are required
+      x-frozen: sha256:fa8fae519dc3973d66fb52af4e39d41d5728b7615bd2325c534568a7f071f14c
+      summary: Tax inputs of one regime and fiscal year, with their definitions
+      description: >-
+        The per-fiscal-year inputs the regime's estimate needs (`definitions`, exactly the
+        catalog's `regimes.required_inputs`) and the stored `values`. A key with no value is
+        absent from `values`. `TaxInputDef.required` says the key can be required in some
+        period of the year; which keys and months are missing **for a given period** is
+        `RegimeEstimate.missing_inputs` (e.g. prior provisional payments are never required
+        for January). This is the target of the "Completa tus datos" CTA. Reads are allowed
+        for a read-only user and for an archived taxpayer.
+
+
+        `FieldError.code` values beyond JSON Schema keywords: `fiscal_year` → `out_of_range`
+        (a future year). `422 business_rule_violation` details: `fiscal_year` →
+        `parameters_unavailable` (before 2026); `regimeCode` → `regime_not_active` (the
+        taxpayer does not hold the regime in any month of that fiscal year).
       x-module: module_tax_engine
+      security:
+        - bearerAuth: []
       responses:
         '200':
           description: Inputs and definitions.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/TaxInputs' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+              examples:
+                regime612:
+                  summary: 612 PF, 2026, prior payments for January and February
+                  value:
+                    regime_code: '612'
+                    fiscal_year: 2026
+                    definitions:
+                      - { key: prior_provisional_payments, label: Pagos provisionales anteriores del ejercicio, kind: money_monthly, required: true }
+                      - { key: ytd_before_app_income, label: Ingresos del ejercicio antes de usar la app, kind: money, required: false }
+                      - { key: ytd_before_app_deductions, label: Deducciones del ejercicio antes de usar la app, kind: money, required: false }
+                      - { key: ptu_paid, label: PTU pagada en el ejercicio, kind: money, required: false }
+                      - { key: prior_year_losses, label: Pérdidas fiscales de ejercicios anteriores, kind: money, required: false }
+                    values:
+                      - { key: prior_provisional_payments, month: 1, value_cents: 200000, value_rate: null, value_bool: null }
+                      - { key: prior_provisional_payments, month: 2, value_cents: 200000, value_rate: null, value_bool: null }
+                regime601:
+                  summary: 601 PM, 2026, coeficiente and first fiscal year
+                  value:
+                    regime_code: '601'
+                    fiscal_year: 2026
+                    definitions:
+                      - { key: coeficiente_utilidad, label: Coeficiente de utilidad, kind: rate, required: true }
+                      - { key: first_fiscal_year, label: Primer ejercicio fiscal, kind: boolean, required: false }
+                      - { key: prior_provisional_payments, label: Pagos provisionales anteriores del ejercicio, kind: money_monthly, required: true }
+                      - { key: ptu_paid, label: PTU pagada en el ejercicio, kind: money, required: false }
+                      - { key: prior_year_losses, label: Pérdidas fiscales de ejercicios anteriores, kind: money, required: false }
+                      - { key: interest_withholding, label: Retención de ISR por intereses, kind: money, required: false }
+                    values:
+                      - { key: coeficiente_utilidad, month: null, value_cents: null, value_rate: '0.1500', value_bool: null }
+                      - { key: first_fiscal_year, month: null, value_cents: null, value_rate: null, value_bool: false }
+        '400': { $ref: '#/components/responses/TaxEngineBadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '404': { $ref: '#/components/responses/TaxEngineNotFound' }
+        '422':
+          description: >-
+            The taxpayer does not hold the regime in that fiscal year (`regime_not_active`), or
+            the fiscal year is before 2026 (`parameters_unavailable`).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                regimeNotActive:
+                  value:
+                    error:
+                      code: business_rule_violation
+                      message: The taxpayer does not hold this regime in that fiscal year.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: regimeCode, code: regime_not_active, message: No tienes este régimen en ese ejercicio. }
+                parametersUnavailable:
+                  value:
+                    error:
+                      code: business_rule_violation
+                      message: There are no tax parameters for that fiscal year.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: fiscal_year, code: parameters_unavailable, message: Sólo podemos estimar desde 2026. }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
     put:
       tags: [TaxEngine]
       operationId: putTaxInputs
-      summary: Replace tax inputs for the fiscal year
+      x-frozen: sha256:282e3d8cc0eebac6595a39efd6900240b59a015ffac42ae11ae70110b793a556
+      summary: Replace the tax inputs of one regime and fiscal year
+      description: >-
+        Replaces **all** values of `(taxpayer, regime, fiscal_year)` with `values` (an empty
+        array clears them). Idempotent: the same body twice leaves the same state. Values are
+        validated against the regime's `required_inputs` (catalog data): the key must be one
+        of them, and exactly the value field of its `kind` is set: `value_cents` for `money`,
+        `value_cents` plus `month` (1-12) for `money_monthly`, `value_rate` for `rate`,
+        `value_bool` for `boolean`; every other value field is absent or `null`. Money is
+        `>= 0`; the coeficiente de utilidad is `0 <= cu <= 1` and used as given. At most one
+        value per key (per key and month for `money_monthly`). A `money_monthly` value, e.g.
+        a monthly prior provisional payment (OQ-T1), is the amount actually paid for that
+        month: the app may prefill its own estimate, the server never assumes it.
+
+
+        **Order of checks:** schema (`400`) → read-only access (`402`) → archived taxpayer,
+        regime window and fiscal year (`422`) → value rules (`400`) → replace. Per-user write
+        budget: 60 per hour (ADR-0005, `429`). Audited as `tax_inputs.updated` with user,
+        taxpayer, regime and fiscal year only, never the values.
+
+
+        `FieldError.code` values beyond JSON Schema keywords (`field` is
+        `values.<index>[.<property>]`): `unknown_input` (the key is not among the regime's
+        inputs); `invalid` (the value field does not match the kind, both or neither are
+        set, `month` on a non-monthly key or missing on a monthly one, or a repeated key or
+        key and month); `out_of_range` (a rate outside `[0, 1]`); `fiscal_year` →
+        `out_of_range` (a future year). `422 business_rule_violation` details: `taxpayerId`
+        → `taxpayer_archived`; `regimeCode` → `regime_not_active`; `fiscal_year` →
+        `parameters_unavailable`.
       x-module: module_tax_engine
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -2284,16 +2636,78 @@ paths:
             schema: { $ref: '#/components/schemas/TaxInputsUpdate' }
       responses:
         '200':
-          description: Saved.
+          description: Saved; the stored inputs.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/TaxInputs' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+        '400':
+          description: >-
+            Input does not match the contract, or a value does not fit its definition
+            (`details[].code`: `unknown_input`, `invalid`, `out_of_range`; see the operation).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                unknownInput:
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: values.0.key, code: unknown_input, message: Este dato no aplica a este régimen. }
+                rateOutOfRange:
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: values.0.value_rate, code: out_of_range, message: El coeficiente debe estar entre 0 y 1. }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '402': { $ref: '#/components/responses/PaymentRequired' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '422': { $ref: '#/components/responses/UnprocessableEntity' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '402': { $ref: '#/components/responses/RecordReadOnly' }
+        '404': { $ref: '#/components/responses/TaxEngineNotFound' }
+        '422':
+          description: >-
+            The taxpayer is archived (`taxpayer_archived`), does not hold the regime in that
+            fiscal year (`regime_not_active`), or the fiscal year is before 2026
+            (`parameters_unavailable`).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                taxpayerArchived:
+                  value:
+                    error:
+                      code: business_rule_violation
+                      message: This taxpayer is archived. Unarchive it to make changes.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: taxpayerId, code: taxpayer_archived, message: Desarchiva al contribuyente primero. }
+                regimeNotActive:
+                  value:
+                    error:
+                      code: business_rule_violation
+                      message: The taxpayer does not hold this regime in that fiscal year.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: regimeCode, code: regime_not_active, message: No tienes este régimen en ese ejercicio. }
+                parametersUnavailable:
+                  value:
+                    error:
+                      code: business_rule_violation
+                      message: There are no tax parameters for that fiscal year.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: fiscal_year, code: parameters_unavailable, message: Sólo podemos estimar desde 2026. }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
 
   # ---------------------------------------------------------------- M6 Dashboard
   /v1/taxpayers/{taxpayerId}/dashboard:
@@ -2653,20 +3067,6 @@ components:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
           example:
             error: { code: not_found, message: Not found., request_id: req_01J9Z6Q4X8 }
-    UnprocessableEntity:
-      description: Well-formed but violates a business rule.
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/ErrorResponse' }
-          example:
-            error:
-              code: invalid_regime_combination
-              message: RESICO cannot be combined with regime 612 for the same taxpayer.
-              request_id: req_01J9Z6Q4X8
-              details:
-                - field: regimes
-                  code: incompatible
-                  message: 626 is incompatible with 612.
     TooManyRequests:
       x-frozen: sha256:f8089f8519a6c89a82d5c1be41732117e53e4f6e7042c713d6d6ac127fea5b3e
       description: Rate limit exceeded.
@@ -2891,6 +3291,65 @@ components:
           example:
             error: { code: internal_error, message: Something went wrong., request_id: req_01J9Z6Q4X8 }
 
+    # M5 tax engine errors (MODULE-tax-engine §5, S-4): they declare `Cache-Control: no-store`.
+    # 402 and 500 reuse RecordReadOnly and RecordInternalError; 401 and 429 are the shared ones.
+    TaxEngineBadRequest:
+      x-frozen: sha256:0a734bbaf7c555ca3fabd3110ce7687dc01b32bfaa634abc759ebff32f8666f8
+      description: >-
+        Input does not match the contract (malformed period, fiscal year, regime code or path
+        id, unknown query parameter), or a future period or fiscal year (`out_of_range`).
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            invalidPeriod:
+              value:
+                error:
+                  code: validation_failed
+                  message: One or more fields are invalid.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: period, code: pattern, message: Usa el formato AAAA-MM. }
+            futurePeriod:
+              value:
+                error:
+                  code: validation_failed
+                  message: One or more fields are invalid.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: period, code: out_of_range, message: Aún no podemos estimar un mes futuro. }
+    TaxEngineNotFound:
+      x-frozen: sha256:d1fbf52ca9d5bc802c25151fa16cc3ac8a2a6e10cba12b2acb6604ed82968b5c
+      description: >-
+        The taxpayer does not exist, belongs to another user, its id is malformed, or
+        `module_tax_engine` (or `module_taxpayers`) is disabled (indistinguishable on purpose).
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            error: { code: not_found, message: Not found., request_id: req_01J9Z6Q4X8 }
+    TaxEngineParametersUnavailable:
+      x-frozen: sha256:4e9a5e2f7793446085f91f029a39edd1c24336cd91a55f3092b23798f3a271e8
+      description: >-
+        The period is before 2026, the first fiscal year with transcribed tax parameters
+        (`parameters_unavailable`, OQ-T9).
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            error:
+              code: business_rule_violation
+              message: There are no tax parameters for that period.
+              request_id: req_01J9Z6Q4X8
+              details:
+                - { field: period, code: parameters_unavailable, message: Sólo podemos estimar desde enero de 2026. }
+
   schemas:
     # ------------------------------------------------------------ primitives
     Uuid:
@@ -2956,22 +3415,48 @@ components:
       description: Mandatory legend; must be shown on every estimate surface.
     DisclaimerCode:
       type: string
+      description: >-
+        Append-only (like `ErrorCode`): clients show the `text` of a code they do not know.
+        `not_tax_advice` always; `incomplete_inputs` when a regime is `incomplete`;
+        `provisional_parameters` when the period's fiscal year has no published parameters
+        yet; `informational_regime` / `partial_regime` when a regime has that status;
+        `deductibility_claimed` when a deductible expense entered the ISR base;
+        `no_coefficient_first_year` for a 601 in its first fiscal year; `iva_mixed_activity`
+        when `iva_fully_taxable = false` and creditable IVA was taken in full;
+        `cpa_review_pending` when a line applies a rule a CPA has not validated
+        (MODULE-tax-engine §2.3, §2.9).
       enum:
         - not_tax_advice
         - incomplete_inputs
         - provisional_parameters
         - informational_regime
+        - partial_regime
         - deductibility_claimed
         - no_coefficient_first_year
+        - iva_mixed_activity
+        - cpa_review_pending
+    DisclaimerSeverity:
+      x-frozen: sha256:8429837655ae31f5f2ec2bbcdb5e05b87988db4e779030e4cf985bd03611eafc
+      type: string
+      enum: [info, warning, strong]
+      description: >-
+        `strong` is the non-dismissible amber banner above the number (`cpa_review_pending`);
+        `warning` and `info` are shown under the estimate.
     Disclaimer:
+      x-frozen: sha256:722b602df34046d80ff612fcd6c04d539b012968b6c92dc8bfe5020a7aa75e35
       type: object
-      required: [code, text]
-      description: Text is versioned with the tax parameter set (ADR-0002).
+      required: [code, severity, text]
+      description: >-
+        Text is versioned with the tax parameter set (ADR-0002), so it tracks the law year;
+        es-MX, safe to show, never an amount. Order in a response: `not_tax_advice` first,
+        then by severity (`strong`, `warning`, `info`), then by code.
       properties:
         code: { $ref: '#/components/schemas/DisclaimerCode' }
+        severity: { $ref: '#/components/schemas/DisclaimerSeverity' }
         text: { type: string }
       examples:
         - code: not_tax_advice
+          severity: info
           text: Estimación informativa. No sustituye la declaración ante el SAT ni la asesoría de un contador. Cálculo basado en LISR, LIVA, LIF 2026 y Anexo 8 RMF 2026.
     ModuleKey:
       x-frozen: sha256:bc858cea369b72b8ff0211331c7fa6ed39b19ae3504e8fb51d4607eb82df306f
@@ -4239,35 +4724,116 @@ components:
           legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
 
     # ------------------------------------------------------------ tax engine
+    # Frozen at M5-01 (MODULE-tax-engine §9). Response shapes; only TaxInputsUpdate and
+    # TaxInputValue are request bodies (closed, S-7). DisclaimerCode and CpaTopic are
+    # append-only enums, not frozen (like ErrorCode).
     ParameterSetRef:
+      x-frozen: sha256:dc5f84a0558b65148657b81f4875ff843b733c8e24275f1894f744c939ec376a
       type: object
       required: [fiscal_year, version]
+      description: >-
+        The tax parameter set used (embedded `params/<fiscal_year>/v<version>.yaml`,
+        ADR-0002 §3): the highest published version of the period's fiscal year, or the
+        previous year's with `provisional_parameters`.
       properties:
         fiscal_year: { $ref: '#/components/schemas/FiscalYear' }
         version: { type: integer, minimum: 1 }
+      examples:
+        - { fiscal_year: 2026, version: 1 }
     TaxResult:
+      x-frozen: sha256:7d9a7c8bf527fcec0f91ec2259a7fb14fb0bb02e550ccd3ae57077c99ce4072c
       type: object
       required: [amount_cents, payable_rounded_cents, outcome]
+      description: >-
+        One tax result, rounded once at the end to the centavo, half away from zero
+        (ADR-0002 §4). `in_favor` is a saldo a favor: never shown as a payment.
       properties:
         amount_cents:
           $ref: '#/components/schemas/MoneyCents'
           description: Exact result; negative = saldo a favor.
         payable_rounded_cents:
-          $ref: '#/components/schemas/MoneyCents'
-          description: Payment amount. Equals amount_cents (centavo precision) until the CPA confirms CFF art. 20 whole-peso rounding (ADR-0002 §4).
+          $ref: '#/components/schemas/NonNegativeCents'
+          description: >-
+            Amount to pay: the positive part of `amount_cents` (0 when `in_favor` or `zero`).
+            Centavo precision until the CPA confirms CFF art. 20 whole-peso rounding
+            (`rounding.payment_whole_pesos`, off, OQ-T3).
         outcome: { type: string, enum: [payable, in_favor, zero] }
-    RegimeEstimate:
+      examples:
+        - { amount_cents: 15096, payable_rounded_cents: 15096, outcome: payable }
+    CpaTopic:
+      type: string
+      description: >-
+        Append-only. A rule a CPA has not validated yet (MODULE-tax-engine §2.9, each mapped
+        to a `docs/reviews/CPA-REVIEW.md` item): `rif_reduction` (any 621 figure),
+        `rif_bimonthly_iva` (621 IVA by bimester, OQ-T7), `platform_definitive_iva` (625
+        definitive option with IVA), `cross_regime_iva_netting` (two or more regimes
+        contribute IVA, OQ-T2), `resico_pm_interest_withholding` (626 PM with interest
+        withholding).
+      enum:
+        - rif_reduction
+        - rif_bimonthly_iva
+        - platform_definitive_iva
+        - cross_regime_iva_netting
+        - resico_pm_interest_withholding
+    MissingInput:
+      x-frozen: sha256:0e1eec1b32b5e51bd57737e253711409c2e2329d30c73f767f733d714d353eb0
       type: object
-      required: [regime_code, regime_name, treatment, status, parameter_set]
+      required: [key, label]
+      description: >-
+        A tax input the period needs and the taxpayer has not entered (`TaxInputDef.key` of
+        the regime). For a `money_monthly` key, `months` lists the months with no value, in
+        order. The CTA opens `getTaxInputs` for the regime and the period's fiscal year,
+        focused on `key`.
+      properties:
+        key: { type: string, pattern: '^[a-z][a-z0-9]*(_[a-z0-9]+)*$', maxLength: 64 }
+        label: { type: string, description: Spanish label (`TaxInputDef.label`). }
+        months:
+          type: array
+          minItems: 1
+          maxItems: 12
+          description: Only for `money_monthly` keys.
+          items: { $ref: '#/components/schemas/Period' }
+      examples:
+        - key: prior_provisional_payments
+          label: Pagos provisionales anteriores del ejercicio
+          months: ['2026-01', '2026-02']
+    RegimeEstimate:
+      x-frozen: sha256:405c6dc15628f38c4209c120a9cc409ae2f6441f5b6278ba6de0811e85bfdf39
+      type: object
+      required:
+        - regime_code
+        - regime_name
+        - treatment
+        - status
+        - missing_inputs
+        - explanation
+        - isr
+        - iva_components
+        - withheld_to_remit_cents
+        - cpa_review_pending
+        - cpa_topics
+        - parameter_set
+      description: >-
+        One regime held in the period. `status` precedence: `informational` >
+        `incomplete` > `partial` > `complete`. `complete`: every input this period needs is
+        present. `incomplete`: an input is missing; computed with zero for it, still shown
+        with an "Incompleto" chip and the CTA. `partial`: only some taxes are estimated
+        (621, 622, 603, 625 without the definitive option); `explanation` says what is not.
+        `informational`: no strategy or an informational catalog regime; `explanation` only,
+        `isr` and `iva_components` are `null`. `missing_inputs` is filled whenever inputs are
+        missing, whatever the status. `isr` is `null` when the regime has no ISR figure in
+        the period (informational, partial, an odd month for 621).
       properties:
         regime_code: { $ref: '#/components/schemas/RegimeCode' }
         regime_name: { type: string }
         treatment: { $ref: '#/components/schemas/Treatment' }
-        status: { type: string, enum: [complete, incomplete, informational] }
+        status: { type: string, enum: [complete, incomplete, partial, informational] }
         missing_inputs:
           type: array
-          items: { type: string }
-        explanation: { type: [string, 'null'] }
+          items: { $ref: '#/components/schemas/MissingInput' }
+        explanation:
+          type: [string, 'null']
+          description: Plain-language text for a partial or informational regime (or an odd 621 month); `null` otherwise.
         isr:
           oneOf:
             - $ref: '#/components/schemas/TaxResult'
@@ -4278,36 +4844,97 @@ components:
             - type: 'null'
         withheld_to_remit_cents:
           $ref: '#/components/schemas/NonNegativeCents'
-          description: ISR/IVA the taxpayer withheld from suppliers in this regime.
+          description: ISR/IVA the taxpayer withheld from its suppliers in this regime (PM only).
+        cpa_review_pending:
+          type: boolean
+          description: A rule of this regime's computation is not validated by a CPA yet (⚠️ on its lines).
+        cpa_topics:
+          type: array
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/CpaTopic' }
         parameter_set: { $ref: '#/components/schemas/ParameterSetRef' }
+      examples:
+        - regime_code: '625'
+          regime_name: Plataformas Tecnológicas
+          treatment: full
+          status: partial
+          missing_inputs: []
+          explanation: Sin el pago definitivo, el ISR se calcula en 612 o RESICO; calcula tu pago ahí y acredita estas retenciones.
+          isr: null
+          iva_components:
+            charged_collected_cents: 480000
+            creditable_paid_cents: 0
+            withheld_from_taxpayer_cents: 240000
+            definitive_excluded_cents: 0
+          withheld_to_remit_cents: 0
+          cpa_review_pending: false
+          cpa_topics: []
+          parameter_set: { fiscal_year: 2026, version: 1 }
     IvaComponents:
+      x-frozen: sha256:0c530e770c54504a5e11480ae96fbfb9261ce973693a5178d9addf6debfc36fa
       type: object
-      description: This regime's contribution; monthly IVA is netted per taxpayer in totals.iva.
-      required: [charged_collected_cents, creditable_paid_cents, withheld_from_taxpayer_cents]
+      description: >-
+        This regime's contribution to the monthly IVA, which is netted per taxpayer in
+        `totals.iva` (LIVA 5-D, OQ-T2); never an amount to pay on its own.
+        `withheld_from_taxpayer_cents` is only the IVA recorded as withheld on incomes
+        (OQ-T6 a); IVA the taxpayer withheld from suppliers is to remit, not creditable
+        (OQ-T6 b).
+      required: [charged_collected_cents, creditable_paid_cents, withheld_from_taxpayer_cents, definitive_excluded_cents]
       properties:
         charged_collected_cents: { $ref: '#/components/schemas/NonNegativeCents' }
         creditable_paid_cents: { $ref: '#/components/schemas/NonNegativeCents' }
         withheld_from_taxpayer_cents: { $ref: '#/components/schemas/NonNegativeCents' }
         definitive_excluded_cents:
           $ref: '#/components/schemas/NonNegativeCents'
-          description: IVA already definitive via withholding (e.g. 625 under LIVA 18-M).
+          description: IVA already definitive via withholding (625 under LIVA 18-M ⚠️); 0 otherwise.
+      examples:
+        - charged_collected_cents: 480000
+          creditable_paid_cents: 160000
+          withheld_from_taxpayer_cents: 106667
+          definitive_excluded_cents: 0
     EstimateTotals:
+      x-frozen: sha256:5710f62fed35e508cd3a28a9ee6735381297280fc55731764e96d5f1508eee92
       type: object
       required: [iva, isr, withholdings_to_remit_cents, total_payable_rounded_cents]
+      description: >-
+        Taxpayer-level totals; they carry no status (the client shows "Incompleto" when any
+        regime is `incomplete`). `total_payable_rounded_cents = isr.payable_rounded_cents +
+        iva.payable_rounded_cents + withholdings_to_remit_cents`.
       properties:
         iva:
           $ref: '#/components/schemas/TaxResult'
           description: Monthly IVA consolidated across the taxpayer's regimes.
         isr:
           $ref: '#/components/schemas/TaxResult'
-          description: Sum of per-regime provisional ISR (payable parts only; favor balances per regime).
+          description: Sum of the payable per-regime provisional ISR; favor balances stay per regime (OQ-T10).
         withholdings_to_remit_cents:
           $ref: '#/components/schemas/NonNegativeCents'
-          description: Withheld ISR/IVA to remit in full (not netted against IVA, LIVA 1-A).
+          description: Withheld ISR/IVA to remit in full, shown on its own line (never netted against IVA, LIVA 1-A).
         total_payable_rounded_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+      examples:
+        - iva: { amount_cents: 213333, payable_rounded_cents: 213333, outcome: payable }
+          isr: { amount_cents: 15096, payable_rounded_cents: 15096, outcome: payable }
+          withholdings_to_remit_cents: 0
+          total_payable_rounded_cents: 228429
+    RecordsFingerprint:
+      x-frozen: sha256:4d4c79ebb4abb473c19edbcdf19db79d4dad5e88121672bc9a3185d73b606408
+      type: string
+      pattern: '^[0-9a-f]{64}$'
+      description: >-
+        SHA-256 (lower-case hex) over the canonical aggregated input, the parameter version
+        and the engine version (ADR-0002 §5). Equal fingerprints mean an identical estimate;
+        M8 uses it to mark months "changed since viewed".
+      examples: [3f6c2a9e8d7b1c4f5a0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a]
     TaxpayerEstimate:
+      x-frozen: sha256:b393ced5ab07bc1d43d3c9642b3870c1232a3fd6e1dbeb6e738db9353e456d02
       type: object
-      required: [taxpayer_id, period, due_date, legend, disclaimers, regimes, totals, engine_version]
+      required: [taxpayer_id, period, due_date, legend, disclaimers, regimes, totals, parameter_set, records_fingerprint, engine_version]
+      description: >-
+        Informational estimate of one month (derived on every read; same records, inputs,
+        parameters and engine version → byte-identical JSON). `due_date` is day 17 of the
+        next month (after the bimester for 621), moved to the next business day (CFF 12 ⚠️,
+        "sujeto a confirmación"); RFC-digit grace days are not applied. `parameter_set` is
+        the set of the period (each regime repeats it).
       properties:
         taxpayer_id: { $ref: '#/components/schemas/Uuid' }
         period: { $ref: '#/components/schemas/Period' }
@@ -4315,11 +4942,14 @@ components:
         legend: { $ref: '#/components/schemas/Legend' }
         disclaimers:
           type: array
+          minItems: 1
           items: { $ref: '#/components/schemas/Disclaimer' }
         regimes:
           type: array
           items: { $ref: '#/components/schemas/RegimeEstimate' }
         totals: { $ref: '#/components/schemas/EstimateTotals' }
+        parameter_set: { $ref: '#/components/schemas/ParameterSetRef' }
+        records_fingerprint: { $ref: '#/components/schemas/RecordsFingerprint' }
         engine_version: { type: string, examples: [1.0.0] }
       examples:
         - taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
@@ -4328,6 +4958,7 @@ components:
           legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
           disclaimers:
             - code: not_tax_advice
+              severity: info
               text: Estimación informativa. No sustituye la declaración ante el SAT ni la asesoría de un contador. Cálculo basado en LISR, LIVA, LIF 2026 y Anexo 8 RMF 2026.
           regimes:
             - regime_code: '612'
@@ -4341,27 +4972,46 @@ components:
                 charged_collected_cents: 480000
                 creditable_paid_cents: 160000
                 withheld_from_taxpayer_cents: 106667
+                definitive_excluded_cents: 0
               withheld_to_remit_cents: 0
+              cpa_review_pending: false
+              cpa_topics: []
               parameter_set: { fiscal_year: 2026, version: 1 }
           totals:
             iva: { amount_cents: 213333, payable_rounded_cents: 213333, outcome: payable }
             isr: { amount_cents: 15096, payable_rounded_cents: 15096, outcome: payable }
             withholdings_to_remit_cents: 0
             total_payable_rounded_cents: 228429
+          parameter_set: { fiscal_year: 2026, version: 1 }
+          records_fingerprint: 3f6c2a9e8d7b1c4f5a0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a
           engine_version: 1.0.0
     Citation:
+      x-frozen: sha256:55a7c9b8131aed8d55139b301ec8451e0f652e8309b1e97dd229cd134ad25122
       type: object
-      required: [law, article]
+      required: [law, article, note]
       properties:
         law: { type: string, examples: [LIVA] }
         article: { type: string, examples: ['1-A'] }
-        note: { type: [string, 'null'] }
+        note: { type: [string, 'null'], description: 'Paragraph, fraction or remark, e.g. "párrafo quinto".' }
+      examples:
+        - { law: LISR, article: '106', note: párrafo quinto }
     BreakdownLine:
+      x-frozen: sha256:2a2d84bb2f00d6172663aeccc107ea3ec01f9cadb8756086a0c1177f72bacdf0
       type: object
-      required: [seq, tax, concept, operation, amount_cents, legal_basis]
+      required: [seq, tax, concept, operation, amount_cents, rate, legal_basis, source, needs_cpa_review]
+      description: >-
+        One step of the computation trace. `amount_cents` is the line's value rounded to the
+        centavo for display. `rate` is set only on `multiply` lines. `legal_basis` has at
+        least one citation on every line except `info` and `rounding_adjustment`.
+        `operation`: `input` (a sum of records or a tax input), `add`, `subtract`,
+        `multiply`, `lookup` (a tariff row; the concept names the row and month), `result`
+        (a subtotal or the tax result), `rounding_adjustment` ("Ajuste por redondeo", ±0.01…,
+        so the displayed lines reconcile with the rounded result), `info` (a fact with no
+        arithmetic, e.g. "Retención definitiva"). `tax: withholding` lines are the
+        withholdings to remit.
       properties:
-        seq: { type: integer, minimum: 1 }
-        tax: { type: string, enum: [iva, isr] }
+        seq: { type: integer, minimum: 1, description: '1-based, fixed order per strategy.' }
+        tax: { type: string, enum: [isr, iva, withholding] }
         concept: { type: string, description: Human-readable step (Spanish). }
         operation: { type: string, enum: [input, add, subtract, multiply, lookup, result, rounding_adjustment, info] }
         amount_cents: { $ref: '#/components/schemas/MoneyCents' }
@@ -4372,9 +5022,34 @@ components:
         legal_basis:
           type: array
           items: { $ref: '#/components/schemas/Citation' }
+        source:
+          type: string
+          pattern: '^(records|computed|tax_input:[a-z][a-z0-9_]*|params:[a-z][a-z0-9_.]*)$'
+          maxLength: 96
+          description: >-
+            Where the figure comes from: `records` (incomes/expenses of the period or year),
+            `tax_input:<key>`, `params:<key>` (the parameter set) or `computed`.
+          examples: ['tax_input:prior_provisional_payments']
+        needs_cpa_review:
+          type: boolean
+          description: The line applies a rule a CPA has not validated yet (⚠️ next to the line).
+      examples:
+        - seq: 10
+          tax: isr
+          concept: Ajuste por redondeo
+          operation: rounding_adjustment
+          amount_cents: 1
+          rate: null
+          legal_basis: []
+          source: computed
+          needs_cpa_review: false
     Breakdown:
+      x-frozen: sha256:d0c1423015e7913852a79eb206e82c57904295f0cf2ad69b78a919a47a8c387d
       type: object
       required: [taxpayer_id, period, regime, lines, legend, disclaimers, engine_version]
+      description: >-
+        Header: `regime.parameter_set` ("Parámetros 2026 v1") and `engine_version`
+        ("Motor 1.0.0"). `disclaimers` are those that apply to this regime.
       properties:
         taxpayer_id: { $ref: '#/components/schemas/Uuid' }
         period: { $ref: '#/components/schemas/Period' }
@@ -4385,6 +5060,7 @@ components:
         legend: { $ref: '#/components/schemas/Legend' }
         disclaimers:
           type: array
+          minItems: 1
           items: { $ref: '#/components/schemas/Disclaimer' }
         engine_version: { type: string }
       examples:
@@ -4395,46 +5071,88 @@ components:
             regime_name: Actividades Empresariales y Profesionales
             treatment: full
             status: complete
+            missing_inputs: []
+            explanation: null
+            isr: { amount_cents: 15096, payable_rounded_cents: 15096, outcome: payable }
+            iva_components:
+              charged_collected_cents: 480000
+              creditable_paid_cents: 160000
+              withheld_from_taxpayer_cents: 106667
+              definitive_excluded_cents: 0
             withheld_to_remit_cents: 0
+            cpa_review_pending: false
+            cpa_topics: []
             parameter_set: { fiscal_year: 2026, version: 1 }
           lines:
-            - { seq: 1, tax: isr, concept: Ingresos cobrados acumulados ene-mar, operation: input, amount_cents: 9000000, rate: null, legal_basis: [{ law: LISR, article: '102', note: null }] }
-            - { seq: 2, tax: isr, concept: Deducciones pagadas acumuladas, operation: subtract, amount_cents: 3000000, rate: null, legal_basis: [{ law: LISR, article: '103', note: null }] }
-            - { seq: 3, tax: isr, concept: Base gravable, operation: result, amount_cents: 6000000, rate: null, legal_basis: [{ law: LISR, article: '106', note: null }] }
-            - { seq: 4, tax: isr, concept: 'Cuota fija (tarifa acumulada marzo, renglón 6)', operation: lookup, amount_cents: 557052, rate: null, legal_basis: [{ law: Anexo 8 RMF 2026, article: B.VI, note: null }] }
-            - { seq: 5, tax: isr, concept: Excedente del límite inferior por tasa, operation: multiply, amount_cents: 158044, rate: '0.2136', legal_basis: [{ law: LISR, article: '106', note: null }] }
-            - { seq: 6, tax: isr, concept: ISR causado acumulado, operation: result, amount_cents: 715096, rate: null, legal_basis: [{ law: LISR, article: '106', note: null }] }
-            - { seq: 7, tax: isr, concept: Pagos provisionales anteriores, operation: subtract, amount_cents: 400000, rate: null, legal_basis: [{ law: LISR, article: '106', note: null }] }
-            - { seq: 8, tax: isr, concept: Retenciones de ISR (10 %) acumuladas, operation: subtract, amount_cents: 300000, rate: null, legal_basis: [{ law: LISR, article: '106', note: párrafo 5 }] }
-            - { seq: 9, tax: isr, concept: ISR a pagar, operation: result, amount_cents: 15096, rate: null, legal_basis: [] }
+            - { seq: 1, tax: isr, concept: Ingresos cobrados acumulados ene–mar, operation: input, amount_cents: 9000000, rate: null, legal_basis: [{ law: LISR, article: '102', note: null }], source: records, needs_cpa_review: false }
+            - { seq: 2, tax: isr, concept: Deducciones pagadas acumuladas ene–mar, operation: subtract, amount_cents: 3000000, rate: null, legal_basis: [{ law: LISR, article: '103', note: null }, { law: LISR, article: '105', note: null }], source: records, needs_cpa_review: false }
+            - { seq: 3, tax: isr, concept: Base gravable, operation: result, amount_cents: 6000000, rate: null, legal_basis: [{ law: LISR, article: '106', note: párrafo primero }], source: computed, needs_cpa_review: false }
+            - { seq: 4, tax: isr, concept: 'Cuota fija (tarifa acumulada de marzo, renglón 6)', operation: lookup, amount_cents: 557052, rate: null, legal_basis: [{ law: Anexo 8 RMF 2026, article: B.VI, note: null }], source: params:isr.art106.accumulated, needs_cpa_review: false }
+            - { seq: 5, tax: isr, concept: Excedente del límite inferior por la tasa, operation: multiply, amount_cents: 158044, rate: '0.2136', legal_basis: [{ law: Anexo 8 RMF 2026, article: B.VI, note: null }], source: params:isr.art106.accumulated, needs_cpa_review: false }
+            - { seq: 6, tax: isr, concept: ISR causado acumulado, operation: result, amount_cents: 715096, rate: null, legal_basis: [{ law: LISR, article: '106', note: párrafo primero }], source: computed, needs_cpa_review: false }
+            - { seq: 7, tax: isr, concept: Pagos provisionales anteriores (ene–feb), operation: subtract, amount_cents: 400000, rate: null, legal_basis: [{ law: LISR, article: '106', note: párrafo cuarto }], source: 'tax_input:prior_provisional_payments', needs_cpa_review: false }
+            - { seq: 8, tax: isr, concept: Retenciones de ISR (10 %) acumuladas, operation: subtract, amount_cents: 300000, rate: null, legal_basis: [{ law: LISR, article: '106', note: párrafo quinto }], source: records, needs_cpa_review: false }
+            - { seq: 9, tax: isr, concept: ISR a pagar, operation: result, amount_cents: 15096, rate: null, legal_basis: [{ law: LISR, article: '106', note: null }], source: computed, needs_cpa_review: false }
+            - { seq: 10, tax: iva, concept: IVA trasladado cobrado, operation: input, amount_cents: 480000, rate: null, legal_basis: [{ law: LIVA, article: '1', note: null }, { law: LIVA, article: 1-B, note: null }], source: records, needs_cpa_review: false }
+            - { seq: 11, tax: iva, concept: IVA acreditable pagado, operation: subtract, amount_cents: 160000, rate: null, legal_basis: [{ law: LIVA, article: '5', note: fracciones I a V }], source: records, needs_cpa_review: false }
+            - { seq: 12, tax: iva, concept: IVA que te retuvieron personas morales, operation: subtract, amount_cents: 106667, rate: null, legal_basis: [{ law: LIVA, article: 1-A, note: null }, { law: RLIVA, article: '3', note: null }], source: records, needs_cpa_review: false }
+            - { seq: 13, tax: iva, concept: IVA a cargo del mes (todos tus regímenes), operation: result, amount_cents: 213333, rate: null, legal_basis: [{ law: LIVA, article: 5-D, note: null }], source: computed, needs_cpa_review: false }
           legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
           disclaimers:
             - code: not_tax_advice
+              severity: info
               text: Estimación informativa. No sustituye la declaración ante el SAT ni la asesoría de un contador. Cálculo basado en LISR, LIVA, LIF 2026 y Anexo 8 RMF 2026.
+            - code: deductibility_claimed
+              severity: info
+              text: Tomamos como deducibles los gastos que marcaste así; el SAT puede no aceptarlos todos.
           engine_version: 1.0.0
     TaxInputDef:
+      x-frozen: sha256:ce5cc5e6d4cbd306543804c8213a73f8943b1e201866075f92b30e9a0cbb9ed7
       type: object
       required: [key, label, kind, required]
+      description: >-
+        One per-fiscal-year tax input of a regime (`regimes.required_inputs`, catalog data).
+        `kind`: `money` (one amount for the year, centavos `>= 0`), `money_monthly` (one
+        amount per month 1-12, e.g. the prior provisional payments, OQ-T1), `rate` (decimal
+        string in `[0, 1]`) or `boolean`. `required`: the key can be required in some period
+        of the year; whether it is missing for a period is `RegimeEstimate.missing_inputs`.
       properties:
         key: { type: string, pattern: '^[a-z][a-z0-9]*(_[a-z0-9]+)*$', maxLength: 64, examples: [coeficiente_utilidad] }
-        label: { type: string }
-        kind: { type: string, enum: [money, rate] }
+        label: { type: string, description: Spanish label shown in the tax-inputs form. }
+        kind: { type: string, enum: [money, money_monthly, rate, boolean] }
         required: { type: boolean }
+      examples:
+        - { key: prior_provisional_payments, label: Pagos provisionales anteriores del ejercicio, kind: money_monthly, required: true }
     TaxInputValue:
+      x-frozen: sha256:a9cd1f021eb4d5f9f7230705be3e3f31efc9cd3264898257a0b6f4bbf2fc1802
       type: object
       required: [key]
-      description: Exactly one of value_cents (kind=money) or value_rate (kind=rate).
+      additionalProperties: false
+      description: >-
+        One stored value. Exactly the field of the key's `kind` is set (`value_cents` for
+        `money` and `money_monthly`, `value_rate` for `rate`, `value_bool` for `boolean`);
+        the others are absent or `null`. `month` (1-12) is set only for `money_monthly`.
+        Responses send every field, `null` when not set.
       properties:
-        key: { type: string }
+        key: { type: string, pattern: '^[a-z][a-z0-9]*(_[a-z0-9]+)*$', maxLength: 64 }
+        month:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 12
+          description: Month of the fiscal year, only for `money_monthly`.
         value_cents:
           oneOf:
-            - $ref: '#/components/schemas/MoneyCents'
+            - $ref: '#/components/schemas/NonNegativeCents'
             - type: 'null'
         value_rate:
           oneOf:
             - $ref: '#/components/schemas/DecimalRate'
             - type: 'null'
+        value_bool: { type: [boolean, 'null'] }
+      examples:
+        - { key: prior_provisional_payments, month: 1, value_cents: 200000 }
     TaxInputs:
+      x-frozen: sha256:4ec47e9f7fb2b8d278720ce7b1d31d97fea218c8957399bf7f4c7ba42d92c771
       type: object
       required: [regime_code, fiscal_year, definitions, values]
       properties:
@@ -4445,24 +5163,32 @@ components:
           items: { $ref: '#/components/schemas/TaxInputDef' }
         values:
           type: array
+          description: Ordered by the key's position in `definitions`, then `month`.
           items: { $ref: '#/components/schemas/TaxInputValue' }
       examples:
         - regime_code: '601'
           fiscal_year: 2026
           definitions:
             - { key: coeficiente_utilidad, label: Coeficiente de utilidad, kind: rate, required: true }
+            - { key: first_fiscal_year, label: Primer ejercicio fiscal, kind: boolean, required: false }
           values:
-            - { key: coeficiente_utilidad, value_cents: null, value_rate: '0.1234' }
+            - { key: coeficiente_utilidad, month: null, value_cents: null, value_rate: '0.1500', value_bool: null }
     TaxInputsUpdate:
+      x-frozen: sha256:e05a1d4d6a20e712216037e5e7b3e25b7675f4939c3433c5b703f4d71959e9a6
       type: object
       required: [values]
+      additionalProperties: false
+      description: The complete set of values for the regime and fiscal year (replace, not merge).
       properties:
         values:
           type: array
+          maxItems: 128
           items: { $ref: '#/components/schemas/TaxInputValue' }
       examples:
         - values:
-            - { key: coeficiente_utilidad, value_rate: '0.1234' }
+            - { key: prior_provisional_payments, month: 1, value_cents: 200000 }
+            - { key: prior_provisional_payments, month: 2, value_cents: 200000 }
+            - { key: ptu_paid, value_cents: 0 }
 
     # ------------------------------------------------------------ dashboard / access
     AccessSummary:
@@ -4507,6 +5233,7 @@ components:
             legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
             disclaimers:
               - code: not_tax_advice
+                severity: info
                 text: Estimación informativa. No sustituye la declaración ante el SAT ni la asesoría de un contador. Cálculo basado en LISR, LIVA, LIF 2026 y Anexo 8 RMF 2026.
             regimes:
               - regime_code: '612'
@@ -4520,13 +5247,18 @@ components:
                   charged_collected_cents: 480000
                   creditable_paid_cents: 160000
                   withheld_from_taxpayer_cents: 106667
+                  definitive_excluded_cents: 0
                 withheld_to_remit_cents: 0
+                cpa_review_pending: false
+                cpa_topics: []
                 parameter_set: { fiscal_year: 2026, version: 1 }
             totals:
               iva: { amount_cents: 213333, payable_rounded_cents: 213333, outcome: payable }
               isr: { amount_cents: 15096, payable_rounded_cents: 15096, outcome: payable }
               withholdings_to_remit_cents: 0
               total_payable_rounded_cents: 228429
+            parameter_set: { fiscal_year: 2026, version: 1 }
+            records_fingerprint: 3f6c2a9e8d7b1c4f5a0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a
             engine_version: 1.0.0
           income_cents: 3000000
           expense_cents: 1000000

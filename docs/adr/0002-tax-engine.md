@@ -4,6 +4,7 @@
 |---|---|
 | Status | PROPOSED (Phase 2 Design) |
 | Date | 2026-10-13 |
+| Amended | 2026-10-13 by M5-01: status `partial`, monthly prior payments ([Amendment 1](#amendment-1-m5-01-2026-10-13)) |
 | Related | [PRD §5, US-X1..X3](../project-specs/PRD.md), [MODULES M5](../project-specs/MODULES.md), [ADR-0001](0001-stack.md), [research](../research/tax-regimes-mx-2026.md) |
 | Grounding | `docs/research/tax-regimes-mx-2026.md` (cut-off 2026-10-13). Items marked ⚠️ there stay ⚠️ here and must not ship as hard-coded behaviour without CPA review |
 
@@ -54,7 +55,7 @@ type StrategyKey struct {
 type Strategy interface {
     Key() StrategyKey
     Treatment() Treatment                        // Full | Partial | Informational
-    RequiredInputs(o Options) []InputKey         // drives "incomplete" + CTA (US-T4)
+    RequiredInputs(o Options, p Period, f Facts) []RequiredInput // per period (Amendment 1); drives "incomplete" + CTA (US-T4)
     Estimate(in Input, p Params) (RegimeEstimate, error)
 }
 ```
@@ -113,7 +114,9 @@ type Strategy interface {
 | 605, 607, 608, 610, 611, 614, 615, 616, 620, 623, 624 | informational | Explanation only (Part C) | — | — |
 
 Missing required inputs → `status = incomplete`, the computation goes ahead with zero for
-that input, and the `incomplete_inputs` disclaimer is added (US-T4).
+that input, and the `incomplete_inputs` disclaimer is added (US-T4). A `partial` treatment
+yields `status = partial` (Amendment 1). `prior_provisional_payments` is one amount **per
+month** (`money_monthly`, Amendment 1), not one year-to-date value.
 
 ### 3. Versioned parameters: data, not code
 
@@ -241,7 +244,7 @@ that input, and the `incomplete_inputs` disclaimer is added (US-T4).
 
 - `TaxpayerEstimate`, `RegimeEstimate`, `TaxResult`, `EstimateTotals` (`iva`, `isr`,
   `withholdings_to_remit_cents`), `Breakdown`, `BreakdownLine`, `Citation`,
-  `ParameterSetRef`, `Disclaimer {code, text}`.
+  `ParameterSetRef`, `Disclaimer {code, severity, text}` (severity added by Amendment 1).
 - `legend` is a response field with `const` "Esto es un aproximado. No todos los gastos
   aplican para tu giro comercial."
 - Disclaimer codes:
@@ -264,3 +267,60 @@ that input, and the `incomplete_inputs` disclaimer is added (US-T4).
   runs on `provisional_parameters`.
 - (−) Each ⚠️ item (RIF reduction, 625 definitive IVA under 18-M, PTU, CFF 20 rounding,
   CFF 12 due-date move) is a known open risk, tracked as a skipped golden case.
+
+## Amendment 1 (M5-01, 2026-10-13)
+
+Decided by the coordinator in [MODULE-tax-engine](../project-specs/MODULE-tax-engine.md) §11
+(OQ-T1, OQ-T8) and frozen in the contract 0.6.0 (`docs/api/openapi.yaml`, M5-01). Both
+changes are pre-release: the 0.1.0 draft shapes were never frozen and nothing was built on
+them.
+
+### A1.1 Status `partial`
+
+`RegimeEstimate.status` is `complete | incomplete | partial | informational`.
+
+- **Why.** The draft only had `complete | incomplete | informational`, so a partial regime
+  (621, 622, 603, 625 without the definitive option) had to pretend to be `complete` while
+  showing only IVA, or `informational` while showing a number. Both mislead the user.
+- **Rule.** `partial` when the strategy's treatment for these options is partial: some taxes
+  are estimated, `explanation` says which are not, `isr` is `null` where no ISR figure
+  exists. Precedence when several apply: `informational` > `incomplete` > `partial` >
+  `complete`; `missing_inputs` is filled whenever inputs are missing, whatever the status.
+  The `partial_regime` disclaimer (info) is added when any regime is `partial`.
+- **Strategy port.** `Treatment()` stays the catalog-level support level. The per-estimate
+  status is computed by the use case from the strategy's result (`partial` vs. full for
+  the options, e.g. 625 without `definitive_option`) and the missing inputs.
+
+### A1.2 Monthly prior provisional payments (`money_monthly`)
+
+- **Why.** §2 stored `prior_provisional_payments` as one year-to-date amount per fiscal
+  year. A single value is only right for one period: the March estimate needs January +
+  February, the June estimate January..May. Re-estimating a past month (allowed, US-H1)
+  with a YTD value entered in June would subtract payments made after that month.
+- **Rule.** `TaxInputDef.kind` gains `money_monthly` (one `NonNegativeCents` per month 1-12,
+  `TaxInputValue.month`) and `boolean` (`value_bool`, for `first_fiscal_year`). For 612 PF,
+  626 PM and 601 PM, `prior_provisional_payments` is `money_monthly`: the estimate of month
+  n subtracts the sum of months 1..n-1, and the input is **required for period n** only
+  for every month m < n in which the regime was active (none for January). A missing month
+  makes the regime `incomplete` with `MissingInput {key, label, months[]}` naming the
+  months.
+- **Required inputs depend on the period.** `RequiredInputs(options, period, facts)`
+  replaces `RequiredInputs(options)`: prior payments are not required in January, the
+  coeficiente is not required in a 601 first fiscal year, `prior_year_income` is required
+  for 625 only with `definitive_option = true`.
+- **Prefill, never assume.** The tax-inputs form offers the app's own estimate of each month
+  as a suggestion (UX only); the stored value is what the user enters.
+- **Data.** The catalog CHECK `regime_required_inputs_valid` accepts the new kinds, and the
+  612/626 PM/601 rows move to `money_monthly` (601 gains `first_fiscal_year`), in a forward
+  migration with M5-20/M5-21. `taxpayer_tax_inputs` stores one row per `(key, month)`.
+
+### A1.3 Also frozen with the contract (no design change)
+
+- `Disclaimer.severity` (`info | warning | strong`) and the codes `partial_regime`,
+  `iva_mixed_activity`, `cpa_review_pending`. Rules a CPA has not validated still run with
+  their default, set `cpa_review_pending` / `cpa_topics` on the regime and
+  `needs_cpa_review` on the line, and raise the `strong` disclaimer (OQ-T8).
+- `BreakdownLine.source` and `needs_cpa_review`; `tax: withholding` for lines to remit.
+- `TaxpayerEstimate.records_fingerprint` and `parameter_set` (§5, used by M8).
+- `getTaxpayerEstimate.period` is optional (current month, America/Mexico_City); periods
+  before 2026 answer `422 parameters_unavailable` (OQ-T9).

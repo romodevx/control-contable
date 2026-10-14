@@ -501,6 +501,21 @@ No new `ErrorCode` values; detail codes go into the contract descriptions (M5-01
 
 ADR-0002 is amended in the same PR for items 2 and 6 (status `partial`, monthly prior payments).
 
+**Applied by M5-01 (contract 0.6.0, frozen).** Items 1-7 are in `docs/api/openapi.yaml`; ADR-0002
+Amendment 1. Precisions made while freezing (no rule changed):
+- The `fiscal_year` of the tax-input operations follows the period rules: a future year → `400
+  out_of_range`, before 2026 → `422 parameters_unavailable`.
+- Shape rules are enforced by the schema at the edge, so they answer the JSON Schema keyword, not a
+  domain code: negative money → `minimum` (`TaxInputValue.value_cents` is `NonNegativeCents`), a
+  `month` outside 1..12 → `minimum`/`maximum`, an unknown body field → `additionalProperties`. The
+  domain codes of §5 (`unknown_input`, `invalid`, `out_of_range`) cover what needs the catalog.
+- `TaxResult.payable_rounded_cents` is `>= 0` (the positive part of `amount_cents`); the per-regime
+  favor balance stays in `amount_cents` with `outcome: in_favor`.
+- `DisclaimerCode` and `CpaTopic` are append-only enums (not frozen, like `ErrorCode`).
+- `TaxInputDef.kind` serves `money_monthly` / `boolean` only after the catalog forward migration
+  (M5-20/M5-21); the onboarding tax-inputs step (M2-09) skips kinds it does not edit, the M5-27 form
+  owns them.
+
 ## 10. Out of scope
 
 - Annual return (PF April, PM March), personal deductions (art. 151), annual PTU computation.
