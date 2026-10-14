@@ -1,0 +1,26 @@
+# golden: hand-authored from research AN-06 (docs/research/annual-return-2026.md Part D). Never generated or rewritten by a tool.
+id: AN-06-PTU
+source: research:AN-06
+skip_reason: "⚠️ PTU rate 10 % from a secondary source only: the Comisión Nacional PTU resolution (DOF) was not fetched, so it is not in params (ANN-05 finding 4); topic ptu_rate, CPA-REVIEW PTU item, until the CPA sign-off (ANN-27)"
+pending_strategy: true # ANN-10 registers pm_601
+input:
+  fiscal_year: 2026
+  person_type: moral
+  regimes:
+    - regime: "601"
+      income: "10000000.00"
+      deductions: "8500000.00"
+      tax_inputs:
+        - {key: ptu_paid, money: "120000.00"}
+        - {key: prior_year_losses, money: "200000.00"}
+        - {key: interest_withholding, money: "2000.00"}
+  payments:
+    - {regime: "601", amount: "330000.00", source: filed}
+expected:
+  sections:
+    - kind: pm_601
+      regimes: ["601"]
+      status: complete
+      cpa_topics: [cu_rounding, ptu_rate]
+      pm_extras:
+        ptu_to_distribute: "150000.00" # 10 % x PTU base 1,500,000

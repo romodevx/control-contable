@@ -84,13 +84,16 @@ const (
 	TopicCURounding                  CPATopic = "cu_rounding"
 	TopicRESICOPMPTUBase             CPATopic = "resico_pm_ptu_base"
 	TopicRESICOPFReliefRenewal       CPATopic = "resico_pf_relief_renewal"
+	// TopicPTURate: the 10 % PTU rate is from a secondary source; the
+	// Comisión Nacional PTU resolution (DOF) is not in params (ANN-05).
+	TopicPTURate CPATopic = "ptu_rate"
 )
 
 // Valid reports a spec annual CPA topic.
 func (c CPATopic) Valid() bool {
 	return slices.Contains([]CPATopic{
 		TopicPlatformNonDefinitiveAnnual, TopicUMAForMinimumWage, TopicDeductionCapRESICOIncome,
-		TopicSalaryObligationBasis, TopicCURounding, TopicRESICOPMPTUBase, TopicRESICOPFReliefRenewal,
+		TopicSalaryObligationBasis, TopicCURounding, TopicRESICOPMPTUBase, TopicRESICOPFReliefRenewal, TopicPTURate,
 	}, c)
 }
 

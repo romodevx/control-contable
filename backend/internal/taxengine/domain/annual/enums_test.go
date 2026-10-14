@@ -42,6 +42,7 @@ func TestEnumsAcceptOnlySpecValues(t *testing.T) {
 		{"topic cu", annual.TopicCURounding, true},
 		{"topic ptu", annual.TopicRESICOPMPTUBase, true},
 		{"topic renewal", annual.TopicRESICOPFReliefRenewal, true},
+		{"topic ptu rate", annual.TopicPTURate, true},
 		{"topic monthly only", annual.CPATopic("rif_reduction"), false},
 		{"disclaimer annual_estimate", annual.DisclaimerAnnualEstimate, true},
 		{"disclaimer no_annual_iva", annual.DisclaimerNoAnnualIVA, true},

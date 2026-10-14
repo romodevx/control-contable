@@ -256,7 +256,7 @@ refundable. Text: "Tus pagos mensuales de RESICO son definitivos; no presentas a
 `annual_depreciation` = utilidad before PTU; − `ptu_paid` = **utilidad fiscal**; − `prior_year_losses` =
 **resultado fiscal** (`max(0, …)`) × 30 % − payments − `interest_withholding` → balance. Extras:
 **PTU base** = ingresos acumulables − deductions (without PTU paid or losses; the 28 fr. XXX adjustment is
-not modelled ⚠️) → **PTU to distribute** = 10 %; **suggested CU next year** = utilidad fiscal ÷ ingresos
+not modelled ⚠️) → **PTU to distribute** = 10 % ⚠️ (`ptu_rate`: secondary source, not in params until the DOF resolution is fetched; ANN-05 finding 4); **suggested CU next year** = utilidad fiscal ÷ ingresos
 nominales, rounded half-up to 4 decimals ⚠️ (`cu_rounding`); 0 when utilidad ≤ 0. Labelled "Sugerido
 para tus pagos de {fy+1}; confírmalo con tu contador".
 
@@ -307,6 +307,7 @@ M5 calendar (CFF 12 ⚠️, "sujeto a confirmación" note). The RFC-digit grace 
 | `cu_rounding` | `pm_601` suggested CU |
 | `resico_pm_ptu_base` | `pm_resico` PTU base |
 | `resico_pf_relief_renewal` | `pf_resico_check` (rule 3.13.7 must be renewed in RMF 2027) |
+| `ptu_rate` | `pm_601` PTU to distribute (10 % not yet read from the DOF resolution; ANN-05 finding 4) |
 
 ### 2.11 Determinism and performance
 
@@ -324,7 +325,7 @@ compute < 5 ms (benchmark).
 | AN-03 | `pf_resico_check` (a)/(b) | Differences **−1,320.00** / **+275.00**, `informational`, no balance | run |
 | AN-04 | `pf_art152` 625 non-definitive | ISR **16,833.81**, **a cargo 4,833.81** | **skip** (`platform_nondefinitive_annual`) until ANN-27 |
 | AN-05 | `pf_art152` two simultaneous employers | ISR **74,013.86** − 48,000 → **a cargo 26,013.86**; `obligated` | run |
-| AN-06 | `pm_601` | Resultado 1,180,000 × 30 % = 354,000 → **a cargo 22,000.00**; PTU **150,000.00**; CU **0.1380** | run (CU asserted; topic shown) |
+| AN-06 | `pm_601` | Resultado 1,180,000 × 30 % = 354,000 → **a cargo 22,000.00**; PTU **150,000.00**; CU **0.1380** | run (CU asserted; topics shown); PTU to distribute **skip** in AN-06-PTU (`ptu_rate`) |
 | AN-07 | `pm_resico` | 345,000 − 360,000 → **a favor 15,000.00**; PTU base 1,150,000 | balance run; PTU assertion **skip** (`resico_pm_ptu_base`) |
 | AN-08 | `pf_art152` cap binds | Deduction applied **45,000** (not 80,000), ISR **31,807.91** | run |
 

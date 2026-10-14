@@ -6,6 +6,7 @@
 # count here, and the CPA sign-off (ANN-27) that lifts a skip removes its id.
 skipped:
   - AN-04 # 625 non-definitive in art. 152 (⚠️ platform_nondefinitive_annual)
+  - AN-06-PTU # PTU rate 10 % (⚠️ ptu_rate, not in params)
   - AN-07-PTU # RESICO PM PTU base (⚠️ resico_pm_ptu_base)
 pending: # section kind: cases
   pf_art152: 4 # AN-01, AN-02, AN-05, AN-08 (ANN-08)
