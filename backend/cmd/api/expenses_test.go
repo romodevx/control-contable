@@ -61,7 +61,7 @@ func stubExpensesModule() expensesModule {
 
 func TestNewHandler_refusesToServeWithoutTheExpensesHandler(t *testing.T) {
 	_, err := newHandler(testConfig(), deps{db: pingOK{}, flags: flagtest.Static{}, auth: stubAuthModule(t), now: time.Now,
-		taxpayers: stubTaxpayersModule(), logger: logging.New(io.Discard, nil)})
+		taxpayers: stubTaxpayersModule(), taxEngine: stubTaxEngineModule(), logger: logging.New(io.Discard, nil)})
 
 	assert.ErrorContains(t, err, "no expenses handler")
 }
