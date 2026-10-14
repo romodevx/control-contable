@@ -1,0 +1,147 @@
+# SYNTHETIC test fixture: these numbers are NOT the official values.
+# The real 2026 parameters live in params/data/2026/v1.yaml (M5-04).
+fiscal_year: 2026
+version: 1
+published_on: 2026-10-13
+sources:
+  - id: decree-synthetic
+    title: Synthetic border decree
+    url: https://example.test/dof/border
+    dof_date: 2025-12-31
+    reference: "Art. 1"
+  - id: anexo-synthetic
+    title: Synthetic Anexo 8
+    url: https://example.test/dof/anexo-8
+    dof_date: 2026-01-09
+    reference: "Anexo 8, B.V and B.VI"
+values:
+  - key: iva.rate.border_8
+    rate: "0.08"
+    valid_from: 2026-01-01
+    valid_to: 2026-12-31   # inclusive; the decree's sunset
+    basis: [{source: decree-synthetic, article: "Art. 1"}]
+  - key: uma.monthly
+    money: "100.00"         # January still uses the previous year's UMA
+    valid_from: 2026-01-01
+    valid_to: 2026-01-31
+    basis: [{source: anexo-synthetic, article: "UMA"}]
+  - key: uma.monthly
+    money: "110.00"
+    valid_from: 2026-02-01
+    valid_to: 2027-01-31
+    basis: [{source: anexo-synthetic, article: "UMA"}]
+  - key: rounding.payment_whole_pesos
+    flag: false
+    valid_from: 2026-01-01
+    basis: [{source: anexo-synthetic, article: "CFF 20"}]
+tables:
+  - key: isr.art96.monthly
+    kind: marginal
+    valid_from: 2026-01-01
+    basis: [{source: anexo-synthetic, article: "B.V"}]
+    rows:
+      - {lower: "0.01", upper: "100.00", fixed_fee: "0.00", rate: "0.02"}
+      - {lower: "100.01", fixed_fee: "2.00", rate: "0.1"}   # no upper: "en adelante"
+  - key: isr.resico_pf.monthly
+    kind: flat
+    valid_from: 2026-01-01
+    basis: [{source: anexo-synthetic, article: "113-E"}]
+    rows:
+      - {lower: "0.01", upper: "100.00", rate: "0.01"}
+      - {lower: "100.01", upper: "200.00", rate: "0.011"}
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 1
+    valid_from: 2026-01-01
+    basis: [{source: anexo-synthetic, article: "B.VI"}]
+    rows:
+      - {lower: "0.01", upper: "100.00", fixed_fee: "0.00", rate: "0.02"}
+      - {lower: "100.01", fixed_fee: "2.00", rate: "0.1"}
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 2
+    valid_from: 2026-01-01
+    basis: [{source: anexo-synthetic, article: "B.VI"}]
+    rows:
+      - {lower: "0.01", upper: "200.00", fixed_fee: "0.00", rate: "0.02"}
+      - {lower: "200.01", fixed_fee: "4.00", rate: "0.1"}
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 3
+    valid_from: 2026-01-01
+    basis: [{source: anexo-synthetic, article: "B.VI"}]
+    rows:
+      - {lower: "0.01", upper: "300.00", fixed_fee: "0.00", rate: "0.02"}
+      - {lower: "300.01", fixed_fee: "6.00", rate: "0.1"}
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 4
+    valid_from: 2026-01-01
+    basis: [{source: anexo-synthetic, article: "B.VI"}]
+    rows:
+      - {lower: "0.01", upper: "400.00", fixed_fee: "0.00", rate: "0.02"}
+      - {lower: "400.01", fixed_fee: "8.00", rate: "0.1"}
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 5
+    valid_from: 2026-01-01
+    basis: [{source: anexo-synthetic, article: "B.VI"}]
+    rows:
+      - {lower: "0.01", upper: "500.00", fixed_fee: "0.00", rate: "0.02"}
+      - {lower: "500.01", fixed_fee: "10.00", rate: "0.1"}
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 6
+    valid_from: 2026-01-01
+    basis: [{source: anexo-synthetic, article: "B.VI"}]
+    rows:
+      - {lower: "0.01", upper: "600.00", fixed_fee: "0.00", rate: "0.02"}
+      - {lower: "600.01", fixed_fee: "12.00", rate: "0.1"}
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 7
+    valid_from: 2026-01-01
+    basis: [{source: anexo-synthetic, article: "B.VI"}]
+    rows:
+      - {lower: "0.01", upper: "700.00", fixed_fee: "0.00", rate: "0.02"}
+      - {lower: "700.01", fixed_fee: "14.00", rate: "0.1"}
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 8
+    valid_from: 2026-01-01
+    basis: [{source: anexo-synthetic, article: "B.VI"}]
+    rows:
+      - {lower: "0.01", upper: "800.00", fixed_fee: "0.00", rate: "0.02"}
+      - {lower: "800.01", fixed_fee: "16.00", rate: "0.1"}
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 9
+    valid_from: 2026-01-01
+    basis: [{source: anexo-synthetic, article: "B.VI"}]
+    rows:
+      - {lower: "0.01", upper: "900.00", fixed_fee: "0.00", rate: "0.02"}
+      - {lower: "900.01", fixed_fee: "18.00", rate: "0.1"}
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 10
+    valid_from: 2026-01-01
+    basis: [{source: anexo-synthetic, article: "B.VI"}]
+    rows:
+      - {lower: "0.01", upper: "1000.00", fixed_fee: "0.00", rate: "0.02"}
+      - {lower: "1000.01", fixed_fee: "20.00", rate: "0.1"}
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 11
+    valid_from: 2026-01-01
+    basis: [{source: anexo-synthetic, article: "B.VI"}]
+    rows:
+      - {lower: "0.01", upper: "1100.00", fixed_fee: "0.00", rate: "0.02"}
+      - {lower: "1100.01", fixed_fee: "22.00", rate: "0.1"}
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 12
+    valid_from: 2026-01-01
+    basis: [{source: anexo-synthetic, article: "B.VI"}]
+    rows:
+      - {lower: "0.01", upper: "1200.00", fixed_fee: "0.00", rate: "0.02"}
+      - {lower: "1200.01", fixed_fee: "24.00", rate: "0.1"}
