@@ -10,6 +10,7 @@ import (
 
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
 	"github.com/romodevx/control-contable/backend/internal/platform/httperr"
+	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit"
 )
 
 // Limiter decides whether a request keyed by key may proceed and, if not,
@@ -38,16 +39,10 @@ func RateLimit(limiter Limiter, key KeyFunc) Func {
 				next.ServeHTTP(w, r)
 				return
 			}
-			w.Header().Set("Retry-After", strconv.FormatInt(retryAfterSeconds(wait), 10))
+			w.Header().Set("Retry-After", strconv.Itoa(ratelimit.RetryAfterSeconds(wait)))
 			_ = httperr.Write(w, r, apperr.Mapper{}, apperr.New(apperr.CodeRateLimited, rateLimitedMessage))
 		})
 	}
-}
-
-// retryAfterSeconds rounds wait up to whole seconds, with a minimum of 1.
-func retryAfterSeconds(wait time.Duration) int64 {
-	seconds := int64((wait + time.Second - 1) / time.Second)
-	return max(seconds, 1)
 }
 
 // ClientIP returns a KeyFunc keyed by the client address. With trustedHops

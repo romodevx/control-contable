@@ -1,7 +1,7 @@
 // Package router builds the HTTP handler of the generated strict server and
 // attaches the per-operation pipeline at route-registration time:
 //
-//	flag gate → authentication → contract validation → generated handler
+//	flag gate → client rate limit → authentication → contract validation → generated handler
 //
 // ADR-0001 (P0-06 notes) explains the placement: a middleware outside the
 // mux sees no route yet, and the generated wrapper binds path and query
@@ -13,7 +13,11 @@
 // same 404 envelope as a disabled module.
 //
 // The gate runs before authentication, unlike the C4 listing, so an anonymous
-// caller cannot tell a disabled module (404) from an enabled one (401).
+// caller cannot tell a disabled module (404) from an enabled one (401). The
+// per-operation client limits (MODULE-auth §5) run right after the gate: a
+// disabled module spends no budget and never answers 429, and a flood of
+// anonymous or malformed requests is limited before any authentication or
+// validation work.
 package router
 
 import (
@@ -69,6 +73,11 @@ type Options struct {
 	// before authentication, validation or the handler, so turning a module
 	// ON before it is built shows nothing new and never reaches a stub.
 	NotBuilt []string
+	// OperationLimits are per-client limits by operationId (MODULE-auth §5),
+	// keyed by ClientKey, which is required when any is set.
+	OperationLimits map[string]Limiter
+	// ClientKey derives the client key of a request (the client address).
+	ClientKey func(*http.Request) string
 }
 
 // New returns the handler serving every operation of spec through si. It
@@ -87,8 +96,12 @@ func New(si gen.StrictServerInterface, spec *openapi3.T, opts Options) (http.Han
 		RequestErrorHandlerFunc:  errs.badRequest,
 		ResponseErrorHandlerFunc: errs.handlerError,
 	})
-	notBuilt, err := knownOperations(spec, opts.NotBuilt)
+	declared := declaredOperations(spec)
+	notBuilt, err := knownOperations(declared, opts.NotBuilt)
 	if err != nil {
+		return nil, fmt.Errorf("router: %w", err)
+	}
+	if err := checkLimits(opts, declared); err != nil {
 		return nil, fmt.Errorf("router: %w", err)
 	}
 	reg := &registrar{mux: http.NewServeMux(), spec: spec, opts: opts, errs: errs, notBuilt: notBuilt}
@@ -133,6 +146,9 @@ func (g *registrar) HandleFunc(pattern string, handler func(http.ResponseWriter,
 	next = validate(route, g.opts.MaxBodyBytes, next)
 	if !isPublic(route) {
 		next = g.opts.Authn.Authenticate(next)
+	}
+	if limiter, ok := g.opts.OperationLimits[route.Operation.OperationID]; ok {
+		next = limit(limiter, g.opts.ClientKey, g.opts.Logger, next)
 	}
 	g.mux.Handle(pattern, flaggate.Wrap(g.opts.Flags, module, next))
 }
@@ -182,15 +198,20 @@ func findRoute(spec *openapi3.T, pattern string) (*routers.Route, error) {
 	return &routers.Route{Spec: spec, Path: path, PathItem: item, Method: method, Operation: item.GetOperation(method)}, nil
 }
 
-// knownOperations returns ids as a set, failing on an id the contract does
-// not declare: a typo would otherwise leave a stub reachable.
-func knownOperations(spec *openapi3.T, ids []string) (map[string]bool, error) {
+// declaredOperations is the set of the contract's operationIds.
+func declaredOperations(spec *openapi3.T) map[string]bool {
 	declared := map[string]bool{}
 	for _, item := range spec.Paths.Map() {
 		for _, op := range item.Operations() {
 			declared[op.OperationID] = true
 		}
 	}
+	return declared
+}
+
+// knownOperations returns ids as a set, failing on an id the contract does
+// not declare: a typo would otherwise leave a stub reachable.
+func knownOperations(declared map[string]bool, ids []string) (map[string]bool, error) {
 	set := make(map[string]bool, len(ids))
 	var unknown []error
 	for _, id := range ids {
