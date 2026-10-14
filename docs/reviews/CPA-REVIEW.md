@@ -44,6 +44,7 @@ catalog migration `backend/migrations/20261013180000_regimes_catalog.sql` (CAT).
 - [ ] 623 PM (grupos de sociedades): payment periodicity not stated. CAT `regimes` 623
 - [ ] 624 PM (coordinados): payment periodicity not stated. CAT `regimes` 624
 - [ ] 625 PF (plataformas): 18-M definitive IVA and RMF platform rules, see above. CAT `regimes` 625
+- [ ] `regimes.explanation` texts (M5-19) for 605, 607, 608, 610 PF/PM, 611, 614, 615, 616, 620, 623, 624, 621, 622, 603: written at article level from the research and the catalog's legal basis, not re-read against the law text. Confirm in particular: 605 annual-return cases (LISR 98 fr. III, $400,000); 607 per-operation payment within 15 days and the notary's role (LISR 126); 610 withholding as definitive, normally no annual return (LISR 153); 611 10 % definitive withholding plus accumulation with credit (LISR 140); 614 retention definitive when real interest ≤ $100,000 and no other income (LISR 135); 615 retention as definitive (LISR 138); 616 change of regime notice (CFF 27); 620 deferral until distribution (LISR 194-199); 603 ISR only on items such as non-deductible expenses or income outside its purpose (LISR 79-80). Migration `20261014170000_regime_explanations.sql`
 
 ## Regime compatibility (`regime_compatibility`, allowed with a warning until confirmed)
 

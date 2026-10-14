@@ -29,7 +29,7 @@ const (
 
 var (
 	caseID      = regexp.MustCompile(`^(PF|PM|TX)(-[0-9A-Z]+)+$`)
-	caseSource  = regexp.MustCompile(`^(research:(PF|PM)(-[0-9A-Z]+)+|cpa:[a-z0-9][a-z0-9._-]*)$`)
+	caseSource  = regexp.MustCompile(`^(research:(PF|PM)(-[0-9A-Z]+)+|(cpa|spec):[a-z0-9][a-z0-9._-]*)$`)
 	regimeCode  = regexp.MustCompile(`^[0-9]{3}$`)
 	centsLexeme = regexp.MustCompile(`^-?[0-9]+\.[0-9]{2}$`)
 )
@@ -117,6 +117,7 @@ type expectedDoc struct {
 	MissingInputs   []missingDoc `yaml:"missing_inputs"`
 	CPATopics       []string     `yaml:"cpa_topics"`
 	Disclaimers     []string     `yaml:"disclaimers"`
+	Explanation     *string      `yaml:"explanation"`
 }
 
 type ivaDoc struct {
@@ -252,7 +253,7 @@ func (cv *converter) convert(doc caseDoc) (Case, error) {
 		cv.fail("id %q: want PF-/PM-/TX- and upper-case segments", doc.ID)
 	}
 	if !caseSource.MatchString(doc.Source) {
-		cv.fail("source %q: want research:<worked example id> or cpa:<ref>", doc.Source)
+		cv.fail("source %q: want research:<worked example id>, cpa:<ref> or spec:<ref>", doc.Source)
 	}
 	if doc.SkipReason != nil {
 		c.SkipReason = strings.TrimSpace(*doc.SkipReason)
@@ -409,6 +410,12 @@ func (cv *converter) expected(doc expectedDoc) Expected {
 	e.MissingInputs = cv.missing(doc.MissingInputs)
 	e.CPATopics = validList(cv, "cpa_topics", doc.CPATopics, func(s string) domain.CPATopic { return domain.CPATopic(s) })
 	e.Disclaimers = validList(cv, "disclaimers", doc.Disclaimers, func(s string) domain.DisclaimerCode { return domain.DisclaimerCode(s) })
+	if doc.Explanation != nil {
+		e.Explanation = domain.LabelKey(strings.TrimSpace(*doc.Explanation))
+		if e.Explanation == "" {
+			cv.fail("expected.explanation is blank: name the label key or leave it out")
+		}
+	}
 	return e
 }
 

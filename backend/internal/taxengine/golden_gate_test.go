@@ -44,6 +44,9 @@ func gateStrategies() []domain.Strategy {
 		domain.NewRentPFStrategy(),   // 606 PF (M5-12)
 		domain.NewRESICOPFStrategy(), // M5-13
 		domain.NewRESICOPMStrategy(), // M5-16
+		domain.NewStrategy621PF(),    // partial (M5-17)
+		domain.NewStrategy622PM(),    // partial (M5-18)
+		domain.NewStrategy603PM(),    // partial (M5-18)
 	}
 }
 

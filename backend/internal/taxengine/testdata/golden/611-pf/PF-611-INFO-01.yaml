@@ -1,0 +1,20 @@
+# golden: hand-authored from docs/project-specs/MODULE-tax-engine.md §2.4 (explanation-only regimes). Never generated or rewritten by a tool.
+# 611 Dividendos: explanation only (the company withholds 10 %, LISR
+# art. 140). Records in an informational regime never change the numbers.
+id: PF-611-INFO-01
+source: spec:module-tax-engine-2.4
+input:
+  regime: "611"
+  person_type: fisica
+  period: "2026-06"
+  months:
+    - {month: 6, income: {cash: "50000.00", isr_withheld: {by_moral: "5000.00"}}}
+expected:
+  status: informational
+  taxes: [isr, iva, withholding]
+  withheld_to_remit: "0.00"
+  lines: []
+  missing_inputs: []
+  cpa_topics: []
+  disclaimers: []
+  explanation: "regime_explanation:611/fisica"

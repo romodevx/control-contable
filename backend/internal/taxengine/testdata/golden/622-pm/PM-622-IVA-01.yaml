@@ -1,0 +1,42 @@
+# golden: hand-authored from docs/research/tax-regimes-mx-2026.md §B.5 PM-601-IVA-01. Never generated or rewritten by a tool.
+# 622 AGAPES PM, June 2026, with the records of PM-601-IVA-01: the monthly
+# IVA follows the same LIVA rules for any persona moral (LIVA 1, 1-B, 5,
+# 5-D). IVA charged and collected 320,000; creditable IVA paid 200,000;
+# IVA withheld from a PF lawyer (fees 50,000 -> IVA 8,000 x 2/3) 5,333.33,
+# remitted separately. IVA 120,000.00 + withheld IVA 5,333.33.
+# The ISR is not estimated (art. 74 exemption and reduction deferred,
+# MODULE-tax-engine §2.4): no ISR figure and no ISR input required, so the
+# status is partial and the catalog explanation says why.
+id: PM-622-IVA-01
+source: research:PM-601-IVA-01
+input:
+  regime: "622"
+  person_type: moral
+  period: "2026-06"
+  options:
+    iva_fully_taxable: true
+  months:
+    - month: 6
+      income: {cash: "2000000.00", accrual: "2000000.00", by_rate: {rate_16: {base: "2000000.00", iva: "320000.00"}}}
+      expenses: {creditable_iva_paid: "200000.00", iva_withheld_to_remit: "5333.33"}
+expected:
+  status: partial
+  taxes: [isr, iva, withholding]
+  iva:
+    charged_collected: "320000.00"
+    creditable_paid: "200000.00"
+    withheld_from_taxpayer: "0.00"
+    definitive_excluded: "0.00"
+    net: "120000.00"
+  withheld_to_remit: "5333.33"
+  lines:
+    - {tax: iva, code: iva.charged.rate_16, op: input, amount: "320000.00"}
+    - {tax: iva, code: iva.charged, op: result, amount: "320000.00"}
+    - {tax: iva, code: iva.creditable, op: subtract, amount: "200000.00"}
+    - {tax: iva, code: iva.withheld.moral, op: subtract, amount: "0.00"}
+    - {tax: iva, code: iva.regime_net, op: result, amount: "120000.00"}
+    - {tax: withholding, code: withholding.iva_to_remit, op: input, amount: "5333.33"}
+  missing_inputs: []
+  cpa_topics: []
+  disclaimers: []
+  explanation: "regime_explanation:622/moral"

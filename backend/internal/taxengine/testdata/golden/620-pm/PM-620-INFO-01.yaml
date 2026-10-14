@@ -1,0 +1,22 @@
+# golden: hand-authored from docs/project-specs/MODULE-tax-engine.md §2.4 (explanation-only regimes). Never generated or rewritten by a tool.
+# 620 Cooperativas de producción que difieren sus ingresos: explanation
+# only (LISR arts. 194-199). Records never change the numbers.
+id: PM-620-INFO-01
+source: spec:module-tax-engine-2.4
+input:
+  regime: "620"
+  person_type: moral
+  period: "2026-06"
+  months:
+    - month: 6
+      income: {cash: "200000.00", accrual: "200000.00", by_rate: {rate_16: {base: "200000.00", iva: "32000.00"}}}
+      expenses: {deductible_paid: "50000.00", creditable_iva_paid: "8000.00"}
+expected:
+  status: informational
+  taxes: [isr, iva, withholding]
+  withheld_to_remit: "0.00"
+  lines: []
+  missing_inputs: []
+  cpa_topics: []
+  disclaimers: []
+  explanation: "regime_explanation:620/moral"

@@ -1,0 +1,20 @@
+# golden: hand-authored from docs/project-specs/MODULE-tax-engine.md §2.4 (explanation-only regimes). Never generated or rewritten by a tool.
+# 607 Enajenación de bienes: explanation only (paid per operation, LISR
+# art. 126). Records in an informational regime never change the numbers.
+id: PF-607-INFO-01
+source: spec:module-tax-engine-2.4
+input:
+  regime: "607"
+  person_type: fisica
+  period: "2026-06"
+  months:
+    - {month: 6, income: {cash: "1500000.00"}}
+expected:
+  status: informational
+  taxes: [isr, iva, withholding]
+  withheld_to_remit: "0.00"
+  lines: []
+  missing_inputs: []
+  cpa_topics: []
+  disclaimers: []
+  explanation: "regime_explanation:607/fisica"
