@@ -264,8 +264,15 @@ func platformIVA(l *Ledger, month MonthSums, o Options, definitive bool) (IVARes
 	in.Sums.Expenses.CreditableIVAPaid = 0
 	in.Definitive = platformDefinitiveIVA(platformRFCGiven(o))
 	result, err := ComputeIVA(l, in)
-	if err != nil || notCredited == 0 {
-		return result, err
+	if err != nil {
+		return IVAResult{}, err
+	}
+	if result.Components.ChargedCollected > 0 || notCredited > 0 {
+		// §2.9: the topic triggers on IVA > 0, excluded or not.
+		result.CPATopics = []CPATopic{TopicPlatformDefinitiveIVA}
+	}
+	if notCredited == 0 {
+		return result, nil
 	}
 	amount, err := notCredited.Exact()
 	if err != nil {
@@ -280,9 +287,10 @@ func platformIVA(l *Ledger, month MonthSums, o Options, definitive bool) (IVARes
 // platformDefinitiveIVA is the 625 DefinitiveIVARule (LIVA 18-M ⚠️): with
 // the RFC the platform withholds half the IVA of its sales (LIVA 18-J fr.
 // II a)), so the other half, equal to the withholding, is settled by it.
-// It never exceeds what is left of the IVA charged after the withholding,
-// so IVA on direct collections stays payable. Without the RFC the
-// platform withholds all of it and nothing is left to exclude.
+// Without the RFC the platform withholds all of it and nothing is left to
+// exclude. A withholding above half the IVA charged cannot be a 50 % one
+// (the platform's IVA is at most the month's), so it is treated as the
+// no-RFC 100 %: excluding it would erase the direct collections' IVA.
 func platformDefinitiveIVA(rfcGiven bool) DefinitiveIVARule {
 	return func(income IncomeSums) (money.Cents, error) {
 		if !rfcGiven {
@@ -297,6 +305,9 @@ func platformDefinitiveIVA(rfcGiven bool) DefinitiveIVARule {
 		if err != nil {
 			return 0, err
 		}
-		return max(min(withheld, rest), 0), nil
+		if withheld <= 0 || withheld > rest {
+			return 0, nil
+		}
+		return withheld, nil
 	}
 }
