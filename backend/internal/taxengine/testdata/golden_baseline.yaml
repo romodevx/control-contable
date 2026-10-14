@@ -1,0 +1,16 @@
+# Golden ratchet baseline (PLAN M5-07). Hand-edited, only downwards.
+# TestGoldenCases fails when a case is skipped that is not listed here, or
+# when a strategy has more pending_strategy cases than its count: new goldens
+# must run, not wait. It also fails when the run is BELOW the baseline, so the
+# PR that registers a strategy (M5-11..M5-19) lowers its count here, and the
+# CPA sign-off (M5-33) that lifts a skip removes its id.
+skipped:
+  - PF-621-01 # RIF reduction % by year (⚠️) and rounding before halving: CPA-REVIEW
+  - PF-625-01-IVA # LIVA 18-M definitive effect (⚠️): CPA-REVIEW
+pending: # strategy key: cases (authored + generated)
+  601/moral: 3
+  606/fisica: 25
+  612/fisica: 256
+  625/fisica: 2
+  626/fisica: 14
+  626/moral: 1

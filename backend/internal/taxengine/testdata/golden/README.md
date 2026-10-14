@@ -63,6 +63,12 @@ from `domain.Registry.Estimate` (the strategy's `RequiredInputs` against the cas
   a case with no strategy and no marker, and **fails** a marker once the strategy is registered.
 - Generated boundary cases are pending until their strategy is registered, then they run.
 
+- **Ratchet:** `testdata/golden_baseline.yaml` lists the allowed skipped ids and the pending count
+  per strategy key. `TestGoldenCases` fails when a run has a skip not listed there or more pending
+  cases for a strategy than its count, so a new golden must run instead of waiting. It also fails
+  when the run is below the baseline: the PR that registers a strategy lowers its count, and the
+  CPA sign-off that lifts a skip removes its id. The baseline is edited by hand, only downwards.
+
 Run `make golden` (in `backend/`) to see the summary with every skip reason and pending count.
 
 ## Line codes
@@ -79,6 +85,7 @@ change without a new source.
    the real `domain.Registry` (M5-10), which also derives the missing inputs as the use case does.
    Cases expecting `informational` run through the registry's fallback with no strategy at all.
 2. Remove `pending_strategy` from its cases; adjust line codes by hand if needed.
+   Lower (or remove) its count in `testdata/golden_baseline.yaml`.
 3. `go test ./internal/taxengine/...` must pass to the centavo, including the generated
    tariff-edge cases of that regime.
 

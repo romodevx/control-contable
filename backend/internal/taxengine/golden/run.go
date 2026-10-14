@@ -124,8 +124,9 @@ func Run(t *testing.T, cases []Case, reg Registry, sel ParamsSelector) Summary {
 type Summary struct {
 	Passed, Failed, Skipped, Pending int
 
-	skips   []string
-	pending map[domain.StrategyKey]int
+	skips      []string
+	skippedIDs []string
+	pending    map[domain.StrategyKey]int
 }
 
 // Add counts o.
@@ -137,6 +138,7 @@ func (s *Summary) Add(o Outcome) {
 		s.Failed++
 	case VerdictSkipped:
 		s.Skipped++
+		s.skippedIDs = append(s.skippedIDs, o.ID)
 		s.skips = append(s.skips, fmt.Sprintf("skipped %s: %s", o.ID, strings.TrimPrefix(o.Reason, "skipped: ")))
 	case VerdictPending:
 		s.Pending++
