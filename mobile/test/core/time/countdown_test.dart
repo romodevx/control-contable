@@ -41,6 +41,29 @@ void main() {
     expect(countdown.isRunning, isFalse);
   });
 
+  // M1-15 QA regression: on the emulator the login wait stuck at "0:00" and
+  // never went away. A timer tick lands a few ms before the wall-clock
+  // deadline, so the last tick saw "0 whole seconds left" yet still running,
+  // stopped the ticker, and no one was ever told the wait had ended (the
+  // resend button would never come back either).
+  testWidgets('a tick just before the deadline still ends the wait for '
+      'listeners', (tester) async {
+    final shown = <bool>[];
+    countdown
+      ..addListener(() => shown.add(countdown.isRunning))
+      ..run(const Duration(seconds: 3));
+
+    for (var tick = 0; tick < 3; tick++) {
+      clock.advance(const Duration(milliseconds: 999)); // timer runs early
+      await tester.pump(const Duration(seconds: 1));
+    }
+    clock.advance(const Duration(seconds: 2));
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(countdown.isRunning, isFalse);
+    expect(shown.last, isFalse, reason: 'listeners must see the end');
+  });
+
   testWidgets('time spent in the background still counts', (tester) async {
     countdown.run(const Duration(minutes: 3));
 
