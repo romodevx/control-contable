@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
+	"github.com/romodevx/control-contable/backend/internal/platform/pgtest"
 	"github.com/romodevx/control-contable/backend/internal/taxpayers/domain"
 	"github.com/romodevx/control-contable/backend/internal/taxpayers/usecase"
 )
@@ -97,6 +98,32 @@ func TestAddRegime_ReconciledRegimeCompatibility(t *testing.T) {
 	require.Len(t, added.Warnings, 1)
 	assert.Equal(t, usecase.WarningRegimeNeedsCPAReview, added.Warnings[0].Code)
 	assert.Equal(t, "regime_code", added.Warnings[0].Field)
+}
+
+// A dev database may hold a pair this reconcile now refuses (written while the
+// seed still allowed it). The migration leaves such rows alone, so the user's
+// way out, ending one of the two regimes, must still work: narrowing a window
+// cannot create an overlap, so the trigger must not refuse it.
+func TestEnd_RegimeOfAPairRefusedAfterItWasWritten(t *testing.T) {
+	db := pgtest.NewDatabase(t)
+	owner := db.Connect(t, pgtest.RoleOwner)
+	setVerdict := func(allowed bool) {
+		t.Helper()
+		_, err := owner.ExecContext(t.Context(), `UPDATE regime_compatibility
+SET allowed = $1, needs_cpa_review = $1,
+    review_note = CASE WHEN $1 THEN 'Pendiente de confirmar con un contador.' END
+WHERE person_type = 'fisica' AND regime_a = '612' AND regime_b = '621'`, allowed)
+		require.NoError(t, err)
+	}
+	e := newEnvOn(t, db, userA).wire(t)
+	setVerdict(true) // the M2-02 seed verdict, before the reconcile
+	id := createFisica(t, e, regimeInput("612"), regimeInput("621"))
+	setVerdict(false) // the reconcile's verdict
+
+	ended, err := e.regimes.End(t.Context(), userA, id, usecase.EndRegimeInput{Code: "621", End: "2026-06"})
+
+	require.NoError(t, err)
+	assert.Equal(t, "2026-06", ended.Window.End.String())
 }
 
 // rfcOf returns a distinct, well-formed RFC of the person type per n (1..28).
