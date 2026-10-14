@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:control_contable/api/generated/models/income.dart';
 import 'package:control_contable/core/network/api_failure.dart';
+import 'package:control_contable/core/records/stacked_undo.dart';
 import 'package:control_contable/features/incomes/application/income_list.dart';
 import 'package:control_contable/features/incomes/application/income_records.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
@@ -25,9 +26,9 @@ Future<void> deleteIncome(
   Income income,
 ) async {
   // The toast and its Undo outlive the list: keep what they need now.
-  final feedback = _Feedback.of(context);
-  final records = ref.read(incomeRecordsProvider);
   final undo = ref.read(incomesUndoProvider);
+  final feedback = _Feedback.of(context, undo);
+  final records = ref.read(incomeRecordsProvider);
   try {
     await records.delete(query, income);
   } on ApiFailure catch (failure) {
@@ -85,15 +86,14 @@ String _failureMessage(
 
 /// What a delete's follow-up needs, read while the list is mounted.
 final class _Feedback {
-  new of(BuildContext context)
+  new of(BuildContext context, this.undo)
     : messenger = ScaffoldMessenger.of(context),
       l10n = AppLocalizations.of(context);
 
   final ScaffoldMessengerState messenger;
   final AppLocalizations l10n;
+  final StackedUndo<Income> undo;
 
-  /// A plain toast (it replaces the current one).
-  void toast(String message) => messenger
-    ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(message)));
+  /// A plain toast; it never closes a pending Undo (PR #85 follow-up).
+  void toast(String message) => undo.notify(messenger, message);
 }

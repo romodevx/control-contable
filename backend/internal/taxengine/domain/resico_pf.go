@@ -168,6 +168,16 @@ func (t *resicoTrace) failure() error {
 
 // finish adds the shared IVA components (§2.5, §2.6) and the lines.
 func (t *resicoTrace) finish(est RegimeEstimate, iva IVAInput) (RegimeEstimate, error) {
+	est, err := t.addIVA(est, iva)
+	if err != nil {
+		return RegimeEstimate{}, err
+	}
+	return t.addLines(est)
+}
+
+// addIVA traces the shared IVA components after the ISR; WithheldToRemit
+// is the IVA withheld from suppliers (LIVA 1-A) until a PM adds its ISR.
+func (t *resicoTrace) addIVA(est RegimeEstimate, iva IVAInput) (RegimeEstimate, error) {
 	if err := t.failure(); err != nil {
 		return RegimeEstimate{}, err
 	}
@@ -175,14 +185,19 @@ func (t *resicoTrace) finish(est RegimeEstimate, iva IVAInput) (RegimeEstimate, 
 	if err != nil {
 		return RegimeEstimate{}, err
 	}
-	lines, err := t.l.Lines()
-	if err != nil {
-		return RegimeEstimate{}, err
-	}
 	est.IVA = &result.Components
 	est.WithheldToRemit = result.WithheldToRemit
 	est.Disclaimers = append(est.Disclaimers, result.Disclaimers...)
 	est.CPATopics = append(est.CPATopics, result.CPATopics...)
+	return est, nil
+}
+
+// addLines closes the trace into the estimate's breakdown.
+func (t *resicoTrace) addLines(est RegimeEstimate) (RegimeEstimate, error) {
+	lines, err := t.l.Lines()
+	if err != nil {
+		return RegimeEstimate{}, err
+	}
 	est.Lines = lines
 	return est, nil
 }

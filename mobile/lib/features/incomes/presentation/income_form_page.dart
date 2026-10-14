@@ -4,8 +4,10 @@ import 'package:control_contable/api/generated/models/field_error.dart' as api;
 import 'package:control_contable/api/generated/models/income.dart';
 import 'package:control_contable/core/forms/app_form.dart';
 import 'package:control_contable/core/forms/field_error.dart';
+import 'package:control_contable/core/forms/form_leave_guard.dart';
 import 'package:control_contable/core/forms/form_notice.dart';
 import 'package:control_contable/core/forms/server_field_errors.dart';
+import 'package:control_contable/core/records/record_save.dart';
 import 'package:control_contable/features/incomes/application/income_defaults_loader.dart';
 import 'package:control_contable/features/incomes/application/income_form_model.dart';
 import 'package:control_contable/features/incomes/application/income_form_request.dart';
@@ -14,7 +16,6 @@ import 'package:control_contable/features/incomes/application/income_save.dart';
 import 'package:control_contable/features/incomes/data/incomes_repository.dart';
 import 'package:control_contable/features/incomes/presentation/income_form_copy.dart';
 import 'package:control_contable/features/incomes/presentation/income_form_fields.dart';
-import 'package:control_contable/features/incomes/presentation/income_leave_guard.dart';
 import 'package:control_contable/features/incomes/presentation/income_save_feedback.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -97,13 +98,13 @@ class _IncomeFormPageState extends ConsumerState<IncomeFormPage> {
     }
     if (!mounted) return null;
     switch (outcome) {
-      case IncomeSaved(:final income):
+      case RecordSaved(record: final income):
         return income;
-      case IncomeNeedsPlan(:final isTrialCap):
+      case RecordNeedsPlan(:final isTrialCap):
         showIncomePaywall(context, isTrialCap: isTrialCap);
-      case IncomeRejected(:final details):
+      case RecordRejected(:final details):
         _showVerdict(details);
-      case IncomeNotSaved(:final notice):
+      case RecordNotSaved(:final notice):
         setState(() => _notice = incomeSaveNoticeText(notice, _l10n));
     }
     return null;
@@ -154,7 +155,10 @@ class _IncomeFormPageState extends ConsumerState<IncomeFormPage> {
   }
 
   Future<void> _requestLeave() async {
-    if (_model.form.isDirty && !await confirmDiscardIncome(context)) return;
+    if (_model.form.isDirty &&
+        !await confirmDiscardRecord(context, title: _l10n.incomeDiscardTitle)) {
+      return;
+    }
     _leave();
   }
 
@@ -172,7 +176,7 @@ class _IncomeFormPageState extends ConsumerState<IncomeFormPage> {
   );
 
   @override
-  Widget build(BuildContext context) => IncomeLeaveGuard(
+  Widget build(BuildContext context) => FormLeaveGuard(
     onLeave: _requestLeave,
     child: Scaffold(
       appBar: AppBar(

@@ -1,5 +1,4 @@
-import 'package:control_contable/api/generated/models/taxpayer.dart';
-import 'package:control_contable/api/generated/models/taxpayer_regime.dart';
+import 'package:control_contable/core/fiscal/regimes_held.dart';
 import 'package:control_contable/core/records/record_month.dart';
 import 'package:control_contable/core/theme/app_spacing.dart';
 import 'package:control_contable/core/time/clock.dart';
@@ -61,11 +60,3 @@ class IncomeFormScreen extends ConsumerWidget {
     );
   }
 }
-
-/// The regimes [taxpayer] holds in [period] (`YYYY-MM`).
-List<TaxpayerRegime> regimesHeldIn(Taxpayer taxpayer, String period) => [
-  for (final regime in taxpayer.regimes)
-    if (regime.startPeriod.compareTo(period) <= 0 &&
-        (regime.endPeriod == null || regime.endPeriod!.compareTo(period) >= 0))
-      regime,
-];

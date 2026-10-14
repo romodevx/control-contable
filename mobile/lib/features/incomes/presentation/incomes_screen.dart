@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:control_contable/api/generated/models/taxpayer.dart';
+import 'package:control_contable/core/fiscal/regimes_held.dart';
 import 'package:control_contable/core/forms/choice_controllers.dart';
 import 'package:control_contable/core/records/month_switcher.dart';
 import 'package:control_contable/core/records/record_filter_chips.dart';
@@ -93,16 +94,10 @@ class _MonthViewState extends ConsumerState<_MonthView> {
   String? _regime;
 
   /// The regimes held at some point of [_month].
-  List<ChoiceOption> get _regimeOptions {
-    final period = _month.period;
-    return [
-      for (final regime in widget.taxpayer.regimes)
-        if (regime.startPeriod.compareTo(period) <= 0 &&
-            (regime.endPeriod == null ||
-                regime.endPeriod!.compareTo(period) >= 0))
-          (value: regime.regimeCode, label: regime.name),
-    ];
-  }
+  List<ChoiceOption> get _regimeOptions => [
+    for (final regime in regimesHeldIn(widget.taxpayer, _month.period))
+      (value: regime.regimeCode, label: regime.name),
+  ];
 
   void _showMonth(RecordMonth month) => setState(() {
     _month = month;
