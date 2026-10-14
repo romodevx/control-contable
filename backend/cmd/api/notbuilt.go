@@ -73,14 +73,6 @@ func (notBuilt) GetDashboard(context.Context, gen.GetDashboardRequestObject) (ge
 	return nil, errNotBuilt
 }
 
-func (notBuilt) GetTaxpayerEstimate(context.Context, gen.GetTaxpayerEstimateRequestObject) (gen.GetTaxpayerEstimateResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) GetEstimateBreakdown(context.Context, gen.GetEstimateBreakdownRequestObject) (gen.GetEstimateBreakdownResponseObject, error) {
-	return nil, errNotBuilt
-}
-
 func (notBuilt) GetHistory(context.Context, gen.GetHistoryRequestObject) (gen.GetHistoryResponseObject, error) {
 	return nil, errNotBuilt
 }

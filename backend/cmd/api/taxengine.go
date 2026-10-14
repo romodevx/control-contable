@@ -79,7 +79,7 @@ func newTaxEngineModule(w taxEngineWiring) (taxEngineModule, error) {
 	for op, policy := range taxenginehttp.UserLimits {
 		out[op] = w.limits.Bucket(policy)
 	}
-	return taxEngineModule{handler: taxenginehttp.NewHandler(inputs), userLimits: out, estimator: estimator}, nil
+	return taxEngineModule{handler: taxenginehttp.NewHandler(inputs, estimator), userLimits: out, estimator: estimator}, nil
 }
 
 // newEstimator builds the immutable strategy registry (every strategy the
@@ -107,6 +107,7 @@ func newEstimator(w taxEngineWiring) (*usecase.Estimator, error) {
 			expenseLedger: newExpenseLedger(expensesinfra.NewLedgerReader()),
 		},
 		Inputs:     taxinputs.NewStore(),
+		Texts:      taxinputs.NewStore(),
 		Holidays:   noHolidays{},
 		Strategies: registry,
 		Params:     catalog,
