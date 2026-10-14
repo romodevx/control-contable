@@ -1238,6 +1238,18 @@
       }
     }
   },
+  "incomesRestoredSome": "{restored, plural, =0{No se restauró ninguno de los {total} ingresos.} =1{Se restauró 1 de {total} ingresos.} other{Se restauraron {restored} de {total} ingresos.}}",
+  "@incomesRestoredSome": {
+    "description": "Toast after a stacked Undo where some incomes could not be restored; the reason follows.",
+    "placeholders": {
+      "restored": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "incomesDeleteFailed": "No se pudo eliminar el ingreso.",
   "@incomesDeleteFailed": {
     "description": "Toast when a delete failed; the row is back."

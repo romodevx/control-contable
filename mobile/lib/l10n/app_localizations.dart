@@ -1608,6 +1608,12 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{Ingreso restaurado} other{{count} ingresos restaurados}}'**
   String incomesRestored(int count);
 
+  /// Toast after a stacked Undo where some incomes could not be restored; the reason follows.
+  ///
+  /// In es, this message translates to:
+  /// **'{restored, plural, =0{No se restauró ninguno de los {total} ingresos.} =1{Se restauró 1 de {total} ingresos.} other{Se restauraron {restored} de {total} ingresos.}}'**
+  String incomesRestoredSome(int restored, int total);
+
   /// Toast when a delete failed; the row is back.
   ///
   /// In es, this message translates to:

@@ -941,6 +941,18 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String incomesRestoredSome(int restored, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      restored,
+      locale: localeName,
+      other: 'Se restauraron $restored de $total ingresos.',
+      one: 'Se restauró 1 de $total ingresos.',
+      zero: 'No se restauró ninguno de los $total ingresos.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get incomesDeleteFailed => 'No se pudo eliminar el ingreso.';
 
   @override

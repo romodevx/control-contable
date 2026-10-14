@@ -79,17 +79,17 @@ class IncomeRecords {
     }
   }
 
-  /// Restores [incomes] in order; stops at the first refusal and throws
-  /// it. Allowed while read-only (contract 0.6.1), so no answer here marks
-  /// the session.
-  Future<void> restore(List<Income> incomes) async {
+  /// Restores every one of [incomes], going on past a refusal. Allowed
+  /// while read-only (contract 0.6.1), so no answer here marks the session.
+  Future<RestoreReport<ApiFailure>> restore(List<Income> incomes) async {
     try {
-      for (final income in incomes) {
-        await _repository.restore(
+      return await restoreEach<Income, ApiFailure>(
+        incomes,
+        (income) => _repository.restore(
           taxpayerId: income.taxpayerId,
           incomeId: income.id,
-        );
-      }
+        ),
+      );
     } finally {
       _ref.invalidate(incomeListProvider);
     }

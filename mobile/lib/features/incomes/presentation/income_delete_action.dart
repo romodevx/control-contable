@@ -33,11 +33,8 @@ Future<void> deleteIncome(
     await records.delete(query, income);
   } on ApiFailure catch (failure) {
     feedback.toast(
-      _failureMessage(
-        failure,
-        feedback.l10n,
-        fallback: feedback.l10n.incomesDeleteFailed,
-      ),
+      _refusalMessage(failure, feedback.l10n) ??
+          feedback.l10n.incomesDeleteFailed,
     );
     return;
   }
@@ -50,39 +47,40 @@ Future<void> deleteIncome(
   );
 }
 
+/// Restores every one of [incomes]; the toast says how many came back
+/// and, when some could not, why.
 Future<void> _restore(
   _Feedback feedback,
   IncomeRecords records,
   List<Income> incomes,
 ) async {
-  try {
-    await records.restore(incomes);
-    feedback.toast(feedback.l10n.incomesRestored(incomes.length));
-  } on ApiFailure catch (failure) {
-    feedback.toast(
-      _failureMessage(
-        failure,
-        feedback.l10n,
-        fallback: feedback.l10n.incomesRestoreFailed,
-      ),
-    );
+  final l10n = feedback.l10n;
+  final report = await records.restore(incomes);
+  if (report.refusals.isEmpty) {
+    feedback.toast(l10n.incomesRestored(report.restored));
+    return;
   }
+  final reason =
+      _refusalMessage(report.refusals.first, l10n) ?? l10n.incomesRestoreFailed;
+  feedback.toast(
+    incomes.length == 1
+        ? reason
+        : '${l10n.incomesRestoredSome(report.restored, incomes.length)} '
+              '$reason',
+  );
 }
 
-/// Why a delete or restore was refused; [fallback] when no rule says.
-String _failureMessage(
-  ApiFailure failure,
-  AppLocalizations l10n, {
-  required String fallback,
-}) => switch (failure) {
-  ApiRejected(:final details)
-      when details.any((d) => d.code == _regimeNotActive) =>
-    l10n.incomesRestoreRegimeEnded,
-  ApiRejected(:final details)
-      when details.any((d) => d.code == _taxpayerArchived) =>
-    l10n.settingsArchivedWrite,
-  _ => fallback,
-};
+/// Why a delete or restore was refused, when a rule says.
+String? _refusalMessage(ApiFailure failure, AppLocalizations l10n) =>
+    switch (failure) {
+      ApiRejected(:final details)
+          when details.any((d) => d.code == _regimeNotActive) =>
+        l10n.incomesRestoreRegimeEnded,
+      ApiRejected(:final details)
+          when details.any((d) => d.code == _taxpayerArchived) =>
+        l10n.settingsArchivedWrite,
+      _ => null,
+    };
 
 /// What a delete's follow-up needs, read while the list is mounted.
 final class _Feedback {
