@@ -15,7 +15,7 @@ const (
 	// (the deductible expenses, LISR 115 fr. I–VI).
 	OptionRentDeductionMode OptionKey = "deduction_mode"
 	// OptionRentQuarterlyPayment is the quarterly option of LISR 116 ¶3
-	// (catalog migration 20261014150000). Its table is not transcribed, so a
+	// (catalog migration 20261014160000). Its table is not transcribed, so a
 	// quarterly payer is informational (ADR-0002 §2).
 	OptionRentQuarterlyPayment OptionKey = "pays_quarterly"
 )

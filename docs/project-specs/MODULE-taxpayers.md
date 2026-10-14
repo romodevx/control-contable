@@ -113,7 +113,7 @@ Informational/partial regimes show their plain-language `explanation` at selecti
 - **Not options**: 601 *coeficiente de utilidad*, YTD totals, PTU, losses, prior payments and 625
   `prior_year_income` are **tax inputs per fiscal year** (ADR-0002 §2; `taxpayer_tax_inputs`,
   M5-20/M5-21). See OQ-3 for how onboarding offers them.
-- 606 `pays_quarterly` (LISR 116 ¶3, added by migration `20261014150000`): the user declares it;
+- 606 `pays_quarterly` (LISR 116 ¶3, added by migration `20261014160000`): the user declares it;
   the quarterly table is not transcribed, so the engine answers informational (research A.2.4
   step 5). The ≤ 10 UMA eligibility is not checked (CPA-REVIEW).
 

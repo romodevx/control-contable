@@ -598,8 +598,8 @@ func TestRegimeCompatibilityReconcile_DownRestoresTheSeedAndUpRefusesAgain(t *te
 }
 
 // rent606QuarterlyVersion is the goose version of
-// 20261014150000_regime_606_pays_quarterly.sql (M5-12).
-const rent606QuarterlyVersion = 20261014150000
+// 20261014160000_regime_606_pays_quarterly.sql (M5-12).
+const rent606QuarterlyVersion = 20261014160000
 
 // Down removes the 606 quarterly option and leaves the rest of the row; up adds it
 // back once, so a stored 606 regime keeps validating against the catalog.

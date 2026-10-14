@@ -376,7 +376,7 @@ func TestRentPFStrategyIVAMixedActivityAndRemit(t *testing.T) {
 }
 
 // rentQuarterlyOptions holds the 606 catalog option pays_quarterly
-// (migration 20261014150000_regime_606_pays_quarterly.sql), spelled as the
+// (migration 20261014160000_regime_606_pays_quarterly.sql), spelled as the
 // taxpayers module stores it, so a renamed engine key fails here.
 func rentQuarterlyOptions(quarterly bool) domain.Options {
 	return domain.NewOptions(map[domain.OptionKey]domain.OptionValue{
