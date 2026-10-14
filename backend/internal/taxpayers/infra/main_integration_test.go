@@ -89,7 +89,12 @@ func readOnlyAccess(txm *pgdb.TxManager) envOption {
 
 func newEnv(t *testing.T, users ...string) *env {
 	t.Helper()
-	db := pgtest.NewDatabase(t)
+	return newEnvOn(t, pgtest.NewDatabase(t), users...)
+}
+
+// newEnvOn is newEnv over an existing test database.
+func newEnvOn(t *testing.T, db *pgtest.Database, users ...string) *env {
+	t.Helper()
 	e := &env{app: db.Connect(t, pgtest.RoleApp), logs: &bytes.Buffer{}, store: infra.NewStore()}
 	var err error
 	e.txm, err = pgdb.NewTxManager(e.app)
@@ -108,17 +113,22 @@ func newEnv(t *testing.T, users ...string) *env {
 // wire builds the use cases; options override deps (e.g. readOnlyAccess).
 func (e *env) wire(t *testing.T, options ...envOption) *env {
 	t.Helper()
-	deps := usecase.Deps{
-		Tx: e.txm, Access: access.NewPolicy(e.txm, accessgorm.NewStore(), accessgorm.NewStore(), clock.NewSystem()),
-		Taxpayers: e.store, Regimes: e.store, Catalog: infra.NewCatalog(), Records: infra.NoRecords{},
-		RFC: e.vault, Clock: clock.NewFixed(today),
-		Logger: slog.New(slog.NewJSONHandler(e.logs, &slog.HandlerOptions{Level: slog.LevelDebug})),
-	}
+	deps := e.deps()
 	for _, o := range options {
 		o(&deps)
 	}
 	e.taxpayers, e.regimes, e.queries = usecase.NewTaxpayers(deps), usecase.NewRegimes(deps), usecase.NewQueries(deps)
 	return e
+}
+
+// deps are the real stores, catalog and policy over the env's pool.
+func (e *env) deps() usecase.Deps {
+	return usecase.Deps{
+		Tx: e.txm, Access: access.NewPolicy(e.txm, accessgorm.NewStore(), accessgorm.NewStore(), clock.NewSystem()),
+		Taxpayers: e.store, Regimes: e.store, Catalog: infra.NewCatalog(), Directory: infra.NewCatalog(), Records: infra.NoRecords{},
+		RFC: e.vault, Clock: clock.NewFixed(today),
+		Logger: slog.New(slog.NewJSONHandler(e.logs, &slog.HandlerOptions{Level: slog.LevelDebug})),
+	}
 }
 
 func register(t *testing.T, app *sql.DB, userID string) {

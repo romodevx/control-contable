@@ -8,6 +8,7 @@ import (
 
 	"github.com/romodevx/control-contable/backend/internal/platform/money"
 	"github.com/romodevx/control-contable/backend/internal/taxpayers/domain"
+	"github.com/romodevx/control-contable/backend/internal/taxpayers/usecase"
 )
 
 // errBadOptionValue reports a stored option value the contract cannot carry
@@ -152,4 +153,60 @@ func decodeDefault(raw json.RawMessage) (domain.OptionValue, error) {
 		return domain.OptionValue{}, errBadOptionValue
 	}
 	return value, nil
+}
+
+// optionDefViewJSON is one regimes.option_defs element with its label
+// (contract RegimeOptionDef, listRegimes).
+type optionDefViewJSON struct {
+	optionDefJSON
+	Label string `json:"label"`
+}
+
+// decodeOptionDefViews parses regimes.option_defs as listRegimes shows it:
+// bounds keep their stored decimal text.
+func decodeOptionDefViews(raw []byte) ([]usecase.OptionDefView, error) {
+	var elements []optionDefViewJSON
+	if err := json.Unmarshal(raw, &elements); err != nil {
+		return nil, fmt.Errorf("decode: %w", err)
+	}
+	out := make([]usecase.OptionDefView, 0, len(elements))
+	for _, e := range elements {
+		def, err := decodeDefault(e.Default)
+		if err != nil {
+			return nil, fmt.Errorf("option %q default: %w", e.Key, err)
+		}
+		out = append(out, usecase.OptionDefView{
+			Key: e.Key, Label: e.Label, Type: domain.OptionType(e.Type), AllowedValues: e.AllowedValues,
+			Min: deref(e.Min), Max: deref(e.Max), Default: def, Required: e.Required,
+		})
+	}
+	return out, nil
+}
+
+// taxInputDefJSON is one regimes.required_inputs element (TaxInputDef).
+type taxInputDefJSON struct {
+	Key      string `json:"key"`
+	Label    string `json:"label"`
+	Kind     string `json:"kind"`
+	Required bool   `json:"required"`
+}
+
+// decodeTaxInputDefs parses regimes.required_inputs.
+func decodeTaxInputDefs(raw []byte) ([]usecase.TaxInputDefView, error) {
+	var elements []taxInputDefJSON
+	if err := json.Unmarshal(raw, &elements); err != nil {
+		return nil, fmt.Errorf("decode: %w", err)
+	}
+	out := make([]usecase.TaxInputDefView, 0, len(elements))
+	for _, e := range elements {
+		out = append(out, usecase.TaxInputDefView(e))
+	}
+	return out, nil
+}
+
+func deref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
