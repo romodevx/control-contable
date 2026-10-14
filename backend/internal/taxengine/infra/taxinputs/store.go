@@ -13,13 +13,15 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/taxengine/usecase"
 )
 
-// Store implements usecase.TaxInputStore and usecase.TaxInputReader. It
-// holds no pool: every method runs on the unit of work in ctx.
+// Store implements usecase.TaxInputStore, usecase.TaxInputReader and
+// usecase.RegimeTextReader. It holds no pool: every method runs on the unit
+// of work in ctx.
 type Store struct{}
 
 var (
-	_ usecase.TaxInputStore  = Store{}
-	_ usecase.TaxInputReader = Store{}
+	_ usecase.TaxInputStore    = Store{}
+	_ usecase.TaxInputReader   = Store{}
+	_ usecase.RegimeTextReader = Store{}
 )
 
 // NewStore returns a Store.
@@ -158,6 +160,47 @@ func (r regimeRow) toHeld() (usecase.HeldRegime, error) {
 		return usecase.HeldRegime{}, err
 	}
 	return usecase.HeldRegime{Start: start, End: end, Definitions: defs}, nil
+}
+
+// regimeTextsQuery reads the catalog row of every regime the taxpayer holds
+// or held: the taxpayer_regimes primary key (user_id from RLS, taxpayer_id)
+// and the regimes primary key, a handful of rows.
+const regimeTextsQuery = `SELECT r.code, r.name, coalesce(r.explanation, '') AS explanation,
+       r.required_inputs::text AS required_inputs
+FROM taxpayer_regimes tr
+JOIN regimes r ON r.code = tr.regime_code AND r.person_type = tr.person_type
+WHERE tr.taxpayer_id = ?`
+
+type regimeTextRow struct {
+	Code           string `gorm:"column:code"`
+	Name           string `gorm:"column:name"`
+	Explanation    string `gorm:"column:explanation"`
+	RequiredInputs string `gorm:"column:required_inputs"`
+}
+
+// RegimeTexts implements usecase.RegimeTextReader.
+func (Store) RegimeTexts(ctx context.Context, taxpayerID string) (map[fiscal.RegimeCode]usecase.RegimeText, error) {
+	db, err := pgdb.Conn(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var rows []regimeTextRow
+	if err := db.Raw(regimeTextsQuery, taxpayerID).Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("taxengine infra: read regime texts: %w", err)
+	}
+	out := make(map[fiscal.RegimeCode]usecase.RegimeText, len(rows))
+	for _, r := range rows {
+		defs, err := decodeDefs(r.RequiredInputs)
+		if err != nil {
+			return nil, fmt.Errorf("taxengine infra: regime %s: %w", r.Code, err)
+		}
+		labels := make(map[domain.InputKey]string, len(defs))
+		for _, d := range defs {
+			labels[d.Key] = d.Label
+		}
+		out[fiscal.RegimeCode(r.Code)] = usecase.RegimeText{Name: r.Name, Explanation: r.Explanation, InputLabels: labels}
+	}
+	return out, nil
 }
 
 // decodeDefs parses regimes.required_inputs, keeping the catalog order.

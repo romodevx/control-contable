@@ -30,10 +30,20 @@ func (stubInputs) Put(context.Context, string, usecase.InputsRequest, []domain.S
 	return usecase.TaxInputsView{}, errStubTaxEngine
 }
 
+type stubEstimates struct{}
+
+func (stubEstimates) EstimateMonth(context.Context, string, string, string) (usecase.TaxpayerEstimate, error) {
+	return usecase.TaxpayerEstimate{}, errStubTaxEngine
+}
+
+func (stubEstimates) Breakdown(context.Context, string, string, string, string) (usecase.RegimeBreakdown, error) {
+	return usecase.RegimeBreakdown{}, errStubTaxEngine
+}
+
 // stubTaxEngineModule has stub use cases and no write budget; contract and
 // integration tests wire the real module.
 func stubTaxEngineModule() taxEngineModule {
-	return taxEngineModule{handler: taxenginehttp.NewHandler(stubInputs{})}
+	return taxEngineModule{handler: taxenginehttp.NewHandler(stubInputs{}, stubEstimates{})}
 }
 
 func TestNewHandler_refusesToServeWithoutTheTaxEngineHandler(t *testing.T) {
@@ -43,11 +53,22 @@ func TestNewHandler_refusesToServeWithoutTheTaxEngineHandler(t *testing.T) {
 	assert.ErrorContains(t, err, "no tax engine handler")
 }
 
-// MODULE-tax-engine §7 / §5: the tax-inputs routes are hidden when
-// module_tax_engine is OFF or module_taxpayers is OFF; with both ON they are
-// routed past the gate (here to authentication).
+// MODULE-tax-engine §7 / §5: every M5 route (tax inputs, estimate,
+// breakdown) is hidden when module_tax_engine is OFF or its prerequisite
+// module_taxpayers is OFF; with both ON it is routed past the gate (here to
+// authentication).
 func TestTaxEngineRoutes_needTheTaxpayersFlagToo(t *testing.T) {
-	const target = "/v1/taxpayers/0190f2a4-7c1e-7b3a-9d2e-4f5a6b7c8d9e/regimes/612/tax-inputs?fiscal_year=2026"
+	for _, target := range []string{
+		"/v1/taxpayers/0190f2a4-7c1e-7b3a-9d2e-4f5a6b7c8d9e/regimes/612/tax-inputs?fiscal_year=2026",
+		"/v1/taxpayers/0190f2a4-7c1e-7b3a-9d2e-4f5a6b7c8d9e/estimates?period=2026-03",
+		"/v1/taxpayers/0190f2a4-7c1e-7b3a-9d2e-4f5a6b7c8d9e/estimates/2026-03/breakdown?regime=612",
+	} {
+		t.Run(target, func(t *testing.T) { assertTaxEngineGate(t, target) })
+	}
+}
+
+func assertTaxEngineGate(t *testing.T, target string) {
+	t.Helper()
 	for _, tc := range []struct {
 		name    string
 		enabled []string

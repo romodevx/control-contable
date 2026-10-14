@@ -36,6 +36,26 @@ type RegimeHold struct {
 	End domain.Period
 }
 
+// RegimeTextReader reads the catalog texts of the regimes a taxpayer holds
+// or held (the global regimes catalog, its row for the taxpayer's person
+// type), in the estimate's unit of work. A regime the catalog lacks is
+// absent from the map.
+type RegimeTextReader interface {
+	RegimeTexts(ctx context.Context, taxpayerID string) (map[fiscal.RegimeCode]RegimeText, error)
+}
+
+// RegimeText is what the catalog says about one regime, in es-MX: what a
+// response shows next to the engine's figures.
+type RegimeText struct {
+	// Name is the regime's name as the SAT catalog spells it.
+	Name string
+	// Explanation is regimes.explanation, the text of the label key
+	// domain.RegimeExplanation; "" when the catalog has none.
+	Explanation string
+	// InputLabels are the TaxInputDef labels of the regime's tax inputs.
+	InputLabels map[domain.InputKey]string
+}
+
 // ParamsCatalog selects the parameter set of a fiscal year
 // (*taxparams.Catalog, embedded and validated at boot).
 type ParamsCatalog interface {

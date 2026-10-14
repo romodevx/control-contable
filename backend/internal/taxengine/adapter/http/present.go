@@ -44,11 +44,30 @@ func (r taxInputsResponse) VisitGetTaxInputsResponse(w http.ResponseWriter) erro
 // VisitPutTaxInputsResponse implements gen.PutTaxInputsResponseObject.
 func (r taxInputsResponse) VisitPutTaxInputsResponse(w http.ResponseWriter) error { return r.write(w) }
 
-// write mirrors the generated 200 writers: encode first, so a failure
-// leaves the response unwritten for the strict handler's error path.
-func (r taxInputsResponse) write(w http.ResponseWriter) error {
+func (r taxInputsResponse) write(w http.ResponseWriter) error { return writeNoStore(w, r.body) }
+
+// noStoreResponse is a 200 JSON body with Cache-Control: no-store (S-4):
+// the estimate and the breakdown.
+type noStoreResponse struct {
+	body any
+}
+
+// VisitGetTaxpayerEstimateResponse implements gen.GetTaxpayerEstimateResponseObject.
+func (r noStoreResponse) VisitGetTaxpayerEstimateResponse(w http.ResponseWriter) error {
+	return writeNoStore(w, r.body)
+}
+
+// VisitGetEstimateBreakdownResponse implements gen.GetEstimateBreakdownResponseObject.
+func (r noStoreResponse) VisitGetEstimateBreakdownResponse(w http.ResponseWriter) error {
+	return writeNoStore(w, r.body)
+}
+
+// writeNoStore mirrors the generated 200 writers: encode first, so a
+// failure leaves the response unwritten for the strict handler's error
+// path.
+func writeNoStore(w http.ResponseWriter, body any) error {
 	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(r.body); err != nil {
+	if err := json.NewEncoder(&buf).Encode(body); err != nil {
 		return err
 	}
 	w.Header().Set("Content-Type", "application/json")

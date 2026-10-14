@@ -17,9 +17,6 @@ import (
 // operation to the contract means adding it here (with its task) or covering
 // it in the same PR.
 var pendingOperations = map[string]string{
-	// M5 module_tax_engine
-	"getTaxpayerEstimate":  "M5-23",
-	"getEstimateBreakdown": "M5-23",
 	// M6 module_dashboard
 	"getDashboard": "M6-03",
 	// M7 module_subscriptions

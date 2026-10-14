@@ -88,6 +88,21 @@ var openMapPaths = []string{
 	"$.body.**.options.*",
 }
 
+// refSiblingPaths are the properties of a `$ref` that carries sibling
+// keywords (OAS 3.1: `{ $ref: TaxResult, description: ... }`). The strict
+// validator resolves such a node to an object with no declared property and
+// reports every field of the referenced schema; base validation does
+// resolve the $ref and checks each field. The node's parent stays strict.
+//
+//   - EstimateTotals.iva and .isr (TaxpayerEstimate.totals, also nested in
+//     the dashboard's estimate).
+var refSiblingPaths = []string{
+	"$.body.totals.iva.*",
+	"$.body.totals.isr.*",
+	"$.body.**.totals.iva.*",
+	"$.body.**.totals.isr.*",
+}
+
 func load() (*Contract, error) {
 	path, err := findSpec()
 	if err != nil {
@@ -108,7 +123,7 @@ func load() (*Contract, error) {
 	opts := []config.Option{
 		config.WithFormatAssertions(),
 		config.WithStrictMode(), // headers: see transportHeaders
-		config.WithStrictIgnorePaths(openMapPaths...),
+		config.WithStrictIgnorePaths(append(slices.Clone(openMapPaths), refSiblingPaths...)...),
 	}
 	v, errs := validator.NewValidator(doc, opts...)
 	if len(errs) > 0 {

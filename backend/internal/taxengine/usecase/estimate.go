@@ -26,6 +26,7 @@ type EstimateDeps struct {
 	Profiles   TaxpayerProfileReader
 	Ledger     LedgerReader
 	Inputs     TaxInputReader
+	Texts      RegimeTextReader
 	Holidays   HolidayCalendar
 	Strategies domain.Registry
 	Params     ParamsCatalog
@@ -39,6 +40,8 @@ type RegimeResult struct {
 	// Treatment is the catalog's support level (contract treatment).
 	Treatment domain.Treatment
 	Status    domain.Status
+	// Text is the catalog's name, explanation and input labels.
+	Text RegimeText
 }
 
 // TaxpayerEstimate is the informational estimate of one month (contract
@@ -54,11 +57,14 @@ type TaxpayerEstimate struct {
 	Regimes []RegimeResult
 	// IVA is the consolidated monthly IVA with its trace; Totals.IVA is its
 	// result.
-	IVA                domain.ConsolidatedIVA
-	Totals             domain.Totals
-	ParameterSet       taxparams.SetID
-	RecordsFingerprint string
-	EngineVersion      string
+	IVA          domain.ConsolidatedIVA
+	Totals       domain.Totals
+	ParameterSet taxparams.SetID
+	// ProvisionalParameters: the period's fiscal year has no published set
+	// and ParameterSet is an earlier year's (ADR-0002 §3).
+	ProvisionalParameters bool
+	RecordsFingerprint    string
+	EngineVersion         string
 }
 
 // Estimator computes a taxpayer's monthly estimate (Estimator, M5-22): the
@@ -80,6 +86,7 @@ type ledgerRecords struct {
 	incomes  []IncomeMonthSums
 	expenses []ExpenseMonthSums
 	inputs   map[fiscal.RegimeCode]domain.TaxInputs
+	texts    map[fiscal.RegimeCode]RegimeText
 }
 
 // EstimateMonth estimates rawPeriod ("YYYY-MM"; "" is the current month in
@@ -182,7 +189,11 @@ func (uc *Estimator) read(ctx context.Context, userID, taxpayerID string, p doma
 	if err != nil {
 		return ledgerRecords{}, fmt.Errorf("tax inputs: %w", err)
 	}
-	return ledgerRecords{profile: profile, incomes: incomes, expenses: expenses, inputs: inputs}, nil
+	texts, err := uc.deps.Texts.RegimeTexts(ctx, taxpayerID)
+	if err != nil {
+		return ledgerRecords{}, fmt.Errorf("regime texts: %w", err)
+	}
+	return ledgerRecords{profile: profile, incomes: incomes, expenses: expenses, inputs: inputs, texts: texts}, nil
 }
 
 // compute derives the estimate from what was read: no I/O.
@@ -204,7 +215,12 @@ func (uc *Estimator) compute(p domain.Period, sel taxparams.Selection, r ledgerR
 		return TaxpayerEstimate{}, err
 	}
 	estimates := make([]domain.RegimeEstimate, 0, len(current.regimes))
-	for _, res := range current.regimes {
+	for i := range current.regimes {
+		res := &current.regimes[i]
+		res.Text = r.texts[res.Key.Regime]
+		if contributesIVA(res.RegimeEstimate) {
+			res.CPATopics = withTopics(res.CPATopics, iva.CPATopics)
+		}
 		estimates = append(estimates, res.RegimeEstimate)
 	}
 	totals, err := domain.NewTotals(estimates, iva.Result)
@@ -222,13 +238,33 @@ func (uc *Estimator) compute(p domain.Period, sel taxparams.Selection, r ledgerR
 		Disclaimers: domain.EstimateDisclaimers(domain.DisclaimerFacts{
 			Regimes: estimates, IVA: iva, ProvisionalParameters: sel.Provisional,
 		}),
-		Regimes:            current.regimes,
-		IVA:                iva,
-		Totals:             totals,
-		ParameterSet:       taxparams.SetID{FiscalYear: sel.Params.FiscalYear(), Version: sel.Params.Version()},
-		RecordsFingerprint: fingerprint,
-		EngineVersion:      domain.EngineVersion,
+		Regimes:               current.regimes,
+		IVA:                   iva,
+		Totals:                totals,
+		ParameterSet:          taxparams.SetID{FiscalYear: sel.Params.FiscalYear(), Version: sel.Params.Version()},
+		ProvisionalParameters: sel.Provisional,
+		RecordsFingerprint:    fingerprint,
+		EngineVersion:         domain.EngineVersion,
 	}, nil
+}
+
+// contributesIVA reports a regime whose IVA components enter the
+// consolidated IVA with a non-zero amount (ConsolidatedIVA.Contributors).
+func contributesIVA(e domain.RegimeEstimate) bool {
+	return e.IVA != nil && *e.IVA != (domain.IVAComponents{})
+}
+
+// withTopics adds the consolidated IVA's topics to a contributing regime's,
+// each once: the regime's IVA is netted by a rule no CPA has validated, so
+// the regime is under review too (contract TX-NET-01, OQ-T2).
+func withTopics(own, consolidated []domain.CPATopic) []domain.CPATopic {
+	out := slices.Clone(own)
+	for _, topic := range consolidated {
+		if !slices.Contains(out, topic) {
+			out = append(out, topic)
+		}
+	}
+	return out
 }
 
 // monthRun is every held regime's estimate of one period and its share of

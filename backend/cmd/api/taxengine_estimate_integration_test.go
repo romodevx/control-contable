@@ -148,6 +148,14 @@ func (e *estimateEnv) priorPayments(t *testing.T, user, taxpayer string, byMonth
 // commercially to a PM in March with creditable IVA 3,000.00.
 func (e *estimateEnv) txNet01(t *testing.T, user, taxpayer string) {
 	t.Helper()
+	e.txNet01Records(t, user, taxpayer)
+	e.priorPayments(t, user, taxpayer, map[time.Month]money.Cents{time.January: 2_000_00, time.February: 2_000_00})
+}
+
+// txNet01Records seeds TX-NET-01's incomes and expenses only (it needs no
+// more than e.app).
+func (e *estimateEnv) txNet01Records(t *testing.T, user, taxpayer string) {
+	t.Helper()
 	fees := func(on string) estIncome {
 		return estIncome{regime: "612", counterparty: "persona_moral", rate: "rate_0", amount: 30_000_00, isr: 1_000_00, on: on}
 	}
@@ -171,7 +179,6 @@ func (e *estimateEnv) txNet01(t *testing.T, user, taxpayer string) {
 			deduction("2026-01-20", 0), deduction("2026-02-20", 0), deduction("2026-03-20", 1_600_00),
 			{regime: "606", category: "mantenimiento", amount: 18_750_00, iva: 3_000_00, credit: 3_000_00, on: "2026-03-25"},
 		})
-	e.priorPayments(t, user, taxpayer, map[time.Month]money.Cents{time.January: 2_000_00, time.February: 2_000_00})
 }
 
 func estRegimes() []taxpayers.RegimeInput {
