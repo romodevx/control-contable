@@ -51,22 +51,24 @@ var requiredIVARates = []taxparams.Requirement{
 	taxparams.RequireRate(taxparams.Key(fiscal.KeyIVAZero)),
 }
 
-// New returns the adapter over sets: ErrNoCatalog for a nil catalog, and
+// New returns the adapter over sets: ErrNoCatalog for a nil catalog,
 // ErrMissingIVARate when a fiscal year's set (the version Select serves)
-// lacks a required IVA rate, so a broken params file fails the boot.
+// lacks a required IVA rate, and ErrMissingWithholdingRate when it lacks a
+// withholding rate, so a broken params file fails the boot.
 func New[K ~string](sets *taxparams.Catalog) (*Catalog[K], error) {
 	if sets == nil {
 		return nil, ErrNoCatalog
 	}
-	if err := requireIVARates(sets); err != nil {
+	if err := requireRates(sets); err != nil {
 		return nil, err
 	}
 	return &Catalog[K]{sets: sets}, nil
 }
 
-// requireIVARates checks every set Select can serve: the highest version of
+// requireRates checks every set Select can serve: the highest version of
 // each fiscal year.
-func requireIVARates(sets *taxparams.Catalog) error {
+func requireRates(sets *taxparams.Catalog) error {
+	withholding := requiredWithholdingRates()
 	var problems []error
 	for _, id := range sets.Sets() {
 		sel, err := sets.Select(id.FiscalYear)
@@ -78,6 +80,9 @@ func requireIVARates(sets *taxparams.Catalog) error {
 		}
 		if err := sel.Params.Require(requiredIVARates...); err != nil {
 			problems = append(problems, fmt.Errorf("%w: set %s: %w", ErrMissingIVARate, id, err))
+		}
+		if err := sel.Params.Require(withholding...); err != nil {
+			problems = append(problems, fmt.Errorf("%w: set %s: %w", ErrMissingWithholdingRate, id, err))
 		}
 	}
 	return errors.Join(problems...)
