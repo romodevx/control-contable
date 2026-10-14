@@ -25,6 +25,16 @@ func TestPrerequisites_declaresTheRecordModulesOnTaxpayers(t *testing.T) {
 	}
 }
 
+// MODULE-history §3 (closes PLAN D7): History without estimates has
+// nothing to show, so module_history is implied OFF when module_tax_engine
+// (and, through it, module_taxpayers) is OFF.
+func TestPrerequisites_declaresHistoryOnTheTaxEngine(t *testing.T) {
+	graph := flags.Prerequisites()
+	assert.Equal(t, []string{"module_tax_engine"}, graph["module_history"])
+	on := func(m string) bool { return m == "module_history" || m == "module_tax_engine" }
+	assert.Equal(t, []string{"module_taxpayers"}, flags.MissingPrerequisites(graph, "module_history", on), "transitively")
+}
+
 func TestPrerequisites_isAWellFormedAcyclicGraph(t *testing.T) {
 	require.NoError(t, flags.CheckPrerequisites(flags.Prerequisites()))
 }

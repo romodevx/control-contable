@@ -21,9 +21,6 @@ var pendingOperations = map[string]string{
 	"getSubscription":          "M7-06",
 	"syncSubscription":         "M7-06",
 	"receiveRevenueCatWebhook": "M7-05",
-	// M8 module_history
-	"getHistory":        "M8-04",
-	"markHistoryViewed": "M8-04",
 	// M9 module_reminders
 	"registerDevice":      "M9-05",
 	"unregisterDevice":    "M9-05",
