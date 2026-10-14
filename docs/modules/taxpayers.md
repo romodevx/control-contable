@@ -7,6 +7,25 @@
 | Contract | [`docs/api/openapi.yaml`](../api/openapi.yaml), tag `Taxpayers`, `x-module: module_taxpayers` (frozen by M2-01) |
 | Status | Contract frozen; implementation in progress (PLAN M2-02..M2-12). The full page lands with M2-15 |
 
+## Keys (M2-07)
+
+The RFC is sealed with AES-256-GCM under `RFC_ENC_KEY` (id `RFC_ENC_KEY_ID`, default 1; the
+ciphertext is bound to `key_id ‖ taxpayer.id ‖ user_id`) and indexed with
+`HMAC-SHA256(RFC_INDEX_PEPPER, user_id ‖ RFC)` for the duplicate check. Both are 32-byte hex
+secrets from the secret manager. The API refuses to start when either is missing outside dev,
+or when any two of `RFC_ENC_KEY`, `RFC_INDEX_PEPPER` and `AUTH_EMAIL_PEPPER` (or any other
+`AUTH_*` key) are equal, in every environment (PR #59 security gate). In dev a missing key
+becomes an ephemeral one, logged as a warning: duplicate-RFC detection then resets on
+restart. `make init-env` generates both (`CC_RFC_ENC_KEY`, `CC_RFC_INDEX_PEPPER`).
+
+**Follow-up (M9, not built): key rotation.** Nothing re-seals stored RFCs yet. Rotating
+`RFC_ENC_KEY` needs a re-seal job: load the old key as a second keyring entry, decrypt each
+`rfc_encrypted` under its stored `rfc_key_id`, re-encrypt with the active key (same row
+binding) and update `rfc_encrypted` and `rfc_key_id` together, per user under RLS, then
+retire the old key once no row names it. Rotating `RFC_INDEX_PEPPER` has no hash version
+column, so it is a re-hash migration from the decrypted RFC (`rfc_hash` for every row, in one
+maintenance window, before the new pepper serves writes). Until then neither key is rotated.
+
 ## Errors
 
 Every error uses the single envelope `ErrorResponse`. `error.code` is the stable value to
