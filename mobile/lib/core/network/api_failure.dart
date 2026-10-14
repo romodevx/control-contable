@@ -74,6 +74,13 @@ const Set<DioExceptionType> _unreachableTypes = {
 
 /// Runs [call] (a generated client method) and rethrows its failure as an
 /// [ApiFailure]; [now] dates an HTTP-date `Retry-After`.
+///
+/// A body that does not decode into the contract's shape is an
+/// [ApiUnexpected], whatever the decoder threw: a `FormatException` or a
+/// `CheckedFromJsonException` (both `Exception`s), or the `TypeError` of a
+/// generated cast on a null, missing or wrongly typed field (an `Error`,
+/// M1-16 FU1). The decoder's error is dropped on purpose: its text can
+/// quote the payload (a token). Any other `Error` is a bug and propagates.
 Future<T> guardApi<T>(
   Future<T> Function() call, {
   DateTime Function() now = DateTime.now,
@@ -83,7 +90,11 @@ Future<T> guardApi<T>(
   } on DioException catch (exception) {
     throw apiFailureFrom(exception, now: now);
   } on Exception {
-    // The body did not decode into the contract's shape.
+    throw const ApiUnexpected();
+    // The generated decoders signal a contract mismatch only by a failed
+    // cast: at this boundary that is bad input, not a bug (see above).
+    // ignore: avoid_catching_errors
+  } on TypeError {
     throw const ApiUnexpected();
   }
 }
