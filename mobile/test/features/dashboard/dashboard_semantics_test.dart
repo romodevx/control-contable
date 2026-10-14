@@ -107,15 +107,15 @@ void main() {
   // QA M6-06 D-1: excludeSemantics dropped the GestureDetector's tap, so
   // TalkBack announced "button" over a node it could not activate (the
   // same defect as the taxpayer switcher in QA M3/M4 D1).
-  testWidgets('a screen reader selects a month through the bar\'s tap '
-      'action', (tester) async {
+  testWidgets('a screen reader selects a month through the tap action of '
+      'its bar', (tester) async {
     final handle = tester.ensureSemantics();
     _tall(tester);
     await harness.pump(tester);
 
     final bar = _barNode(tester, '2026-02');
     expect(bar.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
-    tester.semantics.tap(find.semantics.byLabel(RegExp(r'^febrero de 2026: ')));
+    tester.semantics.tap(find.semantics.byLabel(RegExp('^febrero de 2026: ')));
     await tester.pumpAndSettle();
 
     expect(
