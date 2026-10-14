@@ -737,6 +737,18 @@ class AppLocalizationsEs extends AppLocalizations {
       'Lo ocultas de tu lista. Conservas su información y puedes desarchivarlo.';
 
   @override
+  String settingsArchiveOneWayTitle(String name) {
+    return '¿Archivar a «$name»?';
+  }
+
+  @override
+  String get settingsArchiveOneWayBody =>
+      'Tu cuenta es de solo consulta. Podrás seguir consultándolo, pero no podrás desarchivarlo hasta tener un plan.';
+
+  @override
+  String get settingsArchiveOneWayConfirm => 'Archivar de todos modos';
+
+  @override
   String settingsArchived(String name) {
     return 'Archivaste a «$name».';
   }

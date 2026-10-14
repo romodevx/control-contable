@@ -951,6 +951,23 @@
   "@settingsArchiveHelp": {
     "description": "What archiving does."
   },
+  "settingsArchiveOneWayTitle": "¿Archivar a «{name}»?",
+  "@settingsArchiveOneWayTitle": {
+    "description": "Read-only user (OQ-8): confirmation before an archive they cannot undo; title names the taxpayer.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsArchiveOneWayBody": "Tu cuenta es de solo consulta. Podrás seguir consultándolo, pero no podrás desarchivarlo hasta tener un plan.",
+  "@settingsArchiveOneWayBody": {
+    "description": "Read-only user (OQ-8): why the archive is one-way."
+  },
+  "settingsArchiveOneWayConfirm": "Archivar de todos modos",
+  "@settingsArchiveOneWayConfirm": {
+    "description": "Read-only user (OQ-8): confirms the one-way archive."
+  },
   "settingsArchived": "Archivaste a «{name}».",
   "@settingsArchived": {
     "description": "Undo toast after archiving.",

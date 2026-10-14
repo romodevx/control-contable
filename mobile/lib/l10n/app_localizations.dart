@@ -1320,6 +1320,24 @@ abstract class AppLocalizations {
   /// **'Lo ocultas de tu lista. Conservas su información y puedes desarchivarlo.'**
   String get settingsArchiveHelp;
 
+  /// Read-only user (OQ-8): confirmation before an archive they cannot undo; title names the taxpayer.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Archivar a «{name}»?'**
+  String settingsArchiveOneWayTitle(String name);
+
+  /// Read-only user (OQ-8): why the archive is one-way.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu cuenta es de solo consulta. Podrás seguir consultándolo, pero no podrás desarchivarlo hasta tener un plan.'**
+  String get settingsArchiveOneWayBody;
+
+  /// Read-only user (OQ-8): confirms the one-way archive.
+  ///
+  /// In es, this message translates to:
+  /// **'Archivar de todos modos'**
+  String get settingsArchiveOneWayConfirm;
+
   /// Undo toast after archiving.
   ///
   /// In es, this message translates to:
