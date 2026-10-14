@@ -357,7 +357,7 @@ func TestCreate_ValidatesEveryRegimeAndReportsEveryField(t *testing.T) {
 			"deduction_mode": domain.StringOption("half"), "colour": domain.StringOption("red"),
 		}},
 		usecase.RegimeInput{Code: "621"},                   // duplicate
-		usecase.RegimeInput{Code: "612", Start: "2021-12"}, // before the catalog floor
+		usecase.RegimeInput{Code: "612", Start: "2025-12"}, // before the first parameter year
 		usecase.RegimeInput{Code: "605", Start: "2026-11"}, // after the current month
 		usecase.RegimeInput{Code: "607", Start: "2026-1x"}, // not a period
 	)

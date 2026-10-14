@@ -54,27 +54,27 @@ func TestAddRegime_ExitFromRESICOTheNextMonth(t *testing.T) {
 }
 
 func TestAddRegime_ReopenKeepsTheStoredStartSoNoFalseOverlap(t *testing.T) {
-	// PR #57 follow-up: 626 held 2023-01..2023-12, 606 held 2024-01..2024-06, 612
-	// since 2024-07. Re-adding 606 with a body start of 2023-06 reopens the row
-	// from its stored 2024-01: no overlap with 626, so no 23P01.
+	// PR #57 follow-up: 626 held 2026-01..2026-02, 606 held 2026-03..2026-04, 612
+	// since 2026-05. Re-adding 606 with a body start of 2026-02 reopens the row
+	// from its stored 2026-03: no overlap with 626, so no 23P01.
 	e := newEnv(t, userA).wire(t)
 	id := createFisica(t, e,
-		usecase.RegimeInput{Code: "626", Start: "2023-01"},
-		usecase.RegimeInput{Code: "605", Start: "2023-01"})
-	_, err := e.regimes.End(t.Context(), userA, id, usecase.EndRegimeInput{Code: "626", End: "2023-12"})
+		usecase.RegimeInput{Code: "626", Start: "2026-01"},
+		usecase.RegimeInput{Code: "605", Start: "2026-01"})
+	_, err := e.regimes.End(t.Context(), userA, id, usecase.EndRegimeInput{Code: "626", End: "2026-02"})
 	require.NoError(t, err)
-	_, err = e.regimes.Add(t.Context(), userA, id, usecase.RegimeInput{Code: "606", Start: "2024-01"})
+	_, err = e.regimes.Add(t.Context(), userA, id, usecase.RegimeInput{Code: "606", Start: "2026-03"})
 	require.NoError(t, err)
-	_, err = e.regimes.End(t.Context(), userA, id, usecase.EndRegimeInput{Code: "606", End: "2024-06"})
+	_, err = e.regimes.End(t.Context(), userA, id, usecase.EndRegimeInput{Code: "606", End: "2026-04"})
 	require.NoError(t, err)
-	_, err = e.regimes.Add(t.Context(), userA, id, usecase.RegimeInput{Code: "612", Start: "2024-07"})
+	_, err = e.regimes.Add(t.Context(), userA, id, usecase.RegimeInput{Code: "612", Start: "2026-05"})
 	require.NoError(t, err)
 
-	reopened, err := e.regimes.Add(t.Context(), userA, id, usecase.RegimeInput{Code: "606", Start: "2023-06",
+	reopened, err := e.regimes.Add(t.Context(), userA, id, usecase.RegimeInput{Code: "606", Start: "2026-02",
 		Options: map[string]domain.OptionValue{"deduction_mode": domain.StringOption("actual")}})
 
 	require.NoError(t, err)
-	assert.Equal(t, "2024-01", reopened.Window.Start.String())
+	assert.Equal(t, "2026-03", reopened.Window.Start.String())
 	assert.True(t, reopened.Window.IsOpen())
 	assert.Equal(t, domain.StringOption("actual"), reopened.Options["deduction_mode"])
 	var rows int
@@ -84,10 +84,10 @@ func TestAddRegime_ReopenKeepsTheStoredStartSoNoFalseOverlap(t *testing.T) {
 
 func TestAddRegime_ReopenRefusesARealOverlap(t *testing.T) {
 	e := newEnv(t, userA).wire(t)
-	id := createFisica(t, e, usecase.RegimeInput{Code: "606", Start: "2024-01"}, usecase.RegimeInput{Code: "605", Start: "2024-01"})
-	_, err := e.regimes.End(t.Context(), userA, id, usecase.EndRegimeInput{Code: "606", End: "2024-06"})
+	id := createFisica(t, e, usecase.RegimeInput{Code: "606", Start: "2026-01"}, usecase.RegimeInput{Code: "605", Start: "2026-01"})
+	_, err := e.regimes.End(t.Context(), userA, id, usecase.EndRegimeInput{Code: "606", End: "2026-03"})
 	require.NoError(t, err)
-	_, err = e.regimes.Add(t.Context(), userA, id, usecase.RegimeInput{Code: "626", Start: "2025-01"})
+	_, err = e.regimes.Add(t.Context(), userA, id, usecase.RegimeInput{Code: "626", Start: "2026-04"})
 	require.NoError(t, err)
 
 	_, err = e.regimes.Add(t.Context(), userA, id, usecase.RegimeInput{Code: "606"})

@@ -17,7 +17,7 @@ abstract class TaxpayerRegimeCreate with _$TaxpayerRegimeCreate {
     @JsonKey(name: 'regime_code') required RegimeCode regimeCode,
     @JsonKey(includeIfNull: false) RegimeOptions? options,
 
-    /// Defaults to the current month (America/Mexico_City); `2022-01` … current month.
+    /// Defaults to the current month (America/Mexico_City); `2026-01` (the first fiscal year with tax parameters) … current month. A taxpayer who starts using the app mid-year sends an earlier month to record and estimate the months before.
     @JsonKey(includeIfNull: false, name: 'start_period') Period? startPeriod,
   }) = _TaxpayerRegimeCreate;
 

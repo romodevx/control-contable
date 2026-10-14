@@ -26,7 +26,7 @@ import (
 // and get a taxpayer.
 
 const (
-	expenseTaxpayerA = "0199d4a2-8f00-7c44-a1b2-3c4d5e6f7b01" // Ana's física: 612 since 2025-01, 606 since 2026-01
+	expenseTaxpayerA = "0199d4a2-8f00-7c44-a1b2-3c4d5e6f7b01" // Ana's física: 612 since 2025-01 (backdated), 606 since 2026-01
 	expenseTaxpayerB = "0199d4a2-8f00-7c44-a1b2-3c4d5e6f7b02" // Bea's física: 612 since 2026-01
 	expenseFolio     = "3A9C7E21-5B4D-4F6A-8E2C-9D1B7A3F5C60"
 	expenseLegend    = "Esto es un aproximado. No todos los gastos aplican para tu giro comercial."
@@ -86,8 +86,9 @@ func expenseWarnings(e gen.Expense) []string {
 }
 
 // expenseActors signs Ana and Bea up and gives each a física taxpayer. Ana's
-// 612 started in 2025, so a 2025 date reaches the parameter check (no set
-// before 2026) rather than the regime window.
+// 612 is backdated to 2025 (the API starts no regime before 2026-01), so a
+// 2025 date reaches the parameter check (no set before 2026) rather than the
+// regime window.
 type expenseActors struct {
 	ana, bea, anaID string
 }
@@ -97,9 +98,10 @@ func (e contractEnv) expenseActors(t *testing.T, c *contracttest.Contract) expen
 	ana := e.signUp(t, signUpEmail, acceptableSample)
 	bea := e.signUp(t, beaEmail, otherSample).Tokens.AccessToken
 	e.createExpenseTaxpayer(t, c, ana.Tokens.AccessToken, expenseTaxpayerA, rfcAna,
-		`{"regime_code":"612","start_period":"2025-01"}`,
+		`{"regime_code":"612","start_period":"2026-01"}`,
 		`{"regime_code":"606","start_period":"2026-01","options":{"deduction_mode":"actual"}}`)
 	e.createExpenseTaxpayer(t, c, bea, expenseTaxpayerB, rfcOther, `{"regime_code":"612","start_period":"2026-01"}`)
+	e.backdateRegime(t, expenseTaxpayerA, "612", "2025-01")
 	return expenseActors{ana: ana.Tokens.AccessToken, bea: bea, anaID: ana.User.Id.String()}
 }
 

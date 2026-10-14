@@ -126,6 +126,35 @@ WHERE user_id = $1 AND kind = 'trial'`, userID)
 	require.True(t, forced, "FORCE RLS restored")
 }
 
+// backdateRegime moves a held regime's start to start, earlier than the API
+// accepts (2026-01): a row stored before that floor, which the database
+// CHECK (2022-01) still allows. The record tests use it so a 2025 date
+// reaches the parameter check (400 out_of_range) instead of the regime
+// window. taxpayer_regimes is FORCE RLS and cc_app may not update
+// start_period, so the owner lifts FORCE for one statement and restores it
+// before commit.
+func (e contractEnv) backdateRegime(t *testing.T, taxpayerID, code, start string) {
+	t.Helper()
+	tx, err := e.owner.BeginTx(t.Context(), nil)
+	require.NoError(t, err)
+	defer func() { _ = tx.Rollback() }()
+	_, err = tx.ExecContext(t.Context(), "ALTER TABLE taxpayer_regimes NO FORCE ROW LEVEL SECURITY")
+	require.NoError(t, err)
+	res, err := tx.ExecContext(t.Context(),
+		"UPDATE taxpayer_regimes SET start_period = $3 WHERE taxpayer_id = $1 AND regime_code = $2", taxpayerID, code, start)
+	require.NoError(t, err)
+	n, err := res.RowsAffected()
+	require.NoError(t, err)
+	require.EqualValues(t, 1, n, "the regime row was backdated")
+	_, err = tx.ExecContext(t.Context(), "ALTER TABLE taxpayer_regimes FORCE ROW LEVEL SECURITY")
+	require.NoError(t, err)
+	require.NoError(t, tx.Commit())
+	var forced bool
+	require.NoError(t, e.owner.QueryRowContext(t.Context(),
+		"SELECT relforcerowsecurity FROM pg_class WHERE oid = 'taxpayer_regimes'::regclass").Scan(&forced))
+	require.True(t, forced, "FORCE RLS restored")
+}
+
 func TestContract_taxpayers(t *testing.T) {
 	c := contracttest.Load(t)
 

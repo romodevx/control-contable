@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TaxpayerRegimeCreate {
 
-@JsonKey(name: 'regime_code') RegimeCode get regimeCode;@JsonKey(includeIfNull: false) RegimeOptions? get options;/// Defaults to the current month (America/Mexico_City); `2022-01` … current month.
+@JsonKey(name: 'regime_code') RegimeCode get regimeCode;@JsonKey(includeIfNull: false) RegimeOptions? get options;/// Defaults to the current month (America/Mexico_City); `2026-01` (the first fiscal year with tax parameters) … current month. A taxpayer who starts using the app mid-year sends an earlier month to record and estimate the months before.
 @JsonKey(includeIfNull: false, name: 'start_period') Period? get startPeriod;
 /// Create a copy of TaxpayerRegimeCreate
 /// with the given fields replaced by the non-null parameter values.
@@ -231,7 +231,7 @@ class _TaxpayerRegimeCreate implements TaxpayerRegimeCreate {
   return EqualUnmodifiableMapView(value);
 }
 
-/// Defaults to the current month (America/Mexico_City); `2022-01` … current month.
+/// Defaults to the current month (America/Mexico_City); `2026-01` (the first fiscal year with tax parameters) … current month. A taxpayer who starts using the app mid-year sends an earlier month to record and estimate the months before.
 @override@JsonKey(includeIfNull: false, name: 'start_period') final  Period? startPeriod;
 
 /// Create a copy of TaxpayerRegimeCreate

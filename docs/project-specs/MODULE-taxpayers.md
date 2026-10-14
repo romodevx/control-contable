@@ -158,7 +158,12 @@ some income, art. 80; a Cap. VI group company stays under Título II, art. 59 ¶
 
 ### 2.6 Periods
 - `start_period` defaults to the **current month** (America/Mexico_City, server clock);
-  allowed range `2022-01` (catalog floor) … current month.
+  allowed range `2026-01` (the first fiscal year with tax parameters) … current month
+  (amended by the M5-29 QA finding D2: a month before 2026 can hold no record nor an
+  estimate; the database CHECK keeps the catalog floor `2022-01`, so older rows stay valid).
+  The app asks for it in onboarding step 3 and in *Agregar régimen* ("¿Desde qué mes
+  tributas en este régimen?"), default the current month: a user who starts mid-year picks
+  January to record and estimate the earlier months.
 - `end_period` (archiving a regime): `start_period ≤ end_period ≤ current month`, and
   **≥ the latest period that has a record** in that regime (no orphaned records outside
   the window).
