@@ -605,3 +605,48 @@ first blocked task would otherwise start.
 - Status per task in the tables above (`Done` column); `/status` reads this file.
 - At each milestone the eng-manager records estimate vs. actual per module and updates the
   remaining estimates (Clean Coder: re-estimate, don't absorb).
+
+## 9. WH — Withholdings derivation
+
+Cross-cutting change to M3, M4 and M5 from [MODULE-withholdings.md](MODULE-withholdings.md)
+(owner decisions 2026-10-15: derived automatically, no manual override, expense side included,
+subcontratación 6 % excluded as repealed). No flag of its own: it ships inside `module_incomes`,
+`module_expenses` and `module_tax_engine`, all OFF in shared environments (OQ-W6). Same rules as §0:
+TDD, agent hours, +20 % buffer on the total. Contract break `0.8.0 → 0.9.0` with ADR-0008.
+
+| ID | Task | Owner | Deps | Est (h) | Par | Branch | Blocked by | Done |
+|---|---|---|---|---|---|---|---|---|
+| WH-01 | Spec: MODULE-withholdings, amendments to MODULE-incomes/expenses/tax-engine, research §B.3 fix, CPA items | pm | research #117 | 3 | — | `feature/withholdings-spec` | — | [ ] |
+| WH-02 | ADR-0008 (derived, stored + `table_version`, kernel placement, 0.9.0 break) and contract 0.9.0: remove typed withholdings, `counterparty_kind`, `operation_kind`, `residential_rent`, `via_platform`, supplier fields, read-only `withholding` object, `previewWithholdings`, `getIncomeDefaults` `last_used`, warning codes and `CpaTopic` appends, lint + freeze | architect | WH-01 | 4 | — | `feature/withholdings-contract` | — | [ ] |
+| WH-03 | Migration (expand): new columns, enums as CHECKs, `creditable_iva_withheld_cents`, category → `operation_kind` seed, grants, `NOT VALID`/`VALIDATE`; RLS isolation tests re-run | db-sr | WH-02 | 3 | PG-WH-A | `feature/withholdings-migration` | — | [ ] |
+| WH-04 | Kernel `fiscal.DeriveWithholdings`: decision table (MODULE-withholdings §3) table-driven, WM goldens WH-01..WH-12 to the centavo, property invariants, rule IDs and ⚠️ flags | backend-sr | WH-02 | 6 | PG-WH-A | `feature/withholdings-kernel` | — | [ ] |
+| WH-05 | Dated rate keys in `params/data/2026/v1.yaml` (ISR 10 %, 1.25 %, freight 4 %; platform rates reused) + `RateCatalog` accessors; independent double entry of the table vs WM | backend-sr (keys), qa-sr (double entry, 2 h) | WH-04 | 3.5 | — | `feature/withholdings-kernel` | — | [ ] |
+| WH-06 | Incomes: derive on create/update/restore, reject typed amounts, idempotency canonical compare with new fields, warnings, `previewWithholdings` handler (side=income), contract tests, flag ON/OFF | backend-sr | WH-03, WH-05 | 5 | PG-WH-B | `feature/withholdings-incomes` | — | [ ] |
+| WH-07 | Expenses: PM-only supplier fields, derive, `supplier_not_applicable`, `deduction_requires_remittance`, paid/withheld creditable split, preview (side=expense), contract tests | backend-sr | WH-03, WH-05 | 5 | PG-WH-B | `feature/withholdings-expenses` | — | [ ] |
+| WH-08 | `cmd/backfill-withholdings`: dry-run report (counts + ids only), per-user `SET LOCAL` under RLS, idempotent, re-derives older `table_version`; run on dev; contract step drops `counterparty_type` | backend-sr + db-sr | WH-06, WH-07 | 3.5 | — | `feature/withholdings-backfill` | — | [ ] |
+| WH-09 | Engine change: ledger split `CreditableIVAPaid`/`CreditableIVAWithheld`, read back to n − 1 (January → previous December), line `iva.creditable.withheld_prior_month` + ⚠️ topic, 626 PF negative month = 0 + "a favor (anual)" (verify current), `EngineVersion` 1.0.1 → 1.1.0, fingerprint tests | backend-sr | WH-07 | 6 | — | `feature/withholdings-engine` | — | [ ] |
+| WH-10 | Goldens WH-01-EST, WH-11-JUN, WH-11-JUL, PM-601-IVA-02; PM-601-IVA-01 header note; property suite re-run | qa-sr | WH-09 | 2.5 | — | `feature/withholdings-engine` | — | [ ] |
+| WH-11 | Mobile incomes form: Q1–Q4 with visibility rules and last-used defaults, derived read-only card (debounced preview), remove withholding inputs, regenerate Dart client, widget tests, Prism mock | frontend-sr | WH-02 (mock), WH-06 (real) | 6 | PG-WH-C | `feature/withholdings-mobile-incomes` | — | [ ] |
+| WH-12 | Mobile expenses form: "Tu proveedor" E1–E4 for PM only, category default, derived card with remit date, deduction note, widget tests | frontend-sr | WH-02 (mock), WH-07 (real) | 5 | PG-WH-C | `feature/withholdings-mobile-expenses` | — | [ ] |
+| WH-13 | QA per rules/qa-browser.md: wipe local, create US-W1/US-W4/US-W6 data through the screens, UI = goldens, flags ON/OFF, migration dry-run on a copy | qa-sr | WH-08, WH-10, WH-11, WH-12 | 4 | — | `feature/withholdings-qa-fixes` | — | [ ] |
+| WH-14 | Tech-lead gate (kernel purity, SOLID, no duplicated table in SQL/Dart, determinism) | tech-lead | WH-13 | 2 | PG-WH-D | (PR review) | — | [ ] |
+| WH-15 | Security gate (preview endpoint validation and rate limit, backfill role and RLS, no PII in the report) | security | WH-13 | 2 | PG-WH-D | `feature/withholdings-security-gate` | — | [ ] |
+| WH-16 | Docs: module docs, engine guide (new line), backfill runbook next to the yearly params runbook, ADR-0008 status | doc-writer | WH-14, WH-15 | 2 | — | `feature/withholdings-docs` | — | [ ] |
+| WH-17 | CPA review of the withholdings items (CPA-REVIEW § Withholdings derivation); tick → bump `table_version`, re-derive | owner + CPA, qa-sr | WH-13 | — (owner time) | — | `feature/withholdings-cpa` | OB5 | [ ] |
+
+Parallel groups: **PG-WH-A** (migration ∥ kernel, disjoint files), **PG-WH-B** (incomes ∥ expenses
+use cases), **PG-WH-C** (both mobile forms against the frozen mock, once WH-02 freezes),
+**PG-WH-D** (gates).
+
+Critical path: WH-01 → WH-02 → WH-04 → WH-05 → WH-07 → WH-09 → WH-10 → WH-13 → WH-14/15 → WH-16
+≈ 3 + 4 + 6 + 3.5 + 5 + 6 + 2.5 + 4 + 2 + 2 = **38 h**.
+
+Totals: **62.5 h** of tasks → **75 h** with the +20 % buffer (backend-sr 26 h, frontend-sr 11 h,
+qa-sr 8.5 h, architect 4 h, db-sr 4 h (WH-03 + 1 h of WH-08), tech-lead 2 h, security 2 h,
+doc-writer 2 h, pm 3 h). CPA time is not ours to estimate.
+
+Risks: the CPA changes a ⚠️ rule after release (mitigation: `table_version` + backfill, §5.3 of the
+spec); the engine change moves every PM user's IVA by one month of withheld IVA (mitigation:
+goldens WH-11, explicit `EngineVersion` bump, M8 shows estimates as changed); users whose CFDI shows
+a different withholding cannot correct it (owner decision; OQ-W3 revisits with CFDI import).
+Enabling any of the three flags in a shared environment after WH lands requires WH-14 and WH-15.
