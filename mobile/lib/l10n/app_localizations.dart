@@ -2946,6 +2946,18 @@ abstract class AppLocalizations {
   /// **'Aún no hay meses pagados en este ejercicio.'**
   String get taxInputsNoMonthsYet;
 
+  /// Under an empty month of the prior payments: the app's own estimate of that month's payment, a suggestion the user must confirm (MODULE-tax-engine §8, OQ-T1). Never saved unless used.
+  ///
+  /// In es, this message translates to:
+  /// **'Estimado por la app: {amount} — confírmalo'**
+  String taxInputsSuggestion(String amount);
+
+  /// Copies the app's estimate into the empty month's field (the user still saves).
+  ///
+  /// In es, this message translates to:
+  /// **'Usar este monto'**
+  String get taxInputsUseSuggestion;
+
   /// Label of one month's amount in the monthly payments grid.
   ///
   /// In es, this message translates to:

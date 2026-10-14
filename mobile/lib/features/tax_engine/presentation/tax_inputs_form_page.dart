@@ -169,7 +169,7 @@ class _TaxInputsFormPageState extends ConsumerState<TaxInputsFormPage> {
               ?taxInputField(
                 context,
                 entry,
-                fiscalYear: widget.inputs.fiscalYear,
+                query: widget.query,
                 openGroup: _openGroup,
                 onToggleGroup: _toggleGroup,
               ),

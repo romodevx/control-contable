@@ -2285,6 +2285,20 @@
   "@taxInputsNoMonthsYet": {
     "description": "Monthly payments in January of the current year: no month is due yet."
   },
+  "taxInputsSuggestion": "Estimado por la app: {amount} — confírmalo",
+  "@taxInputsSuggestion": {
+    "description": "Under an empty month of the prior payments: the app's own estimate of that month's payment, a suggestion the user must confirm (MODULE-tax-engine §8, OQ-T1). Never saved unless used.",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "$150.96"
+      }
+    }
+  },
+  "taxInputsUseSuggestion": "Usar este monto",
+  "@taxInputsUseSuggestion": {
+    "description": "Copies the app's estimate into the empty month's field (the user still saves)."
+  },
   "taxInputsMonthLabel": "Pago de {month}",
   "@taxInputsMonthLabel": {
     "description": "Label of one month's amount in the monthly payments grid.",

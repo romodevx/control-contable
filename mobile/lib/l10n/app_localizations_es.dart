@@ -1750,6 +1750,14 @@ class AppLocalizationsEs extends AppLocalizations {
       'Aún no hay meses pagados en este ejercicio.';
 
   @override
+  String taxInputsSuggestion(String amount) {
+    return 'Estimado por la app: $amount — confírmalo';
+  }
+
+  @override
+  String get taxInputsUseSuggestion => 'Usar este monto';
+
+  @override
   String taxInputsMonthLabel(String month) {
     return 'Pago de $month';
   }

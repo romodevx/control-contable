@@ -1,6 +1,7 @@
 import 'package:control_contable/core/forms/app_checkbox_field.dart';
 import 'package:control_contable/core/forms/app_text_field.dart';
 import 'package:control_contable/features/tax_engine/application/tax_input_entries.dart';
+import 'package:control_contable/features/tax_engine/application/tax_inputs.dart';
 import 'package:control_contable/features/tax_engine/presentation/monthly_payments_section.dart';
 import 'package:control_contable/features/taxpayers/presentation/option_fields.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
@@ -18,7 +19,7 @@ const String rateMax = '1';
 Widget? taxInputField(
   BuildContext context,
   TaxInputEntry entry, {
-  required int fiscalYear,
+  required TaxInputsQuery query,
   required int? openGroup,
   required ValueChanged<int> onToggleGroup,
 }) {
@@ -48,7 +49,7 @@ Widget? taxInputField(
     FlagEntry(:final field) => AppCheckboxField(field: field),
     MonthlyEntry() => MonthlyPaymentsSection(
       entry: entry,
-      fiscalYear: fiscalYear,
+      query: query,
       openGroup: openGroup,
       onToggleGroup: onToggleGroup,
     ),
