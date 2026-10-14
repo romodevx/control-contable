@@ -73,9 +73,20 @@ void main() {
 
       expect(
         find.bySemanticsLabel(
-          RegExp('Total a pagar.*2,284 pesos con 29 centavos'),
+          RegExp(r'^Total a pagar: 2,284 pesos con 29 centavos$'),
         ),
         findsOneWidget,
+        reason: 'the total is its own screen-reader stop',
+      );
+      expect(
+        find.bySemanticsLabel(
+          RegExp(
+            '^Esto es un aproximado. No todos los gastos aplican para tu '
+            r'giro comercial\.$',
+          ),
+        ),
+        findsOneWidget,
+        reason: 'the legend is read on its own, never lost in a blob',
       );
       expect(
         find.bySemanticsLabel(RegExp(r'\$2,284\.29')),
@@ -205,14 +216,17 @@ void main() {
       expect(_inTotals(find.text('ISR a pagar (incompleto)')), findsOne);
       expect(
         find.bySemanticsLabel(
-          RegExp(r'^Total a pagar \(incompleto\): .*pesos'),
+          RegExp(
+            r'^Total a pagar \(incompleto\): 6,284 pesos con 29 centavos$',
+          ),
         ),
         findsOneWidget,
+        reason: 'each amount is its own screen-reader stop, not one blob',
       );
       await _reveal(tester, find.text('Completa tus datos'));
       expect(_inCard('612', find.text('ISR a pagar (incompleto)')), findsOne);
       expect(
-        find.bySemanticsLabel(RegExp(r'^ISR a pagar: ')),
+        find.bySemanticsLabel(RegExp('^ISR a pagar: ')),
         findsNothing,
         reason: 'an incomplete ISR is never announced as final',
       );
