@@ -13,7 +13,8 @@ import (
 )
 
 // statusByCode follows the response descriptions of the contract:
-// 400 BadRequest, 401 Unauthorized, 402 PaymentRequired, 404 NotFound,
+// 400 BadRequest, 401 Unauthorized, 402 PaymentRequired, 403 (a wrong
+// re-entered password: the bearer was fine), 404 NotFound,
 // 409 Conflict (state), 422 UnprocessableEntity (business rule), 429, 503.
 var statusByCode = map[apperr.Code]int{
 	apperr.CodeValidationFailed:         http.StatusBadRequest,
@@ -29,6 +30,7 @@ var statusByCode = map[apperr.Code]int{
 	apperr.CodeRateLimited:              http.StatusTooManyRequests,
 	apperr.CodeUpstreamUnavailable:      http.StatusServiceUnavailable,
 	apperr.CodeInternalError:            http.StatusInternalServerError,
+	apperr.CodeInvalidPassword:          http.StatusForbidden,
 }
 
 // Status returns the HTTP status for code; an unknown code is a 500.

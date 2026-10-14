@@ -32,6 +32,8 @@ enum ErrorCode {
   upstreamUnavailable('upstream_unavailable'),
   @JsonValue('internal_error')
   internalError('internal_error'),
+  @JsonValue('invalid_password')
+  invalidPassword('invalid_password'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);

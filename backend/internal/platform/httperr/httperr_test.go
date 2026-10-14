@@ -34,6 +34,7 @@ func TestStatus(t *testing.T) {
 		{apperr.CodeRateLimited, http.StatusTooManyRequests},
 		{apperr.CodeUpstreamUnavailable, http.StatusServiceUnavailable},
 		{apperr.CodeInternalError, http.StatusInternalServerError},
+		{apperr.CodeInvalidPassword, http.StatusForbidden},
 		{apperr.Code("not_in_contract"), http.StatusInternalServerError},
 	}
 	for _, tt := range tests {

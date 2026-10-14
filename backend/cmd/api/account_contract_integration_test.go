@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -99,6 +100,7 @@ func TestContract_authAccount(t *testing.T) {
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			var list gen.LegalDocumentList
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &list))
+			assert.Equal(t, "public, max-age=300", rec.Header().Get("Cache-Control"))
 			require.Len(t, list.Items, 3)
 			for _, d := range list.Items {
 				assert.Equal(t, "v1", d.Version, d.Kind)
@@ -155,13 +157,8 @@ func TestContract_authAccount(t *testing.T) {
 			assert.Equal(t, "name", fieldError(t, rec).Field)
 		})
 
-		// Not through ServeOp: the authenticator's 401 carries the bearer
-		// challenge (RFC 9110 requires it on every 401), but the frozen
-		// deleteMe 401 is inline and declares no WWW-Authenticate header,
-		// unlike the shared Unauthorized response. A contract fix, not a
-		// server one (reported in the M1-09 PR).
 		t.Run("deleteMe without a bearer is a 401 before the body is read", func(t *testing.T) {
-			rec := env.do(env.send(http.MethodDelete, "/v1/me", `{}`, ""))
+			rec := c.ServeOp(t, contracttest.Op("deleteMe"), env.handler, env.send(http.MethodDelete, "/v1/me", `{}`, ""))
 			require.Equal(t, http.StatusUnauthorized, rec.Code)
 			assert.Equal(t, realmChallenge, rec.Header().Get("WWW-Authenticate"))
 			code, _ := errorOf(t, rec)
@@ -177,12 +174,15 @@ func TestContract_authAccount(t *testing.T) {
 			assert.Equal(t, 1, env.ownedRows(t, ana.User.Id.String())["users"])
 		})
 
-		t.Run("deleteMe with a wrong password is a 401 and deletes nothing", func(t *testing.T) {
+		// Not a 401: the bearer is valid, and a client refreshes and retries
+		// on a 401, which would spend a second attempt on the same password.
+		t.Run("deleteMe with a wrong password is a 403 invalid_password and deletes nothing", func(t *testing.T) {
 			rec := c.ServeOp(t, contracttest.Op("deleteMe"), env.handler,
 				env.send(http.MethodDelete, "/v1/me", `{"password":"`+otherSample+`"}`, anaToken))
-			require.Equal(t, http.StatusUnauthorized, rec.Code)
+			require.Equal(t, http.StatusForbidden, rec.Code)
+			assert.Empty(t, rec.Header().Get("WWW-Authenticate"))
 			code, message := errorOf(t, rec)
-			assert.Equal(t, gen.ErrorCodeUnauthorized, code)
+			assert.Equal(t, gen.ErrorCodeInvalidPassword, code)
 			assert.Equal(t, "The password is incorrect.", message)
 			assert.Equal(t, 1, env.ownedRows(t, ana.User.Id.String())["users"])
 		})
@@ -212,6 +212,7 @@ func TestContract_authAccount(t *testing.T) {
 			rec = c.ServeOp(t, contracttest.Op("deleteMe"), env.handler,
 				env.send(http.MethodDelete, "/v1/me", `{"password":"`+acceptableSample+`"}`, anaToken))
 			assert.Equal(t, http.StatusUnauthorized, rec.Code)
+			assert.Equal(t, realmChallenge, rec.Header().Get("WWW-Authenticate"))
 		})
 
 		// Sessions are revoked by the cascade, in the delete's own
@@ -234,6 +235,25 @@ func TestContract_authAccount(t *testing.T) {
 			owned := env.ownedRows(t, again.User.Id.String())
 			assert.Equal(t, 1, owned["users"])
 			assert.Zero(t, owned["entitlements"], "trial_registry survived the deletion: no second trial")
+		})
+
+		// A stolen access token is not a password oracle: 5 attempts per
+		// account, then one every 3 minutes, whatever the client address.
+		t.Run("deleteMe stops guessing after 5 attempts, even the right password", func(t *testing.T) {
+			for i := range 5 {
+				rec := env.do(env.send(http.MethodDelete, "/v1/me", `{"password":"wrong guess number `+strconv.Itoa(i)+`"}`, beaToken))
+				require.Equal(t, http.StatusForbidden, rec.Code, "attempt %d", i+1)
+			}
+
+			rec := c.ServeOp(t, contracttest.Op("deleteMe"), env.handler,
+				env.send(http.MethodDelete, "/v1/me", `{"password":"`+otherSample+`"}`, beaToken))
+
+			require.Equal(t, http.StatusTooManyRequests, rec.Code, rec.Body.String())
+			retryAfter, err := strconv.Atoi(rec.Header().Get("Retry-After"))
+			require.NoError(t, err)
+			assert.Positive(t, retryAfter)
+			assert.Equal(t, 1, env.ownedRows(t, bea.User.Id.String())["users"], "nothing was deleted")
+			assert.Contains(t, env.logs.String(), `"event":"delete_attempts_exhausted"`)
 		})
 
 		t.Run("no log line carries an email or a password", func(t *testing.T) {

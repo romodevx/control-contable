@@ -208,47 +208,69 @@ func TestDeleteMe_answers204(t *testing.T) {
 	assert.Equal(t, "made-up sample phrase", f.deleter.gotPassword)
 }
 
-func TestDeleteMe_failures(t *testing.T) {
-	for name, tt := range map[string]struct {
-		err     error
-		code    apperr.Code
-		message string
-	}{
-		"wrong password":  {usecase.ErrWrongPassword, apperr.CodeUnauthorized, "The password is incorrect."},
-		"deleted account": {usecase.ErrAccountNotFound, apperr.CodeUnauthorized, "Authentication required."},
-	} {
-		t.Run(name, func(t *testing.T) {
-			f := newAccountFixture(t)
-			f.deleter.err = fmt.Errorf("delete: %w", tt.err)
+func TestDeleteMe_aWrongPasswordIsA403InvalidPassword(t *testing.T) {
+	f := newAccountFixture(t)
+	f.deleter.err = fmt.Errorf("delete: %w", usecase.ErrWrongPassword)
 
-			_, err := f.handler.DeleteMe(signedIn(t), gen.DeleteMeRequestObject{Body: &gen.DeleteMeJSONRequestBody{Password: "x"}})
+	_, err := f.handler.DeleteMe(signedIn(t), gen.DeleteMeRequestObject{Body: &gen.DeleteMeJSONRequestBody{Password: "x"}})
 
-			var appErr *apperr.Error
-			require.ErrorAs(t, err, &appErr)
-			assert.Equal(t, tt.code, appErr.Code)
-			assert.Equal(t, tt.message, appErr.Message)
-		})
-	}
+	// Not a 401: the bearer was valid, and a client refreshes on a 401.
+	var appErr *apperr.Error
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, apperr.CodeInvalidPassword, appErr.Code)
+	assert.Equal(t, "The password is incorrect.", appErr.Message)
+}
 
-	t.Run("an infrastructure failure is returned for the 500", func(t *testing.T) {
+func TestDeleteMe_bearerFailuresAreTheGeneric401WithTheChallenge(t *testing.T) {
+	t.Run("a deleted account", func(t *testing.T) {
 		f := newAccountFixture(t)
-		f.deleter.err = errBoom
+		f.deleter.err = fmt.Errorf("delete: %w", usecase.ErrAccountNotFound)
 
-		_, err := f.handler.DeleteMe(signedIn(t), gen.DeleteMeRequestObject{Body: &gen.DeleteMeJSONRequestBody{Password: "x"}})
+		resp, err := f.handler.DeleteMe(signedIn(t), gen.DeleteMeRequestObject{Body: &gen.DeleteMeJSONRequestBody{Password: "x"}})
 
-		assert.ErrorIs(t, err, errBoom)
+		require.NoError(t, err)
+		got, ok := resp.(gen.DeleteMe401JSONResponse)
+		require.True(t, ok, "%T", resp)
+		assert.Equal(t, challenge, got.Headers.WWWAuthenticate)
+		assert.Equal(t, gen.ErrorCodeUnauthorized, got.Body.Error.Code)
+		assert.Equal(t, "Authentication required.", got.Body.Error.Message)
 	})
 
-	t.Run("no principal is a 401 and deletes nothing", func(t *testing.T) {
+	t.Run("no principal deletes nothing", func(t *testing.T) {
 		f := newAccountFixture(t)
 
-		_, err := f.handler.DeleteMe(t.Context(), gen.DeleteMeRequestObject{Body: &gen.DeleteMeJSONRequestBody{Password: "x"}})
+		resp, err := f.handler.DeleteMe(t.Context(), gen.DeleteMeRequestObject{Body: &gen.DeleteMeJSONRequestBody{Password: "x"}})
 
-		var appErr *apperr.Error
-		require.ErrorAs(t, err, &appErr)
-		assert.Equal(t, apperr.CodeUnauthorized, appErr.Code)
+		require.NoError(t, err)
+		got, ok := resp.(gen.DeleteMe401JSONResponse)
+		require.True(t, ok, "%T", resp)
+		assert.Equal(t, challenge, got.Headers.WWWAuthenticate)
 		assert.Zero(t, f.deleter.calls)
 	})
+}
+
+func TestDeleteMe_outOfAttemptsIsA429WithRetryAfter(t *testing.T) {
+	f := newAccountFixture(t)
+	f.deleter.err = fmt.Errorf("delete: %w", &usecase.TooManyAttemptsError{RetryAfter: 90*time.Second + time.Millisecond})
+
+	resp, err := f.handler.DeleteMe(signedIn(t), gen.DeleteMeRequestObject{Body: &gen.DeleteMeJSONRequestBody{Password: "x"}})
+
+	require.NoError(t, err)
+	got, ok := resp.(gen.DeleteMe429JSONResponse)
+	require.True(t, ok, "%T", resp)
+	require.NotNil(t, got.Headers.RetryAfter)
+	assert.Equal(t, 91, *got.Headers.RetryAfter, "whole seconds, rounded up")
+	assert.Equal(t, gen.ErrorCodeRateLimited, got.Body.Error.Code)
+	assert.Equal(t, "req_test", got.Body.Error.RequestId)
+}
+
+func TestDeleteMe_anInfrastructureFailureIsReturnedForThe500(t *testing.T) {
+	f := newAccountFixture(t)
+	f.deleter.err = errBoom
+
+	_, err := f.handler.DeleteMe(signedIn(t), gen.DeleteMeRequestObject{Body: &gen.DeleteMeJSONRequestBody{Password: "x"}})
+
+	assert.ErrorIs(t, err, errBoom)
 }
 
 func TestListLegalDocuments_answersTheCurrentDocumentsInUTC(t *testing.T) {
@@ -264,12 +286,13 @@ func TestListLegalDocuments_answersTheCurrentDocumentsInUTC(t *testing.T) {
 	require.NoError(t, err)
 	got, ok := resp.(gen.ListLegalDocuments200JSONResponse)
 	require.True(t, ok, "%T", resp)
-	require.Len(t, got.Items, 2)
+	assert.Equal(t, "public, max-age=300", got.Headers.CacheControl, "public and the same for everyone")
+	require.Len(t, got.Body.Items, 2)
 	assert.Equal(t, gen.LegalDocument{
 		Kind: gen.PrivacyNoticeIntegral, Version: "v1", Url: "https://example.mx/aviso", PublishedAt: published.UTC(),
-	}, got.Items[0])
-	assert.Equal(t, gen.Terms, got.Items[1].Kind)
-	assert.Equal(t, time.UTC, got.Items[1].PublishedAt.Location())
+	}, got.Body.Items[0])
+	assert.Equal(t, gen.Terms, got.Body.Items[1].Kind)
+	assert.Equal(t, time.UTC, got.Body.Items[1].PublishedAt.Location())
 }
 
 func TestListLegalDocuments_aFailureIsReturnedForThe500(t *testing.T) {

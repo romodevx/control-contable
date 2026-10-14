@@ -90,7 +90,7 @@ func newAuthModule(w authWiring) (authModule, error) {
 		return authModule{}, err
 	}
 	handler := authhttp.NewHandler(authhttp.UseCases{Register: register, Verify: verify, Resend: resend, Login: login})
-	return authModule{handler: handler, account: newAccountHandler(txm, keys, w.logger),
+	return authModule{handler: handler, account: newAccountHandler(txm, keys, w.now, w.logger),
 		sessions: newSessionHandler(txm, keys, w.logger), authn: authn}, nil
 }
 

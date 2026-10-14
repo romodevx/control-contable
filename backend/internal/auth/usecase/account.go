@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/romodevx/control-contable/backend/internal/auth/domain"
 	"github.com/romodevx/control-contable/backend/internal/platform/tx"
@@ -82,11 +83,25 @@ type PasswordChecker interface {
 	Verify(password, encoded string) (bool, error)
 }
 
+// TooManyAttemptsError reports an account that spent its password
+// attempts for account deletion; RetryAfter is when the next one is
+// admitted. Nothing was read or verified.
+type TooManyAttemptsError struct {
+	RetryAfter time.Duration
+}
+
+func (e *TooManyAttemptsError) Error() string {
+	return fmt.Sprintf("auth: too many account deletion attempts, retry in %s", e.RetryAfter)
+}
+
 // DeleteAccountDeps are the ports DeleteAccount needs.
 type DeleteAccountDeps struct {
 	Tx        tx.Manager
 	Passwords PasswordChecker
 	Accounts  AccountRemover
+	// Attempts admits the password attempts of each account, keyed by its
+	// user id: a stolen access token must not become a password oracle.
+	Attempts Throttle
 	// Logger receives the login_failed and account_deleted audit events;
 	// nil discards them.
 	Logger *slog.Logger
@@ -101,8 +116,12 @@ type DeleteAccount struct {
 	deps DeleteAccountDeps
 }
 
-// NewDeleteAccount returns the use case.
+// NewDeleteAccount returns the use case. It panics without deps.Attempts:
+// deletion with no attempt limit is a wiring error, never a default.
 func NewDeleteAccount(deps DeleteAccountDeps) *DeleteAccount {
+	if deps.Attempts == nil {
+		panic("auth: NewDeleteAccount needs an attempt Throttle")
+	}
 	if deps.Logger == nil {
 		deps.Logger = slog.New(slog.DiscardHandler)
 	}
@@ -115,7 +134,15 @@ func NewDeleteAccount(deps DeleteAccountDeps) *DeleteAccount {
 // outside any transaction (no row lock or pooled connection is held for its
 // cost), and the delete is conditioned on the hash it verified: a password
 // changed in between deletes nothing and answers ErrWrongPassword.
+//
+// Every call spends one of the account's attempts, before any database
+// access or argon2id run (a success ends the account, so attempts are
+// failures plus at most one); none left is a *TooManyAttemptsError.
 func (uc *DeleteAccount) Execute(ctx context.Context, userID domain.UserID, password string) error {
+	if allowed, wait := uc.deps.Attempts.Allow(userID.String()); !allowed {
+		uc.audit(ctx, "delete_attempts_exhausted", userID)
+		return &TooManyAttemptsError{RetryAfter: wait}
+	}
 	candidate, err := domain.PasswordForVerification(password)
 	if err != nil {
 		uc.audit(ctx, "login_failed", userID)

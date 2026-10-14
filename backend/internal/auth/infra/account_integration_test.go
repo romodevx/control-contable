@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,6 +15,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/auth/infra"
 	"github.com/romodevx/control-contable/backend/internal/auth/usecase"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
+	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit"
 	"github.com/romodevx/control-contable/backend/internal/platform/tx"
 )
 
@@ -216,7 +218,7 @@ func (e accountEnv) storedHash(t *testing.T, id domain.UserID) string {
 // no trial entitlement.
 func TestDeleteAccount_reRegisteringTheSameEmailGetsNoNewTrial(t *testing.T) {
 	e := newAccountEnv(t)
-	remove := usecase.NewDeleteAccount(usecase.DeleteAccountDeps{Tx: e.txm, Passwords: e.passwords, Accounts: e.store})
+	remove := usecase.NewDeleteAccount(usecase.DeleteAccountDeps{Tx: e.txm, Passwords: e.passwords, Accounts: e.store, Attempts: ratelimit.New(1, 5, time.Now)})
 	require.NoError(t, remove.Execute(t.Context(), e.ana, firstSample))
 
 	again, err := domain.ParseUserID(e.signUp(t, anaEmail, secondSample))
@@ -230,7 +232,7 @@ func TestDeleteAccount_reRegisteringTheSameEmailGetsNoNewTrial(t *testing.T) {
 
 func TestDeleteAccount_wrongPasswordDeletesNothing(t *testing.T) {
 	e := newAccountEnv(t)
-	remove := usecase.NewDeleteAccount(usecase.DeleteAccountDeps{Tx: e.txm, Passwords: e.passwords, Accounts: e.store})
+	remove := usecase.NewDeleteAccount(usecase.DeleteAccountDeps{Tx: e.txm, Passwords: e.passwords, Accounts: e.store, Attempts: ratelimit.New(1, 5, time.Now)})
 	before := e.owned(t, e.ana)
 
 	err := remove.Execute(t.Context(), e.ana, secondSample)
