@@ -2256,12 +2256,6 @@ abstract class AppLocalizations {
   /// **'Datos fiscales'**
   String get taxInputsTitle;
 
-  /// Placeholder body of a screen still being built.
-  ///
-  /// In es, this message translates to:
-  /// **'Disponible pronto.'**
-  String get comingSoon;
-
   /// A record field the server refused for a reason the app has no copy for.
   ///
   /// In es, this message translates to:
@@ -2795,6 +2789,252 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Otro'**
   String get paymentOther;
+
+  /// Announced while the breakdown loads.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando el desglose…'**
+  String get breakdownLoading;
+
+  /// Breakdown header: the regime code and the month.
+  ///
+  /// In es, this message translates to:
+  /// **'Régimen {code} · {month}'**
+  String breakdownSubtitle(String code, String month);
+
+  /// Breakdown header: the tax parameter set and engine version used.
+  ///
+  /// In es, this message translates to:
+  /// **'Parámetros {year} v{version} · Motor {engine}'**
+  String breakdownVersions(String year, String version, String engine);
+
+  /// Heading of the breakdown's ISR lines.
+  ///
+  /// In es, this message translates to:
+  /// **'ISR'**
+  String get breakdownGroupIsr;
+
+  /// Heading of the breakdown's IVA lines.
+  ///
+  /// In es, this message translates to:
+  /// **'IVA'**
+  String get breakdownGroupIva;
+
+  /// Under the withholdings-to-remit heading of the breakdown.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que retuviste a otros y debes enterar al SAT. Se paga aparte de tus impuestos.'**
+  String get breakdownWithholdingsHelp;
+
+  /// Under the IVA heading: the month's IVA is netted per taxpayer (OQ-T2).
+  ///
+  /// In es, this message translates to:
+  /// **'El IVA del mes es uno solo: sumamos lo cobrado y lo pagado en todos tus regímenes y resulta un solo pago (LIVA 5-D).'**
+  String get breakdownIvaHelp;
+
+  /// Under the IVA heading when the IVA was netted across regimes (CPA-unverified, OQ-T2/T8).
+  ///
+  /// In es, this message translates to:
+  /// **'Esta suma entre regímenes aún no la valida un contador; tómala con reserva.'**
+  String get breakdownIvaNettingUnverified;
+
+  /// Rate of a multiplication line.
+  ///
+  /// In es, this message translates to:
+  /// **'Tasa: {rate}'**
+  String breakdownRate(String rate);
+
+  /// Source tag: the figure sums the user's incomes or expenses.
+  ///
+  /// In es, this message translates to:
+  /// **'De tus registros'**
+  String get breakdownSourceRecords;
+
+  /// Source tag: the figure is computed from the lines above.
+  ///
+  /// In es, this message translates to:
+  /// **'Calculado'**
+  String get breakdownSourceComputed;
+
+  /// Source tag: the figure is a tax input the user entered.
+  ///
+  /// In es, this message translates to:
+  /// **'Dato que capturaste'**
+  String get breakdownSourceInput;
+
+  /// Source tag: the figure comes from the official tariffs and parameters.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifa oficial'**
+  String get breakdownSourceParams;
+
+  /// Marker of a line that applies a rule no CPA has validated yet.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin validar por un contador'**
+  String get breakdownCpaLine;
+
+  /// Collapsed legal basis of a line; expands to the full citations.
+  ///
+  /// In es, this message translates to:
+  /// **'Fundamento: {references}'**
+  String breakdownLegalBasis(String references);
+
+  /// Opens the official text of a cited law.
+  ///
+  /// In es, this message translates to:
+  /// **'Leer: {law}'**
+  String breakdownReadLaw(String law);
+
+  /// Explains the 'Ajuste por redondeo' line.
+  ///
+  /// In es, this message translates to:
+  /// **'Cada línea se muestra redondeada al centavo; este ajuste hace que la suma coincida con el resultado. No es un cobro extra.'**
+  String get breakdownRoundingHelp;
+
+  /// Breakdown of an informational regime (no lines).
+  ///
+  /// In es, this message translates to:
+  /// **'Este régimen no tiene desglose: no estimamos su impuesto.'**
+  String get breakdownNoLines;
+
+  /// 422 regime_not_active on the breakdown.
+  ///
+  /// In es, this message translates to:
+  /// **'No tenías este régimen en ese mes.'**
+  String get breakdownRegimeNotActive;
+
+  /// Announced while the tax-inputs form loads.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando tus datos fiscales…'**
+  String get taxInputsLoading;
+
+  /// The tax inputs could not be loaded (generic).
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar tus datos fiscales.'**
+  String get taxInputsLoadFailed;
+
+  /// Tax-inputs form header: the regime code and the fiscal year.
+  ///
+  /// In es, this message translates to:
+  /// **'Régimen {code} · Ejercicio {year}'**
+  String taxInputsSubtitle(String code, String year);
+
+  /// Intro of the tax-inputs form: every field is optional.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos del ejercicio que tu estimado necesita y no puede sacar de tus registros. Lo que no captures se calcula con cero y el estimado queda Incompleto.'**
+  String get taxInputsIntro;
+
+  /// Helper of an input the estimate can require.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu estimado lo necesita.'**
+  String get taxInputsNeeded;
+
+  /// Help of the monthly prior provisional payments.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que pagaste cada mes, no el estimado. Escribe 0 si no pagaste; un mes vacío cuenta como dato faltante.'**
+  String get taxInputsMonthlyHelp;
+
+  /// Monthly payments in January of the current year: no month is due yet.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay meses pagados en este ejercicio.'**
+  String get taxInputsNoMonthsYet;
+
+  /// Under an empty month of the prior payments: the app's own estimate of that month's payment, a suggestion the user must confirm (MODULE-tax-engine §8, OQ-T1). Never saved unless used.
+  ///
+  /// In es, this message translates to:
+  /// **'Estimado por la app: {amount} — confírmalo'**
+  String taxInputsSuggestion(String amount);
+
+  /// Copies the app's estimate into the empty month's field (the user still saves).
+  ///
+  /// In es, this message translates to:
+  /// **'Usar este monto'**
+  String get taxInputsUseSuggestion;
+
+  /// Label of one month's amount in the monthly payments grid.
+  ///
+  /// In es, this message translates to:
+  /// **'Pago de {month}'**
+  String taxInputsMonthLabel(String month);
+
+  /// Title of a half of the monthly payments grid (e.g. 'Enero a junio').
+  ///
+  /// In es, this message translates to:
+  /// **'{first} a {last}'**
+  String taxInputsMonthsRange(String first, String last);
+
+  /// Toast after the tax inputs are saved.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardamos tus datos. Tu estimado ya los usa.'**
+  String get taxInputsSaved;
+
+  /// The save failed (429 or unexpected).
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron guardar tus datos. Inténtalo de nuevo.'**
+  String get taxInputsSaveFailed;
+
+  /// 422 taxpayer_archived on save.
+  ///
+  /// In es, this message translates to:
+  /// **'Este contribuyente está archivado: sus datos fiscales no se pueden cambiar.'**
+  String get taxInputsArchived;
+
+  /// 422 regime_not_active on the tax inputs.
+  ///
+  /// In es, this message translates to:
+  /// **'No tienes este régimen en ese ejercicio.'**
+  String get taxInputsRegimeNotActive;
+
+  /// Server verdict unknown_input on a value.
+  ///
+  /// In es, this message translates to:
+  /// **'Este dato no aplica a este régimen.'**
+  String get taxInputsUnknownInput;
+
+  /// Server verdict minimum on an amount.
+  ///
+  /// In es, this message translates to:
+  /// **'El monto no puede ser negativo.'**
+  String get taxInputsNegative;
+
+  /// Server verdict on a value with no more specific copy.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa este dato.'**
+  String get taxInputsInvalid;
+
+  /// Leaving the tax-inputs form with unsaved changes.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Descartar los cambios?'**
+  String get taxInputsDiscardTitle;
+
+  /// Body of the discard dialog.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que escribiste se perderá.'**
+  String get taxInputsDiscardBody;
+
+  /// Stays on the form.
+  ///
+  /// In es, this message translates to:
+  /// **'Seguir editando'**
+  String get taxInputsDiscardKeep;
+
+  /// Leaves the form without saving.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar'**
+  String get taxInputsDiscardConfirm;
 }
 
 class _AppLocalizationsDelegate

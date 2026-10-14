@@ -74,15 +74,19 @@ void main() {
     expect(find.text('Total a pagar'), findsOneWidget);
   });
 
-  testWidgets('on: the breakdown and inputs placeholders open', (tester) async {
+  testWidgets('on: the breakdown and the inputs form open', (tester) async {
     await harness.pump(tester, location: null);
-    for (final location in _locations.skip(1)) {
+    final titles = ['Desglose', 'Datos fiscales'];
+    for (final (index, location) in _locations.skip(1).indexed) {
       harness.container.read(appRouterProvider).go(location);
       await tester.pumpAndSettle();
 
       expect(harness.location, location);
       expect(find.text('Página no encontrada'), findsNothing);
-      expect(find.text('Disponible pronto.'), findsOneWidget);
+      expect(find.text(titles[index]), findsOneWidget);
+      expect(find.text('Disponible pronto.'), findsNothing);
     }
+    expect(harness.repository.breakdownCalls, hasLength(1));
+    expect(harness.repository.inputsCalls, hasLength(1));
   });
 }

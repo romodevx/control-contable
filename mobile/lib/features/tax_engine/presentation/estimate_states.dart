@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 
 const String _parametersUnavailable = 'parameters_unavailable';
 const String _outOfRange = 'out_of_range';
+const String _regimeNotActive = 'regime_not_active';
 
 /// Heights of the skeleton's placeholder blocks: the totals hero, then two
 /// regime cards.
@@ -48,7 +49,7 @@ class EstimateSkeleton extends StatelessWidget {
   }
 }
 
-/// A failed estimate load: why, in es-MX, and a retry.
+/// A failed estimate or breakdown load: why, in es-MX, and a retry.
 class EstimateFailure extends StatelessWidget {
   /// The failure of [error], retried by [onRetry].
   const new({required this.error, required this.onRetry, super.key});
@@ -71,6 +72,9 @@ class EstimateFailure extends StatelessWidget {
     ApiRejected(code: ErrorCode.businessRuleViolation, :final details)
         when details.any((d) => d.code == _parametersUnavailable) =>
       l10n.estimateParametersUnavailable,
+    ApiRejected(code: ErrorCode.businessRuleViolation, :final details)
+        when details.any((d) => d.code == _regimeNotActive) =>
+      l10n.breakdownRegimeNotActive,
     ApiValidationFailure(:final details)
         when details.any((d) => d.code == _outOfRange) =>
       l10n.estimateFutureMonth,

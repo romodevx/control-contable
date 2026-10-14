@@ -38,16 +38,19 @@ class FormDisclosure extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Semantics(
-          expanded: isOpen,
-          child: TextButton.icon(
-            style: TextButton.styleFrom(
-              alignment: Alignment.centerLeft,
-              minimumSize: const Size.fromHeight(AppSizes.minTarget),
+        // One node, so the button itself is announced expanded/collapsed.
+        MergeSemantics(
+          child: Semantics(
+            expanded: isOpen,
+            child: TextButton.icon(
+              style: TextButton.styleFrom(
+                alignment: Alignment.centerLeft,
+                minimumSize: const Size.fromHeight(AppSizes.minTarget),
+              ),
+              icon: Icon(isOpen ? Icons.expand_less : Icons.expand_more),
+              label: Text(title),
+              onPressed: onToggle,
             ),
-            icon: Icon(isOpen ? Icons.expand_less : Icons.expand_more),
-            label: Text(title),
-            onPressed: onToggle,
           ),
         ),
         if (isOpen) ...[
