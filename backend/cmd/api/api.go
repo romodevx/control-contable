@@ -14,13 +14,15 @@ type api struct {
 	*health.Handler
 	*flagsHandler
 	*authHandler
+	*accountHandler
 	*authhttp.SessionHandler
 }
 
 // flagsHandler and authHandler name the embedded handlers: health.Handler,
 // flagshttp.Handler and authhttp.Handler would otherwise all be the embedded
-// field "Handler".
+// field "Handler". accountHandler is the auth module's account side (M1-09).
 type (
-	flagsHandler = flagshttp.Handler
-	authHandler  = authhttp.Handler
+	flagsHandler   = flagshttp.Handler
+	authHandler    = authhttp.Handler
+	accountHandler = authhttp.AccountHandler
 )

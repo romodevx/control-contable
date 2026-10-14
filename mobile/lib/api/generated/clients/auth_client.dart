@@ -76,7 +76,7 @@ abstract class AuthClient {
   /// Delete the account and all its data (irreversible; requires the current password).
   ///
   /// Re-authenticates with the current password (D4), then in one transaction deletes the user and everything it owns (taxpayers, records, consents, refresh tokens, usage, entitlements) and answers `204` (US-A4). Consents are deleted too (D6); only the keyed email hash survives in the trial registry (no second trial). The store subscription is not cancelled (the app explains how). Any later call with the old access token answers `401`.
-  /// A wrong password answers `401`, counts toward the login failure limit and deletes nothing; a body without `password` answers `400 validation_failed`.
+  /// A wrong password answers `403 invalid_password` and deletes nothing: the bearer was valid, so it is not a `401` (which always means the bearer, carries the challenge and is the client's cue to refresh). Each account gets 5 password attempts, then one more every 3 minutes (`429 rate_limited` with `Retry-After`); a body without `password` answers `400 validation_failed` and spends no attempt.
   @DELETE('/v1/me')
   Future<void> deleteMe({@Body() required DeleteAccountRequest body});
 

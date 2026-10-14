@@ -20,6 +20,10 @@ var (
 	// unknown email, a pending (unverified) sign-up or an account that may
 	// not sign in (US-A2a): the caller cannot tell which.
 	ErrInvalidCredentials = errors.New("auth: invalid credentials")
+	// ErrWrongPassword reports a current password that does not match the
+	// signed-in account's (account deletion re-authentication, D4), or that
+	// changed while the deletion ran. Nothing was deleted.
+	ErrWrongPassword = errors.New("auth: wrong current password")
 	// ErrInvalidAccessToken reports a bearer access token that is malformed,
 	// forged, expired or not meant for this API. Verifiers wrap the reason
 	// in it for the logs; the client only ever sees the generic 401.

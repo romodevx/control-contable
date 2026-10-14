@@ -225,7 +225,7 @@ func TestNotBuilt_isHiddenEvenWithItsModuleOn(t *testing.T) {
 	svc := flags.NewService(keysReader{keys: []string{"module_auth", "module_taxpayers"}})
 	h := newFlaggedHandler(t, testConfig(), pingOK{}, svc)
 
-	for _, target := range []string{"/v1/me", "/v1/taxpayers", "/v1/legal/documents"} {
+	for _, target := range []string{"/v1/taxpayers", "/v1/taxpayers/0190f2a4-7c1e-7b3a-9d2e-4f5a6b7c8d9e"} {
 		req, rec := get(h, target)
 		flagtest.AssertHidden(t, rec)
 		conforms(t, req, rec)

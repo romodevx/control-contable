@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Control Contable API
-  version: 0.2.0
+  version: 0.3.0
   summary: Monthly IVA and provisional ISR estimates for Mexican taxpayers.
   description: |
     Spec-first contract (single source of truth). Server stubs (oapi-codegen),
@@ -419,7 +419,7 @@ paths:
     delete:
       tags: [Auth]
       operationId: deleteMe
-      x-frozen: sha256:bf96beb3ef6d74d9c691affd82a9ecda5034278b114667bacdfa40d532c84e3c
+      x-frozen: sha256:066dd153af80867dc5199982f2c2fe3157125b2c2d54443c7e754b708262b63b
       summary: Delete the account and all its data (irreversible; requires the current password)
       description: >-
         Re-authenticates with the current password (D4), then in one transaction deletes the
@@ -429,8 +429,11 @@ paths:
         subscription is not cancelled (the app explains how). Any later call with the old
         access token answers `401`.
 
-        A wrong password answers `401`, counts toward the login failure limit and deletes
-        nothing; a body without `password` answers `400 validation_failed`.
+        A wrong password answers `403 invalid_password` and deletes nothing: the bearer was
+        valid, so it is not a `401` (which always means the bearer, carries the challenge and
+        is the client's cue to refresh). Each account gets 5 password attempts, then one more
+        every 3 minutes (`429 rate_limited` with `Retry-After`); a body without `password`
+        answers `400 validation_failed` and spends no attempt.
       x-module: module_auth
       security:
         - bearerAuth: []
@@ -442,13 +445,14 @@ paths:
       responses:
         '204': { description: Account and all its data deleted. }
         '400': { $ref: '#/components/responses/BadRequest' }
-        '401':
-          description: Missing or invalid bearer, or wrong current password; nothing was deleted.
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: Wrong current password; nothing was deleted.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
               example:
-                error: { code: unauthorized, message: Authentication required., request_id: req_01J9Z6Q4X8 }
+                error: { code: invalid_password, message: The password is incorrect., request_id: req_01J9Z6Q4X8 }
         '404': { $ref: '#/components/responses/NotFound' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
@@ -456,7 +460,7 @@ paths:
     get:
       tags: [Auth]
       operationId: listLegalDocuments
-      x-frozen: sha256:0782a5ff83a75262a9959b1d1f65b83d8619ce4ccf8e2d0538eea897e01b19df
+      x-frozen: sha256:f32c46b4e9b150c8d423a8974896170d8fbc35ac4725a43ef2dcee0948d8e3b8
       summary: Current privacy notices and terms
       description: >-
         The current version of each legal document kind (US-A5). The register screen links to
@@ -468,6 +472,13 @@ paths:
       responses:
         '200':
           description: Current version of each kind.
+          headers:
+            Cache-Control:
+              description: >-
+                Shared caches may keep the list for 5 minutes (RFC 9111): it is public and
+                the same for everyone, and a new version takes effect within that window.
+              required: true
+              schema: { type: string, const: 'public, max-age=300' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/LegalDocumentList' }
@@ -1568,6 +1579,7 @@ components:
         - rate_limited
         - upstream_unavailable
         - internal_error
+        - invalid_password
     FieldError:
       x-frozen: sha256:8de017f335831a0658c87486c7cb050faa553f4215e6cd7df03de2b74384fc3d
       type: object

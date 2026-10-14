@@ -53,22 +53,6 @@ func (notBuilt) ListExpenseCategories(context.Context, gen.ListExpenseCategories
 	return nil, errNotBuilt
 }
 
-func (notBuilt) ListLegalDocuments(context.Context, gen.ListLegalDocumentsRequestObject) (gen.ListLegalDocumentsResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) DeleteMe(context.Context, gen.DeleteMeRequestObject) (gen.DeleteMeResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) GetMe(context.Context, gen.GetMeRequestObject) (gen.GetMeResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) UpdateMe(context.Context, gen.UpdateMeRequestObject) (gen.UpdateMeResponseObject, error) {
-	return nil, errNotBuilt
-}
-
 func (notBuilt) ListRegimes(context.Context, gen.ListRegimesRequestObject) (gen.ListRegimesResponseObject, error) {
 	return nil, errNotBuilt
 }
