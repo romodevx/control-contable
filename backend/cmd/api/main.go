@@ -140,8 +140,9 @@ type recordWiring struct {
 	pool   *sql.DB // cc_app
 	auth   authModule
 	logger *slog.Logger
-	// expensesClock is the expense rules' clock; nil is the system clock
-	// (tests pin a day).
+	// incomesClock and expensesClock are the record rules' clocks; nil is
+	// the system clock (tests pin a day).
+	incomesClock  clock.Clock
 	expensesClock clock.Clock
 }
 
@@ -168,7 +169,7 @@ func newRecordModules(w recordWiring) (recordModules, error) {
 	}
 	incomes, err := newIncomesModule(incomesWiring{
 		tx: taxpayers.tx, taxpayers: taxpayers.queries, rates: rates,
-		clock: clock.NewSystem(), accessClock: clock.NewSystem(), logger: w.logger,
+		limits: w.auth.limits, clock: w.incomesClock, logger: w.logger,
 	})
 	if err != nil {
 		return recordModules{}, err
@@ -223,8 +224,6 @@ type deps struct {
 	flags     flagService
 	auth      authModule
 	taxpayers taxpayersModule
-	// incomes is built at boot (its rate catalog fails a broken params
-	// file there); M3-06 serves it.
 	incomes   incomesModule
 	expenses  expensesModule
 	taxEngine taxEngineModule
@@ -261,6 +260,7 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 		accountHandler:   d.auth.account,
 		SessionHandler:   d.auth.sessions,
 		taxpayersHandler: d.taxpayers.handler,
+		incomesHandler:   d.incomes.handler,
 		expensesHandler:  d.expenses.handler,
 		taxEngineHandler: d.taxEngine.handler,
 	}
@@ -276,7 +276,10 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 	if d.taxEngine.handler == nil {
 		return nil, errors.New("api: no tax engine handler: module_tax_engine operations would panic")
 	}
-	userLimits, err := mergeLimits(d.taxpayers.userLimits, d.expenses.userLimits, d.taxEngine.userLimits)
+	if d.incomes.handler == nil {
+		return nil, errors.New("api: no incomes handler: module_incomes operations would panic")
+	}
+	userLimits, err := mergeLimits(d.taxpayers.userLimits, d.incomes.userLimits, d.expenses.userLimits, d.taxEngine.userLimits)
 	if err != nil {
 		return nil, err
 	}
@@ -291,8 +294,9 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 		// (MODULE-auth §5), keyed like the edge limiter.
 		OperationLimits: d.auth.clientLimits,
 		ClientKey:       middleware.ClientIP(cfg.TrustedProxyHops),
-		// The per-user write budgets (MODULE-taxpayers S-10, expenses M4-07,
-		// MODULE-tax-engine §5), keyed by the authenticated user.
+		// The per-user write budgets (MODULE-taxpayers S-10, incomes M3-06,
+		// expenses M4-07, MODULE-tax-engine §5), keyed by the authenticated
+		// user.
 		UserLimits: userLimits,
 	})
 	if err != nil {
