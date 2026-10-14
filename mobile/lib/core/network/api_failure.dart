@@ -64,15 +64,18 @@ const Set<DioExceptionType> _unreachableTypes = {
 };
 
 /// Runs [call] (a generated client method) and rethrows its failure as an
-/// [ApiFailure]; [now] dates an HTTP-date `Retry-After`.
+/// [ApiFailure]; [now] dates an HTTP-date `Retry-After`. [classify] reads an
+/// operation's own refusals first (by the envelope's `code`); when it
+/// answers `null` the status decides.
 Future<T> guardApi<T>(
   Future<T> Function() call, {
   DateTime Function() now = DateTime.now,
+  ApiFailure? Function(DioException exception)? classify,
 }) async {
   try {
     return await call();
   } on DioException catch (exception) {
-    throw apiFailureFrom(exception, now: now);
+    throw classify?.call(exception) ?? apiFailureFrom(exception, now: now);
   } on Exception {
     // The body did not decode into the contract's shape.
     throw const ApiUnexpected();
@@ -113,6 +116,14 @@ Duration? parseRetryAfter(String? header, {required DateTime now}) {
     return null;
   }
 }
+
+/// The raw `error.code` of an `ErrorResponse` [body], or `null`. Read as
+/// text, not as the generated enum: a code the client does not know yet
+/// (added by the server first) stays readable instead of `$unknown`.
+String? apiErrorCode(Object? body) => switch (body) {
+  {'error': {'code': final String code}} => code,
+  _ => null,
+};
 
 List<FieldError> _details(Object? body) {
   if (body is! Map<String, Object?>) return const [];

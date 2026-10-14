@@ -10,7 +10,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// as an expired bearer; the interceptor therefore never refreshes nor
 /// retries it (a retry would count the wrong password twice). So the bearer
 /// is freshened first with a `GET /v1/me`, which the interceptor does
-/// refresh for: a `401` from the delete then means the password.
+/// refresh for: a `401` from the delete then means the password. The
+/// repository also reads the `invalid_password` code under any status, so
+/// a server that answers the password apart (e.g. `403`) needs no change.
 class DeleteAccount {
   /// Deletes through [_repository] and ends [_session].
   new(this._repository, this._session);

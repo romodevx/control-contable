@@ -56,12 +56,54 @@ void main() {
     expect(lastBody(), {'password': password});
   });
 
-  test('a wrong password is an ApiUnauthorized', () async {
-    adapter.reply('/v1/me', (status: 401, body: <String, Object?>{}));
+  Map<String, Object?> envelope(String code) => {
+    'error': {'code': code, 'message': 'Refused.', 'request_id': 'req_1'},
+  };
 
+  Future<void> expectDeleteFailure(
+    ({int status, Object? body}) reply,
+    Matcher failure,
+  ) async {
+    adapter.reply('/v1/me', reply);
     await expectLater(
       repository.deleteAccount(syntheticPassword()),
-      throwsA(isA<ApiUnauthorized>()),
+      throwsA(failure),
     );
+  }
+
+  group('a wrong password is an ApiUnauthorized, whatever the status', () {
+    test('401 (the contract today)', () async {
+      await expectDeleteFailure((
+        status: 401,
+        body: <String, Object?>{},
+      ), isA<ApiUnauthorized>());
+    });
+
+    test('403 invalid_password (a distinct code, mapped by code)', () async {
+      await expectDeleteFailure((
+        status: 403,
+        body: envelope('invalid_password'),
+      ), isA<ApiUnauthorized>());
+    });
+
+    test('400 invalid_password is still the password', () async {
+      await expectDeleteFailure((
+        status: 400,
+        body: envelope('invalid_password'),
+      ), isA<ApiUnauthorized>());
+    });
+  });
+
+  test('a 403 with any other code is not taken for the password', () async {
+    await expectDeleteFailure((
+      status: 403,
+      body: envelope('forbidden'),
+    ), isA<ApiUnexpected>());
+  });
+
+  test('getMe never reads a 403 invalid_password as unauthorized', () async {
+    adapter.reply('/v1/me', (status: 403, body: envelope('invalid_password')));
+
+    await expectLater(repository.getMe(), throwsA(isA<ApiUnexpected>()));
   });
 }
