@@ -30,4 +30,12 @@ const (
 	// ErrNoSegment reports an arithmetic step before any input or lookup has
 	// started a running value.
 	ErrNoSegment Error = "taxengine: ledger step before an input"
+	// ErrInvalidStrategy reports a nil strategy, or one whose key has a
+	// blank regime code or an unknown person type, at registry build.
+	ErrInvalidStrategy Error = "taxengine: invalid strategy"
+	// ErrDuplicateStrategy reports two strategies registered under one key.
+	ErrDuplicateStrategy Error = "taxengine: duplicate strategy"
+	// ErrStrategyMismatch reports an estimate for a key other than the
+	// input's: a strategy wired to the wrong regime.
+	ErrStrategyMismatch Error = "taxengine: strategy key mismatch"
 )
