@@ -1954,19 +1954,19 @@ abstract class AppLocalizations {
   ///
   /// In es, this message translates to:
   /// **'Lo que escribiste se perderá.'**
-  String get incomeDiscardBody;
+  String get recordDiscardBody;
 
   /// Stays on the form.
   ///
   /// In es, this message translates to:
   /// **'Seguir editando'**
-  String get incomeDiscardKeep;
+  String get recordDiscardKeep;
 
   /// Leaves the form, losing the changes.
   ///
   /// In es, this message translates to:
   /// **'Descartar'**
-  String get incomeDiscardConfirm;
+  String get recordDiscardConfirm;
 
   /// Home entry to the estimate screen (module_tax_engine).
   ///
@@ -2261,6 +2261,540 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Disponible pronto.'**
   String get comingSoon;
+
+  /// A record field the server refused for a reason the app has no copy for.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa este dato.'**
+  String get recordErrorInvalid;
+
+  /// Expense list when the user has no active taxpayer.
+  ///
+  /// In es, this message translates to:
+  /// **'Registra un contribuyente para llevar sus gastos.'**
+  String get expensesNoTaxpayer;
+
+  /// Empty expense list for a month.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin gastos en {month}'**
+  String expensesEmptyTitle(String month);
+
+  /// Warm copy under the empty expense list.
+  ///
+  /// In es, this message translates to:
+  /// **'Registra tus gastos y te mostramos cuáles podrían bajar tus impuestos.'**
+  String get expensesEmptyBody;
+
+  /// Opens the new-expense form (list action and empty state).
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar gasto'**
+  String get expensesRecord;
+
+  /// Expense list failed to load; a retry button follows.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar los gastos.'**
+  String get expensesLoadFailed;
+
+  /// Expense list is loading.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando gastos…'**
+  String get expensesLoading;
+
+  /// How many expenses the month (filtered) holds.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 gasto} other{{count} gastos}}'**
+  String expensesCount(int count);
+
+  /// Heading of the expense month totals card.
+  ///
+  /// In es, this message translates to:
+  /// **'Total del mes con IVA'**
+  String get expensesTotalTitle;
+
+  /// Totals card line: expenses before IVA.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin IVA'**
+  String get expensesTotalSubtotal;
+
+  /// Totals card line: IVA paid.
+  ///
+  /// In es, this message translates to:
+  /// **'IVA pagado'**
+  String get expensesTotalIva;
+
+  /// Totals card line: ISR and IVA the taxpayer withheld from suppliers (to remit).
+  ///
+  /// In es, this message translates to:
+  /// **'Retenciones a enterar'**
+  String get expensesTotalWithheld;
+
+  /// Badge of an expense that does not lower ISR (words, never color alone).
+  ///
+  /// In es, this message translates to:
+  /// **'No deducible'**
+  String get expensesNotDeductible;
+
+  /// Tooltip and label of an expense row delete button.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar gasto: {title}'**
+  String expensesDeleteTooltip(String title);
+
+  /// Screen-reader label of an expense row: tapping it edits the expense.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar gasto: {title}'**
+  String expensesEditLabel(String title);
+
+  /// Persistent toast after deleting expenses; deletes stack.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{Gasto eliminado} other{{count} gastos eliminados}}'**
+  String expensesDeleted(int count);
+
+  /// Toast after Undo restored every deleted expense.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{Gasto restaurado} other{{count} gastos restaurados}}'**
+  String expensesRestored(int count);
+
+  /// Toast after a stacked Undo where some expenses could not be restored; the reason follows.
+  ///
+  /// In es, this message translates to:
+  /// **'{restored, plural, =0{No se restauró ninguno de los {total} gastos.} =1{Se restauró 1 de {total} gastos.} other{Se restauraron {restored} de {total} gastos.}}'**
+  String expensesRestoredSome(int restored, int total);
+
+  /// Toast when deleting an expense failed (the row is back).
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo eliminar el gasto.'**
+  String get expensesDeleteFailed;
+
+  /// Toast when an Undo failed for an unexpected reason.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo restaurar el gasto.'**
+  String get expensesRestoreFailed;
+
+  /// Toast when an Undo is refused because the regime no longer covers the date.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo restaurar: el régimen ya no cubre la fecha del gasto.'**
+  String get expensesRestoreRegimeEnded;
+
+  /// App bar title of the new-expense page.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevo gasto'**
+  String get expenseFormTitle;
+
+  /// App bar title of the edit-expense page.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar gasto'**
+  String get expenseEditTitle;
+
+  /// Label of the expense category picker.
+  ///
+  /// In es, this message translates to:
+  /// **'Categoría'**
+  String get expenseFieldCategory;
+
+  /// Category picker before a category is chosen.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige una categoría'**
+  String get expenseCategoryNone;
+
+  /// Title of the category picker sheet.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige la categoría del gasto'**
+  String get expenseCategoryPickerTitle;
+
+  /// Label of the search field in the category picker.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar categoría'**
+  String get expenseCategorySearch;
+
+  /// Category picker search with no result.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguna categoría coincide con la búsqueda.'**
+  String get expenseCategoryNoMatch;
+
+  /// The expense form waits for the category catalog.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando categorías…'**
+  String get expenseCategoriesLoading;
+
+  /// The category catalog failed to load; a retry follows.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar las categorías.'**
+  String get expenseCategoriesLoadFailed;
+
+  /// Label: expense subtotal before IVA.
+  ///
+  /// In es, this message translates to:
+  /// **'Monto sin IVA'**
+  String get expenseFieldAmount;
+
+  /// Label: IVA rate of the expense.
+  ///
+  /// In es, this message translates to:
+  /// **'Tasa de IVA'**
+  String get expenseFieldIvaRate;
+
+  /// Label: payment date (the only date of an expense).
+  ///
+  /// In es, this message translates to:
+  /// **'Fecha de pago'**
+  String get expenseFieldPaidOn;
+
+  /// Label: how the expense was paid.
+  ///
+  /// In es, this message translates to:
+  /// **'Forma de pago'**
+  String get expenseFieldPaymentMethod;
+
+  /// Label: whether the expense has a CFDI.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Tienes factura?'**
+  String get expenseFieldHasCfdi;
+
+  /// Option: the expense has a CFDI.
+  ///
+  /// In es, this message translates to:
+  /// **'Sí'**
+  String get expenseHasCfdiYes;
+
+  /// Option: the expense has no CFDI.
+  ///
+  /// In es, this message translates to:
+  /// **'No'**
+  String get expenseHasCfdiNo;
+
+  /// Label: regime of the expense (only with several).
+  ///
+  /// In es, this message translates to:
+  /// **'Régimen'**
+  String get expenseFieldRegime;
+
+  /// Label: IVA paid, prefilled from the rate.
+  ///
+  /// In es, this message translates to:
+  /// **'IVA pagado'**
+  String get expenseFieldIvaAmount;
+
+  /// Label of the deductibility switch.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Es deducible?'**
+  String get expenseFieldDeductible;
+
+  /// Under the switch while it shows the suggested value.
+  ///
+  /// In es, this message translates to:
+  /// **'Valor sugerido para esta categoría y forma de pago'**
+  String get expenseDeductibleSuggested;
+
+  /// Under the switch while it shows the user override.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo elegiste tú'**
+  String get expenseDeductibleUser;
+
+  /// Button clearing the deductibility override.
+  ///
+  /// In es, this message translates to:
+  /// **'Usar el valor sugerido'**
+  String get expenseDeductibleReset;
+
+  /// Label: the CFDI folio fiscal.
+  ///
+  /// In es, this message translates to:
+  /// **'Folio fiscal (UUID)'**
+  String get expenseFieldCfdiUuid;
+
+  /// Label: what the expense was.
+  ///
+  /// In es, this message translates to:
+  /// **'Descripción'**
+  String get expenseFieldDescription;
+
+  /// Label: ISR the taxpayer withheld from the supplier.
+  ///
+  /// In es, this message translates to:
+  /// **'ISR retenido'**
+  String get expenseFieldIsrWithheld;
+
+  /// Label: IVA the taxpayer withheld from the supplier.
+  ///
+  /// In es, this message translates to:
+  /// **'IVA retenido'**
+  String get expenseFieldIvaWithheld;
+
+  /// Collapsed section: IVA, deductibility, folio, description.
+  ///
+  /// In es, this message translates to:
+  /// **'Más detalles'**
+  String get expenseSectionMore;
+
+  /// Collapsed section of a persona moral: what it withheld from the supplier.
+  ///
+  /// In es, this message translates to:
+  /// **'Retenciones a tu proveedor'**
+  String get expenseSectionWithholdings;
+
+  /// Help under the supplier withholdings section.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que le retuviste al proveedor, como dice el CFDI. Lo tienes que enterar al SAT.'**
+  String get expenseWithholdingsHelp;
+
+  /// Live total under the amount.
+  ///
+  /// In es, this message translates to:
+  /// **'Total con IVA {total}'**
+  String expenseSummaryTotal(String total);
+
+  /// Deductibility hint: deductible.
+  ///
+  /// In es, this message translates to:
+  /// **'Normalmente deducible para tu régimen.'**
+  String get expenseHintDeductible;
+
+  /// Deductibility hint: partially deductible.
+  ///
+  /// In es, this message translates to:
+  /// **'Deducible sólo en parte para tu régimen.'**
+  String get expenseHintPartial;
+
+  /// Deductibility hint: not deductible.
+  ///
+  /// In es, this message translates to:
+  /// **'Normalmente no es deducible para tu régimen.'**
+  String get expenseHintNotDeductible;
+
+  /// Deductibility hint: ISR not applicable.
+  ///
+  /// In es, this message translates to:
+  /// **'No reduce tu ISR en este régimen.'**
+  String get expenseHintNotIsr;
+
+  /// Deductibility hint for RESICO PF.
+  ///
+  /// In es, this message translates to:
+  /// **'No reduce tu ISR en RESICO.'**
+  String get expenseHintResico;
+
+  /// Second line of the RESICO PF hint (PRD US-E1).
+  ///
+  /// In es, this message translates to:
+  /// **'En RESICO tus gastos no reducen tu ISR, pero el IVA que pagaste sí puede acreditarse.'**
+  String get expenseHintResicoIva;
+
+  /// Hint for 606 with the blind 35 % deduction.
+  ///
+  /// In es, this message translates to:
+  /// **'Con la deducción ciega del 35 % este gasto no cuenta.'**
+  String get expenseHintBlind35;
+
+  /// Legal basis of the hint, article level.
+  ///
+  /// In es, this message translates to:
+  /// **'Fundamento: {basis}'**
+  String expenseHintBasis(String basis);
+
+  /// Inline warning: cash above the limit (LISR 27-III).
+  ///
+  /// In es, this message translates to:
+  /// **'Los pagos en efectivo de más de {limit} no son deducibles.'**
+  String expenseCashOverLimit(String limit);
+
+  /// Inline warning: fuel paid in cash.
+  ///
+  /// In es, this message translates to:
+  /// **'El combustible pagado en efectivo no es deducible.'**
+  String get expenseCashFuel;
+
+  /// Inline warning: the IVA of a non-deductible cash payment is not creditable (LIVA 5-II).
+  ///
+  /// In es, this message translates to:
+  /// **'El IVA de este pago en efectivo no es acreditable.'**
+  String get expenseCashIva;
+
+  /// Inline warning: no CFDI.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin factura, el gasto no es deducible.'**
+  String get expenseNoCfdi;
+
+  /// Saved-toast note: override against an ISR-not-applicable hint.
+  ///
+  /// In es, this message translates to:
+  /// **'En tu régimen este gasto no reduce el ISR, aunque lo marcaste como deducible.'**
+  String get expenseWarningNotIsrInRegime;
+
+  /// Saved-toast note: override against a not-deductible hint.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta categoría normalmente no es deducible; se guardó como la marcaste.'**
+  String get expenseWarningCategoryNotDeductible;
+
+  /// Saved-toast note: repeated folio fiscal.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya hay otro gasto con este folio fiscal.'**
+  String get expenseWarningDuplicateCfdi;
+
+  /// Saved-toast note: provisional tax parameters.
+  ///
+  /// In es, this message translates to:
+  /// **'Se usaron los parámetros fiscales del año anterior: los de este año aún no se publican.'**
+  String get expenseWarningProvisional;
+
+  /// Toast after saving an expense.
+  ///
+  /// In es, this message translates to:
+  /// **'Gasto guardado'**
+  String get expenseSaved;
+
+  /// Toast after saving an expense with warnings; the notes follow.
+  ///
+  /// In es, this message translates to:
+  /// **'Gasto guardado, con un aviso:'**
+  String get expenseSavedWithWarnings;
+
+  /// Toast after editing an expense.
+  ///
+  /// In es, this message translates to:
+  /// **'Gasto actualizado'**
+  String get expenseUpdated;
+
+  /// Toast after editing an expense with warnings; the notes follow.
+  ///
+  /// In es, this message translates to:
+  /// **'Gasto actualizado, con un aviso:'**
+  String get expenseUpdatedWithWarnings;
+
+  /// Form notice: offline; the retry is idempotent.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo guardar por falta de conexión. Vuelve a tocar Guardar: no se duplicará.'**
+  String get expenseSaveUnreachable;
+
+  /// Form notice: 409 id_reused.
+  ///
+  /// In es, this message translates to:
+  /// **'Este gasto ya se había guardado con otros datos. Revisa la lista de gastos.'**
+  String get expenseSaveIdReused;
+
+  /// Form notice: the edited expense is gone (404).
+  ///
+  /// In es, this message translates to:
+  /// **'Este gasto ya no existe: se eliminó en otro lugar.'**
+  String get expenseSaveGone;
+
+  /// Form notice: any other failure.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo guardar el gasto. Intenta de nuevo.'**
+  String get expenseSaveFailed;
+
+  /// Paywall title when the expenses trial cap is spent.
+  ///
+  /// In es, this message translates to:
+  /// **'Llegaste al límite de gastos de prueba'**
+  String get expenseTrialCapTitle;
+
+  /// Paywall body when the expenses trial cap is spent.
+  ///
+  /// In es, this message translates to:
+  /// **'La prueba incluye 5 gastos y ya los registraste. Para registrar más gastos se necesita un plan. Lo que capturaste sigue en el formulario.'**
+  String get expenseTrialCapBody;
+
+  /// Title of the leave-without-saving dialog of the expense form.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Descartar este gasto?'**
+  String get expenseDiscardTitle;
+
+  /// Server: unknown_category.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige una categoría de la lista.'**
+  String get expenseErrorUnknownCategory;
+
+  /// Server: has_cfdi_mismatch.
+  ///
+  /// In es, this message translates to:
+  /// **'Si capturas el folio fiscal, indica que tienes factura.'**
+  String get expenseErrorHasCfdiMismatch;
+
+  /// Server: rate_not_valid_on_date.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta tasa no está vigente en la fecha del gasto.'**
+  String get expenseErrorRateNotValid;
+
+  /// Server: withholding_not_applicable.
+  ///
+  /// In es, this message translates to:
+  /// **'Sólo una persona moral retiene a sus proveedores.'**
+  String get expenseErrorWithholdingNotApplicable;
+
+  /// Payment method: cash.
+  ///
+  /// In es, this message translates to:
+  /// **'Efectivo'**
+  String get paymentCash;
+
+  /// Payment method: bank transfer.
+  ///
+  /// In es, this message translates to:
+  /// **'Transferencia'**
+  String get paymentTransfer;
+
+  /// Payment method: debit card.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarjeta de débito'**
+  String get paymentCardDebit;
+
+  /// Payment method: credit card.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarjeta de crédito'**
+  String get paymentCardCredit;
+
+  /// Payment method: check.
+  ///
+  /// In es, this message translates to:
+  /// **'Cheque'**
+  String get paymentCheck;
+
+  /// Payment method: e-wallet.
+  ///
+  /// In es, this message translates to:
+  /// **'Monedero electrónico'**
+  String get paymentEWallet;
+
+  /// Payment method: other.
+  ///
+  /// In es, this message translates to:
+  /// **'Otro'**
+  String get paymentOther;
 }
 
 class _AppLocalizationsDelegate
