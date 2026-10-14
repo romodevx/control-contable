@@ -36,9 +36,12 @@ const (
 // gateStrategies are the strategies the gate runs, through the real M5-10
 // registry. A strategy PR (M5-11..M5-19) adds its strategy here and removes
 // pending_strategy from its cases in the same PR, until M5-22 wires them all
-// at the composition root and the gate can take that list. Empty: no
-// strategy has landed yet.
-func gateStrategies() []domain.Strategy { return nil }
+// at the composition root and the gate can take that list.
+func gateStrategies() []domain.Strategy {
+	return []domain.Strategy{
+		domain.NewRentPFStrategy(), // M5-12
+	}
+}
 
 func registry(t *testing.T) domain.Registry {
 	t.Helper()
