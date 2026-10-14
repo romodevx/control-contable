@@ -101,7 +101,7 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err != nil {
 		return err
 	}
-	taxpayers, expenses, err := newRecordModules(recordWiring{env: cfg.Env, keys: taxpayerKeys, pool: pool, auth: auth, logger: logger})
+	records, err := newRecordModules(recordWiring{env: cfg.Env, keys: taxpayerKeys, pool: pool, auth: auth, logger: logger})
 	if err != nil {
 		return err
 	}
@@ -114,8 +114,9 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 		db:        pgdb.NewPinger(pool),
 		flags:     flagSvc,
 		auth:      auth,
-		taxpayers: taxpayers,
-		expenses:  expenses,
+		taxpayers: records.taxpayers,
+		incomes:   records.incomes,
+		expenses:  records.expenses,
 		taxEngine: taxEngine,
 		now:       time.Now,
 	})
@@ -131,8 +132,8 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	return serve(ctx, newServer(handler, cfg.HTTPAddr, logger), ln, logger)
 }
 
-// recordWiring is what the record modules (taxpayers, expenses) need from
-// the composition root.
+// recordWiring is what the record modules (taxpayers, incomes, expenses)
+// need from the composition root.
 type recordWiring struct {
 	env    config.Environment
 	keys   config.Taxpayers
@@ -144,25 +145,42 @@ type recordWiring struct {
 	expensesClock clock.Clock
 }
 
-// newRecordModules wires the taxpayers and expenses modules over one cc_app
-// unit of work: the expense's regime check joins it, and the taxpayers
-// record lookup reads the expenses inside the taxpayers' own.
-func newRecordModules(w recordWiring) (taxpayersModule, expensesModule, error) {
-	txm, err := pgdb.NewTxManager(w.pool)
+// recordModules are the taxpayers module and the record modules over its
+// unit of work.
+type recordModules struct {
+	taxpayers taxpayersModule
+	incomes   incomesModule
+	expenses  expensesModule
+}
+
+// newRecordModules wires the incomes and expenses modules over the
+// taxpayers module's cc_app unit of work and one rate catalog: their
+// regime checks join it, and the taxpayers record lookup reads the
+// expenses inside the taxpayers' own.
+func newRecordModules(w recordWiring) (recordModules, error) {
+	taxpayers, err := newTaxpayersModule(taxpayersWiring{env: w.env, keys: w.keys, pool: w.pool, limits: w.auth.limits, logger: w.logger})
 	if err != nil {
-		return taxpayersModule{}, expensesModule{}, err
+		return recordModules{}, err
 	}
-	taxpayers, err := newTaxpayersModule(taxpayersWiring{env: w.env, keys: w.keys, tx: txm, limits: w.auth.limits, logger: w.logger})
+	rates, err := newRateCatalog()
 	if err != nil {
-		return taxpayersModule{}, expensesModule{}, err
+		return recordModules{}, err
 	}
-	expenses, err := newExpensesModule(expensesWiring{
-		tx: txm, taxpayers: taxpayers.queries, limits: w.auth.limits, clock: w.expensesClock, logger: w.logger,
+	incomes, err := newIncomesModule(incomesWiring{
+		tx: taxpayers.tx, taxpayers: taxpayers.queries, rates: rates,
+		clock: clock.NewSystem(), accessClock: clock.NewSystem(), logger: w.logger,
 	})
 	if err != nil {
-		return taxpayersModule{}, expensesModule{}, err
+		return recordModules{}, err
 	}
-	return taxpayers, expenses, nil
+	expenses, err := newExpensesModule(expensesWiring{
+		tx: taxpayers.tx, taxpayers: taxpayers.queries, rates: rates,
+		limits: w.auth.limits, clock: w.expensesClock, logger: w.logger,
+	})
+	if err != nil {
+		return recordModules{}, err
+	}
+	return recordModules{taxpayers: taxpayers, incomes: incomes, expenses: expenses}, nil
 }
 
 // openDatabase opens the cc_app pool (pgx) without connecting.
@@ -205,6 +223,9 @@ type deps struct {
 	flags     flagService
 	auth      authModule
 	taxpayers taxpayersModule
+	// incomes is built at boot (its rate catalog fails a broken params
+	// file there); M3-06 serves it.
+	incomes   incomesModule
 	expenses  expensesModule
 	taxEngine taxEngineModule
 	now       func() time.Time

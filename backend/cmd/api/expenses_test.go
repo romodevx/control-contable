@@ -132,8 +132,9 @@ func TestTaxpayerProfiles_passesTheClientError(t *testing.T) {
 // year's (provisional) for a year without its own set, and
 // ErrParametersUnavailable before the first set (pre-2026: 400 out_of_range).
 func TestExpenseParameters_overTheEmbeddedSets(t *testing.T) {
-	params, err := newExpenseParameters()
+	rates, err := newRateCatalog()
 	require.NoError(t, err)
+	params := newExpenseParameters(rates)
 
 	got, err := params.On(fiscalDate(t, "2026-09-12"))
 	require.NoError(t, err)

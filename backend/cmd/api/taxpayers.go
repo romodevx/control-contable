@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -16,6 +17,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
 	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit"
 	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit/ratelimitpg"
+	"github.com/romodevx/control-contable/backend/internal/platform/tx"
 	taxpayershttp "github.com/romodevx/control-contable/backend/internal/taxpayers/adapter/http"
 	"github.com/romodevx/control-contable/backend/internal/taxpayers/infra"
 	"github.com/romodevx/control-contable/backend/internal/taxpayers/usecase"
@@ -26,51 +28,63 @@ import (
 var errMissingRFCKeys = errors.New("taxpayers: RFC keys are required outside dev")
 
 // taxpayersWiring is what the taxpayers module needs from the composition
-// root. tx is the cc_app unit of work every module shares: the expenses
-// module's regime check joins it.
+// root.
 type taxpayersWiring struct {
 	env    config.Environment
 	keys   config.Taxpayers
-	tx     *pgdb.TxManager
+	pool   *sql.DB // cc_app
 	limits *ratelimitpg.Store
 	logger *slog.Logger
 }
 
 // taxpayersModule is the taxpayers module's HTTP side: the handler of its
-// operations and its per-user write budget (S-10) for the router, plus the
-// read-side queries the record modules consume.
+// operations and its per-user write budget (S-10) for the router.
 type taxpayersModule struct {
 	handler    *taxpayershttp.Handler
 	userLimits map[string]router.Limiter
-	queries    *usecase.Queries
+	// tx is the cc_app unit of work the record modules share: CheckRegime
+	// joins their transaction only through the same manager.
+	tx tx.Manager
+	// queries is the read side M3/M4 consume (TaxpayerRegimeChecker,
+	// TaxpayerProfileReader).
+	queries *usecase.Queries
 }
 
 // newTaxpayersModule wires the taxpayers use cases (M2-05, M2-06) over the
-// shared cc_app unit of work, the RFC vault and the access policy. Its
-// record lookup reads the expenses (M2-14 G-1).
+// cc_app unit of work, the RFC vault and the access policy.
 func newTaxpayersModule(w taxpayersWiring) (taxpayersModule, error) {
-	if w.tx == nil {
-		return taxpayersModule{}, errors.New("taxpayers: the shared unit of work is required")
-	}
-	txm := w.tx
-	vault, err := newRFCVault(w)
+	deps, err := newTaxpayersDeps(w)
 	if err != nil {
 		return taxpayersModule{}, err
-	}
-	store, catalog := infra.NewStore(), infra.NewCatalog()
-	deps := usecase.Deps{
-		Tx:        txm,
-		Access:    access.NewPolicy(txm, accessgorm.NewStore(), accessgorm.NewStore(), clock.NewSystem()),
-		Taxpayers: store, Regimes: store, Catalog: catalog, Directory: catalog,
-		Records: regimeRecords{expenses: expinfra.NewStore()}, // M3 adds the incomes
-		RFC:     vault, Clock: clock.NewSystem(), Logger: w.logger,
 	}
 	return taxpayersModule{
 		handler: taxpayershttp.NewHandler(taxpayershttp.UseCases{
 			Taxpayers: usecase.NewTaxpayers(deps), Regimes: usecase.NewRegimes(deps), Catalog: usecase.NewCatalog(deps),
 		}),
 		userLimits: bucketsOf(w.limits, taxpayershttp.UserLimits),
+		tx:         deps.Tx,
 		queries:    usecase.NewQueries(deps),
+	}, nil
+}
+
+// newTaxpayersDeps builds the taxpayers ports over a new cc_app unit of
+// work.
+func newTaxpayersDeps(w taxpayersWiring) (usecase.Deps, error) {
+	txm, err := pgdb.NewTxManager(w.pool)
+	if err != nil {
+		return usecase.Deps{}, err
+	}
+	vault, err := newRFCVault(w)
+	if err != nil {
+		return usecase.Deps{}, err
+	}
+	store, catalog := infra.NewStore(), infra.NewCatalog()
+	return usecase.Deps{
+		Tx:        txm,
+		Access:    access.NewPolicy(txm, accessgorm.NewStore(), accessgorm.NewStore(), clock.NewSystem()),
+		Taxpayers: store, Regimes: store, Catalog: catalog, Directory: catalog,
+		Records: regimeRecords{expenses: expinfra.NewStore()}, // M3-06 adds the incomes
+		RFC:     vault, Clock: clock.NewSystem(), Logger: w.logger,
 	}, nil
 }
 

@@ -15,10 +15,9 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/access"
 	"github.com/romodevx/control-contable/backend/internal/platform/access/accessgorm"
 	"github.com/romodevx/control-contable/backend/internal/platform/clock"
-	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
 	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit/ratelimitpg"
+	"github.com/romodevx/control-contable/backend/internal/platform/tx"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/infra/ratecatalog"
-	"github.com/romodevx/control-contable/backend/internal/taxengine/params"
 	tpdomain "github.com/romodevx/control-contable/backend/internal/taxpayers/domain"
 	tpusecase "github.com/romodevx/control-contable/backend/internal/taxpayers/usecase"
 )
@@ -33,8 +32,9 @@ const (
 // root. tx must be the taxpayers module's manager: the regime check joins
 // the expense's unit of work (tx.ErrForeignTransaction otherwise).
 type expensesWiring struct {
-	tx        *pgdb.TxManager
+	tx        tx.Manager
 	taxpayers *tpusecase.Queries
+	rates     *rateCatalog
 	limits    *ratelimitpg.Store
 	clock     clock.Clock // nil = the system clock
 	logger    *slog.Logger
@@ -51,13 +51,10 @@ type expensesModule struct {
 // shared cc_app unit of work, the access policy (trial cap), the taxpayers
 // queries and the tax engine's RateCatalog over the embedded parameters.
 func newExpensesModule(w expensesWiring) (expensesModule, error) {
-	if w.tx == nil || w.taxpayers == nil {
-		return expensesModule{}, errors.New("expenses: the shared unit of work and the taxpayers queries are required")
+	if w.tx == nil || w.taxpayers == nil || w.rates == nil {
+		return expensesModule{}, errors.New("expenses: the shared unit of work, the taxpayers queries and the rate catalog are required")
 	}
-	parameters, err := newExpenseParameters()
-	if err != nil {
-		return expensesModule{}, err
-	}
+	parameters := newExpenseParameters(w.rates)
 	clk := w.clock
 	if clk == nil {
 		clk = clock.NewSystem()
@@ -122,17 +119,9 @@ type expenseParameters struct {
 
 var _ expusecase.Parameters = expenseParameters{}
 
-// newExpenseParameters binds the catalog over the embedded parameter sets.
-func newExpenseParameters() (expenseParameters, error) {
-	sets, err := params.Embedded()
-	if err != nil {
-		return expenseParameters{}, fmt.Errorf("expenses: tax parameters: %w", err)
-	}
-	catalog, err := ratecatalog.New[expdomain.AmountKey](sets)
-	if err != nil {
-		return expenseParameters{}, fmt.Errorf("expenses: rate catalog: %w", err)
-	}
-	return expenseParameters{Catalog: catalog}, nil
+// newExpenseParameters binds the shared rate catalog to the expenses port.
+func newExpenseParameters(rates *rateCatalog) expenseParameters {
+	return expenseParameters{Catalog: rates}
 }
 
 // On implements expusecase.Parameters: a day no set covers (before the

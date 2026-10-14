@@ -78,12 +78,12 @@ func newContractEnv(t *testing.T, db health.Pinger, options ...contractOption) c
 	for _, o := range options {
 		o(&wiring)
 	}
-	taxpayers, expenses, err := newRecordModules(wiring)
+	records, err := newRecordModules(wiring)
 	require.NoError(t, err)
 	taxEngine, err := newTaxEngineModule(taxEngineWiring{pool: app, limits: auth.limits, logger: logger})
 	require.NoError(t, err)
 	return contractEnv{
-		handler: newHandlerWithAll(t, contractConfig(), db, svc, auth, taxpayers, expenses, taxEngine, logger),
+		handler: newHandlerWithAll(t, contractConfig(), db, svc, auth, records.taxpayers, records.expenses, taxEngine, logger),
 		store:   flagsgorm.NewStore(owner),
 		flags:   svc,
 		logs:    logs,

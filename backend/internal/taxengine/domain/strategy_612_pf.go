@@ -30,7 +30,7 @@ type Strategy612PF struct{}
 func NewStrategy612PF() Strategy612PF { return Strategy612PF{} }
 
 // pf612Tariff is the parameter key of the twelve accumulated tables.
-const pf612Tariff taxparams.Key = "isr.art106.accumulated"
+const pf612Tariff taxparams.Key = "isr.art106.accumulated" // gitleaks:allow (a public parameter key, not a secret)
 
 // The 612 ISR line codes, in the order Estimate appends them; the optional
 // tax-input lines appear only when the input was entered.
