@@ -487,16 +487,16 @@ Amounts, constancia figures and deduction details are never logged or echoed in 
 - Recomputing salary exemptions or the employment subsidy (constancia totals are trusted).
 - Mid-year RESICO exit recomputation (rule 3.13.5): explanation only.
 
-## 12. Open questions (defaults applied until the owner answers)
+## 12. Decisions (coordinator, 2026-10-15) — all DECIDED
 
-| # | Question | Default |
+| # | Question | Decision |
 |---|---|---|
-| OQ-A1 | Unify M5 `prior_provisional_payments` and `annual_filed_payments` into one table? | **No in v1**: precedence filed > tax input > app estimate (§2.5); unify later if both are used |
-| OQ-A2 | Salary constancias for a PF without 605 registered? | **Allowed** for any PF; the screen suggests adding 605 |
-| OQ-A3 | Extrapolate the current year to December? | **No**: records to date + `year_in_progress` warning |
-| OQ-A4 | RESICO income in the 15 % "total income" for the cap? | **Excluded** (conservative) + CPA topic |
-| OQ-A5 | Donations without 2025 acumulables | **Excluded** and section `incomplete` |
-| OQ-A6 | 614 interest in art. 152 | **Explanation only** in v1 |
-| OQ-A7 | Presets including `module_annual` | **`demo_full` only** |
-| OQ-A8 | Default year shown | Previous year Jan → 30 abr, else current year |
-| OQ-A9 | Free tier: are annual inputs counted in trial record caps? | **No**; writes need `pro`/trial like `putTaxInputs` (402 when read-only) |
+| OQ-A1 | Unify M5 `prior_provisional_payments` and `annual_filed_payments` into one table? | **DECIDED:** **No in v1**: precedence filed > tax input > app estimate (§2.5); unify later if both are used |
+| OQ-A2 | Salary constancias for a PF without 605 registered? | **DECIDED:** **Allowed** for any PF; the screen suggests adding 605 |
+| OQ-A3 | Extrapolate the current year to December? | **DECIDED:** **No**: records to date + `year_in_progress` warning |
+| OQ-A4 | RESICO income in the 15 % "total income" for the cap? | **DECIDED:** **Excluded** (conservative) + CPA topic `deduction_cap_resico_income`; legal reasoning in [CPA-REVIEW](../reviews/CPA-REVIEW.md#annual-estimate-module_annual-module-annual) |
+| OQ-A5 | Donations without 2025 acumulables | **DECIDED:** **Excluded** and section `incomplete` |
+| OQ-A6 | 614 interest in art. 152 | **DECIDED:** **Explanation only** in v1 |
+| OQ-A7 | Presets including `module_annual` | **DECIDED:** **`demo_full` only** |
+| OQ-A8 | Default year shown | **DECIDED:** Previous year Jan → 30 abr, else current year |
+| OQ-A9 | Free tier: are annual inputs counted in trial record caps? | **DECIDED:** **No**; writes need `pro`/trial like `putTaxInputs` (402 when read-only) |
