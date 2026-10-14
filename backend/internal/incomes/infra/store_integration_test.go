@@ -54,6 +54,8 @@ var registerSQL = []string{
 }
 
 type env struct {
+	db        *pgtest.Database
+	app       *sql.DB
 	txm       *pgdb.TxManager
 	store     infra.Store
 	taxpayers *taxpayers.Taxpayers
@@ -61,7 +63,8 @@ type env struct {
 
 func newEnv(t *testing.T) *env {
 	t.Helper()
-	app := pgtest.NewDatabase(t).Connect(t, pgtest.RoleApp)
+	db := pgtest.NewDatabase(t)
+	app := db.Connect(t, pgtest.RoleApp)
 	for _, u := range []string{userA, userB} {
 		require.NoError(t, pgtest.AsUser(t.Context(), app, u, func(tx *sql.Tx) error {
 			for _, statement := range registerSQL {
@@ -84,7 +87,7 @@ func newEnv(t *testing.T) *env {
 		Taxpayers: store, Regimes: store, Catalog: catalog, Directory: catalog, Records: taxpayersinfra.NoRecords{},
 		RFC: taxpayersinfra.NewRFCVault(keyring, index), Clock: clock.NewSystem(), Logger: slog.New(slog.DiscardHandler),
 	}
-	return &env{txm: txm, store: infra.NewStore(), taxpayers: taxpayers.NewTaxpayers(deps)}
+	return &env{db: db, app: app, txm: txm, store: infra.NewStore(), taxpayers: taxpayers.NewTaxpayers(deps)}
 }
 
 // taxpayer creates a taxpayer of user holding regime since January 2026.
