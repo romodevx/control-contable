@@ -45,6 +45,21 @@ linters:
               desc: GORM lives in infra/ only (ADR-0001 Dependency Rule)
             - pkg: github.com/jackc
               desc: the driver lives in infra/ only (ADR-0001 Dependency Rule)
+        # ADR-0007: the shared fiscal kernel is held to the domain's rule,
+        # without the domain's external allowlist (internal/archtest
+        # kernel-imports is the authority; this is the editor-time hint).
+        kernel:
+          files:
+            - "**/internal/kernel/**"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/romodevx/control-contable/backend/internal
+          deny:
+            - pkg: net/http
+              desc: the shared kernel knows nothing of HTTP (ADR-0007)
+            - pkg: database/sql
+              desc: the shared kernel knows nothing of the database (ADR-0007)
         usecase:
           files:
             - "**/internal/*/usecase/**"
@@ -86,8 +101,9 @@ linters:
     # `generated: strict` skips them; the hand-written files next to them
     # (contract_test.go, generate.go) stay linted.
     rules:
-      # forbidigo's float/clock bans apply to the domain and to platform/money only.
-      - path-except: (^|/)internal/([^/]+/domain|platform/money)/
+      # forbidigo's float/clock bans apply to the domain, the shared kernel
+      # (ADR-0007) and platform/money only.
+      - path-except: (^|/)internal/([^/]+/domain|platform/money|kernel)/
         linters:
           - forbidigo
 
