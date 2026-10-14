@@ -24,6 +24,17 @@ void main() {
     expect(await store.read(), 'refresh-2');
   });
 
+  test('wipeAll clears every key the app keeps there', () async {
+    FlutterSecureStorage.setMockInitialValues({'other': 'x'});
+    final store = SecureRefreshTokenStore();
+    await store.write('refresh-1');
+
+    await store.wipeAll();
+
+    expect(await store.read(), isNull);
+    expect(await const FlutterSecureStorage().readAll(), isEmpty);
+  });
+
   test('the Keychain item never syncs nor migrates to another device', () {
     const options = SecureRefreshTokenStore.appleOptions;
 

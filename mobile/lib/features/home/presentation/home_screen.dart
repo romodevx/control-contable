@@ -1,6 +1,7 @@
 import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/flags/flag_gate.dart';
 import 'package:control_contable/core/theme/app_spacing.dart';
+import 'package:control_contable/features/auth/presentation/account_button.dart';
 import 'package:control_contable/features/auth/presentation/sign_out_button.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +20,7 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(l10n.navHome),
         actions: const [
+          FlagGate(module: AppModule.auth, child: AccountButton()),
           FlagGate(module: AppModule.auth, child: SignOutButton()),
         ],
       ),

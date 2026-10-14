@@ -33,25 +33,34 @@ const String _retriedKey = 'auth.retried';
 ///   rotation) and stores the rotated refresh token.
 /// - A refused refresh ends the session (the router then shows login) and
 ///   the original 401 surfaces; an unreachable one keeps the session.
-/// - Auth endpoints (`/v1/auth/*`) are never refreshed for.
+/// - Auth endpoints (`/v1/auth/*`) are never refreshed for. Only a `401`
+///   is (it always means the bearer): a wrong current password on
+///   re-authentication is a `403 invalid_password` and passes through.
+/// - Only requests to the configured API origin (scheme, host and port of
+///   `apiBase`) get the bearer or a refresh: an absolute URL to anywhere
+///   else never sees the token.
 ///
 /// A plain [Interceptor], not a `QueuedInterceptor`: the single flight lives
 /// in `Session`, so a retry through the same client never waits behind its
 /// own error handler.
 class AuthInterceptor extends Interceptor {
   /// Authenticates the requests of a client with a session.
-  new({required this._session, required this._dio});
+  new({required this._session, required this._dio, required this._apiBase});
 
   final Session _session;
   final Dio _dio;
+  final Uri _apiBase;
 
   @override
   Future<void> onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    final path = options.uri.path;
-    if (_publicAuthPaths.any(path.endsWith)) return handler.next(options);
+    final uri = options.uri;
+    final path = uri.path;
+    if (!_isApiOrigin(uri) || _publicAuthPaths.any(path.endsWith)) {
+      return handler.next(options);
+    }
     final mustRefreshFirst =
         _session.isSignedIn &&
         _session.accessToken == null &&
@@ -71,6 +80,7 @@ class AuthInterceptor extends Interceptor {
     final request = err.requestOptions;
     final isRefreshable =
         err.response?.statusCode == HttpStatus.unauthorized &&
+        _isApiOrigin(request.uri) &&
         !_isAuthPath(request.uri.path) &&
         request.extra[_retriedKey] != true &&
         _session.isSignedIn;
@@ -93,6 +103,11 @@ class AuthInterceptor extends Interceptor {
       handler.next(retryError);
     }
   }
+
+  bool _isApiOrigin(Uri uri) =>
+      uri.scheme == _apiBase.scheme &&
+      uri.host.toLowerCase() == _apiBase.host.toLowerCase() &&
+      uri.port == _apiBase.port;
 
   static bool _isAuthPath(String path) => path.contains(_authPrefix);
 

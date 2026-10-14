@@ -319,5 +319,99 @@
   "authVerifyNoPending": "No hay un registro en curso.",
   "@authVerifyNoPending": {
     "description": "Verify screen opened without a sign-up in progress."
+  },
+  "accountTitle": "Mi cuenta",
+  "@accountTitle": {
+    "description": "Title of the account (profile) screen and tooltip of its entry on home."
+  },
+  "accountLoading": "Cargando tu cuenta…",
+  "@accountLoading": {
+    "description": "Status while the profile loads."
+  },
+  "accountLoadFailed": "No se pudo cargar tu cuenta.",
+  "@accountLoadFailed": {
+    "description": "The profile could not be loaded; a retry button follows."
+  },
+  "accountEmailReadOnly": "El correo no se puede cambiar.",
+  "@accountEmailReadOnly": {
+    "description": "Note under the read-only email of the account screen."
+  },
+  "accountSave": "Guardar cambios",
+  "@accountSave": {
+    "description": "Primary button of the account screen (saves the name)."
+  },
+  "accountSaved": "Guardamos tu nombre.",
+  "@accountSaved": {
+    "description": "Confirmation after the name is saved."
+  },
+  "accountDeleteHeading": "Eliminar cuenta",
+  "@accountDeleteHeading": {
+    "description": "Heading of the account-deletion section."
+  },
+  "accountDeleteIntro": "Borra tu cuenta y todos sus datos de forma permanente.",
+  "@accountDeleteIntro": {
+    "description": "One line under the account-deletion heading."
+  },
+  "accountDeleteOpen": "Eliminar mi cuenta",
+  "@accountDeleteOpen": {
+    "description": "Button that opens the account-deletion confirmation."
+  },
+  "accountDeleteTitle": "¿Eliminar tu cuenta?",
+  "@accountDeleteTitle": {
+    "description": "Title of the account-deletion confirmation dialog."
+  },
+  "accountDeleteWhat": "Se borrarán para siempre tu cuenta y todo lo que guardaste: contribuyentes, ingresos, gastos, estimados y recordatorios. No se puede deshacer.",
+  "@accountDeleteWhat": {
+    "description": "What the deletion removes; it is irreversible."
+  },
+  "accountDeleteTrial": "La prueba gratuita no se reinicia: si vuelves a registrarte con este correo, no tendrás otra.",
+  "@accountDeleteTrial": {
+    "description": "The trial registry keeps the email hash: no second free trial."
+  },
+  "accountDeleteSubscription": "Si pagas una suscripción, cancélala en la tienda de tu teléfono (App Store o Google Play): eliminar la cuenta no la cancela.",
+  "@accountDeleteSubscription": {
+    "description": "A store subscription is not cancelled by the deletion."
+  },
+  "accountDeletePasswordLabel": "Contraseña actual",
+  "@accountDeletePasswordLabel": {
+    "description": "Password re-entered to confirm the deletion."
+  },
+  "accountDeleteConfirm": "Eliminar cuenta",
+  "@accountDeleteConfirm": {
+    "description": "Destructive primary button of the deletion dialog."
+  },
+  "accountDeleting": "Eliminando cuenta…",
+  "@accountDeleting": {
+    "description": "Busy state of the deletion button, read by screen readers."
+  },
+  "accountDeleteWrongPassword": "La contraseña no es correcta.",
+  "@accountDeleteWrongPassword": {
+    "description": "The re-entered password was refused; nothing was deleted."
+  },
+  "accountDeleteRetryIn": "Podrás intentar de nuevo en {time}.",
+  "@accountDeleteRetryIn": {
+    "description": "Countdown in the delete-account dialog after too many password attempts (Retry-After), as m:ss.",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "2:45"
+      }
+    }
+  },
+  "goodbyeTitle": "Cuenta eliminada",
+  "@goodbyeTitle": {
+    "description": "Title of the screen shown after the account is deleted."
+  },
+  "goodbyeBody": "Eliminamos tu cuenta y todos sus datos. Gracias por usar Control Contable.",
+  "@goodbyeBody": {
+    "description": "Body of the goodbye screen."
+  },
+  "goodbyeToLogin": "Ir a iniciar sesión",
+  "@goodbyeToLogin": {
+    "description": "Button from the goodbye screen to the login form."
+  },
+  "sessionTokenLeftOnDevice": "No pudimos borrar la sesión guardada en este teléfono. Cierra la app y vuelve a abrirla; si el aviso sigue, borra los datos de la app desde los ajustes del teléfono.",
+  "@sessionTokenLeftOnDevice": {
+    "description": "Sign-out could not remove the stored session token, even by wiping the secure store."
   }
 }
