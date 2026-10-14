@@ -145,14 +145,6 @@ func (notBuilt) RestoreIncome(context.Context, gen.RestoreIncomeRequestObject) (
 	return nil, errNotBuilt
 }
 
-func (notBuilt) GetTaxInputs(context.Context, gen.GetTaxInputsRequestObject) (gen.GetTaxInputsResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) PutTaxInputs(context.Context, gen.PutTaxInputsRequestObject) (gen.PutTaxInputsResponseObject, error) {
-	return nil, errNotBuilt
-}
-
 func (notBuilt) ReceiveRevenueCatWebhook(context.Context, gen.ReceiveRevenueCatWebhookRequestObject) (gen.ReceiveRevenueCatWebhookResponseObject, error) {
 	return nil, errNotBuilt
 }
