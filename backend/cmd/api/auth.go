@@ -50,6 +50,9 @@ type authModule struct {
 	// clientLimits are the per-client limits of the auth operations
 	// (MODULE-auth §5), by operationId, for the router.
 	clientLimits map[string]router.Limiter
+	// limits is the shared rate-limit store (ADR-0005); other modules key
+	// their own scopes in it.
+	limits *ratelimitpg.Store
 }
 
 // newAuthModule wires the auth use cases (M1-05, M1-07) over the cc_app pool
@@ -109,6 +112,7 @@ func newAuthModule(w authWiring) (authModule, error) {
 		sessions:     newSessionHandler(txm, keys, limits, w.logger),
 		authn:        authn,
 		clientLimits: clientLimits(limits),
+		limits:       limits,
 	}, nil
 }
 

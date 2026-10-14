@@ -4,6 +4,7 @@ import (
 	"github.com/romodevx/control-contable/backend/adapter/http/flagshttp"
 	"github.com/romodevx/control-contable/backend/adapter/http/health"
 	authhttp "github.com/romodevx/control-contable/backend/internal/auth/adapter/http"
+	taxpayershttp "github.com/romodevx/control-contable/backend/internal/taxpayers/adapter/http"
 )
 
 // api is the single gen.StrictServerInterface, built by embedding one handler
@@ -16,13 +17,16 @@ type api struct {
 	*authHandler
 	*accountHandler
 	*authhttp.SessionHandler
+	*taxpayersHandler
 }
 
 // flagsHandler and authHandler name the embedded handlers: health.Handler,
 // flagshttp.Handler and authhttp.Handler would otherwise all be the embedded
-// field "Handler". accountHandler is the auth module's account side (M1-09).
+// field "Handler". accountHandler is the auth module's account side (M1-09);
+// taxpayersHandler serves module_taxpayers (M2-07).
 type (
-	flagsHandler   = flagshttp.Handler
-	authHandler    = authhttp.Handler
-	accountHandler = authhttp.AccountHandler
+	flagsHandler     = flagshttp.Handler
+	authHandler      = authhttp.Handler
+	accountHandler   = authhttp.AccountHandler
+	taxpayersHandler = taxpayershttp.Handler
 )

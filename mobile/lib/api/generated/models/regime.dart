@@ -31,6 +31,10 @@ abstract class Regime with _$Regime {
     @JsonKey(name: 'required_inputs') required List<TaxInputDef> requiredInputs,
     @JsonKey(name: 'incompatible_with')
     required List<RegimeIncompatibility> incompatibleWith,
+
+    /// Regimes it may overlap in time, but only with the warning `regime_combination_needs_cpa_review`: the pair is allowed and not yet verified by a CPA (`regime_compatibility.needs_cpa_review`); `reason` is the warning's message. Symmetric, like `incompatible_with`, so the client can warn before submitting. Added in 0.4.0 without a version bump (optional response field); the server always sends it, possibly empty.
+    @JsonKey(includeIfNull: false, name: 'review_pending_with')
+    List<RegimeIncompatibility>? reviewPendingWith,
   }) = _Regime;
 
   factory Regime.fromJson(Map<String, Object?> json) => _$RegimeFromJson(json);

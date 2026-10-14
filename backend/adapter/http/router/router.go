@@ -1,7 +1,7 @@
 // Package router builds the HTTP handler of the generated strict server and
 // attaches the per-operation pipeline at route-registration time:
 //
-//	flag gate → client rate limit → authentication → contract validation → generated handler
+//	flag gate → client rate limit → authentication → user rate limit → contract validation → generated handler
 //
 // ADR-0001 (P0-06 notes) explains the placement: a middleware outside the
 // mux sees no route yet, and the generated wrapper binds path and query
@@ -17,7 +17,8 @@
 // per-operation client limits (MODULE-auth §5) run right after the gate: a
 // disabled module spends no budget and never answers 429, and a flood of
 // anonymous or malformed requests is limited before any authentication or
-// validation work.
+// validation work. The per-user limits (MODULE-taxpayers S-10) need the
+// principal, so they run right after authentication.
 package router
 
 import (
@@ -78,6 +79,10 @@ type Options struct {
 	OperationLimits map[string]Limiter
 	// ClientKey derives the client key of a request (the client address).
 	ClientKey func(*http.Request) string
+	// UserLimits are per-user limits by operationId (MODULE-taxpayers
+	// S-10), keyed by the authenticated user's id. They run right after
+	// authentication, so only secured operations may have one.
+	UserLimits map[string]Limiter
 }
 
 // New returns the handler serving every operation of spec through si. It
@@ -101,7 +106,7 @@ func New(si gen.StrictServerInterface, spec *openapi3.T, opts Options) (http.Han
 	if err != nil {
 		return nil, fmt.Errorf("router: %w", err)
 	}
-	if err := checkLimits(opts, declared); err != nil {
+	if err := checkLimits(opts, declared, publicOperations(spec)); err != nil {
 		return nil, fmt.Errorf("router: %w", err)
 	}
 	reg := &registrar{mux: http.NewServeMux(), spec: spec, opts: opts, errs: errs, notBuilt: notBuilt}
@@ -144,6 +149,9 @@ func (g *registrar) HandleFunc(pattern string, handler func(http.ResponseWriter,
 	}
 	var next http.Handler = http.HandlerFunc(handler)
 	next = validate(route, g.opts.MaxBodyBytes, next)
+	if limiter, ok := g.opts.UserLimits[route.Operation.OperationID]; ok {
+		next = limit(limiter, principalKey, g.opts.Logger, next)
+	}
 	if !isPublic(route) {
 		next = g.opts.Authn.Authenticate(next)
 	}
@@ -207,6 +215,17 @@ func declaredOperations(spec *openapi3.T) map[string]bool {
 		}
 	}
 	return declared
+}
+
+// publicOperations returns the operationIds with no security requirement.
+func publicOperations(spec *openapi3.T) map[string]bool {
+	public := map[string]bool{}
+	for path, item := range spec.Paths.Map() {
+		for method, op := range item.Operations() {
+			public[op.OperationID] = isPublic(&routers.Route{Spec: spec, Path: path, PathItem: item, Method: method, Operation: op})
+		}
+	}
+	return public
 }
 
 // knownOperations returns ids as a set, failing on an id the contract does

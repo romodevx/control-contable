@@ -2357,7 +2357,7 @@ components:
         - code: '612'
           reason: El RESICO sustituye al régimen de actividad empresarial y profesional (art. 113-E LISR).
     Regime:
-      x-frozen: sha256:f60828e0154cea0d795463fbc903ee39ce770da26b609a1e404b592a154b2417
+      x-frozen: sha256:6ab8995766ac240c51a979c5cd7292039e74fffd53ccd6771980ae498e80a543
       type: object
       required: [code, name, person_type, treatment, explanation, option_defs, required_inputs, incompatible_with]
       description: >-
@@ -2384,6 +2384,16 @@ components:
             `regime_required_inputs_valid`).
         incompatible_with:
           type: array
+          items: { $ref: '#/components/schemas/RegimeIncompatibility' }
+        review_pending_with:
+          type: array
+          description: >-
+            Regimes it may overlap in time, but only with the warning
+            `regime_combination_needs_cpa_review`: the pair is allowed and not yet verified by
+            a CPA (`regime_compatibility.needs_cpa_review`); `reason` is the warning's message.
+            Symmetric, like `incompatible_with`, so the client can warn before submitting.
+            Added in 0.4.0 without a version bump (optional response field); the server
+            always sends it, possibly empty.
           items: { $ref: '#/components/schemas/RegimeIncompatibility' }
       examples:
         - code: '626'

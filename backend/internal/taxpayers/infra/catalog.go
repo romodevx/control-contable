@@ -88,3 +88,79 @@ WHERE person_type = ? AND regime_a IN ? AND regime_b IN ?`, string(personType), 
 	}
 	return out, nil
 }
+
+var _ usecase.RegimeDirectory = Catalog{}
+
+type listedRow struct {
+	Code           string
+	Name           string
+	Treatment      string
+	Explanation    *string
+	OptionDefs     string
+	RequiredInputs string
+}
+
+// ListRegimes implements usecase.RegimeDirectory: one query, ordered by code.
+func (Catalog) ListRegimes(ctx context.Context, personType domain.PersonType) ([]usecase.ListedRegime, error) {
+	db, err := pgdb.Conn(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var rows []listedRow
+	err = db.Raw(`SELECT code, name, treatment, explanation,
+       option_defs::text AS option_defs, required_inputs::text AS required_inputs
+FROM regimes WHERE person_type = ? ORDER BY code`, string(personType)).Scan(&rows).Error
+	if err != nil {
+		return nil, translate("list regime catalog", err)
+	}
+	out := make([]usecase.ListedRegime, 0, len(rows))
+	for _, r := range rows {
+		listed, err := r.toListed(personType)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, listed)
+	}
+	return out, nil
+}
+
+func (r listedRow) toListed(personType domain.PersonType) (usecase.ListedRegime, error) {
+	defs, err := decodeOptionDefViews([]byte(r.OptionDefs))
+	if err != nil {
+		return usecase.ListedRegime{}, fmt.Errorf("taxpayers infra: regime %s option_defs: %w", r.Code, err)
+	}
+	inputs, err := decodeTaxInputDefs([]byte(r.RequiredInputs))
+	if err != nil {
+		return usecase.ListedRegime{}, fmt.Errorf("taxpayers infra: regime %s required_inputs: %w", r.Code, err)
+	}
+	listed := usecase.ListedRegime{
+		Code: r.Code, PersonType: personType, Name: r.Name, Treatment: r.Treatment,
+		OptionDefs: defs, RequiredInputs: inputs,
+	}
+	if r.Explanation != nil {
+		listed.Explanation = *r.Explanation
+	}
+	return listed, nil
+}
+
+// ListCompatibility implements usecase.RegimeDirectory.
+func (Catalog) ListCompatibility(ctx context.Context, personType domain.PersonType) ([]usecase.PairVerdict, error) {
+	db, err := pgdb.Conn(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var rows []compatibilityRow
+	err = db.Raw(`SELECT regime_a, regime_b, allowed, needs_cpa_review, reason
+FROM regime_compatibility WHERE person_type = ?`, string(personType)).Scan(&rows).Error
+	if err != nil {
+		return nil, translate("list regime compatibility", err)
+	}
+	out := make([]usecase.PairVerdict, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, usecase.PairVerdict{
+			Pair:          usecase.PairOf(r.RegimeA, r.RegimeB),
+			Compatibility: usecase.Compatibility{Allowed: r.Allowed, NeedsCPAReview: r.NeedsCPAReview, Reason: r.Reason},
+		})
+	}
+	return out, nil
+}

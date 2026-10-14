@@ -61,7 +61,7 @@ target), so every schema a frozen operation exposes is frozen on its own.
 | `components.responses.Unauthorized`, `components.headers.WWWAuthenticate` | M1-07 (security gate, pre-release addition) | The 401 of every secured operation, with the fixed `WWW-Authenticate: Bearer realm="control-contable"` challenge RFC 9110 §15.5.2 requires; the bearer authenticator writes it |
 | `components.responses.TooManyRequests` | M1-10 (pre-release change, 0.3.1; noted in the PR #9 tech-lead review) | The 429 of every operation. `Retry-After` (whole seconds, at least 1) is **required**: both the edge limiter and the per-operation and per-account limits send it, and the harness now fails a 429 without it |
 | M2 `module_taxpayers` operations: `listRegimes`, `listTaxpayers`, `createTaxpayer`, `getTaxpayer`, `updateTaxpayer`, `deleteTaxpayer`, `archiveTaxpayer`, `unarchiveTaxpayer`, `addTaxpayerRegime`, `updateTaxpayerRegime`, `archiveTaxpayerRegime` | M2-01 (0.4.0) | [MODULE-taxpayers](../project-specs/MODULE-taxpayers.md) (OD-1..OD-7, OQ-1..OQ-9); the backend (M2-05..M2-07) and the Flutter onboarding/switcher (M2-08..M2-10) build on it. `unarchiveTaxpayer` and the RFC correction on `updateTaxpayer` are new (OQ-1, OQ-2); RFC rules travel as `details[].code` on `rfc`, never echoing the RFC; a check-digit mismatch is accepted with a `warnings` entry (D-RFC) |
-| `components.schemas.PersonType`, `Treatment`, `RegimeCode`, `RegimeOptionDef`, `RegimeIncompatibility`, `Regime`, `RegimeList`, `RegimeOptions`, `TaxpayerRegime`, `TaxpayerRegimeCreate`, `TaxpayerRegimeUpdate`, `RfcInput`, `Warning`, `Taxpayer`, `TaxpayerCreate`, `TaxpayerUpdate`, `TaxpayerList` | M2-01 | Bodies of the M2 operations. Request bodies are closed (`additionalProperties: false`, S-11); `RfcInput` bounds only the length so the domain reports every RFC rule with its own code |
+| `components.schemas.PersonType`, `Treatment`, `RegimeCode`, `RegimeOptionDef`, `RegimeIncompatibility`, `Regime`, `RegimeList`, `RegimeOptions`, `TaxpayerRegime`, `TaxpayerRegimeCreate`, `TaxpayerRegimeUpdate`, `RfcInput`, `Warning`, `Taxpayer`, `TaxpayerCreate`, `TaxpayerUpdate`, `TaxpayerList` | M2-01 (`Regime` re-frozen by M2-07) | Bodies of the M2 operations. Request bodies are closed (`additionalProperties: false`, S-11); `RfcInput` bounds only the length so the domain reports every RFC rule with its own code. M2-07 added the optional response field `Regime.review_pending_with` (non-breaking, PR #56 follow-up): the pairs under CPA review, so the client warns before submitting |
 
 **`FieldError.field` naming (one convention).** A dotted path relative to the request body
 (`password`, `accepted_documents.1.kind`), `body` for the body root, and the bare parameter
@@ -112,6 +112,10 @@ rec = c.Serve(t, handler, req)                                     // serve + va
   libopenapi-validator's strict mode skips responses that declare no headers and ignores
   `Set-Cookie`, `Cache-Control`, `ETag`, `Vary`, ... by default. A response that needs one of
   those declares it in this file. Formats (`uuid`, `date`, ...) are asserted.
+- Strict mode also reports every key of an open map (`additionalProperties` with a schema) as
+  undeclared. The keys of the contract's open maps are data, so they are exempt by path in
+  `openMapPaths` (`backend/adapter/http/contracttest/contracttest.go`); their values are still
+  validated. Today: `RegimeOptions` (`TaxpayerRegime.options`, keyed by the catalog's option keys).
 - A failure prints the operation, the declared statuses, each violation with its JSON path and
   the response received (status, headers, pretty-printed body).
 - `ServeOp` also fails when the request does not route to the named operation.

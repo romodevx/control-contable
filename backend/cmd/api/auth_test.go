@@ -97,7 +97,7 @@ func TestNewHandler_refusesToServeWithoutAnAuthenticator(t *testing.T) {
 	module.authn = nil
 
 	_, err := newHandler(testConfig(), deps{db: pingOK{}, flags: flagtest.Static{}, auth: module, now: time.Now,
-		logger: logging.New(io.Discard, nil)})
+		taxpayers: stubTaxpayersModule(), logger: logging.New(io.Discard, nil)})
 
 	assert.ErrorContains(t, err, "no authenticator")
 }

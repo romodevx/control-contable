@@ -278,3 +278,39 @@ func TestValidate_checksAnAlreadyRecordedResponse(t *testing.T) {
 	require.NotEmpty(t, spy.errors)
 	assert.Contains(t, spy.report(), "database")
 }
+
+// RegimeOptions is an open map (additionalProperties with a schema): its keys
+// are the catalog's option keys, data not contract, so strict mode must not
+// report them. Their values are still validated, and an undeclared property
+// next to them still fails.
+func TestServe_regimeOptionKeysAreNotUndeclared(t *testing.T) {
+	c := contracttest.Load(t)
+	regime := `{"regime_code":"612","name":"n","treatment":"full","start_period":"2026-01","end_period":null,` +
+		`"options":{"iva_fully_taxable":true,"activities":["lodging"],"mode":"blind_35"}}`
+	taxpayer := `{"id":"0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80","person_type":"fisica","display_name":"Ana",` +
+		`"rfc_masked":"PEXJ******HK8","archived_at":null,"created_at":"2026-10-13T16:05:00Z","regimes":[` + regime + `]%s}`
+	get := func() *http.Request {
+		return httptest.NewRequest(http.MethodGet, "/v1/taxpayers/0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80", nil)
+	}
+	list := func() *http.Request { return httptest.NewRequest(http.MethodGet, "/v1/taxpayers", nil) }
+	noStore := []string{"Cache-Control", "no-store"}
+
+	spy := run(t, func(tb testing.TB) {
+		c.Serve(tb, respond(http.StatusOK, jsonType, fmt.Sprintf(taxpayer, ""), noStore...), get())
+		c.Serve(tb, respond(http.StatusOK, jsonType, `{"items":[`+fmt.Sprintf(taxpayer, "")+`]}`, noStore...), list())
+		c.Serve(tb, respond(http.StatusOK, jsonType, regime, noStore...), httptest.NewRequest(http.MethodPatch,
+			"/v1/taxpayers/0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80/regimes/612", nil))
+	})
+	assert.Empty(t, spy.report())
+
+	spy = run(t, func(tb testing.TB) {
+		c.Serve(tb, respond(http.StatusOK, jsonType, fmt.Sprintf(taxpayer, `,"debug":"leak"`), noStore...), get())
+	})
+	assert.Contains(t, spy.report(), "debug", "a property next to the regimes is still strict")
+
+	spy = run(t, func(tb testing.TB) {
+		bad := strings.Replace(fmt.Sprintf(taxpayer, ""), `"mode":"blind_35"`, `"mode":7`, 1)
+		c.Serve(tb, respond(http.StatusOK, jsonType, bad, noStore...), get())
+	})
+	assert.NotEmpty(t, spy.report(), "option values are still validated")
+}

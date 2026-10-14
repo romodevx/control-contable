@@ -26,6 +26,7 @@ type Deps struct {
 	Taxpayers TaxpayerStore
 	Regimes   RegimeStore
 	Catalog   RegimeCatalog
+	Directory RegimeDirectory
 	Records   RegimeRecords
 	RFC       RFCProtector
 	Clock     clock.Clock
