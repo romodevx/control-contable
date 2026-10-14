@@ -13,15 +13,35 @@ type Withheld struct {
 	ByPlatform money.Cents // a digital platform (LISR 113-A, LIVA 18-J)
 }
 
+// RateSums are the income collected at one taxable IVA rate: the base
+// (amount_cents) and the IVA charged on it (iva_cents), as entered.
+type RateSums struct {
+	Base money.Cents
+	IVA  money.Cents
+}
+
+// IVAByRate splits the income collected in a month by the record's IVA
+// treatment (contract IvaRate). The rate is the record's own: the incomes
+// module checked it against the rate catalog on the record's IVA date, so
+// the border 8 % counts as entered whatever the period (MODULE-tax-engine
+// §2.4). A 0 % or exempt record carries no IVA, so only its base is kept;
+// both bases matter to proportional crediting (LIVA 5 fr. V).
+type IVAByRate struct {
+	Rate16     RateSums    // rate_16, LIVA 1
+	Rate8      RateSums    // rate_8, border regions while the decree is in force
+	Rate0Base  money.Cents // rate_0, LIVA 2-A
+	ExemptBase money.Cents // exempt, LIVA 9, 15, 20
+}
+
 // IncomeSums are one regime's income aggregates for one month, as entered
 // on the records (non-deleted only, MODULE-tax-engine §2.4). Amounts are
 // before IVA.
 type IncomeSums struct {
-	Cash         money.Cents // amount_cents by collected_on (cash-basis ISR)
-	Accrual      money.Cents // amount_cents by invoiced_on (accrual-basis ISR, 601)
-	IVACollected money.Cents // iva_cents by collected_on (IVA is always cash, LIVA 1-B)
-	IVAWithheld  Withheld    // iva_withheld_cents by collected_on
-	ISRWithheld  Withheld    // isr_withheld_cents by collected_on
+	Cash        money.Cents // amount_cents by collected_on (cash-basis ISR)
+	Accrual     money.Cents // amount_cents by invoiced_on (accrual-basis ISR, 601)
+	ByRate      IVAByRate   // amount_cents and iva_cents by collected_on (IVA is always cash, LIVA 1-B)
+	IVAWithheld Withheld    // iva_withheld_cents by collected_on
+	ISRWithheld Withheld    // isr_withheld_cents by collected_on
 }
 
 // ExpenseSums are one regime's expense aggregates for one month, by
@@ -54,6 +74,19 @@ func (s *summer) add(a, b money.Cents) money.Cents {
 	return sum
 }
 
+func (s *summer) rateSums(a, b RateSums) RateSums {
+	return RateSums{Base: s.add(a.Base, b.Base), IVA: s.add(a.IVA, b.IVA)}
+}
+
+func (s *summer) byRate(a, b IVAByRate) IVAByRate {
+	return IVAByRate{
+		Rate16:     s.rateSums(a.Rate16, b.Rate16),
+		Rate8:      s.rateSums(a.Rate8, b.Rate8),
+		Rate0Base:  s.add(a.Rate0Base, b.Rate0Base),
+		ExemptBase: s.add(a.ExemptBase, b.ExemptBase),
+	}
+}
+
 func (s *summer) withheld(a, b Withheld) Withheld {
 	return Withheld{ByMoral: s.add(a.ByMoral, b.ByMoral), ByPlatform: s.add(a.ByPlatform, b.ByPlatform)}
 }
@@ -63,11 +96,11 @@ func (m MonthSums) Add(o MonthSums) (MonthSums, error) {
 	var s summer
 	sum := MonthSums{
 		Income: IncomeSums{
-			Cash:         s.add(m.Income.Cash, o.Income.Cash),
-			Accrual:      s.add(m.Income.Accrual, o.Income.Accrual),
-			IVACollected: s.add(m.Income.IVACollected, o.Income.IVACollected),
-			IVAWithheld:  s.withheld(m.Income.IVAWithheld, o.Income.IVAWithheld),
-			ISRWithheld:  s.withheld(m.Income.ISRWithheld, o.Income.ISRWithheld),
+			Cash:        s.add(m.Income.Cash, o.Income.Cash),
+			Accrual:     s.add(m.Income.Accrual, o.Income.Accrual),
+			ByRate:      s.byRate(m.Income.ByRate, o.Income.ByRate),
+			IVAWithheld: s.withheld(m.Income.IVAWithheld, o.Income.IVAWithheld),
+			ISRWithheld: s.withheld(m.Income.ISRWithheld, o.Income.ISRWithheld),
 		},
 		Expenses: ExpenseSums{
 			DeductiblePaid:     s.add(m.Expenses.DeductiblePaid, o.Expenses.DeductiblePaid),

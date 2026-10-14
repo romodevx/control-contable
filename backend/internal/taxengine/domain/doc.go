@@ -16,6 +16,10 @@
 //     each with its citation and source. A result rounds once, half away from
 //     zero, and adds an explicit rounding_adjustment line whenever the
 //     displayed lines would not add up to it.
+//   - ComputeIVA: one regime's monthly IVA components through the Ledger
+//     (charged by rate, creditable, withheld from the taxpayer, the 625
+//     definitive exclusion hook, IVA withheld to remit), shared by every
+//     strategy; the netting across regimes is the use case's.
 //   - RegimeEstimate: lines, ISR TaxResult, IVA components, withholdings to
 //     remit, missing inputs, CPA topics and disclaimers; Status applies the
 //     precedence informational > incomplete > partial > complete.
