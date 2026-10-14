@@ -228,6 +228,39 @@ void main() {
       expect(find.text(_paywallTitle), findsOneWidget);
       expect(find.text(_archivedBanner), findsOneWidget);
     });
+
+    // QA M2-12 D2: unarchive is a `402` for a read-only user (OQ-8), so
+    // once that is known an archive is one-way: confirm first (house rule:
+    // confirmation for the irreversible), and no Undo that only paywalls.
+    testWidgets('known read-only: archiving asks first and offers no Undo', (
+      tester,
+    ) async {
+      Iterable<String> archives() =>
+          harness.repository.calls.where((c) => c.startsWith('archive:'));
+      await pumpSettings(tester);
+      harness.container.read(readOnlyAccessProvider.notifier).markReadOnly();
+      await tester.pump();
+
+      await tapText(tester, 'Archivar');
+
+      expect(find.text('¿Archivar a «Ana»?'), findsOneWidget);
+      expect(
+        find.textContaining('no podrás desarchivarlo hasta tener un plan'),
+        findsOneWidget,
+      );
+      expect(archives(), isEmpty);
+      await tapText(tester, 'Cancelar');
+      expect(archives(), isEmpty);
+      expect(find.text(_archivedBanner), findsNothing);
+
+      await tapText(tester, 'Archivar');
+      await tapText(tester, 'Archivar de todos modos');
+
+      expect(archives(), ['archive:$_id']);
+      expect(find.text(_archivedBanner), findsOneWidget);
+      expect(find.text('Archivaste a «Ana».'), findsOneWidget);
+      expect(find.text('Deshacer'), findsNothing);
+    });
   });
 
   group('archive (reversible: do it, then offer Undo)', () {
