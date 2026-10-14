@@ -523,6 +523,21 @@ void main() {
       expect(_row('2026-03'), findsOneWidget);
     });
 
+    testWidgets('a failed re-read says so, never the stale figures (§5)', (
+      tester,
+    ) async {
+      _tall(tester);
+      await harness.pump(tester);
+      await tester.tap(_row('2026-02'));
+      await tester.pumpAndSettle();
+      harness.repository.replies.add(const ApiUnexpected());
+
+      await harness.back(tester);
+
+      expect(find.text('No se pudo cargar el historial.'), findsOneWidget);
+      expect(_row('2026-02'), findsNothing);
+    });
+
     testWidgets('pulling down reads the year again', (tester) async {
       await harness.pump(tester);
 
