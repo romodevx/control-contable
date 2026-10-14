@@ -448,6 +448,7 @@ Composite cases defined by this spec (use-case level, M5-22; QA verifies the ari
 | Breakdown/tax inputs for a regime not held in the period / fiscal year | 422 | `business_rule_violation` | `regime_not_active` |
 | `putTaxInputs` on an archived taxpayer | 422 | `business_rule_violation` | `taxpayer_archived` |
 | Per-user write budget on `putTaxInputs` (60/h, ADR-0005) | 429 | `rate_limited` | |
+| Per-user read budget shared by `getTaxpayerEstimate` and `getEstimateBreakdown` (`estimate_reads`, 600/h, burst 600, ADR-0005; M5-23) | 429 | `rate_limited` | |
 | Params invalid at boot | — | the process does not start (fail-fast, ADR-0002 §3) | |
 | Anything else | 500 | `internal_error` | |
 

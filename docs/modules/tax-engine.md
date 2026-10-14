@@ -32,6 +32,17 @@
   month), `rate`, `boolean`. `PUT` replaces all values; read-only users get `402`, reads stay
   open.
 - Every response, success or error, carries `Cache-Control: no-store` (S-4).
+- Per-user budgets (ADR-0005), `429 rate_limited` with `Retry-After` when spent:
+  `getTaxpayerEstimate` and `getEstimateBreakdown` share `estimate_reads`, 600 per hour
+  (burst 600, one more every 6 s); `putTaxInputs` has `tax_input_writes`, 60 per hour.
+- The breakdown shows the regime's ISR and IVA lines, then the taxpayer's consolidated IVA
+  lines (when the regime has IVA), then its withholdings to remit; `seq` is 1..n. Regime
+  names, explanations and input labels come from the `regimes` catalog; line concepts and
+  disclaimer texts are rendered by the HTTP adapter (`internal/taxengine/adapter/http/texts.go`).
+- Performance (M5-23, one user, 3 regimes, 50k incomes + 50k expenses in the year):
+  `CC_PERF=1 go test -tags=integration -run TestPerf_estimateReadPath -v ./cmd/api/` prints
+  EXPLAIN (ANALYZE, BUFFERS) of each statement of the read path and the latencies; the
+  budget is p95 < 300 ms.
 
 ## Errors
 
