@@ -27,6 +27,9 @@ const (
 	// Every published marginal row states its cuota fija (0.00 on the first
 	// row), so an omitted one is a transcription slip, never a silent zero.
 	ErrMissingFixedFee Error = "params: marginal tariff row needs fixed_fee"
+	// ErrInvalidDate reports a date that is not a plain "YYYY-MM-DD" calendar
+	// day (fiscal.ParseDate): a timestamp, a number or an impossible day.
+	ErrInvalidDate Error = "params: invalid date"
 	// ErrTableKind reports a table kind other than marginal or flat.
 	ErrTableKind Error = "params: table kind must be marginal or flat"
 )

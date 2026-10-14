@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/money"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/taxparams"
 )
@@ -23,9 +24,9 @@ const (
 	sourceID      = "dof-synthetic"
 )
 
-func mustDate(t testing.TB, s string) taxparams.Date {
+func mustDate(t testing.TB, s string) fiscal.Date {
 	t.Helper()
-	d, err := taxparams.ParseDate(s)
+	d, err := fiscal.ParseDate(s)
 	require.NoError(t, err)
 	return d
 }

@@ -7,6 +7,7 @@ import (
 
 	"go.yaml.in/yaml/v3"
 
+	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/money"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/taxparams"
 )
@@ -89,17 +90,17 @@ func (d *decimalText) UnmarshalYAML(n *yaml.Node) error {
 }
 
 // dateText is a calendar date, written plain (2026-01-31) or quoted.
-type dateText struct{ taxparams.Date }
+type dateText struct{ fiscal.Date }
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (d *dateText) UnmarshalYAML(n *yaml.Node) error {
 	tag := n.ShortTag()
 	if n.Kind != yaml.ScalarNode || (tag != tagString && tag != tagTimestamp) {
-		return fmt.Errorf("line %d: %s %q: %w", n.Line, tag, n.Value, taxparams.ErrInvalidDate)
+		return fmt.Errorf("line %d: %s %q: %w", n.Line, tag, n.Value, ErrInvalidDate)
 	}
-	parsed, err := taxparams.ParseDate(n.Value)
+	parsed, err := fiscal.ParseDate(n.Value)
 	if err != nil {
-		return fmt.Errorf("line %d: %w", n.Line, err)
+		return fmt.Errorf("line %d: %q: %w: %w", n.Line, n.Value, ErrInvalidDate, err)
 	}
 	d.Date = parsed
 	return nil

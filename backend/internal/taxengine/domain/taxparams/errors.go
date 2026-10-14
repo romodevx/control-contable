@@ -9,9 +9,6 @@ func (e Error) Error() string { return string(e) }
 // Validation errors, reported by NewParams (wrapped with the offending path,
 // joined so one run lists every problem).
 const (
-	// ErrInvalidDate reports a date that is not a "YYYY-MM-DD" calendar date
-	// in years 0001-9999.
-	ErrInvalidDate Error = "taxparams: invalid date"
 	// ErrInvalidHeader reports a fiscal year outside 2000-9999, a version
 	// below 1 or a missing published_on.
 	ErrInvalidHeader Error = "taxparams: invalid set header"

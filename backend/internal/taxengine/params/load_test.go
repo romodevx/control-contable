@@ -12,14 +12,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/money"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/taxparams"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/params"
 )
 
-func date(t testing.TB, s string) taxparams.Date {
+func date(t testing.TB, s string) fiscal.Date {
 	t.Helper()
-	d, err := taxparams.ParseDate(s)
+	d, err := fiscal.ParseDate(s)
 	require.NoError(t, err)
 	return d
 }
@@ -139,10 +140,10 @@ func TestLoadRejects(t *testing.T) {
     money: "1.00"`)), params.ErrValueKind},
 		{"marginal row without fixed_fee", one("2026/v1.yaml", replace(`lower: "100.01", fixed_fee: "2.00", rate: "0.1"`, `lower: "100.01", rate: "0.1"`)), params.ErrMissingFixedFee},
 		{"unknown table kind", one("2026/v1.yaml", replace("kind: flat", "kind: progressive")), params.ErrTableKind},
-		{"date that is not a calendar day", one("2026/v1.yaml", replace("valid_to: 2026-01-31", "valid_to: 2026-02-30")), taxparams.ErrInvalidDate},
-		{"timestamp instead of a date", one("2026/v1.yaml", replace("published_on: 2026-10-13", "published_on: 2026-10-13T10:00:00Z")), taxparams.ErrInvalidDate},
-		{"date as a number", one("2026/v1.yaml", replace("published_on: 2026-10-13", "published_on: 20261013")), taxparams.ErrInvalidDate},
-		{"source date quoted but malformed", one("2026/v1.yaml", replace("dof_date: 2025-12-31", `dof_date: "31/12/2025"`)), taxparams.ErrInvalidDate},
+		{"date that is not a calendar day", one("2026/v1.yaml", replace("valid_to: 2026-01-31", "valid_to: 2026-02-30")), params.ErrInvalidDate},
+		{"timestamp instead of a date", one("2026/v1.yaml", replace("published_on: 2026-10-13", "published_on: 2026-10-13T10:00:00Z")), params.ErrInvalidDate},
+		{"date as a number", one("2026/v1.yaml", replace("published_on: 2026-10-13", "published_on: 20261013")), params.ErrInvalidDate},
+		{"source date quoted but malformed", one("2026/v1.yaml", replace("dof_date: 2025-12-31", `dof_date: "31/12/2025"`)), params.ErrInvalidDate},
 		{"domain validation still applies", one("2026/v1.yaml", replace(`rate: "0.08"`, `rate: "1.08"`)), taxparams.ErrRateOutOfRange},
 		{"monthly tariffs incomplete", one("2026/v1.yaml", replace("month: 12", "month: 11")), taxparams.ErrMonthlyIncomplete},
 		{"no files at all", fstest.MapFS{"README.md": &fstest.MapFile{Data: []byte("x")}}, taxparams.ErrNoParameterSets},

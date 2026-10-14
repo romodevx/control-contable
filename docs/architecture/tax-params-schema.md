@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Implements | [ADR-0002 §3](../adr/0002-tax-engine.md) (versioned parameters: data, not code), PLAN M5-03 |
-| Model | `backend/internal/taxengine/domain/taxparams` (pure: no I/O, no clock, no floats) |
+| Model | `backend/internal/taxengine/domain/taxparams` (pure: no I/O, no clock, no floats; dates are the kernel's `fiscal.Date`, ADR-0007) |
 | Loader | `backend/internal/taxengine/params` (`go:embed`, strict YAML) |
 | Files | `backend/internal/taxengine/params/data/<fiscal_year>/v<N>.yaml` |
 
@@ -85,8 +85,8 @@ tables:                     # tariffs, verbatim as published
 |---|---|---|
 | `rate`, row `rate` | **quoted** decimal fraction, at most 6 decimals (`"0.16"`) | `money.Rate` (10^-6, exact) |
 | `money`, `lower`, `upper`, `fixed_fee` | **quoted** pesos, at most 2 decimals (`"844.59"`) | `money.Cents` (int64) |
-| dates | `YYYY-MM-DD`, plain or quoted | `taxparams.Date` (calendar day, no time zone) |
-| `key` | dotted lower-case segments `[a-z0-9_]`, at least two | `taxparams.Key` |
+| dates | `YYYY-MM-DD`, plain or quoted; anything else is `ErrInvalidDate` (loader) | `fiscal.Date` from the shared kernel (ADR-0007): calendar day, no time zone |
+| `key` | dotted lower-case segments `[a-z0-9_]`, at least two | `taxparams.Key`; the kernel's `fiscal.RateKey` constants use the same spelling and are tested to load |
 
 An unquoted number (`rate: 0.08`, `money: 100`) is rejected (`ErrInexactNumber`). YAML would read it
 as a binary float before we see it, and money never touches a float. More decimals than the type

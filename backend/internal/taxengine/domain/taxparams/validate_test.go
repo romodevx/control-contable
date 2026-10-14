@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/money"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/taxparams"
 )
@@ -44,14 +45,14 @@ func TestNewParamsRejects(t *testing.T) {
 		{"fiscal year before 2000", func(_ testing.TB, s *taxparams.Spec) { s.FiscalYear = 1999 }, taxparams.ErrInvalidHeader},
 		{"fiscal year past 9999", func(_ testing.TB, s *taxparams.Spec) { s.FiscalYear = 10000 }, taxparams.ErrInvalidHeader},
 		{"version zero", func(_ testing.TB, s *taxparams.Spec) { s.Version = 0 }, taxparams.ErrInvalidHeader},
-		{"no published_on", func(_ testing.TB, s *taxparams.Spec) { s.PublishedOn = taxparams.Date{} }, taxparams.ErrInvalidHeader},
+		{"no published_on", func(_ testing.TB, s *taxparams.Spec) { s.PublishedOn = fiscal.Date{} }, taxparams.ErrInvalidHeader},
 
 		// Sources.
 		{"no sources", func(_ testing.TB, s *taxparams.Spec) { s.Sources = nil }, taxparams.ErrInvalidSource},
 		{"source without id", func(_ testing.TB, s *taxparams.Spec) { s.Sources[0].ID = "" }, taxparams.ErrInvalidSource},
 		{"source without title", func(_ testing.TB, s *taxparams.Spec) { s.Sources[0].Title = " " }, taxparams.ErrInvalidSource},
 		{"source without reference", func(_ testing.TB, s *taxparams.Spec) { s.Sources[0].Reference = "" }, taxparams.ErrInvalidSource},
-		{"source without dof date", func(_ testing.TB, s *taxparams.Spec) { s.Sources[0].DOFDate = taxparams.Date{} }, taxparams.ErrInvalidSource},
+		{"source without dof date", func(_ testing.TB, s *taxparams.Spec) { s.Sources[0].DOFDate = fiscal.Date{} }, taxparams.ErrInvalidSource},
 		{"source over plain http", func(_ testing.TB, s *taxparams.Spec) { s.Sources[0].URL = "http://example.test/dof" }, taxparams.ErrInvalidSource},
 		{"source url without host", func(_ testing.TB, s *taxparams.Spec) { s.Sources[0].URL = "https:///dof" }, taxparams.ErrInvalidSource},
 		{"source url unparsable", func(_ testing.TB, s *taxparams.Spec) { s.Sources[0].URL = "https://exa mple.test/%zz" }, taxparams.ErrInvalidSource},
@@ -66,7 +67,7 @@ func TestNewParamsRejects(t *testing.T) {
 		{"rate above one", func(t testing.TB, s *taxparams.Spec) { s.Values[0].Rate = mustRate(t, "1.000001") }, taxparams.ErrRateOutOfRange},
 		{"negative rate", func(t testing.TB, s *taxparams.Spec) { s.Values[0].Rate = mustRate(t, "-0.01") }, taxparams.ErrRateOutOfRange},
 		{"negative money", func(t testing.TB, s *taxparams.Spec) { s.Values[1].Money = mustCents(t, "-0.01") }, taxparams.ErrNegativeMoney},
-		{"value without start", func(_ testing.TB, s *taxparams.Spec) { s.Values[0].Validity.From = taxparams.Date{} }, taxparams.ErrInvalidValidity},
+		{"value without start", func(_ testing.TB, s *taxparams.Spec) { s.Values[0].Validity.From = fiscal.Date{} }, taxparams.ErrInvalidValidity},
 		{"value ends before it starts", func(t testing.TB, s *taxparams.Spec) {
 			s.Values[0].Validity = taxparams.Validity{From: mustDate(t, "2026-02-01"), To: mustDate(t, "2026-01-31")}
 		}, taxparams.ErrInvalidValidity},
@@ -80,7 +81,7 @@ func TestNewParamsRejects(t *testing.T) {
 			s.Values[2].Validity.From = mustDate(t, "2026-01-31") // the January UMA ends that day
 		}, taxparams.ErrOverlap},
 		{"open range followed by another", func(_ testing.TB, s *taxparams.Spec) {
-			s.Values[1].Validity.To = taxparams.Date{}
+			s.Values[1].Validity.To = fiscal.Date{}
 		}, taxparams.ErrOverlap},
 		{"identical entries", func(_ testing.TB, s *taxparams.Spec) {
 			s.Values = append(s.Values, s.Values[0])
@@ -98,7 +99,7 @@ func TestNewParamsRejects(t *testing.T) {
 			s.Tables = append(s.Tables, extra)
 		}, taxparams.ErrKindConflict},
 		{"table without basis", func(_ testing.TB, s *taxparams.Spec) { s.Tables[0].Basis = nil }, taxparams.ErrInvalidBasis},
-		{"table without start", func(_ testing.TB, s *taxparams.Spec) { s.Tables[0].Validity.From = taxparams.Date{} }, taxparams.ErrInvalidValidity},
+		{"table without start", func(_ testing.TB, s *taxparams.Spec) { s.Tables[0].Validity.From = fiscal.Date{} }, taxparams.ErrInvalidValidity},
 		{"table without rows", func(_ testing.TB, s *taxparams.Spec) { s.Tables[0].Rows = nil }, taxparams.ErrInvalidTable},
 		{"first row not at one centavo", func(t testing.TB, s *taxparams.Spec) { s.Tables[0].Rows[0].Lower = mustCents(t, "0.00") }, taxparams.ErrInvalidTable},
 		{"row upper below its lower", func(t testing.TB, s *taxparams.Spec) {
@@ -147,8 +148,8 @@ func TestNewParamsRejects(t *testing.T) {
 }
 
 // mustDateUnchecked is for fixture literals that are valid by inspection.
-func mustDateUnchecked(s string) taxparams.Date {
-	d, err := taxparams.ParseDate(s)
+func mustDateUnchecked(s string) fiscal.Date {
+	d, err := fiscal.ParseDate(s)
 	if err != nil {
 		panic(err)
 	}
@@ -169,6 +170,25 @@ func TestNewParamsReportsEveryProblemAtOnce(t *testing.T) {
 	}
 	assert.Contains(t, err.Error(), "values[0] iva.rate.border_8")
 	assert.Contains(t, err.Error(), "tables[0] isr.art96.monthly rows[1]")
+}
+
+// The kernel's shared rate keys (ADR-0007) must be keys a params file can
+// define, or M5-08 could never resolve them.
+func TestNewParamsAcceptsTheKernelRateKeys(t *testing.T) {
+	keys := []fiscal.RateKey{
+		fiscal.KeyIVAGeneral, fiscal.KeyIVABorder, fiscal.KeyIVAZero,
+		fiscal.KeyISRWithholdingFees, fiscal.KeyISRWithholdingRent,
+	}
+	for _, key := range keys {
+		t.Run(string(key), func(t *testing.T) {
+			spec := validSpec(t)
+			spec.Values[0].Key = taxparams.Key(key)
+			p, err := taxparams.NewParams(spec)
+			require.NoError(t, err)
+			_, err = p.Rate(taxparams.Key(key), mustDate(t, "2026-06-30"))
+			require.NoError(t, err)
+		})
+	}
 }
 
 func TestNewParamsAcceptsBoundaryRates(t *testing.T) {

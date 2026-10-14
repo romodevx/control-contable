@@ -4,6 +4,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/money"
 )
 
@@ -67,9 +68,9 @@ func (k TableKind) String() string {
 type Source struct {
 	ID        string // referenced by Citation.Source
 	Title     string
-	URL       string // https only
-	DOFDate   Date   // publication date in the Diario Oficial de la Federación
-	Reference string // article, rule or annex section, e.g. "Anexo 8, B.VI"
+	URL       string      // https only
+	DOFDate   fiscal.Date // publication date in the Diario Oficial de la Federación
+	Reference string      // article, rule or annex section, e.g. "Anexo 8, B.VI"
 }
 
 // Citation is the legal basis of one value or table.
@@ -116,7 +117,7 @@ type Table struct {
 type Spec struct {
 	FiscalYear  int
 	Version     int
-	PublishedOn Date
+	PublishedOn fiscal.Date
 	// Provisional marks a set published before its official sources (a draft
 	// of next year's values). Selecting it adds the provisional_parameters
 	// disclaimer, as the previous-year fallback does.

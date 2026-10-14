@@ -12,7 +12,8 @@
 // estimate uses (Catalog.Select), falling back to the previous fiscal year,
 // flagged provisional, while the new year is not published yet.
 //
-// The package is pure: no I/O, no clock (dates are passed in), no floats. The
+// The package is pure: no I/O, no clock (dates are passed in, as the fiscal
+// shared kernel's fiscal.Date, ADR-0007), no floats. The
 // YAML files and their decoding live in internal/taxengine/params; the schema
 // is documented in docs/architecture/tax-params-schema.md.
 package taxparams

@@ -7,6 +7,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/money"
 )
 
@@ -17,7 +18,7 @@ import (
 type Params struct {
 	fiscalYear  int
 	version     int
-	publishedOn Date
+	publishedOn fiscal.Date
 	provisional bool
 	sources     []Source
 	shapes      map[Key]shape
@@ -100,7 +101,7 @@ func (p *Params) FiscalYear() int { return p.fiscalYear }
 func (p *Params) Version() int { return p.version }
 
 // PublishedOn returns the day the set was written.
-func (p *Params) PublishedOn() Date { return p.publishedOn }
+func (p *Params) PublishedOn() fiscal.Date { return p.publishedOn }
 
 // Provisional reports a set marked provisional in its file.
 func (p *Params) Provisional() bool { return p.provisional }
@@ -110,7 +111,7 @@ func (p *Params) Sources() []Source { return slices.Clone(p.sources) }
 
 // At returns the value of key in force on d: ErrUnknownKey, ErrKindMismatch
 // for a table key, or ErrNotInForce when no entry covers d.
-func (p *Params) At(key Key, d Date) (Value, error) {
+func (p *Params) At(key Key, d fiscal.Date) (Value, error) {
 	s, err := p.shapeOf(key)
 	if err != nil {
 		return Value{}, err
@@ -126,24 +127,24 @@ func (p *Params) At(key Key, d Date) (Value, error) {
 }
 
 // Rate returns the rate key holds on d.
-func (p *Params) Rate(key Key, d Date) (money.Rate, error) {
+func (p *Params) Rate(key Key, d fiscal.Date) (money.Rate, error) {
 	val, err := p.typedValue(key, KindRate, d)
 	return val.Rate, err
 }
 
 // Money returns the amount key holds on d.
-func (p *Params) Money(key Key, d Date) (money.Cents, error) {
+func (p *Params) Money(key Key, d fiscal.Date) (money.Cents, error) {
 	val, err := p.typedValue(key, KindMoney, d)
 	return val.Money, err
 }
 
 // Flag returns the switch key holds on d.
-func (p *Params) Flag(key Key, d Date) (bool, error) {
+func (p *Params) Flag(key Key, d fiscal.Date) (bool, error) {
 	val, err := p.typedValue(key, KindFlag, d)
 	return val.Flag, err
 }
 
-func (p *Params) typedValue(key Key, kind ValueKind, d Date) (Value, error) {
+func (p *Params) typedValue(key Key, kind ValueKind, d fiscal.Date) (Value, error) {
 	s, err := p.shapeOf(key)
 	if err != nil {
 		return Value{}, err
@@ -155,20 +156,20 @@ func (p *Params) typedValue(key Key, kind ValueKind, d Date) (Value, error) {
 }
 
 // Table returns the plain (not monthly) table key holds on d.
-func (p *Params) Table(key Key, d Date) (Table, error) {
+func (p *Params) Table(key Key, d fiscal.Date) (Table, error) {
 	return p.table(key, 0, d)
 }
 
 // MonthlyTable returns the month's table of a monthly key in force on d
 // (for the art. 106 accumulated tariffs: the table of the period's month).
-func (p *Params) MonthlyTable(key Key, month time.Month, d Date) (Table, error) {
+func (p *Params) MonthlyTable(key Key, month time.Month, d fiscal.Date) (Table, error) {
 	if month < time.January || month > time.December {
 		return Table{}, fmt.Errorf("%s month %d: %w", key, month, ErrInvalidMonth)
 	}
 	return p.table(key, month, d)
 }
 
-func (p *Params) table(key Key, month time.Month, d Date) (Table, error) {
+func (p *Params) table(key Key, month time.Month, d fiscal.Date) (Table, error) {
 	want := shape{monthly: month != 0}
 	s, err := p.shapeOf(key)
 	if err != nil {
@@ -196,14 +197,14 @@ func kindMismatch(key Key, got shape, want string) error {
 	return fmt.Errorf("%s is a %s, not a %s: %w", key, got, want, ErrKindMismatch)
 }
 
-func notInForce(key Key, d Date) error {
+func notInForce(key Key, d fiscal.Date) error {
 	return fmt.Errorf("%s on %s: %w", key, d, ErrNotInForce)
 }
 
 // inForce returns the entry whose validity contains d. Entries are sorted by
 // start and never overlap, so the only candidate is the last one starting on
 // or before d: a binary search, O(log n).
-func inForce[T any](entries []T, validity func(T) Validity, d Date) (T, bool) {
+func inForce[T any](entries []T, validity func(T) Validity, d fiscal.Date) (T, bool) {
 	i := sort.Search(len(entries), func(i int) bool { return validity(entries[i]).From.Compare(d) > 0 })
 	if i == 0 {
 		var zero T
