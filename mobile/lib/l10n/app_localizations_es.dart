@@ -321,7 +321,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get accountDeleteWrongPassword => 'La contraseña no es correcta.';
 
   @override
-  String accountDeleteRetryIn(String time) {
+  String authRetryIn(String time) {
     return 'Podrás intentar de nuevo en $time.';
   }
 

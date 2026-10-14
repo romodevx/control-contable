@@ -120,6 +120,22 @@ make mobile-run                 # dev flavor against the local API on port 3000
 make mobile-run API_BASE_URL=http://10.0.2.2:3000   # Android emulator: the host is 10.0.2.2
 ```
 
+The Android emulator reaches the host's `localhost` as `10.0.2.2`; the API listens on every
+interface (`[::]:3000`), so no extra setup is needed. A debug APK of the dev flavor is about
+200 MB: on an emulator low on storage `flutter run`/`adb install -r` fails with
+`INSTALL_FAILED_INSUFFICIENT_STORAGE`. A profile build for the emulator's ABI is about 30 MB
+and behaves the same against the local API:
+
+```sh
+cd mobile && flutter build apk --profile --flavor dev -t lib/main_dev.dart \
+  --target-platform android-arm64 --dart-define=API_BASE_URL=http://10.0.2.2:3000
+adb install -r build/app/outputs/flutter-apk/app-dev-profile.apk
+```
+
+With `module_auth` ON and `make -C backend api` running, the dev email adapter prints each
+verification code in the API log (`"msg":"dev email: verification code"`; the address is
+redacted). It is the only way to read a code locally.
+
 ## 6. API reference
 
 ```sh

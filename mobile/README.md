@@ -152,8 +152,7 @@ Every record form is built from `core/forms/`, which encodes
   forgotten password (idle timeout) shows the password field again. *Enviar otro código* appears after
   the 60 s cooldown, or after `Retry-After` when longer; the countdown runs on a clock
   deadline, so time in the background counts.
-- The new session goes to `sessionStoreProvider`: in memory until M1-12 brings
-  `flutter_secure_storage`.
+- The new session starts like a login's (`sessionProvider`; see "Session tokens" below).
 
 ## Session tokens (M1-12)
 
@@ -185,6 +184,9 @@ Every record form is built from `core/forms/`, which encodes
 - Router guards (`core/router/app_router.dart`): while `module_auth` is on, a signed-out user
   goes to `/cuenta/entrar` (keeping `desde`), a signed-in user leaves the guest screens
   (login, sign-up, code). Login and a verified sign-up (`201 AuthSession`) both start the session.
+- Login (`/cuenta/entrar`): bad credentials read as one generic message. A `429` counts its
+  `Retry-After` down (`RetryWait`, shared with the delete dialog), and a tap during the wait
+  sends nothing, so it never spends the network's login budget.
 - Logout (`features/auth/application/sign_out.dart`) calls the API, then wipes locally even if
   the call fails.
 - The session (refresh) token is stored **only** through `flutter_secure_storage` (ADR-0001:

@@ -388,9 +388,9 @@
   "@accountDeleteWrongPassword": {
     "description": "The re-entered password was refused; nothing was deleted."
   },
-  "accountDeleteRetryIn": "Podrás intentar de nuevo en {time}.",
-  "@accountDeleteRetryIn": {
-    "description": "Countdown in the delete-account dialog after too many password attempts (Retry-After), as m:ss.",
+  "authRetryIn": "Podrás intentar de nuevo en {time}.",
+  "@authRetryIn": {
+    "description": "Countdown after a 429 (Retry-After) on login or account deletion, as m:ss; a tap during it sends nothing.",
     "placeholders": {
       "time": {
         "type": "String",

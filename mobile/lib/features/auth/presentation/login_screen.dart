@@ -5,10 +5,13 @@ import 'package:control_contable/core/forms/typed_fields.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/session/session.dart';
 import 'package:control_contable/core/theme/app_spacing.dart';
+import 'package:control_contable/core/time/clock.dart';
+import 'package:control_contable/core/time/countdown.dart';
 import 'package:control_contable/features/auth/auth_routes.dart';
 import 'package:control_contable/features/auth/data/auth_repository.dart';
 import 'package:control_contable/features/auth/presentation/auth_copy.dart';
 import 'package:control_contable/features/auth/presentation/login_fields.dart';
+import 'package:control_contable/features/auth/presentation/retry_wait.dart';
 import 'package:control_contable/features/auth/presentation/session_wipe_notice.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -18,8 +21,11 @@ import 'package:go_router/go_router.dart';
 
 /// Login (US-A2a): email and password on their own screen (2 fields; house
 /// UI rules). Bad credentials read as one generic message, whatever the
-/// cause (no account enumeration). On success the session starts and the
-/// router's guard takes the user where they were going.
+/// cause (no account enumeration). Too many failures (`429`) count the
+/// `Retry-After` down; a tap during the wait sends nothing (it would only
+/// spend the network's login budget) and announces how long is left. On
+/// success the session starts and the router's guard takes the user where
+/// they were going.
 class LoginScreen extends ConsumerStatefulWidget {
   /// Creates the screen.
   const new({super.key});
@@ -30,6 +36,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   LoginFields? _fields;
+  late final Countdown _retryWait = Countdown(ref.read(clockProvider));
   String? _notice;
 
   LoginFields get fields => _fields!;
@@ -43,11 +50,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   void dispose() {
+    _retryWait.dispose();
     _fields?.dispose();
     super.dispose();
   }
 
   Future<void> _login() async {
+    if (_retryWait.isRunning) return announceRetryWait(context, _retryWait);
     final l10n = AppLocalizations.of(context);
     _showNotice(null);
     try {
@@ -59,6 +68,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await ref.read(sessionProvider).start(session.tokens);
     } on ApiUnauthorized {
       _showNotice(l10n.authLoginRejected);
+    } on ApiRateLimited catch (failure) {
+      if (failure.retryAfter case final wait?) _retryWait.run(wait);
+      _showNotice(describeAuthFailure(failure, l10n));
     } on ApiFailure catch (failure) {
       _showNotice(describeAuthFailure(failure, l10n));
     }
@@ -82,6 +94,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             primaryLabel: l10n.authLoginSubmit,
             children: [
               if (notice != null) FormNotice(message: notice),
+              RetryWait(countdown: _retryWait),
               AppTextField(
                 field: fields.email,
                 keyboardType: TextInputType.emailAddress,

@@ -106,24 +106,46 @@ func TestLogout_answers204ForTheBearersUser(t *testing.T) {
 
 // The authenticator runs first; a handler reached without a principal still
 // fails closed with the generic 401, never a logout for an empty user.
-func TestLogout_withoutAPrincipalIs401(t *testing.T) {
-	l := &fakeLogout{}
+//
+// Every logout 401 is the contract's Unauthorized response, whose
+// WWW-Authenticate header is required (M1-16: the malformed-token path
+// went out as a plain apperr 401 without the challenge).
+func TestLogout_401sCarryTheBearerChallenge(t *testing.T) {
+	withUser := func(t *testing.T) context.Context {
+		return principal.With(t.Context(), principal.Principal{UserID: userIDText})
+	}
+	tests := []struct {
+		name      string
+		ctx       func(t *testing.T) context.Context
+		logout    *fakeLogout
+		wantCalls int
+	}{
+		{name: "without a principal", ctx: func(t *testing.T) context.Context { return t.Context() }, logout: &fakeLogout{}, wantCalls: 0},
+		{name: "malformed refresh token", ctx: withUser, logout: &fakeLogout{err: usecase.ErrTokenMalformed}, wantCalls: 1},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			resp, err := sessionHandler(&fakeRefresher{}, tc.logout).Logout(tc.ctx(t), gen.LogoutRequestObject{Body: refreshBody("x")})
 
-	_, err := sessionHandler(&fakeRefresher{}, l).Logout(t.Context(), gen.LogoutRequestObject{Body: refreshBody("presented")})
-
-	appErr, ok := errors.AsType[*apperr.Error](err)
-	require.True(t, ok, "%v", err)
-	assert.Equal(t, apperr.CodeUnauthorized, appErr.Code)
-	assert.Zero(t, l.calls)
+			require.NoError(t, err)
+			unauthorized, ok := resp.(gen.Logout401JSONResponse)
+			require.True(t, ok, "got %T", resp)
+			assert.Equal(t, `Bearer realm="control-contable"`, unauthorized.Headers.WWWAuthenticate)
+			assert.Equal(t, gen.ErrorCodeUnauthorized, unauthorized.Body.Error.Code)
+			assert.Equal(t, tc.wantCalls, tc.logout.calls)
+		})
+	}
 }
 
-func TestLogout_malformedTokenIs401(t *testing.T) {
-	l := &fakeLogout{err: usecase.ErrTokenMalformed}
+// Only the credential failures become the 401 response; anything else
+// still reaches the error mapper (a 500, never a disguised 401).
+func TestLogout_otherFailuresStayErrors(t *testing.T) {
+	dbDown := errors.New("db down")
+	l := &fakeLogout{err: dbDown}
 	ctx := principal.With(t.Context(), principal.Principal{UserID: userIDText})
 
-	_, err := sessionHandler(&fakeRefresher{}, l).Logout(ctx, gen.LogoutRequestObject{Body: refreshBody("x")})
+	resp, err := sessionHandler(&fakeRefresher{}, l).Logout(ctx, gen.LogoutRequestObject{Body: refreshBody("x")})
 
-	appErr, ok := errors.AsType[*apperr.Error](err)
-	require.True(t, ok, "%v", err)
-	assert.Equal(t, apperr.CodeUnauthorized, appErr.Code)
+	require.ErrorIs(t, err, dbDown)
+	assert.Nil(t, resp)
 }
