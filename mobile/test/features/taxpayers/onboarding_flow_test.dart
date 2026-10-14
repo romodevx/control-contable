@@ -293,6 +293,41 @@ void main() {
       expect(repository.catalogCalls, isEmpty);
     });
 
+    // QA M2-12 D1: at 10 taxpayers the cap was reported only after the
+    // last step. The app holds the list, so it says so before step 1.
+    test('a user already at the cap sees the limit before step 1: '
+        'nothing to fill, nothing sent', () {
+      final capped = OnboardingFlow(
+        repository: repository,
+        newId: () => _clientId,
+        clock: () => now,
+        taxEngineEnabled: false,
+        capReached: true,
+      );
+      addTearDown(capped.dispose);
+
+      expect(capped.step, OnboardingStep.limitReached);
+      expect(capped.stepNumber, isNull);
+      expect(capped.back(), isFalse);
+      expect(repository.creates, isEmpty);
+      expect(repository.catalogCalls, isEmpty);
+    });
+
+    test('read-only is said before the cap, as the server checks access '
+        'first (§2.10)', () {
+      final both = OnboardingFlow(
+        repository: repository,
+        newId: () => _clientId,
+        clock: () => now,
+        taxEngineEnabled: false,
+        knownReadOnly: true,
+        capReached: true,
+      );
+      addTearDown(both.dispose);
+
+      expect(both.step, OnboardingStep.readOnly);
+    });
+
     test(
       '409 rfc_already_registered: back to the RFC with its error',
       () async {
