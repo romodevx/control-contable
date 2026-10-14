@@ -29,6 +29,8 @@ catalog migration `backend/migrations/20261013180000_regimes_catalog.sql` (CAT).
 - [ ] Payment rounding to whole pesos (CFF art. 20): not covered; off until confirmed (`rounding.payment_whole_pesos`). ADR §4
 - [ ] Monthly IVA netting across regimes for a PF holding 612 + 606 (one consolidated IVA result). ADR §1
 - [ ] 626 PM credits the art. 54 interest withholding like 601 (input `interest_withholding` added to 626 PM). R §B.2.2 step 4, CAT `regimes` 626 PM
+- [ ] RIF (621) IVA paid by bimester like its ISR (old LIVA 5-E), not monthly; research A.3 lists 621 under the monthly rule. MODULE-tax-engine OQ-T7
+- [ ] IVA a PM withheld **from its suppliers** (recorded on the expense) becomes creditable for that PM when paid (LIVA 5 fr. IV): v1 sends it to withholdings to remit only and does not credit it. Confirm timing and whether to credit. Distinct from IVA withheld **from** the taxpayer and recorded on the income, which v1 subtracts from the monthly IVA (LIVA 1-A, 5-D). MODULE-tax-engine OQ-T6
 
 ## Regime catalog (`regimes`, needs_cpa_review = true)
 
@@ -62,6 +64,8 @@ every (category, regime) rule waits for this review; the legal basis is article 
 - [ ] 620 PM (cooperativas que difieren) gets the business rows although the regime catalog marks it informational. EXP
 - [ ] The profit-coefficient note on 601 and 622 (regimes requiring `coeficiente_utilidad`): expenses do not lower the 601/622 provisional ISR, only IVA and the annual return. EXP
 - [ ] `iva_creditable_default`: true where the expense is (or, for RESICO PF, would be under the business column) ISR-deductible, per LIVA art. 5 fr. I; partial cases assume IVA creditable in the deductible proportion. R §A.3, EXP
+- [ ] Creditable IVA follows `iva_creditable_default`, never the absence of ISR deductions (LIVA art. 5 fr. I, "estrictamente indispensable"): a never-deductible category (e.g. `gastos_personales`) yields **0** creditable IVA in every regime, RESICO PF included, and a user override to deductible does not change that. PR #67, `expenses/domain.creditableIVA`, EXP
+- [ ] A cash payment over the $2,000.00 limit yields **0** creditable IVA even when the user overrides it to deductible (LIVA art. 5 fr. II, payment other than cash above the threshold): the override stands for the ISR display only, and the expense carries the warning `iva_not_creditable_cash_payment`. Confirm the threshold is the LISR art. 27 fr. III amount on the total with IVA. PR #67, MODULE-expenses §2.4–§2.5
 - [ ] 606 rows: only servicios profesionales, agua (servicios básicos), construcciones, sueldos, IMSS, intereses, seguros, mantenimiento and predial count (LISR art. 115). R §A.2.4, EXP
 - [ ] Booking date: an expense books on `paid_on` in every regime (no invoice date is stored). Correct for PF (LISR arts. 103/105, 115, 113-E) and RESICO PM (arts. 208, 211), and for creditable IVA (LIVA art. 5 fr. III). Título II PM (601; 620/622 unless cash basis applies, see the income-basis item) deduct on an accrual basis, except payments that are income of a PF, deductible only when paid (LISR art. 27 fr. VIII); v1 is monthly only and the 601/622 provisional ISR uses the profit coefficient (art. 14), so no monthly figure depends on it. Confirm; an annual PM computation would need an accrual date. Research §B.2.1 (income only), EXP
 - [ ] 603 (fines no lucrativos) gets the business rows, but it has no provisional ISR: non-deductible expenses become remanente distribuible (LISR art. 79) rather than lowering a base. Is the D / P / N hint the right message for 603? R §B.1, EXP
