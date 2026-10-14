@@ -41,11 +41,12 @@ func (f *fakeStrategy) Estimate(_ domain.Input, p *taxparams.Params) (domain.Reg
 	return f.estimate, f.err
 }
 
-type fakeRegistry map[domain.StrategyKey]domain.Strategy
-
-func (r fakeRegistry) Strategy(k domain.StrategyKey) (domain.Strategy, bool) {
-	s, ok := r[k]
-	return s, ok
+// registryOf is the real M5-10 registry over the given strategies.
+func registryOf(t *testing.T, strategies ...domain.Strategy) domain.Registry {
+	t.Helper()
+	r, err := domain.NewRegistry(strategies...)
+	require.NoError(t, err)
+	return r
 }
 
 type fakeSelector struct {
@@ -89,10 +90,11 @@ func baseCase(t *testing.T) golden.Case {
 	return c
 }
 
-func evaluate(c golden.Case, s *fakeStrategy) golden.Outcome {
-	reg := fakeRegistry{}
+func evaluate(t *testing.T, c golden.Case, s *fakeStrategy) golden.Outcome {
+	t.Helper()
+	reg := registryOf(t)
 	if s != nil {
-		reg[key612] = s
+		reg = registryOf(t, s)
 	}
 	return golden.Evaluate(c, reg, &fakeSelector{params: &taxparams.Params{}})
 }
@@ -101,7 +103,7 @@ func TestEvaluatePassesAMatchingEstimate(t *testing.T) {
 	s := &fakeStrategy{estimate: matching()}
 	sel := &fakeSelector{params: &taxparams.Params{}}
 
-	o := golden.Evaluate(baseCase(t), fakeRegistry{key612: s}, sel)
+	o := golden.Evaluate(baseCase(t), registryOf(t, s), sel)
 
 	assert.Equal(t, golden.VerdictPassed, o.Verdict, o.Mismatches)
 	assert.Empty(t, o.Mismatches)
@@ -114,7 +116,7 @@ func TestEvaluateSkipsAnUnverifiedCaseWithItsReason(t *testing.T) {
 	c.SkipReason = "⚠️ 18-M effect not confirmed"
 	s := &fakeStrategy{estimate: matching()}
 
-	o := evaluate(c, s)
+	o := evaluate(t, c, s)
 
 	assert.Equal(t, golden.VerdictSkipped, o.Verdict)
 	assert.Contains(t, o.Reason, "⚠️ 18-M effect not confirmed")
@@ -145,7 +147,7 @@ func TestEvaluateStrategyRegistrationRules(t *testing.T) {
 				s = &fakeStrategy{estimate: matching()}
 			}
 
-			o := evaluate(c, s)
+			o := evaluate(t, c, s)
 
 			assert.Equal(t, tt.want, o.Verdict, o.Reason)
 			assert.Contains(t, o.Reason, tt.reason)
@@ -153,17 +155,41 @@ func TestEvaluateStrategyRegistrationRules(t *testing.T) {
 	}
 }
 
+func TestEvaluateRunsAnInformationalCaseThroughTheFallback(t *testing.T) {
+	c := baseCase(t)
+	c.Input.Key = domain.StrategyKey{Regime: "605", PersonType: fiscal.PersonFisica}
+	c.Want = golden.Expected{
+		Status: domain.StatusInformational, Taxes: []domain.TaxKind{domain.TaxISR, domain.TaxIVA},
+		Lines: []golden.LineWant{}, MissingInputs: []domain.MissingInput{},
+		CPATopics: []domain.CPATopic{}, Disclaimers: []domain.DisclaimerCode{},
+	}
+
+	o := evaluate(t, c, nil)
+
+	assert.Equal(t, golden.VerdictPassed, o.Verdict, o.Reason, o.Mismatches)
+}
+
+func TestEvaluateFailsAnEstimateForAnotherKey(t *testing.T) {
+	got := matching()
+	got.Key = domain.StrategyKey{Regime: "606", PersonType: fiscal.PersonFisica}
+
+	o := evaluate(t, baseCase(t), &fakeStrategy{estimate: got})
+
+	assert.Equal(t, golden.VerdictFailed, o.Verdict)
+	assert.Contains(t, o.Reason, string(domain.ErrStrategyMismatch))
+}
+
 func TestEvaluateFailsOnEngineErrors(t *testing.T) {
 	t.Run("parameters", func(t *testing.T) {
 		s := &fakeStrategy{estimate: matching()}
-		o := golden.Evaluate(baseCase(t), fakeRegistry{key612: s}, &fakeSelector{err: taxparams.ErrNoParameters})
+		o := golden.Evaluate(baseCase(t), registryOf(t, s), &fakeSelector{err: taxparams.ErrNoParameters})
 
 		assert.Equal(t, golden.VerdictFailed, o.Verdict)
 		assert.Contains(t, o.Reason, "no parameters")
 		assert.False(t, s.called)
 	})
 	t.Run("estimate", func(t *testing.T) {
-		o := evaluate(baseCase(t), &fakeStrategy{err: errors.New("boom")})
+		o := evaluate(t, baseCase(t), &fakeStrategy{err: errors.New("boom")})
 
 		assert.Equal(t, golden.VerdictFailed, o.Verdict)
 		assert.Contains(t, o.Reason, "boom")
@@ -181,7 +207,7 @@ func TestEvaluateReportsEveryMismatch(t *testing.T) {
 	got.CPATopics = []domain.CPATopic{domain.TopicCrossRegimeIVANetting}
 	got.Coverage = domain.TreatmentPartial
 
-	o := evaluate(baseCase(t), &fakeStrategy{estimate: got})
+	o := evaluate(t, baseCase(t), &fakeStrategy{estimate: got})
 
 	require.Equal(t, golden.VerdictFailed, o.Verdict)
 	report := strings.Join(o.Mismatches, "\n")
@@ -203,7 +229,7 @@ func TestEvaluateReportsAMissingLine(t *testing.T) {
 	got := matching()
 	got.Lines = got.Lines[:2]
 
-	o := evaluate(baseCase(t), &fakeStrategy{estimate: got})
+	o := evaluate(t, baseCase(t), &fakeStrategy{estimate: got})
 
 	assert.Contains(t, strings.Join(o.Mismatches, "\n"), "line 3: missing iva iva.net result 2133.33")
 }
@@ -212,7 +238,7 @@ func TestEvaluateComparesTheOperationOfALine(t *testing.T) {
 	got := matching()
 	got.Lines[0].Operation = domain.OpAdd
 
-	o := evaluate(baseCase(t), &fakeStrategy{estimate: got})
+	o := evaluate(t, baseCase(t), &fakeStrategy{estimate: got})
 
 	assert.Contains(t, strings.Join(o.Mismatches, "\n"),
 		"line 1: want isr isr.income_ytd input 90000.00, got isr isr.income_ytd add 90000.00")
@@ -228,7 +254,7 @@ func TestEvaluateComparesOnlyTheAssertedTaxes(t *testing.T) {
 	got.Lines[2].Amount = 42
 	got.WithheldToRemit = 99
 
-	o := evaluate(c, &fakeStrategy{estimate: got})
+	o := evaluate(t, c, &fakeStrategy{estimate: got})
 
 	assert.Equal(t, golden.VerdictPassed, o.Verdict, o.Mismatches)
 }
@@ -240,7 +266,7 @@ func TestEvaluateAssertsAbsentFiguresAndWithholdings(t *testing.T) {
 	c.Want.WithheldToRemit = 533333
 	got := matching()
 
-	o := evaluate(c, &fakeStrategy{estimate: got})
+	o := evaluate(t, c, &fakeStrategy{estimate: got})
 
 	report := strings.Join(o.Mismatches, "\n")
 	assert.Contains(t, report, "isr: want none, got 150.96")
@@ -255,7 +281,7 @@ func TestEvaluateLeavesNilListsUnasserted(t *testing.T) {
 	got.Lines = nil
 	got.Disclaimers = []domain.DisclaimerCode{domain.DisclaimerNotTaxAdvice}
 
-	o := evaluate(c, &fakeStrategy{estimate: got})
+	o := evaluate(t, c, &fakeStrategy{estimate: got})
 
 	assert.Equal(t, golden.VerdictPassed, o.Verdict, o.Mismatches)
 }
@@ -275,7 +301,7 @@ func TestEvaluateDerivesMissingInputsFromRequiredInputs(t *testing.T) {
 		{Key: domain.InputPTUPaid, Kind: domain.InputMoney},
 	}}
 
-	o := evaluate(c, s)
+	o := evaluate(t, c, s)
 
 	assert.Equal(t, golden.VerdictPassed, o.Verdict, o.Mismatches)
 	assert.Equal(t, c.ActiveMonths, s.gotFacts.ActiveMonths)
