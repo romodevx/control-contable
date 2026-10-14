@@ -139,8 +139,9 @@ contract makes `null` a value the server must receive.
 | nullable with a `default` (swagger_parser makes it required) | `T?` + `@Default`, `includeIfNull: true` | `null` | same |
 
 Checked against the contract (every `requestBody`, `$ref`s followed): no request has a
-required nullable property. The nullable ones are `ExpenseFields.description`,
-`IncomeFields.description` / `invoiced_on` / `collected_on` (create and PATCH),
+required nullable property. The nullable ones are the incomes/expenses fields listed below
+(create and PATCH; `ExpenseFields`/`IncomeFields` were flattened into the request schemas by
+contract 0.5.0),
 `ReminderSettings.early_day` (PUT; `null` turns the early reminder off) and
 `TaxInputValue.value_cents` / `value_rate` (PUT; exactly one is sent).
 
@@ -148,15 +149,17 @@ required nullable property. The nullable ones are `ExpenseFields.description`,
   "unchanged"; there is no explicit-null case to preserve. Correct as generated.
 - `PUT /v1/reminder-settings`: `early_day: null` stays on the wire (row 4). Guarded by
   `mobile/test/api/request_serialization_test.dart`.
-- **Known gap, PATCH of an optional nullable field** (`IncomeUpdate` / `ExpenseUpdate`
-  `description`, `invoiced_on`, `collected_on`): Dart `T?` cannot tell "unset" from "set to
-  `null`", so the generated client cannot clear one of these fields (it omits the key). The
-  backend handlers for those PATCHes do not exist yet, and oapi-codegen's `*T` + `omitempty`
-  reads `null` and absent alike, so nothing is lost today. **Before any mobile screen edits an
-  income or expense**, the incomes/expenses module must decide, in the contract, whether `null`
-  in a PATCH clears the field (merge-patch semantics). If it does, both sides need a tri-state
-  (server: `nullable.Nullable[T]`; client: a hand-written request type or `Map` body for that
-  call, kept in contract tests) and this section is updated.
+- **PATCH of an optional nullable field: decided by M3-01/M4-01 (contract 0.5.0).**
+  `PATCH` on incomes and expenses is merge-patch on top-level fields: absent = unchanged,
+  `null` clears a nullable field (`IncomeUpdate`: `invoiced_on`, `collected_on`,
+  `platform_activity`, `cfdi_uuid`, `description`; `ExpenseUpdate`: `cfdi_uuid`,
+  `description`, and `deductible: null` clears the user's override). Dart `T?` cannot tell
+  "unset" from "set to `null`", so the generated client cannot send the clearing `null` (it
+  omits the key). Both sides need a tri-state, owned by the module tasks: the server decodes the
+  PATCH body with absent/null/value distinguished (`nullable.Nullable[T]` or its own decoder;
+  oapi-codegen's `*T` + `omitempty` reads `null` and absent alike), M3-04/M4-05; the client
+  sends a hand-written request type or `Map` body for the clearing call, kept in contract
+  tests, M3-09/M4-10. Until then no mobile screen clears one of these fields.
 
 ## Consequences
 

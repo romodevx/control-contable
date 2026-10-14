@@ -281,6 +281,11 @@ tab. Presets `demo_core`, `demo_monetization`, `demo_full` include it.
 4. `deleteExpense`: add `422`; `restoreExpense`: add `402`, `422`.
 5. Detail codes of §4 and M3 §4 in the descriptions; `Cache-Control: no-store` as M3.
 
+**Frozen as (M4-01, contract 0.5.0; architect notes).** `ExpensePage` also carries `legend`
+(the list header renders the server field even on an empty month). `category_code` has no
+pattern, so an unknown code is always `unknown_category`. `ExpenseCategory` is flat (no per-regime
+`hints[]`): the endpoint is resolved for one regime.
+
 Data-model deltas for M4-02/M4-03 (db-sr): `expenses.cfdi_uuid text NULL`, `deductible boolean
 NOT NULL`, `deductible_overridden boolean NOT NULL DEFAULT false`; `category_regime_rules.default_deductible
 boolean NOT NULL`; partial indexes as M3 (`paid_on` is the booking date, so no `booked_on`

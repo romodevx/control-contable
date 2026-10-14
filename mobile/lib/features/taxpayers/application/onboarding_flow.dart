@@ -10,6 +10,7 @@ import 'package:control_contable/api/generated/models/warning.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/time/clock.dart';
 import 'package:control_contable/features/taxpayers/application/onboarding_failures.dart';
+import 'package:control_contable/features/taxpayers/application/regime_wizard.dart';
 import 'package:control_contable/features/taxpayers/data/taxpayers_repository.dart';
 import 'package:control_contable/features/taxpayers/domain/rfc.dart';
 import 'package:flutter/foundation.dart';
@@ -61,7 +62,7 @@ enum OnboardingStep {
 /// option at the end of step 4 (or step 3 when no chosen regime has
 /// options). Going back keeps every value. A server verdict sends the user
 /// back to the step that owns the rejected field.
-class OnboardingFlow extends ChangeNotifier {
+class OnboardingFlow extends ChangeNotifier implements RegimeWizard {
   /// A flow writing through `repository`. [newId] makes the client id of
   /// the create (stable across retries); `clock` dates the fiscal year.
   /// [knownReadOnly] (the server already answered `402` this session)
@@ -102,11 +103,25 @@ class OnboardingFlow extends ChangeNotifier {
   /// The current step.
   OnboardingStep get step => _step;
 
+  @override
+  RegimeWizardPurpose get purpose => RegimeWizardPurpose.createTaxpayer;
+
   /// The page within [OnboardingStep.options] or [OnboardingStep.taxInputs].
+  @override
   int get page => _page;
 
   /// The chosen person type.
+  @override
   PersonType? get personType => _personType;
+
+  /// A persona moral holds one regime at a time (UX; the server's `422`
+  /// decides).
+  @override
+  bool get singleRegime => _personType == PersonType.moral;
+
+  /// A new taxpayer holds nothing yet.
+  @override
+  Set<String> get heldCodes => const {};
 
   /// The display name as typed.
   String get displayName => _displayName;
@@ -115,6 +130,7 @@ class OnboardingFlow extends ChangeNotifier {
   String get rfc => _rfc;
 
   /// The chosen regimes, in selection order.
+  @override
   List<Regime> get regimes => _regimes;
 
   /// The created taxpayer, once it exists.
@@ -127,12 +143,15 @@ class OnboardingFlow extends ChangeNotifier {
   bool get displayNameRejected => _displayNameRejected;
 
   /// Options the server refused, by regime code.
+  @override
   Map<String, Set<String>> get optionRejections => _optionRejections;
 
   /// A form-level message for the current screen.
+  @override
   OnboardingNotice? get notice => _notice;
 
   /// Chosen regimes that have options (one page each in step 4).
+  @override
   List<Regime> get optionRegimes => [
     for (final regime in _regimes)
       if (regime.optionDefs.isNotEmpty) regime,
@@ -147,9 +166,11 @@ class OnboardingFlow extends ChangeNotifier {
   ];
 
   /// How many numbered steps the onboarding has.
+  @override
   int get totalSteps => taxEngineEnabled ? 5 : 4;
 
   /// The current step's number, or `null` outside the numbered steps.
+  @override
   int? get stepNumber => switch (_step) {
     OnboardingStep.personType => 1,
     OnboardingStep.identity => 2,
@@ -197,10 +218,12 @@ class OnboardingFlow extends ChangeNotifier {
   }
 
   /// Keeps the step 3 choice as picked (no rebuild): going back keeps it.
+  @override
   void rememberRegimes(List<Regime> chosen) =>
       _regimes = List.unmodifiable(chosen);
 
   /// Step 3 done: options next, or the create when none has options.
+  @override
   Future<void> submitRegimes(List<Regime> chosen) async {
     rememberRegimes(chosen);
     if (optionRegimes.isNotEmpty) return _go(OnboardingStep.options);
@@ -209,18 +232,17 @@ class OnboardingFlow extends ChangeNotifier {
 
   /// The options of [regime]: what the user set, else the catalog
   /// defaults (an option without a default starts empty).
+  @override
   Map<String, Object> optionsFor(Regime regime) =>
-      _options[regime.code] ??
-      {
-        for (final def in regime.optionDefs)
-          if (def.defaultValue case final Object value) def.key: value,
-      };
+      _options[regime.code] ?? catalogDefaults(regime);
 
   /// Keeps the options of [regimeCode] as set (no rebuild).
+  @override
   void rememberOptions(String regimeCode, Map<String, Object> values) =>
       _options[regimeCode] = Map.unmodifiable(values);
 
   /// One options page done: the next one, or the create after the last.
+  @override
   Future<void> submitOptions(
     String regimeCode,
     Map<String, Object> values,
@@ -373,3 +395,10 @@ class OnboardingFlow extends ChangeNotifier {
     notifyListeners();
   }
 }
+
+/// The catalog defaults of [regime]'s options (an option without a default
+/// is left out).
+Map<String, Object> catalogDefaults(Regime regime) => {
+  for (final def in regime.optionDefs)
+    if (def.defaultValue case final Object value) def.key: value,
+};

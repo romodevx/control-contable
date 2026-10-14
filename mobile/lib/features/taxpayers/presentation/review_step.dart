@@ -4,17 +4,14 @@ import 'package:control_contable/core/forms/app_text_field.dart';
 import 'package:control_contable/core/forms/field_controller.dart';
 import 'package:control_contable/core/forms/form_controller.dart';
 import 'package:control_contable/core/forms/form_notice.dart';
-import 'package:control_contable/core/theme/app_spacing.dart';
-import 'package:control_contable/core/theme/app_tokens.dart';
 import 'package:control_contable/features/taxpayers/application/onboarding_flow.dart';
+import 'package:control_contable/features/taxpayers/domain/masked_rfc.dart';
 import 'package:control_contable/features/taxpayers/domain/rfc.dart';
 import 'package:control_contable/features/taxpayers/presentation/onboarding_copy.dart';
 import 'package:control_contable/features/taxpayers/presentation/step_header.dart';
+import 'package:control_contable/features/taxpayers/presentation/warning_block.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-
-/// Width of a warning's leading rule (matches `FormNotice`).
-const double _ruleWidth = 3;
 
 /// After the create, when the server warned (non-blocking): the taxpayer
 /// exists. A check-digit mismatch (D-RFC) shows "Revisa que tu RFC esté
@@ -95,13 +92,13 @@ class _ReviewStepState extends State<ReviewStep> {
                 tone: FormNoticeTone.info,
                 message: l10n.onboardingReviewCreated(
                   created.displayName,
-                  created.rfcMasked,
+                  displayRfc(created.rfcMasked),
                 ),
               ),
             if (notice != null)
               FormNotice(message: describeNotice(notice, l10n)),
             if (_flow.rfcWarning) ...[
-              _Warning(
+              WarningBlock(
                 title: l10n.onboardingRfcCheckWarning,
                 body: l10n.onboardingRfcCheckBody,
               ),
@@ -115,60 +112,10 @@ class _ReviewStepState extends State<ReviewStep> {
               ),
             ],
             for (final reason in _flow.cpaReviewReasons)
-              _Warning(title: l10n.onboardingCpaWarningTitle, body: reason),
+              WarningBlock(title: l10n.onboardingCpaWarningTitle, body: reason),
           ],
         );
       },
-    );
-  }
-}
-
-/// A non-blocking warning: a heading and a plain explanation on a tinted
-/// block with a leading rule; words carry the meaning, not the color.
-class _Warning extends StatelessWidget {
-  const new({required this.title, required this.body});
-
-  final String title;
-  final String body;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.tokens.colors;
-    final theme = Theme.of(context);
-    return Semantics(
-      container: true,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colors.legendBg,
-          border: Border(
-            left: BorderSide(color: colors.legendText, width: _ruleWidth),
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Semantics(
-                header: true,
-                child: Text(
-                  title,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: colors.legendText,
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xxs),
-              Text(
-                body,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: colors.legendText,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

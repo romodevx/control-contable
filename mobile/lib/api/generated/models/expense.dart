@@ -4,13 +4,18 @@
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import 'expense_warning.dart';
+import 'business_date.dart';
+import 'cfdi_uuid.dart';
+import 'deductible_source.dart';
 import 'iva_rate.dart';
 import 'legend.dart';
 import 'non_negative_cents.dart';
 import 'payment_method.dart';
+import 'positive_cents.dart';
+import 'record_description.dart';
 import 'regime_code.dart';
 import 'uuid.dart';
+import 'warning.dart';
 
 part 'expense.freezed.dart';
 part 'expense.g.dart';
@@ -20,32 +25,32 @@ abstract class Expense with _$Expense {
   const factory Expense({
     required Uuid id,
     @JsonKey(name: 'taxpayer_id') required Uuid taxpayerId,
-    required List<ExpenseWarning> warnings,
+    @JsonKey(name: 'regime_code') required RegimeCode regimeCode,
+    @JsonKey(name: 'category_code') required String categoryCode,
+    @JsonKey(name: 'amount_cents') required PositiveCents amountCents,
+    @JsonKey(name: 'iva_rate') required IvaRate ivaRate,
+    @JsonKey(name: 'iva_cents') required NonNegativeCents ivaCents,
+    @JsonKey(name: 'payment_method') required PaymentMethod paymentMethod,
+    @JsonKey(name: 'paid_on') required BusinessDate paidOn,
+    @JsonKey(name: 'has_cfdi') required bool hasCfdi,
+    @JsonKey(includeIfNull: true, name: 'cfdi_uuid')
+    required CfdiUuid? cfdiUuid,
+    @JsonKey(name: 'isr_withheld_cents')
+    required NonNegativeCents isrWithheldCents,
+    @JsonKey(name: 'iva_withheld_cents')
+    required NonNegativeCents ivaWithheldCents,
+    required RecordDescription description,
+
+    /// Effective value ("the user claims it lowers ISR"): the override if any, else the default.
+    required bool deductible,
+    @JsonKey(name: 'deductible_source')
+    required DeductibleSource deductibleSource,
+
+    /// Non-blocking notices computed on writes (create, update, restore), never stored; `[]` on reads. Codes (append-only): `cash_over_threshold` (`payment_method`), `no_cfdi` (`has_cfdi`), `not_isr_deductible_in_regime` and `category_not_deductible` (`deductible`), `duplicate_cfdi_uuid` (`cfdi_uuid`).
+    required List<Warning> warnings,
     required Legend legend,
     @JsonKey(name: 'created_at') required DateTime createdAt,
     @JsonKey(name: 'updated_at') required DateTime updatedAt,
-    @JsonKey(includeIfNull: false, name: 'regime_code') RegimeCode? regimeCode,
-    @JsonKey(includeIfNull: false, name: 'category_code') String? categoryCode,
-    @JsonKey(includeIfNull: false) String? description,
-
-    /// Subtotal before IVA.
-    @JsonKey(includeIfNull: false, name: 'amount_cents')
-    NonNegativeCents? amountCents,
-    @JsonKey(includeIfNull: false, name: 'iva_rate') IvaRate? ivaRate,
-    @JsonKey(includeIfNull: false, name: 'iva_cents')
-    NonNegativeCents? ivaCents,
-    @JsonKey(includeIfNull: false, name: 'payment_method')
-    PaymentMethod? paymentMethod,
-    @JsonKey(includeIfNull: false, name: 'has_cfdi') bool? hasCfdi,
-    @JsonKey(includeIfNull: false, name: 'paid_on') DateTime? paidOn,
-
-    /// ISR the taxpayer (typically a PM) withheld from the supplier; must be remitted.
-    @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')
-    NonNegativeCents? isrWithheldCents,
-
-    /// IVA the taxpayer withheld from the supplier (LIVA 1-A); remitted in full, creditable when paid.
-    @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')
-    NonNegativeCents? ivaWithheldCents,
   }) = _Expense;
 
   factory Expense.fromJson(Map<String, Object?> json) =>

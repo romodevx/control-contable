@@ -16,7 +16,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ExpensePage {
 
- List<Expense> get items; PeriodTotals get totals;@JsonKey(includeIfNull: false, name: 'next_cursor') String? get nextCursor;
+ List<Expense> get items;/// Opaque cursor of the next page; `null` on the last page.
+@JsonKey(includeIfNull: true, name: 'next_cursor') String? get nextCursor; PeriodTotals get totals; Legend get legend;
 /// Create a copy of ExpensePage
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +31,20 @@ $ExpensePageCopyWith<ExpensePage> get copyWith => _$ExpensePageCopyWithImpl<Expe
 @override
 bool operator ==(Object other) {
   final _this = this as ExpensePage;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ExpensePage&&const DeepCollectionEquality().equals(other.items, _this.items)&&(identical(other.totals, _this.totals) || other.totals == _this.totals)&&(identical(other.nextCursor, _this.nextCursor) || other.nextCursor == _this.nextCursor));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ExpensePage&&const DeepCollectionEquality().equals(other.items, _this.items)&&(identical(other.nextCursor, _this.nextCursor) || other.nextCursor == _this.nextCursor)&&(identical(other.totals, _this.totals) || other.totals == _this.totals)&&(identical(other.legend, _this.legend) || other.legend == _this.legend));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as ExpensePage;
-  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.items),_this.totals,_this.nextCursor);
+  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.items),_this.nextCursor,_this.totals,_this.legend);
 }
 
 @override
 String toString() {
   final _this = this as ExpensePage;
-  return 'ExpensePage(items: ${_this.items}, totals: ${_this.totals}, nextCursor: ${_this.nextCursor})';
+  return 'ExpensePage(items: ${_this.items}, nextCursor: ${_this.nextCursor}, totals: ${_this.totals}, legend: ${_this.legend})';
 }
 
 
@@ -54,7 +55,7 @@ abstract mixin class $ExpensePageCopyWith<$Res>  {
   factory $ExpensePageCopyWith(ExpensePage value, $Res Function(ExpensePage) _then) = _$ExpensePageCopyWithImpl;
 @useResult
 $Res call({
- List<Expense> items, PeriodTotals totals,@JsonKey(includeIfNull: false, name: 'next_cursor') String? nextCursor
+ List<Expense> items,@JsonKey(includeIfNull: true, name: 'next_cursor') String? nextCursor, PeriodTotals totals, Legend legend
 });
 
 
@@ -71,12 +72,13 @@ class _$ExpensePageCopyWithImpl<$Res>
 
 /// Create a copy of ExpensePage
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? items = null,Object? totals = null,Object? nextCursor = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? items = null,Object? nextCursor = freezed,Object? totals = null,Object? legend = null,}) {
   return _then(ExpensePage(
 items: null == items ? _self.items : items // ignore: cast_nullable_to_non_nullable
-as List<Expense>,totals: null == totals ? _self.totals : totals // ignore: cast_nullable_to_non_nullable
-as PeriodTotals,nextCursor: freezed == nextCursor ? _self.nextCursor : nextCursor // ignore: cast_nullable_to_non_nullable
-as String?,
+as List<Expense>,nextCursor: freezed == nextCursor ? _self.nextCursor : nextCursor // ignore: cast_nullable_to_non_nullable
+as String?,totals: null == totals ? _self.totals : totals // ignore: cast_nullable_to_non_nullable
+as PeriodTotals,legend: null == legend ? _self.legend : legend // ignore: cast_nullable_to_non_nullable
+as Legend,
   ));
 }
 /// Create a copy of ExpensePage
@@ -170,10 +172,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<Expense> items,  PeriodTotals totals, @JsonKey(includeIfNull: false, name: 'next_cursor')  String? nextCursor)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<Expense> items, @JsonKey(includeIfNull: true, name: 'next_cursor')  String? nextCursor,  PeriodTotals totals,  Legend legend)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ExpensePage() when $default != null:
-return $default(_that.items,_that.totals,_that.nextCursor);case _:
+return $default(_that.items,_that.nextCursor,_that.totals,_that.legend);case _:
   return orElse();
 
 }
@@ -191,10 +193,10 @@ return $default(_that.items,_that.totals,_that.nextCursor);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<Expense> items,  PeriodTotals totals, @JsonKey(includeIfNull: false, name: 'next_cursor')  String? nextCursor)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<Expense> items, @JsonKey(includeIfNull: true, name: 'next_cursor')  String? nextCursor,  PeriodTotals totals,  Legend legend)  $default,) {final _that = this;
 switch (_that) {
 case _ExpensePage():
-return $default(_that.items,_that.totals,_that.nextCursor);case _:
+return $default(_that.items,_that.nextCursor,_that.totals,_that.legend);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -211,10 +213,10 @@ return $default(_that.items,_that.totals,_that.nextCursor);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<Expense> items,  PeriodTotals totals, @JsonKey(includeIfNull: false, name: 'next_cursor')  String? nextCursor)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<Expense> items, @JsonKey(includeIfNull: true, name: 'next_cursor')  String? nextCursor,  PeriodTotals totals,  Legend legend)?  $default,) {final _that = this;
 switch (_that) {
 case _ExpensePage() when $default != null:
-return $default(_that.items,_that.totals,_that.nextCursor);case _:
+return $default(_that.items,_that.nextCursor,_that.totals,_that.legend);case _:
   return null;
 
 }
@@ -226,7 +228,7 @@ return $default(_that.items,_that.totals,_that.nextCursor);case _:
 @JsonSerializable()
 
 class _ExpensePage implements ExpensePage {
-  const _ExpensePage({required  List<Expense> items, required this.totals, @JsonKey(includeIfNull: false, name: 'next_cursor') this.nextCursor}): _items = items;
+  const _ExpensePage({required  List<Expense> items, @JsonKey(includeIfNull: true, name: 'next_cursor') required this.nextCursor, required this.totals, required this.legend}): _items = items;
   factory _ExpensePage.fromJson(Map<String, dynamic> json) => _$ExpensePageFromJson(json);
 
  final  List<Expense> _items;
@@ -236,8 +238,10 @@ class _ExpensePage implements ExpensePage {
   return EqualUnmodifiableListView(_items);
 }
 
+/// Opaque cursor of the next page; `null` on the last page.
+@override@JsonKey(includeIfNull: true, name: 'next_cursor') final  String? nextCursor;
 @override final  PeriodTotals totals;
-@override@JsonKey(includeIfNull: false, name: 'next_cursor') final  String? nextCursor;
+@override final  Legend legend;
 
 /// Create a copy of ExpensePage
 /// with the given fields replaced by the non-null parameter values.
@@ -252,18 +256,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _ExpensePage&&const DeepCollectionEquality().equals(other.items, _items)&&(identical(other.totals, totals) || other.totals == totals)&&(identical(other.nextCursor, nextCursor) || other.nextCursor == nextCursor));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _ExpensePage&&const DeepCollectionEquality().equals(other.items, _items)&&(identical(other.nextCursor, nextCursor) || other.nextCursor == nextCursor)&&(identical(other.totals, totals) || other.totals == totals)&&(identical(other.legend, legend) || other.legend == legend));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_items),totals,nextCursor);
+    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_items),nextCursor,totals,legend);
 }
 
 @override
 String toString() {
-    return 'ExpensePage(items: $items, totals: $totals, nextCursor: $nextCursor)';
+    return 'ExpensePage(items: $items, nextCursor: $nextCursor, totals: $totals, legend: $legend)';
 }
 
 
@@ -274,7 +278,7 @@ abstract mixin class _$ExpensePageCopyWith<$Res> implements $ExpensePageCopyWith
   factory _$ExpensePageCopyWith(_ExpensePage value, $Res Function(_ExpensePage) _then) = __$ExpensePageCopyWithImpl;
 @override @useResult
 $Res call({
- List<Expense> items, PeriodTotals totals,@JsonKey(includeIfNull: false, name: 'next_cursor') String? nextCursor
+ List<Expense> items,@JsonKey(includeIfNull: true, name: 'next_cursor') String? nextCursor, PeriodTotals totals, Legend legend
 });
 
 
@@ -291,12 +295,13 @@ class __$ExpensePageCopyWithImpl<$Res>
 
 /// Create a copy of ExpensePage
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? items = null,Object? totals = null,Object? nextCursor = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? items = null,Object? nextCursor = freezed,Object? totals = null,Object? legend = null,}) {
   return _then(_ExpensePage(
 items: null == items ? _self._items : items // ignore: cast_nullable_to_non_nullable
-as List<Expense>,totals: null == totals ? _self.totals : totals // ignore: cast_nullable_to_non_nullable
-as PeriodTotals,nextCursor: freezed == nextCursor ? _self.nextCursor : nextCursor // ignore: cast_nullable_to_non_nullable
-as String?,
+as List<Expense>,nextCursor: freezed == nextCursor ? _self.nextCursor : nextCursor // ignore: cast_nullable_to_non_nullable
+as String?,totals: null == totals ? _self.totals : totals // ignore: cast_nullable_to_non_nullable
+as PeriodTotals,legend: null == legend ? _self.legend : legend // ignore: cast_nullable_to_non_nullable
+as Legend,
   ));
 }
 

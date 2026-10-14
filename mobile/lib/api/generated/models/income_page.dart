@@ -14,8 +14,11 @@ part 'income_page.g.dart';
 abstract class IncomePage with _$IncomePage {
   const factory IncomePage({
     required List<Income> items,
+
+    /// Opaque cursor of the next page; `null` on the last page.
+    @JsonKey(includeIfNull: true, name: 'next_cursor')
+    required String? nextCursor,
     required PeriodTotals totals,
-    @JsonKey(includeIfNull: false, name: 'next_cursor') String? nextCursor,
   }) = _IncomePage;
 
   factory IncomePage.fromJson(Map<String, Object?> json) =>

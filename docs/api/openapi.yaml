@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Control Contable API
-  version: 0.4.0
+  version: 0.5.0
   summary: Monthly IVA and provisional ISR estimates for Mexican taxpayers.
   description: |
     Spec-first contract (single source of truth). Server stubs (oapi-codegen),
@@ -1202,8 +1202,20 @@ paths:
     get:
       tags: [Incomes]
       operationId: listIncomes
+      x-frozen: sha256:ead5984c5b0b5db82e60c3b9bdeb9002e1fc8e86e91be10b4ece5ed2e3ee6769
       summary: List a month's incomes (keyset pagination) with period totals
+      description: >-
+        Live (not deleted) incomes of the taxpayer whose **booking date** falls in `period`:
+        `invoiced_on` for accrual regimes (PM Título II), `collected_on` for cash regimes
+        (MODULE-incomes §2.2). Ordered by booking date, then `id`, both descending; `cursor`
+        is the opaque `next_cursor` of the previous page (`limit` 1–100, default 50). `regime`
+        narrows items and totals. `totals` cover the whole filtered period, not the page.
+        Accrual incomes with `collected_on: null` come with `pending_collection: true`
+        ("Por cobrar"). Archived taxpayers can be listed. Reads are allowed for a read-only
+        user. `warnings` is always `[]` here (warnings are computed per write, never stored).
       x-module: module_incomes
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/PeriodQuery'
         - $ref: '#/components/parameters/RegimeQuery'
@@ -1212,41 +1224,390 @@ paths:
       responses:
         '200':
           description: Page of incomes.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/IncomePage' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+        '400': { $ref: '#/components/responses/RecordBadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '404': { $ref: '#/components/responses/RecordNotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
     post:
       tags: [Incomes]
       operationId: createIncome
-      summary: Record an income (trial cap enforced)
+      x-frozen: sha256:8fa5b3ec62c4ee013f257def7b68c8b7be5254ec714ba3f73a764552ef46e4dc
+      summary: Record an income (idempotent client id; trial cap enforced)
+      description: >-
+        Records an income of the active taxpayer. Amounts are MXN centavos (`int64`), the
+        amount is the subtotal **before IVA**; there is no currency field.
+
+
+        **Idempotency (double submit).** The client generates `id` (UUIDv7 recommended) once
+        per form session and resends it on every retry; the server generates one when it is
+        absent. Before any access check: a new `id` → `201`; an `id` the caller already owns
+        for the same taxpayer, not deleted, with the same persisted fields (compared after
+        normalization) → `200` with the stored income, no second record and no trial slot
+        (even at 5/5); the same `id` with other fields, another taxpayer, or a soft-deleted
+        income → `409 conflict` with `{field: id, code: id_reused}`; an `id` that belongs to
+        another user → `409 conflict` with no `details` (it reveals no ownership).
+
+
+        **Order of checks** (one transaction): schema (`400`) → idempotency (`200`/`409`) →
+        read-only access (`402`) → regime window and archive (`422`) → domain rules (`400`/`422`)
+        → trial slot (`402`, atomic) → insert. A failed insert gives the slot back.
+
+
+        **Trial cap.** 5 incomes per user across all taxpayers, independent of the 5 expenses.
+        A spent cap answers `402 entitlement_required` with
+        `{field: incomes_remaining, code: trial_cap_reached}`; deleting never frees a slot.
+
+
+        `FieldError.code` values beyond JSON Schema keywords (`required`, `minimum`, `enum`,
+        `format`, `pattern`, `maxLength`, `additionalProperties`, …):
+        `collected_on` / `invoiced_on` → `required` (the date the regime's basis needs:
+        `collected_on` for cash regimes, `invoiced_on` for accrual), `out_of_range` (before
+        2022-01-01 or after today, America/Mexico_City);
+        `platform_activity` → `required` (625 with more than one activity), `not_for_regime`
+        (sent for a regime other than 625);
+        `amount_cents` → `minimum` (0 is refused at the edge; `must_be_positive` is the
+        domain's backstop code for the same rule).
+        `422 business_rule_violation` details: `regime_code` → `regime_not_active` (the regime
+        is not held on one of the income's dates); `taxpayerId` → `taxpayer_archived`;
+        `iva_rate` → `rate_not_valid_on_date` (rate not allowed on the IVA date, e.g. `rate_8`
+        after the border decree ends); `iva_cents` → `iva_amount_mismatch` (`rate_0`/`exempt`
+        with IVA > 0, or more than 100 centavos away from `amount_cents × rate`);
+        `isr_withheld_cents` / `iva_withheld_cents` → `withholding_not_applicable` (the
+        person type, regime and `counterparty_type` allow no such withholding),
+        `withholding_exceeds_base` (ISR above `amount_cents`, IVA above `iva_cents`);
+        `platform_activity` → `activity_not_held` (not among the taxpayer's 625 activities).
+
+
+        Success bodies carry non-blocking `warnings` (MODULE-incomes §2.8):
+        `duplicate_cfdi_uuid` on `cfdi_uuid` (another live income of the taxpayer has the
+        same folio fiscal: legit for partial collections) and `withholding_differs_from_rate`
+        on `isr_withheld_cents` / `iva_withheld_cents` (the CFDI wins). Messages never carry
+        amounts, descriptions or UUIDs.
       x-module: module_incomes
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/IncomeCreate' }
+            examples:
+              professionalFees:
+                summary: 612 fees paid by a persona moral (ISR 10 %, IVA 2/3 withheld)
+                value:
+                  id: 0199d4a3-1a2b-7d3c-8e4f-5a6b7c8d9e01
+                  regime_code: '612'
+                  counterparty_type: persona_moral
+                  amount_cents: 1000000
+                  iva_rate: rate_16
+                  iva_cents: 160000
+                  isr_withheld_cents: 100000
+                  iva_withheld_cents: 106667
+                  invoiced_on: '2026-09-05'
+                  collected_on: '2026-09-10'
+                  cfdi_uuid: 6F3B2C1D-8A4E-4B7F-9C2D-1E5A7B9C3D4F
+                  description: Diseño de logotipo
+              accrualPendingCollection:
+                summary: 601 invoice not yet collected ("Por cobrar")
+                value:
+                  id: 0199d4a3-3c4d-7f5e-a061-7c8d9e0f1a23
+                  regime_code: '601'
+                  counterparty_type: persona_moral
+                  amount_cents: 4500000
+                  iva_rate: rate_16
+                  iva_cents: 720000
+                  invoiced_on: '2026-09-05'
+                  collected_on: null
+                  description: Consultoría de procesos, septiembre
+              platformLodging:
+                summary: 625 lodging through a platform (activity defaulted when the taxpayer holds one)
+                value:
+                  id: 0199d4a3-4d5e-7a6f-b172-8d9e0f1a2b34
+                  regime_code: '625'
+                  counterparty_type: plataforma
+                  amount_cents: 1500000
+                  iva_rate: rate_16
+                  iva_cents: 240000
+                  isr_withheld_cents: 60000
+                  iva_withheld_cents: 120000
+                  collected_on: '2026-09-20'
       responses:
         '201':
-          description: Created.
+          description: Created (with `warnings` when the folio fiscal repeats or a withholding differs from the suggested rate).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Income' }
+              examples:
+                created:
+                  value:
+                    id: 0199d4a3-1a2b-7d3c-8e4f-5a6b7c8d9e01
+                    taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                    regime_code: '612'
+                    counterparty_type: persona_moral
+                    amount_cents: 1000000
+                    iva_rate: rate_16
+                    iva_cents: 160000
+                    isr_withheld_cents: 100000
+                    iva_withheld_cents: 106667
+                    invoiced_on: '2026-09-05'
+                    collected_on: '2026-09-10'
+                    platform_activity: null
+                    cfdi_uuid: 6F3B2C1D-8A4E-4B7F-9C2D-1E5A7B9C3D4F
+                    description: Diseño de logotipo
+                    pending_collection: false
+                    warnings: []
+                    created_at: '2026-09-10T17:00:00Z'
+                    updated_at: '2026-09-10T17:00:00Z'
+                duplicateCfdiUuid:
+                  summary: Accepted; another live income has the same folio fiscal (partial collection)
+                  value:
+                    id: 0199d4a3-5e6f-7b70-8283-9e0f1a2b3c45
+                    taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                    regime_code: '612'
+                    counterparty_type: persona_moral
+                    amount_cents: 500000
+                    iva_rate: rate_16
+                    iva_cents: 80000
+                    isr_withheld_cents: 50000
+                    iva_withheld_cents: 53333
+                    invoiced_on: '2026-09-05'
+                    collected_on: '2026-09-25'
+                    platform_activity: null
+                    cfdi_uuid: 6F3B2C1D-8A4E-4B7F-9C2D-1E5A7B9C3D4F
+                    description: Segundo pago del logotipo
+                    pending_collection: false
+                    warnings:
+                      - code: duplicate_cfdi_uuid
+                        field: cfdi_uuid
+                        message: Ya registraste otro ingreso con este folio fiscal. Si es un pago parcial, está bien.
+                    created_at: '2026-09-25T19:12:00Z'
+                    updated_at: '2026-09-25T19:12:00Z'
         '200':
-          description: Idempotent retry; already created.
+          description: Idempotent retry; the caller already owns this income with the same fields. No trial slot is used.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Income' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+        '400':
+          description: >-
+            Input does not match the contract, or a date, activity or amount rule
+            (`details[].code`: see the operation description).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                missingCollectedOn:
+                  summary: A cash-basis regime (612) without `collected_on`
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: collected_on, code: required, message: Indica la fecha de cobro. }
+                futureDate:
+                  summary: A date after today (America/Mexico_City)
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: collected_on, code: out_of_range, message: La fecha no puede ser futura ni anterior a 2022. }
+                zeroAmount:
+                  summary: '`amount_cents: 0`'
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: amount_cents, code: minimum, message: El monto debe ser mayor que cero. }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '402': { $ref: '#/components/responses/PaymentRequired' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/UnprocessableEntity' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '402':
+          description: >-
+            Read-only access (trial over, no active plan), or the income trial cap is spent:
+            `details[0]` names the cap (`incomes_remaining` / `trial_cap_reached`). Never on
+            an idempotent retry.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                trialCapReached:
+                  value:
+                    error:
+                      code: entitlement_required
+                      message: You have used every income of your trial. Subscribe to keep adding incomes.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - field: incomes_remaining
+                          code: trial_cap_reached
+                          message: You have used every income of your trial. Subscribe to keep adding incomes.
+                readOnly:
+                  value:
+                    error: { code: entitlement_required, message: Your trial has ended. Subscribe to keep adding records., request_id: req_01J9Z6Q4X8 }
+        '404': { $ref: '#/components/responses/RecordNotFound' }
+        '409':
+          description: >-
+            The client `id` is reused: by the caller with other fields, another taxpayer or a
+            deleted income (`details`: `id` / `id_reused`), or it belongs to another user (no
+            `details`).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                idReused:
+                  value:
+                    error:
+                      code: conflict
+                      message: The request conflicts with the current state.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: id, code: id_reused, message: Este identificador ya se usó con otros datos. }
+                foreignId:
+                  value:
+                    error: { code: conflict, message: The request conflicts with the current state., request_id: req_01J9Z6Q4X8 }
+        '422': { $ref: '#/components/responses/IncomeRuleViolation' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
+  /v1/taxpayers/{taxpayerId}/incomes/defaults:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+    get:
+      tags: [Incomes]
+      operationId: getIncomeDefaults
+      x-frozen: sha256:13e400f9f1e5149353f4fb6f7daa675efbec43c858f4f37b23d1a62a173d7f58
+      summary: IVA rates and suggested withholding rates for a new income (prefills the form)
+      description: >-
+        Resolved from the rate catalog (`RateCatalog`, dated parameter data) for the
+        taxpayer's person type, the regime and its options (625 `activities`,
+        `rfc_given_to_platform`), the counterparty and the date `on` (default: today,
+        America/Mexico_City). The app never hard-codes a rate. A suggestion is UX only:
+        the stored value is what the user enters (the CFDI wins). `iva_rates_allowed` lists
+        the rates valid on `on` (`rate_8` disappears when the border decree ends). A
+        withholding that is not allowed has `*_allowed: false` and a `null` rate (the value
+        must be 0); an allowed one without a suggestion has `*_allowed: true` and a `null`
+        rate. The ISR rate applies to `amount_cents`, the IVA rate to `iva_cents`. For 625,
+        `platform_activity` selects the ISR rate; it defaults to the taxpayer's only activity
+        and stays `null` when there are several and none is sent. Reads are allowed for a
+        read-only user and for an archived taxpayer. `regime` must be held by the taxpayer
+        on `on` (`422 regime_not_active`).
+      x-module: module_incomes
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: regime
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/RegimeCode' }
+        - name: counterparty_type
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/CounterpartyType' }
+        - $ref: '#/components/parameters/OnDate'
+        - name: platform_activity
+          in: query
+          required: false
+          description: 625 only (`not_for_regime` otherwise); must be one of the taxpayer's activities (`activity_not_held`).
+          schema: { $ref: '#/components/schemas/PlatformActivity' }
+      responses:
+        '200':
+          description: Defaults for the form.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IncomeDefaults' }
+              examples:
+                fisica612PersonaMoral:
+                  summary: 612 paid by a persona moral
+                  value:
+                    iva_rates_allowed: [rate_16, rate_8, rate_0, exempt]
+                    suggested_iva_rate: rate_16
+                    isr_withholding_allowed: true
+                    isr_withholding_rate: '0.10'
+                    iva_withholding_allowed: true
+                    iva_withholding_rate: '0.666667'
+                    platform_activity: null
+                platform625Lodging:
+                  summary: 625 lodging, RFC given to the platform
+                  value:
+                    iva_rates_allowed: [rate_16, rate_8, rate_0, exempt]
+                    suggested_iva_rate: rate_16
+                    isr_withholding_allowed: true
+                    isr_withholding_rate: '0.04'
+                    iva_withholding_allowed: true
+                    iva_withholding_rate: '0.5'
+                    platform_activity: lodging
+                publicoGeneral:
+                  summary: Sale to the general public (no withholding)
+                  value:
+                    iva_rates_allowed: [rate_16, rate_8, rate_0, exempt]
+                    suggested_iva_rate: rate_16
+                    isr_withholding_allowed: false
+                    isr_withholding_rate: null
+                    iva_withholding_allowed: false
+                    iva_withholding_rate: null
+                    platform_activity: null
+        '400':
+          description: >-
+            Input does not match the contract: `on` out of range (`out_of_range`, 2022-01-01 …
+            today), or `platform_activity` for a regime other than 625 (`not_for_regime`).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: validation_failed
+                  message: One or more fields are invalid.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: regime, code: required, message: Indica el régimen. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/RecordNotFound' }
+        '422':
+          description: The regime is not held on `on`, or the 625 activity is not among the taxpayer's.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                regimeNotActive:
+                  value:
+                    error:
+                      code: business_rule_violation
+                      message: The taxpayer does not hold this regime on that date.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: regime, code: regime_not_active, message: No tienes este régimen en esa fecha. }
+                activityNotHeld:
+                  value:
+                    error:
+                      code: business_rule_violation
+                      message: The activity is not among the taxpayer's platform activities.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: platform_activity, code: activity_not_held, message: No registraste esta actividad en el régimen 625. }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
   /v1/taxpayers/{taxpayerId}/incomes/{incomeId}:
     parameters:
       - $ref: '#/components/parameters/TaxpayerId'
@@ -1254,49 +1615,106 @@ paths:
     get:
       tags: [Incomes]
       operationId: getIncome
+      x-frozen: sha256:dbd746b911e7f52c7871550ccba0f6a81a605f8b134e59e2573a0d8a029cec8b
       summary: Get an income
+      description: >-
+        A live income of the taxpayer. A soft-deleted, purged, foreign or unknown income, or
+        a malformed id, answers `404`. `warnings` is always `[]` here.
       x-module: module_incomes
+      security:
+        - bearerAuth: []
       responses:
         '200':
           description: Income.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Income' }
+        '400': { $ref: '#/components/responses/RecordBadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '404': { $ref: '#/components/responses/RecordNotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
     patch:
       tags: [Incomes]
       operationId: updateIncome
-      summary: Edit an income (402 when access is read-only)
+      x-frozen: sha256:ea1f050de0778177819a86ec8ca28f82a6b9d5e17b81754735052672ae1fedad
+      summary: Edit an income (merge-patch; null clears a nullable field)
+      description: >-
+        Partial update with merge-patch semantics on top-level fields: an absent field is
+        unchanged; `null` clears a nullable one (`invoiced_on`, `collected_on`,
+        `platform_activity`, `cfdi_uuid`, `description`). `id` cannot be sent
+        (`additionalProperties`). Every rule of `createIncome` is re-run on the merged income,
+        with the same `details[].code` values and `warnings`; moving it to another
+        `regime_code` re-checks the regime window. Setting `collected_on` on an accrual income
+        clears `pending_collection`. A read-only user gets `402`; an archived taxpayer
+        `422 taxpayer_archived`. Last write wins (no ETag in v1).
       x-module: module_incomes
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/IncomeUpdate' }
+            examples:
+              correctAmounts:
+                value: { amount_cents: 1200000, iva_cents: 192000 }
+              markCollected:
+                summary: A 601 income gets collected (leaves "Por cobrar")
+                value: { collected_on: '2026-10-02' }
+              clearUuid:
+                value: { cfdi_uuid: null }
       responses:
         '200':
-          description: Updated.
+          description: Updated (with `warnings` as on create).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Income' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+        '400':
+          description: Input does not match the contract, or a date, activity or amount rule (see `createIncome`).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: validation_failed
+                  message: One or more fields are invalid.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: id, code: additionalProperties, message: Este campo no se puede modificar. }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '402': { $ref: '#/components/responses/PaymentRequired' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '422': { $ref: '#/components/responses/UnprocessableEntity' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '402': { $ref: '#/components/responses/RecordReadOnly' }
+        '404': { $ref: '#/components/responses/RecordNotFound' }
+        '422': { $ref: '#/components/responses/IncomeRuleViolation' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
     delete:
       tags: [Incomes]
       operationId: deleteIncome
-      summary: Soft-delete an income (undo via restore)
+      x-frozen: sha256:24fb709c16287f5e6ad05fde01afd96f8f92228593f7971e8d7675ec5c141f40
+      summary: Soft-delete an income (Undo via restore)
+      description: >-
+        Sets `deleted_at`: the income leaves lists, totals and the estimate at once and can be
+        restored for 30 days (then it is purged). Deleting an already deleted income answers
+        `204`. Allowed for a read-only user. Never frees a trial slot. An archived taxpayer
+        answers `422 taxpayer_archived` (archive freezes the data).
       x-module: module_incomes
+      security:
+        - bearerAuth: []
       responses:
         '204': { description: Deleted (restorable). }
+        '400': { $ref: '#/components/responses/RecordBadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '404': { $ref: '#/components/responses/RecordNotFound' }
+        '422': { $ref: '#/components/responses/RecordTaxpayerArchived' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
   /v1/taxpayers/{taxpayerId}/incomes/{incomeId}/restore:
     parameters:
       - $ref: '#/components/parameters/TaxpayerId'
@@ -1304,48 +1722,106 @@ paths:
     post:
       tags: [Incomes]
       operationId: restoreIncome
-      summary: Undo a delete
+      x-frozen: sha256:4ec6aab1542fd898db80cb5876aa2df84154306a667c081b79d55e338ce03206
+      summary: Undo a delete (never consumes a trial slot)
+      description: >-
+        Clears `deleted_at`. **Never consumes a trial slot**: the slot was used once at
+        creation and never freed, so Undo works at 5/5 with no paywall. Only the read-only
+        check applies (`402` without `details`). The regime window is re-checked
+        (`422 regime_not_active` when the regime no longer covers the income's dates); an
+        archived taxpayer answers `422 taxpayer_archived`. Restoring a live income answers
+        `200` unchanged; a purged one `404`. `warnings` are computed as on create.
       x-module: module_incomes
+      security:
+        - bearerAuth: []
       responses:
         '200':
           description: Restored.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Income' }
+        '400': { $ref: '#/components/responses/RecordBadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '402': { $ref: '#/components/responses/RecordReadOnly' }
+        '404': { $ref: '#/components/responses/RecordNotFound' }
+        '422': { $ref: '#/components/responses/RecordRestoreRefused' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
 
   # ---------------------------------------------------------------- M4 Expenses
-  /v1/expense-categories:
+  /v1/taxpayers/{taxpayerId}/expense-categories:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
     get:
       tags: [Expenses]
       operationId: listExpenseCategories
-      summary: Expense categories with deductibility hints per regime
+      x-frozen: sha256:250cabadb86ef2f393099e0d73b35b486926912b5157383fddff115e1057b5ae
+      summary: Expense categories with deductibility resolved for the taxpayer's regime and options
+      description: >-
+        Replaces the global `GET /v1/expense-categories` (OQ-E1): the hint depends on the
+        taxpayer's person type (626 PF vs 626 PM) and regime options (606 `deduction_mode`,
+        625 `definitive_option`), so the catalog is read per taxpayer. Every category comes
+        with `deductibility` (the hint shown), `default_deductible` (the boolean a new
+        expense starts with; conservative for partial cases), the `note` and the article-level
+        `legal_basis`, ordered by the catalog's `sort_order`. `iva_rates_allowed` and
+        `cash_payment_limit_cents` are dated parameter data on `on` (default: today, America/
+        Mexico_City). `legend` is the mandatory text the form shows under the category. The
+        catalog is pending CPA review (⚠️). Allowed for a read-only user and for an archived
+        taxpayer. `regime` must be held by the taxpayer on `on` (`422 regime_not_active`).
       x-module: module_expenses
+      security:
+        - bearerAuth: []
       parameters:
         - name: regime
           in: query
-          required: false
+          required: true
           schema: { $ref: '#/components/schemas/RegimeCode' }
+        - $ref: '#/components/parameters/OnDate'
       responses:
         '200':
-          description: Categories.
+          description: Categories for the regime.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ExpenseCategoryList' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+        '400': { $ref: '#/components/responses/RecordBadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '404': { $ref: '#/components/responses/RecordNotFound' }
+        '422':
+          description: The taxpayer does not hold `regime` on `on`.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: business_rule_violation
+                  message: The taxpayer does not hold this regime on that date.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: regime, code: regime_not_active, message: No tienes este régimen en esa fecha. }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
   /v1/taxpayers/{taxpayerId}/expenses:
     parameters:
       - $ref: '#/components/parameters/TaxpayerId'
     get:
       tags: [Expenses]
       operationId: listExpenses
+      x-frozen: sha256:b8c1a87910a417004daac47ce3b4cd6f69cd6dd4f01f6282147ae4055968cf57
       summary: List a month's expenses (keyset pagination) with period totals
+      description: >-
+        Live (not deleted) expenses of the taxpayer whose `paid_on` (the booking date for
+        every regime) falls in `period`, ordered by `paid_on`, then `id`, both descending;
+        pagination, `regime` filter and totals as `listIncomes`. `legend` is the mandatory
+        text of the list header. `warnings` is always `[]` here.
       x-module: module_expenses
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/PeriodQuery'
         - $ref: '#/components/parameters/RegimeQuery'
@@ -1354,41 +1830,241 @@ paths:
       responses:
         '200':
           description: Page of expenses.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ExpensePage' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+        '400': { $ref: '#/components/responses/RecordBadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '404': { $ref: '#/components/responses/RecordNotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
     post:
       tags: [Expenses]
       operationId: createExpense
-      summary: Record an expense (trial cap enforced)
+      x-frozen: sha256:32aebb34497600cd41396779054fb80c171230b51a914d91b05107c76027f6d6
+      summary: Record an expense (idempotent client id; trial cap enforced)
+      description: >-
+        Records an expense of the active taxpayer. Idempotency, order of checks, regime
+        window, IVA rate validity and the `iva_cents` tolerance are those of `createIncome`
+        (same `200` / `409 id_reused` rules). Trial cap: 5 expenses per user across all
+        taxpayers, independent of incomes; a spent cap answers `402` with
+        `{field: expenses_remaining, code: trial_cap_reached}`.
+
+
+        **Deductibility.** `deductible` omitted or `null` → the default: the category rule for
+        the regime, person type and options (MODULE-expenses §2.2–2.3) AND `has_cfdi` AND NOT
+        a cash payment over the limit (`payment_method: cash` with `amount_cents + iva_cents`
+        above `cash_payment_limit_cents`, or any cash `combustible`). A boolean is the user's
+        override (`deductible_source: user`). Non-deductibility is never an error.
+
+
+        `FieldError.code` values beyond JSON Schema keywords: `category_code` →
+        `unknown_category`; `cfdi_uuid` → `has_cfdi_mismatch` (a folio fiscal with
+        `has_cfdi: false`); `paid_on` → `out_of_range` (before 2022-01-01 or after today).
+        `422 business_rule_violation` details: `regime_code` → `regime_not_active`;
+        `taxpayerId` → `taxpayer_archived`; `iva_rate` → `rate_not_valid_on_date`;
+        `iva_cents` → `iva_amount_mismatch`; `isr_withheld_cents` / `iva_withheld_cents` →
+        `withholding_not_applicable` (only a persona moral withholds from its suppliers),
+        `withholding_exceeds_base`.
+
+
+        Success bodies carry non-blocking `warnings`: `cash_over_threshold` on
+        `payment_method`, `no_cfdi` on `has_cfdi`, `not_isr_deductible_in_regime` and
+        `category_not_deductible` on `deductible` (an override to `true` against the hint),
+        `duplicate_cfdi_uuid` on `cfdi_uuid`.
       x-module: module_expenses
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/ExpenseCreate' }
+            examples:
+              software:
+                summary: 612 software paid by card, with CFDI
+                value:
+                  id: 0199d4a3-2b3c-7e4d-9f50-6b7c8d9e0f12
+                  regime_code: '612'
+                  category_code: software
+                  amount_cents: 50000
+                  iva_rate: rate_16
+                  iva_cents: 8000
+                  payment_method: card_debit
+                  paid_on: '2026-09-12'
+                  has_cfdi: true
+                  cfdi_uuid: 3A9C7E21-5B4D-4F6A-8E2C-9D1B7A3F5C60
+                  description: Suscripción anual de diseño
+              cashOverLimit:
+                summary: Stationery paid in cash above $2,000 (accepted, not deductible)
+                value:
+                  id: 0199d4a3-6f70-7c81-9394-0f1a2b3c4d56
+                  regime_code: '612'
+                  category_code: papeleria
+                  amount_cents: 200000
+                  iva_rate: rate_16
+                  iva_cents: 32000
+                  payment_method: cash
+                  paid_on: '2026-09-15'
+                  has_cfdi: true
+              moralFeesWithholding:
+                summary: 601 professional fees with ISR and IVA withheld from the supplier
+                value:
+                  id: 0199d4a3-7081-7d92-a4a5-1a2b3c4d5e67
+                  regime_code: '601'
+                  category_code: servicios_profesionales
+                  amount_cents: 1000000
+                  iva_rate: rate_16
+                  iva_cents: 160000
+                  payment_method: transfer
+                  paid_on: '2026-09-30'
+                  has_cfdi: true
+                  isr_withheld_cents: 100000
+                  iva_withheld_cents: 106667
+                  description: Honorarios de auditoría
       responses:
         '201':
-          description: Created. `warnings` may flag non-deductibility risks.
+          description: Created (with `warnings` for non-deductibility risks or a repeated folio fiscal).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Expense' }
+              examples:
+                deductible:
+                  value:
+                    id: 0199d4a3-2b3c-7e4d-9f50-6b7c8d9e0f12
+                    taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                    regime_code: '612'
+                    category_code: software
+                    amount_cents: 50000
+                    iva_rate: rate_16
+                    iva_cents: 8000
+                    payment_method: card_debit
+                    paid_on: '2026-09-12'
+                    has_cfdi: true
+                    cfdi_uuid: 3A9C7E21-5B4D-4F6A-8E2C-9D1B7A3F5C60
+                    isr_withheld_cents: 0
+                    iva_withheld_cents: 0
+                    description: Suscripción anual de diseño
+                    deductible: true
+                    deductible_source: category_default
+                    warnings: []
+                    legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
+                    created_at: '2026-09-12T18:30:00Z'
+                    updated_at: '2026-09-12T18:30:00Z'
+                cashOverThreshold:
+                  summary: Paid in cash above $2,000 with IVA; default deductible is false
+                  value:
+                    id: 0199d4a3-6f70-7c81-9394-0f1a2b3c4d56
+                    taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                    regime_code: '612'
+                    category_code: papeleria
+                    amount_cents: 200000
+                    iva_rate: rate_16
+                    iva_cents: 32000
+                    payment_method: cash
+                    paid_on: '2026-09-15'
+                    has_cfdi: true
+                    cfdi_uuid: null
+                    isr_withheld_cents: 0
+                    iva_withheld_cents: 0
+                    description: null
+                    deductible: false
+                    deductible_source: category_default
+                    warnings:
+                      - code: cash_over_threshold
+                        field: payment_method
+                        message: Los pagos en efectivo de más de $2,000 no son deducibles.
+                    legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
+                    created_at: '2026-09-15T15:42:00Z'
+                    updated_at: '2026-09-15T15:42:00Z'
         '200':
-          description: Idempotent retry; already created.
+          description: Idempotent retry; the caller already owns this expense with the same fields. No trial slot is used.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Expense' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+        '400':
+          description: >-
+            Input does not match the contract, an unknown category, a folio fiscal without
+            CFDI, or a date out of range (`details[].code`: see the operation description).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                unknownCategory:
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: category_code, code: unknown_category, message: Elige una categoría de la lista. }
+                hasCfdiMismatch:
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: cfdi_uuid, code: has_cfdi_mismatch, message: 'Si capturas el folio fiscal, indica que tienes factura.' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '402': { $ref: '#/components/responses/PaymentRequired' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/UnprocessableEntity' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '402':
+          description: >-
+            Read-only access (trial over, no active plan), or the expense trial cap is spent:
+            `details[0]` names the cap (`expenses_remaining` / `trial_cap_reached`). Never on
+            an idempotent retry.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                trialCapReached:
+                  value:
+                    error:
+                      code: entitlement_required
+                      message: You have used every expense of your trial. Subscribe to keep adding expenses.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - field: expenses_remaining
+                          code: trial_cap_reached
+                          message: You have used every expense of your trial. Subscribe to keep adding expenses.
+                readOnly:
+                  value:
+                    error: { code: entitlement_required, message: Your trial has ended. Subscribe to keep adding records., request_id: req_01J9Z6Q4X8 }
+        '404': { $ref: '#/components/responses/RecordNotFound' }
+        '409':
+          description: >-
+            The client `id` is reused: by the caller with other fields, another taxpayer or a
+            deleted expense (`details`: `id` / `id_reused`), or it belongs to another user (no
+            `details`).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                idReused:
+                  value:
+                    error:
+                      code: conflict
+                      message: The request conflicts with the current state.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: id, code: id_reused, message: Este identificador ya se usó con otros datos. }
+                foreignId:
+                  value:
+                    error: { code: conflict, message: The request conflicts with the current state., request_id: req_01J9Z6Q4X8 }
+        '422': { $ref: '#/components/responses/ExpenseRuleViolation' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
   /v1/taxpayers/{taxpayerId}/expenses/{expenseId}:
     parameters:
       - $ref: '#/components/parameters/TaxpayerId'
@@ -1396,49 +2072,105 @@ paths:
     get:
       tags: [Expenses]
       operationId: getExpense
+      x-frozen: sha256:9749da319178522571a49de6761b91ef623c4ab3dcd3aa270d9d853ff9e85092
       summary: Get an expense
+      description: >-
+        A live expense of the taxpayer. A soft-deleted, purged, foreign or unknown expense, or
+        a malformed id, answers `404`. `warnings` is always `[]` here.
       x-module: module_expenses
+      security:
+        - bearerAuth: []
       responses:
         '200':
           description: Expense.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Expense' }
+        '400': { $ref: '#/components/responses/RecordBadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '404': { $ref: '#/components/responses/RecordNotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
     patch:
       tags: [Expenses]
       operationId: updateExpense
-      summary: Edit an expense
+      x-frozen: sha256:53026b27499621247d20ac5a96620fa6a7190ec5dc27788f38a69dbe23f00597
+      summary: Edit an expense (merge-patch; null clears a nullable field or the override)
+      description: >-
+        Merge-patch on top-level fields as `updateIncome`: absent is unchanged, `null` clears
+        `cfdi_uuid` or `description`, and `deductible: null` clears the user's override (the
+        default applies again). Without an override the default `deductible` is recomputed
+        when the category, regime, payment method, amounts, `has_cfdi` or `paid_on` change;
+        an override is kept as is. Every rule of `createExpense` is re-run on the merged
+        expense with the same `details[].code` values and `warnings`. A read-only user gets
+        `402`; an archived taxpayer `422 taxpayer_archived`.
       x-module: module_expenses
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/ExpenseUpdate' }
+            examples:
+              overrideDeductible:
+                summary: The user claims a restaurant expense as deductible
+                value: { deductible: true }
+              useSuggestedValue:
+                summary: '"Usar el valor sugerido": clear the override'
+                value: { deductible: null }
+              changeCategory:
+                value: { category_code: capacitacion }
       responses:
         '200':
-          description: Updated.
+          description: Updated (with `warnings` as on create).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Expense' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+        '400':
+          description: Input does not match the contract, or a category, CFDI or date rule (see `createExpense`).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: validation_failed
+                  message: One or more fields are invalid.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: category_code, code: unknown_category, message: Elige una categoría de la lista. }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '402': { $ref: '#/components/responses/PaymentRequired' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '422': { $ref: '#/components/responses/UnprocessableEntity' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '402': { $ref: '#/components/responses/RecordReadOnly' }
+        '404': { $ref: '#/components/responses/RecordNotFound' }
+        '422': { $ref: '#/components/responses/ExpenseRuleViolation' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
     delete:
       tags: [Expenses]
       operationId: deleteExpense
-      summary: Soft-delete an expense (undo via restore)
+      x-frozen: sha256:b81294d63a26f9446de3480c7680490e9589321f51df8dda5c280dee7c7f50d4
+      summary: Soft-delete an expense (Undo via restore)
+      description: >-
+        As `deleteIncome`: sets `deleted_at`, restorable for 30 days, `204` also when already
+        deleted, allowed for a read-only user, never frees a trial slot; an archived taxpayer
+        answers `422 taxpayer_archived`.
       x-module: module_expenses
+      security:
+        - bearerAuth: []
       responses:
         '204': { description: Deleted (restorable). }
+        '400': { $ref: '#/components/responses/RecordBadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '404': { $ref: '#/components/responses/RecordNotFound' }
+        '422': { $ref: '#/components/responses/RecordTaxpayerArchived' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
   /v1/taxpayers/{taxpayerId}/expenses/{expenseId}/restore:
     parameters:
       - $ref: '#/components/parameters/TaxpayerId'
@@ -1446,17 +2178,31 @@ paths:
     post:
       tags: [Expenses]
       operationId: restoreExpense
-      summary: Undo a delete
+      x-frozen: sha256:923da02d2c138a33a89d0cf8b751919b711fad0bb8c73ae5c018e5086996a7a7
+      summary: Undo a delete (never consumes a trial slot)
+      description: >-
+        As `restoreIncome`: clears `deleted_at` without consuming a trial slot (Undo works at
+        5/5), read-only check only (`402`), regime window re-checked (`422 regime_not_active`),
+        archived taxpayer `422 taxpayer_archived`, a live expense `200` unchanged, a purged one
+        `404`. `deductible` is not recomputed; `warnings` are computed as on create.
       x-module: module_expenses
+      security:
+        - bearerAuth: []
       responses:
         '200':
           description: Restored.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Expense' }
+        '400': { $ref: '#/components/responses/RecordBadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '402': { $ref: '#/components/responses/RecordReadOnly' }
+        '404': { $ref: '#/components/responses/RecordNotFound' }
+        '422': { $ref: '#/components/responses/RecordRestoreRefused' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
 
   # ---------------------------------------------------------------- M5 Tax engine
   /v1/taxpayers/{taxpayerId}/estimates:
@@ -1837,6 +2583,12 @@ components:
       required: false
       description: Must be `true` to perform a destructive or data-affecting action.
       schema: { type: boolean, default: false }
+    OnDate:
+      name: 'on'
+      in: query
+      required: false
+      description: Date the dated parameters are read on (America/Mexico_City); defaults to today. `2022-01-01` … today (`out_of_range`).
+      schema: { type: string, format: date }
 
   headers:
     NoStore:
@@ -1852,6 +2604,15 @@ components:
         says why the credentials were refused.
       required: true
       schema: { type: string, const: 'Bearer realm="control-contable"' }
+
+    NoStoreOnError:
+      x-frozen: sha256:f93c7edd6e7b3b59a6d2f83259c90c1a7cfd78fc7ae5f30fda8ed95175385822
+      description: >-
+        `Cache-Control: no-store` on the error responses of record operations (M3/M4, S-11;
+        P0-30 D-6). Optional in the contract because a 404 written before the module is reached
+        (flag OFF, unknown route) may omit it; every error the module's handlers write sends it.
+      required: false
+      schema: { type: string, const: no-store }
 
   responses:
     BadRequest:
@@ -1892,13 +2653,6 @@ components:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
           example:
             error: { code: not_found, message: Not found., request_id: req_01J9Z6Q4X8 }
-    Conflict:
-      description: State conflict (duplicate RFC, regime with records needs confirmation, client `id` reused with a different body).
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/ErrorResponse' }
-          example:
-            error: { code: rfc_already_registered, message: This RFC is already registered in your account., request_id: req_01J9Z6Q4X8 }
     UnprocessableEntity:
       description: Well-formed but violates a business rule.
       content:
@@ -1942,6 +2696,200 @@ components:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
           example:
             error: { code: upstream_unavailable, message: Service temporarily unavailable., request_id: req_01J9Z6Q4X8 }
+
+    # M3/M4 record errors (S-11 / P0-30 D-6): they declare `Cache-Control: no-store`. The
+    # shared 401 and 429 above are frozen and written before the module is reached.
+    RecordBadRequest:
+      x-frozen: sha256:f12d33b72a30b44330c8b367ec6665d2d3da79e76e27bad201ca92c62fce2b95
+      description: Input does not match the contract (query parameter, path or body).
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            error:
+              code: validation_failed
+              message: One or more fields are invalid.
+              request_id: req_01J9Z6Q4X8
+              details:
+                - { field: period, code: pattern, message: Usa el formato AAAA-MM. }
+    RecordReadOnly:
+      x-frozen: sha256:c1299ddf61d9cd0f49039bbff4ce79db094875cbcd3936fa740f2b8672cef28f
+      description: Read-only access (trial over, no active plan). Never a trial-cap refusal.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            error: { code: entitlement_required, message: Your trial has ended. Subscribe to keep adding records., request_id: req_01J9Z6Q4X8 }
+    RecordNotFound:
+      x-frozen: sha256:c6dae32a37504e595548ee4cb265478e4d55db19194c742902dcc08453c9c00f
+      description: >-
+        The taxpayer or record does not exist, belongs to another user, is deleted or purged,
+        its id is malformed, or the module is disabled (indistinguishable on purpose).
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            error: { code: not_found, message: Not found., request_id: req_01J9Z6Q4X8 }
+    RecordTaxpayerArchived:
+      x-frozen: sha256:b66f9bb35ad2a974e840f92ec2dda4b7e9d777fee6985e3202a153933c2db265
+      description: The taxpayer is archived; archive freezes its records (OQ-5).
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            error:
+              code: business_rule_violation
+              message: This taxpayer is archived. Unarchive it to make changes.
+              request_id: req_01J9Z6Q4X8
+              details:
+                - { field: taxpayerId, code: taxpayer_archived, message: Desarchiva al contribuyente primero. }
+    RecordRestoreRefused:
+      x-frozen: sha256:b1873a050742287d1052152f8f21f656e0ebe12dd6e8514b19a1403d712a6aad
+      description: >-
+        The regime no longer covers the record's dates (`regime_not_active`), or the
+        taxpayer is archived (`taxpayer_archived`).
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            regimeNotActive:
+              value:
+                error:
+                  code: business_rule_violation
+                  message: The taxpayer does not hold this regime on that date.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: regime_code, code: regime_not_active, message: El régimen ya no cubre la fecha de este registro. }
+            taxpayerArchived:
+              value:
+                error:
+                  code: business_rule_violation
+                  message: This taxpayer is archived. Unarchive it to make changes.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: taxpayerId, code: taxpayer_archived, message: Desarchiva al contribuyente primero. }
+    IncomeRuleViolation:
+      x-frozen: sha256:f7d8df739837a67a0b6b9667009d3e5ce7a801c4d6468bb1aa941f94a1a25ef3
+      description: >-
+        Well-formed but violates an income rule: regime window, archived taxpayer, IVA rate
+        or amount, withholdings, 625 activity (`details[].code`: see `createIncome`).
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            regimeNotActive:
+              value:
+                error:
+                  code: business_rule_violation
+                  message: The taxpayer does not hold this regime on that date.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: regime_code, code: regime_not_active, message: No tienes este régimen en la fecha del ingreso. }
+            rateNotValidOnDate:
+              value:
+                error:
+                  code: business_rule_violation
+                  message: The IVA rate is not valid on that date.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: iva_rate, code: rate_not_valid_on_date, message: La tasa de 8 % no está vigente en esa fecha. }
+            ivaAmountMismatch:
+              value:
+                error:
+                  code: business_rule_violation
+                  message: The IVA amount does not match the rate.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: iva_cents, code: iva_amount_mismatch, message: El IVA no corresponde a la tasa elegida. }
+            withholdingNotApplicable:
+              value:
+                error:
+                  code: business_rule_violation
+                  message: This withholding does not apply.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: isr_withheld_cents, code: withholding_not_applicable, message: Una persona física no te retiene ISR. }
+            activityNotHeld:
+              value:
+                error:
+                  code: business_rule_violation
+                  message: The activity is not among the taxpayer's platform activities.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: platform_activity, code: activity_not_held, message: No registraste esta actividad en el régimen 625. }
+            taxpayerArchived:
+              value:
+                error:
+                  code: business_rule_violation
+                  message: This taxpayer is archived. Unarchive it to make changes.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: taxpayerId, code: taxpayer_archived, message: Desarchiva al contribuyente primero. }
+    ExpenseRuleViolation:
+      x-frozen: sha256:c55b311d08f2cf5cf27ae61256cfbaa7c72f56107b51946c68e5540e33b6763f
+      description: >-
+        Well-formed but violates an expense rule: regime window, archived taxpayer, IVA rate
+        or amount, withholdings (`details[].code`: see `createExpense`).
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            regimeNotActive:
+              value:
+                error:
+                  code: business_rule_violation
+                  message: The taxpayer does not hold this regime on that date.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: regime_code, code: regime_not_active, message: No tienes este régimen en la fecha del pago. }
+            withholdingNotApplicable:
+              value:
+                error:
+                  code: business_rule_violation
+                  message: This withholding does not apply.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: isr_withheld_cents, code: withholding_not_applicable, message: Sólo una persona moral retiene a sus proveedores. }
+            withholdingExceedsBase:
+              value:
+                error:
+                  code: business_rule_violation
+                  message: The withholding is larger than its base.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: iva_withheld_cents, code: withholding_exceeds_base, message: La retención de IVA no puede ser mayor que el IVA. }
+            taxpayerArchived:
+              value:
+                error:
+                  code: business_rule_violation
+                  message: This taxpayer is archived. Unarchive it to make changes.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: taxpayerId, code: taxpayer_archived, message: Desarchiva al contribuyente primero. }
+    RecordInternalError:
+      x-frozen: sha256:5858fcd0e7a448f789705e367a96b2ff9252d1de37af59c6c02dd5b5b687b549
+      description: Unexpected server error.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            error: { code: internal_error, message: Something went wrong., request_id: req_01J9Z6Q4X8 }
 
   schemas:
     # ------------------------------------------------------------ primitives
@@ -1987,6 +2935,7 @@ components:
       enum: [fisica, moral]
       description: Chosen first at onboarding and immutable; fixes the RFC length (13 física, 12 moral).
     IvaRate:
+      x-frozen: sha256:4c6f053f333244b4dcfe1824b01b00d543b61ba2bf1286e9deb209905e185141
       type: string
       enum: [rate_16, rate_8, rate_0, exempt]
       description: |
@@ -2001,6 +2950,7 @@ components:
         Support level of a regime: `full` (estimated), `partial` (some taxes only, e.g. IVA)
         or `informational` (selectable, not estimated; carries an explanation).
     Legend:
+      x-frozen: sha256:71d09177095c3074f20dc4565cec4add6cbfee2c793570c7befc34901aec86cd
       type: string
       const: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
       description: Mandatory legend; must be shown on every estimate surface.
@@ -2694,78 +3644,226 @@ components:
               created_at: '2026-10-13T16:20:00Z'
 
     # ------------------------------------------------------------ records
+    PositiveCents:
+      x-frozen: sha256:185f6d4be46dcd0694813767e2764d3be91b883a355ce45d2bf2aef5094e2c9c
+      type: integer
+      format: int64
+      minimum: 1
+      maximum: 99999999999999
+      description: Amount in MXN centavos (>= 1). Same upper bound as `NonNegativeCents`.
+      examples: [1000000]
+    BusinessDate:
+      x-frozen: sha256:f66638b291feb0b2099fcca88e1cb3e52550a76b6883a388c235441e66ffafb0
+      type: string
+      format: date
+      description: >-
+        A record date on the America/Mexico_City calendar. The server refuses dates before
+        2022-01-01 or after today (`out_of_range`); the bound moves with the clock, so it is
+        not a schema keyword.
+      examples: ['2026-09-10']
     CounterpartyType:
+      x-frozen: sha256:cc26c1afe13bbd539a2abfec079d0b5f3376a9939475bcc8251de9ab9f2837c3
       type: string
       enum: [persona_fisica, persona_moral, publico_general, plataforma]
-      description: Determines which withholdings may apply.
+      description: >-
+        Who paid the income. Decides which withholdings may exist (MODULE-incomes §2.6):
+        persona física and público en general never withhold; a persona moral withholds from a
+        física in 612/606/626; a platform withholds in 625 and from a persona moral.
+    PlatformActivity:
+      x-frozen: sha256:203687d195665cc438340652fff2dd2cf418e2e279db366e2f86a83f55fe13f9
+      type: string
+      enum: [transport_delivery, lodging, goods_services]
+      description: >-
+        625 activity of an income (same values as the 625 `activities` option). Selects the
+        ISR withholding rate (LIF 2026 art. 25-VI).
+    CfdiUuid:
+      x-frozen: sha256:46ad76e7d8c864ec48d768130b868e84825ef6056fd83ef5d172f916bafb84d6
+      type: string
+      pattern: '^[0-9A-Fa-f]{8}-([0-9A-Fa-f]{4}-){3}[0-9A-Fa-f]{12}$'
+      description: >-
+        CFDI folio fiscal (8-4-4-4-12 hex), stored upper-case. Optional; a folio already used
+        by another live record of the taxpayer is accepted with the warning
+        `duplicate_cfdi_uuid` (partial collections, OQ-9). Never logged or echoed in errors.
+      examples: [6F3B2C1D-8A4E-4B7F-9C2D-1E5A7B9C3D4F]
+    RecordDescription:
+      x-frozen: sha256:346e2d060d76f54d2e89ee1bcae89bb03efd7f654c44e991912800b17a0f2056
+      type: [string, 'null']
+      maxLength: 200
+      description: Free text, trimmed and NFC-normalized; empty becomes `null`. Never logged (may name a client).
     PeriodTotals:
+      x-frozen: sha256:256a926c73a1824ecc7c666f225f72054dc1a1befdceaed4c90ef675e370c661
       type: object
-      required: [count, amount_cents, iva_cents]
+      required: [count, amount_cents, iva_cents, isr_withheld_cents, iva_withheld_cents]
+      description: Sums of every live record of the filtered period (not just the page).
       properties:
         count: { type: integer, minimum: 0 }
         amount_cents: { $ref: '#/components/schemas/NonNegativeCents' }
         iva_cents: { $ref: '#/components/schemas/NonNegativeCents' }
         isr_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
         iva_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
-    IncomeFields:
+      examples:
+        - count: 1
+          amount_cents: 1000000
+          iva_cents: 160000
+          isr_withheld_cents: 100000
+          iva_withheld_cents: 106667
+    IncomeCreate:
+      x-frozen: sha256:383dc48ba95b27bf4e81d3f1f39b4cd69d067e442769882c28593be22dcbd885
       type: object
+      required: [regime_code, counterparty_type, amount_cents, iva_rate, iva_cents]
+      additionalProperties: false
+      description: >-
+        `user_id` comes from the session and `taxpayer_id` from the path, never from the body.
+        The date the regime's basis needs is required by the server: `collected_on` (cash
+        regimes) or `invoiced_on` (accrual regimes).
       properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+          description: Client-generated idempotency key (UUIDv7 recommended), once per form session.
         regime_code: { $ref: '#/components/schemas/RegimeCode' }
-        description: { type: [string, 'null'], maxLength: 200 }
         counterparty_type: { $ref: '#/components/schemas/CounterpartyType' }
         amount_cents:
+          $ref: '#/components/schemas/PositiveCents'
+          description: Subtotal before IVA, MXN centavos.
+        iva_rate: { $ref: '#/components/schemas/IvaRate' }
+        iva_cents:
           $ref: '#/components/schemas/NonNegativeCents'
-          description: Subtotal before IVA.
+          description: IVA charged; `0` for `rate_0`/`exempt`, else within 100 centavos of `amount_cents × rate`.
+        isr_withheld_cents:
+          $ref: '#/components/schemas/NonNegativeCents'
+          description: ISR withheld by the payer (default 0); at most `amount_cents`.
+        iva_withheld_cents:
+          $ref: '#/components/schemas/NonNegativeCents'
+          description: IVA withheld by the payer (default 0); at most `iva_cents`.
+        invoiced_on:
+          oneOf:
+            - $ref: '#/components/schemas/BusinessDate'
+            - type: 'null'
+        collected_on:
+          oneOf:
+            - $ref: '#/components/schemas/BusinessDate'
+            - type: 'null'
+        platform_activity:
+          oneOf:
+            - $ref: '#/components/schemas/PlatformActivity'
+            - type: 'null'
+        cfdi_uuid:
+          oneOf:
+            - $ref: '#/components/schemas/CfdiUuid'
+            - type: 'null'
+        description: { $ref: '#/components/schemas/RecordDescription' }
+      examples:
+        - id: 0199d4a3-1a2b-7d3c-8e4f-5a6b7c8d9e01
+          regime_code: '612'
+          counterparty_type: persona_moral
+          amount_cents: 1000000
+          iva_rate: rate_16
+          iva_cents: 160000
+          isr_withheld_cents: 100000
+          iva_withheld_cents: 106667
+          invoiced_on: '2026-09-05'
+          collected_on: '2026-09-10'
+          description: Diseño de logotipo
+    IncomeUpdate:
+      x-frozen: sha256:acdfef9fa3eb0e622889e5a6aa482eda08c694b7272c22572e452c3d92bc7715
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      description: >-
+        Merge-patch on top-level fields: absent = unchanged, `null` clears a nullable field.
+        `id` is immutable and not accepted.
+      properties:
+        regime_code: { $ref: '#/components/schemas/RegimeCode' }
+        counterparty_type: { $ref: '#/components/schemas/CounterpartyType' }
+        amount_cents: { $ref: '#/components/schemas/PositiveCents' }
         iva_rate: { $ref: '#/components/schemas/IvaRate' }
         iva_cents: { $ref: '#/components/schemas/NonNegativeCents' }
         isr_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
         iva_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
-        invoiced_on: { type: [string, 'null'], format: date }
+        invoiced_on:
+          oneOf:
+            - $ref: '#/components/schemas/BusinessDate'
+            - type: 'null'
         collected_on:
-          type: [string, 'null']
-          format: date
-          description: Required for cash-basis regimes; may be null for PM 601 (pending collection).
-    IncomeCreate:
-      allOf:
-        - $ref: '#/components/schemas/IncomeFields'
-        - type: object
-          required: [regime_code, amount_cents, iva_rate, iva_cents]
-          properties:
-            id: { $ref: '#/components/schemas/Uuid' }
-      examples:
-        - id: 0199d4a3-1a2b-7d3c-8e4f-5a6b7c8d9e01
-          regime_code: '612'
-          description: Diseño de logotipo
-          counterparty_type: persona_moral
-          amount_cents: 1000000
-          iva_rate: rate_16
-          iva_cents: 160000
-          isr_withheld_cents: 100000
-          iva_withheld_cents: 106667
-          invoiced_on: '2026-09-05'
-          collected_on: '2026-09-10'
-    IncomeUpdate:
-      allOf:
-        - $ref: '#/components/schemas/IncomeFields'
-        - type: object
-          minProperties: 1
+          oneOf:
+            - $ref: '#/components/schemas/BusinessDate'
+            - type: 'null'
+        platform_activity:
+          oneOf:
+            - $ref: '#/components/schemas/PlatformActivity'
+            - type: 'null'
+        cfdi_uuid:
+          oneOf:
+            - $ref: '#/components/schemas/CfdiUuid'
+            - type: 'null'
+        description: { $ref: '#/components/schemas/RecordDescription' }
       examples:
         - description: Diseño de logotipo y manual de marca
     Income:
-      allOf:
-        - $ref: '#/components/schemas/IncomeFields'
-        - type: object
-          required: [id, taxpayer_id, regime_code, amount_cents, iva_rate, iva_cents, created_at, updated_at]
-          properties:
-            id: { $ref: '#/components/schemas/Uuid' }
-            taxpayer_id: { $ref: '#/components/schemas/Uuid' }
-            created_at: { type: string, format: date-time }
-            updated_at: { type: string, format: date-time }
+      x-frozen: sha256:37f75e22683edb0616f859ce6312a535d731826d29150c16021e06d067eb4dbe
+      type: object
+      required:
+        - id
+        - taxpayer_id
+        - regime_code
+        - counterparty_type
+        - amount_cents
+        - iva_rate
+        - iva_cents
+        - isr_withheld_cents
+        - iva_withheld_cents
+        - invoiced_on
+        - collected_on
+        - platform_activity
+        - cfdi_uuid
+        - description
+        - pending_collection
+        - warnings
+        - created_at
+        - updated_at
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        taxpayer_id: { $ref: '#/components/schemas/Uuid' }
+        regime_code: { $ref: '#/components/schemas/RegimeCode' }
+        counterparty_type: { $ref: '#/components/schemas/CounterpartyType' }
+        amount_cents: { $ref: '#/components/schemas/PositiveCents' }
+        iva_rate: { $ref: '#/components/schemas/IvaRate' }
+        iva_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        isr_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        iva_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        invoiced_on:
+          oneOf:
+            - $ref: '#/components/schemas/BusinessDate'
+            - type: 'null'
+        collected_on:
+          oneOf:
+            - $ref: '#/components/schemas/BusinessDate'
+            - type: 'null'
+        platform_activity:
+          oneOf:
+            - $ref: '#/components/schemas/PlatformActivity'
+            - type: 'null'
+        cfdi_uuid:
+          oneOf:
+            - $ref: '#/components/schemas/CfdiUuid'
+            - type: 'null'
+        description: { $ref: '#/components/schemas/RecordDescription' }
+        pending_collection:
+          type: boolean
+          description: Accrual income with `collected_on` still `null` ("Por cobrar"); counts for IVA only once collected.
+        warnings:
+          type: array
+          description: >-
+            Non-blocking notices computed on writes (create, update, restore), never stored;
+            `[]` on reads. Codes: `duplicate_cfdi_uuid` (`cfdi_uuid`),
+            `withholding_differs_from_rate` (`isr_withheld_cents`, `iva_withheld_cents`).
+          items: { $ref: '#/components/schemas/Warning' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
       examples:
         - id: 0199d4a3-1a2b-7d3c-8e4f-5a6b7c8d9e01
           taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
           regime_code: '612'
-          description: Diseño de logotipo
           counterparty_type: persona_moral
           amount_cents: 1000000
           iva_rate: rate_16
@@ -2774,147 +3872,295 @@ components:
           iva_withheld_cents: 106667
           invoiced_on: '2026-09-05'
           collected_on: '2026-09-10'
+          platform_activity: null
+          cfdi_uuid: 6F3B2C1D-8A4E-4B7F-9C2D-1E5A7B9C3D4F
+          description: Diseño de logotipo
+          pending_collection: false
+          warnings: []
           created_at: '2026-09-10T17:00:00Z'
           updated_at: '2026-09-10T17:00:00Z'
     IncomePage:
+      x-frozen: sha256:96016462030d79a574a137fc4512e165a5eedebcac84a1b86b8569bb117305b5
       type: object
-      required: [items, totals]
+      required: [items, next_cursor, totals]
       properties:
         items:
           type: array
           items: { $ref: '#/components/schemas/Income' }
-        next_cursor: { type: [string, 'null'] }
+        next_cursor:
+          type: [string, 'null']
+          description: Opaque cursor of the next page; `null` on the last page.
         totals: { $ref: '#/components/schemas/PeriodTotals' }
       examples:
         - items:
-            - id: 0199d4a3-1a2b-7d3c-8e4f-5a6b7c8d9e01
-              taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
-              regime_code: '612'
-              description: Diseño de logotipo
+            - id: 0199d4a3-3c4d-7f5e-a061-7c8d9e0f1a23
+              taxpayer_id: 0199d4a2-9a10-7d55-b2c3-4d5e6f7a8b91
+              regime_code: '601'
               counterparty_type: persona_moral
-              amount_cents: 1000000
+              amount_cents: 4500000
               iva_rate: rate_16
-              iva_cents: 160000
-              isr_withheld_cents: 100000
-              iva_withheld_cents: 106667
+              iva_cents: 720000
+              isr_withheld_cents: 0
+              iva_withheld_cents: 0
               invoiced_on: '2026-09-05'
-              collected_on: '2026-09-10'
-              created_at: '2026-09-10T17:00:00Z'
-              updated_at: '2026-09-10T17:00:00Z'
+              collected_on: null
+              platform_activity: null
+              cfdi_uuid: null
+              description: Consultoría de procesos, septiembre
+              pending_collection: true
+              warnings: []
+              created_at: '2026-09-05T16:00:00Z'
+              updated_at: '2026-09-05T16:00:00Z'
           next_cursor: null
           totals:
             count: 1
-            amount_cents: 1000000
-            iva_cents: 160000
-            isr_withheld_cents: 100000
-            iva_withheld_cents: 106667
+            amount_cents: 4500000
+            iva_cents: 720000
+            isr_withheld_cents: 0
+            iva_withheld_cents: 0
+    IncomeDefaults:
+      x-frozen: sha256:64ba9114468e2b716933ede0c51169433f9fe2f9a6ac0211aadbe26ed96e7d67
+      type: object
+      required:
+        - iva_rates_allowed
+        - suggested_iva_rate
+        - isr_withholding_allowed
+        - isr_withholding_rate
+        - iva_withholding_allowed
+        - iva_withholding_rate
+        - platform_activity
+      description: Form prefill from the rate catalog (UX only; the server re-validates every write).
+      properties:
+        iva_rates_allowed:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/IvaRate' }
+        suggested_iva_rate: { $ref: '#/components/schemas/IvaRate' }
+        isr_withholding_allowed: { type: boolean }
+        isr_withholding_rate:
+          oneOf:
+            - $ref: '#/components/schemas/DecimalRate'
+            - type: 'null'
+          description: Fraction of `amount_cents`; `null` when not allowed or when there is no suggestion.
+        iva_withholding_allowed: { type: boolean }
+        iva_withholding_rate:
+          oneOf:
+            - $ref: '#/components/schemas/DecimalRate'
+            - type: 'null'
+          description: Fraction of `iva_cents` (2/3 = `0.666667`); `null` when not allowed or when there is no suggestion.
+        platform_activity:
+          oneOf:
+            - $ref: '#/components/schemas/PlatformActivity'
+            - type: 'null'
+          description: The 625 activity the ISR rate is for; `null` outside 625 or when it is ambiguous.
+      examples:
+        - iva_rates_allowed: [rate_16, rate_8, rate_0, exempt]
+          suggested_iva_rate: rate_16
+          isr_withholding_allowed: true
+          isr_withholding_rate: '0.10'
+          iva_withholding_allowed: true
+          iva_withholding_rate: '0.666667'
+          platform_activity: null
     PaymentMethod:
+      x-frozen: sha256:d1163f8011d8c8fe35bf52b26cb38d7d57a1ec14608145b03beeb0de30657946
       type: string
       enum: [cash, transfer, card_debit, card_credit, check, e_wallet, other]
-    ExpenseWarning:
+      description: '`cash` drives the cash-payment deductibility rule (`cash_over_threshold`).'
+    DeductibleSource:
+      x-frozen: sha256:226d20ae0cca255403068c9ee9a9a21663ba5402e8cfb008faa10934196d82a0
+      type: string
+      enum: [category_default, user]
+      description: '`user` when the user overrode `deductible`; `category_default` otherwise.'
+    ExpenseCreate:
+      x-frozen: sha256:5d0accbd8e6f251839d9d338ad804c591473850c207aa2cd68201b281d818aeb
       type: object
-      required: [code, message]
+      required: [regime_code, category_code, amount_cents, iva_rate, iva_cents, payment_method, paid_on, has_cfdi]
+      additionalProperties: false
+      description: '`user_id` comes from the session and `taxpayer_id` from the path, never from the body.'
       properties:
-        code:
-          type: string
-          enum: [cash_over_threshold, no_cfdi, not_isr_deductible_in_regime, category_not_deductible]
-        message: { type: string }
-    ExpenseFields:
-      type: object
-      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+          description: Client-generated idempotency key (UUIDv7 recommended), once per form session.
         regime_code: { $ref: '#/components/schemas/RegimeCode' }
-        category_code: { type: string, maxLength: 40 }
-        description: { type: [string, 'null'], maxLength: 200 }
+        category_code:
+          type: string
+          minLength: 1
+          maxLength: 40
+          description: A code of `listExpenseCategories` (`unknown_category` otherwise).
         amount_cents:
-          $ref: '#/components/schemas/NonNegativeCents'
-          description: Subtotal before IVA.
+          $ref: '#/components/schemas/PositiveCents'
+          description: Subtotal before IVA, MXN centavos.
         iva_rate: { $ref: '#/components/schemas/IvaRate' }
-        iva_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        iva_cents:
+          $ref: '#/components/schemas/NonNegativeCents'
+          description: IVA paid; `0` for `rate_0`/`exempt`, else within 100 centavos of `amount_cents × rate`.
         payment_method: { $ref: '#/components/schemas/PaymentMethod' }
+        paid_on:
+          $ref: '#/components/schemas/BusinessDate'
+          description: The only date (paid basis for every regime in scope); the booking date.
         has_cfdi: { type: boolean }
-        paid_on: { type: string, format: date }
+        cfdi_uuid:
+          oneOf:
+            - $ref: '#/components/schemas/CfdiUuid'
+            - type: 'null'
+          description: 'Requires `has_cfdi: true` (`has_cfdi_mismatch`).'
+        deductible:
+          type: [boolean, 'null']
+          description: The user's override; omitted or `null` uses the default.
         isr_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
-          description: ISR the taxpayer (typically a PM) withheld from the supplier; must be remitted.
+          description: ISR the taxpayer (a persona moral) withheld from the supplier (default 0); at most `amount_cents`.
         iva_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
-          description: IVA the taxpayer withheld from the supplier (LIVA 1-A); remitted in full, creditable when paid.
-    ExpenseCreate:
-      allOf:
-        - $ref: '#/components/schemas/ExpenseFields'
-        - type: object
-          required: [regime_code, category_code, amount_cents, iva_rate, iva_cents, payment_method, has_cfdi, paid_on]
-          properties:
-            id: { $ref: '#/components/schemas/Uuid' }
+          description: IVA the taxpayer (a persona moral) withheld from the supplier (LIVA 1-A, default 0); at most `iva_cents`.
+        description: { $ref: '#/components/schemas/RecordDescription' }
       examples:
-        - regime_code: '612'
+        - id: 0199d4a3-2b3c-7e4d-9f50-6b7c8d9e0f12
+          regime_code: '612'
           category_code: software
-          description: Suscripción de diseño
           amount_cents: 50000
           iva_rate: rate_16
           iva_cents: 8000
-          payment_method: card_credit
-          has_cfdi: true
+          payment_method: card_debit
           paid_on: '2026-09-12'
+          has_cfdi: true
+          description: Suscripción anual de diseño
     ExpenseUpdate:
-      allOf:
-        - $ref: '#/components/schemas/ExpenseFields'
-        - type: object
-          minProperties: 1
+      x-frozen: sha256:7d5b1c67a4426ddbc30c18dbc233c9da147838cf02ddfb9c98bfaee69c0791b2
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      description: >-
+        Merge-patch on top-level fields: absent = unchanged, `null` clears `cfdi_uuid`,
+        `description` or the `deductible` override. `id` is immutable and not accepted.
+      properties:
+        regime_code: { $ref: '#/components/schemas/RegimeCode' }
+        category_code: { type: string, minLength: 1, maxLength: 40 }
+        amount_cents: { $ref: '#/components/schemas/PositiveCents' }
+        iva_rate: { $ref: '#/components/schemas/IvaRate' }
+        iva_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        payment_method: { $ref: '#/components/schemas/PaymentMethod' }
+        paid_on: { $ref: '#/components/schemas/BusinessDate' }
+        has_cfdi: { type: boolean }
+        cfdi_uuid:
+          oneOf:
+            - $ref: '#/components/schemas/CfdiUuid'
+            - type: 'null'
+        deductible: { type: [boolean, 'null'] }
+        isr_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        iva_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        description: { $ref: '#/components/schemas/RecordDescription' }
       examples:
-        - has_cfdi: true
+        - deductible: true
     Expense:
-      allOf:
-        - $ref: '#/components/schemas/ExpenseFields'
-        - type: object
-          required: [id, taxpayer_id, regime_code, category_code, amount_cents, iva_rate, iva_cents, payment_method, has_cfdi, paid_on, warnings, legend, created_at, updated_at]
-          properties:
-            id: { $ref: '#/components/schemas/Uuid' }
-            taxpayer_id: { $ref: '#/components/schemas/Uuid' }
-            warnings:
-              type: array
-              items: { $ref: '#/components/schemas/ExpenseWarning' }
-            legend: { $ref: '#/components/schemas/Legend' }
-            created_at: { type: string, format: date-time }
-            updated_at: { type: string, format: date-time }
+      x-frozen: sha256:59c98071ea048a7cc0e74c2408c47b323eb67e409b6bed78a208db7d8a809087
+      type: object
+      required:
+        - id
+        - taxpayer_id
+        - regime_code
+        - category_code
+        - amount_cents
+        - iva_rate
+        - iva_cents
+        - payment_method
+        - paid_on
+        - has_cfdi
+        - cfdi_uuid
+        - isr_withheld_cents
+        - iva_withheld_cents
+        - description
+        - deductible
+        - deductible_source
+        - warnings
+        - legend
+        - created_at
+        - updated_at
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        taxpayer_id: { $ref: '#/components/schemas/Uuid' }
+        regime_code: { $ref: '#/components/schemas/RegimeCode' }
+        category_code: { type: string }
+        amount_cents: { $ref: '#/components/schemas/PositiveCents' }
+        iva_rate: { $ref: '#/components/schemas/IvaRate' }
+        iva_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        payment_method: { $ref: '#/components/schemas/PaymentMethod' }
+        paid_on: { $ref: '#/components/schemas/BusinessDate' }
+        has_cfdi: { type: boolean }
+        cfdi_uuid:
+          oneOf:
+            - $ref: '#/components/schemas/CfdiUuid'
+            - type: 'null'
+        isr_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        iva_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        description: { $ref: '#/components/schemas/RecordDescription' }
+        deductible:
+          type: boolean
+          description: 'Effective value ("the user claims it lowers ISR"): the override if any, else the default.'
+        deductible_source: { $ref: '#/components/schemas/DeductibleSource' }
+        warnings:
+          type: array
+          description: >-
+            Non-blocking notices computed on writes (create, update, restore), never stored;
+            `[]` on reads. Codes (append-only): `cash_over_threshold` (`payment_method`),
+            `no_cfdi` (`has_cfdi`), `not_isr_deductible_in_regime` and
+            `category_not_deductible` (`deductible`), `duplicate_cfdi_uuid` (`cfdi_uuid`).
+          items: { $ref: '#/components/schemas/Warning' }
+        legend: { $ref: '#/components/schemas/Legend' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
       examples:
         - id: 0199d4a3-2b3c-7e4d-9f50-6b7c8d9e0f12
           taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
           regime_code: '612'
           category_code: software
-          description: Suscripción de diseño
           amount_cents: 50000
           iva_rate: rate_16
           iva_cents: 8000
-          payment_method: card_credit
-          has_cfdi: true
+          payment_method: card_debit
           paid_on: '2026-09-12'
+          has_cfdi: true
+          cfdi_uuid: null
+          isr_withheld_cents: 0
+          iva_withheld_cents: 0
+          description: Suscripción anual de diseño
+          deductible: true
+          deductible_source: category_default
           warnings: []
           legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
           created_at: '2026-09-12T18:30:00Z'
           updated_at: '2026-09-12T18:30:00Z'
     ExpensePage:
+      x-frozen: sha256:cebf53bb7c0b63b6d6a0b1df4a3ccceadace4f1da2b82522cdf4001e4e7e8a80
       type: object
-      required: [items, totals]
+      required: [items, next_cursor, totals, legend]
       properties:
         items:
           type: array
           items: { $ref: '#/components/schemas/Expense' }
-        next_cursor: { type: [string, 'null'] }
+        next_cursor:
+          type: [string, 'null']
+          description: Opaque cursor of the next page; `null` on the last page.
         totals: { $ref: '#/components/schemas/PeriodTotals' }
+        legend: { $ref: '#/components/schemas/Legend' }
       examples:
         - items:
             - id: 0199d4a3-2b3c-7e4d-9f50-6b7c8d9e0f12
               taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
               regime_code: '612'
               category_code: software
-              description: Suscripción de diseño
               amount_cents: 50000
               iva_rate: rate_16
               iva_cents: 8000
-              payment_method: card_credit
-              has_cfdi: true
+              payment_method: card_debit
               paid_on: '2026-09-12'
+              has_cfdi: true
+              cfdi_uuid: null
+              isr_withheld_cents: 0
+              iva_withheld_cents: 0
+              description: Suscripción anual de diseño
+              deductible: true
+              deductible_source: category_default
               warnings: []
               legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
               created_at: '2026-09-12T18:30:00Z'
@@ -2924,42 +4170,72 @@ components:
             count: 1
             amount_cents: 50000
             iva_cents: 8000
-    DeductibilityHint:
-      type: object
-      required: [regime_code, deductibility]
-      properties:
-        regime_code: { $ref: '#/components/schemas/RegimeCode' }
-        deductibility:
-          type: string
-          enum: [deductible, partially_deductible, not_deductible, isr_not_applicable]
-        note: { type: [string, 'null'] }
-        legal_basis: { type: [string, 'null'] }
+            isr_withheld_cents: 0
+            iva_withheld_cents: 0
+          legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
+    Deductibility:
+      x-frozen: sha256:6383a59120a36ab687dde5cec220330c077dadf614754de68b31d6880fa43ccf
+      type: string
+      enum: [deductible, partially_deductible, not_deductible, isr_not_applicable]
+      description: The hint shown for a category in the taxpayer's regime (after options such as 606 `blind_35`).
     ExpenseCategory:
+      x-frozen: sha256:197b555d3c257d41aef097381856540ff9cb921a7f3be71c4fe32da53d9211d8
       type: object
-      required: [code, name, hints]
+      required: [code, name, deductibility, default_deductible, note, legal_basis]
       properties:
         code: { type: string }
-        name: { type: string }
-        hints:
-          type: array
-          items: { $ref: '#/components/schemas/DeductibilityHint' }
+        name: { type: string, description: es-MX display name. }
+        deductibility: { $ref: '#/components/schemas/Deductibility' }
+        default_deductible:
+          type: boolean
+          description: The `deductible` a new expense starts with (before the CFDI and cash rules); conservative for partial cases.
+        note: { type: [string, 'null'], description: es-MX note shown with the hint. }
+        legal_basis: { type: [string, 'null'], description: Article-level basis (e.g. `LISR 103`). }
+      examples:
+        - code: software
+          name: Software y suscripciones
+          deductibility: deductible
+          default_deductible: true
+          note: null
+          legal_basis: LISR 103
     ExpenseCategoryList:
+      x-frozen: sha256:5854b61862f9c8e28692416004ff4a580c7ab84b99fb6eda2b9fd3de0c459276
       type: object
-      required: [items, legend]
+      required: [items, iva_rates_allowed, cash_payment_limit_cents, legend]
       properties:
         items:
           type: array
           items: { $ref: '#/components/schemas/ExpenseCategory' }
+        iva_rates_allowed:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/IvaRate' }
+        cash_payment_limit_cents:
+          $ref: '#/components/schemas/NonNegativeCents'
+          description: A cash payment above this total (with IVA) is not deductible (LISR 27-III; dated parameter data, ⚠️ CPA).
         legend: { $ref: '#/components/schemas/Legend' }
       examples:
         - items:
             - code: software
               name: Software y suscripciones
-              hints:
-                - regime_code: '612'
-                  deductibility: deductible
-                  note: null
-                  legal_basis: LISR 103-III
+              deductibility: deductible
+              default_deductible: true
+              note: null
+              legal_basis: LISR 103
+            - code: combustible
+              name: Combustibles
+              deductibility: deductible
+              default_deductible: true
+              note: Sólo deducible si lo pagas con tarjeta, transferencia o monedero, sin importar el monto
+              legal_basis: LISR 27
+            - code: restaurantes
+              name: Consumo en restaurantes
+              deductibility: partially_deductible
+              default_deductible: false
+              note: Sólo una parte es deducible
+              legal_basis: LISR 28
+          iva_rates_allowed: [rate_16, rate_8, rate_0, exempt]
+          cash_payment_limit_cents: 200000
           legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
 
     # ------------------------------------------------------------ tax engine

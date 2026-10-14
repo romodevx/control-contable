@@ -4,6 +4,7 @@
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+/// `cash` drives the cash-payment deductibility rule (`cash_over_threshold`).
 @JsonEnum()
 enum PaymentMethod {
   @JsonValue('cash')

@@ -29,6 +29,8 @@ catalog migration `backend/migrations/20261013180000_regimes_catalog.sql` (CAT).
 - [ ] Payment rounding to whole pesos (CFF art. 20): not covered; off until confirmed (`rounding.payment_whole_pesos`). ADR §4
 - [ ] Monthly IVA netting across regimes for a PF holding 612 + 606 (one consolidated IVA result). ADR §1
 - [ ] 626 PM credits the art. 54 interest withholding like 601 (input `interest_withholding` added to 626 PM). R §B.2.2 step 4, CAT `regimes` 626 PM
+- [ ] RIF (621) IVA paid by bimester like its ISR (old LIVA 5-E), not monthly; research A.3 lists 621 under the monthly rule. MODULE-tax-engine OQ-T7
+- [ ] IVA a PM withheld **from its suppliers** (recorded on the expense) becomes creditable for that PM when paid (LIVA 5 fr. IV): v1 sends it to withholdings to remit only and does not credit it. Confirm timing and whether to credit. Distinct from IVA withheld **from** the taxpayer and recorded on the income, which v1 subtracts from the monthly IVA (LIVA 1-A, 5-D). MODULE-tax-engine OQ-T6
 
 ## Regime catalog (`regimes`, needs_cpa_review = true)
 
@@ -49,3 +51,24 @@ For each, the CPA answers: may one taxpayer hold both regimes at the same time?
 - [ ] PM 601/603/620/622/623/624 among themselves (15 pairs), and 620 with 626 (1 pair). CAT
 - [ ] PF Título IV pairs among 605, 606, 607, 608, 611, 612, 614, 615, 625 are seeded as allowed (separate chapters, combined in the annual return) by inference, not by an explicit rule. CAT
 - [ ] 616 (sin obligaciones) and 610 (residentes en el extranjero) are seeded as excluding every other regime by definition. CAT
+
+## Expense categories (`expense_categories`, `category_regime_rules`, all rows needs_cpa_review = true)
+
+Seeded in M4-02 from [MODULE-expenses §2.2](../project-specs/MODULE-expenses.md) (OQ-E3, OQ-E4),
+migration `backend/migrations/20261013210000_expense_categories.sql` (EXP). Every category and
+every (category, regime) rule waits for this review; the legal basis is article level only.
+
+- [ ] The 26 categories and their per-regime hint (D / P / N / ISR not applicable) for the business regimes, 606 (actual deductions) and 626 PF. MODULE-expenses §2.2, EXP
+- [ ] Conservative defaults: investments (equipo de cómputo, mobiliario, automóvil, construcciones), restaurantes, gastos personales and "otros" start non-deductible. OQ-E3, EXP
+- [ ] Cash rule (LISR art. 27 fr. III): cash above $2,000.00 on the total with IVA is not deductible; fuel paid in cash never is. Not in the research. OQ-E4, §2.5, EXP `cash_payment_rule`
+- [ ] 620 PM (cooperativas que difieren) gets the business rows although the regime catalog marks it informational. EXP
+- [ ] The profit-coefficient note on 601 and 622 (regimes requiring `coeficiente_utilidad`): expenses do not lower the 601/622 provisional ISR, only IVA and the annual return. EXP
+- [ ] `iva_creditable_default`: true where the expense is (or, for RESICO PF, would be under the business column) ISR-deductible, per LIVA art. 5 fr. I; partial cases assume IVA creditable in the deductible proportion. R §A.3, EXP
+- [ ] 606 rows: only servicios profesionales, agua (servicios básicos), construcciones, sueldos, IMSS, intereses, seguros, mantenimiento and predial count (LISR art. 115). R §A.2.4, EXP
+- [ ] Booking date: an expense books on `paid_on` in every regime (no invoice date is stored). Correct for PF (LISR arts. 103/105, 115, 113-E) and RESICO PM (arts. 208, 211), and for creditable IVA (LIVA art. 5 fr. III). Título II PM (601; 620/622 unless cash basis applies, see the income-basis item) deduct on an accrual basis, except payments that are income of a PF, deductible only when paid (LISR art. 27 fr. VIII); v1 is monthly only and the 601/622 provisional ISR uses the profit coefficient (art. 14), so no monthly figure depends on it. Confirm; an annual PM computation would need an accrual date. Research §B.2.1 (income only), EXP
+- [ ] 603 (fines no lucrativos) gets the business rows, but it has no provisional ISR: non-deductible expenses become remanente distribuible (LISR art. 79) rather than lowering a base. Is the D / P / N hint the right message for 603? R §B.1, EXP
+- [ ] Copy: the coefficient note on 622 rows reads "En los pagos provisionales del 601…" (spec text verbatim); should 622 name its own regime? MODULE-expenses §2.2, EXP
+
+## Income basis (`regimes.income_basis`, M3-02)
+
+- [ ] 620, 622 and 624 are seeded `accrual` with 601, but under LISR they look cash basis: 620 cooperativas que difieren (arts. 194-199, income deferred until distributed), 622 AGAPES (art. 74, flujo de efectivo) and 624 coordinados (arts. 72-73, flujo de efectivo). Confirm per regime; a change re-derives `incomes.booked_on` in the same migration. MODULE-incomes §2.2, `20261013200000_incomes.sql`

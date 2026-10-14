@@ -26,6 +26,7 @@ var operationModules = map[string]string{
 	"getHealth":                "platform",             // GET /healthz
 	"getHistory":               "module_history",       // GET /v1/taxpayers/{taxpayerId}/history
 	"getIncome":                "module_incomes",       // GET /v1/taxpayers/{taxpayerId}/incomes/{incomeId}
+	"getIncomeDefaults":        "module_incomes",       // GET /v1/taxpayers/{taxpayerId}/incomes/defaults
 	"getMe":                    "module_auth",          // GET /v1/me
 	"getReminderSettings":      "module_reminders",     // GET /v1/reminder-settings
 	"getSubscription":          "module_subscriptions", // GET /v1/subscription
@@ -34,7 +35,7 @@ var operationModules = map[string]string{
 	"getTaxpayer":              "module_taxpayers",     // GET /v1/taxpayers/{taxpayerId}
 	"getTaxpayerEstimate":      "module_tax_engine",    // GET /v1/taxpayers/{taxpayerId}/estimates
 	"listEnabledFlags":         "platform",             // GET /v1/flags
-	"listExpenseCategories":    "module_expenses",      // GET /v1/expense-categories
+	"listExpenseCategories":    "module_expenses",      // GET /v1/taxpayers/{taxpayerId}/expense-categories
 	"listExpenses":             "module_expenses",      // GET /v1/taxpayers/{taxpayerId}/expenses
 	"listIncomes":              "module_incomes",       // GET /v1/taxpayers/{taxpayerId}/incomes
 	"listLegalDocuments":       "module_auth",          // GET /v1/legal/documents
@@ -85,7 +86,6 @@ var routeModules = map[string]string{
 	"DELETE /v1/taxpayers/{taxpayerId}/incomes/{incomeId}":   "module_incomes",   // deleteIncome
 	"DELETE /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}": "module_taxpayers", // archiveTaxpayerRegime
 	"GET /healthz":                             "platform",             // getHealth
-	"GET /v1/expense-categories":               "module_expenses",      // listExpenseCategories
 	"GET /v1/flags":                            "platform",             // listEnabledFlags
 	"GET /v1/legal/documents":                  "module_auth",          // listLegalDocuments
 	"GET /v1/me":                               "module_auth",          // getMe
@@ -98,10 +98,12 @@ var routeModules = map[string]string{
 	"GET /v1/taxpayers/{taxpayerId}/dashboard": "module_dashboard",     // getDashboard
 	"GET /v1/taxpayers/{taxpayerId}/estimates": "module_tax_engine",    // getTaxpayerEstimate
 	"GET /v1/taxpayers/{taxpayerId}/estimates/{period}/breakdown":    "module_tax_engine", // getEstimateBreakdown
+	"GET /v1/taxpayers/{taxpayerId}/expense-categories":              "module_expenses",   // listExpenseCategories
 	"GET /v1/taxpayers/{taxpayerId}/expenses":                        "module_expenses",   // listExpenses
 	"GET /v1/taxpayers/{taxpayerId}/expenses/{expenseId}":            "module_expenses",   // getExpense
 	"GET /v1/taxpayers/{taxpayerId}/history":                         "module_history",    // getHistory
 	"GET /v1/taxpayers/{taxpayerId}/incomes":                         "module_incomes",    // listIncomes
+	"GET /v1/taxpayers/{taxpayerId}/incomes/defaults":                "module_incomes",    // getIncomeDefaults
 	"GET /v1/taxpayers/{taxpayerId}/incomes/{incomeId}":              "module_incomes",    // getIncome
 	"GET /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/tax-inputs": "module_tax_engine", // getTaxInputs
 	"PATCH /v1/me":                                                   "module_auth",          // updateMe

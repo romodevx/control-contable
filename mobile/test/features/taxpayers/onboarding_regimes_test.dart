@@ -471,7 +471,7 @@ void main() {
       await tapText(tester, _create);
 
       expect(find.text('Revisa que tu RFC esté bien escrito'), findsOneWidget);
-      expect(find.textContaining('GOMA******AB6'), findsOneWidget);
+      expect(find.textContaining('GOMA••••••AB6'), findsOneWidget);
       expect(find.text('GOMA800101AB6'), findsOneWidget, reason: 'editable');
 
       await tapText(tester, 'Continuar');

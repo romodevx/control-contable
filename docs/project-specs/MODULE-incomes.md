@@ -380,6 +380,15 @@ Version `0.4.0 → 0.5.0` (additive, plus non-frozen schema tightening before th
    as `DecimalRate`s for `(regime, counterparty_type, on)`, from `RateCatalog`.
 6. Detail codes of §4 in the operation descriptions; `Cache-Control: no-store` (S-11).
 
+**Frozen as (M3-01, contract 0.5.0; architect notes).** `amount_cents: 0` is refused at the
+edge with the schema keyword `minimum` (`must_be_positive` stays the domain's backstop code).
+`getIncomeDefaults` also returns `isr_withholding_allowed` / `iva_withholding_allowed` (a
+`null` rate alone cannot tell "not allowed" from "allowed, no suggestion") and the resolved
+`platform_activity`, and takes an optional `platform_activity` query parameter (625 with several
+activities). `warnings` is always present (`[]` on reads). PATCH is merge-patch (`null` clears).
+M3/M4 errors declare `Cache-Control: no-store` (optional header, S-11). The list has no
+`deleted` filter (the recently-deleted view is out of scope, §9).
+
 Data-model deltas for M3-02 (db-sr): `cfdi_uuid text NULL`, `platform_activity text NULL`,
 `booked_on date NOT NULL` (one partial index `(user_id, taxpayer_id, booked_on, id) WHERE
 deleted_at IS NULL` replaces the two date indexes), `(user_id, taxpayer_id, cfdi_uuid) WHERE

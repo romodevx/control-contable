@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:control_contable/core/access/read_only_access.dart';
 import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/flags/flags_provider.dart';
 import 'package:control_contable/core/router/app_router.dart';
 import 'package:control_contable/core/time/clock.dart';
+import 'package:control_contable/features/taxpayers/application/active_taxpayer.dart';
 import 'package:control_contable/features/taxpayers/application/client_id.dart';
 import 'package:control_contable/features/taxpayers/application/onboarding_flow.dart';
 import 'package:control_contable/features/taxpayers/data/taxpayers_repository.dart';
@@ -62,6 +65,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   void _leave() {
     if (_isLeaving || !mounted) return;
     _isLeaving = true;
+    // A created taxpayer becomes the active one (US-T1), also when the user
+    // backs out of the review.
+    if (_flow.created case final created?) {
+      unawaited(ref.read(activeTaxpayerProvider.notifier).adopt(created.id));
+    }
     if (context.canPop()) {
       context.pop();
     } else {
