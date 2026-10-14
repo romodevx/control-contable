@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TaxpayerEstimate {
 
-@JsonKey(name: 'taxpayer_id') Uuid get taxpayerId; Period get period;@JsonKey(name: 'due_date') DateTime get dueDate; Legend get legend; List<Disclaimer> get disclaimers; List<RegimeEstimate> get regimes; EstimateTotals get totals;@JsonKey(name: 'parameter_set') ParameterSetRef get parameterSet;@JsonKey(name: 'records_fingerprint') RecordsFingerprint get recordsFingerprint;@JsonKey(name: 'engine_version') String get engineVersion;
+@JsonKey(name: 'taxpayer_id') Uuid get taxpayerId; Period get period;@JsonKey(name: 'due_date') String get dueDate; Legend get legend; List<Disclaimer> get disclaimers; List<RegimeEstimate> get regimes; EstimateTotals get totals;@JsonKey(name: 'parameter_set') ParameterSetRef get parameterSet;@JsonKey(name: 'records_fingerprint') RecordsFingerprint get recordsFingerprint;@JsonKey(name: 'engine_version') String get engineVersion;
 /// Create a copy of TaxpayerEstimate
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -54,7 +54,7 @@ abstract mixin class $TaxpayerEstimateCopyWith<$Res>  {
   factory $TaxpayerEstimateCopyWith(TaxpayerEstimate value, $Res Function(TaxpayerEstimate) _then) = _$TaxpayerEstimateCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'taxpayer_id') Uuid taxpayerId, Period period,@JsonKey(name: 'due_date') DateTime dueDate, Legend legend, List<Disclaimer> disclaimers, List<RegimeEstimate> regimes, EstimateTotals totals,@JsonKey(name: 'parameter_set') ParameterSetRef parameterSet,@JsonKey(name: 'records_fingerprint') RecordsFingerprint recordsFingerprint,@JsonKey(name: 'engine_version') String engineVersion
+@JsonKey(name: 'taxpayer_id') Uuid taxpayerId, Period period,@JsonKey(name: 'due_date') String dueDate, Legend legend, List<Disclaimer> disclaimers, List<RegimeEstimate> regimes, EstimateTotals totals,@JsonKey(name: 'parameter_set') ParameterSetRef parameterSet,@JsonKey(name: 'records_fingerprint') RecordsFingerprint recordsFingerprint,@JsonKey(name: 'engine_version') String engineVersion
 });
 
 
@@ -76,7 +76,7 @@ class _$TaxpayerEstimateCopyWithImpl<$Res>
 taxpayerId: null == taxpayerId ? _self.taxpayerId : taxpayerId // ignore: cast_nullable_to_non_nullable
 as Uuid,period: null == period ? _self.period : period // ignore: cast_nullable_to_non_nullable
 as Period,dueDate: null == dueDate ? _self.dueDate : dueDate // ignore: cast_nullable_to_non_nullable
-as DateTime,legend: null == legend ? _self.legend : legend // ignore: cast_nullable_to_non_nullable
+as String,legend: null == legend ? _self.legend : legend // ignore: cast_nullable_to_non_nullable
 as Legend,disclaimers: null == disclaimers ? _self.disclaimers : disclaimers // ignore: cast_nullable_to_non_nullable
 as List<Disclaimer>,regimes: null == regimes ? _self.regimes : regimes // ignore: cast_nullable_to_non_nullable
 as List<RegimeEstimate>,totals: null == totals ? _self.totals : totals // ignore: cast_nullable_to_non_nullable
@@ -186,7 +186,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'taxpayer_id')  Uuid taxpayerId,  Period period, @JsonKey(name: 'due_date')  DateTime dueDate,  Legend legend,  List<Disclaimer> disclaimers,  List<RegimeEstimate> regimes,  EstimateTotals totals, @JsonKey(name: 'parameter_set')  ParameterSetRef parameterSet, @JsonKey(name: 'records_fingerprint')  RecordsFingerprint recordsFingerprint, @JsonKey(name: 'engine_version')  String engineVersion)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'taxpayer_id')  Uuid taxpayerId,  Period period, @JsonKey(name: 'due_date')  String dueDate,  Legend legend,  List<Disclaimer> disclaimers,  List<RegimeEstimate> regimes,  EstimateTotals totals, @JsonKey(name: 'parameter_set')  ParameterSetRef parameterSet, @JsonKey(name: 'records_fingerprint')  RecordsFingerprint recordsFingerprint, @JsonKey(name: 'engine_version')  String engineVersion)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TaxpayerEstimate() when $default != null:
 return $default(_that.taxpayerId,_that.period,_that.dueDate,_that.legend,_that.disclaimers,_that.regimes,_that.totals,_that.parameterSet,_that.recordsFingerprint,_that.engineVersion);case _:
@@ -207,7 +207,7 @@ return $default(_that.taxpayerId,_that.period,_that.dueDate,_that.legend,_that.d
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'taxpayer_id')  Uuid taxpayerId,  Period period, @JsonKey(name: 'due_date')  DateTime dueDate,  Legend legend,  List<Disclaimer> disclaimers,  List<RegimeEstimate> regimes,  EstimateTotals totals, @JsonKey(name: 'parameter_set')  ParameterSetRef parameterSet, @JsonKey(name: 'records_fingerprint')  RecordsFingerprint recordsFingerprint, @JsonKey(name: 'engine_version')  String engineVersion)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'taxpayer_id')  Uuid taxpayerId,  Period period, @JsonKey(name: 'due_date')  String dueDate,  Legend legend,  List<Disclaimer> disclaimers,  List<RegimeEstimate> regimes,  EstimateTotals totals, @JsonKey(name: 'parameter_set')  ParameterSetRef parameterSet, @JsonKey(name: 'records_fingerprint')  RecordsFingerprint recordsFingerprint, @JsonKey(name: 'engine_version')  String engineVersion)  $default,) {final _that = this;
 switch (_that) {
 case _TaxpayerEstimate():
 return $default(_that.taxpayerId,_that.period,_that.dueDate,_that.legend,_that.disclaimers,_that.regimes,_that.totals,_that.parameterSet,_that.recordsFingerprint,_that.engineVersion);case _:
@@ -227,7 +227,7 @@ return $default(_that.taxpayerId,_that.period,_that.dueDate,_that.legend,_that.d
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'taxpayer_id')  Uuid taxpayerId,  Period period, @JsonKey(name: 'due_date')  DateTime dueDate,  Legend legend,  List<Disclaimer> disclaimers,  List<RegimeEstimate> regimes,  EstimateTotals totals, @JsonKey(name: 'parameter_set')  ParameterSetRef parameterSet, @JsonKey(name: 'records_fingerprint')  RecordsFingerprint recordsFingerprint, @JsonKey(name: 'engine_version')  String engineVersion)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'taxpayer_id')  Uuid taxpayerId,  Period period, @JsonKey(name: 'due_date')  String dueDate,  Legend legend,  List<Disclaimer> disclaimers,  List<RegimeEstimate> regimes,  EstimateTotals totals, @JsonKey(name: 'parameter_set')  ParameterSetRef parameterSet, @JsonKey(name: 'records_fingerprint')  RecordsFingerprint recordsFingerprint, @JsonKey(name: 'engine_version')  String engineVersion)?  $default,) {final _that = this;
 switch (_that) {
 case _TaxpayerEstimate() when $default != null:
 return $default(_that.taxpayerId,_that.period,_that.dueDate,_that.legend,_that.disclaimers,_that.regimes,_that.totals,_that.parameterSet,_that.recordsFingerprint,_that.engineVersion);case _:
@@ -247,7 +247,7 @@ class _TaxpayerEstimate implements TaxpayerEstimate {
 
 @override@JsonKey(name: 'taxpayer_id') final  Uuid taxpayerId;
 @override final  Period period;
-@override@JsonKey(name: 'due_date') final  DateTime dueDate;
+@override@JsonKey(name: 'due_date') final  String dueDate;
 @override final  Legend legend;
  final  List<Disclaimer> _disclaimers;
 @override List<Disclaimer> get disclaimers {
@@ -303,7 +303,7 @@ abstract mixin class _$TaxpayerEstimateCopyWith<$Res> implements $TaxpayerEstima
   factory _$TaxpayerEstimateCopyWith(_TaxpayerEstimate value, $Res Function(_TaxpayerEstimate) _then) = __$TaxpayerEstimateCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'taxpayer_id') Uuid taxpayerId, Period period,@JsonKey(name: 'due_date') DateTime dueDate, Legend legend, List<Disclaimer> disclaimers, List<RegimeEstimate> regimes, EstimateTotals totals,@JsonKey(name: 'parameter_set') ParameterSetRef parameterSet,@JsonKey(name: 'records_fingerprint') RecordsFingerprint recordsFingerprint,@JsonKey(name: 'engine_version') String engineVersion
+@JsonKey(name: 'taxpayer_id') Uuid taxpayerId, Period period,@JsonKey(name: 'due_date') String dueDate, Legend legend, List<Disclaimer> disclaimers, List<RegimeEstimate> regimes, EstimateTotals totals,@JsonKey(name: 'parameter_set') ParameterSetRef parameterSet,@JsonKey(name: 'records_fingerprint') RecordsFingerprint recordsFingerprint,@JsonKey(name: 'engine_version') String engineVersion
 });
 
 
@@ -325,7 +325,7 @@ class __$TaxpayerEstimateCopyWithImpl<$Res>
 taxpayerId: null == taxpayerId ? _self.taxpayerId : taxpayerId // ignore: cast_nullable_to_non_nullable
 as Uuid,period: null == period ? _self.period : period // ignore: cast_nullable_to_non_nullable
 as Period,dueDate: null == dueDate ? _self.dueDate : dueDate // ignore: cast_nullable_to_non_nullable
-as DateTime,legend: null == legend ? _self.legend : legend // ignore: cast_nullable_to_non_nullable
+as String,legend: null == legend ? _self.legend : legend // ignore: cast_nullable_to_non_nullable
 as Legend,disclaimers: null == disclaimers ? _self._disclaimers : disclaimers // ignore: cast_nullable_to_non_nullable
 as List<Disclaimer>,regimes: null == regimes ? _self._regimes : regimes // ignore: cast_nullable_to_non_nullable
 as List<RegimeEstimate>,totals: null == totals ? _self.totals : totals // ignore: cast_nullable_to_non_nullable

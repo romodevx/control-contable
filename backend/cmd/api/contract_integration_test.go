@@ -19,6 +19,7 @@ import (
 	"github.com/romodevx/control-contable/backend/adapter/http/contracttest"
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
 	"github.com/romodevx/control-contable/backend/adapter/http/health"
+	"github.com/romodevx/control-contable/backend/internal/platform/clock"
 	"github.com/romodevx/control-contable/backend/internal/platform/config"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagsgorm"
@@ -49,7 +50,22 @@ type contractEnv struct {
 	app     *sql.DB     // cc_app, the API's own pool, for reading rows as a user
 }
 
-func newContractEnv(t *testing.T, db health.Pinger) contractEnv {
+// contractOption adjusts the composition of a contractEnv.
+type contractOption func(*recordWiring)
+
+// withExpensesDay pins the expense rules' clock to day (the auth, trial and
+// taxpayer clocks stay the system's).
+func withExpensesDay(day time.Time) contractOption {
+	return func(w *recordWiring) { w.expensesClock = clock.NewFixed(day) }
+}
+
+// withIncomesDay pins the income rules' clock to day (the auth, trial and
+// taxpayer clocks stay the system's).
+func withIncomesDay(day time.Time) contractOption {
+	return func(w *recordWiring) { w.incomesClock = clock.NewFixed(day) }
+}
+
+func newContractEnv(t *testing.T, db health.Pinger, options ...contractOption) contractEnv {
 	t.Helper()
 	pg := pgtest.NewDatabase(t)
 	ownerDB := pg.Connect(t, pgtest.RoleOwner)
@@ -64,14 +80,16 @@ func newContractEnv(t *testing.T, db health.Pinger) contractEnv {
 		env: config.EnvDev, keys: testAuthKeys(), pool: app, logger: logger, now: time.Now, argon2: fastArgon2,
 	})
 	require.NoError(t, err)
-	taxpayers, err := newTaxpayersModule(taxpayersWiring{
-		env: config.EnvDev, keys: testTaxpayerKeys(), pool: app, limits: auth.limits, logger: logger,
-	})
+	wiring := recordWiring{env: config.EnvDev, keys: testTaxpayerKeys(), pool: app, auth: auth, logger: logger}
+	for _, o := range options {
+		o(&wiring)
+	}
+	records, err := newRecordModules(wiring)
 	require.NoError(t, err)
 	taxEngine, err := newTaxEngineModule(taxEngineWiring{pool: app, limits: auth.limits, logger: logger})
 	require.NoError(t, err)
 	return contractEnv{
-		handler: newHandlerWithAll(t, contractConfig(), db, svc, auth, taxpayers, taxEngine, logger),
+		handler: newHandlerWithAll(t, contractConfig(), db, svc, auth, records, taxEngine, logger),
 		store:   flagsgorm.NewStore(owner),
 		flags:   svc,
 		logs:    logs,

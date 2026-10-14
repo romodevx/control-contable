@@ -18,9 +18,7 @@ _ExpenseUpdate _$ExpenseUpdateFromJson(Map<String, dynamic> json) =>
       paymentMethod: json['payment_method'] == null
           ? null
           : PaymentMethod.fromJson(json['payment_method'] as String),
-      paidOn: json['paid_on'] == null
-          ? null
-          : DateTime.parse(json['paid_on'] as String),
+      paidOn: json['paid_on'] as String?,
       hasCfdi: json['has_cfdi'] as bool?,
       cfdiUuid: json['cfdi_uuid'] as String?,
       deductible: json['deductible'] as bool?,
@@ -37,7 +35,7 @@ Map<String, dynamic> _$ExpenseUpdateToJson(_ExpenseUpdate instance) =>
       'iva_rate': ?_$IvaRateEnumMap[instance.ivaRate],
       'iva_cents': ?instance.ivaCents,
       'payment_method': ?_$PaymentMethodEnumMap[instance.paymentMethod],
-      'paid_on': ?instance.paidOn?.toIso8601String(),
+      'paid_on': ?instance.paidOn,
       'has_cfdi': ?instance.hasCfdi,
       'cfdi_uuid': ?instance.cfdiUuid,
       'deductible': ?instance.deductible,

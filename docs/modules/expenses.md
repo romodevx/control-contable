@@ -71,7 +71,6 @@ it by hand. CI (`make api-error-tables-check`) fails when it differs from `opena
 | `deleteExpense` | `DELETE /v1/taxpayers/{taxpayerId}/expenses/{expenseId}` | 500 | `internal_error` | Unexpected server error. |
 | `restoreExpense` | `POST /v1/taxpayers/{taxpayerId}/expenses/{expenseId}/restore` | 400 | `validation_failed` | Input does not match the contract (query parameter, path or body). |
 | `restoreExpense` | `POST /v1/taxpayers/{taxpayerId}/expenses/{expenseId}/restore` | 401 | `unauthorized` | Missing, invalid or expired credentials. |
-| `restoreExpense` | `POST /v1/taxpayers/{taxpayerId}/expenses/{expenseId}/restore` | 402 | `entitlement_required` | Read-only access (trial over, no active plan). Never a trial-cap refusal. |
 | `restoreExpense` | `POST /v1/taxpayers/{taxpayerId}/expenses/{expenseId}/restore` | 404 | `not_found` | The taxpayer or record does not exist, belongs to another user, is deleted or purged, its id is malformed, or the module is disabled (indistinguishable on purpose). |
 | `restoreExpense` | `POST /v1/taxpayers/{taxpayerId}/expenses/{expenseId}/restore` | 422 | `business_rule_violation` | The regime no longer covers the record's dates (`regime_not_active`), or the taxpayer is archived (`taxpayer_archived`). |
 | `restoreExpense` | `POST /v1/taxpayers/{taxpayerId}/expenses/{expenseId}/restore` | 429 | `rate_limited` | Rate limit exceeded. |

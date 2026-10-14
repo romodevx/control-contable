@@ -190,6 +190,45 @@ func TestDecodeReadsActiveMonthsAndAbsentTaxFigures(t *testing.T) {
 	assert.Equal(t, cents(t, "5333.33"), c.Want.WithheldToRemit)
 }
 
+// An informational or partial case asserts the explanation's label key; its
+// source may be the spec when no research worked example exists for it.
+func TestDecodeReadsExplanationAndSpecSource(t *testing.T) {
+	doc := strings.Replace(validCase, "source: research:PF-612-ISR-01", "source: spec:module-tax-engine-2.4", 1)
+	doc = strings.Replace(doc, "  disclaimers: [deductibility_claimed]\n",
+		"  disclaimers: [deductibility_claimed]\n  explanation: \"regime_explanation:612/fisica\"\n", 1)
+
+	c, err := decode(t, doc)
+	require.NoError(t, err)
+
+	assert.Equal(t, "spec:module-tax-engine-2.4", c.Source)
+	assert.Equal(t, domain.LabelKey("regime_explanation:612/fisica"), c.Want.Explanation)
+}
+
+func TestDecodeLeavesAnAbsentExplanationUnasserted(t *testing.T) {
+	c, err := decode(t, validCase)
+	require.NoError(t, err)
+
+	assert.Empty(t, c.Want.Explanation)
+}
+
+func TestDecodeRejectsABlankExplanationOrABadSpecSource(t *testing.T) {
+	tests := []struct{ name, old, new string }{
+		{"blank explanation", "  disclaimers: [deductibility_claimed]\n", "  disclaimers: [deductibility_claimed]\n  explanation: \"  \"\n"},
+		{"spec without a reference", "source: research:PF-612-ISR-01", "source: \"spec:\""},
+		{"spec with an upper-case reference", "source: research:PF-612-ISR-01", "source: spec:MODULE"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			doc := strings.Replace(validCase, tt.old, tt.new, 1)
+			require.NotEqual(t, validCase, doc, "the edit must apply")
+
+			_, err := decode(t, doc)
+
+			require.ErrorIs(t, err, golden.ErrInvalidCase)
+		})
+	}
+}
+
 func TestDecodeRejectsWhatAHandAuthorCouldGetWrong(t *testing.T) {
 	tests := []struct {
 		name     string

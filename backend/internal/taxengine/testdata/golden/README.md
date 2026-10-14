@@ -1,7 +1,9 @@
 # Tax engine golden cases (PLAN M5-07)
 
 Hand-authored expected results for the tax engine, taken from the worked examples of
-`docs/research/tax-regimes-mx-2026.md` §A.5 / §B.5 or from a CPA. The gate is
+`docs/research/tax-regimes-mx-2026.md` §A.5 / §B.5 or from a CPA. Cases with no figure to
+take from a worked example (informational regimes, a partial regime's month without a
+figure) cite the spec rule they pin (`spec:<ref>`). The gate is
 `internal/taxengine/golden_gate_test.go`; it runs in `go test ./...`, so a mismatch fails CI.
 
 **There is no update flag.** Expected values are never written by a program: change them by
@@ -19,7 +21,7 @@ serializers drop comments).
 ```yaml
 # golden: hand-authored from <source>. Never generated or rewritten by a tool.   <- line 1, required
 id: PF-612-ISR-01                 # PF-/PM-/TX- and upper-case segments
-source: research:PF-612-ISR-01    # research:<worked example id> | cpa:<ref>
+source: research:PF-612-ISR-01    # research:<worked example id> | cpa:<ref> | spec:<ref>
 skip_reason: "⚠️ ..."             # optional: an unverified rule; the case is reported skipped
 pending_strategy: true            # optional: the strategy is not registered yet
 input:
@@ -47,6 +49,7 @@ expected:
   missing_inputs: [{key: prior_provisional_payments, months: [1, 2]}]   # absent = none
   cpa_topics: [rif_reduction]                                           # absent = none
   disclaimers: [deductibility_claimed]                                  # absent = none
+  explanation: "regime_explanation:605/fisica"   # partial/informational label key; absent = not asserted
 ```
 
 Amounts are quoted decimals with exactly two places (the centavo); an unquoted number is a YAML

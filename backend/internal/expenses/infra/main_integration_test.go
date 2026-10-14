@@ -36,7 +36,7 @@ func TestMain(m *testing.M) {
 
 // The expense use cases over the real stores, migrations, access policy,
 // taxpayers queries and tax parameters, as cc_app under RLS, wired the way
-// cmd/api will wire them (M4-07). Fixture ids are this suite's own; every
+// cmd/api wires them (M4-07). Fixture ids are this suite's own; every
 // test gets its own cloned database.
 const (
 	userA = "0199d4a2-0000-7000-8000-0000000e000a"
@@ -169,8 +169,9 @@ func (e *env) wire(t *testing.T, options ...envOption) *env {
 	return e
 }
 
-// profileAdapter is the composition root's adapter of the taxpayers
-// profile reader to the expenses port (M4-07 moves it to cmd/api).
+// profileAdapter mirrors cmd/api's taxpayerProfiles, the production adapter
+// of the taxpayers profile reader to the expenses port (M4-07): package main
+// cannot be imported, and the cmd/api contract suite runs the real one.
 type profileAdapter struct{ queries *tpusecase.Queries }
 
 func (a profileAdapter) Profile(ctx context.Context, userID, taxpayerID string) (usecase.TaxpayerProfile, error) {
@@ -195,8 +196,9 @@ func (a profileAdapter) Profile(ctx context.Context, userID, taxpayerID string) 
 	return out, nil
 }
 
-// parametersAdapter is the composition root's adapter of the tax engine's
-// RateCatalog to the expenses Parameters port (M4-07 moves it to cmd/api).
+// parametersAdapter mirrors cmd/api's expenseParameters, the production
+// adapter of the tax engine's RateCatalog to the expenses Parameters port
+// (M4-07), for the same reason.
 type parametersAdapter struct {
 	*ratecatalog.Catalog[domain.AmountKey]
 }

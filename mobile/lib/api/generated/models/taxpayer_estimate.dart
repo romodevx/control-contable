@@ -22,7 +22,7 @@ abstract class TaxpayerEstimate with _$TaxpayerEstimate {
   const factory TaxpayerEstimate({
     @JsonKey(name: 'taxpayer_id') required Uuid taxpayerId,
     required Period period,
-    @JsonKey(name: 'due_date') required DateTime dueDate,
+    @JsonKey(name: 'due_date') required String dueDate,
     required Legend legend,
     required List<Disclaimer> disclaimers,
     required List<RegimeEstimate> regimes,

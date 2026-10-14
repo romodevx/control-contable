@@ -42,6 +42,9 @@ func compare(want Expected, got domain.RegimeEstimate) []string {
 	if want.Disclaimers != nil {
 		out = appendSetDiff(out, "disclaimers", texts(want.Disclaimers), texts(got.Disclaimers))
 	}
+	if want.Explanation != "" && want.Explanation != got.Explanation {
+		out = append(out, fmt.Sprintf("explanation: want %s, got %s", want.Explanation, got.Explanation))
+	}
 	return append(out, uncited(got.Lines)...)
 }
 

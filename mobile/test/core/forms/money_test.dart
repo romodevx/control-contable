@@ -59,4 +59,18 @@ void main() {
       });
     });
   });
+
+  group('formatPesos writes an es-MX currency amount with a real minus', () {
+    const cases = <int, String>{
+      1160000: r'$11,600.00',
+      5: r'$0.05',
+      0: r'$0.00',
+      -206667: r'−$2,066.67',
+    };
+    cases.forEach((centavos, text) {
+      test('$centavos -> "$text"', () {
+        expect(formatPesos(centavos), text);
+      });
+    });
+  });
 }

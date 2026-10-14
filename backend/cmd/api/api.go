@@ -4,6 +4,8 @@ import (
 	"github.com/romodevx/control-contable/backend/adapter/http/flagshttp"
 	"github.com/romodevx/control-contable/backend/adapter/http/health"
 	authhttp "github.com/romodevx/control-contable/backend/internal/auth/adapter/http"
+	expenseshttp "github.com/romodevx/control-contable/backend/internal/expenses/adapter/http"
+	incomeshttp "github.com/romodevx/control-contable/backend/internal/incomes/adapter/http"
 	taxenginehttp "github.com/romodevx/control-contable/backend/internal/taxengine/adapter/http"
 	taxpayershttp "github.com/romodevx/control-contable/backend/internal/taxpayers/adapter/http"
 )
@@ -19,18 +21,23 @@ type api struct {
 	*accountHandler
 	*authhttp.SessionHandler
 	*taxpayersHandler
+	*incomesHandler
+	*expensesHandler
 	*taxEngineHandler
 }
 
 // flagsHandler and authHandler name the embedded handlers: health.Handler,
 // flagshttp.Handler and authhttp.Handler would otherwise all be the embedded
 // field "Handler". accountHandler is the auth module's account side (M1-09);
-// taxpayersHandler serves module_taxpayers (M2-07); taxEngineHandler serves
-// the built module_tax_engine operations (M5-21).
+// taxpayersHandler serves module_taxpayers (M2-07), incomesHandler
+// module_incomes (M3-06), expensesHandler module_expenses (M4-07) and
+// taxEngineHandler the built module_tax_engine operations (M5-21).
 type (
 	flagsHandler     = flagshttp.Handler
 	authHandler      = authhttp.Handler
 	accountHandler   = authhttp.AccountHandler
 	taxpayersHandler = taxpayershttp.Handler
+	incomesHandler   = incomeshttp.Handler
+	expensesHandler  = expenseshttp.Handler
 	taxEngineHandler = taxenginehttp.Handler
 )

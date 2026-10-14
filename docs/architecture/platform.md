@@ -137,12 +137,13 @@ Rules:
 - The trial starts at registration and lasts `TrialDuration` (7 days). It ends at exactly
   start + 7 days (the end is exclusive).
 - In the trial a user creates at most `TrialRecordCap` (5) incomes and 5 expenses, counted per
-  user across all taxpayers. Deleting never frees a slot, and restoring a record reserves one
-  like a create. A refused create is `402` with detail `trial_cap_reached` naming the spent
+  user across all taxpayers. Deleting never frees a slot, and restoring a record never
+  reserves one (the slot was spent at creation; MODULE-incomes §2.7). A refused create is `402` with detail `trial_cap_reached` naming the spent
   kind, because the caps are independent.
 - With an active `pro` or `comp` entitlement, records are unlimited. With neither and no running
-  trial, access is **read-only**: creates, restores and edits get `402 entitlement_required`
-  (`ErrReadOnly`), while reads and deletes still work.
+  trial, access is **read-only**: creates and edits get `402 entitlement_required`
+  (`ErrReadOnly`), while reads, deletes and restores (Undo) of the user's own records still
+  work (contract 0.6.1).
 - Every user, trial included, holds at most `TaxpayerCap` (10) taxpayers
   (`422 taxpayer_limit_reached`).
 - **`ReserveRecord` is atomic.** One conditional `UPDATE … RETURNING` in the caller's

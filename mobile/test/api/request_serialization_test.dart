@@ -1,6 +1,9 @@
 import 'dart:convert';
 
+import 'package:control_contable/api/generated/models/counterparty_type.dart';
+import 'package:control_contable/api/generated/models/income_create.dart';
 import 'package:control_contable/api/generated/models/income_update.dart';
+import 'package:control_contable/api/generated/models/iva_rate.dart';
 import 'package:control_contable/api/generated/models/reminder_settings.dart';
 import 'package:control_contable/api/generated/models/verify_email_request.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,6 +49,24 @@ void main() {
     final body = wire(const IncomeUpdate(description: 'Diseño de logotipo'));
 
     expect(body, {'description': 'Diseño de logotipo'});
+  });
+
+  // `BusinessDate` is a calendar date: `YYYY-MM-DD` on the wire, never a
+  // date-time (the server and Prism refuse `2026-09-10T00:00:00.000`).
+  test('a record date travels as YYYY-MM-DD', () {
+    final body = wire(
+      const IncomeCreate(
+        regimeCode: '612',
+        counterpartyType: CounterpartyType.personaMoral,
+        amountCents: 1000000,
+        ivaRate: IvaRate.rate16,
+        ivaCents: 160000,
+        collectedOn: '2026-09-10',
+      ),
+    );
+
+    expect(body['collected_on'], '2026-09-10');
+    expect(body.containsKey('invoiced_on'), isFalse);
   });
 
   // A nullable field with a contract default is generated as required, so

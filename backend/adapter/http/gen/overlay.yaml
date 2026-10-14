@@ -14,3 +14,51 @@ actions:
   - target: $.components.schemas.RegimeOptionDef.properties.default
     update:
       x-go-type: any
+  # Merge-patch `null` on an optional property (`type: [T, 'null']` or
+  # `oneOf: [T, {type: 'null'}]`): v2.8.0 generates a plain pointer, so `null` and an
+  # absent key both decode to nil and `null` could never clear the field. The three
+  # clearable ExpenseUpdate properties become nullable.Nullable[T], which keeps
+  # absent, null and a value apart. Only the Go type changes: the property schemas,
+  # and the request validation against them, stay the contract's (M4-07).
+  - target: $.components.schemas.ExpenseUpdate.properties.cfdi_uuid
+    update:
+      x-go-type: nullable.Nullable[string]
+      x-go-type-import: { path: github.com/oapi-codegen/nullable }
+      x-go-type-skip-optional-pointer: true
+  - target: $.components.schemas.ExpenseUpdate.properties.deductible
+    update:
+      x-go-type: nullable.Nullable[bool]
+      x-go-type-import: { path: github.com/oapi-codegen/nullable }
+      x-go-type-skip-optional-pointer: true
+  - target: $.components.schemas.ExpenseUpdate.properties.description
+    update:
+      x-go-type: nullable.Nullable[string]
+      x-go-type-import: { path: github.com/oapi-codegen/nullable }
+      x-go-type-skip-optional-pointer: true
+  # The same for the five clearable IncomeUpdate properties (M3-06). The dates keep
+  # the generated openapi_types.Date and the activity the generated enum type.
+  - target: $.components.schemas.IncomeUpdate.properties.invoiced_on
+    update:
+      x-go-type: nullable.Nullable[openapi_types.Date]
+      x-go-type-import: { path: github.com/oapi-codegen/nullable }
+      x-go-type-skip-optional-pointer: true
+  - target: $.components.schemas.IncomeUpdate.properties.collected_on
+    update:
+      x-go-type: nullable.Nullable[openapi_types.Date]
+      x-go-type-import: { path: github.com/oapi-codegen/nullable }
+      x-go-type-skip-optional-pointer: true
+  - target: $.components.schemas.IncomeUpdate.properties.platform_activity
+    update:
+      x-go-type: nullable.Nullable[PlatformActivity]
+      x-go-type-import: { path: github.com/oapi-codegen/nullable }
+      x-go-type-skip-optional-pointer: true
+  - target: $.components.schemas.IncomeUpdate.properties.cfdi_uuid
+    update:
+      x-go-type: nullable.Nullable[string]
+      x-go-type-import: { path: github.com/oapi-codegen/nullable }
+      x-go-type-skip-optional-pointer: true
+  - target: $.components.schemas.IncomeUpdate.properties.description
+    update:
+      x-go-type: nullable.Nullable[string]
+      x-go-type-import: { path: github.com/oapi-codegen/nullable }
+      x-go-type-skip-optional-pointer: true

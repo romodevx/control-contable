@@ -49,10 +49,6 @@ func (notBuilt) UnregisterDevice(context.Context, gen.UnregisterDeviceRequestObj
 	return nil, errNotBuilt
 }
 
-func (notBuilt) ListExpenseCategories(context.Context, gen.ListExpenseCategoriesRequestObject) (gen.ListExpenseCategoriesResponseObject, error) {
-	return nil, errNotBuilt
-}
-
 func (notBuilt) GetReminderSettings(context.Context, gen.GetReminderSettingsRequestObject) (gen.GetReminderSettingsResponseObject, error) {
 	return nil, errNotBuilt
 }
@@ -85,63 +81,11 @@ func (notBuilt) GetEstimateBreakdown(context.Context, gen.GetEstimateBreakdownRe
 	return nil, errNotBuilt
 }
 
-func (notBuilt) ListExpenses(context.Context, gen.ListExpensesRequestObject) (gen.ListExpensesResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) CreateExpense(context.Context, gen.CreateExpenseRequestObject) (gen.CreateExpenseResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) DeleteExpense(context.Context, gen.DeleteExpenseRequestObject) (gen.DeleteExpenseResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) GetExpense(context.Context, gen.GetExpenseRequestObject) (gen.GetExpenseResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) UpdateExpense(context.Context, gen.UpdateExpenseRequestObject) (gen.UpdateExpenseResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) RestoreExpense(context.Context, gen.RestoreExpenseRequestObject) (gen.RestoreExpenseResponseObject, error) {
-	return nil, errNotBuilt
-}
-
 func (notBuilt) GetHistory(context.Context, gen.GetHistoryRequestObject) (gen.GetHistoryResponseObject, error) {
 	return nil, errNotBuilt
 }
 
 func (notBuilt) MarkHistoryViewed(context.Context, gen.MarkHistoryViewedRequestObject) (gen.MarkHistoryViewedResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) ListIncomes(context.Context, gen.ListIncomesRequestObject) (gen.ListIncomesResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) CreateIncome(context.Context, gen.CreateIncomeRequestObject) (gen.CreateIncomeResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) GetIncomeDefaults(context.Context, gen.GetIncomeDefaultsRequestObject) (gen.GetIncomeDefaultsResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) DeleteIncome(context.Context, gen.DeleteIncomeRequestObject) (gen.DeleteIncomeResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) GetIncome(context.Context, gen.GetIncomeRequestObject) (gen.GetIncomeResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) UpdateIncome(context.Context, gen.UpdateIncomeRequestObject) (gen.UpdateIncomeResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) RestoreIncome(context.Context, gen.RestoreIncomeRequestObject) (gen.RestoreIncomeResponseObject, error) {
 	return nil, errNotBuilt
 }
 

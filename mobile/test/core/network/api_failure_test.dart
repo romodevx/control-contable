@@ -118,6 +118,33 @@ void main() {
       );
     });
 
+    test('402 with a spent trial cap names the cap, not a read-only '
+        'account (MODULE-incomes §4)', () {
+      final failure = _failureOf(
+        _answer(
+          402,
+          body: _envelope('entitlement_required', [
+            {
+              'field': 'incomes_remaining',
+              'code': 'trial_cap_reached',
+              'message': 'Trial cap reached.',
+            },
+          ]),
+        ),
+      );
+
+      expect(failure, isA<ApiEntitlementRequired>());
+      final details = (failure as ApiEntitlementRequired).details;
+      expect(details.single.field, 'incomes_remaining');
+      expect(failure.trialCapOf, 'incomes_remaining');
+      expect(
+        (_failureOf(
+          _answer(402, body: _envelope('entitlement_required')),
+        ) as ApiEntitlementRequired).trialCapOf,
+        isNull,
+      );
+    });
+
     for (final (status, code, expected) in [
       (409, 'rfc_already_registered', ErrorCode.rfcAlreadyRegistered),
       (409, 'conflict', ErrorCode.conflict),

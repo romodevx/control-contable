@@ -8,13 +8,17 @@ import (
 	"log/slog"
 
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
+	expinfra "github.com/romodevx/control-contable/backend/internal/expenses/infra"
+	incomesinfra "github.com/romodevx/control-contable/backend/internal/incomes/infra"
 	"github.com/romodevx/control-contable/backend/internal/platform/access"
 	"github.com/romodevx/control-contable/backend/internal/platform/access/accessgorm"
 	"github.com/romodevx/control-contable/backend/internal/platform/clock"
 	"github.com/romodevx/control-contable/backend/internal/platform/config"
 	"github.com/romodevx/control-contable/backend/internal/platform/crypto"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
+	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit"
 	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit/ratelimitpg"
+	"github.com/romodevx/control-contable/backend/internal/platform/tx"
 	taxpayershttp "github.com/romodevx/control-contable/backend/internal/taxpayers/adapter/http"
 	"github.com/romodevx/control-contable/backend/internal/taxpayers/infra"
 	"github.com/romodevx/control-contable/backend/internal/taxpayers/usecase"
@@ -39,40 +43,58 @@ type taxpayersWiring struct {
 type taxpayersModule struct {
 	handler    *taxpayershttp.Handler
 	userLimits map[string]router.Limiter
+	// tx is the cc_app unit of work the record modules share: CheckRegime
+	// joins their transaction only through the same manager.
+	tx tx.Manager
+	// queries is the read side M3/M4 consume (TaxpayerRegimeChecker,
+	// TaxpayerProfileReader).
+	queries *usecase.Queries
 }
 
 // newTaxpayersModule wires the taxpayers use cases (M2-05, M2-06) over the
 // cc_app unit of work, the RFC vault and the access policy.
 func newTaxpayersModule(w taxpayersWiring) (taxpayersModule, error) {
-	txm, err := pgdb.NewTxManager(w.pool)
+	deps, err := newTaxpayersDeps(w)
 	if err != nil {
 		return taxpayersModule{}, err
-	}
-	vault, err := newRFCVault(w)
-	if err != nil {
-		return taxpayersModule{}, err
-	}
-	store, catalog := infra.NewStore(), infra.NewCatalog()
-	deps := usecase.Deps{
-		Tx:        txm,
-		Access:    access.NewPolicy(txm, accessgorm.NewStore(), accessgorm.NewStore(), clock.NewSystem()),
-		Taxpayers: store, Regimes: store, Catalog: catalog, Directory: catalog,
-		Records: infra.NoRecords{}, // M3/M4 replace it with the record lookup
-		RFC:     vault, Clock: clock.NewSystem(), Logger: w.logger,
 	}
 	return taxpayersModule{
 		handler: taxpayershttp.NewHandler(taxpayershttp.UseCases{
 			Taxpayers: usecase.NewTaxpayers(deps), Regimes: usecase.NewRegimes(deps), Catalog: usecase.NewCatalog(deps),
 		}),
-		userLimits: userLimits(w.limits),
+		userLimits: bucketsOf(w.limits, taxpayershttp.UserLimits),
+		tx:         deps.Tx,
+		queries:    usecase.NewQueries(deps),
 	}, nil
 }
 
-// userLimits builds the router's per-user limits from the adapter's
-// policies: every write shares one bucket per user (one scope).
-func userLimits(limits *ratelimitpg.Store) map[string]router.Limiter {
-	out := make(map[string]router.Limiter, len(taxpayershttp.UserLimits))
-	for op, policy := range taxpayershttp.UserLimits {
+// newTaxpayersDeps builds the taxpayers ports over a new cc_app unit of
+// work.
+func newTaxpayersDeps(w taxpayersWiring) (usecase.Deps, error) {
+	txm, err := pgdb.NewTxManager(w.pool)
+	if err != nil {
+		return usecase.Deps{}, err
+	}
+	vault, err := newRFCVault(w)
+	if err != nil {
+		return usecase.Deps{}, err
+	}
+	store, catalog := infra.NewStore(), infra.NewCatalog()
+	return usecase.Deps{
+		Tx:        txm,
+		Access:    access.NewPolicy(txm, accessgorm.NewStore(), accessgorm.NewStore(), clock.NewSystem()),
+		Taxpayers: store, Regimes: store, Catalog: catalog, Directory: catalog,
+		Records: regimeRecords{expenses: expinfra.NewStore(), incomes: incomesinfra.NewStore()},
+		RFC:     vault, Clock: clock.NewSystem(), Logger: w.logger,
+	}, nil
+}
+
+// bucketsOf builds the router's per-user limits from a module adapter's
+// policies by operationId: the writes of one scope share one bucket per
+// user.
+func bucketsOf(limits *ratelimitpg.Store, policies map[string]ratelimit.Policy) map[string]router.Limiter {
+	out := make(map[string]router.Limiter, len(policies))
+	for op, policy := range policies {
 		out[op] = limits.Bucket(policy)
 	}
 	return out
