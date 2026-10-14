@@ -431,7 +431,8 @@ Composite cases defined by this spec (use-case level, M5-22; QA verifies the ari
 - **Given** another user's taxpayer id, **Then** `404 not_found` on every M5 endpoint.
 
 ### US-X4 Flag
-- **Given** `module_tax_engine` OFF, **Then** every M5 route answers `404`, M6/M8 are implied OFF, M9
+- **Given** `module_tax_engine` OFF, **Then** every M5 route answers `404`, M8 is implied OFF, M6 shows income/expense only
+  (MODULE-dashboard §3), M9
   reminders omit amounts, and the app shows no estimate surface.
 
 ## 5. Errors → ErrorCode
@@ -471,8 +472,9 @@ No new `ErrorCode` values; detail codes go into the contract descriptions (M5-01
 ## 7. Feature flag `module_tax_engine`
 
 - Default OFF; registered by migration (M5-28). OFF → every M5 route `404` (server boundary).
-- Implied OFF when `module_taxpayers` is OFF. M5 OFF implies M6 and M8 OFF (their routes `404`) and M9
-  sends reminders without amounts.
+- Implied OFF when `module_taxpayers` is OFF. M5 OFF implies M8 OFF (its routes `404`), M9
+  sends reminders without amounts, and M6 degrades to income/expense only with no tax figure
+  (amended 2026-10-14 by MODULE-dashboard §3).
 - Independent of `module_incomes` / `module_expenses`: M5 reads their data even when their screens are
   hidden (MODULE-incomes OQ-8).
 - `RateCatalog` (used by M3/M4 writes) is **not** behind the M5 flag: it is a shared port, not a route.
