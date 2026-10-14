@@ -99,6 +99,7 @@ var taxpayerSeeds = []struct {
 }
 
 type env struct {
+	db   *pgtest.Database
 	app  *sql.DB
 	txm  *pgdb.TxManager
 	logs *bytes.Buffer
@@ -120,7 +121,8 @@ func readOnlyAccess(txm *pgdb.TxManager) envOption {
 // cases wired over it.
 func newEnv(t *testing.T, options ...envOption) *env {
 	t.Helper()
-	e := &env{app: pgtest.NewDatabase(t).Connect(t, pgtest.RoleApp), logs: &bytes.Buffer{}}
+	db := pgtest.NewDatabase(t)
+	e := &env{db: db, app: db.Connect(t, pgtest.RoleApp), logs: &bytes.Buffer{}}
 	var err error
 	e.txm, err = pgdb.NewTxManager(e.app)
 	require.NoError(t, err)
@@ -231,6 +233,13 @@ func queryAs(t *testing.T, app *sql.DB, userID, query string, args []any, dest .
 	require.NoError(t, pgtest.AsUser(t.Context(), app, userID, func(tx *sql.Tx) error {
 		return tx.QueryRowContext(t.Context(), query, args...).Scan(dest...)
 	}))
+}
+
+// analyze refreshes the planner's statistics on expenses, as the owner.
+func analyze(t *testing.T, e *env) {
+	t.Helper()
+	_, err := e.db.Connect(t, pgtest.RoleOwner).ExecContext(t.Context(), "ANALYZE expenses")
+	require.NoError(t, err)
 }
 
 // expensesCreated is the user's trial counter.

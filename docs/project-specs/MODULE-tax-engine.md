@@ -120,6 +120,7 @@ TaxpayerEstimate(taxpayer, period)
 | `no_coefficient_first_year` | info | 601 with `first_fiscal_year = true` | "En el primer ejercicio no hay pagos provisionales de ISR (LISR art. 14)." |
 | `iva_mixed_activity` (**new**) | warning | A regime with creditable IVA and exempt acts: `iva_fully_taxable = false`, or exempt (`iva_rate = exempt`) collections in the month (M5-09 review) | "Tienes actividades exentas: el IVA acreditable debe ser proporcional y aquí se acreditó completo." (LIVA 5 fr. V, research Part C) |
 | `cpa_review_pending` (**new**) | **strong** | Any line uses a rule still open in CPA-REVIEW (§2.9) | "Este cálculo usa reglas que un contador aún no valida: {topics}. Tómalo con mayor reserva." |
+| `resico_cap_exceeded` (**new**, M5-13/M5-16) | warning | A 626 regime collected more than its annual cap in the period's fiscal year (Jan..n): PF > $3,500,000 (LISR 113-E); PM > $35,000,000, counting `ytd_before_app_income` (LISR 206 ¶2). The month is still estimated with RESICO rules | PF: "Tus ingresos cobrados en el año ya pasan de $3,500,000, el límite de RESICO. Desde el mes siguiente dejas RESICO y pagas en el régimen general de tu actividad (612 o 606); revisa con tu contador." (LISR 113-E, 113-I) · PM: "Los ingresos cobrados de la empresa en el año ya pasan de $35,000,000, el límite de RESICO. Desde el siguiente ejercicio tributa en el régimen general (601, Título II) y debe avisarlo al SAT a más tardar el 31 de enero." (LISR 206, 214) |
 
 `not_tax_advice` sits first; then by severity (strong, warning, info), then by code. Deterministic order.
 
@@ -515,6 +516,13 @@ Amendment 1. Precisions made while freezing (no rule changed):
 - `TaxResult.payable_rounded_cents` is `>= 0` (the positive part of `amount_cents`); the per-regime
   favor balance stays in `amount_cents` with `outcome: in_favor`.
 - `DisclaimerCode` and `CpaTopic` are append-only enums (not frozen, like `ErrorCode`).
+- **Append (M5-13/M5-16, PR #90):** `DisclaimerCode` gains `resico_cap_exceeded` (§2.3). In plain
+  words: once a RESICO taxpayer has collected more than the cap in the year, it stops being RESICO —
+  a persona física from the next month (LISR 113-E; art. 113-I lists the exits), a persona moral
+  from the next fiscal year, moving to Título II (LISR 206 ¶2, 214). The engine still estimates the
+  month under RESICO and says so with this warning; it never moves the taxpayer to another regime.
+  Breakdown lines stay money lines: the cap is never an `info` line. Non-breaking (append-only enum;
+  clients show the `text` of an unknown code); `info.version` unchanged, no `x-frozen` node changed.
 - `Breakdown.disclaimers` carries the estimate's disclaimers that bear on its lines (same order):
   `cpa_review_pending` (strong) whenever the regime or any line needs CPA review, including the
   consolidated IVA line (`cross_regime_iva_netting`), and `iva_mixed_activity` whenever the

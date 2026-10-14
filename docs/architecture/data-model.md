@@ -226,6 +226,8 @@ erDiagram
         text cfdi_uuid "upper case; not unique (warning)"
         boolean deductible "effective verdict"
         boolean deductible_overridden "deductible_source = user"
+        boolean cash_over_limit "assessed on write (LISR 27 fr. III)"
+        bigint creditable_iva_cents "assessed on write (LIVA 5)"
         bigint isr_withheld_cents "withheld from supplier"
         bigint iva_withheld_cents "withheld from supplier"
         date paid_on

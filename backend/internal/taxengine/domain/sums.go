@@ -20,12 +20,13 @@ type RateSums struct {
 	IVA  money.Cents
 }
 
-// IVAByRate splits the income collected in a month by the record's IVA
-// treatment (contract IvaRate). The rate is the record's own: the incomes
-// module checked it against the rate catalog on the record's IVA date, so
-// the border 8 % counts as entered whatever the period (MODULE-tax-engine
-// §2.4). A 0 % or exempt record carries no IVA, so only its base is kept;
-// both bases matter to proportional crediting (LIVA 5 fr. V).
+// IVAByRate splits a month's income collected, or expenses paid, by the
+// record's IVA treatment (contract IvaRate). The rate is the record's own:
+// its module checked it against the rate catalog on the record's IVA date,
+// so the border 8 % counts as entered whatever the period
+// (MODULE-tax-engine §2.4). A 0 % or exempt record carries no IVA, so only
+// its base is kept; on the income side both bases matter to proportional
+// crediting (LIVA 5 fr. V).
 type IVAByRate struct {
 	Rate16     RateSums    // rate_16, LIVA 1
 	Rate8      RateSums    // rate_8, border regions while the decree is in force
@@ -45,11 +46,24 @@ type IncomeSums struct {
 }
 
 // ExpenseSums are one regime's expense aggregates for one month, by
-// paid_on.
+// paid_on (the booking date of every expense, MODULE-expenses §2.1), over
+// non-deleted records. Amounts are before IVA.
+//
+// DeductiblePaid, NonDeductiblePaid and CashOverLimitPaid are the
+// deductibility classes and partition the month's amount_cents: deductible
+// is the stored effective verdict (MODULE-expenses §2.4, an override
+// included); a non-deductible expense paid in cash over the limit (§2.5)
+// counts as cash-over-limit, any other one as non-deductible.
 type ExpenseSums struct {
-	DeductiblePaid     money.Cents // amount_cents of effectively deductible expenses
-	CreditableIVAPaid  money.Cents // iva_cents of those expenses
-	PredialPaid        money.Cents // category predial (606 blind deduction)
+	DeductiblePaid    money.Cents // amount_cents of effectively deductible expenses
+	NonDeductiblePaid money.Cents // amount_cents of the other non-deductible expenses
+	CashOverLimitPaid money.Cents // amount_cents of non-deductible cash payments over the limit (LISR 27 fr. III)
+	IVAPaid           IVAByRate   // amount_cents and iva_cents by the record's IVA rate, all classes
+	// CreditableIVAPaid is the stored creditable-IVA candidate (LIVA 5,
+	// MODULE-expenses §2.4): CFDI, never a cash payment over the limit,
+	// a creditable category, and deductible or RESICO PF.
+	CreditableIVAPaid  money.Cents
+	PredialPaid        money.Cents // amount_cents of deductible predial (606 blind deduction, LISR 115 ¶2)
 	ISRWithheldToRemit money.Cents // ISR the taxpayer withheld from suppliers
 	IVAWithheldToRemit money.Cents // IVA the taxpayer withheld from suppliers
 }
@@ -104,6 +118,9 @@ func (m MonthSums) Add(o MonthSums) (MonthSums, error) {
 		},
 		Expenses: ExpenseSums{
 			DeductiblePaid:     s.add(m.Expenses.DeductiblePaid, o.Expenses.DeductiblePaid),
+			NonDeductiblePaid:  s.add(m.Expenses.NonDeductiblePaid, o.Expenses.NonDeductiblePaid),
+			CashOverLimitPaid:  s.add(m.Expenses.CashOverLimitPaid, o.Expenses.CashOverLimitPaid),
+			IVAPaid:            s.byRate(m.Expenses.IVAPaid, o.Expenses.IVAPaid),
 			CreditableIVAPaid:  s.add(m.Expenses.CreditableIVAPaid, o.Expenses.CreditableIVAPaid),
 			PredialPaid:        s.add(m.Expenses.PredialPaid, o.Expenses.PredialPaid),
 			ISRWithheldToRemit: s.add(m.Expenses.ISRWithheldToRemit, o.Expenses.ISRWithheldToRemit),

@@ -90,6 +90,17 @@ type Strategy interface {
   result (LIVA arts. 1, 1-B, 5-D), shown as payable or *saldo a favor*. Withholdings the
   taxpayer made to suppliers are added to a separate `withholdings_to_remit` total, never
   netted (LIVA 1-A). *(CPA to confirm cross-regime netting for a PF holding 612 + 606.)*
+- **Totals rule (M5-22): each amount is counted exactly once.** A PM regime reports three
+  disjoint things: its own ISR (`isr`, the ISR segment's last line), its own IVA
+  (`ivaComponents`, netted by the use case), and the ISR **and** IVA it withheld from its
+  suppliers, already summed into `withheldToRemit` (the `tax: withholding` segment: the IVA
+  line, plus the ISR line and one `withholding.to_remit` total when both exist; e.g.
+  5,333.33 + 5,000.00 = 10,333.33). So the use case computes
+  `totals.withholdings_to_remit = Σ regime.withheldToRemit`,
+  `totals.isr = Σ payable regime.isr`, `totals.iva = net(Σ ivaComponents)`, and
+  `total_payable = isr + iva + withholdings_to_remit` (contract `EstimateTotals`). It never
+  re-adds `withholding` lines, never adds `MonthSums.ISRWithheldToRemit` /
+  `IVAWithheldToRemit` again, and never folds `withheldToRemit` into `isr` or `iva`.
 - **Registry**: `map[StrategyKey]Strategy`, built at the composition root. A catalog regime
   with no registered strategy falls back to a generic `InformationalStrategy`, which
   returns the catalog's plain-language explanation and no number. So every catalog regime
