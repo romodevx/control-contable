@@ -40,6 +40,12 @@ func (f *fakeEstimates) Breakdown(_ context.Context, userID, taxpayerID, period,
 	return f.breakdown, f.err
 }
 
+// exampleEngineVersion is the engine_version the contract examples show.
+// The handler passes the use case's version through, so the fakes answer
+// the examples' one rather than domain.EngineVersion, which moves with
+// every engine release.
+const exampleEngineVersion = "1.0.0"
+
 // contractExample is the named 200 example of operationID in the served
 // contract, re-encoded as JSON.
 func contractExample(t *testing.T, operationID, name string) string {
@@ -124,7 +130,7 @@ func estimateNet(t *testing.T) usecase.TaxpayerEstimate {
 		},
 		ParameterSet:       taxparams.SetID{FiscalYear: 2026, Version: 1},
 		RecordsFingerprint: "5e2a8c1f4b7d0e3a6c9f2b5e8d1a4c7f0b3e6a9d2c5f8b1e4a7d0c3f6b9e2a5d",
-		EngineVersion:      domain.EngineVersion,
+		EngineVersion:      exampleEngineVersion,
 	}
 }
 
@@ -275,7 +281,7 @@ func breakdown612(t *testing.T) usecase.RegimeBreakdown {
 	return usecase.RegimeBreakdown{
 		TaxpayerID: "0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80", PersonType: fiscal.PersonFisica, Period: march(t),
 		Regime: regime612Net(), ParameterSet: taxparams.SetID{FiscalYear: 2026, Version: 1},
-		Lines: lines, Legend: domain.Legend, Disclaimers: nettingDisclaimers, EngineVersion: domain.EngineVersion,
+		Lines: lines, Legend: domain.Legend, Disclaimers: nettingDisclaimers, EngineVersion: exampleEngineVersion,
 	}
 }
 

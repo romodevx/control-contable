@@ -16,6 +16,7 @@ import (
 	"github.com/romodevx/control-contable/backend/adapter/http/contracttest"
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagtest"
+	"github.com/romodevx/control-contable/backend/internal/taxengine/domain"
 )
 
 // Contract tests of the estimate and breakdown operations (M5-23) through
@@ -69,16 +70,28 @@ func (e contractEnv) priorPayments(t *testing.T, f estimateFixture) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 }
 
-// withoutIdentity drops the fields that name this run's taxpayer and
-// records, so a body compares with the contract example. Regime names are
+// withoutIdentity drops the fields that name this run's taxpayer, records
+// and engine build, so a body compares with the contract example (whose
+// engine_version is illustrative: assertEngineVersion checks it). Regime names are
 // the catalog's (the SAT spelling, migration 20261013180000), which the
 // examples abbreviate: they are compared on their own.
+// assertEngineVersion checks that a body names the engine that computed it.
+func assertEngineVersion(t *testing.T, body []byte) {
+	t.Helper()
+	var head struct {
+		EngineVersion string `json:"engine_version"`
+	}
+	require.NoError(t, json.Unmarshal(body, &head))
+	assert.Equal(t, domain.EngineVersion, head.EngineVersion)
+}
+
 func withoutIdentity(t *testing.T, body string) map[string]json.RawMessage {
 	t.Helper()
 	var m map[string]json.RawMessage
 	require.NoError(t, json.Unmarshal([]byte(body), &m), body)
 	delete(m, "taxpayer_id")
 	delete(m, "records_fingerprint")
+	delete(m, "engine_version")
 	if raw, ok := m["regimes"]; ok {
 		var regimes []map[string]json.RawMessage
 		require.NoError(t, json.Unmarshal(raw, &regimes))
@@ -165,6 +178,7 @@ func TestContract_estimates(t *testing.T) {
 			rec := estimate(estimateTarget(ana.taxpayer, "2026-03"), ana.token)
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"), "S-4")
+			assertEngineVersion(t, rec.Body.Bytes())
 			got := withoutIdentity(t, rec.Body.String())
 			want := withoutIdentity(t, exampleOf(t, "getTaxpayerEstimate", "crossRegimeIva"))
 			for field, value := range want {
@@ -188,9 +202,10 @@ func TestContract_estimates(t *testing.T) {
 			rec := breakdown(breakdownTarget(ana.taxpayer, "2026-03", "612"), ana.token)
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"), "S-4")
+			assertEngineVersion(t, rec.Body.Bytes())
 			got := withoutIdentity(t, rec.Body.String())
 			want := withoutIdentity(t, exampleOf(t, "getEstimateBreakdown", "crossRegimeIva612"))
-			for _, field := range []string{"period", "regime", "legend", "disclaimers", "engine_version"} {
+			for _, field := range []string{"period", "regime", "legend", "disclaimers"} {
 				assert.JSONEqf(t, string(want[field]), string(got[field]), "field %s", field)
 			}
 			var lines []gen.BreakdownLine
