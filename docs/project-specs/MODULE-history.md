@@ -18,9 +18,10 @@ fiscal year, and did anything change since I last looked?"**
 - A **fiscal-year list of months** (one row per month, January to December, or to the current month
   in the current year), each with the estimated total, ISR, IVA (or saldo a favor), withholdings to
   remit, the due date and the taxpayer-level status.
-- A **"Cambió desde que lo viste"** marker on a month whose estimate moved since the user last opened
-  it: a late income or expense was added/edited/deleted, a tax input changed, or the engine or its
-  parameters were corrected (§2.4).
+- A **"Cambió desde que lo viste"** marker on a month whose **displayed figures** changed since the user
+  last opened it, because a late income or expense was added/edited/deleted, a tax input changed, or the
+  engine or its parameters were corrected (§2.4). A change of inputs or engine that leaves every figure
+  identical never marks (DECIDED OQ-H4).
 - **Opening a month** shows the M5 estimate screen for that period (per-regime cards, breakdown one tap
   away) and **marks it viewed**.
 - Fiscal-year **sum of the monthly estimates** (clearly not an annual return).
@@ -93,7 +94,8 @@ HistoryMonth
 ├── due_date                     from the estimate (M5 §2.10)
 ├── cpa_review_pending           bool: any regime pending CPA review (drives the strong banner)
 ├── is_current                   bool
-├── records_fingerprint          the current fingerprint (opaque; the client echoes it on markViewed)
+├── records_fingerprint          the current input fingerprint (opaque; echoed on markViewed)
+├── figures_fingerprint          the current result-figures hash (opaque; echoed on markViewed; §2.4)
 ├── engine_version, parameter_set   current ones (opaque to the client)
 ├── viewed_at | null             last time this user marked it viewed
 ├── changed_since_viewed         bool (§2.4)
@@ -115,7 +117,8 @@ HistoryMonth
 | `user_id` | uuid, FK users ON DELETE CASCADE | RLS key |
 | `taxpayer_id` | uuid, FK taxpayers ON DELETE CASCADE | |
 | `period` | date (first day of month), CHECK day = 1 | |
-| `records_fingerprint` | char(64), CHECK `^[0-9a-f]{64}$` | as seen by the user |
+| `records_fingerprint` | char(64), CHECK `^[0-9a-f]{64}$` | input fingerprint as seen by the user |
+| `figures_fingerprint` | char(64), CHECK `^[0-9a-f]{64}$` | result-figures hash as seen (drives the marker) |
 | `engine_version` | text, CHECK length ≤ 32 | as seen |
 | `parameter_set` | text, CHECK length ≤ 32 | as seen ("2026/v1") |
 | `viewed_at` | timestamptz NOT NULL | server clock |
@@ -134,33 +137,45 @@ HistoryMonth
 
 ### 2.4 Changed since viewed
 
+Two hashes, both computed server-side and returned with every estimate:
+
+- **`records_fingerprint`** (input side, ADR-0002 §5): records, tax inputs, regimes, parameter set and
+  engine version.
+- **`figures_fingerprint`** (result side, new): SHA-256 over a canonical text of **the figures the user
+  sees** for the month: totals (ISR, IVA payable / in favor, withholdings to remit, total), each regime's
+  code, status, ISR, IVA and withholdings, `cpa_review_pending`, and the due date. Excluded: versions,
+  texts, explanations, citations, breakdown line order. Computed in the M5 domain next to
+  `Fingerprint` (one function, golden-tested) so M5 and M8 can never disagree.
+
 For a month with a stored view `v` and current estimate `e`:
 
 | Condition | `changed_since_viewed` | `change_reason` | Copy |
 |---|---|---|---|
 | No view yet | false | null | none (never-viewed months are not "changed"; OQ-H1) |
-| `v.fingerprint = e.fingerprint` | false | null | "Visto el 3 oct" (secondary text) |
-| differs, and `v.engine_version ≠ e.engine_version` or `v.parameter_set ≠ e.parameter_set` | true | `engine` | "Se actualizó el cálculo desde que lo viste" |
-| differs otherwise | true | `records` | "Cambió desde que lo viste: hubo cambios en tus registros o datos fiscales" |
+| `v.figures = e.figures` (whatever the inputs or engine did) | false | null | "Visto el 3 oct" (secondary text) |
+| figures differ, and `v.engine_version ≠ e.engine_version` or `v.parameter_set ≠ e.parameter_set` | true | `engine` | "Se actualizó el cálculo desde que lo viste" |
+| figures differ otherwise | true | `records` | "Cambió desde que lo viste: hubo cambios en tus registros o datos fiscales" |
 | current month | false | null | "Mes en curso" |
 
-- The fingerprint already covers records, tax inputs, regimes, parameter set and engine version
-  (ADR-0002 §5, M5 §2.11); `engine_version`/`parameter_set` are stored **only** to explain the reason.
-  When both apply, `engine` wins (one honest cause, shown once).
+- **The marker is driven only by `figures_fingerprint`** (DECIDED OQ-H4): an engine or parameter bump,
+  or a record edit, that yields identical figures does not mark. `records_fingerprint`,
+  `engine_version` and `parameter_set` are stored **only** to explain the reason when the figures did
+  change. When both causes apply, `engine` wins (one honest cause, shown once).
 - YTD regimes (612, 626 PM, 601) are cumulative: a late January income legitimately changes February..
-  current. Every affected viewed month is marked; that is correct, not noise.
-- **False marks must not exist**: #98 FU1 (the fingerprint hashes informational-regime sums and the
-  order of multi-enum options) is fixed **in M8-03, before `estimate_views` holds any row**, so the fix
-  needs no migration of stored fingerprints. A golden test pins that informational-only record
-  changes and option reordering keep the fingerprint.
-- Any later change to the fingerprint *scheme* must bump `EngineVersion` (it is an engine change), so the
-  marker says `engine`, never a misleading `records` (OQ-H4).
+  current. Every viewed month whose figures moved is marked; that is correct, not noise.
+- **False marks must not exist**: with the marker on result figures, #98 FU1 (the input fingerprint
+  hashes informational-regime sums and multi-enum order) can no longer cause a mark; it is still fixed in
+  M8-03 so `change_reason` stays accurate. A golden test pins that informational-only record changes,
+  option reordering and an `EngineVersion`-only bump keep `figures_fingerprint`.
+- A change to the `figures_fingerprint` *scheme* (new field shown, new canonical text) would mark every
+  viewed month; it requires an ADR-0002 amendment and ships with a one-time re-baseline of stored views
+  in the same migration (the user saw the same numbers, only the hash changed).
 
 ### 2.5 Mark viewed
 
 - The app calls `markHistoryViewed` when the M5 estimate screen for a past (non-current) period renders
   successfully, **from any entry point** (History row, dashboard "Ver detalle" on a past month), with
-  body `{ records_fingerprint, engine_version, parameter_set }` copied from the `TaxpayerEstimate` it
+  body `{ records_fingerprint, figures_fingerprint, engine_version, parameter_set }` copied from the `TaxpayerEstimate` it
   rendered. Storing *what the user saw* (not a server recompute at POST time) keeps the marker honest if
   records change between render and POST, and keeps the write cheap (no estimate).
 - Server validates format (64 lower-hex; version strings ≤ 32 chars, `^[0-9A-Za-z./-]+$`), period range
@@ -233,15 +248,17 @@ spend `estimate_reads`. Spent → `429 rate_limited` + `Retry-After`.
 - **Given** I viewed March and April, **When** I add an income collected in March, **Then** March and
   (for 612, cumulative ISR) April show "Cambió desde que lo viste" with reason `records`.
 - **When** I open March, **Then** its marker clears; April's stays until I open April.
-- **Given** I delete that income again (fingerprint returns to the seen one), **Then** the marker clears
+- **Given** I delete that income again (figures return to the seen ones), **Then** the marker clears
   without opening the month.
 
 ### US-H4 Engine correction marks the month
 - **Given** I viewed March under engine 1.0.1, **When** the server ships 1.0.2 and March's estimate moves,
   **Then** March shows "Se actualizó el cálculo desde que lo viste" (`engine`).
 - **Given** a parameter-set change (2026/v1 → v2) that touches March, **Then** the same `engine` reason.
-- **Given** an engine bump that does not change a month's computation, **Then** the fingerprint still
-  differs (it includes the version) and the month is marked `engine`. Accepted: rare, honest (OQ-H4).
+- **Given** an engine or parameter bump that leaves a month's displayed figures identical, **Then** the
+  month is **not** marked (only `records_fingerprint` moved; DECIDED OQ-H4).
+- **Given** I edit a record in a way that leaves March's figures identical (e.g. a typo in the
+  description), **Then** March is not marked.
 
 ### US-H5 Never-viewed and current month
 - **Given** I never opened June, **Then** June shows no marker. **Given** the current month, **Then** it
@@ -324,36 +341,39 @@ spend `estimate_reads`. Spent → `429 rate_limited` + `Retry-After`.
 1. `HistoryMonth`: replace the scaffold (`status` enum with `no_records`, `iva`/`isr` as `TaxResult`)
    with §2.2: `status: TaxpayerEstimateStatus` (frozen enum, reused), `has_records`, `tax: HistoryTax |
    null` (shape aligned with M6 `TrendTax` plus `iva_in_favor_cents`; reuse if the architect prefers),
-   `due_date`, `cpa_review_pending`, `is_current`, `records_fingerprint`, `engine_version`,
+   `due_date`, `cpa_review_pending`, `is_current`, `records_fingerprint`, `figures_fingerprint`,
+   `engine_version`,
    `parameter_set`, `viewed_at` (renamed from `last_viewed_at`), `changed_since_viewed`,
    `change_reason: enum [records, engine] | null`.
 2. `HistoryYear`: add `year_totals` and `disclaimers`; `legend` stays required.
-3. `markHistoryViewed`: required JSON body `HistoryViewedRequest { records_fingerprint (pattern
-   `^[0-9a-f]{64}$`), engine_version, parameter_set }`, `additionalProperties: false`; keep `204`.
+3. `markHistoryViewed`: required JSON body `HistoryViewedRequest { records_fingerprint,
+   figures_fingerprint (both pattern `^[0-9a-f]{64}$`), engine_version, parameter_set }`, `additionalProperties: false`; keep `204`.
 4. Both operations: add `422` (`parameters_unavailable`) and `429`; `getHistory` documents the month
    range rule (§2.1) and newest-first order.
-5. `TaxpayerEstimate` already carries `records_fingerprint` and `parameter_set` (M5 §9 item 5); confirm
-   `engine_version` is at taxpayer level too (needed for item 3).
+5. `TaxpayerEstimate` already carries `records_fingerprint` and `parameter_set` (M5 §9 item 5); add
+   `figures_fingerprint` (additive, M5 domain function, §2.4) and confirm `engine_version` is at
+   taxpayer level too (needed for item 3).
 6. Examples: a year with one `records` and one `engine` change, a never-viewed month, a `none` month,
    the current month.
 
 ## 10. Out of scope
 
 - The **annual return** (declaración anual), annual ISR adjustments, PTU, or any yearly reconciliation;
-  `year_totals` is only a sum of monthly estimates.
+  `year_totals` is only a sum of monthly estimates. An **annual-estimate** scope is coming as a
+  **separate module** (coordinator, 2026-10-14); History v1 stays monthly and does not anticipate it.
 - Storing past estimates or "what you declared" (no snapshots; the marker says *that* it changed, not
   by how much). A "before → after" diff is a later Could (OQ-H2).
 - Comparing years, CSV/PDF export, a combined all-taxpayers history (PRD Q14).
 - Push notifications on change (M9), withholding derivation (the engine owns it).
 
-## 11. Open questions (defaults apply unless the owner says otherwise)
+## 11. Decisions (coordinator, 2026-10-14) — all DECIDED
 
-| # | Question | Default |
+| # | Question | Decision |
 |---|---|---|
-| OQ-H1 | Mark never-viewed months as "new"? | **No**; only viewed months can be "changed" (avoids 10 markers on first use) |
-| OQ-H2 | Show how much a month changed (old → new total)? | **No** in v1 (needs stored amounts); later Could |
-| OQ-H3 | Changed marker on the current month? | **Never**; it is live ("Mes en curso") |
-| OQ-H4 | Engine bump that does not change a month's numbers still marks it `engine` | **Accept** (fingerprint includes the version; rare and honest). Revisit only if it causes noise |
-| OQ-H5 | Order of months | **Newest first** |
-| OQ-H6 | Which presets include `module_history` | **`demo_full` only** |
-| OQ-H7 | Mark viewed from any entry point or only from History? | **Any entry point** while the flag is ON (the user saw the figure) |
+| OQ-H1 | Mark never-viewed months as "new"? | **DECIDED:** **No**; only viewed months can be "changed" (avoids 10 markers on first use) |
+| OQ-H2 | Show how much a month changed (old → new total)? | **DECIDED:** **No** in v1 (needs stored amounts); later Could |
+| OQ-H3 | Changed marker on the current month? | **DECIDED:** **Never**; it is live ("Mes en curso") |
+| OQ-H4 | Engine/params bump (or record edit) that leaves a month's figures identical: mark it? | **DECIDED (changed from the proposed default):** **No.** Mark only when the displayed figures change: `figures_fingerprint` stored alongside the input fingerprint (§2.4). Reason label (`engine` vs `records`) kept when they did change |
+| OQ-H5 | Order of months | **DECIDED:** **Newest first** |
+| OQ-H6 | Which presets include `module_history` | **DECIDED:** **`demo_full` only** |
+| OQ-H7 | Mark viewed from any entry point or only from History? | **DECIDED:** **Any entry point** while the flag is ON (the user saw the figure) |
