@@ -3,7 +3,6 @@
 # Chosen month: March 2026; income 30,000, deductions 45,000, prior payments 0.
 id: PF-612-ISR-03
 source: research:PF-612-ISR-03
-pending_strategy: true # M5-11
 input:
   regime: "612"
   person_type: fisica
