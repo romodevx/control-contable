@@ -59,7 +59,7 @@ void main() {
       // Without the catalog's limit there is nothing to compare with.
       (PaymentMethod.cash, papeleria, 900000, null): null,
     };
-    cases.forEach((input, expected) {
+    for (final MapEntry(key: input, value: expected) in cases.entries) {
       final (method, category, total, limit) = input;
       test('$method ${category?.code}/${category?.deductibility} $total '
           '$limit → $expected', () {
@@ -73,7 +73,7 @@ void main() {
           expected,
         );
       });
-    });
+    }
   });
 
   group('suggestedDeductibleOf: §2.4 default = rule AND CFDI AND NOT cash', () {
