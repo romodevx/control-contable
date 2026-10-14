@@ -36,5 +36,6 @@ const _$ErrorCodeEnumMap = {
   ErrorCode.rateLimited: 'rate_limited',
   ErrorCode.upstreamUnavailable: 'upstream_unavailable',
   ErrorCode.internalError: 'internal_error',
+  ErrorCode.invalidPassword: 'invalid_password',
   ErrorCode.$unknown: r'$unknown',
 };

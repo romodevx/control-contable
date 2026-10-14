@@ -181,9 +181,11 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 		return nil, fmt.Errorf("load embedded contract: %w", err)
 	}
 	server := api{
-		Handler:      health.New(d.db, version, d.logger),
-		flagsHandler: flagshttp.New(d.flags, d.logger),
-		authHandler:  d.auth.handler,
+		Handler:        health.New(d.db, version, d.logger),
+		flagsHandler:   flagshttp.New(d.flags, d.logger),
+		authHandler:    d.auth.handler,
+		accountHandler: d.auth.account,
+		SessionHandler: d.auth.sessions,
 	}
 	if d.auth.authn == nil {
 		return nil, errors.New("api: no authenticator: secured operations would run unauthenticated")

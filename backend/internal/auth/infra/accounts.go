@@ -159,6 +159,22 @@ func (s *AccountStore) ReplacePasswordHash(ctx context.Context, id domain.UserID
 	return nil
 }
 
+var _ usecase.AccountStatus = (*AccountStore)(nil)
+
+// CanSignIn implements usecase.AccountStatus: the account still exists
+// (RLS shows the unit of work's user only) and its status may sign in.
+func (s *AccountStore) CanSignIn(ctx context.Context, id domain.UserID) (bool, error) {
+	db, err := pgdb.Conn(ctx)
+	if err != nil {
+		return false, err
+	}
+	var statuses []string
+	if err := db.Model(&userRow{}).Where("id = ?", id.String()).Limit(1).Pluck("status", &statuses).Error; err != nil {
+		return false, fmt.Errorf("auth infra: read user status: %w", err)
+	}
+	return len(statuses) == 1 && statuses[0] == statusActive, nil
+}
+
 func insertConsents(ctx context.Context, userID string, documents []domain.DocumentVersion, acceptedAt time.Time) error {
 	if len(documents) == 0 {
 		return nil

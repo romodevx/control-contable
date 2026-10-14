@@ -57,7 +57,9 @@ func TestFlags_endToEndOverPostgres(t *testing.T) {
 	svc.Invalidate() // another process would wait for flags.DefaultTTL
 
 	_, rec = get(h, "/v1/me")
-	flagtest.AssertHidden(t, rec) // getMe is not built yet (P0-29 FU2): hidden even ON
+	assert.Equal(t, http.StatusUnauthorized, rec.Code, "module_auth is ON: getMe is routed to authentication")
+	_, rec = get(h, "/v1/taxpayers")
+	flagtest.AssertHidden(t, rec) // module_taxpayers is still OFF
 	resend := httptest.NewRequest(http.MethodPost, "/v1/auth/verify-email/resend", strings.NewReader(`{}`))
 	resend.Header.Set("Content-Type", "application/json")
 	rec = httptest.NewRecorder()

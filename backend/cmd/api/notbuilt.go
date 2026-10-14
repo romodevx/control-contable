@@ -41,14 +41,6 @@ func lowerFirst(s string) string {
 	return string(unicode.ToLower(r)) + s[size:]
 }
 
-func (notBuilt) Logout(context.Context, gen.LogoutRequestObject) (gen.LogoutResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) RefreshSession(context.Context, gen.RefreshSessionRequestObject) (gen.RefreshSessionResponseObject, error) {
-	return nil, errNotBuilt
-}
-
 func (notBuilt) RegisterDevice(context.Context, gen.RegisterDeviceRequestObject) (gen.RegisterDeviceResponseObject, error) {
 	return nil, errNotBuilt
 }
@@ -58,22 +50,6 @@ func (notBuilt) UnregisterDevice(context.Context, gen.UnregisterDeviceRequestObj
 }
 
 func (notBuilt) ListExpenseCategories(context.Context, gen.ListExpenseCategoriesRequestObject) (gen.ListExpenseCategoriesResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) ListLegalDocuments(context.Context, gen.ListLegalDocumentsRequestObject) (gen.ListLegalDocumentsResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) DeleteMe(context.Context, gen.DeleteMeRequestObject) (gen.DeleteMeResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) GetMe(context.Context, gen.GetMeRequestObject) (gen.GetMeResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) UpdateMe(context.Context, gen.UpdateMeRequestObject) (gen.UpdateMeResponseObject, error) {
 	return nil, errNotBuilt
 }
 

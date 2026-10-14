@@ -32,6 +32,7 @@ const (
 	CodeRateLimited              Code = "rate_limited"
 	CodeUpstreamUnavailable      Code = "upstream_unavailable"
 	CodeInternalError            Code = "internal_error"
+	CodeInvalidPassword          Code = "invalid_password"
 )
 
 // InternalMessage is the only message a client sees for an unmapped error.
@@ -51,6 +52,7 @@ var allCodes = []Code{
 	CodeRateLimited,
 	CodeUpstreamUnavailable,
 	CodeInternalError,
+	CodeInvalidPassword,
 }
 
 // Codes returns every contract error code, in declaration order.
