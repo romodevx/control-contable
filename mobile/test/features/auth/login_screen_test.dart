@@ -18,6 +18,8 @@ const _submit = 'Entrar';
 const _rejected = 'Correo o contraseña incorrectos.';
 const _missing = 'Escribe este dato.';
 
+String _retryIn(String time) => 'Podrás intentar de nuevo en $time.';
+
 void main() {
   late AuthHarness harness;
 
@@ -162,6 +164,40 @@ void main() {
         find.text('Demasiados intentos. Espera 3 min y vuelve a intentarlo.'),
         findsOneWidget,
       );
+    });
+
+    // M1-15 QA regression: on the emulator the login 429 showed a static
+    // "Espera 3 min" that never moved, and every tap during the wait went to
+    // the server (spending the per-network login budget of everyone behind
+    // the same network). The wait now counts down like the delete dialog's.
+    testWidgets('too many tries count the Retry-After down; a tap during '
+        'the wait sends nothing and says how long is left', (tester) async {
+      harness.repository.loginError = const ApiRateLimited(
+        Duration(minutes: 3),
+      );
+      await harness.pump(tester);
+      await fill(tester);
+      await tapPrimary(tester);
+
+      expect(find.text(_retryIn('3:00')), findsOneWidget);
+      await harness.elapse(tester, const Duration(minutes: 1));
+      expect(find.text(_retryIn('2:00')), findsOneWidget);
+
+      tester.takeAnnouncements();
+      await tapPrimary(tester);
+      expect(harness.repository.logins, hasLength(1), reason: 'not sent');
+      expect(
+        tester.takeAnnouncements().map((a) => a.message),
+        contains(_retryIn('2:00')),
+      );
+
+      await harness.elapse(tester, const Duration(minutes: 2));
+      expect(find.textContaining('Podrás intentar'), findsNothing);
+
+      harness.repository.loginError = null;
+      await tapPrimary(tester);
+      expect(harness.repository.logins, hasLength(2));
+      expect(find.byType(HomeScreen), findsOneWidget);
     });
 
     testWidgets('no connection says so', (tester) async {

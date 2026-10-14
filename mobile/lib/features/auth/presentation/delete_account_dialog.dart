@@ -15,6 +15,7 @@ import 'package:control_contable/features/auth/application/delete_account.dart';
 import 'package:control_contable/features/auth/auth_routes.dart';
 import 'package:control_contable/features/auth/presentation/auth_copy.dart';
 import 'package:control_contable/features/auth/presentation/delete_busy_label.dart';
+import 'package:control_contable/features/auth/presentation/retry_wait.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -123,10 +124,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
     _announce(message);
   }
 
-  void _announceWait() => _announce(
-    AppLocalizations.of(context)
-        .accountDeleteRetryIn(formatCountdown(_retryWait.remaining)),
-  );
+  void _announceWait() => announceRetryWait(context, _retryWait);
 
   void _announce(String message) => unawaited(
     SemanticsService.sendAnnouncement(
@@ -163,7 +161,7 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
             children: [
               FormErrorSummary(controller: _form),
               if (notice != null) FormNotice(message: notice),
-              _RetryWait(countdown: _retryWait),
+              RetryWait(countdown: _retryWait),
               Text(l10n.accountDeleteWhat, style: body),
               Text(l10n.accountDeleteTrial, style: body),
               Text(l10n.accountDeleteSubscription, style: body),
@@ -214,25 +212,4 @@ class _ConfirmButton extends StatelessWidget {
       ),
     );
   }
-}
-
-/// The live `m:ss` left before another try. Not a live region: it changes
-/// every second; the notice above is announced once, and a tap during the
-/// wait announces what is left.
-class _RetryWait extends StatelessWidget {
-  const new({required this.countdown});
-
-  final Countdown countdown;
-
-  @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: countdown,
-    builder: (context, _) => countdown.isRunning
-        ? Text(
-            AppLocalizations.of(context)
-                .accountDeleteRetryIn(formatCountdown(countdown.remaining)),
-            style: Theme.of(context).textTheme.bodyMedium,
-          )
-        : const SizedBox.shrink(),
-  );
 }
