@@ -118,7 +118,13 @@ can run in parallel with M5/M6.
   write: `GET /v1/me` (frozen) carries no access and `GET /v1/subscription` is gated by this
   flag, while the trial rules apply with it OFF. M7 must expose `AccessSummary` to the app
   regardless of `module_subscriptions` (an additive field on `GET /v1/me`, or an always-on
-  read; ADR for the frozen-schema change). Until then the onboarding shows the paywall up
+  read; ADR for the frozen-schema change). **M6-01 (contract 0.8.0) froze the shape**:
+  `AccessSummary` {`access`: `AccessLevel`, `trial_ends_at`, `trial_days_left`,
+  `incomes_remaining`, `expenses_remaining`}, server-computed, already in `getDashboard` and
+  `SubscriptionStatus`. Architect recommendation for M7-01: an always-on read
+  `GET /v1/me/access` (`getMyAccess`, `x-module: module_auth`) answering that schema, rather
+  than a field on the frozen `User` (which `login`/`verifyEmail`/`updateMe` also return, so
+  every one of them would have to read the access policy). Until then the onboarding shows the paywall up
   front only after a `402` in the same session (`readOnlyAccessProvider`, mobile).
 
 ### M8 — History (`module_history`)

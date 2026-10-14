@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TrendPoint {
 
- Period get period;@JsonKey(name: 'income_cents') NonNegativeCents get incomeCents;@JsonKey(name: 'expense_cents') NonNegativeCents get expenseCents;@JsonKey(name: 'tax_payable_rounded_cents') NonNegativeCents get taxPayableRoundedCents;
+ Period get period;@JsonKey(includeIfNull: true, name: 'income_cents') int? get incomeCents;@JsonKey(includeIfNull: true, name: 'expense_cents') int? get expenseCents;@JsonKey(includeIfNull: true) TrendTax? get tax;
 /// Create a copy of TrendPoint
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +30,20 @@ $TrendPointCopyWith<TrendPoint> get copyWith => _$TrendPointCopyWithImpl<TrendPo
 @override
 bool operator ==(Object other) {
   final _this = this as TrendPoint;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TrendPoint&&(identical(other.period, _this.period) || other.period == _this.period)&&(identical(other.incomeCents, _this.incomeCents) || other.incomeCents == _this.incomeCents)&&(identical(other.expenseCents, _this.expenseCents) || other.expenseCents == _this.expenseCents)&&(identical(other.taxPayableRoundedCents, _this.taxPayableRoundedCents) || other.taxPayableRoundedCents == _this.taxPayableRoundedCents));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TrendPoint&&(identical(other.period, _this.period) || other.period == _this.period)&&(identical(other.incomeCents, _this.incomeCents) || other.incomeCents == _this.incomeCents)&&(identical(other.expenseCents, _this.expenseCents) || other.expenseCents == _this.expenseCents)&&(identical(other.tax, _this.tax) || other.tax == _this.tax));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as TrendPoint;
-  return Object.hash(runtimeType,_this.period,_this.incomeCents,_this.expenseCents,_this.taxPayableRoundedCents);
+  return Object.hash(runtimeType,_this.period,_this.incomeCents,_this.expenseCents,_this.tax);
 }
 
 @override
 String toString() {
   final _this = this as TrendPoint;
-  return 'TrendPoint(period: ${_this.period}, incomeCents: ${_this.incomeCents}, expenseCents: ${_this.expenseCents}, taxPayableRoundedCents: ${_this.taxPayableRoundedCents})';
+  return 'TrendPoint(period: ${_this.period}, incomeCents: ${_this.incomeCents}, expenseCents: ${_this.expenseCents}, tax: ${_this.tax})';
 }
 
 
@@ -54,11 +54,11 @@ abstract mixin class $TrendPointCopyWith<$Res>  {
   factory $TrendPointCopyWith(TrendPoint value, $Res Function(TrendPoint) _then) = _$TrendPointCopyWithImpl;
 @useResult
 $Res call({
- Period period,@JsonKey(name: 'income_cents') NonNegativeCents incomeCents,@JsonKey(name: 'expense_cents') NonNegativeCents expenseCents,@JsonKey(name: 'tax_payable_rounded_cents') NonNegativeCents taxPayableRoundedCents
+ Period period,@JsonKey(includeIfNull: true, name: 'income_cents') int? incomeCents,@JsonKey(includeIfNull: true, name: 'expense_cents') int? expenseCents,@JsonKey(includeIfNull: true) TrendTax? tax
 });
 
 
-
+$TrendTaxCopyWith<$Res>? get tax;
 
 }
 /// @nodoc
@@ -71,16 +71,28 @@ class _$TrendPointCopyWithImpl<$Res>
 
 /// Create a copy of TrendPoint
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? period = null,Object? incomeCents = null,Object? expenseCents = null,Object? taxPayableRoundedCents = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? period = null,Object? incomeCents = freezed,Object? expenseCents = freezed,Object? tax = freezed,}) {
   return _then(TrendPoint(
 period: null == period ? _self.period : period // ignore: cast_nullable_to_non_nullable
-as Period,incomeCents: null == incomeCents ? _self.incomeCents : incomeCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents,expenseCents: null == expenseCents ? _self.expenseCents : expenseCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents,taxPayableRoundedCents: null == taxPayableRoundedCents ? _self.taxPayableRoundedCents : taxPayableRoundedCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents,
+as Period,incomeCents: freezed == incomeCents ? _self.incomeCents : incomeCents // ignore: cast_nullable_to_non_nullable
+as int?,expenseCents: freezed == expenseCents ? _self.expenseCents : expenseCents // ignore: cast_nullable_to_non_nullable
+as int?,tax: freezed == tax ? _self.tax : tax // ignore: cast_nullable_to_non_nullable
+as TrendTax?,
   ));
 }
+/// Create a copy of TrendPoint
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$TrendTaxCopyWith<$Res>? get tax {
+    if (_self.tax == null) {
+    return null;
+  }
 
+  return $TrendTaxCopyWith<$Res>(_self.tax!, (value) {
+    return _then(_self.copyWith(tax: value));
+  });
+}
 }
 
 
@@ -162,10 +174,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Period period, @JsonKey(name: 'income_cents')  NonNegativeCents incomeCents, @JsonKey(name: 'expense_cents')  NonNegativeCents expenseCents, @JsonKey(name: 'tax_payable_rounded_cents')  NonNegativeCents taxPayableRoundedCents)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Period period, @JsonKey(includeIfNull: true, name: 'income_cents')  int? incomeCents, @JsonKey(includeIfNull: true, name: 'expense_cents')  int? expenseCents, @JsonKey(includeIfNull: true)  TrendTax? tax)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TrendPoint() when $default != null:
-return $default(_that.period,_that.incomeCents,_that.expenseCents,_that.taxPayableRoundedCents);case _:
+return $default(_that.period,_that.incomeCents,_that.expenseCents,_that.tax);case _:
   return orElse();
 
 }
@@ -183,10 +195,10 @@ return $default(_that.period,_that.incomeCents,_that.expenseCents,_that.taxPayab
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Period period, @JsonKey(name: 'income_cents')  NonNegativeCents incomeCents, @JsonKey(name: 'expense_cents')  NonNegativeCents expenseCents, @JsonKey(name: 'tax_payable_rounded_cents')  NonNegativeCents taxPayableRoundedCents)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Period period, @JsonKey(includeIfNull: true, name: 'income_cents')  int? incomeCents, @JsonKey(includeIfNull: true, name: 'expense_cents')  int? expenseCents, @JsonKey(includeIfNull: true)  TrendTax? tax)  $default,) {final _that = this;
 switch (_that) {
 case _TrendPoint():
-return $default(_that.period,_that.incomeCents,_that.expenseCents,_that.taxPayableRoundedCents);case _:
+return $default(_that.period,_that.incomeCents,_that.expenseCents,_that.tax);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -203,10 +215,10 @@ return $default(_that.period,_that.incomeCents,_that.expenseCents,_that.taxPayab
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Period period, @JsonKey(name: 'income_cents')  NonNegativeCents incomeCents, @JsonKey(name: 'expense_cents')  NonNegativeCents expenseCents, @JsonKey(name: 'tax_payable_rounded_cents')  NonNegativeCents taxPayableRoundedCents)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Period period, @JsonKey(includeIfNull: true, name: 'income_cents')  int? incomeCents, @JsonKey(includeIfNull: true, name: 'expense_cents')  int? expenseCents, @JsonKey(includeIfNull: true)  TrendTax? tax)?  $default,) {final _that = this;
 switch (_that) {
 case _TrendPoint() when $default != null:
-return $default(_that.period,_that.incomeCents,_that.expenseCents,_that.taxPayableRoundedCents);case _:
+return $default(_that.period,_that.incomeCents,_that.expenseCents,_that.tax);case _:
   return null;
 
 }
@@ -218,13 +230,13 @@ return $default(_that.period,_that.incomeCents,_that.expenseCents,_that.taxPayab
 @JsonSerializable()
 
 class _TrendPoint implements TrendPoint {
-  const _TrendPoint({required this.period, @JsonKey(name: 'income_cents') required this.incomeCents, @JsonKey(name: 'expense_cents') required this.expenseCents, @JsonKey(name: 'tax_payable_rounded_cents') required this.taxPayableRoundedCents});
+  const _TrendPoint({required this.period, @JsonKey(includeIfNull: true, name: 'income_cents') required this.incomeCents, @JsonKey(includeIfNull: true, name: 'expense_cents') required this.expenseCents, @JsonKey(includeIfNull: true) required this.tax});
   factory _TrendPoint.fromJson(Map<String, dynamic> json) => _$TrendPointFromJson(json);
 
 @override final  Period period;
-@override@JsonKey(name: 'income_cents') final  NonNegativeCents incomeCents;
-@override@JsonKey(name: 'expense_cents') final  NonNegativeCents expenseCents;
-@override@JsonKey(name: 'tax_payable_rounded_cents') final  NonNegativeCents taxPayableRoundedCents;
+@override@JsonKey(includeIfNull: true, name: 'income_cents') final  int? incomeCents;
+@override@JsonKey(includeIfNull: true, name: 'expense_cents') final  int? expenseCents;
+@override@JsonKey(includeIfNull: true) final  TrendTax? tax;
 
 /// Create a copy of TrendPoint
 /// with the given fields replaced by the non-null parameter values.
@@ -239,18 +251,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TrendPoint&&(identical(other.period, period) || other.period == period)&&(identical(other.incomeCents, incomeCents) || other.incomeCents == incomeCents)&&(identical(other.expenseCents, expenseCents) || other.expenseCents == expenseCents)&&(identical(other.taxPayableRoundedCents, taxPayableRoundedCents) || other.taxPayableRoundedCents == taxPayableRoundedCents));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TrendPoint&&(identical(other.period, period) || other.period == period)&&(identical(other.incomeCents, incomeCents) || other.incomeCents == incomeCents)&&(identical(other.expenseCents, expenseCents) || other.expenseCents == expenseCents)&&(identical(other.tax, tax) || other.tax == tax));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,period,incomeCents,expenseCents,taxPayableRoundedCents);
+    return Object.hash(runtimeType,period,incomeCents,expenseCents,tax);
 }
 
 @override
 String toString() {
-    return 'TrendPoint(period: $period, incomeCents: $incomeCents, expenseCents: $expenseCents, taxPayableRoundedCents: $taxPayableRoundedCents)';
+    return 'TrendPoint(period: $period, incomeCents: $incomeCents, expenseCents: $expenseCents, tax: $tax)';
 }
 
 
@@ -261,11 +273,11 @@ abstract mixin class _$TrendPointCopyWith<$Res> implements $TrendPointCopyWith<$
   factory _$TrendPointCopyWith(_TrendPoint value, $Res Function(_TrendPoint) _then) = __$TrendPointCopyWithImpl;
 @override @useResult
 $Res call({
- Period period,@JsonKey(name: 'income_cents') NonNegativeCents incomeCents,@JsonKey(name: 'expense_cents') NonNegativeCents expenseCents,@JsonKey(name: 'tax_payable_rounded_cents') NonNegativeCents taxPayableRoundedCents
+ Period period,@JsonKey(includeIfNull: true, name: 'income_cents') int? incomeCents,@JsonKey(includeIfNull: true, name: 'expense_cents') int? expenseCents,@JsonKey(includeIfNull: true) TrendTax? tax
 });
 
 
-
+@override $TrendTaxCopyWith<$Res>? get tax;
 
 }
 /// @nodoc
@@ -278,17 +290,29 @@ class __$TrendPointCopyWithImpl<$Res>
 
 /// Create a copy of TrendPoint
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? period = null,Object? incomeCents = null,Object? expenseCents = null,Object? taxPayableRoundedCents = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? period = null,Object? incomeCents = freezed,Object? expenseCents = freezed,Object? tax = freezed,}) {
   return _then(_TrendPoint(
 period: null == period ? _self.period : period // ignore: cast_nullable_to_non_nullable
-as Period,incomeCents: null == incomeCents ? _self.incomeCents : incomeCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents,expenseCents: null == expenseCents ? _self.expenseCents : expenseCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents,taxPayableRoundedCents: null == taxPayableRoundedCents ? _self.taxPayableRoundedCents : taxPayableRoundedCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents,
+as Period,incomeCents: freezed == incomeCents ? _self.incomeCents : incomeCents // ignore: cast_nullable_to_non_nullable
+as int?,expenseCents: freezed == expenseCents ? _self.expenseCents : expenseCents // ignore: cast_nullable_to_non_nullable
+as int?,tax: freezed == tax ? _self.tax : tax // ignore: cast_nullable_to_non_nullable
+as TrendTax?,
   ));
 }
 
+/// Create a copy of TrendPoint
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$TrendTaxCopyWith<$Res>? get tax {
+    if (_self.tax == null) {
+    return null;
+  }
 
+  return $TrendTaxCopyWith<$Res>(_self.tax!, (value) {
+    return _then(_self.copyWith(tax: value));
+  });
+}
 }
 
 // dart format on

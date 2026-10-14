@@ -328,6 +328,12 @@ Home refreshes.
 
 ## 9. Contract changes for M6-01 (architect)
 
+**Applied and frozen in contract 0.8.0 (M6-01).** Item 3: `month: DashboardMonth` (nested,
+not flat). Item 4: `TrendTax.status` is the named enum `TaxpayerEstimateStatus`. Item 5: every
+`AccessSummary` field is required (nullable) and its `access` enum is the named `AccessLevel`,
+so M7 reuses the frozen shape (MODULES.md M7). The `404`, `422` and `400` are declared inline
+on the operation (dashboard wording); `500` reuses `RecordInternalError`.
+
 1. `period`: optional own parameter (not the required `PeriodQuery`); absent → current month (MX).
 2. `estimate`: `TaxpayerEstimate | null`; `legend`: not required (present iff `estimate`).
 3. Replace top-level `income_cents` / `expense_cents` with `month: { income_cents, expense_cents }`

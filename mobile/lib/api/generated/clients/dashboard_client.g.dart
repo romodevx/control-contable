@@ -23,13 +23,13 @@ class _DashboardClient implements DashboardClient {
   @override
   Future<Dashboard> getDashboard({
     required String taxpayerId,
-    required String period,
     int? months = 12,
+    String? period,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
-      r'period': period,
       r'months': months,
+      r'period': period,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};

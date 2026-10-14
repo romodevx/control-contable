@@ -401,7 +401,7 @@ holds, first the CPA sign-off (M5-33).
 
 | ID | Task | Owner | Deps | Est (h) | Par | Branch | Blocked by | Done |
 |---|---|---|---|---|---|---|---|---|
-| M6-01 | Contract freeze: `/v1/taxpayers/{id}/dashboard` | architect | P0-05 | 1 | — | `feature/dashboard-contract` | — | [ ] |
+| M6-01 | Contract freeze: `/v1/taxpayers/{id}/dashboard` | architect | P0-05 | 1 | — | `feature/dashboard-contract` | — | [x] |
 | M6-02 | Dashboard use case: one aggregate pass for 12 months, Estimator, income vs expense, trial banner via AccessPolicy | backend-sr | M5-22, M6-01 | 4 | — | `feature/dashboard-backend` | — | [ ] |
 | M6-03 | Dashboard handler, contract tests, flag ON/OFF, benchmark p95 < 1 s, EXPLAIN ANALYZE | backend-sr | M6-02, M5-23 | 3 | — | `feature/dashboard-backend` | — | [ ] |
 | M6-04 | Flutter Home: this month's estimate, income vs expense, trend chart, trial banner, empty state | frontend-sr | M6-01, M5-25 | 5 | — | `feature/dashboard-mobile` | — | [ ] |

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Control Contable API
-  version: 0.7.1
+  version: 0.8.0
   summary: Monthly IVA and provisional ISR estimates for Mexican taxpayers.
   description: |
     Spec-first contract (single source of truth). Server stubs (oapi-codegen),
@@ -2838,31 +2838,288 @@ paths:
         '500': { $ref: '#/components/responses/RecordInternalError' }
 
   # ---------------------------------------------------------------- M6 Dashboard
+  # Frozen at M6-01 (docs/project-specs/MODULE-dashboard.md §9, OQ-D1..OQ-D7 DECIDED).
   /v1/taxpayers/{taxpayerId}/dashboard:
     parameters:
       - $ref: '#/components/parameters/TaxpayerId'
     get:
       tags: [Dashboard]
       operationId: getDashboard
-      summary: Home for the active taxpayer
+      x-frozen: sha256:c6e4c22519dfe074bcb8144c7be95f2f54dfe2c3e110ad57161b0ce227e649de
+      summary: Home of one taxpayer - this month's estimate, income vs expense, trend and access
+      description: >-
+        Read-only Home for the taxpayer, derived on every read (no cache, ADR-0002 §5).
+        `period` is optional: absent means the current month in America/Mexico_City (the app
+        always omits it). The trend window is `[max(period - (months - 1), 2026-01), period]`,
+        oldest first, one point per month with gaps filled with zeros, so the last point is
+        always `period` (in October 2026 the default window has 10 points).
+
+
+        **Figures.** Income is the sum of `amount_cents` (before IVA) of live incomes
+        *collected* in the month (`collected_on`, cash basis, "Ingresos cobrados"); expense the
+        sum of `amount_cents` (before IVA) of live expenses *paid* in the month (`paid_on`,
+        deductible or not, "Gastos pagados"). Informational regimes count in income and
+        expense, never in tax figures. `estimate` is the same `TaxpayerEstimate` that
+        `getTaxpayerEstimate` answers for `period` (same totals to the centavo); the client
+        renders it as is and links to the estimate screen with its `period`. Each
+        `trend[].tax` carries the taxpayer-level status (`informational` > `incomplete` >
+        `partial` > `complete`; `none` when no regime is held that month); the hero chip is
+        the status of the last point.
+
+
+        **Flags (server-enforced; nothing is computed for a module that is OFF).**
+        `module_tax_engine` OFF: `estimate` is `null`, every `trend[].tax` is `null` and
+        `legend` is absent; no tax figure leaves the server. `module_incomes` OFF:
+        `month.income_cents` and every `trend[].income_cents` are `null` (same for
+        `module_expenses` and the expense fields); tax figures are unaffected. `is_empty`
+        counts only the enabled modules' records (`false` when both are OFF).
+        `module_dashboard` OFF, or `module_taxpayers` OFF (prerequisite), answers `404`.
+
+
+        **Access.** Open to read-only users (no `402`) and to archived taxpayers. `access` is
+        the caller's `AccessSummary` (per user, across taxpayers), with the server-computed
+        `trial_days_left`. Per-user budget `dashboard_reads`, 600 per hour (burst 600,
+        ADR-0005), separate from `estimate_reads`; spent → `429 rate_limited` with
+        `Retry-After`. If any part fails the whole request fails (`500`); a Home with
+        silently missing figures is never returned.
+
+
+        `FieldError.code` values beyond JSON Schema keywords: `period` → `out_of_range` (a
+        future month, America/Mexico_City). `422 business_rule_violation` details: `period` →
+        `parameters_unavailable` (before 2026-01).
       x-module: module_dashboard
+      security:
+        - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/PeriodQuery'
+        - name: period
+          in: query
+          required: false
+          description: Month the Home is for (`YYYY-MM`). Absent → the current month (America/Mexico_City).
+          schema: { $ref: '#/components/schemas/Period' }
         - name: months
           in: query
+          required: false
+          description: >-
+            Trend window length in months, ending at `period`. Months before 2026-01 are
+            never included, so the window may hold fewer points.
           schema: { type: integer, minimum: 6, maximum: 12, default: 12 }
       responses:
         '200':
-          description: Dashboard.
+          description: Home of the taxpayer for `period`.
           headers:
             Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Dashboard' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+              examples:
+                engineOn:
+                  summary: Every module ON, pro user, March 2026 (the window starts at 2026-01)
+                  value:
+                    taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                    period: '2026-03'
+                    is_empty: false
+                    month: { income_cents: 3000000, expense_cents: 1000000 }
+                    estimate:
+                      taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                      period: '2026-03'
+                      due_date: '2026-04-17'
+                      legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
+                      disclaimers:
+                        - code: not_tax_advice
+                          severity: info
+                          text: Estimación informativa. No sustituye la declaración ante el SAT ni la asesoría de un contador. Cálculo basado en LISR, LIVA, LIF 2026 y Anexo 8 RMF 2026.
+                      regimes:
+                        - regime_code: '612'
+                          regime_name: Actividades Empresariales y Profesionales
+                          treatment: full
+                          status: complete
+                          missing_inputs: []
+                          explanation: null
+                          isr: { amount_cents: 15096, payable_rounded_cents: 15096, outcome: payable }
+                          iva_components:
+                            charged_collected_cents: 480000
+                            creditable_paid_cents: 160000
+                            withheld_from_taxpayer_cents: 106667
+                            definitive_excluded_cents: 0
+                          withheld_to_remit_cents: 0
+                          cpa_review_pending: false
+                          cpa_topics: []
+                          parameter_set: { fiscal_year: 2026, version: 1 }
+                      totals:
+                        iva: { amount_cents: 213333, payable_rounded_cents: 213333, outcome: payable }
+                        isr: { amount_cents: 15096, payable_rounded_cents: 15096, outcome: payable }
+                        withholdings_to_remit_cents: 0
+                        total_payable_rounded_cents: 228429
+                      parameter_set: { fiscal_year: 2026, version: 1 }
+                      records_fingerprint: 3f6c2a9e8d7b1c4f5a0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a
+                      engine_version: 1.0.0
+                    trend:
+                      - period: '2026-01'
+                        income_cents: 0
+                        expense_cents: 0
+                        tax: { iva_payable_rounded_cents: 0, isr_payable_rounded_cents: 0, withholdings_to_remit_cents: 0, total_payable_rounded_cents: 0, iva_outcome: zero, status: none }
+                      - period: '2026-02'
+                        income_cents: 2500000
+                        expense_cents: 2900000
+                        tax: { iva_payable_rounded_cents: 0, isr_payable_rounded_cents: 0, withholdings_to_remit_cents: 12500, total_payable_rounded_cents: 12500, iva_outcome: in_favor, status: incomplete }
+                      - period: '2026-03'
+                        income_cents: 3000000
+                        expense_cents: 1000000
+                        tax: { iva_payable_rounded_cents: 213333, isr_payable_rounded_cents: 15096, withholdings_to_remit_cents: 0, total_payable_rounded_cents: 228429, iva_outcome: payable, status: complete }
+                    access: { access: pro, trial_ends_at: null, trial_days_left: null, incomes_remaining: null, expenses_remaining: null }
+                    legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
+                engineOff:
+                  summary: module_tax_engine OFF - income and expense only, no tax figure, no legend
+                  value:
+                    taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                    period: '2026-03'
+                    is_empty: false
+                    month: { income_cents: 3000000, expense_cents: 1000000 }
+                    estimate: null
+                    trend:
+                      - { period: '2026-01', income_cents: 0, expense_cents: 0, tax: null }
+                      - { period: '2026-02', income_cents: 2500000, expense_cents: 2900000, tax: null }
+                      - { period: '2026-03', income_cents: 3000000, expense_cents: 1000000, tax: null }
+                    access: { access: comp, trial_ends_at: null, trial_days_left: null, incomes_remaining: null, expenses_remaining: null }
+                incomesAndEngineOff:
+                  summary: module_incomes and module_tax_engine OFF - only expenses are shown
+                  value:
+                    taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                    period: '2026-02'
+                    is_empty: false
+                    month: { income_cents: null, expense_cents: 2900000 }
+                    estimate: null
+                    trend:
+                      - { period: '2026-01', income_cents: null, expense_cents: 0, tax: null }
+                      - { period: '2026-02', income_cents: null, expense_cents: 2900000, tax: null }
+                    access: { access: pro, trial_ends_at: null, trial_days_left: null, incomes_remaining: null, expenses_remaining: null }
+                emptyTrial:
+                  summary: Trial user with no records yet (empty state), engine ON, January 2026 (one-point window)
+                  value:
+                    taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                    period: '2026-01'
+                    is_empty: true
+                    month: { income_cents: 0, expense_cents: 0 }
+                    estimate:
+                      taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                      period: '2026-01'
+                      due_date: '2026-02-17'
+                      legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
+                      disclaimers:
+                        - code: not_tax_advice
+                          severity: info
+                          text: Estimación informativa. No sustituye la declaración ante el SAT ni la asesoría de un contador. Cálculo basado en LISR, LIVA, LIF 2026 y Anexo 8 RMF 2026.
+                      regimes:
+                        - regime_code: '626'
+                          regime_name: Régimen Simplificado de Confianza
+                          treatment: full
+                          status: complete
+                          missing_inputs: []
+                          explanation: null
+                          isr: { amount_cents: 0, payable_rounded_cents: 0, outcome: zero }
+                          iva_components:
+                            charged_collected_cents: 0
+                            creditable_paid_cents: 0
+                            withheld_from_taxpayer_cents: 0
+                            definitive_excluded_cents: 0
+                          withheld_to_remit_cents: 0
+                          cpa_review_pending: false
+                          cpa_topics: []
+                          parameter_set: { fiscal_year: 2026, version: 1 }
+                      totals:
+                        iva: { amount_cents: 0, payable_rounded_cents: 0, outcome: zero }
+                        isr: { amount_cents: 0, payable_rounded_cents: 0, outcome: zero }
+                        withholdings_to_remit_cents: 0
+                        total_payable_rounded_cents: 0
+                      parameter_set: { fiscal_year: 2026, version: 1 }
+                      records_fingerprint: 0a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9
+                      engine_version: 1.0.0
+                    trend:
+                      - period: '2026-01'
+                        income_cents: 0
+                        expense_cents: 0
+                        tax: { iva_payable_rounded_cents: 0, isr_payable_rounded_cents: 0, withholdings_to_remit_cents: 0, total_payable_rounded_cents: 0, iva_outcome: zero, status: complete }
+                    access: { access: trial, trial_ends_at: '2026-01-20T16:00:00Z', trial_days_left: 3, incomes_remaining: 2, expenses_remaining: 5 }
+                    legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
+                readOnlyEngineOff:
+                  summary: Read-only user (trial over, no plan), engine OFF - every figure stays visible
+                  value:
+                    taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                    period: '2026-02'
+                    is_empty: false
+                    month: { income_cents: 2500000, expense_cents: 2900000 }
+                    estimate: null
+                    trend:
+                      - { period: '2026-01', income_cents: 0, expense_cents: 0, tax: null }
+                      - { period: '2026-02', income_cents: 2500000, expense_cents: 2900000, tax: null }
+                    access: { access: read_only, trial_ends_at: null, trial_days_left: null, incomes_remaining: 0, expenses_remaining: 0 }
+        '400':
+          description: >-
+            Input does not match the contract (malformed `period` or path id, `months` not an
+            integer in 6..12, unknown query parameter), or a future `period` (`out_of_range`).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                invalidPeriod:
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: period, code: pattern, message: Usa el formato AAAA-MM. }
+                futurePeriod:
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: period, code: out_of_range, message: Aún no hay datos de un mes futuro. }
+                monthsOutOfRange:
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: months, code: maximum, message: Debe ser como máximo 12. }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '404':
+          description: >-
+            The taxpayer does not exist or belongs to another user, or `module_dashboard` (or
+            `module_taxpayers`) is disabled, which answers `404` before any input check, a
+            malformed request included (indistinguishable on purpose). With the module ON a
+            malformed id is `400`.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error: { code: not_found, message: Not found., request_id: req_01J9Z6Q4X8 }
+        '422':
+          description: >-
+            `period` is before 2026-01, the first month any record or estimate can exist
+            (`parameters_unavailable`). A well-formed request with nothing to show, hence
+            `422`, as `getTaxpayerEstimate`.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: business_rule_violation
+                  message: There is no data before January 2026.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: period, code: parameters_unavailable, message: Sólo hay datos desde enero de 2026. }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
 
   # ---------------------------------------------------------------- M7 Subscriptions
   /v1/subscription:
@@ -5413,82 +5670,135 @@ components:
             - { key: ptu_paid, value_cents: 0 }
 
     # ------------------------------------------------------------ dashboard / access
+    AccessLevel:
+      x-frozen: sha256:fe644e379c34e4cdc8d18c3798c7f3d95fcd88d0ec7c4d870e9853fb9a68cdad
+      type: string
+      enum: [trial, pro, comp, read_only]
+      description: >-
+        The caller's access (P0-16, PRD §7): `trial` (running trial, capped records), `pro`
+        (store plan), `comp` (granted), `read_only` (trial over and no plan: reads, deletes
+        and restores stay, creates and edits answer `402`).
     AccessSummary:
+      x-frozen: sha256:1de20135ee15892d01048cd5179417c247a1c4bd8f61a2c90f4633c87d88d81c
       type: object
-      required: [access]
+      required: [access, trial_ends_at, trial_days_left, incomes_remaining, expenses_remaining]
+      description: >-
+        The caller's access state, computed by the server so the client never uses its own
+        clock (OQ-D6). Per user, across all taxpayers (PRD Q2). One shape for every screen
+        that needs it: the Home banner (`getDashboard`), the subscription status (M7) and the
+        check before a create wizard (MODULES.md M7, PR #58 follow-up: M7-01 exposes this
+        same schema to the app regardless of `module_subscriptions`).
+        `trial`: `trial_ends_at` (exclusive), `trial_days_left` (whole days left, rounded
+        up, at least 1 while the trial runs) and the records left of each kind.
+        `read_only`: both counters `0`, the trial fields `null`. `pro`, `comp`: every other
+        field `null` (no limit applies).
       properties:
-        access: { type: string, enum: [trial, pro, comp, read_only] }
+        access: { $ref: '#/components/schemas/AccessLevel' }
         trial_ends_at: { type: [string, 'null'], format: date-time }
+        trial_days_left: { type: [integer, 'null'], minimum: 1 }
         incomes_remaining: { type: [integer, 'null'], minimum: 0 }
         expenses_remaining: { type: [integer, 'null'], minimum: 0 }
-    TrendPoint:
+      examples:
+        - { access: trial, trial_ends_at: '2026-10-20T16:00:00Z', trial_days_left: 3, incomes_remaining: 2, expenses_remaining: 5 }
+    DashboardMonth:
+      x-frozen: sha256:1cf2fdcb39c3f00875f6c80758f1fa0be5ce3541175b165854d2866131d95bc8
       type: object
-      required: [period, income_cents, expense_cents, tax_payable_rounded_cents]
+      required: [income_cents, expense_cents]
+      description: >-
+        Income collected (`collected_on`) and expenses paid (`paid_on`) in the dashboard's
+        `period`, before IVA, live records only. A field is `null` when its module
+        (`module_incomes` / `module_expenses`) is effectively OFF; `0` when ON with no record.
+      properties:
+        income_cents: { type: [integer, 'null'], format: int64, minimum: 0, maximum: 99999999999999 }
+        expense_cents: { type: [integer, 'null'], format: int64, minimum: 0, maximum: 99999999999999 }
+      examples:
+        - { income_cents: 3000000, expense_cents: 1000000 }
+    TaxpayerEstimateStatus:
+      x-frozen: sha256:d6ca03ec7cdfccddfbe6585c34b9241c91fe778b8559b5a7e4ea163945b022d3
+      type: string
+      enum: [complete, incomplete, partial, informational, none]
+      description: >-
+        Taxpayer-level status of one month's estimate, derived server-side from its regimes
+        with the M5 precedence: `informational` (every regime informational) > `incomplete`
+        (any regime incomplete) > `partial` (any partial) > `complete`; `none` when the
+        taxpayer holds no regime that month (`regimes: []`).
+    TrendTax:
+      x-frozen: sha256:44ff3314e2f2529950b648be217e291bff85ee69d2b86b388907a6967eaaa5a5
+      type: object
+      required: [iva_payable_rounded_cents, isr_payable_rounded_cents, withholdings_to_remit_cents, total_payable_rounded_cents, iva_outcome, status]
+      description: >-
+        One month's tax figures, from the same estimate `getTaxpayerEstimate` answers for that
+        month (`totals`). A saldo a favor never adds to a bar: `iva_payable_rounded_cents` is
+        `0` and `iva_outcome` is `in_favor`. `total_payable_rounded_cents =
+        iva_payable_rounded_cents + isr_payable_rounded_cents + withholdings_to_remit_cents`.
+      properties:
+        iva_payable_rounded_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        isr_payable_rounded_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        withholdings_to_remit_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        total_payable_rounded_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        iva_outcome: { type: string, enum: [payable, in_favor, zero] }
+        status: { $ref: '#/components/schemas/TaxpayerEstimateStatus' }
+      examples:
+        - { iva_payable_rounded_cents: 213333, isr_payable_rounded_cents: 15096, withholdings_to_remit_cents: 0, total_payable_rounded_cents: 228429, iva_outcome: payable, status: complete }
+    TrendPoint:
+      x-frozen: sha256:ed58e50bbf963a0d2342ddfed6b46ccf6c4a9ce2afbb901bc8032301e54d2407
+      type: object
+      required: [period, income_cents, expense_cents, tax]
+      description: >-
+        One month of the trend. Income and expense as in `DashboardMonth` (`null` ⇔ that
+        module OFF); `tax` is `null` ⇔ `module_tax_engine` OFF. A month with no record is a
+        point with zeros, never a hole.
       properties:
         period: { $ref: '#/components/schemas/Period' }
-        income_cents: { $ref: '#/components/schemas/NonNegativeCents' }
-        expense_cents: { $ref: '#/components/schemas/NonNegativeCents' }
-        tax_payable_rounded_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        income_cents: { type: [integer, 'null'], format: int64, minimum: 0, maximum: 99999999999999 }
+        expense_cents: { type: [integer, 'null'], format: int64, minimum: 0, maximum: 99999999999999 }
+        tax:
+          oneOf:
+            - $ref: '#/components/schemas/TrendTax'
+            - type: 'null'
+      examples:
+        - period: '2026-03'
+          income_cents: 3000000
+          expense_cents: 1000000
+          tax: { iva_payable_rounded_cents: 213333, isr_payable_rounded_cents: 15096, withholdings_to_remit_cents: 0, total_payable_rounded_cents: 228429, iva_outcome: payable, status: complete }
     Dashboard:
+      x-frozen: sha256:969b103b2f7f2891289e04504bd71b35f9a6249f009185a02636ccbbd83d784c
       type: object
-      required: [taxpayer_id, period, is_empty, estimate, income_cents, expense_cents, trend, access, legend]
+      required: [taxpayer_id, period, is_empty, month, estimate, trend, access]
+      description: >-
+        Home of one taxpayer for `period` (see `getDashboard`). `is_empty` is true when the
+        taxpayer has no live income and no live expense in any period (enabled modules only):
+        the client shows the empty state instead of the hero and the chart. `estimate` is
+        `null` ⇔ `module_tax_engine` OFF. `trend` is oldest first and ends at `period`.
+        `legend` is the mandatory constant, present if and only if `estimate` is not `null`;
+        the client renders it under every tax figure, never a copy of its own. The
+        `strong` disclaimers (`cpa_review_pending`) travel inside `estimate.disclaimers`.
       properties:
         taxpayer_id: { $ref: '#/components/schemas/Uuid' }
         period: { $ref: '#/components/schemas/Period' }
-        is_empty: { type: boolean, description: True when the taxpayer has no records (empty state). }
-        estimate: { $ref: '#/components/schemas/TaxpayerEstimate' }
-        income_cents: { $ref: '#/components/schemas/NonNegativeCents' }
-        expense_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        is_empty: { type: boolean }
+        month: { $ref: '#/components/schemas/DashboardMonth' }
+        estimate:
+          oneOf:
+            - $ref: '#/components/schemas/TaxpayerEstimate'
+            - type: 'null'
         trend:
           type: array
+          minItems: 1
+          maxItems: 12
           items: { $ref: '#/components/schemas/TrendPoint' }
         access: { $ref: '#/components/schemas/AccessSummary' }
         legend: { $ref: '#/components/schemas/Legend' }
       examples:
         - taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
-          period: '2026-03'
+          period: '2026-02'
           is_empty: false
-          estimate:
-            taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
-            period: '2026-03'
-            due_date: '2026-04-17'
-            legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
-            disclaimers:
-              - code: not_tax_advice
-                severity: info
-                text: Estimación informativa. No sustituye la declaración ante el SAT ni la asesoría de un contador. Cálculo basado en LISR, LIVA, LIF 2026 y Anexo 8 RMF 2026.
-            regimes:
-              - regime_code: '612'
-                regime_name: Actividades Empresariales y Profesionales
-                treatment: full
-                status: complete
-                missing_inputs: []
-                explanation: null
-                isr: { amount_cents: 15096, payable_rounded_cents: 15096, outcome: payable }
-                iva_components:
-                  charged_collected_cents: 480000
-                  creditable_paid_cents: 160000
-                  withheld_from_taxpayer_cents: 106667
-                  definitive_excluded_cents: 0
-                withheld_to_remit_cents: 0
-                cpa_review_pending: false
-                cpa_topics: []
-                parameter_set: { fiscal_year: 2026, version: 1 }
-            totals:
-              iva: { amount_cents: 213333, payable_rounded_cents: 213333, outcome: payable }
-              isr: { amount_cents: 15096, payable_rounded_cents: 15096, outcome: payable }
-              withholdings_to_remit_cents: 0
-              total_payable_rounded_cents: 228429
-            parameter_set: { fiscal_year: 2026, version: 1 }
-            records_fingerprint: 3f6c2a9e8d7b1c4f5a0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a
-            engine_version: 1.0.0
-          income_cents: 3000000
-          expense_cents: 1000000
+          month: { income_cents: 2500000, expense_cents: 2900000 }
+          estimate: null
           trend:
-            - { period: '2026-02', income_cents: 2500000, expense_cents: 900000, tax_payable_rounded_cents: 198000 }
-            - { period: '2026-03', income_cents: 3000000, expense_cents: 1000000, tax_payable_rounded_cents: 228429 }
-          access: { access: pro, trial_ends_at: null, incomes_remaining: null, expenses_remaining: null }
-          legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
+            - { period: '2026-01', income_cents: 0, expense_cents: 0, tax: null }
+            - { period: '2026-02', income_cents: 2500000, expense_cents: 2900000, tax: null }
+          access: { access: trial, trial_ends_at: '2026-02-20T16:00:00Z', trial_days_left: 3, incomes_remaining: 2, expenses_remaining: 5 }
 
     # ------------------------------------------------------------ subscriptions
     SubscriptionPlan:
@@ -5522,7 +5832,7 @@ components:
             - $ref: '#/components/schemas/SubscriptionPlan'
             - type: 'null'
       examples:
-        - access: { access: trial, trial_ends_at: '2026-10-20T16:00:00Z', incomes_remaining: 3, expenses_remaining: 5 }
+        - access: { access: trial, trial_ends_at: '2026-10-20T16:00:00Z', trial_days_left: 3, incomes_remaining: 3, expenses_remaining: 5 }
           plan: null
     RevenueCatWebhook:
       type: object

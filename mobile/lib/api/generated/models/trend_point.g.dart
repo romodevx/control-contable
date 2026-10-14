@@ -8,9 +8,11 @@ part of 'trend_point.dart';
 
 _TrendPoint _$TrendPointFromJson(Map<String, dynamic> json) => _TrendPoint(
   period: json['period'] as String,
-  incomeCents: (json['income_cents'] as num).toInt(),
-  expenseCents: (json['expense_cents'] as num).toInt(),
-  taxPayableRoundedCents: (json['tax_payable_rounded_cents'] as num).toInt(),
+  incomeCents: (json['income_cents'] as num?)?.toInt(),
+  expenseCents: (json['expense_cents'] as num?)?.toInt(),
+  tax: json['tax'] == null
+      ? null
+      : TrendTax.fromJson(json['tax'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$TrendPointToJson(_TrendPoint instance) =>
@@ -18,5 +20,5 @@ Map<String, dynamic> _$TrendPointToJson(_TrendPoint instance) =>
       'period': instance.period,
       'income_cents': instance.incomeCents,
       'expense_cents': instance.expenseCents,
-      'tax_payable_rounded_cents': instance.taxPayableRoundedCents,
+      'tax': instance.tax,
     };
