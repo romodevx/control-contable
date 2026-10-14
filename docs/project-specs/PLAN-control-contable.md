@@ -407,7 +407,7 @@ holds, first the CPA sign-off (M5-33).
 | M6-04 | Flutter Home: this month's estimate, income vs expense, trend chart, trial banner, empty state | frontend-sr | M6-01, M5-25 | 5 | — | `feature/dashboard-mobile` | — | [ ] |
 | M6-05 | Register flag `module_dashboard` + preset `demo_core` | backend-sr | M6-03, M6-04 | 0.5 | — | `feature/dashboard-flag` | — | [x] |
 | M6-06 | QA M6 + `demo_core` preset smoke | qa-sr | M6-05 | 2.5 | — | `feature/dashboard-qa-fixes` | OB6 | [x] |
-| M6-07 | Tech-lead gate M6 | tech-lead | M6-06 | 1 | — | (PR review) | — | [ ] |
+| M6-07 | Tech-lead gate M6 ([PASS](../reviews/M6-07-tech-lead-gate.md)) | tech-lead | M6-06 | 1 | — | (PR review) | — | [x] |
 | M6-08 | Security gate M6 | security | M6-06 | 1 | — | (PR review) | — | [ ] |
 | M6-09 | Docs M6 | doc-writer | M6-07, M6-08 | 1 | — | `feature/dashboard-docs` | — | [ ] |
 
