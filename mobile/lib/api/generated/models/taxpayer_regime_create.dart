@@ -16,6 +16,8 @@ abstract class TaxpayerRegimeCreate with _$TaxpayerRegimeCreate {
   const factory TaxpayerRegimeCreate({
     @JsonKey(name: 'regime_code') required RegimeCode regimeCode,
     @JsonKey(includeIfNull: false) RegimeOptions? options,
+
+    /// Defaults to the current month (America/Mexico_City); `2022-01` … current month.
     @JsonKey(includeIfNull: false, name: 'start_period') Period? startPeriod,
   }) = _TaxpayerRegimeCreate;
 

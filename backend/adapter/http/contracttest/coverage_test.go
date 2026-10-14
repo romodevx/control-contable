@@ -25,6 +25,7 @@ var pendingOperations = map[string]string{
 	"updateTaxpayer":        "M2-07",
 	"deleteTaxpayer":        "M2-07",
 	"archiveTaxpayer":       "M2-07",
+	"unarchiveTaxpayer":     "M2-07",
 	"addTaxpayerRegime":     "M2-07",
 	"updateTaxpayerRegime":  "M2-07",
 	"archiveTaxpayerRegime": "M2-07",

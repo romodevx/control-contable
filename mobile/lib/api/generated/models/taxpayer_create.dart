@@ -5,6 +5,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'person_type.dart';
+import 'rfc_input.dart';
 import 'taxpayer_regime_create.dart';
 import 'uuid.dart';
 
@@ -15,10 +16,12 @@ part 'taxpayer_create.g.dart';
 abstract class TaxpayerCreate with _$TaxpayerCreate {
   const factory TaxpayerCreate({
     @JsonKey(name: 'person_type') required PersonType personType,
+    required RfcInput rfc,
 
-    /// 13 chars for fisica, 12 for moral; check digit validated server-side.
-    required String rfc,
+    /// Trimmed and NFC-normalized.
     @JsonKey(name: 'display_name') required String displayName,
+
+    /// At least one regime; each code at most once (`regimes.N.regime_code` / `duplicate`).
     required List<TaxpayerRegimeCreate> regimes,
 
     /// Optional client-generated id (idempotent retries).

@@ -11,10 +11,10 @@ enum RegimeOptionDefType {
   valueEnum('enum'),
   @JsonValue('multi_enum')
   multiEnum('multi_enum'),
-  @JsonValue('rate')
-  rate('rate'),
   @JsonValue('boolean')
   boolean('boolean'),
+  @JsonValue('rate')
+  rate('rate'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);

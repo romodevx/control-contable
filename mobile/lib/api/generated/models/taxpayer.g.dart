@@ -14,10 +14,13 @@ _Taxpayer _$TaxpayerFromJson(Map<String, dynamic> json) => _Taxpayer(
   regimes: (json['regimes'] as List<dynamic>)
       .map((e) => TaxpayerRegime.fromJson(e as Map<String, dynamic>))
       .toList(),
-  createdAt: DateTime.parse(json['created_at'] as String),
   archivedAt: json['archived_at'] == null
       ? null
       : DateTime.parse(json['archived_at'] as String),
+  createdAt: DateTime.parse(json['created_at'] as String),
+  warnings: (json['warnings'] as List<dynamic>?)
+      ?.map((e) => Warning.fromJson(e as Map<String, dynamic>))
+      .toList(),
 );
 
 Map<String, dynamic> _$TaxpayerToJson(_Taxpayer instance) => <String, dynamic>{
@@ -26,8 +29,9 @@ Map<String, dynamic> _$TaxpayerToJson(_Taxpayer instance) => <String, dynamic>{
   'display_name': instance.displayName,
   'rfc_masked': instance.rfcMasked,
   'regimes': instance.regimes,
+  'archived_at': instance.archivedAt?.toIso8601String(),
   'created_at': instance.createdAt.toIso8601String(),
-  'archived_at': ?instance.archivedAt?.toIso8601String(),
+  'warnings': ?instance.warnings,
 };
 
 const _$PersonTypeEnumMap = {
