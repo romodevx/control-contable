@@ -216,6 +216,9 @@ erDiagram
         bigint iva_cents
         text payment_method
         boolean has_cfdi
+        text cfdi_uuid "upper case; not unique (warning)"
+        boolean deductible "effective verdict"
+        boolean deductible_overridden "deductible_source = user"
         bigint isr_withheld_cents "withheld from supplier"
         bigint iva_withheld_cents "withheld from supplier"
         date paid_on
@@ -224,15 +227,22 @@ erDiagram
     expense_categories {
         text code PK
         text name
-        int sort_order
+        int sort_order UK
+        text legal_basis
+        text source_url
+        boolean needs_cpa_review
     }
     category_regime_rules {
-        text category_code PK
         text regime_code PK
         text person_type PK
+        text category_code PK
         text deductibility
+        boolean default_deductible
+        boolean iva_creditable_default
+        text cash_payment_rule "over_limit|any_cash|not_applicable"
         text note
         text legal_basis
+        boolean needs_cpa_review
     }
     subscriptions {
         uuid user_id PK
@@ -309,6 +319,9 @@ in MODULES.md M5 are dropped (MODULES.md updated to match).
 | incomes | `INDEX (user_id, taxpayer_id, collected_on, id) WHERE deleted_at IS NULL` + same on `invoiced_on` | Period aggregates; keyset pagination `(date DESC, id DESC)` |
 | expenses | `INDEX (user_id, taxpayer_id, paid_on, id) WHERE deleted_at IS NULL` | Same |
 | incomes / expenses | `INDEX (deleted_at) WHERE deleted_at IS NOT NULL` | Purge job |
+| expenses | `CHECK amount_cents BETWEEN 1 AND NonNegativeCents.maximum`; `rate_0`/`exempt` → `iva_cents = 0`; withholdings within their base; `payment_method` enum; `cfdi_uuid IS NULL OR has_cfdi`, upper-case 8-4-4-4-12; `paid_on >= 2022-01-01`; description trimmed, NFC, ≤ 200 | MODULE-expenses §2.1, SE-2 (M4-03) |
+| expenses | `INDEX (user_id, taxpayer_id, cfdi_uuid) WHERE cfdi_uuid IS NOT NULL AND deleted_at IS NULL`; `INDEX (user_id, taxpayer_id, regime_code)` (composite FK) | `duplicate_cfdi_uuid` lookup; cascades reach soft-deleted rows. cc_app has no DELETE: delete is soft, rows leave by cascade or purge |
+| category_regime_rules | PK `(regime_code, person_type, category_code)`; FK `(regime_code, person_type) → regimes`; `default_deductible` only for `deductible`/`partially_deductible`; `cash_payment_rule = not_applicable` iff never deductible | Complete matrix (one row per category × regime); the PK serves the per-regime categories lookup (M4-02) |
 | entitlements | `UNIQUE (user_id, kind)` | One trial / pro / comp row each |
 | entitlements | `CHECK (kind, source)` ∈ trial/registration, pro/revenuecat, comp/admin; only comp may be open-ended; trial `ends_at <= starts_at + 168 h`; RevenueCat ids iff `source = 'revenuecat'` | Kind and provenance cannot drift; no trial longer than 7 days (PRD §7) |
 | users | `UNIQUE (email_hash)`; `CHECK` 32-byte hash, ciphertext framed with `email_key_id` as its key_id prefix, argon2id PHC `password_hash` | One account per email; the email is never stored in clear (P0-14 crypto) |
