@@ -306,8 +306,9 @@ user's 5 trial incomes and 3 of the 5 trial expenses.
 - Independent of `module_incomes` / `module_expenses`: the estimate reads their records either way.
 - `RateCatalog` (allowed IVA rates and withholding suggestions for the record forms) is a
   shared port, not a route: it works with the flag OFF.
-- M6 dashboard and M8 history will be implied OFF with it, and M9 reminders will omit amounts
-  (declared by their own flag tasks).
+- M6 dashboard is **not** implied OFF with it: Home drops every tax figure and keeps income vs
+  expense ([MODULE-dashboard OQ-D7](dashboard.md#flag-behaviour-module_dashboard)). M8 history will be
+  implied OFF with it and M9 reminders will omit amounts (declared by their own flag tasks).
 - A running API sees a change within 5 s.
 - Suites: `backend/adapter/http/gen/tax_engine_module_test.go` (the 4 operations by
   operationId and route), `backend/cmd/api/taxengine_preset_smoke_integration_test.go` (every
