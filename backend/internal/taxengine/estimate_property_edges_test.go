@@ -143,9 +143,12 @@ func (er edgeRegime) isrOn(t *testing.T, m time.Month, income money.Cents) money
 
 // TestEstimatePropertyPMWithholdingsToRemitAreComplete: a persona moral
 // remits every ISR and IVA it withheld from its suppliers in the month
-// (§1, TX-601-REMIT-01), as a figure of its own.
+// (§1, TX-601-REMIT-01), as a figure of its own. Every PM strategy must be
+// checked with both withheld, or a strategy that drops one passes unseen
+// (the 626 PM bug this suite found). A física never has any: expenses
+// rejects it (withholding_not_applicable).
 func TestEstimatePropertyPMWithholdingsToRemitAreComplete(t *testing.T) {
-	var checked int
+	withBoth := map[domain.StrategyKey]int{}
 	forEachCase(t, func(t *testing.T, c propCase) {
 		if c.person != fiscal.PersonMoral {
 			return
@@ -155,12 +158,18 @@ func TestEstimatePropertyPMWithholdingsToRemitAreComplete(t *testing.T) {
 			if r.Status == domain.StatusInformational {
 				continue
 			}
-			checked++
 			isr, iva := c.toRemitOf(r.Key.Regime, month)
+			if isr > 0 && iva > 0 {
+				withBoth[r.Key]++
+			}
 			assert.Equal(t, isr+iva, r.WithheldToRemit, "case %d %s %s: withholdings to remit", c.index, r.Key, c.period)
 		}
 	})
-	require.Positive(t, checked)
+	for _, s := range taxengine.Strategies() {
+		if s.Key().PersonType == fiscal.PersonMoral {
+			assert.Positive(t, withBoth[s.Key()], "no case checks %s with ISR and IVA withheld from suppliers", s.Key())
+		}
+	}
 }
 
 func (c propCase) toRemitOf(code fiscal.RegimeCode, m time.Month) (isr, iva money.Cents) {
