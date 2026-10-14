@@ -343,6 +343,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get formErrorChoose => 'Elige una opción.';
 
   @override
+  String get homeNoRegime => 'Agrega un régimen para ver tu estimado.';
+
+  @override
   String get homeAddTaxpayer => 'Registrar contribuyente';
 
   @override
@@ -604,6 +607,205 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get onboardingInputsSkip => 'Omitir';
+
+  @override
+  String switcherLabel(String name) {
+    return 'Contribuyente activo: $name. Cambiar';
+  }
+
+  @override
+  String get switcherTitle => 'Contribuyentes';
+
+  @override
+  String get switcherShowArchived => 'Mostrar archivados';
+
+  @override
+  String get taxpayerArchivedBadge => 'Archivado';
+
+  @override
+  String taxpayerRfcSemantics(String start, String end) {
+    return 'RFC $start, oculto, $end';
+  }
+
+  @override
+  String taxpayerSettingsTooltip(String name) {
+    return 'Ajustes de $name';
+  }
+
+  @override
+  String get settingsTitle => 'Ajustes del contribuyente';
+
+  @override
+  String get settingsLoading => 'Cargando contribuyentes…';
+
+  @override
+  String get settingsLoadFailed => 'No se pudieron cargar tus contribuyentes.';
+
+  @override
+  String get settingsNotFound => 'Este contribuyente ya no existe.';
+
+  @override
+  String get settingsDataTitle => 'Datos';
+
+  @override
+  String get settingsEditName => 'Editar nombre';
+
+  @override
+  String get settingsCorrectRfc => 'Corregir RFC';
+
+  @override
+  String get settingsRfcHelp =>
+      'Escribe el RFC completo, como en la constancia. Nunca lo mostramos completo.';
+
+  @override
+  String get settingsNameSaved => 'Guardamos el nombre.';
+
+  @override
+  String get settingsRfcCorrected => 'Corregimos el RFC.';
+
+  @override
+  String get settingsArchivedWrite =>
+      'Este contribuyente está archivado. Desarchívalo para hacer cambios.';
+
+  @override
+  String get settingsRegimesTitle => 'Regímenes';
+
+  @override
+  String settingsRegimeSince(String start) {
+    return 'Desde $start';
+  }
+
+  @override
+  String settingsRegimeRange(String start, String end) {
+    return 'De $start a $end';
+  }
+
+  @override
+  String get settingsRegimeEnded => 'Terminado';
+
+  @override
+  String get settingsAddRegime => 'Agregar régimen';
+
+  @override
+  String get settingsEditOptions => 'Editar opciones';
+
+  @override
+  String get settingsEndRegime => 'Terminar régimen';
+
+  @override
+  String get settingsEndRegimeLabel => 'Último mes en este régimen';
+
+  @override
+  String get settingsEndRegimeConfirm => 'Terminar';
+
+  @override
+  String get settingsEndRegimeHasRecords =>
+      'Este régimen tiene ingresos o gastos registrados. Se conservan y siguen contando hasta el mes que elijas.';
+
+  @override
+  String get settingsEndRegimeKeep => 'Terminar y conservar registros';
+
+  @override
+  String get settingsEndRegimeRecordsAfter =>
+      'Hay registros después de ese mes. Elige el mes del último registro o uno posterior.';
+
+  @override
+  String get settingsLastRegime =>
+      'Es su único régimen activo. Para dejar de usarlo, archiva al contribuyente.';
+
+  @override
+  String settingsRegimeEndedDone(String code) {
+    return 'Terminamos el régimen $code.';
+  }
+
+  @override
+  String get settingsManageTitle => 'Archivar o eliminar';
+
+  @override
+  String get settingsArchive => 'Archivar';
+
+  @override
+  String get settingsArchiveHelp =>
+      'Lo ocultas de tu lista. Conservas su información y puedes desarchivarlo.';
+
+  @override
+  String settingsArchived(String name) {
+    return 'Archivaste a «$name».';
+  }
+
+  @override
+  String get settingsUndo => 'Deshacer';
+
+  @override
+  String get settingsUnarchive => 'Desarchivar';
+
+  @override
+  String settingsUnarchived(String name) {
+    return '«$name» volvió a tu lista.';
+  }
+
+  @override
+  String get settingsArchivedBanner =>
+      'Este contribuyente está archivado. Puedes consultarlo; para hacer cambios, desarchívalo.';
+
+  @override
+  String get settingsDelete => 'Eliminar';
+
+  @override
+  String get settingsDeleteHelp =>
+      'Borra al contribuyente y todos sus registros. No se puede deshacer.';
+
+  @override
+  String settingsDeleteTitle(String name) {
+    return '¿Eliminar a «$name»?';
+  }
+
+  @override
+  String get settingsDeleteBody =>
+      'Se borrarán sus ingresos y gastos, sus datos para el cálculo y su historial. No se puede deshacer. Si solo quieres ocultarlo, archívalo.';
+
+  @override
+  String get settingsDeleteConfirm => 'Eliminar definitivamente';
+
+  @override
+  String settingsDeleted(String name) {
+    return 'Eliminaste a «$name».';
+  }
+
+  @override
+  String get paywallWriteBody =>
+      'Tu periodo de prueba terminó y no hay un plan activo. Puedes consultar, archivar y eliminar tu información, pero hacer cambios requiere un plan.';
+
+  @override
+  String get paywallClose => 'Entendido';
+
+  @override
+  String get addRegimeIntro =>
+      'Elige el régimen que vas a agregar. Cuenta a partir de este mes.';
+
+  @override
+  String get addRegimeNoneLeft =>
+      'Ya tiene todos los regímenes disponibles para su tipo de persona.';
+
+  @override
+  String addRegimeAdded(String code) {
+    return 'Agregamos el régimen $code.';
+  }
+
+  @override
+  String addRegimeCpaReview(String code, String reason) {
+    return 'Agregamos el régimen $code. Un contador debe confirmar la combinación: $reason';
+  }
+
+  @override
+  String get optionsEditWarning =>
+      'El cambio aplica a todos los meses de este régimen, también a los anteriores.';
+
+  @override
+  String get optionsSaved => 'Guardamos las opciones.';
+
+  @override
+  String get addRegimeTitle => 'Nuevo régimen';
 }
 
 /// The translations for Spanish Castilian, as used in Mexico (`es_MX`).

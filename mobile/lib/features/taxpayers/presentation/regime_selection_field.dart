@@ -9,6 +9,8 @@ import 'package:flutter/foundation.dart';
 /// policy: nothing chosen is an error on submit; an incompatible pair is
 /// an error too (its reason shows inline at once, under the later regime).
 /// [single] makes it single-select (a persona moral holds one regime).
+/// `held` are regimes the taxpayer already holds: a chosen regime that
+/// conflicts with one of them is an error too.
 class RegimeSelectionField extends AppFormFieldModel {
   /// The selection labeled [label], starting with [initial].
   new({
@@ -17,7 +19,9 @@ class RegimeSelectionField extends AppFormFieldModel {
     required this.missingError,
     required this.conflictError,
     List<Regime> initial = const [],
-  }) : _initial = List.unmodifiable(initial),
+    List<Regime> held = const [],
+  }) : _held = List.unmodifiable(held),
+       _initial = List.unmodifiable(initial),
        _selected = [...initial];
 
   /// Whether choosing one regime drops the others.
@@ -29,15 +33,17 @@ class RegimeSelectionField extends AppFormFieldModel {
   /// Shown when an incompatible pair is chosen.
   final FieldError conflictError;
 
+  final List<Regime> _held;
   final List<Regime> _initial;
   final List<Regime> _selected;
 
   /// The chosen regimes, in selection order.
   List<Regime> get selected => List.unmodifiable(_selected);
 
-  /// Incompatible pairs among the chosen ones, keyed by the later code.
+  /// Incompatible pairs among the held and chosen ones, keyed by the
+  /// chosen code (held regimes come first, so they are never the key).
   Map<String, RegimeIncompatibility> get conflicts =>
-      regimeConflicts(_selected);
+      regimeConflicts([..._held, ..._selected]);
 
   /// Whether [regime] is chosen.
   bool isChosen(Regime regime) =>

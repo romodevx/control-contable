@@ -176,4 +176,120 @@ void main() {
 
     expect(failure, isA<ApiEntitlementRequired>());
   });
+
+  group('settings operations (M2-10)', () {
+    const regimePath = '/v1/taxpayers/$_taxpayerId/regimes/606';
+    const regimeBody = {
+      'regime_code': '606',
+      'name': 'Arrendamiento',
+      'treatment': 'full',
+      'options': {'deduction_mode': 'actual'},
+      'start_period': '2026-01',
+      'end_period': null,
+    };
+
+    setUp(() {
+      adapter
+        ..reply('/v1/taxpayers', (
+          status: 200,
+          body: {
+            'items': [_taxpayer],
+          },
+        ))
+        ..reply('/v1/taxpayers/$_taxpayerId/archive', (
+          status: 200,
+          body: _taxpayer,
+        ))
+        ..reply('/v1/taxpayers/$_taxpayerId/unarchive', (
+          status: 200,
+          body: _taxpayer,
+        ))
+        ..reply('/v1/taxpayers/$_taxpayerId/regimes', (
+          status: 201,
+          body: regimeBody,
+        ))
+        ..reply(regimePath, (status: 200, body: regimeBody));
+    });
+
+    test('listTaxpayers asks for archived ones too', () async {
+      final list = await repository.listTaxpayers();
+
+      final request = adapter.requests.single;
+      expect(request.method, 'GET');
+      expect(request.uri.queryParameters, {'include_archived': 'true'});
+      expect(list.single.id, _taxpayerId);
+    });
+
+    test('rename patches only the display name', () async {
+      await repository.rename(taxpayerId: _taxpayerId, displayName: 'Ana G');
+
+      expect(adapter.requests.single.method, 'PATCH');
+      expect(lastBody(), {'display_name': 'Ana G'});
+    });
+
+    test('archive and unarchive post to their own paths', () async {
+      await repository.archive(_taxpayerId);
+      await repository.unarchive(_taxpayerId);
+
+      expect(adapter.requests.map((r) => (r.method, r.uri.path)), [
+        ('POST', '/v1/taxpayers/$_taxpayerId/archive'),
+        ('POST', '/v1/taxpayers/$_taxpayerId/unarchive'),
+      ]);
+    });
+
+    test('delete always sends confirm=true', () async {
+      adapter.reply('/v1/taxpayers/$_taxpayerId', (status: 204, body: null));
+
+      await repository.delete(_taxpayerId);
+
+      final request = adapter.requests.single;
+      expect(request.method, 'DELETE');
+      expect(request.uri.queryParameters, {'confirm': 'true'});
+    });
+
+    test('addRegime posts the code and options', () async {
+      final added = await repository.addRegime(
+        taxpayerId: _taxpayerId,
+        regimeCode: '606',
+        options: {'deduction_mode': 'actual'},
+      );
+
+      expect(adapter.requests.single.method, 'POST');
+      expect(lastBody(), {
+        'regime_code': '606',
+        'options': {'deduction_mode': 'actual'},
+      });
+      expect(added.regimeCode, '606');
+    });
+
+    test('updateRegimeOptions patches the options', () async {
+      await repository.updateRegimeOptions(
+        taxpayerId: _taxpayerId,
+        regimeCode: '606',
+        options: {'deduction_mode': 'blind_35'},
+      );
+
+      expect(adapter.requests.single.method, 'PATCH');
+      expect(lastBody(), {
+        'options': {'deduction_mode': 'blind_35'},
+      });
+    });
+
+    test('endRegime sends the end period and the confirmation', () async {
+      await repository.endRegime(
+        taxpayerId: _taxpayerId,
+        regimeCode: '606',
+        endPeriod: '2026-09',
+        confirm: true,
+      );
+
+      final request = adapter.requests.single;
+      expect(request.method, 'DELETE');
+      expect(request.uri.path, regimePath);
+      expect(request.uri.queryParameters, {
+        'end_period': '2026-09',
+        'confirm': 'true',
+      });
+    });
+  });
 }

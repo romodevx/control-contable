@@ -1,6 +1,6 @@
 import 'package:control_contable/core/theme/app_spacing.dart';
 import 'package:control_contable/core/theme/app_tokens.dart';
-import 'package:control_contable/features/taxpayers/application/onboarding_flow.dart';
+import 'package:control_contable/features/taxpayers/application/regime_wizard.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
@@ -14,8 +14,8 @@ class StepHeader extends StatelessWidget {
   /// The header of [flow]'s current step, titled [title].
   const new({required this.flow, required this.title, this.intro, super.key});
 
-  /// The onboarding, for the step number.
-  final OnboardingFlow flow;
+  /// The wizard, for the step number.
+  final RegimeWizard flow;
 
   /// The step's title.
   final String title;
