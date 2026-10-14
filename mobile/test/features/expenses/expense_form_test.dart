@@ -464,6 +464,40 @@ void main() {
       expect(tester.widget<SnackBar>(find.byType(SnackBar)).persist, isTrue);
     });
 
+    // QA M3/M4 D3: the focused first field is shown, not left above the
+    // fold where the previous record was finished (WCAG 2.2 · 2.4.11).
+    testWidgets('Guardar y crear otro brings the focused category into view', (
+      tester,
+    ) async {
+      await pumpForm(tester);
+      await fillSoftware(tester);
+      await tester.drag(
+        find.byType(SingleChildScrollView).first,
+        const Offset(0, -2000),
+      );
+      await tester.pumpAndSettle();
+      final opener = find.descendant(
+        of: find.byType(ExpenseCategoryField),
+        matching: find.byType(OutlinedButton),
+      );
+      final viewport = tester.getRect(find.byType(SingleChildScrollView).first);
+      expect(
+        tester.getRect(opener).top,
+        lessThan(viewport.top),
+        reason: 'scrolled away first',
+      );
+
+      await tapText(tester, 'Guardar y crear otro');
+
+      final shown = tester.getRect(opener);
+      expect(shown.top, greaterThanOrEqualTo(viewport.top));
+      expect(shown.bottom, lessThanOrEqualTo(viewport.bottom));
+      expect(
+        tester.widget<OutlinedButton>(opener).focusNode?.hasPrimaryFocus,
+        isTrue,
+      );
+    });
+
     // QA M3/M4 D2: after *Guardar y crear otro* the warning toast stays
     // until closed, on the form itself; it must not cover the footer.
     testWidgets('a persistent warning toast leaves the form footer clear', (
