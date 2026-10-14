@@ -15,6 +15,7 @@ type api struct {
 	*flagsHandler
 	*authHandler
 	*accountHandler
+	*authhttp.SessionHandler
 }
 
 // flagsHandler and authHandler name the embedded handlers: health.Handler,

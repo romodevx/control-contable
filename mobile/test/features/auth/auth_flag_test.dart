@@ -11,9 +11,13 @@ void main() {
 
   setUp(() => harness = AuthHarness());
 
-  Finder createAccount() => find.widgetWithText(OutlinedButton, 'Crear cuenta');
+  Finder createAccount() => find.widgetWithText(TextButton, 'Crear cuenta');
 
-  for (final location in [AuthRoutes.register, AuthRoutes.verifyEmail]) {
+  for (final location in [
+    AuthRoutes.login,
+    AuthRoutes.register,
+    AuthRoutes.verifyEmail,
+  ]) {
     testWidgets('off: $location is not found', (tester) async {
       await harness.pump(tester, location: location, enabled: false);
 
@@ -22,13 +26,16 @@ void main() {
     });
   }
 
-  testWidgets('off: home offers no way to create an account', (tester) async {
+  testWidgets('off: the app opens on home, with no way to sign in', (
+    tester,
+  ) async {
     await harness.pump(tester, enabled: false);
 
+    expect(find.text('Inicio'), findsOneWidget);
     expect(createAccount(), findsNothing);
   });
 
-  testWidgets('on: home offers "Crear cuenta", which opens the form', (
+  testWidgets('on: login offers "Crear cuenta", which opens the form', (
     tester,
   ) async {
     await harness.pump(tester);

@@ -11,6 +11,19 @@ const int _secondsPerMinute = 60;
 const int _passwordMinLength = 12;
 const int _passwordMaxLength = 128;
 
+/// Email length limit of the contract's request bodies.
+const int _emailMaxLength = 254;
+
+/// A plausible address: something@something.tld, no spaces. The server
+/// decides; this only catches typos on blur.
+final RegExp _emailShape = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
+/// The client check of an email address (sign-up and login).
+FieldError? checkEmail(String value, AppLocalizations l10n) =>
+    value.length > _emailMaxLength || !_emailShape.hasMatch(value)
+    ? CustomFieldError(l10n.authEmailInvalid)
+    : null;
+
 /// The client check of a new password: its length, counted in characters.
 /// The common/breached check runs on the server (D5).
 FieldError? checkNewPassword(String value, AppLocalizations l10n) {

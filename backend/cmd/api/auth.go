@@ -41,9 +41,10 @@ type authWiring struct {
 // authModule is the auth module's HTTP side: the handler of its operations
 // and the bearer authenticator every secured operation runs behind.
 type authModule struct {
-	handler *authhttp.Handler
-	account *authhttp.AccountHandler
-	authn   *authhttp.Authenticator
+	handler  *authhttp.Handler
+	account  *authhttp.AccountHandler
+	sessions *authhttp.SessionHandler
+	authn    *authhttp.Authenticator
 }
 
 // newAuthModule wires the auth use cases (M1-05, M1-07) over the cc_app pool
@@ -89,7 +90,19 @@ func newAuthModule(w authWiring) (authModule, error) {
 		return authModule{}, err
 	}
 	handler := authhttp.NewHandler(authhttp.UseCases{Register: register, Verify: verify, Resend: resend, Login: login})
-	return authModule{handler: handler, account: newAccountHandler(txm, keys, w.logger), authn: authn}, nil
+	return authModule{handler: handler, account: newAccountHandler(txm, keys, w.logger),
+		sessions: newSessionHandler(txm, keys, w.logger), authn: authn}, nil
+}
+
+// newSessionHandler wires refreshSession and logout (M1-08).
+func newSessionHandler(txm *pgdb.TxManager, keys authCrypto, logger *slog.Logger) *authhttp.SessionHandler {
+	tokens := infra.NewRefreshTokenStore()
+	refresh := usecase.NewRefreshSession(usecase.RefreshDeps{
+		Tx: txm, Clock: clock.NewSystem(), Entropy: rand.Reader, Tokens: tokens,
+		Accounts: infra.NewAccountStore(keys.emails), Access: keys.access, Logger: logger,
+	})
+	logout := usecase.NewLogout(usecase.LogoutDeps{Tx: txm, Tokens: tokens, Logger: logger})
+	return authhttp.NewSessionHandler(refresh, logout)
 }
 
 // newAuthenticator builds the bearer authenticator over the access-token

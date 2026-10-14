@@ -154,8 +154,21 @@ Every record form is built from `core/forms/`, which encodes
 - The new session goes to `sessionStoreProvider`: in memory until M1-12 brings
   `flutter_secure_storage`.
 
-## Session tokens (rule for M1-12)
+## Session tokens (M1-12)
 
+- `core/session/session.dart` (`Session`): the access token lives **in memory only**; the
+  rotating refresh token lives in `RefreshTokenStore` (`core/session/refresh_token_store.dart`,
+  the only file that imports `flutter_secure_storage`; iOS item `first_unlock_this_device`,
+  never synced). Every rotation stores the newly returned refresh token before any retry.
+- `core/network/auth_interceptor.dart`: bearer on each request; on a 401, one **single-flight**
+  refresh shared by every concurrent caller, then one retry. Never refreshes for `/v1/auth/*`.
+  A refused refresh (401/400) ends the session and the router shows login; an unreachable one
+  keeps it. The rotation runs on `bareDioProvider` (no interceptor), so it cannot recurse.
+- Router guards (`core/router/app_router.dart`): while `module_auth` is on, a signed-out user
+  goes to `/cuenta/entrar` (keeping `desde`), a signed-in user leaves the guest screens
+  (login, sign-up, code). Login and a verified sign-up (`201 AuthSession`) both start the session.
+- Logout (`features/auth/application/sign_out.dart`) calls the API, then wipes locally even if
+  the call fails.
 - The session (refresh) token is stored **only** through `flutter_secure_storage` (ADR-0001:
   Keystore on Android, Keychain on iOS). Never through the `shared_preferences` plugin: it
   writes plain XML that a backup, `adb` on a debuggable build or a rooted phone can read.

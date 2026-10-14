@@ -1,6 +1,8 @@
 import 'package:control_contable/api/generated/clients/auth_client.dart';
 import 'package:control_contable/api/generated/models/auth_session.dart';
 import 'package:control_contable/api/generated/models/legal_document.dart';
+import 'package:control_contable/api/generated/models/login_request.dart';
+import 'package:control_contable/api/generated/models/refresh_request.dart';
 import 'package:control_contable/api/generated/models/register_request.dart';
 import 'package:control_contable/api/generated/models/resend_verification_request.dart';
 import 'package:control_contable/api/generated/models/verify_email_request.dart';
@@ -8,7 +10,7 @@ import 'package:control_contable/core/network/api_client_provider.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// The sign-up operations of `module_auth`. Every method throws an
+/// The sign-up and session operations of `module_auth`. Every method throws an
 /// `ApiFailure` when the server refuses or cannot be reached.
 abstract interface class AuthRepository {
   /// The current version of each legal document (`GET /v1/legal/documents`).
@@ -22,6 +24,13 @@ abstract interface class AuthRepository {
 
   /// Asks for a new code; the server always answers the same generic 202.
   Future<void> resendVerification(String email);
+
+  /// Signs in; a wrong password, an unknown email and an unverified
+  /// sign-up all fail with the same `ApiUnauthorized`.
+  Future<AuthSession> login({required String email, required String password});
+
+  /// Revokes the family of [refreshToken] on the server (idempotent).
+  Future<void> logout(String refreshToken);
 }
 
 /// [AuthRepository] over the generated auth client.
@@ -48,6 +57,21 @@ class ApiAuthRepository implements AuthRepository {
     () => _client.resendVerification(
       body: ResendVerificationRequest(email: email),
     ),
+  );
+
+  @override
+  Future<AuthSession> login({
+    required String email,
+    required String password,
+  }) => guardApi(
+    () => _client.login(
+      body: LoginRequest(email: email, password: password),
+    ),
+  );
+
+  @override
+  Future<void> logout(String refreshToken) => guardApi(
+    () => _client.logout(body: RefreshRequest(refreshToken: refreshToken)),
   );
 }
 

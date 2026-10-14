@@ -253,11 +253,35 @@ abstract class AppLocalizations {
   /// **'Ocultar contraseña'**
   String get formHidePassword;
 
-  /// Home entry point to the sign-up form (shown only while module_auth is on).
+  /// Home app-bar action that ends the session (shown only while module_auth is on). Works offline: the device forgets the session even when the server cannot be told.
   ///
   /// In es, this message translates to:
-  /// **'Crear cuenta'**
-  String get homeCreateAccount;
+  /// **'Cerrar sesión'**
+  String get authSignOut;
+
+  /// Title of the login screen, where a signed-out user is sent.
+  ///
+  /// In es, this message translates to:
+  /// **'Iniciar sesión'**
+  String get authLoginTitle;
+
+  /// Primary button of the login form.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrar'**
+  String get authLoginSubmit;
+
+  /// Login 401: one generic message for a wrong password, an unknown email or an unverified sign-up (no account enumeration).
+  ///
+  /// In es, this message translates to:
+  /// **'Correo o contraseña incorrectos.'**
+  String get authLoginRejected;
+
+  /// Lead-in before the link from the login form to the sign-up form.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Aún no tienes cuenta?'**
+  String get authLoginNoAccount;
 
   /// Title of the sign-up screen.
   ///

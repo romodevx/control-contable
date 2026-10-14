@@ -17,9 +17,6 @@ import (
 // operation to the contract means adding it here (with its task) or covering
 // it in the same PR.
 var pendingOperations = map[string]string{
-	// M1 module_auth
-	"refreshSession": "M1-10",
-	"logout":         "M1-10",
 	// M2 module_taxpayers
 	"listRegimes":           "M2-07",
 	"listTaxpayers":         "M2-07",

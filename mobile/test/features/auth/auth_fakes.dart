@@ -7,7 +7,7 @@ import 'package:control_contable/api/generated/models/register_request.dart';
 import 'package:control_contable/api/generated/models/token_pair.dart';
 import 'package:control_contable/api/generated/models/user.dart';
 import 'package:control_contable/api/generated/models/verify_email_request.dart';
-import 'package:control_contable/features/auth/application/session_store.dart';
+import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/features/auth/data/auth_repository.dart';
 
 /// The contract's current documents (the `LegalDocumentList` example).
@@ -58,6 +58,13 @@ class FakeAuthRepository implements AuthRepository {
   final List<String> resent = [];
   Exception? resendError;
 
+  final List<({String email, String password})> logins = [];
+  Exception? loginError;
+  Completer<void>? loginGate;
+
+  final List<String> loggedOut = [];
+  Exception? logoutError;
+
   @override
   Future<List<LegalDocument>> listLegalDocuments() async {
     documentCalls++;
@@ -84,14 +91,45 @@ class FakeAuthRepository implements AuthRepository {
     resent.add(email);
     if (resendError case final error?) throw error;
   }
-}
-
-/// A [SessionStore] that remembers what it was given.
-class RecordingSessionStore implements SessionStore {
-  final List<AuthSession> saved = [];
 
   @override
-  Future<void> save(AuthSession session) async => saved.add(session);
+  Future<AuthSession> login({
+    required String email,
+    required String password,
+  }) async {
+    logins.add((email: email, password: password));
+    await loginGate?.future;
+    if (loginError case final error?) throw error;
+    return sampleSession;
+  }
+
+  @override
+  Future<void> logout(String refreshToken) async {
+    loggedOut.add(refreshToken);
+    if (logoutError case final error?) throw error;
+  }
+}
+
+/// The refresh token a signed-in harness starts with.
+const String storedRefreshToken = 'refresh-stored';
+
+/// A scripted `refreshSession`: counts calls and answers a fresh pair, or
+/// throws [error].
+class FakeTokenRotation {
+  final List<String> received = [];
+  ApiFailure? error;
+
+  Future<TokenPair> call(String refreshToken) async {
+    received.add(refreshToken);
+    if (error case final error?) throw error;
+    return const TokenPair(
+      accessToken: 'access-rotated',
+      accessExpiresIn: 900,
+      refreshToken: 'refresh-rotated',
+      refreshExpiresIn: 2592000,
+      tokenType: 'Bearer',
+    );
+  }
 }
 
 /// A clock the test moves by hand.

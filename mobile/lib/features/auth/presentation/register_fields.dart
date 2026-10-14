@@ -10,17 +10,12 @@ import 'package:control_contable/features/auth/application/pending_sign_up.dart'
 import 'package:control_contable/features/auth/presentation/auth_copy.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 
-/// `RegisterRequest` limits (docs/api/openapi.yaml).
-const int _emailMaxLength = 254;
+/// `RegisterRequest` limit (docs/api/openapi.yaml).
 const int _nameMaxLength = 120;
 
 /// The body paths `register` reports field errors under.
 const String _emailPath = 'email';
 const String _documentsPath = 'accepted_documents';
-
-/// A plausible address: something@something.tld, no spaces. The server
-/// decides; this only catches typos on blur.
-final RegExp _emailShape = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
 /// The sign-up form's fields, in reading order, and how the server's
 /// verdict maps onto them. Owns its `AppFormController`.
@@ -36,10 +31,7 @@ class RegisterFields {
     );
     email = form.textField(
       label: _l10n.authEmailLabel,
-      validator: (value) =>
-          value.length > _emailMaxLength || !_emailShape.hasMatch(value)
-          ? CustomFieldError(_l10n.authEmailInvalid)
-          : null,
+      validator: (value) => checkEmail(value, _l10n),
     );
     password = form.textField(
       label: _l10n.authPasswordLabel,
