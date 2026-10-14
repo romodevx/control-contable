@@ -16,7 +16,7 @@ List<Taxpayer> _held(int count) => [
     taxpayer(
       id: '0192f0c4-7b1e-7c3a-9d2e-${i.toString().padLeft(12, '0')}',
       displayName: 'Cliente $i',
-      archivedAt: i == count - 1 ? DateTime.utc(2026, 10, 1) : null,
+      archivedAt: i == count - 1 ? DateTime.utc(2026, 10, 2) : null,
     ),
 ];
 
