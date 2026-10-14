@@ -2,6 +2,7 @@ package ratecatalog_test
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"testing"
 
@@ -54,9 +55,20 @@ func embedded(t testing.TB) *catalog {
 
 const syntheticSource = "dof-synthetic"
 
+// syntheticWithholdingRates are the withholding rates every set must hold
+// (WH-05), open-ended. The values differ from the real ones on purpose, so a
+// test reading them proves it went through the synthetic set.
+var syntheticWithholdingRates = map[fiscal.RateKey]string{
+	fiscal.KeyISRWithholdingFees:         "0.11",
+	fiscal.KeyISRWithholdingRent:         "0.12",
+	ratecatalog.KeyISRWithholdingRESICO:  "0.013",
+	ratecatalog.KeyIVAWithholdingFreight: "0.05",
+	ratecatalog.KeyIVAWithholdingScrap:   "0.9",
+}
+
 // syntheticSet is a minimal valid set of fiscalYear holding the IVA rates
 // every set must hold (general 16 % and zero, open-ended), a border rate that
-// lapses on December 31 and the cash payment limit.
+// lapses on December 31, the cash payment limit and the withholding rates.
 func syntheticSet(t testing.TB, fiscalYear int, provisional bool) *taxparams.Params {
 	t.Helper()
 	return syntheticSetWithout(t, fiscalYear, provisional)
@@ -70,6 +82,27 @@ func syntheticSetWithout(t testing.TB, fiscalYear int, provisional bool, omit ..
 
 // syntheticVersion is version of syntheticSetWithout.
 func syntheticVersion(t testing.TB, fiscalYear, version int, provisional bool, omit ...taxparams.Key) *taxparams.Params {
+	t.Helper()
+	values := syntheticValues(t, fiscalYear)
+	values = slices.DeleteFunc(values, func(v taxparams.Value) bool { return slices.Contains(omit, v.Key) })
+	return newSyntheticParams(t, fiscalYear, version, provisional, values)
+}
+
+// syntheticSetStartingOn is syntheticSet with key in force only from day
+// from on, as when a reform starts a rate mid-year.
+func syntheticSetStartingOn(t testing.TB, fiscalYear int, key fiscal.RateKey, from fiscal.Date) *taxparams.Params {
+	t.Helper()
+	values := syntheticValues(t, fiscalYear)
+	for i := range values {
+		if values[i].Key == taxparams.Key(key) {
+			values[i].Validity = taxparams.Validity{From: from}
+		}
+	}
+	return newSyntheticParams(t, fiscalYear, 1, false, values)
+}
+
+// syntheticValues are the values of syntheticSet.
+func syntheticValues(t testing.TB, fiscalYear int) []taxparams.Value {
 	t.Helper()
 	first := date(t, fmtDate(fiscalYear, "01-01"))
 	last := date(t, fmtDate(fiscalYear, "12-31"))
@@ -92,7 +125,18 @@ func syntheticVersion(t testing.TB, fiscalYear, version int, provisional bool, o
 			Validity: taxparams.Validity{From: first}, Basis: basis,
 		},
 	}
-	values = slices.DeleteFunc(values, func(v taxparams.Value) bool { return slices.Contains(omit, v.Key) })
+	for _, key := range slices.Sorted(maps.Keys(syntheticWithholdingRates)) {
+		values = append(values, taxparams.Value{
+			Key: taxparams.Key(key), Kind: taxparams.KindRate, Rate: rate(t, syntheticWithholdingRates[key]),
+			Validity: taxparams.Validity{From: first}, Basis: basis,
+		})
+	}
+	return values
+}
+
+func newSyntheticParams(t testing.TB, fiscalYear, version int, provisional bool, values []taxparams.Value) *taxparams.Params {
+	t.Helper()
+	first := date(t, fmtDate(fiscalYear, "01-01"))
 	set, err := taxparams.NewParams(taxparams.Spec{
 		FiscalYear:  fiscalYear,
 		Version:     version,

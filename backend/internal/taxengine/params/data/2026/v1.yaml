@@ -41,12 +41,12 @@ sources:
     title: Ley del Impuesto al Valor Agregado, texto vigente, última reforma DOF 12-11-2021 (Cámara de Diputados; accessed 2026-10-14)
     url: https://www.diputados.gob.mx/LeyesBiblio/pdf/LIVA.pdf
     dof_date: 2021-11-12
-    reference: "Arts. 1o. y 2o.-A"
+    reference: "Arts. 1o., 1o.-A fr. II incisos b) y c) y último párrafo, y 2o.-A"
   - id: rliva
     title: Reglamento de la Ley del Impuesto al Valor Agregado, última reforma DOF 25-09-2014 (Cámara de Diputados; accessed 2026-10-14)
     url: https://www.diputados.gob.mx/LeyesBiblio/regley/Reg_LIVA_250914.pdf
     dof_date: 2014-09-25
-    reference: "Art. 3 fr. II"
+    reference: "Arts. 3 fr. I y II, y 4"
   - id: dof-frontera-norte-2018
     title: Decreto de estímulos fiscales región fronteriza norte (DOF; accessed 2026-10-14)
     url: https://dof.gob.mx/nota_detalle.php?codigo=5547485&fecha=31/12/2018
@@ -95,11 +95,27 @@ values:
       - {source: dof-fronteras-2025, article: "Arts. Primero y Segundo"}
       - {source: liva, article: "Art. 1o."}
 
-  # IVA withholding -----------------------------------------------------------
+  # IVA withholding by personas morales (LIVA 1o.-A fr. II) -------------------
+  # Re-read 2026-10-14 for WH-05 (docs/reviews/WH-05-params-verification.md).
+  # The base differs per key: freight is a rate on the PRICE, scrap is a share
+  # of the IVA charged. The 2/3 share of RLIVA 3 fr. I stays in code
+  # (fiscal.ShareTwoThirds, see the header).
   - key: iva.withholding.freight_pm
-    rate: "0.04"            # "el 4% del valor de la contraprestación"
+    rate: "0.04"            # "la retención se hará por el 4% del valor de la contraprestación pagada efectivamente"
     valid_from: 2026-01-01
-    basis: [{source: rliva, article: "Art. 3 fr. II"}]
+    basis:
+      - {source: rliva, article: "Art. 3 fr. II"}
+      - {source: liva, article: "Art. 1o.-A fr. II inciso c)"}
+  - key: iva.withholding.scrap_pm
+    # Desperdicios bought as an industrial input or to resell carry "la retención del
+    # impuesto que se les traslade": the whole IVA. RLIVA 3 lowers it only for
+    # fr. I (2/3) and fr. II (4 % freight); scrap is in neither, so 100 %.
+    rate: "1"
+    valid_from: 2026-01-01
+    basis:
+      - {source: liva, article: "Art. 1o.-A fr. II inciso b)"}
+      - {source: liva, article: "Art. 1o.-A último párrafo"}
+      - {source: rliva, article: "Art. 3 (no reduction for desperdicios)"}
 
   # ISR rates -----------------------------------------------------------------
   - key: isr.rate.persona_moral
@@ -119,7 +135,7 @@ values:
   - key: isr.withholding.rent_pm
     rate: "0.10"            # "la tasa del 10%"
     valid_from: 2026-01-01
-    basis: [{source: lisr, article: "Art. 116"}]
+    basis: [{source: lisr, article: "Art. 116, penúltimo párrafo"}]
   - key: isr.withholding.resico_pf
     rate: "0.0125"          # "la tasa del 1.25%"
     valid_from: 2026-01-01

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -306,6 +307,48 @@ func TestValidation_rejectsOversizedBodies(t *testing.T) {
 	require.Len(t, body.Details, 1)
 	assert.Equal(t, "too_large", body.Details[0].Code)
 	assert.Empty(t, h.calls)
+}
+
+// M6-08 G-1: the details list is capped, so a request with thousands of
+// undeclared query parameters or unknown body properties cannot turn into a
+// response many times its size (an unauthenticated amplifier on the public
+// operations). The first errors are kept, in order.
+func TestValidation_capsTheDetailsList(t *testing.T) {
+	const many = 2000
+	params := make([]string, 0, many)
+	props := make([]string, 0, many)
+	for i := range many {
+		params = append(params, fmt.Sprintf("q%04d=", i))
+		props = append(props, fmt.Sprintf(`"p%04d":1`, i))
+	}
+	tests := []struct {
+		name, method, target, body string
+		flags                      flagSet
+		wantFirst                  string
+	}{
+		{name: "undeclared query parameters", method: http.MethodGet,
+			target: "/v1/taxpayers/" + validTaxpayer + "/incomes?period=2026-09&" + strings.Join(params, "&"),
+			flags:  flagSet{"module_incomes": true}, wantFirst: "q0000"},
+		{name: "unknown body properties on a public operation", method: http.MethodPost, target: "/v1/auth/register",
+			body:  `{"email":"ana@example.mx","accepted_documents":[` + termsAccepted + `,` + privacyAccepted + `],` + strings.Join(props, ",") + `}`,
+			flags: flagSet{"module_auth": true}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := newHarness(t, setup{flags: tt.flags})
+
+			rec := h.do(tt.method, tt.target, tt.body)
+
+			require.Equal(t, http.StatusBadRequest, rec.Code)
+			body := envelope(t, rec)
+			assert.Equal(t, apperr.CodeValidationFailed, body.Code)
+			require.Len(t, body.Details, router.MaxFieldErrors)
+			if tt.wantFirst != "" {
+				assert.Equal(t, tt.wantFirst, body.Details[0].Field)
+			}
+			assert.Empty(t, h.calls)
+		})
+	}
 }
 
 func TestValidation_handlerStillReadsTheBody(t *testing.T) {

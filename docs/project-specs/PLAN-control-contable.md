@@ -408,7 +408,7 @@ holds, first the CPA sign-off (M5-33).
 | M6-05 | Register flag `module_dashboard` + preset `demo_core` | backend-sr | M6-03, M6-04 | 0.5 | — | `feature/dashboard-flag` | — | [ ] |
 | M6-06 | QA M6 + `demo_core` preset smoke | qa-sr | M6-05 | 2.5 | — | `feature/dashboard-qa-fixes` | OB6 | [ ] |
 | M6-07 | Tech-lead gate M6 | tech-lead | M6-06 | 1 | — | (PR review) | — | [ ] |
-| M6-08 | Security gate M6 | security | M6-06 | 1 | — | (PR review) | — | [ ] |
+| M6-08 | Security gate M6 | security | M6-06 | 1 | — | (PR review) | — | [x] |
 | M6-09 | Docs M6 | doc-writer | M6-07, M6-08 | 1 | — | `feature/dashboard-docs` | — | [ ] |
 
 ### M7 — Subscriptions (`module_subscriptions`)
@@ -437,9 +437,9 @@ Backend can start right after P0 + M1-07, in parallel with M5/M6. With the flag 
 
 | ID | Task | Owner | Deps | Est (h) | Par | Branch | Blocked by | Done |
 |---|---|---|---|---|---|---|---|---|
-| M8-01 | Contract freeze: history paths | architect | P0-05 | 1 | — | `feature/history-contract` | — | [ ] |
+| M8-01 | Contract freeze: history paths | architect | P0-05 | 1 | — | `feature/history-contract` | — | [x] |
 | M8-02 | Migration `estimate_views` with RLS + isolation tests | db-sr | M2-03 | 2 | — | `feature/history-migration` | — | [ ] |
-| M8-03 | History use case: fiscal-year summaries in one aggregate pass, changed-since-viewed via fingerprint, mark viewed | backend-sr | M5-22, M8-01, M8-02 | 3.5 | — | `feature/history-backend` | — | [ ] |
+| M8-03 | History use case: fiscal-year summaries in one aggregate pass, changed-since-viewed via fingerprint, mark viewed; **contract follow-up (M8-01):** make `TaxpayerEstimate.figures_fingerprint` required and type `TaxpayerEstimate.engine_version` as `EngineVersion` (re-freeze, regenerate clients) | backend-sr | M5-22, M8-01, M8-02 | 3.5 | — | `feature/history-backend` | — | [ ] |
 | M8-04 | History handlers, contract tests, flag ON/OFF (implies M5) | backend-sr | M8-03, M5-23 | 2 | — | `feature/history-backend` | — | [ ] |
 | M8-05 | Flutter history list, changed marker, open breakdown (reuses M5-26) | frontend-sr | M8-01, M5-26 | 4 | — | `feature/history-mobile` | — | [ ] |
 | M8-06 | Register flag `module_history` | backend-sr | M8-04, M8-05 | 0.5 | — | `feature/history-flag` | — | [ ] |
@@ -469,6 +469,55 @@ M9-07 (FCM) and M9-09 (Flutter push) are built against fakes; live verification 
 | M9-13 | Tech-lead gate M9 | tech-lead | M9-12 | 1.5 | — | (PR review) | — | [ ] |
 | M9-14 | Security gate M9 (lock-screen amounts opt-in, token claim) | security | M9-12 | 1.5 | — | (PR review) | — | [ ] |
 | M9-15 | Docs M9 | doc-writer | M9-13, M9-14 | 1 | — | `feature/reminders-docs` | — | [ ] |
+
+### AN — Annual estimate (`module_annual`)
+
+Spec: [MODULE-annual.md](MODULE-annual.md) (owner decisions 2026-10-15). Research:
+[annual-return-2026.md](../research/annual-return-2026.md). Flag prerequisites: `module_tax_engine`,
+`module_taxpayers`. Task IDs are `ANN-xx` so they never clash with the golden cases `AN-01..AN-08`.
+⚠️ goldens (AN-04, AN-07 PTU base) ship as `skip` until ANN-27 (OB5). Added after the v1 plan was
+approved, so it is **not** in the §4 totals: **AN adds 27 tasks, 91.5 h (109.8 h with +20%)**.
+
+| ID | Task | Owner | Deps | Est (h) | Par | Branch | Blocked by | Done |
+|---|---|---|---|---|---|---|---|---|
+| ANN-01 | Spec MODULE-annual + this plan section | pm | research #118 | 2 | — | `feature/annual-spec` | — | [ ] |
+| ANN-02 | ADR-0008 (annual engine placement) + contract freeze: annual estimate/breakdown, annual inputs, salary statements, personal deductions (+restore), filed payments, `annual_depreciation` key; lint | architect | ANN-01 | 3 | — | `feature/annual-contract` | — | [ ] |
+| ANN-03 | Migrations `personal_deductions`, `salary_statements`, `annual_filed_payments`, `annual_inputs` (ENABLE + FORCE RLS, FKs, cascades, indexes) + RLS isolation tests per table; catalog forward migration adding `annual_depreciation` to 612 PF / 601 PM / 626 PM `required_inputs` | db-sr | ANN-02, M5-20 | 4 | PG-AN-F | `feature/annual-migrations` | — | [ ] |
+| ANN-04 | Params `params/data/2026/v1.yaml` (new version if required by the loader): `isr.annual_152` (Anexo 8 C.II), deduction caps (5 UMA, 15 %, 10 %/5 UMA, 1 UMA funeral, 7 %/4 % donations), tuition caps per level, $400k salary and $500k informative thresholds, PTU 10 %, deadlines PF/PM/603; schema + typed validation; test `isr.annual_152` == December art. 106 table | backend-sr | ANN-02, M5-03 | 3 | PG-AN-F | `feature/annual-params` | — | [ ] |
+| ANN-05 | Independent double-entry verification of the ANN-04 values against Anexo 8 C.II (DOF), LISR 151, decree DOF 26-12-2013 arts. 1.8–1.10, INEGI UMA 2026, with source SHA-256 (same method as M5-06) | qa-sr | ANN-04 | 2 | — | `feature/annual-params` | — | [ ] |
+| ANN-06 | Annual golden harness: case YAML with constancias, deductions, filed payments, tax inputs; runner; skip-with-reason; CI hard gate; generated cap-boundary and `isr.annual_152` row edges | qa-sr | ANN-02, M5-07 | 2.5 | PG-AN-F | `feature/annual-golden-harness` | — | [ ] |
+| ANN-07 | Domain: personal-deductions calculator (eligibility/cash, own caps, global cap, uncapped, "Tope aplicado" lines) + property tests (applied ≤ registered, ≤ caps, monotonic) | backend-sr | ANN-04, ANN-06 | 5 | — | `feature/annual-deductions-domain` | — | [ ] |
+| ANN-08 | Strategy `pf_art152` (605/606/612/625 non-definitive aggregation, per-chapter floors, 612 loss stays in 612, credits with sources, obligation test art. 98 fr. III); goldens AN-01, AN-02, AN-04 (skip), AN-05, AN-08 | backend-sr | ANN-05, ANN-07 | 6 | PG-AN-S | `feature/annual-pf-152` | — | [ ] |
+| ANN-09 | Strategy `pf_resico_check` (113-F informative, never a balance); golden AN-03 (a, b) | backend-sr | ANN-05, ANN-06 | 2 | PG-AN-S | `feature/annual-resico-pf` | — | [ ] |
+| ANN-10 | Strategy `pm_601` (art. 9, depreciation, PTU paid, losses, credits; PTU base/10 %, suggested CU 4 dp); golden AN-06 | backend-sr | ANN-05, ANN-06 | 4 | PG-AN-S | `feature/annual-601` | — | [ ] |
+| ANN-11 | Strategy `pm_resico` (cash flow art. 9, PTU base ⚠️); golden AN-07 (PTU assertion skip) | backend-sr | ANN-05, ANN-06 | 3 | PG-AN-S | `feature/annual-resico-pm` | — | [ ] |
+| ANN-12 | Explanation sections + deadlines + 625 definitive / > $500k informative notes + disclaimers/CPA topics catalog | backend-sr | ANN-04 | 3 | PG-AN-S | `feature/annual-explanations` | — | [ ] |
+| ANN-13 | Repositories + use cases: personal deductions (create/update/delete/restore), salary statements, annual inputs, filed payments (regime window check); access policy `402`; person-type and archived checks | backend-sr | ANN-03, ANN-02 | 6 | — | `feature/annual-inputs` | — | [ ] |
+| ANN-14 | `EstimateAnnual` use case: one LedgerReader pass, Estimator range for default payments (payment precedence), TaxInputReader, section assembly, rounding + `Ajuste por redondeo`, legend, disclaimers, statuses | backend-sr | ANN-08, ANN-09, ANN-10, ANN-11, ANN-12, ANN-13, M5-22 | 5 | — | `feature/annual-estimate` | — | [ ] |
+| ANN-15 | Handlers + contract tests for all annual ops, flag ON/OFF/implied, rate-limit budget, EXPLAIN ANALYZE, p95 < 500 ms | backend-sr | ANN-14 | 4 | — | `feature/annual-http` | — | [ ] |
+| ANN-16 | Annual property suite, fixed seed (lines + adjustment = result, byte-identical JSON, balance sign vs credits) | qa-sr | ANN-14 | 2.5 | — | `feature/annual-property-tests` | — | [ ] |
+| ANN-17 | Flutter annual screen: year picker, headline balance + deadline, sections, legend, disclaimers, CPA banner, `incomplete` CTA, "Datos para tu anual" | frontend-sr | ANN-02, M5-25 | 5 | — | `feature/annual-mobile-estimate` | — | [ ] |
+| ANN-18 | Flutter annual breakdown (reuses M5-26 widgets) | frontend-sr | ANN-17, M5-26 | 2.5 | — | `feature/annual-mobile-breakdown` | — | [ ] |
+| ANN-19 | Flutter personal deductions: list by category with applied/registered, category-driven form (own screen), cash warning, delete + Undo | frontend-sr | ANN-17 | 6 | — | `feature/annual-mobile-deductions` | — | [ ] |
+| ANN-20 | Flutter salary constancias list + sheet form | frontend-sr | ANN-17 | 3.5 | — | `feature/annual-mobile-salary` | — | [ ] |
+| ANN-21 | Flutter filed payments (12 inline rows prefilled with app estimates, "Confirmar todos") + annual inputs form | frontend-sr | ANN-17 | 4 | — | `feature/annual-mobile-payments` | — | [ ] |
+| ANN-22 | Register flag `module_annual` + prerequisites (`module_tax_engine`, `module_taxpayers`) + `demo_full` preset | backend-sr | ANN-15, ANN-16, ANN-18, ANN-19, ANN-20, ANN-21 | 0.5 | — | `feature/annual-flag` | — | [ ] |
+| ANN-23 | QA AN: LOCAL DB wiped, data entered through the app; UI figures equal AN-01..AN-08; flag ON/OFF; read-only; PF and PM | qa-sr | ANN-22 | 5 | — | `feature/annual-qa-fixes` | OB6 | [ ] |
+| ANN-24 | Tech-lead gate AN (OCP per section, purity, no floats, determinism, ports only) | tech-lead | ANN-23 | 2 | — | (PR review) | — | [ ] |
+| ANN-25 | Security gate AN (RLS on 4 tables, PII in labels, logs, flag matrix, 404 indistinguishability) | security | ANN-23 | 2 | — | `feature/annual-security-gate` | — | [ ] |
+| ANN-26 | Docs AN: user-facing annual guide, Dec–Jan params runbook additions (RMF 2027 deadlines, rule renewals) | doc-writer | ANN-24, ANN-25 | 2 | — | `feature/annual-docs` | — | [ ] |
+| ANN-27 | CPA sign-off of annual goldens and topics (AR Part E CPA list); un-skip or record decisions | qa-sr | ANN-23 | 2 | — | `feature/annual-cpa-signoff` | OB5 | [ ] |
+
+Parallel groups: **PG-AN-F** (ANN-03, ANN-04, ANN-06) after ANN-02: separate migration files, params
+file, golden harness folder. **PG-AN-S** (ANN-08..ANN-12) after ANN-05/ANN-06 (ANN-08 also after ANN-07):
+one strategy file + one golden folder each, the registry is wired only in ANN-14. Mobile ANN-17..21 run
+against the Prism mock once ANN-02 freezes, sequentially (shared feature folder).
+
+Effort by owner: backend-sr 41.5 · frontend-sr 21 · qa-sr 14 · db-sr 4 · architect 3 · pm 2 ·
+tech-lead 2 · security 2 · doc-writer 2 → **91.5 h raw, 109.8 h with +20%**. Riskiest numbers: ANN-08
+(aggregation + obligation logic) and ANN-19 (category-driven form). External risk: RMF 2027 (late
+December 2026) may change deadlines or rules 3.13.7 / 3.17.x for ejercicio 2026 → params data change +
+ANN-27 re-check.
 
 ### REL — Release (MVP deployable)
 

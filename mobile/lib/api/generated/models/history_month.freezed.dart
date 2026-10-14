@@ -16,7 +16,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$HistoryMonth {
 
- Period get period; HistoryMonthStatus get status;@JsonKey(name: 'total_payable_rounded_cents') NonNegativeCents get totalPayableRoundedCents;@JsonKey(name: 'changed_since_viewed') bool get changedSinceViewed;@JsonKey(includeIfNull: false) TaxResult? get iva;@JsonKey(includeIfNull: false) TaxResult? get isr;@JsonKey(includeIfNull: false, name: 'last_viewed_at') DateTime? get lastViewedAt;
+ Period get period; TaxpayerEstimateStatus get status;@JsonKey(name: 'has_records') bool get hasRecords;@JsonKey(includeIfNull: true) HistoryTax? get tax;@JsonKey(name: 'due_date') String get dueDate;/// Any regime of the month is pending CPA review; the app shows the strong, non-dismissible banner.
+@JsonKey(name: 'cpa_review_pending') bool get cpaReviewPending;@JsonKey(name: 'is_current') bool get isCurrent;@JsonKey(name: 'records_fingerprint') RecordsFingerprint get recordsFingerprint;@JsonKey(name: 'figures_fingerprint') FiguresFingerprint get figuresFingerprint;@JsonKey(name: 'engine_version') EngineVersion get engineVersion;@JsonKey(name: 'parameter_set') ParameterSetRef get parameterSet;@JsonKey(includeIfNull: true, name: 'viewed_at') DateTime? get viewedAt;@JsonKey(name: 'changed_since_viewed') bool get changedSinceViewed;@JsonKey(includeIfNull: true, name: 'change_reason') HistoryChangeReason? get changeReason;
 /// Create a copy of HistoryMonth
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +31,20 @@ $HistoryMonthCopyWith<HistoryMonth> get copyWith => _$HistoryMonthCopyWithImpl<H
 @override
 bool operator ==(Object other) {
   final _this = this as HistoryMonth;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is HistoryMonth&&(identical(other.period, _this.period) || other.period == _this.period)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.totalPayableRoundedCents, _this.totalPayableRoundedCents) || other.totalPayableRoundedCents == _this.totalPayableRoundedCents)&&(identical(other.changedSinceViewed, _this.changedSinceViewed) || other.changedSinceViewed == _this.changedSinceViewed)&&(identical(other.iva, _this.iva) || other.iva == _this.iva)&&(identical(other.isr, _this.isr) || other.isr == _this.isr)&&(identical(other.lastViewedAt, _this.lastViewedAt) || other.lastViewedAt == _this.lastViewedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is HistoryMonth&&(identical(other.period, _this.period) || other.period == _this.period)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.hasRecords, _this.hasRecords) || other.hasRecords == _this.hasRecords)&&(identical(other.tax, _this.tax) || other.tax == _this.tax)&&(identical(other.dueDate, _this.dueDate) || other.dueDate == _this.dueDate)&&(identical(other.cpaReviewPending, _this.cpaReviewPending) || other.cpaReviewPending == _this.cpaReviewPending)&&(identical(other.isCurrent, _this.isCurrent) || other.isCurrent == _this.isCurrent)&&(identical(other.recordsFingerprint, _this.recordsFingerprint) || other.recordsFingerprint == _this.recordsFingerprint)&&(identical(other.figuresFingerprint, _this.figuresFingerprint) || other.figuresFingerprint == _this.figuresFingerprint)&&(identical(other.engineVersion, _this.engineVersion) || other.engineVersion == _this.engineVersion)&&(identical(other.parameterSet, _this.parameterSet) || other.parameterSet == _this.parameterSet)&&(identical(other.viewedAt, _this.viewedAt) || other.viewedAt == _this.viewedAt)&&(identical(other.changedSinceViewed, _this.changedSinceViewed) || other.changedSinceViewed == _this.changedSinceViewed)&&(identical(other.changeReason, _this.changeReason) || other.changeReason == _this.changeReason));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as HistoryMonth;
-  return Object.hash(runtimeType,_this.period,_this.status,_this.totalPayableRoundedCents,_this.changedSinceViewed,_this.iva,_this.isr,_this.lastViewedAt);
+  return Object.hash(runtimeType,_this.period,_this.status,_this.hasRecords,_this.tax,_this.dueDate,_this.cpaReviewPending,_this.isCurrent,_this.recordsFingerprint,_this.figuresFingerprint,_this.engineVersion,_this.parameterSet,_this.viewedAt,_this.changedSinceViewed,_this.changeReason);
 }
 
 @override
 String toString() {
   final _this = this as HistoryMonth;
-  return 'HistoryMonth(period: ${_this.period}, status: ${_this.status}, totalPayableRoundedCents: ${_this.totalPayableRoundedCents}, changedSinceViewed: ${_this.changedSinceViewed}, iva: ${_this.iva}, isr: ${_this.isr}, lastViewedAt: ${_this.lastViewedAt})';
+  return 'HistoryMonth(period: ${_this.period}, status: ${_this.status}, hasRecords: ${_this.hasRecords}, tax: ${_this.tax}, dueDate: ${_this.dueDate}, cpaReviewPending: ${_this.cpaReviewPending}, isCurrent: ${_this.isCurrent}, recordsFingerprint: ${_this.recordsFingerprint}, figuresFingerprint: ${_this.figuresFingerprint}, engineVersion: ${_this.engineVersion}, parameterSet: ${_this.parameterSet}, viewedAt: ${_this.viewedAt}, changedSinceViewed: ${_this.changedSinceViewed}, changeReason: ${_this.changeReason})';
 }
 
 
@@ -54,11 +55,11 @@ abstract mixin class $HistoryMonthCopyWith<$Res>  {
   factory $HistoryMonthCopyWith(HistoryMonth value, $Res Function(HistoryMonth) _then) = _$HistoryMonthCopyWithImpl;
 @useResult
 $Res call({
- Period period, HistoryMonthStatus status,@JsonKey(name: 'total_payable_rounded_cents') NonNegativeCents totalPayableRoundedCents,@JsonKey(name: 'changed_since_viewed') bool changedSinceViewed,@JsonKey(includeIfNull: false) TaxResult? iva,@JsonKey(includeIfNull: false) TaxResult? isr,@JsonKey(includeIfNull: false, name: 'last_viewed_at') DateTime? lastViewedAt
+ Period period, TaxpayerEstimateStatus status,@JsonKey(name: 'has_records') bool hasRecords,@JsonKey(includeIfNull: true) HistoryTax? tax,@JsonKey(name: 'due_date') String dueDate,@JsonKey(name: 'cpa_review_pending') bool cpaReviewPending,@JsonKey(name: 'is_current') bool isCurrent,@JsonKey(name: 'records_fingerprint') RecordsFingerprint recordsFingerprint,@JsonKey(name: 'figures_fingerprint') FiguresFingerprint figuresFingerprint,@JsonKey(name: 'engine_version') EngineVersion engineVersion,@JsonKey(name: 'parameter_set') ParameterSetRef parameterSet,@JsonKey(includeIfNull: true, name: 'viewed_at') DateTime? viewedAt,@JsonKey(name: 'changed_since_viewed') bool changedSinceViewed,@JsonKey(includeIfNull: true, name: 'change_reason') HistoryChangeReason? changeReason
 });
 
 
-$TaxResultCopyWith<$Res>? get iva;$TaxResultCopyWith<$Res>? get isr;
+$HistoryTaxCopyWith<$Res>? get tax;$ParameterSetRefCopyWith<$Res> get parameterSet;
 
 }
 /// @nodoc
@@ -71,41 +72,45 @@ class _$HistoryMonthCopyWithImpl<$Res>
 
 /// Create a copy of HistoryMonth
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? period = null,Object? status = null,Object? totalPayableRoundedCents = null,Object? changedSinceViewed = null,Object? iva = freezed,Object? isr = freezed,Object? lastViewedAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? period = null,Object? status = null,Object? hasRecords = null,Object? tax = freezed,Object? dueDate = null,Object? cpaReviewPending = null,Object? isCurrent = null,Object? recordsFingerprint = null,Object? figuresFingerprint = null,Object? engineVersion = null,Object? parameterSet = null,Object? viewedAt = freezed,Object? changedSinceViewed = null,Object? changeReason = freezed,}) {
   return _then(HistoryMonth(
 period: null == period ? _self.period : period // ignore: cast_nullable_to_non_nullable
 as Period,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
-as HistoryMonthStatus,totalPayableRoundedCents: null == totalPayableRoundedCents ? _self.totalPayableRoundedCents : totalPayableRoundedCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents,changedSinceViewed: null == changedSinceViewed ? _self.changedSinceViewed : changedSinceViewed // ignore: cast_nullable_to_non_nullable
-as bool,iva: freezed == iva ? _self.iva : iva // ignore: cast_nullable_to_non_nullable
-as TaxResult?,isr: freezed == isr ? _self.isr : isr // ignore: cast_nullable_to_non_nullable
-as TaxResult?,lastViewedAt: freezed == lastViewedAt ? _self.lastViewedAt : lastViewedAt // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as TaxpayerEstimateStatus,hasRecords: null == hasRecords ? _self.hasRecords : hasRecords // ignore: cast_nullable_to_non_nullable
+as bool,tax: freezed == tax ? _self.tax : tax // ignore: cast_nullable_to_non_nullable
+as HistoryTax?,dueDate: null == dueDate ? _self.dueDate : dueDate // ignore: cast_nullable_to_non_nullable
+as String,cpaReviewPending: null == cpaReviewPending ? _self.cpaReviewPending : cpaReviewPending // ignore: cast_nullable_to_non_nullable
+as bool,isCurrent: null == isCurrent ? _self.isCurrent : isCurrent // ignore: cast_nullable_to_non_nullable
+as bool,recordsFingerprint: null == recordsFingerprint ? _self.recordsFingerprint : recordsFingerprint // ignore: cast_nullable_to_non_nullable
+as RecordsFingerprint,figuresFingerprint: null == figuresFingerprint ? _self.figuresFingerprint : figuresFingerprint // ignore: cast_nullable_to_non_nullable
+as FiguresFingerprint,engineVersion: null == engineVersion ? _self.engineVersion : engineVersion // ignore: cast_nullable_to_non_nullable
+as EngineVersion,parameterSet: null == parameterSet ? _self.parameterSet : parameterSet // ignore: cast_nullable_to_non_nullable
+as ParameterSetRef,viewedAt: freezed == viewedAt ? _self.viewedAt : viewedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,changedSinceViewed: null == changedSinceViewed ? _self.changedSinceViewed : changedSinceViewed // ignore: cast_nullable_to_non_nullable
+as bool,changeReason: freezed == changeReason ? _self.changeReason : changeReason // ignore: cast_nullable_to_non_nullable
+as HistoryChangeReason?,
   ));
 }
 /// Create a copy of HistoryMonth
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$TaxResultCopyWith<$Res>? get iva {
-    if (_self.iva == null) {
+$HistoryTaxCopyWith<$Res>? get tax {
+    if (_self.tax == null) {
     return null;
   }
 
-  return $TaxResultCopyWith<$Res>(_self.iva!, (value) {
-    return _then(_self.copyWith(iva: value));
+  return $HistoryTaxCopyWith<$Res>(_self.tax!, (value) {
+    return _then(_self.copyWith(tax: value));
   });
 }/// Create a copy of HistoryMonth
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$TaxResultCopyWith<$Res>? get isr {
-    if (_self.isr == null) {
-    return null;
-  }
-
-  return $TaxResultCopyWith<$Res>(_self.isr!, (value) {
-    return _then(_self.copyWith(isr: value));
+$ParameterSetRefCopyWith<$Res> get parameterSet {
+  
+  return $ParameterSetRefCopyWith<$Res>(_self.parameterSet, (value) {
+    return _then(_self.copyWith(parameterSet: value));
   });
 }
 }
@@ -189,10 +194,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Period period,  HistoryMonthStatus status, @JsonKey(name: 'total_payable_rounded_cents')  NonNegativeCents totalPayableRoundedCents, @JsonKey(name: 'changed_since_viewed')  bool changedSinceViewed, @JsonKey(includeIfNull: false)  TaxResult? iva, @JsonKey(includeIfNull: false)  TaxResult? isr, @JsonKey(includeIfNull: false, name: 'last_viewed_at')  DateTime? lastViewedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Period period,  TaxpayerEstimateStatus status, @JsonKey(name: 'has_records')  bool hasRecords, @JsonKey(includeIfNull: true)  HistoryTax? tax, @JsonKey(name: 'due_date')  String dueDate, @JsonKey(name: 'cpa_review_pending')  bool cpaReviewPending, @JsonKey(name: 'is_current')  bool isCurrent, @JsonKey(name: 'records_fingerprint')  RecordsFingerprint recordsFingerprint, @JsonKey(name: 'figures_fingerprint')  FiguresFingerprint figuresFingerprint, @JsonKey(name: 'engine_version')  EngineVersion engineVersion, @JsonKey(name: 'parameter_set')  ParameterSetRef parameterSet, @JsonKey(includeIfNull: true, name: 'viewed_at')  DateTime? viewedAt, @JsonKey(name: 'changed_since_viewed')  bool changedSinceViewed, @JsonKey(includeIfNull: true, name: 'change_reason')  HistoryChangeReason? changeReason)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _HistoryMonth() when $default != null:
-return $default(_that.period,_that.status,_that.totalPayableRoundedCents,_that.changedSinceViewed,_that.iva,_that.isr,_that.lastViewedAt);case _:
+return $default(_that.period,_that.status,_that.hasRecords,_that.tax,_that.dueDate,_that.cpaReviewPending,_that.isCurrent,_that.recordsFingerprint,_that.figuresFingerprint,_that.engineVersion,_that.parameterSet,_that.viewedAt,_that.changedSinceViewed,_that.changeReason);case _:
   return orElse();
 
 }
@@ -210,10 +215,10 @@ return $default(_that.period,_that.status,_that.totalPayableRoundedCents,_that.c
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Period period,  HistoryMonthStatus status, @JsonKey(name: 'total_payable_rounded_cents')  NonNegativeCents totalPayableRoundedCents, @JsonKey(name: 'changed_since_viewed')  bool changedSinceViewed, @JsonKey(includeIfNull: false)  TaxResult? iva, @JsonKey(includeIfNull: false)  TaxResult? isr, @JsonKey(includeIfNull: false, name: 'last_viewed_at')  DateTime? lastViewedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Period period,  TaxpayerEstimateStatus status, @JsonKey(name: 'has_records')  bool hasRecords, @JsonKey(includeIfNull: true)  HistoryTax? tax, @JsonKey(name: 'due_date')  String dueDate, @JsonKey(name: 'cpa_review_pending')  bool cpaReviewPending, @JsonKey(name: 'is_current')  bool isCurrent, @JsonKey(name: 'records_fingerprint')  RecordsFingerprint recordsFingerprint, @JsonKey(name: 'figures_fingerprint')  FiguresFingerprint figuresFingerprint, @JsonKey(name: 'engine_version')  EngineVersion engineVersion, @JsonKey(name: 'parameter_set')  ParameterSetRef parameterSet, @JsonKey(includeIfNull: true, name: 'viewed_at')  DateTime? viewedAt, @JsonKey(name: 'changed_since_viewed')  bool changedSinceViewed, @JsonKey(includeIfNull: true, name: 'change_reason')  HistoryChangeReason? changeReason)  $default,) {final _that = this;
 switch (_that) {
 case _HistoryMonth():
-return $default(_that.period,_that.status,_that.totalPayableRoundedCents,_that.changedSinceViewed,_that.iva,_that.isr,_that.lastViewedAt);case _:
+return $default(_that.period,_that.status,_that.hasRecords,_that.tax,_that.dueDate,_that.cpaReviewPending,_that.isCurrent,_that.recordsFingerprint,_that.figuresFingerprint,_that.engineVersion,_that.parameterSet,_that.viewedAt,_that.changedSinceViewed,_that.changeReason);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -230,10 +235,10 @@ return $default(_that.period,_that.status,_that.totalPayableRoundedCents,_that.c
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Period period,  HistoryMonthStatus status, @JsonKey(name: 'total_payable_rounded_cents')  NonNegativeCents totalPayableRoundedCents, @JsonKey(name: 'changed_since_viewed')  bool changedSinceViewed, @JsonKey(includeIfNull: false)  TaxResult? iva, @JsonKey(includeIfNull: false)  TaxResult? isr, @JsonKey(includeIfNull: false, name: 'last_viewed_at')  DateTime? lastViewedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Period period,  TaxpayerEstimateStatus status, @JsonKey(name: 'has_records')  bool hasRecords, @JsonKey(includeIfNull: true)  HistoryTax? tax, @JsonKey(name: 'due_date')  String dueDate, @JsonKey(name: 'cpa_review_pending')  bool cpaReviewPending, @JsonKey(name: 'is_current')  bool isCurrent, @JsonKey(name: 'records_fingerprint')  RecordsFingerprint recordsFingerprint, @JsonKey(name: 'figures_fingerprint')  FiguresFingerprint figuresFingerprint, @JsonKey(name: 'engine_version')  EngineVersion engineVersion, @JsonKey(name: 'parameter_set')  ParameterSetRef parameterSet, @JsonKey(includeIfNull: true, name: 'viewed_at')  DateTime? viewedAt, @JsonKey(name: 'changed_since_viewed')  bool changedSinceViewed, @JsonKey(includeIfNull: true, name: 'change_reason')  HistoryChangeReason? changeReason)?  $default,) {final _that = this;
 switch (_that) {
 case _HistoryMonth() when $default != null:
-return $default(_that.period,_that.status,_that.totalPayableRoundedCents,_that.changedSinceViewed,_that.iva,_that.isr,_that.lastViewedAt);case _:
+return $default(_that.period,_that.status,_that.hasRecords,_that.tax,_that.dueDate,_that.cpaReviewPending,_that.isCurrent,_that.recordsFingerprint,_that.figuresFingerprint,_that.engineVersion,_that.parameterSet,_that.viewedAt,_that.changedSinceViewed,_that.changeReason);case _:
   return null;
 
 }
@@ -245,16 +250,24 @@ return $default(_that.period,_that.status,_that.totalPayableRoundedCents,_that.c
 @JsonSerializable()
 
 class _HistoryMonth implements HistoryMonth {
-  const _HistoryMonth({required this.period, required this.status, @JsonKey(name: 'total_payable_rounded_cents') required this.totalPayableRoundedCents, @JsonKey(name: 'changed_since_viewed') required this.changedSinceViewed, @JsonKey(includeIfNull: false) this.iva, @JsonKey(includeIfNull: false) this.isr, @JsonKey(includeIfNull: false, name: 'last_viewed_at') this.lastViewedAt});
+  const _HistoryMonth({required this.period, required this.status, @JsonKey(name: 'has_records') required this.hasRecords, @JsonKey(includeIfNull: true) required this.tax, @JsonKey(name: 'due_date') required this.dueDate, @JsonKey(name: 'cpa_review_pending') required this.cpaReviewPending, @JsonKey(name: 'is_current') required this.isCurrent, @JsonKey(name: 'records_fingerprint') required this.recordsFingerprint, @JsonKey(name: 'figures_fingerprint') required this.figuresFingerprint, @JsonKey(name: 'engine_version') required this.engineVersion, @JsonKey(name: 'parameter_set') required this.parameterSet, @JsonKey(includeIfNull: true, name: 'viewed_at') required this.viewedAt, @JsonKey(name: 'changed_since_viewed') required this.changedSinceViewed, @JsonKey(includeIfNull: true, name: 'change_reason') required this.changeReason});
   factory _HistoryMonth.fromJson(Map<String, dynamic> json) => _$HistoryMonthFromJson(json);
 
 @override final  Period period;
-@override final  HistoryMonthStatus status;
-@override@JsonKey(name: 'total_payable_rounded_cents') final  NonNegativeCents totalPayableRoundedCents;
+@override final  TaxpayerEstimateStatus status;
+@override@JsonKey(name: 'has_records') final  bool hasRecords;
+@override@JsonKey(includeIfNull: true) final  HistoryTax? tax;
+@override@JsonKey(name: 'due_date') final  String dueDate;
+/// Any regime of the month is pending CPA review; the app shows the strong, non-dismissible banner.
+@override@JsonKey(name: 'cpa_review_pending') final  bool cpaReviewPending;
+@override@JsonKey(name: 'is_current') final  bool isCurrent;
+@override@JsonKey(name: 'records_fingerprint') final  RecordsFingerprint recordsFingerprint;
+@override@JsonKey(name: 'figures_fingerprint') final  FiguresFingerprint figuresFingerprint;
+@override@JsonKey(name: 'engine_version') final  EngineVersion engineVersion;
+@override@JsonKey(name: 'parameter_set') final  ParameterSetRef parameterSet;
+@override@JsonKey(includeIfNull: true, name: 'viewed_at') final  DateTime? viewedAt;
 @override@JsonKey(name: 'changed_since_viewed') final  bool changedSinceViewed;
-@override@JsonKey(includeIfNull: false) final  TaxResult? iva;
-@override@JsonKey(includeIfNull: false) final  TaxResult? isr;
-@override@JsonKey(includeIfNull: false, name: 'last_viewed_at') final  DateTime? lastViewedAt;
+@override@JsonKey(includeIfNull: true, name: 'change_reason') final  HistoryChangeReason? changeReason;
 
 /// Create a copy of HistoryMonth
 /// with the given fields replaced by the non-null parameter values.
@@ -269,18 +282,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _HistoryMonth&&(identical(other.period, period) || other.period == period)&&(identical(other.status, status) || other.status == status)&&(identical(other.totalPayableRoundedCents, totalPayableRoundedCents) || other.totalPayableRoundedCents == totalPayableRoundedCents)&&(identical(other.changedSinceViewed, changedSinceViewed) || other.changedSinceViewed == changedSinceViewed)&&(identical(other.iva, iva) || other.iva == iva)&&(identical(other.isr, isr) || other.isr == isr)&&(identical(other.lastViewedAt, lastViewedAt) || other.lastViewedAt == lastViewedAt));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _HistoryMonth&&(identical(other.period, period) || other.period == period)&&(identical(other.status, status) || other.status == status)&&(identical(other.hasRecords, hasRecords) || other.hasRecords == hasRecords)&&(identical(other.tax, tax) || other.tax == tax)&&(identical(other.dueDate, dueDate) || other.dueDate == dueDate)&&(identical(other.cpaReviewPending, cpaReviewPending) || other.cpaReviewPending == cpaReviewPending)&&(identical(other.isCurrent, isCurrent) || other.isCurrent == isCurrent)&&(identical(other.recordsFingerprint, recordsFingerprint) || other.recordsFingerprint == recordsFingerprint)&&(identical(other.figuresFingerprint, figuresFingerprint) || other.figuresFingerprint == figuresFingerprint)&&(identical(other.engineVersion, engineVersion) || other.engineVersion == engineVersion)&&(identical(other.parameterSet, parameterSet) || other.parameterSet == parameterSet)&&(identical(other.viewedAt, viewedAt) || other.viewedAt == viewedAt)&&(identical(other.changedSinceViewed, changedSinceViewed) || other.changedSinceViewed == changedSinceViewed)&&(identical(other.changeReason, changeReason) || other.changeReason == changeReason));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,period,status,totalPayableRoundedCents,changedSinceViewed,iva,isr,lastViewedAt);
+    return Object.hash(runtimeType,period,status,hasRecords,tax,dueDate,cpaReviewPending,isCurrent,recordsFingerprint,figuresFingerprint,engineVersion,parameterSet,viewedAt,changedSinceViewed,changeReason);
 }
 
 @override
 String toString() {
-    return 'HistoryMonth(period: $period, status: $status, totalPayableRoundedCents: $totalPayableRoundedCents, changedSinceViewed: $changedSinceViewed, iva: $iva, isr: $isr, lastViewedAt: $lastViewedAt)';
+    return 'HistoryMonth(period: $period, status: $status, hasRecords: $hasRecords, tax: $tax, dueDate: $dueDate, cpaReviewPending: $cpaReviewPending, isCurrent: $isCurrent, recordsFingerprint: $recordsFingerprint, figuresFingerprint: $figuresFingerprint, engineVersion: $engineVersion, parameterSet: $parameterSet, viewedAt: $viewedAt, changedSinceViewed: $changedSinceViewed, changeReason: $changeReason)';
 }
 
 
@@ -291,11 +304,11 @@ abstract mixin class _$HistoryMonthCopyWith<$Res> implements $HistoryMonthCopyWi
   factory _$HistoryMonthCopyWith(_HistoryMonth value, $Res Function(_HistoryMonth) _then) = __$HistoryMonthCopyWithImpl;
 @override @useResult
 $Res call({
- Period period, HistoryMonthStatus status,@JsonKey(name: 'total_payable_rounded_cents') NonNegativeCents totalPayableRoundedCents,@JsonKey(name: 'changed_since_viewed') bool changedSinceViewed,@JsonKey(includeIfNull: false) TaxResult? iva,@JsonKey(includeIfNull: false) TaxResult? isr,@JsonKey(includeIfNull: false, name: 'last_viewed_at') DateTime? lastViewedAt
+ Period period, TaxpayerEstimateStatus status,@JsonKey(name: 'has_records') bool hasRecords,@JsonKey(includeIfNull: true) HistoryTax? tax,@JsonKey(name: 'due_date') String dueDate,@JsonKey(name: 'cpa_review_pending') bool cpaReviewPending,@JsonKey(name: 'is_current') bool isCurrent,@JsonKey(name: 'records_fingerprint') RecordsFingerprint recordsFingerprint,@JsonKey(name: 'figures_fingerprint') FiguresFingerprint figuresFingerprint,@JsonKey(name: 'engine_version') EngineVersion engineVersion,@JsonKey(name: 'parameter_set') ParameterSetRef parameterSet,@JsonKey(includeIfNull: true, name: 'viewed_at') DateTime? viewedAt,@JsonKey(name: 'changed_since_viewed') bool changedSinceViewed,@JsonKey(includeIfNull: true, name: 'change_reason') HistoryChangeReason? changeReason
 });
 
 
-@override $TaxResultCopyWith<$Res>? get iva;@override $TaxResultCopyWith<$Res>? get isr;
+@override $HistoryTaxCopyWith<$Res>? get tax;@override $ParameterSetRefCopyWith<$Res> get parameterSet;
 
 }
 /// @nodoc
@@ -308,16 +321,23 @@ class __$HistoryMonthCopyWithImpl<$Res>
 
 /// Create a copy of HistoryMonth
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? period = null,Object? status = null,Object? totalPayableRoundedCents = null,Object? changedSinceViewed = null,Object? iva = freezed,Object? isr = freezed,Object? lastViewedAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? period = null,Object? status = null,Object? hasRecords = null,Object? tax = freezed,Object? dueDate = null,Object? cpaReviewPending = null,Object? isCurrent = null,Object? recordsFingerprint = null,Object? figuresFingerprint = null,Object? engineVersion = null,Object? parameterSet = null,Object? viewedAt = freezed,Object? changedSinceViewed = null,Object? changeReason = freezed,}) {
   return _then(_HistoryMonth(
 period: null == period ? _self.period : period // ignore: cast_nullable_to_non_nullable
 as Period,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
-as HistoryMonthStatus,totalPayableRoundedCents: null == totalPayableRoundedCents ? _self.totalPayableRoundedCents : totalPayableRoundedCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents,changedSinceViewed: null == changedSinceViewed ? _self.changedSinceViewed : changedSinceViewed // ignore: cast_nullable_to_non_nullable
-as bool,iva: freezed == iva ? _self.iva : iva // ignore: cast_nullable_to_non_nullable
-as TaxResult?,isr: freezed == isr ? _self.isr : isr // ignore: cast_nullable_to_non_nullable
-as TaxResult?,lastViewedAt: freezed == lastViewedAt ? _self.lastViewedAt : lastViewedAt // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as TaxpayerEstimateStatus,hasRecords: null == hasRecords ? _self.hasRecords : hasRecords // ignore: cast_nullable_to_non_nullable
+as bool,tax: freezed == tax ? _self.tax : tax // ignore: cast_nullable_to_non_nullable
+as HistoryTax?,dueDate: null == dueDate ? _self.dueDate : dueDate // ignore: cast_nullable_to_non_nullable
+as String,cpaReviewPending: null == cpaReviewPending ? _self.cpaReviewPending : cpaReviewPending // ignore: cast_nullable_to_non_nullable
+as bool,isCurrent: null == isCurrent ? _self.isCurrent : isCurrent // ignore: cast_nullable_to_non_nullable
+as bool,recordsFingerprint: null == recordsFingerprint ? _self.recordsFingerprint : recordsFingerprint // ignore: cast_nullable_to_non_nullable
+as RecordsFingerprint,figuresFingerprint: null == figuresFingerprint ? _self.figuresFingerprint : figuresFingerprint // ignore: cast_nullable_to_non_nullable
+as FiguresFingerprint,engineVersion: null == engineVersion ? _self.engineVersion : engineVersion // ignore: cast_nullable_to_non_nullable
+as EngineVersion,parameterSet: null == parameterSet ? _self.parameterSet : parameterSet // ignore: cast_nullable_to_non_nullable
+as ParameterSetRef,viewedAt: freezed == viewedAt ? _self.viewedAt : viewedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,changedSinceViewed: null == changedSinceViewed ? _self.changedSinceViewed : changedSinceViewed // ignore: cast_nullable_to_non_nullable
+as bool,changeReason: freezed == changeReason ? _self.changeReason : changeReason // ignore: cast_nullable_to_non_nullable
+as HistoryChangeReason?,
   ));
 }
 
@@ -325,25 +345,22 @@ as DateTime?,
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$TaxResultCopyWith<$Res>? get iva {
-    if (_self.iva == null) {
+$HistoryTaxCopyWith<$Res>? get tax {
+    if (_self.tax == null) {
     return null;
   }
 
-  return $TaxResultCopyWith<$Res>(_self.iva!, (value) {
-    return _then(_self.copyWith(iva: value));
+  return $HistoryTaxCopyWith<$Res>(_self.tax!, (value) {
+    return _then(_self.copyWith(tax: value));
   });
 }/// Create a copy of HistoryMonth
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$TaxResultCopyWith<$Res>? get isr {
-    if (_self.isr == null) {
-    return null;
-  }
-
-  return $TaxResultCopyWith<$Res>(_self.isr!, (value) {
-    return _then(_self.copyWith(isr: value));
+$ParameterSetRefCopyWith<$Res> get parameterSet {
+  
+  return $ParameterSetRefCopyWith<$Res>(_self.parameterSet, (value) {
+    return _then(_self.copyWith(parameterSet: value));
   });
 }
 }
