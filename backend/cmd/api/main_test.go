@@ -91,7 +91,13 @@ func newFlaggedHandler(t *testing.T, cfg config.Config, db health.Pinger, f flag
 
 func newHandlerWith(t *testing.T, cfg config.Config, db health.Pinger, f flagService, auth authModule, logger *slog.Logger) http.Handler {
 	t.Helper()
-	h, err := newHandler(cfg, deps{logger: logger, db: db, flags: f, auth: auth, now: time.Now})
+	return newHandlerWithModules(t, cfg, db, f, auth, stubTaxpayersModule(), logger)
+}
+
+func newHandlerWithModules(t *testing.T, cfg config.Config, db health.Pinger, f flagService, auth authModule,
+	taxpayers taxpayersModule, logger *slog.Logger) http.Handler {
+	t.Helper()
+	h, err := newHandler(cfg, deps{logger: logger, db: db, flags: f, auth: auth, taxpayers: taxpayers, now: time.Now})
 	require.NoError(t, err)
 	return h
 }
@@ -222,10 +228,11 @@ func TestFlagGate_throughTheRealRouter(t *testing.T) {
 // P0-29 FU2: an operation of an enabled module that is not built yet answers
 // exactly like a hidden module: no panic, no 500, nothing about its schema.
 func TestNotBuilt_isHiddenEvenWithItsModuleOn(t *testing.T) {
-	svc := flags.NewService(keysReader{keys: []string{"module_auth", "module_taxpayers"}})
+	svc := flags.NewService(keysReader{keys: []string{"module_auth", "module_taxpayers", "module_incomes"}})
 	h := newFlaggedHandler(t, testConfig(), pingOK{}, svc)
 
-	for _, target := range []string{"/v1/taxpayers", "/v1/taxpayers/0190f2a4-7c1e-7b3a-9d2e-4f5a6b7c8d9e"} {
+	const taxpayer = "/v1/taxpayers/0190f2a4-7c1e-7b3a-9d2e-4f5a6b7c8d9e"
+	for _, target := range []string{taxpayer + "/incomes?period=2026-09", taxpayer + "/incomes/0190f2a4-7c1e-7b3a-9d2e-4f5a6b7c8d9f"} {
 		req, rec := get(h, target)
 		flagtest.AssertHidden(t, rec)
 		conforms(t, req, rec)
@@ -356,10 +363,10 @@ func TestRun_reportsMalformedDatabaseURL(t *testing.T) {
 
 // Outside dev a role that cannot be verified is refused: the process does not start.
 func TestRun_refusesToStartWhenTheRuntimeRoleCannotBeVerified(t *testing.T) {
-	env := withAuthKeys(map[string]string{ //nolint:gosec // G101: fake password of a test fixture; the port is closed.
+	env := withTaxpayersKeys(withAuthKeys(map[string]string{ //nolint:gosec // G101: fake password of a test fixture; the port is closed.
 		"APP_ENV": "staging", "TRUSTED_PROXY_HOPS": "0",
 		"DATABASE_URL": "postgres://cc_app:s3cr3t-pw@127.0.0.1:1/control_contable?sslmode=disable&connect_timeout=1",
-	})
+	}))
 	err := run(context.Background(), func(k string) (string, bool) { v, ok := env[k]; return v, ok }, io.Discard)
 
 	require.Error(t, err)

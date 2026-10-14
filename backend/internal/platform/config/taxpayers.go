@@ -13,7 +13,7 @@ const (
 	// secretRFCKey is the AES-256-GCM key sealing taxpayers.rfc_encrypted.
 	secretRFCKey = "RFC_ENC_KEY" //nolint:gosec // G101: a secret's name, not its value
 	// secretRFCIndexPepper keys the rfc_hash blind index (crypto.NewRFCIndex).
-	secretRFCIndexPepper = "RFC_INDEX_PEPPER" //nolint:gosec // G101: a secret's name, not its value
+	secretRFCIndexPepper = "RFC_INDEX_PEPPER"
 	// keyRFCKeyID names RFCKey in every ciphertext (rfc_key_id).
 	keyRFCKeyID = "RFC_ENC_KEY_ID"
 
@@ -60,7 +60,8 @@ func LoadTaxpayers(ctx context.Context, lookup Lookup, secrets SecretSource, env
 	}
 	for _, k := range keys {
 		*k.dst, err = loadHexKey(ctx, secrets, k.name, k.size)
-		if err != nil && !(env == EnvDev && errors.Is(err, ErrSecretNotFound)) {
+		devMissing := env == EnvDev && errors.Is(err, ErrSecretNotFound)
+		if err != nil && !devMissing {
 			errs = append(errs, err)
 		}
 	}

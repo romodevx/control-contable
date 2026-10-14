@@ -76,6 +76,10 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err := errors.Join(err, authErr); err != nil {
 		return err
 	}
+	taxpayerKeys, err := config.LoadTaxpayers(ctx, lookup, secrets, cfg.Env, authKeys)
+	if err != nil {
+		return err
+	}
 	logger := logging.New(logOut, cfg.LogLevel)
 	// The runtime pool (cc_app). Opening does not connect: once started, an
 	// unreachable database makes every flagged module OFF (fail closed) and
@@ -96,12 +100,19 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err != nil {
 		return err
 	}
+	taxpayers, err := newTaxpayersModule(taxpayersWiring{
+		env: cfg.Env, keys: taxpayerKeys, pool: pool, limits: auth.limits, logger: logger,
+	})
+	if err != nil {
+		return err
+	}
 	handler, err := newHandler(cfg, deps{
-		logger: logger,
-		db:     pgdb.NewPinger(pool),
-		flags:  flagSvc,
-		auth:   auth,
-		now:    time.Now,
+		logger:    logger,
+		db:        pgdb.NewPinger(pool),
+		flags:     flagSvc,
+		auth:      auth,
+		taxpayers: taxpayers,
+		now:       time.Now,
 	})
 	if err != nil {
 		return err
@@ -150,11 +161,12 @@ func closeDatabase(pool *sql.DB, logger *slog.Logger) {
 
 // deps are the adapters newHandler wires; tests substitute them.
 type deps struct {
-	logger *slog.Logger
-	db     health.Pinger
-	flags  flagService
-	auth   authModule
-	now    func() time.Time
+	logger    *slog.Logger
+	db        health.Pinger
+	flags     flagService
+	auth      authModule
+	taxpayers taxpayersModule
+	now       func() time.Time
 }
 
 // flagService is what the HTTP layer needs from the flags service: the
@@ -181,14 +193,18 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 		return nil, fmt.Errorf("load embedded contract: %w", err)
 	}
 	server := api{
-		Handler:        health.New(d.db, version, d.logger),
-		flagsHandler:   flagshttp.New(d.flags, d.logger),
-		authHandler:    d.auth.handler,
-		accountHandler: d.auth.account,
-		SessionHandler: d.auth.sessions,
+		Handler:          health.New(d.db, version, d.logger),
+		flagsHandler:     flagshttp.New(d.flags, d.logger),
+		authHandler:      d.auth.handler,
+		accountHandler:   d.auth.account,
+		SessionHandler:   d.auth.sessions,
+		taxpayersHandler: d.taxpayers.handler,
 	}
 	if d.auth.authn == nil {
 		return nil, errors.New("api: no authenticator: secured operations would run unauthenticated")
+	}
+	if d.taxpayers.handler == nil {
+		return nil, errors.New("api: no taxpayers handler: module_taxpayers operations would panic")
 	}
 	routes, err := router.New(server, spec, router.Options{
 		Flags:    d.flags,
@@ -199,6 +215,9 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 		// (MODULE-auth §5), keyed like the edge limiter.
 		OperationLimits: d.auth.clientLimits,
 		ClientKey:       middleware.ClientIP(cfg.TrustedProxyHops),
+		// The per-user write budget of the taxpayer mutations (MODULE-taxpayers
+		// S-10), keyed by the authenticated user.
+		UserLimits: d.taxpayers.userLimits,
 	})
 	if err != nil {
 		return nil, err

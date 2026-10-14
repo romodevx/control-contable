@@ -17,7 +17,9 @@ import (
 // one means deleting its stub from notbuilt.go (the compiler insists) and
 // adding it here.
 var builtOperations = []string{"getHealth", "listEnabledFlags", "register", "resendVerification", "verifyEmail", "login",
-	"refreshSession", "logout", "getMe", "updateMe", "deleteMe", "listLegalDocuments"}
+	"refreshSession", "logout", "getMe", "updateMe", "deleteMe", "listLegalDocuments",
+	"listRegimes", "listTaxpayers", "createTaxpayer", "getTaxpayer", "updateTaxpayer", "deleteTaxpayer",
+	"archiveTaxpayer", "unarchiveTaxpayer", "addTaxpayerRegime", "updateTaxpayerRegime", "archiveTaxpayerRegime"}
 
 func TestNotBuilt_coversExactlyTheOperationsWithoutAHandler(t *testing.T) {
 	var want []string

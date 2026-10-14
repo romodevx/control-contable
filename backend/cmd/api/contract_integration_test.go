@@ -64,8 +64,12 @@ func newContractEnv(t *testing.T, db health.Pinger) contractEnv {
 		env: config.EnvDev, keys: testAuthKeys(), pool: app, logger: logger, now: time.Now, argon2: fastArgon2,
 	})
 	require.NoError(t, err)
+	taxpayers, err := newTaxpayersModule(taxpayersWiring{
+		env: config.EnvDev, keys: testTaxpayerKeys(), pool: app, limits: auth.limits, logger: logger,
+	})
+	require.NoError(t, err)
 	return contractEnv{
-		handler: newHandlerWith(t, contractConfig(), db, svc, auth, logger),
+		handler: newHandlerWithModules(t, contractConfig(), db, svc, auth, taxpayers, logger),
 		store:   flagsgorm.NewStore(owner),
 		flags:   svc,
 		logs:    logs,

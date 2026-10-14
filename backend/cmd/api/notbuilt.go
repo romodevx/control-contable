@@ -53,10 +53,6 @@ func (notBuilt) ListExpenseCategories(context.Context, gen.ListExpenseCategories
 	return nil, errNotBuilt
 }
 
-func (notBuilt) ListRegimes(context.Context, gen.ListRegimesRequestObject) (gen.ListRegimesResponseObject, error) {
-	return nil, errNotBuilt
-}
-
 func (notBuilt) GetReminderSettings(context.Context, gen.GetReminderSettingsRequestObject) (gen.GetReminderSettingsResponseObject, error) {
 	return nil, errNotBuilt
 }
@@ -74,34 +70,6 @@ func (notBuilt) SyncSubscription(context.Context, gen.SyncSubscriptionRequestObj
 }
 
 func (notBuilt) GetTaxCalendar(context.Context, gen.GetTaxCalendarRequestObject) (gen.GetTaxCalendarResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) ListTaxpayers(context.Context, gen.ListTaxpayersRequestObject) (gen.ListTaxpayersResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) CreateTaxpayer(context.Context, gen.CreateTaxpayerRequestObject) (gen.CreateTaxpayerResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) DeleteTaxpayer(context.Context, gen.DeleteTaxpayerRequestObject) (gen.DeleteTaxpayerResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) GetTaxpayer(context.Context, gen.GetTaxpayerRequestObject) (gen.GetTaxpayerResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) UpdateTaxpayer(context.Context, gen.UpdateTaxpayerRequestObject) (gen.UpdateTaxpayerResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) ArchiveTaxpayer(context.Context, gen.ArchiveTaxpayerRequestObject) (gen.ArchiveTaxpayerResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) UnarchiveTaxpayer(context.Context, gen.UnarchiveTaxpayerRequestObject) (gen.UnarchiveTaxpayerResponseObject, error) {
 	return nil, errNotBuilt
 }
 
@@ -170,18 +138,6 @@ func (notBuilt) UpdateIncome(context.Context, gen.UpdateIncomeRequestObject) (ge
 }
 
 func (notBuilt) RestoreIncome(context.Context, gen.RestoreIncomeRequestObject) (gen.RestoreIncomeResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) AddTaxpayerRegime(context.Context, gen.AddTaxpayerRegimeRequestObject) (gen.AddTaxpayerRegimeResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) ArchiveTaxpayerRegime(context.Context, gen.ArchiveTaxpayerRegimeRequestObject) (gen.ArchiveTaxpayerRegimeResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) UpdateTaxpayerRegime(context.Context, gen.UpdateTaxpayerRegimeRequestObject) (gen.UpdateTaxpayerRegimeResponseObject, error) {
 	return nil, errNotBuilt
 }
 
