@@ -4,23 +4,20 @@
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+/// `user` when the user overrode `deductible`; `category_default` otherwise.
 @JsonEnum()
-enum DeductibilityHintDeductibility {
-  @JsonValue('deductible')
-  deductible('deductible'),
-  @JsonValue('partially_deductible')
-  partiallyDeductible('partially_deductible'),
-  @JsonValue('not_deductible')
-  notDeductible('not_deductible'),
-  @JsonValue('isr_not_applicable')
-  isrNotApplicable('isr_not_applicable'),
+enum DeductibleSource {
+  @JsonValue('category_default')
+  categoryDefault('category_default'),
+  @JsonValue('user')
+  user('user'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);
 
-  const DeductibilityHintDeductibility(this.json);
+  const DeductibleSource(this.json);
 
-  factory DeductibilityHintDeductibility.fromJson(String json) =>
+  factory DeductibleSource.fromJson(String json) =>
       values.firstWhere((e) => e.json == json, orElse: () => $unknown);
 
   final String? json;
@@ -29,6 +26,6 @@ enum DeductibilityHintDeductibility {
   String toString() => json?.toString() ?? super.toString();
 
   /// Returns all defined enum values excluding the $unknown value.
-  static List<DeductibilityHintDeductibility> get $valuesDefined =>
+  static List<DeductibleSource> get $valuesDefined =>
       values.where((value) => value != $unknown).toList();
 }

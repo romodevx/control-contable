@@ -26,7 +26,8 @@ API_DOCS_OUT ?= build/api-docs/index.html
 # Generated error tables (M1-18): each module page's error table is rendered from the
 # contract between BEGIN/END GENERATED markers. Add one <module>=<page> pair per module page.
 API_BUNDLE := build/openapi/bundle.json
-ERROR_TABLE_PAGES := module_auth=docs/modules/auth.md module_taxpayers=docs/modules/taxpayers.md
+ERROR_TABLE_PAGES := module_auth=docs/modules/auth.md module_taxpayers=docs/modules/taxpayers.md \
+	module_incomes=docs/modules/incomes.md module_expenses=docs/modules/expenses.md
 ERROR_TABLE := node $(CONTRACT_TOOLS)/error-table.js $(API_BUNDLE)
 
 .PHONY: contract-tools contract-lint contract-lint-test mock api-docs api-bundle \

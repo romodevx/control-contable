@@ -91,6 +91,45 @@ class _IncomesClient implements IncomesClient {
   }
 
   @override
+  Future<IncomeDefaults> getIncomeDefaults({
+    required String taxpayerId,
+    required String regime,
+    required CounterpartyType counterpartyType,
+    DateTime? onValue,
+    PlatformActivity? platformActivity,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{
+      r'regime': regime,
+      r'counterparty_type': counterpartyType,
+      r'on': onValue?.toIso8601String(),
+      r'platform_activity': platformActivity,
+    };
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<IncomeDefaults>(
+      Options(method: 'GET', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/v1/taxpayers/${taxpayerId}/incomes/defaults',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late IncomeDefaults _value;
+    try {
+      _value = IncomeDefaults.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
   Future<Income> getIncome({
     required String taxpayerId,
     required String incomeId,

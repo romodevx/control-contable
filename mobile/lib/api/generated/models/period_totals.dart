@@ -9,16 +9,17 @@ import 'non_negative_cents.dart';
 part 'period_totals.freezed.dart';
 part 'period_totals.g.dart';
 
+/// Sums of every live record of the filtered period (not just the page).
 @Freezed()
 abstract class PeriodTotals with _$PeriodTotals {
   const factory PeriodTotals({
     required int count,
     @JsonKey(name: 'amount_cents') required NonNegativeCents amountCents,
     @JsonKey(name: 'iva_cents') required NonNegativeCents ivaCents,
-    @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')
-    NonNegativeCents? isrWithheldCents,
-    @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')
-    NonNegativeCents? ivaWithheldCents,
+    @JsonKey(name: 'isr_withheld_cents')
+    required NonNegativeCents isrWithheldCents,
+    @JsonKey(name: 'iva_withheld_cents')
+    required NonNegativeCents ivaWithheldCents,
   }) = _PeriodTotals;
 
   factory PeriodTotals.fromJson(Map<String, Object?> json) =>

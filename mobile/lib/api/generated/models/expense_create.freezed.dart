@@ -16,10 +16,16 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ExpenseCreate {
 
-@JsonKey(includeIfNull: false, name: 'regime_code') RegimeCode? get regimeCode;@JsonKey(includeIfNull: false, name: 'category_code') String? get categoryCode;@JsonKey(includeIfNull: false) String? get description;/// Subtotal before IVA.
-@JsonKey(includeIfNull: false, name: 'amount_cents') NonNegativeCents? get amountCents;@JsonKey(includeIfNull: false, name: 'iva_rate') IvaRate? get ivaRate;@JsonKey(includeIfNull: false, name: 'iva_cents') NonNegativeCents? get ivaCents;@JsonKey(includeIfNull: false, name: 'payment_method') PaymentMethod? get paymentMethod;@JsonKey(includeIfNull: false, name: 'has_cfdi') bool? get hasCfdi;@JsonKey(includeIfNull: false, name: 'paid_on') DateTime? get paidOn;/// ISR the taxpayer (typically a PM) withheld from the supplier; must be remitted.
-@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') NonNegativeCents? get isrWithheldCents;/// IVA the taxpayer withheld from the supplier (LIVA 1-A); remitted in full, creditable when paid.
-@JsonKey(includeIfNull: false, name: 'iva_withheld_cents') NonNegativeCents? get ivaWithheldCents;@JsonKey(includeIfNull: false) Uuid? get id;
+@JsonKey(name: 'regime_code') RegimeCode get regimeCode;/// A code of `listExpenseCategories` (`unknown_category` otherwise).
+@JsonKey(name: 'category_code') String get categoryCode;/// Subtotal before IVA, MXN centavos.
+@JsonKey(name: 'amount_cents') PositiveCents get amountCents;@JsonKey(name: 'iva_rate') IvaRate get ivaRate;/// IVA paid; `0` for `rate_0`/`exempt`, else within 100 centavos of `amount_cents × rate`.
+@JsonKey(name: 'iva_cents') NonNegativeCents get ivaCents;@JsonKey(name: 'payment_method') PaymentMethod get paymentMethod;/// The only date (paid basis for every regime in scope); the booking date.
+@JsonKey(name: 'paid_on') BusinessDate get paidOn;@JsonKey(name: 'has_cfdi') bool get hasCfdi;/// Client-generated idempotency key (UUIDv7 recommended), once per form session.
+@JsonKey(includeIfNull: false) Uuid? get id;/// Requires `has_cfdi: true` (`has_cfdi_mismatch`).
+@JsonKey(includeIfNull: false, name: 'cfdi_uuid') CfdiUuid? get cfdiUuid;/// The user's override; omitted or `null` uses the default.
+@JsonKey(includeIfNull: false) bool? get deductible;/// ISR the taxpayer (a persona moral) withheld from the supplier (default 0); at most `amount_cents`.
+@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') NonNegativeCents? get isrWithheldCents;/// IVA the taxpayer (a persona moral) withheld from the supplier (LIVA 1-A, default 0); at most `iva_cents`.
+@JsonKey(includeIfNull: false, name: 'iva_withheld_cents') NonNegativeCents? get ivaWithheldCents;@JsonKey(includeIfNull: false) RecordDescription? get description;
 /// Create a copy of ExpenseCreate
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -33,20 +39,20 @@ $ExpenseCreateCopyWith<ExpenseCreate> get copyWith => _$ExpenseCreateCopyWithImp
 @override
 bool operator ==(Object other) {
   final _this = this as ExpenseCreate;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ExpenseCreate&&(identical(other.regimeCode, _this.regimeCode) || other.regimeCode == _this.regimeCode)&&(identical(other.categoryCode, _this.categoryCode) || other.categoryCode == _this.categoryCode)&&(identical(other.description, _this.description) || other.description == _this.description)&&(identical(other.amountCents, _this.amountCents) || other.amountCents == _this.amountCents)&&(identical(other.ivaRate, _this.ivaRate) || other.ivaRate == _this.ivaRate)&&(identical(other.ivaCents, _this.ivaCents) || other.ivaCents == _this.ivaCents)&&(identical(other.paymentMethod, _this.paymentMethod) || other.paymentMethod == _this.paymentMethod)&&(identical(other.hasCfdi, _this.hasCfdi) || other.hasCfdi == _this.hasCfdi)&&(identical(other.paidOn, _this.paidOn) || other.paidOn == _this.paidOn)&&(identical(other.isrWithheldCents, _this.isrWithheldCents) || other.isrWithheldCents == _this.isrWithheldCents)&&(identical(other.ivaWithheldCents, _this.ivaWithheldCents) || other.ivaWithheldCents == _this.ivaWithheldCents)&&(identical(other.id, _this.id) || other.id == _this.id));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ExpenseCreate&&(identical(other.regimeCode, _this.regimeCode) || other.regimeCode == _this.regimeCode)&&(identical(other.categoryCode, _this.categoryCode) || other.categoryCode == _this.categoryCode)&&(identical(other.amountCents, _this.amountCents) || other.amountCents == _this.amountCents)&&(identical(other.ivaRate, _this.ivaRate) || other.ivaRate == _this.ivaRate)&&(identical(other.ivaCents, _this.ivaCents) || other.ivaCents == _this.ivaCents)&&(identical(other.paymentMethod, _this.paymentMethod) || other.paymentMethod == _this.paymentMethod)&&(identical(other.paidOn, _this.paidOn) || other.paidOn == _this.paidOn)&&(identical(other.hasCfdi, _this.hasCfdi) || other.hasCfdi == _this.hasCfdi)&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.cfdiUuid, _this.cfdiUuid) || other.cfdiUuid == _this.cfdiUuid)&&(identical(other.deductible, _this.deductible) || other.deductible == _this.deductible)&&(identical(other.isrWithheldCents, _this.isrWithheldCents) || other.isrWithheldCents == _this.isrWithheldCents)&&(identical(other.ivaWithheldCents, _this.ivaWithheldCents) || other.ivaWithheldCents == _this.ivaWithheldCents)&&(identical(other.description, _this.description) || other.description == _this.description));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as ExpenseCreate;
-  return Object.hash(runtimeType,_this.regimeCode,_this.categoryCode,_this.description,_this.amountCents,_this.ivaRate,_this.ivaCents,_this.paymentMethod,_this.hasCfdi,_this.paidOn,_this.isrWithheldCents,_this.ivaWithheldCents,_this.id);
+  return Object.hash(runtimeType,_this.regimeCode,_this.categoryCode,_this.amountCents,_this.ivaRate,_this.ivaCents,_this.paymentMethod,_this.paidOn,_this.hasCfdi,_this.id,_this.cfdiUuid,_this.deductible,_this.isrWithheldCents,_this.ivaWithheldCents,_this.description);
 }
 
 @override
 String toString() {
   final _this = this as ExpenseCreate;
-  return 'ExpenseCreate(regimeCode: ${_this.regimeCode}, categoryCode: ${_this.categoryCode}, description: ${_this.description}, amountCents: ${_this.amountCents}, ivaRate: ${_this.ivaRate}, ivaCents: ${_this.ivaCents}, paymentMethod: ${_this.paymentMethod}, hasCfdi: ${_this.hasCfdi}, paidOn: ${_this.paidOn}, isrWithheldCents: ${_this.isrWithheldCents}, ivaWithheldCents: ${_this.ivaWithheldCents}, id: ${_this.id})';
+  return 'ExpenseCreate(regimeCode: ${_this.regimeCode}, categoryCode: ${_this.categoryCode}, amountCents: ${_this.amountCents}, ivaRate: ${_this.ivaRate}, ivaCents: ${_this.ivaCents}, paymentMethod: ${_this.paymentMethod}, paidOn: ${_this.paidOn}, hasCfdi: ${_this.hasCfdi}, id: ${_this.id}, cfdiUuid: ${_this.cfdiUuid}, deductible: ${_this.deductible}, isrWithheldCents: ${_this.isrWithheldCents}, ivaWithheldCents: ${_this.ivaWithheldCents}, description: ${_this.description})';
 }
 
 
@@ -57,7 +63,7 @@ abstract mixin class $ExpenseCreateCopyWith<$Res>  {
   factory $ExpenseCreateCopyWith(ExpenseCreate value, $Res Function(ExpenseCreate) _then) = _$ExpenseCreateCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(includeIfNull: false, name: 'regime_code') RegimeCode? regimeCode,@JsonKey(includeIfNull: false, name: 'category_code') String? categoryCode,@JsonKey(includeIfNull: false) String? description,@JsonKey(includeIfNull: false, name: 'amount_cents') NonNegativeCents? amountCents,@JsonKey(includeIfNull: false, name: 'iva_rate') IvaRate? ivaRate,@JsonKey(includeIfNull: false, name: 'iva_cents') NonNegativeCents? ivaCents,@JsonKey(includeIfNull: false, name: 'payment_method') PaymentMethod? paymentMethod,@JsonKey(includeIfNull: false, name: 'has_cfdi') bool? hasCfdi,@JsonKey(includeIfNull: false, name: 'paid_on') DateTime? paidOn,@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') NonNegativeCents? isrWithheldCents,@JsonKey(includeIfNull: false, name: 'iva_withheld_cents') NonNegativeCents? ivaWithheldCents,@JsonKey(includeIfNull: false) Uuid? id
+@JsonKey(name: 'regime_code') RegimeCode regimeCode,@JsonKey(name: 'category_code') String categoryCode,@JsonKey(name: 'amount_cents') PositiveCents amountCents,@JsonKey(name: 'iva_rate') IvaRate ivaRate,@JsonKey(name: 'iva_cents') NonNegativeCents ivaCents,@JsonKey(name: 'payment_method') PaymentMethod paymentMethod,@JsonKey(name: 'paid_on') BusinessDate paidOn,@JsonKey(name: 'has_cfdi') bool hasCfdi,@JsonKey(includeIfNull: false) Uuid? id,@JsonKey(includeIfNull: false, name: 'cfdi_uuid') CfdiUuid? cfdiUuid,@JsonKey(includeIfNull: false) bool? deductible,@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') NonNegativeCents? isrWithheldCents,@JsonKey(includeIfNull: false, name: 'iva_withheld_cents') NonNegativeCents? ivaWithheldCents,@JsonKey(includeIfNull: false) RecordDescription? description
 });
 
 
@@ -74,21 +80,23 @@ class _$ExpenseCreateCopyWithImpl<$Res>
 
 /// Create a copy of ExpenseCreate
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? regimeCode = freezed,Object? categoryCode = freezed,Object? description = freezed,Object? amountCents = freezed,Object? ivaRate = freezed,Object? ivaCents = freezed,Object? paymentMethod = freezed,Object? hasCfdi = freezed,Object? paidOn = freezed,Object? isrWithheldCents = freezed,Object? ivaWithheldCents = freezed,Object? id = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? regimeCode = null,Object? categoryCode = null,Object? amountCents = null,Object? ivaRate = null,Object? ivaCents = null,Object? paymentMethod = null,Object? paidOn = null,Object? hasCfdi = null,Object? id = freezed,Object? cfdiUuid = freezed,Object? deductible = freezed,Object? isrWithheldCents = freezed,Object? ivaWithheldCents = freezed,Object? description = freezed,}) {
   return _then(ExpenseCreate(
-regimeCode: freezed == regimeCode ? _self.regimeCode : regimeCode // ignore: cast_nullable_to_non_nullable
-as RegimeCode?,categoryCode: freezed == categoryCode ? _self.categoryCode : categoryCode // ignore: cast_nullable_to_non_nullable
-as String?,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
-as String?,amountCents: freezed == amountCents ? _self.amountCents : amountCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents?,ivaRate: freezed == ivaRate ? _self.ivaRate : ivaRate // ignore: cast_nullable_to_non_nullable
-as IvaRate?,ivaCents: freezed == ivaCents ? _self.ivaCents : ivaCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents?,paymentMethod: freezed == paymentMethod ? _self.paymentMethod : paymentMethod // ignore: cast_nullable_to_non_nullable
-as PaymentMethod?,hasCfdi: freezed == hasCfdi ? _self.hasCfdi : hasCfdi // ignore: cast_nullable_to_non_nullable
-as bool?,paidOn: freezed == paidOn ? _self.paidOn : paidOn // ignore: cast_nullable_to_non_nullable
-as DateTime?,isrWithheldCents: freezed == isrWithheldCents ? _self.isrWithheldCents : isrWithheldCents // ignore: cast_nullable_to_non_nullable
+regimeCode: null == regimeCode ? _self.regimeCode : regimeCode // ignore: cast_nullable_to_non_nullable
+as RegimeCode,categoryCode: null == categoryCode ? _self.categoryCode : categoryCode // ignore: cast_nullable_to_non_nullable
+as String,amountCents: null == amountCents ? _self.amountCents : amountCents // ignore: cast_nullable_to_non_nullable
+as PositiveCents,ivaRate: null == ivaRate ? _self.ivaRate : ivaRate // ignore: cast_nullable_to_non_nullable
+as IvaRate,ivaCents: null == ivaCents ? _self.ivaCents : ivaCents // ignore: cast_nullable_to_non_nullable
+as NonNegativeCents,paymentMethod: null == paymentMethod ? _self.paymentMethod : paymentMethod // ignore: cast_nullable_to_non_nullable
+as PaymentMethod,paidOn: null == paidOn ? _self.paidOn : paidOn // ignore: cast_nullable_to_non_nullable
+as BusinessDate,hasCfdi: null == hasCfdi ? _self.hasCfdi : hasCfdi // ignore: cast_nullable_to_non_nullable
+as bool,id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as Uuid?,cfdiUuid: freezed == cfdiUuid ? _self.cfdiUuid : cfdiUuid // ignore: cast_nullable_to_non_nullable
+as CfdiUuid?,deductible: freezed == deductible ? _self.deductible : deductible // ignore: cast_nullable_to_non_nullable
+as bool?,isrWithheldCents: freezed == isrWithheldCents ? _self.isrWithheldCents : isrWithheldCents // ignore: cast_nullable_to_non_nullable
 as NonNegativeCents?,ivaWithheldCents: freezed == ivaWithheldCents ? _self.ivaWithheldCents : ivaWithheldCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents?,id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as Uuid?,
+as NonNegativeCents?,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as RecordDescription?,
   ));
 }
 
@@ -173,10 +181,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(includeIfNull: false, name: 'regime_code')  RegimeCode? regimeCode, @JsonKey(includeIfNull: false, name: 'category_code')  String? categoryCode, @JsonKey(includeIfNull: false)  String? description, @JsonKey(includeIfNull: false, name: 'amount_cents')  NonNegativeCents? amountCents, @JsonKey(includeIfNull: false, name: 'iva_rate')  IvaRate? ivaRate, @JsonKey(includeIfNull: false, name: 'iva_cents')  NonNegativeCents? ivaCents, @JsonKey(includeIfNull: false, name: 'payment_method')  PaymentMethod? paymentMethod, @JsonKey(includeIfNull: false, name: 'has_cfdi')  bool? hasCfdi, @JsonKey(includeIfNull: false, name: 'paid_on')  DateTime? paidOn, @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')  NonNegativeCents? isrWithheldCents, @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')  NonNegativeCents? ivaWithheldCents, @JsonKey(includeIfNull: false)  Uuid? id)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'regime_code')  RegimeCode regimeCode, @JsonKey(name: 'category_code')  String categoryCode, @JsonKey(name: 'amount_cents')  PositiveCents amountCents, @JsonKey(name: 'iva_rate')  IvaRate ivaRate, @JsonKey(name: 'iva_cents')  NonNegativeCents ivaCents, @JsonKey(name: 'payment_method')  PaymentMethod paymentMethod, @JsonKey(name: 'paid_on')  BusinessDate paidOn, @JsonKey(name: 'has_cfdi')  bool hasCfdi, @JsonKey(includeIfNull: false)  Uuid? id, @JsonKey(includeIfNull: false, name: 'cfdi_uuid')  CfdiUuid? cfdiUuid, @JsonKey(includeIfNull: false)  bool? deductible, @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')  NonNegativeCents? isrWithheldCents, @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')  NonNegativeCents? ivaWithheldCents, @JsonKey(includeIfNull: false)  RecordDescription? description)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ExpenseCreate() when $default != null:
-return $default(_that.regimeCode,_that.categoryCode,_that.description,_that.amountCents,_that.ivaRate,_that.ivaCents,_that.paymentMethod,_that.hasCfdi,_that.paidOn,_that.isrWithheldCents,_that.ivaWithheldCents,_that.id);case _:
+return $default(_that.regimeCode,_that.categoryCode,_that.amountCents,_that.ivaRate,_that.ivaCents,_that.paymentMethod,_that.paidOn,_that.hasCfdi,_that.id,_that.cfdiUuid,_that.deductible,_that.isrWithheldCents,_that.ivaWithheldCents,_that.description);case _:
   return orElse();
 
 }
@@ -194,10 +202,10 @@ return $default(_that.regimeCode,_that.categoryCode,_that.description,_that.amou
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(includeIfNull: false, name: 'regime_code')  RegimeCode? regimeCode, @JsonKey(includeIfNull: false, name: 'category_code')  String? categoryCode, @JsonKey(includeIfNull: false)  String? description, @JsonKey(includeIfNull: false, name: 'amount_cents')  NonNegativeCents? amountCents, @JsonKey(includeIfNull: false, name: 'iva_rate')  IvaRate? ivaRate, @JsonKey(includeIfNull: false, name: 'iva_cents')  NonNegativeCents? ivaCents, @JsonKey(includeIfNull: false, name: 'payment_method')  PaymentMethod? paymentMethod, @JsonKey(includeIfNull: false, name: 'has_cfdi')  bool? hasCfdi, @JsonKey(includeIfNull: false, name: 'paid_on')  DateTime? paidOn, @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')  NonNegativeCents? isrWithheldCents, @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')  NonNegativeCents? ivaWithheldCents, @JsonKey(includeIfNull: false)  Uuid? id)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'regime_code')  RegimeCode regimeCode, @JsonKey(name: 'category_code')  String categoryCode, @JsonKey(name: 'amount_cents')  PositiveCents amountCents, @JsonKey(name: 'iva_rate')  IvaRate ivaRate, @JsonKey(name: 'iva_cents')  NonNegativeCents ivaCents, @JsonKey(name: 'payment_method')  PaymentMethod paymentMethod, @JsonKey(name: 'paid_on')  BusinessDate paidOn, @JsonKey(name: 'has_cfdi')  bool hasCfdi, @JsonKey(includeIfNull: false)  Uuid? id, @JsonKey(includeIfNull: false, name: 'cfdi_uuid')  CfdiUuid? cfdiUuid, @JsonKey(includeIfNull: false)  bool? deductible, @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')  NonNegativeCents? isrWithheldCents, @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')  NonNegativeCents? ivaWithheldCents, @JsonKey(includeIfNull: false)  RecordDescription? description)  $default,) {final _that = this;
 switch (_that) {
 case _ExpenseCreate():
-return $default(_that.regimeCode,_that.categoryCode,_that.description,_that.amountCents,_that.ivaRate,_that.ivaCents,_that.paymentMethod,_that.hasCfdi,_that.paidOn,_that.isrWithheldCents,_that.ivaWithheldCents,_that.id);case _:
+return $default(_that.regimeCode,_that.categoryCode,_that.amountCents,_that.ivaRate,_that.ivaCents,_that.paymentMethod,_that.paidOn,_that.hasCfdi,_that.id,_that.cfdiUuid,_that.deductible,_that.isrWithheldCents,_that.ivaWithheldCents,_that.description);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -214,10 +222,10 @@ return $default(_that.regimeCode,_that.categoryCode,_that.description,_that.amou
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(includeIfNull: false, name: 'regime_code')  RegimeCode? regimeCode, @JsonKey(includeIfNull: false, name: 'category_code')  String? categoryCode, @JsonKey(includeIfNull: false)  String? description, @JsonKey(includeIfNull: false, name: 'amount_cents')  NonNegativeCents? amountCents, @JsonKey(includeIfNull: false, name: 'iva_rate')  IvaRate? ivaRate, @JsonKey(includeIfNull: false, name: 'iva_cents')  NonNegativeCents? ivaCents, @JsonKey(includeIfNull: false, name: 'payment_method')  PaymentMethod? paymentMethod, @JsonKey(includeIfNull: false, name: 'has_cfdi')  bool? hasCfdi, @JsonKey(includeIfNull: false, name: 'paid_on')  DateTime? paidOn, @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')  NonNegativeCents? isrWithheldCents, @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')  NonNegativeCents? ivaWithheldCents, @JsonKey(includeIfNull: false)  Uuid? id)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'regime_code')  RegimeCode regimeCode, @JsonKey(name: 'category_code')  String categoryCode, @JsonKey(name: 'amount_cents')  PositiveCents amountCents, @JsonKey(name: 'iva_rate')  IvaRate ivaRate, @JsonKey(name: 'iva_cents')  NonNegativeCents ivaCents, @JsonKey(name: 'payment_method')  PaymentMethod paymentMethod, @JsonKey(name: 'paid_on')  BusinessDate paidOn, @JsonKey(name: 'has_cfdi')  bool hasCfdi, @JsonKey(includeIfNull: false)  Uuid? id, @JsonKey(includeIfNull: false, name: 'cfdi_uuid')  CfdiUuid? cfdiUuid, @JsonKey(includeIfNull: false)  bool? deductible, @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')  NonNegativeCents? isrWithheldCents, @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')  NonNegativeCents? ivaWithheldCents, @JsonKey(includeIfNull: false)  RecordDescription? description)?  $default,) {final _that = this;
 switch (_that) {
 case _ExpenseCreate() when $default != null:
-return $default(_that.regimeCode,_that.categoryCode,_that.description,_that.amountCents,_that.ivaRate,_that.ivaCents,_that.paymentMethod,_that.hasCfdi,_that.paidOn,_that.isrWithheldCents,_that.ivaWithheldCents,_that.id);case _:
+return $default(_that.regimeCode,_that.categoryCode,_that.amountCents,_that.ivaRate,_that.ivaCents,_that.paymentMethod,_that.paidOn,_that.hasCfdi,_that.id,_that.cfdiUuid,_that.deductible,_that.isrWithheldCents,_that.ivaWithheldCents,_that.description);case _:
   return null;
 
 }
@@ -229,24 +237,32 @@ return $default(_that.regimeCode,_that.categoryCode,_that.description,_that.amou
 @JsonSerializable()
 
 class _ExpenseCreate implements ExpenseCreate {
-  const _ExpenseCreate({@JsonKey(includeIfNull: false, name: 'regime_code') this.regimeCode, @JsonKey(includeIfNull: false, name: 'category_code') this.categoryCode, @JsonKey(includeIfNull: false) this.description, @JsonKey(includeIfNull: false, name: 'amount_cents') this.amountCents, @JsonKey(includeIfNull: false, name: 'iva_rate') this.ivaRate, @JsonKey(includeIfNull: false, name: 'iva_cents') this.ivaCents, @JsonKey(includeIfNull: false, name: 'payment_method') this.paymentMethod, @JsonKey(includeIfNull: false, name: 'has_cfdi') this.hasCfdi, @JsonKey(includeIfNull: false, name: 'paid_on') this.paidOn, @JsonKey(includeIfNull: false, name: 'isr_withheld_cents') this.isrWithheldCents, @JsonKey(includeIfNull: false, name: 'iva_withheld_cents') this.ivaWithheldCents, @JsonKey(includeIfNull: false) this.id});
+  const _ExpenseCreate({@JsonKey(name: 'regime_code') required this.regimeCode, @JsonKey(name: 'category_code') required this.categoryCode, @JsonKey(name: 'amount_cents') required this.amountCents, @JsonKey(name: 'iva_rate') required this.ivaRate, @JsonKey(name: 'iva_cents') required this.ivaCents, @JsonKey(name: 'payment_method') required this.paymentMethod, @JsonKey(name: 'paid_on') required this.paidOn, @JsonKey(name: 'has_cfdi') required this.hasCfdi, @JsonKey(includeIfNull: false) this.id, @JsonKey(includeIfNull: false, name: 'cfdi_uuid') this.cfdiUuid, @JsonKey(includeIfNull: false) this.deductible, @JsonKey(includeIfNull: false, name: 'isr_withheld_cents') this.isrWithheldCents, @JsonKey(includeIfNull: false, name: 'iva_withheld_cents') this.ivaWithheldCents, @JsonKey(includeIfNull: false) this.description});
   factory _ExpenseCreate.fromJson(Map<String, dynamic> json) => _$ExpenseCreateFromJson(json);
 
-@override@JsonKey(includeIfNull: false, name: 'regime_code') final  RegimeCode? regimeCode;
-@override@JsonKey(includeIfNull: false, name: 'category_code') final  String? categoryCode;
-@override@JsonKey(includeIfNull: false) final  String? description;
-/// Subtotal before IVA.
-@override@JsonKey(includeIfNull: false, name: 'amount_cents') final  NonNegativeCents? amountCents;
-@override@JsonKey(includeIfNull: false, name: 'iva_rate') final  IvaRate? ivaRate;
-@override@JsonKey(includeIfNull: false, name: 'iva_cents') final  NonNegativeCents? ivaCents;
-@override@JsonKey(includeIfNull: false, name: 'payment_method') final  PaymentMethod? paymentMethod;
-@override@JsonKey(includeIfNull: false, name: 'has_cfdi') final  bool? hasCfdi;
-@override@JsonKey(includeIfNull: false, name: 'paid_on') final  DateTime? paidOn;
-/// ISR the taxpayer (typically a PM) withheld from the supplier; must be remitted.
-@override@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') final  NonNegativeCents? isrWithheldCents;
-/// IVA the taxpayer withheld from the supplier (LIVA 1-A); remitted in full, creditable when paid.
-@override@JsonKey(includeIfNull: false, name: 'iva_withheld_cents') final  NonNegativeCents? ivaWithheldCents;
+@override@JsonKey(name: 'regime_code') final  RegimeCode regimeCode;
+/// A code of `listExpenseCategories` (`unknown_category` otherwise).
+@override@JsonKey(name: 'category_code') final  String categoryCode;
+/// Subtotal before IVA, MXN centavos.
+@override@JsonKey(name: 'amount_cents') final  PositiveCents amountCents;
+@override@JsonKey(name: 'iva_rate') final  IvaRate ivaRate;
+/// IVA paid; `0` for `rate_0`/`exempt`, else within 100 centavos of `amount_cents × rate`.
+@override@JsonKey(name: 'iva_cents') final  NonNegativeCents ivaCents;
+@override@JsonKey(name: 'payment_method') final  PaymentMethod paymentMethod;
+/// The only date (paid basis for every regime in scope); the booking date.
+@override@JsonKey(name: 'paid_on') final  BusinessDate paidOn;
+@override@JsonKey(name: 'has_cfdi') final  bool hasCfdi;
+/// Client-generated idempotency key (UUIDv7 recommended), once per form session.
 @override@JsonKey(includeIfNull: false) final  Uuid? id;
+/// Requires `has_cfdi: true` (`has_cfdi_mismatch`).
+@override@JsonKey(includeIfNull: false, name: 'cfdi_uuid') final  CfdiUuid? cfdiUuid;
+/// The user's override; omitted or `null` uses the default.
+@override@JsonKey(includeIfNull: false) final  bool? deductible;
+/// ISR the taxpayer (a persona moral) withheld from the supplier (default 0); at most `amount_cents`.
+@override@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') final  NonNegativeCents? isrWithheldCents;
+/// IVA the taxpayer (a persona moral) withheld from the supplier (LIVA 1-A, default 0); at most `iva_cents`.
+@override@JsonKey(includeIfNull: false, name: 'iva_withheld_cents') final  NonNegativeCents? ivaWithheldCents;
+@override@JsonKey(includeIfNull: false) final  RecordDescription? description;
 
 /// Create a copy of ExpenseCreate
 /// with the given fields replaced by the non-null parameter values.
@@ -261,18 +277,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _ExpenseCreate&&(identical(other.regimeCode, regimeCode) || other.regimeCode == regimeCode)&&(identical(other.categoryCode, categoryCode) || other.categoryCode == categoryCode)&&(identical(other.description, description) || other.description == description)&&(identical(other.amountCents, amountCents) || other.amountCents == amountCents)&&(identical(other.ivaRate, ivaRate) || other.ivaRate == ivaRate)&&(identical(other.ivaCents, ivaCents) || other.ivaCents == ivaCents)&&(identical(other.paymentMethod, paymentMethod) || other.paymentMethod == paymentMethod)&&(identical(other.hasCfdi, hasCfdi) || other.hasCfdi == hasCfdi)&&(identical(other.paidOn, paidOn) || other.paidOn == paidOn)&&(identical(other.isrWithheldCents, isrWithheldCents) || other.isrWithheldCents == isrWithheldCents)&&(identical(other.ivaWithheldCents, ivaWithheldCents) || other.ivaWithheldCents == ivaWithheldCents)&&(identical(other.id, id) || other.id == id));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _ExpenseCreate&&(identical(other.regimeCode, regimeCode) || other.regimeCode == regimeCode)&&(identical(other.categoryCode, categoryCode) || other.categoryCode == categoryCode)&&(identical(other.amountCents, amountCents) || other.amountCents == amountCents)&&(identical(other.ivaRate, ivaRate) || other.ivaRate == ivaRate)&&(identical(other.ivaCents, ivaCents) || other.ivaCents == ivaCents)&&(identical(other.paymentMethod, paymentMethod) || other.paymentMethod == paymentMethod)&&(identical(other.paidOn, paidOn) || other.paidOn == paidOn)&&(identical(other.hasCfdi, hasCfdi) || other.hasCfdi == hasCfdi)&&(identical(other.id, id) || other.id == id)&&(identical(other.cfdiUuid, cfdiUuid) || other.cfdiUuid == cfdiUuid)&&(identical(other.deductible, deductible) || other.deductible == deductible)&&(identical(other.isrWithheldCents, isrWithheldCents) || other.isrWithheldCents == isrWithheldCents)&&(identical(other.ivaWithheldCents, ivaWithheldCents) || other.ivaWithheldCents == ivaWithheldCents)&&(identical(other.description, description) || other.description == description));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,regimeCode,categoryCode,description,amountCents,ivaRate,ivaCents,paymentMethod,hasCfdi,paidOn,isrWithheldCents,ivaWithheldCents,id);
+    return Object.hash(runtimeType,regimeCode,categoryCode,amountCents,ivaRate,ivaCents,paymentMethod,paidOn,hasCfdi,id,cfdiUuid,deductible,isrWithheldCents,ivaWithheldCents,description);
 }
 
 @override
 String toString() {
-    return 'ExpenseCreate(regimeCode: $regimeCode, categoryCode: $categoryCode, description: $description, amountCents: $amountCents, ivaRate: $ivaRate, ivaCents: $ivaCents, paymentMethod: $paymentMethod, hasCfdi: $hasCfdi, paidOn: $paidOn, isrWithheldCents: $isrWithheldCents, ivaWithheldCents: $ivaWithheldCents, id: $id)';
+    return 'ExpenseCreate(regimeCode: $regimeCode, categoryCode: $categoryCode, amountCents: $amountCents, ivaRate: $ivaRate, ivaCents: $ivaCents, paymentMethod: $paymentMethod, paidOn: $paidOn, hasCfdi: $hasCfdi, id: $id, cfdiUuid: $cfdiUuid, deductible: $deductible, isrWithheldCents: $isrWithheldCents, ivaWithheldCents: $ivaWithheldCents, description: $description)';
 }
 
 
@@ -283,7 +299,7 @@ abstract mixin class _$ExpenseCreateCopyWith<$Res> implements $ExpenseCreateCopy
   factory _$ExpenseCreateCopyWith(_ExpenseCreate value, $Res Function(_ExpenseCreate) _then) = __$ExpenseCreateCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(includeIfNull: false, name: 'regime_code') RegimeCode? regimeCode,@JsonKey(includeIfNull: false, name: 'category_code') String? categoryCode,@JsonKey(includeIfNull: false) String? description,@JsonKey(includeIfNull: false, name: 'amount_cents') NonNegativeCents? amountCents,@JsonKey(includeIfNull: false, name: 'iva_rate') IvaRate? ivaRate,@JsonKey(includeIfNull: false, name: 'iva_cents') NonNegativeCents? ivaCents,@JsonKey(includeIfNull: false, name: 'payment_method') PaymentMethod? paymentMethod,@JsonKey(includeIfNull: false, name: 'has_cfdi') bool? hasCfdi,@JsonKey(includeIfNull: false, name: 'paid_on') DateTime? paidOn,@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') NonNegativeCents? isrWithheldCents,@JsonKey(includeIfNull: false, name: 'iva_withheld_cents') NonNegativeCents? ivaWithheldCents,@JsonKey(includeIfNull: false) Uuid? id
+@JsonKey(name: 'regime_code') RegimeCode regimeCode,@JsonKey(name: 'category_code') String categoryCode,@JsonKey(name: 'amount_cents') PositiveCents amountCents,@JsonKey(name: 'iva_rate') IvaRate ivaRate,@JsonKey(name: 'iva_cents') NonNegativeCents ivaCents,@JsonKey(name: 'payment_method') PaymentMethod paymentMethod,@JsonKey(name: 'paid_on') BusinessDate paidOn,@JsonKey(name: 'has_cfdi') bool hasCfdi,@JsonKey(includeIfNull: false) Uuid? id,@JsonKey(includeIfNull: false, name: 'cfdi_uuid') CfdiUuid? cfdiUuid,@JsonKey(includeIfNull: false) bool? deductible,@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') NonNegativeCents? isrWithheldCents,@JsonKey(includeIfNull: false, name: 'iva_withheld_cents') NonNegativeCents? ivaWithheldCents,@JsonKey(includeIfNull: false) RecordDescription? description
 });
 
 
@@ -300,21 +316,23 @@ class __$ExpenseCreateCopyWithImpl<$Res>
 
 /// Create a copy of ExpenseCreate
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? regimeCode = freezed,Object? categoryCode = freezed,Object? description = freezed,Object? amountCents = freezed,Object? ivaRate = freezed,Object? ivaCents = freezed,Object? paymentMethod = freezed,Object? hasCfdi = freezed,Object? paidOn = freezed,Object? isrWithheldCents = freezed,Object? ivaWithheldCents = freezed,Object? id = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? regimeCode = null,Object? categoryCode = null,Object? amountCents = null,Object? ivaRate = null,Object? ivaCents = null,Object? paymentMethod = null,Object? paidOn = null,Object? hasCfdi = null,Object? id = freezed,Object? cfdiUuid = freezed,Object? deductible = freezed,Object? isrWithheldCents = freezed,Object? ivaWithheldCents = freezed,Object? description = freezed,}) {
   return _then(_ExpenseCreate(
-regimeCode: freezed == regimeCode ? _self.regimeCode : regimeCode // ignore: cast_nullable_to_non_nullable
-as RegimeCode?,categoryCode: freezed == categoryCode ? _self.categoryCode : categoryCode // ignore: cast_nullable_to_non_nullable
-as String?,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
-as String?,amountCents: freezed == amountCents ? _self.amountCents : amountCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents?,ivaRate: freezed == ivaRate ? _self.ivaRate : ivaRate // ignore: cast_nullable_to_non_nullable
-as IvaRate?,ivaCents: freezed == ivaCents ? _self.ivaCents : ivaCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents?,paymentMethod: freezed == paymentMethod ? _self.paymentMethod : paymentMethod // ignore: cast_nullable_to_non_nullable
-as PaymentMethod?,hasCfdi: freezed == hasCfdi ? _self.hasCfdi : hasCfdi // ignore: cast_nullable_to_non_nullable
-as bool?,paidOn: freezed == paidOn ? _self.paidOn : paidOn // ignore: cast_nullable_to_non_nullable
-as DateTime?,isrWithheldCents: freezed == isrWithheldCents ? _self.isrWithheldCents : isrWithheldCents // ignore: cast_nullable_to_non_nullable
+regimeCode: null == regimeCode ? _self.regimeCode : regimeCode // ignore: cast_nullable_to_non_nullable
+as RegimeCode,categoryCode: null == categoryCode ? _self.categoryCode : categoryCode // ignore: cast_nullable_to_non_nullable
+as String,amountCents: null == amountCents ? _self.amountCents : amountCents // ignore: cast_nullable_to_non_nullable
+as PositiveCents,ivaRate: null == ivaRate ? _self.ivaRate : ivaRate // ignore: cast_nullable_to_non_nullable
+as IvaRate,ivaCents: null == ivaCents ? _self.ivaCents : ivaCents // ignore: cast_nullable_to_non_nullable
+as NonNegativeCents,paymentMethod: null == paymentMethod ? _self.paymentMethod : paymentMethod // ignore: cast_nullable_to_non_nullable
+as PaymentMethod,paidOn: null == paidOn ? _self.paidOn : paidOn // ignore: cast_nullable_to_non_nullable
+as BusinessDate,hasCfdi: null == hasCfdi ? _self.hasCfdi : hasCfdi // ignore: cast_nullable_to_non_nullable
+as bool,id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as Uuid?,cfdiUuid: freezed == cfdiUuid ? _self.cfdiUuid : cfdiUuid // ignore: cast_nullable_to_non_nullable
+as CfdiUuid?,deductible: freezed == deductible ? _self.deductible : deductible // ignore: cast_nullable_to_non_nullable
+as bool?,isrWithheldCents: freezed == isrWithheldCents ? _self.isrWithheldCents : isrWithheldCents // ignore: cast_nullable_to_non_nullable
 as NonNegativeCents?,ivaWithheldCents: freezed == ivaWithheldCents ? _self.ivaWithheldCents : ivaWithheldCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents?,id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as Uuid?,
+as NonNegativeCents?,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as RecordDescription?,
   ));
 }
 

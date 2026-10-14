@@ -4,7 +4,7 @@
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-/// Determines which withholdings may apply.
+/// Who paid the income. Decides which withholdings may exist (MODULE-incomes §2.6): persona física and público en general never withhold; a persona moral withholds from a física in 612/606/626; a platform withholds in 625 and from a persona moral.
 @JsonEnum()
 enum CounterpartyType {
   @JsonValue('persona_fisica')

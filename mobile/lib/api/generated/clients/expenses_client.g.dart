@@ -21,9 +21,16 @@ class _ExpensesClient implements ExpensesClient {
   final ParseErrorLogger? errorLogger;
 
   @override
-  Future<ExpenseCategoryList> listExpenseCategories({String? regime}) async {
+  Future<ExpenseCategoryList> listExpenseCategories({
+    required String taxpayerId,
+    required String regime,
+    DateTime? onValue,
+  }) async {
     final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{r'regime': regime};
+    final queryParameters = <String, dynamic>{
+      r'regime': regime,
+      r'on': onValue?.toIso8601String(),
+    };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
@@ -31,7 +38,7 @@ class _ExpensesClient implements ExpensesClient {
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            '/v1/expense-categories',
+            '/v1/taxpayers/${taxpayerId}/expense-categories',
             queryParameters: queryParameters,
             data: _data,
           )

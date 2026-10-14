@@ -16,7 +16,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$IncomePage {
 
- List<Income> get items; PeriodTotals get totals;@JsonKey(includeIfNull: false, name: 'next_cursor') String? get nextCursor;
+ List<Income> get items;/// Opaque cursor of the next page; `null` on the last page.
+@JsonKey(includeIfNull: true, name: 'next_cursor') String? get nextCursor; PeriodTotals get totals;
 /// Create a copy of IncomePage
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +31,20 @@ $IncomePageCopyWith<IncomePage> get copyWith => _$IncomePageCopyWithImpl<IncomeP
 @override
 bool operator ==(Object other) {
   final _this = this as IncomePage;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is IncomePage&&const DeepCollectionEquality().equals(other.items, _this.items)&&(identical(other.totals, _this.totals) || other.totals == _this.totals)&&(identical(other.nextCursor, _this.nextCursor) || other.nextCursor == _this.nextCursor));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is IncomePage&&const DeepCollectionEquality().equals(other.items, _this.items)&&(identical(other.nextCursor, _this.nextCursor) || other.nextCursor == _this.nextCursor)&&(identical(other.totals, _this.totals) || other.totals == _this.totals));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as IncomePage;
-  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.items),_this.totals,_this.nextCursor);
+  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.items),_this.nextCursor,_this.totals);
 }
 
 @override
 String toString() {
   final _this = this as IncomePage;
-  return 'IncomePage(items: ${_this.items}, totals: ${_this.totals}, nextCursor: ${_this.nextCursor})';
+  return 'IncomePage(items: ${_this.items}, nextCursor: ${_this.nextCursor}, totals: ${_this.totals})';
 }
 
 
@@ -54,7 +55,7 @@ abstract mixin class $IncomePageCopyWith<$Res>  {
   factory $IncomePageCopyWith(IncomePage value, $Res Function(IncomePage) _then) = _$IncomePageCopyWithImpl;
 @useResult
 $Res call({
- List<Income> items, PeriodTotals totals,@JsonKey(includeIfNull: false, name: 'next_cursor') String? nextCursor
+ List<Income> items,@JsonKey(includeIfNull: true, name: 'next_cursor') String? nextCursor, PeriodTotals totals
 });
 
 
@@ -71,12 +72,12 @@ class _$IncomePageCopyWithImpl<$Res>
 
 /// Create a copy of IncomePage
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? items = null,Object? totals = null,Object? nextCursor = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? items = null,Object? nextCursor = freezed,Object? totals = null,}) {
   return _then(IncomePage(
 items: null == items ? _self.items : items // ignore: cast_nullable_to_non_nullable
-as List<Income>,totals: null == totals ? _self.totals : totals // ignore: cast_nullable_to_non_nullable
-as PeriodTotals,nextCursor: freezed == nextCursor ? _self.nextCursor : nextCursor // ignore: cast_nullable_to_non_nullable
-as String?,
+as List<Income>,nextCursor: freezed == nextCursor ? _self.nextCursor : nextCursor // ignore: cast_nullable_to_non_nullable
+as String?,totals: null == totals ? _self.totals : totals // ignore: cast_nullable_to_non_nullable
+as PeriodTotals,
   ));
 }
 /// Create a copy of IncomePage
@@ -170,10 +171,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<Income> items,  PeriodTotals totals, @JsonKey(includeIfNull: false, name: 'next_cursor')  String? nextCursor)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<Income> items, @JsonKey(includeIfNull: true, name: 'next_cursor')  String? nextCursor,  PeriodTotals totals)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _IncomePage() when $default != null:
-return $default(_that.items,_that.totals,_that.nextCursor);case _:
+return $default(_that.items,_that.nextCursor,_that.totals);case _:
   return orElse();
 
 }
@@ -191,10 +192,10 @@ return $default(_that.items,_that.totals,_that.nextCursor);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<Income> items,  PeriodTotals totals, @JsonKey(includeIfNull: false, name: 'next_cursor')  String? nextCursor)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<Income> items, @JsonKey(includeIfNull: true, name: 'next_cursor')  String? nextCursor,  PeriodTotals totals)  $default,) {final _that = this;
 switch (_that) {
 case _IncomePage():
-return $default(_that.items,_that.totals,_that.nextCursor);case _:
+return $default(_that.items,_that.nextCursor,_that.totals);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -211,10 +212,10 @@ return $default(_that.items,_that.totals,_that.nextCursor);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<Income> items,  PeriodTotals totals, @JsonKey(includeIfNull: false, name: 'next_cursor')  String? nextCursor)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<Income> items, @JsonKey(includeIfNull: true, name: 'next_cursor')  String? nextCursor,  PeriodTotals totals)?  $default,) {final _that = this;
 switch (_that) {
 case _IncomePage() when $default != null:
-return $default(_that.items,_that.totals,_that.nextCursor);case _:
+return $default(_that.items,_that.nextCursor,_that.totals);case _:
   return null;
 
 }
@@ -226,7 +227,7 @@ return $default(_that.items,_that.totals,_that.nextCursor);case _:
 @JsonSerializable()
 
 class _IncomePage implements IncomePage {
-  const _IncomePage({required  List<Income> items, required this.totals, @JsonKey(includeIfNull: false, name: 'next_cursor') this.nextCursor}): _items = items;
+  const _IncomePage({required  List<Income> items, @JsonKey(includeIfNull: true, name: 'next_cursor') required this.nextCursor, required this.totals}): _items = items;
   factory _IncomePage.fromJson(Map<String, dynamic> json) => _$IncomePageFromJson(json);
 
  final  List<Income> _items;
@@ -236,8 +237,9 @@ class _IncomePage implements IncomePage {
   return EqualUnmodifiableListView(_items);
 }
 
+/// Opaque cursor of the next page; `null` on the last page.
+@override@JsonKey(includeIfNull: true, name: 'next_cursor') final  String? nextCursor;
 @override final  PeriodTotals totals;
-@override@JsonKey(includeIfNull: false, name: 'next_cursor') final  String? nextCursor;
 
 /// Create a copy of IncomePage
 /// with the given fields replaced by the non-null parameter values.
@@ -252,18 +254,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _IncomePage&&const DeepCollectionEquality().equals(other.items, _items)&&(identical(other.totals, totals) || other.totals == totals)&&(identical(other.nextCursor, nextCursor) || other.nextCursor == nextCursor));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _IncomePage&&const DeepCollectionEquality().equals(other.items, _items)&&(identical(other.nextCursor, nextCursor) || other.nextCursor == nextCursor)&&(identical(other.totals, totals) || other.totals == totals));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_items),totals,nextCursor);
+    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_items),nextCursor,totals);
 }
 
 @override
 String toString() {
-    return 'IncomePage(items: $items, totals: $totals, nextCursor: $nextCursor)';
+    return 'IncomePage(items: $items, nextCursor: $nextCursor, totals: $totals)';
 }
 
 
@@ -274,7 +276,7 @@ abstract mixin class _$IncomePageCopyWith<$Res> implements $IncomePageCopyWith<$
   factory _$IncomePageCopyWith(_IncomePage value, $Res Function(_IncomePage) _then) = __$IncomePageCopyWithImpl;
 @override @useResult
 $Res call({
- List<Income> items, PeriodTotals totals,@JsonKey(includeIfNull: false, name: 'next_cursor') String? nextCursor
+ List<Income> items,@JsonKey(includeIfNull: true, name: 'next_cursor') String? nextCursor, PeriodTotals totals
 });
 
 
@@ -291,12 +293,12 @@ class __$IncomePageCopyWithImpl<$Res>
 
 /// Create a copy of IncomePage
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? items = null,Object? totals = null,Object? nextCursor = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? items = null,Object? nextCursor = freezed,Object? totals = null,}) {
   return _then(_IncomePage(
 items: null == items ? _self._items : items // ignore: cast_nullable_to_non_nullable
-as List<Income>,totals: null == totals ? _self.totals : totals // ignore: cast_nullable_to_non_nullable
-as PeriodTotals,nextCursor: freezed == nextCursor ? _self.nextCursor : nextCursor // ignore: cast_nullable_to_non_nullable
-as String?,
+as List<Income>,nextCursor: freezed == nextCursor ? _self.nextCursor : nextCursor // ignore: cast_nullable_to_non_nullable
+as String?,totals: null == totals ? _self.totals : totals // ignore: cast_nullable_to_non_nullable
+as PeriodTotals,
   ));
 }
 

@@ -4,23 +4,24 @@
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+/// The hint shown for a category in the taxpayer's regime (after options such as 606 `blind_35`).
 @JsonEnum()
-enum ExpenseWarningCode {
-  @JsonValue('cash_over_threshold')
-  cashOverThreshold('cash_over_threshold'),
-  @JsonValue('no_cfdi')
-  noCfdi('no_cfdi'),
-  @JsonValue('not_isr_deductible_in_regime')
-  notIsrDeductibleInRegime('not_isr_deductible_in_regime'),
-  @JsonValue('category_not_deductible')
-  categoryNotDeductible('category_not_deductible'),
+enum Deductibility {
+  @JsonValue('deductible')
+  deductible('deductible'),
+  @JsonValue('partially_deductible')
+  partiallyDeductible('partially_deductible'),
+  @JsonValue('not_deductible')
+  notDeductible('not_deductible'),
+  @JsonValue('isr_not_applicable')
+  isrNotApplicable('isr_not_applicable'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);
 
-  const ExpenseWarningCode(this.json);
+  const Deductibility(this.json);
 
-  factory ExpenseWarningCode.fromJson(String json) =>
+  factory Deductibility.fromJson(String json) =>
       values.firstWhere((e) => e.json == json, orElse: () => $unknown);
 
   final String? json;
@@ -29,6 +30,6 @@ enum ExpenseWarningCode {
   String toString() => json?.toString() ?? super.toString();
 
   /// Returns all defined enum values excluding the $unknown value.
-  static List<ExpenseWarningCode> get $valuesDefined =>
+  static List<Deductibility> get $valuesDefined =>
       values.where((value) => value != $unknown).toList();
 }
