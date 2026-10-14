@@ -10,6 +10,7 @@ import 'package:control_contable/core/router/app_router.dart';
 import 'package:control_contable/features/expenses/expenses_routes.dart';
 import 'package:control_contable/features/expenses/presentation/expense_category_field.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../taxpayers/pump_onboarding.dart' show inputLabeled, tapText, typeInto;
@@ -178,6 +179,25 @@ void main() {
       );
     });
 
+    testWidgets('the hint of each chosen category is announced', (
+      tester,
+    ) async {
+      await pumpForm(tester);
+      tester.takeAnnouncements();
+
+      await pickCategory(tester, 'Software y suscripciones', query: 'soft');
+      expect(
+        tester.takeAnnouncements().map((a) => a.message),
+        contains('Normalmente deducible para tu régimen.'),
+      );
+
+      await pickCategory(tester, 'Consumo en restaurantes', query: 'restau');
+      expect(
+        tester.takeAnnouncements().map((a) => a.message),
+        contains('Deducible sólo en parte para tu régimen.'),
+      );
+    });
+
     testWidgets('the total with IVA follows the amount live (integer '
         'centavos)', (tester) async {
       await pumpForm(tester);
@@ -213,6 +233,28 @@ void main() {
       expect(find.text(_cashIva), findsOneWidget);
       await _save(tester);
       expect(harness.expenses.creates.single.paymentMethod, PaymentMethod.cash);
+    });
+
+    testWidgets('a cash warning is announced once when it appears (a live '
+        'region alone is silent on VoiceOver)', (tester) async {
+      await pumpForm(tester);
+      await pickCategory(tester, 'Papelería y artículos de oficina');
+      await typeInto(tester, _amount, '1000');
+      await tapText(tester, 'Efectivo');
+      tester.takeAnnouncements();
+
+      await typeInto(tester, _amount, '2000');
+
+      final announced = tester.takeAnnouncements();
+      expect(announced.map((a) => a.message), [_cashOverLimit, _cashIva]);
+      expect(
+        announced.map((a) => a.assertiveness),
+        everyElement(Assertiveness.polite),
+      );
+
+      await typeInto(tester, _amount, '2500');
+
+      expect(tester.takeAnnouncements(), isEmpty);
     });
 
     testWidgets('fuel paid in cash warns whatever the amount', (tester) async {
