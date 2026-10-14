@@ -8,13 +8,16 @@ import 'package:control_contable/core/time/clock.dart';
 import 'package:control_contable/features/taxpayers/application/active_taxpayer.dart';
 import 'package:control_contable/features/taxpayers/application/client_id.dart';
 import 'package:control_contable/features/taxpayers/application/onboarding_flow.dart';
+import 'package:control_contable/features/taxpayers/application/taxpayer_list.dart';
 import 'package:control_contable/features/taxpayers/data/taxpayers_repository.dart';
+import 'package:control_contable/features/taxpayers/domain/taxpayer_cap.dart';
 import 'package:control_contable/features/taxpayers/presentation/identity_step.dart';
 import 'package:control_contable/features/taxpayers/presentation/person_type_step.dart';
 import 'package:control_contable/features/taxpayers/presentation/read_only_notice.dart';
 import 'package:control_contable/features/taxpayers/presentation/regime_options_step.dart';
 import 'package:control_contable/features/taxpayers/presentation/regimes_step.dart';
 import 'package:control_contable/features/taxpayers/presentation/review_step.dart';
+import 'package:control_contable/features/taxpayers/presentation/stop_notice.dart';
 import 'package:control_contable/features/taxpayers/presentation/tax_inputs_step.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -47,6 +50,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     clock: ref.read(clockProvider),
     taxEngineEnabled: false,
     knownReadOnly: ref.read(readOnlyAccessProvider),
+    // An unloaded list says nothing: the server's `422` still decides.
+    capReached: isAtTaxpayerCap(ref.read(taxpayersProvider).value?.length ?? 0),
   )..addListener(_handleStepChanged);
 
   bool _isLeaving = false;
@@ -126,8 +131,29 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     OnboardingStep.review => ReviewStep(flow: _flow),
     OnboardingStep.taxInputs => TaxInputsStep(flow: _flow),
     OnboardingStep.readOnly => ReadOnlyNotice(onLeave: _leave),
+    OnboardingStep.limitReached => _LimitReachedNotice(onLeave: _leave),
     OnboardingStep.done => const SizedBox.shrink(),
   };
+}
+
+/// The cap of taxpayers is reached (OD-2): said before step 1 (QA M2-12
+/// D1), with the way to free a slot.
+class _LimitReachedNotice extends StatelessWidget {
+  const new({required this.onLeave});
+
+  final VoidCallback onLeave;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return StopNotice(
+      icon: Icons.group_outlined,
+      title: l10n.onboardingLimitTitle,
+      body: l10n.onboardingLimitBody(taxpayerCap),
+      actionLabel: l10n.onboardingPaywallAction,
+      onLeave: onLeave,
+    );
+  }
 }
 
 Widget _fadeAndSlide(Widget child, Animation<double> animation) =>

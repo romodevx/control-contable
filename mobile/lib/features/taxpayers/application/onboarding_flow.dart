@@ -50,6 +50,10 @@ enum OnboardingStep {
   /// A read-only user (`402`): the paywall message, nothing created.
   readOnly,
 
+  /// The user already holds the cap of taxpayers (OD-2): said before
+  /// step 1, nothing to fill.
+  limitReached,
+
   /// Finished: the taxpayer exists.
   done,
 }
@@ -67,16 +71,21 @@ class OnboardingFlow extends ChangeNotifier implements RegimeWizard {
   /// the create (stable across retries); `clock` dates the fiscal year.
   /// [knownReadOnly] (the server already answered `402` this session)
   /// starts at the paywall: nothing to fill that could not be saved.
+  /// [capReached] (the user's list already holds the cap) starts at the
+  /// limit, after the paywall as the server checks access first (§2.10).
   new({
     required this._repository,
     required String Function() newId,
     required this._clock,
     required this.taxEngineEnabled,
     bool knownReadOnly = false,
+    bool capReached = false,
   }) : _clientId = newId(),
-       _step = knownReadOnly
-           ? OnboardingStep.readOnly
-           : OnboardingStep.personType;
+       _step = switch ((knownReadOnly, capReached)) {
+         (true, _) => OnboardingStep.readOnly,
+         (_, true) => OnboardingStep.limitReached,
+         _ => OnboardingStep.personType,
+       };
 
   final TaxpayersRepository _repository;
   final Clock _clock;

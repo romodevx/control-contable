@@ -583,6 +583,14 @@ class AppLocalizationsEs extends AppLocalizations {
       'Tu periodo de prueba terminó y no hay un plan activo. Puedes consultar, archivar y eliminar tu información, pero registrar un contribuyente requiere un plan.';
 
   @override
+  String get onboardingLimitTitle => 'Llegaste al máximo de contribuyentes';
+
+  @override
+  String onboardingLimitBody(int cap) {
+    return 'Ya tienes $cap contribuyentes, el máximo por cuenta; los archivados también cuentan. Para registrar otro, elimina uno que ya no uses.';
+  }
+
+  @override
   String get onboardingPaywallAction => 'Volver al inicio';
 
   @override

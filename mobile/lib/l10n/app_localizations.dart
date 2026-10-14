@@ -1062,6 +1062,18 @@ abstract class AppLocalizations {
   /// **'Tu periodo de prueba terminó y no hay un plan activo. Puedes consultar, archivar y eliminar tu información, pero registrar un contribuyente requiere un plan.'**
   String get onboardingPaywallBody;
 
+  /// Onboarding opened at the cap of taxpayers (OD-2): title.
+  ///
+  /// In es, this message translates to:
+  /// **'Llegaste al máximo de contribuyentes'**
+  String get onboardingLimitTitle;
+
+  /// Onboarding opened at the cap of taxpayers (OD-2): why and how to free a slot.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya tienes {cap} contribuyentes, el máximo por cuenta; los archivados también cuentan. Para registrar otro, elimina uno que ya no uses.'**
+  String onboardingLimitBody(int cap);
+
   /// Read-only user (402): leaves onboarding.
   ///
   /// In es, this message translates to:

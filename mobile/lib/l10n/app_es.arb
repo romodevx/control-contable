@@ -725,6 +725,19 @@
   "@onboardingPaywallBody": {
     "description": "Read-only user (402): explanation."
   },
+  "onboardingLimitTitle": "Llegaste al máximo de contribuyentes",
+  "@onboardingLimitTitle": {
+    "description": "Onboarding opened at the cap of taxpayers (OD-2): title."
+  },
+  "onboardingLimitBody": "Ya tienes {cap} contribuyentes, el máximo por cuenta; los archivados también cuentan. Para registrar otro, elimina uno que ya no uses.",
+  "@onboardingLimitBody": {
+    "description": "Onboarding opened at the cap of taxpayers (OD-2): why and how to free a slot.",
+    "placeholders": {
+      "cap": {
+        "type": "int"
+      }
+    }
+  },
   "onboardingPaywallAction": "Volver al inicio",
   "@onboardingPaywallAction": {
     "description": "Read-only user (402): leaves onboarding."
