@@ -98,10 +98,14 @@ class _MonthColumn extends StatelessWidget {
     final colors = tokens.colors;
     final text = Theme.of(context).textTheme;
     final flagged = view == TrendView.taxes && isFlagged(point);
+    // excludeSemantics drops the GestureDetector's own tap action, so the
+    // node carries onTap itself: a "button" a screen reader can activate
+    // (QA M6-06 D-1).
     return Semantics(
       button: true,
       selected: isSelected,
       label: label,
+      onTap: onTap,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,

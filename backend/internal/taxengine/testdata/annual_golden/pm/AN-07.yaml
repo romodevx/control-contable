@@ -1,0 +1,27 @@
+# golden: hand-authored from research AN-07 (docs/research/annual-return-2026.md Part D). Never generated or rewritten by a tool.
+# The PTU base of this example is a ⚠️ rule: it is asserted apart, in AN-07-PTU (skipped).
+id: AN-07
+source: research:AN-07
+pending_strategy: true # ANN-11 registers pm_resico
+input:
+  fiscal_year: 2026
+  person_type: moral
+  regimes:
+    - regime: "626"
+      income: "6000000.00" # collected
+      deductions: "4800000.00" # paid
+      tax_inputs:
+        - {key: ptu_paid, money: "50000.00"}
+  payments:
+    - {regime: "626", amount: "360000.00", source: filed}
+expected:
+  sections:
+    - kind: pm_resico
+      regimes: ["626"]
+      status: complete
+      obligation: obligated
+      tax:
+        base: "1150000.00" # utilidad fiscal: 6,000,000 - 4,800,000 - 50,000; no losses
+        isr: "345000.00" # x 30 %
+        credits: {payments: "360000.00"}
+        balance: {kind: a_favor, amount: "15000.00"}

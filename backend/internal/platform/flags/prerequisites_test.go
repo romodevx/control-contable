@@ -25,6 +25,13 @@ func TestPrerequisites_declaresTheRecordModulesOnTaxpayers(t *testing.T) {
 	}
 }
 
+// MODULE-dashboard §3: module_dashboard is implied OFF when module_taxpayers
+// is OFF, and only then. The engine is NOT a prerequisite (OQ-D7): with it
+// OFF Home degrades instead of disappearing.
+func TestPrerequisites_declaresTheDashboardOnTaxpayersOnly(t *testing.T) {
+	assert.Equal(t, []string{"module_taxpayers"}, flags.Prerequisites()["module_dashboard"])
+}
+
 // MODULE-history §3 (closes PLAN D7): History without estimates has
 // nothing to show, so module_history is implied OFF when module_tax_engine
 // (and, through it, module_taxpayers) is OFF.

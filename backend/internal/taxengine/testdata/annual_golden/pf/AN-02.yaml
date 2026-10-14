@@ -1,0 +1,49 @@
+# golden: hand-authored from research AN-02 (docs/research/annual-return-2026.md Part D). Never generated or rewritten by a tool.
+id: AN-02
+source: research:AN-02
+pending_strategy: true # ANN-08 registers pf_art152
+input:
+  fiscal_year: 2026
+  person_type: fisica
+  regimes:
+    - regime: "605" # salary comes from the constancia below
+    - regime: "612"
+      income: "400000.00"
+      deductions: "150000.00" # utilidad 250,000
+      isr_withheld: "15000.00"
+    - regime: "606"
+      income: "240000.00" # rent to a PF: no withholding
+      predial: "6000.00" # 240,000 - 35 % blind (84,000) - predial = 150,000
+      options: {deduction_mode: blind_35}
+  payments:
+    - {regime: "612", amount: "20000.00", source: filed}
+    - {regime: "606", amount: "18000.00", source: filed}
+  salary_statements:
+    - {employer: "Empleador", accumulable: "360000.00", exempt: "20000.00", isr_withheld: "54235.91"}
+  personal_deductions:
+    - {category: medical, amount: "30000.00", payment_method: electronic, beneficiary: self}
+    - {category: health_insurance, amount: "25000.00", payment_method: electronic, beneficiary: self}
+    - {category: mortgage_real_interest, amount: "40000.00", payment_method: electronic, beneficiary: self}
+    - {category: donation, amount: "10000.00", payment_method: electronic, beneficiary: self, donee_type: authorized}
+    - {category: retirement_contribution, amount: "50000.00", payment_method: electronic, beneficiary: self}
+    - {category: tuition, amount: "30000.00", payment_method: electronic, beneficiary: descendant, student: "Hijo 1", tuition_level: primaria}
+  annual_inputs:
+    prior_year_accumulable_income: "700000.00" # 7 % donation cap 49,000
+expected:
+  informative_income_over_500k: true # total income 1,020,000
+  sections:
+    - kind: pf_art152
+      regimes: ["605", "606", "612"]
+      status: complete
+      obligation: obligated
+      missing_inputs: []
+      cpa_topics: [uma_for_minimum_wage] # retirement 5 UMA cap; a dependant's tuition
+      tax:
+        accumulable_income: "760000.00"
+        personal_deductions: "167900.00" # capped group 105,000 + retirement 50,000 + primaria 12,900
+        base: "592100.00"
+        isr: "107435.78"
+        credits: {payments: "38000.00", withholdings: "15000.00", salary_isr: "54235.91"}
+        balance: {kind: a_cargo, amount: "199.87"}
+      lines:
+        - {code: deductions.cap_applied, op: info, amount: "12900.00"} # tuition 30,000 -> primaria cap
