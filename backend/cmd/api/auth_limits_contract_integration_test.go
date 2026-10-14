@@ -94,6 +94,39 @@ func TestContract_authLoginLimits(t *testing.T) {
 		assertRetryAfter(t, env.do(fromClient(env.post("/v1/auth/login", loginJSON(signUpEmail, "mal")), 20)), 3*time.Minute)
 	})
 
+	// ADR-0005 (M1-17): the failure budget is per (email, client network),
+	// so a stranger spending a victim's budget from their network does not
+	// lock the victim out of theirs.
+	t.Run("another network's failures do not lock the account out", func(t *testing.T) {
+		env := newLimitsEnv(t)
+		env.signUp(t, signUpEmail, acceptableSample)
+		for i := range 10 {
+			env.do(fromClient(env.post("/v1/auth/login", loginJSON(signUpEmail, "mal")), i))
+		}
+		assertRetryAfter(t, env.do(fromClient(env.post("/v1/auth/login", loginJSON(signUpEmail, acceptableSample)), 11)), 3*time.Minute)
+
+		victim := env.post("/v1/auth/login", loginJSON(signUpEmail, acceptableSample))
+		victim.RemoteAddr = "203.0.113.5:4321"
+		rec := env.do(victim)
+		assert.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	})
+
+	// ADR-0005: 50 failures / h per email from all networks together bound
+	// distributed guessing (then one per 72 s).
+	t.Run("the email's ceiling holds across networks", func(t *testing.T) {
+		env := newLimitsEnv(t)
+		for n := range 10 {
+			for i := range 5 {
+				req := env.post("/v1/auth/login", loginJSON("nadie@example.mx", "mal"))
+				req.RemoteAddr = fmt.Sprintf("100.64.%d.%d:4321", n, i+1)
+				require.Equalf(t, http.StatusUnauthorized, env.do(req).Code, "network %d failure %d", n, i+1)
+			}
+		}
+		req := env.post("/v1/auth/login", loginJSON("nadie@example.mx", "mal"))
+		req.RemoteAddr = "100.64.99.1:4321"
+		assertRetryAfter(t, c.ServeOp(t, contracttest.Op("login"), env.handler, req), 72*time.Second)
+	})
+
 	// ADR-0005: the budget lives in Postgres, so a second API instance sees
 	// the failures the first one counted.
 	t.Run("the email's budget is shared by every API instance", func(t *testing.T) {

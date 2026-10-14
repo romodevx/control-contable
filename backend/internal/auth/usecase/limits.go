@@ -11,9 +11,15 @@ import (
 // admitted every window/limit (the backoff). The per-client limits of each
 // operation live in the HTTP adapter (authhttp.ClientLimits).
 var (
-	// LoginFailuresPolicy: 5 failures / 15 min per email blind index
-	// (known or unknown address alike); a success refills it.
-	LoginFailuresPolicy = ratelimit.PerWindow("auth_login_email", 5, 15*time.Minute)
+	// LoginFailuresPolicy: 5 failures / 15 min per (email blind index,
+	// client network), known or unknown address alike; a success refills it.
+	// Keying by network too means a stranger spending it locks out only
+	// their own network, not the account (ADR-0005, M1-17).
+	LoginFailuresPolicy = ratelimit.PerWindow("auth_login_email_client", 5, 15*time.Minute)
+	// LoginCeilingPolicy: 50 failures / h per email blind index from all
+	// networks together, bounding distributed guessing (then one per 72 s);
+	// a success refills it.
+	LoginCeilingPolicy = ratelimit.PerWindow("auth_login_email", 50, time.Hour)
 	// SignUpEmailPolicy: 5 / h per email blind index, shared by register
 	// and resendVerification (D7).
 	SignUpEmailPolicy = ratelimit.PerWindow("auth_signup_email", 5, time.Hour)

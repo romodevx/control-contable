@@ -16,6 +16,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/auth/domain"
 	"github.com/romodevx/control-contable/backend/internal/auth/usecase"
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
+	"github.com/romodevx/control-contable/backend/internal/platform/clientnet"
 )
 
 const userIDText = "0199d4a2-7c1e-7b3a-9f10-2c5e8a1b4d01"
@@ -89,11 +90,13 @@ func TestLogin_answers200WithANoStoreSession(t *testing.T) {
 		Tokens:  usecase.Tokens{Access: "jwt", AccessExpiresIn: 15 * time.Minute, Refresh: refresh, RefreshExpiresIn: 720 * time.Hour},
 	}}
 
-	resp, err := loginHandler(login).Login(t.Context(), gen.LoginRequestObject{Body: loginBody()})
+	ctx := clientnet.With(t.Context(), "203.0.113.0/24")
+
+	resp, err := loginHandler(login).Login(ctx, gen.LoginRequestObject{Body: loginBody()})
 
 	require.NoError(t, err)
-	assert.Equal(t, usecase.LoginInput{Email: "Ana.Gomez@example.mx", Password: "made-up sample phrase"}, login.got,
-		"normalization is the use case's job")
+	assert.Equal(t, usecase.LoginInput{Email: "Ana.Gomez@example.mx", Password: "made-up sample phrase", Client: "203.0.113.0/24"},
+		login.got, "normalization is the use case's job; the client network keys its failure budget")
 	got, ok := resp.(gen.Login200JSONResponse)
 	require.True(t, ok)
 	assert.Equal(t, "no-store", got.Headers.CacheControl)

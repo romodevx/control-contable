@@ -208,6 +208,9 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 		middleware.RequestID,
 		middleware.Recover(d.logger),
 		middleware.RateLimit(limiter, middleware.ClientIP(cfg.TrustedProxyHops)),
+		// The client network keys the per-(email, network) login budget
+		// (ADR-0005), resolved behind the same trusted proxies.
+		middleware.WithClientNetwork(middleware.ClientNetwork(cfg.TrustedProxyHops)),
 		middleware.Deadline(cfg.RequestTimeout),
 	), nil
 }

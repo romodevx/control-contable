@@ -10,6 +10,7 @@ import (
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
 	"github.com/romodevx/control-contable/backend/internal/auth/domain"
 	"github.com/romodevx/control-contable/backend/internal/auth/usecase"
+	"github.com/romodevx/control-contable/backend/internal/platform/clientnet"
 )
 
 // noStore is the Cache-Control of every response carrying tokens (contract
@@ -64,7 +65,9 @@ func NewHandler(uc UseCases) *Handler {
 // Login implements gen.StrictServerInterface (POST /v1/auth/login). Every
 // credential failure is the one generic 401 (US-A2a).
 func (h *Handler) Login(ctx context.Context, req gen.LoginRequestObject) (gen.LoginResponseObject, error) {
-	session, err := h.login.Execute(ctx, usecase.LoginInput{Email: string(req.Body.Email), Password: req.Body.Password})
+	session, err := h.login.Execute(ctx, usecase.LoginInput{
+		Email: string(req.Body.Email), Password: req.Body.Password, Client: clientnet.From(ctx),
+	})
 	if limited, ok := tooManyRequests(ctx, err); ok {
 		return gen.Login429JSONResponse{TooManyRequestsJSONResponse: limited}, nil
 	}

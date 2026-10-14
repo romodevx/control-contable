@@ -36,7 +36,7 @@ func (s *stack) newLogin(t *testing.T, params crypto.Argon2idParams) *usecase.Lo
 	login, err := usecase.NewLogin(usecase.LoginDeps{
 		System: txm, Tx: txm, Clock: clock.NewSystem(), Entropy: rand.Reader, Index: s.index,
 		Passwords: passwords, Credentials: infra.NewCredentialStore(), Accounts: infra.NewAccountStore(s.keyring),
-		Refresh: infra.NewRefreshTokenStore(), Access: access, Failures: s.limits.Bucket(usecase.LoginFailuresPolicy),
+		Refresh: infra.NewRefreshTokenStore(), Access: access, Failures: s.limits.Bucket(usecase.LoginFailuresPolicy), Ceiling: s.limits.Bucket(usecase.LoginCeilingPolicy),
 		Logger: slog.New(slog.DiscardHandler),
 	})
 	require.NoError(t, err)

@@ -93,7 +93,7 @@ func newAuthModule(w authWiring) (authModule, error) {
 		System: txm, Tx: txm, Clock: clk, Entropy: rand.Reader, Index: keys.index, Passwords: keys.passwords,
 		Credentials: infra.NewCredentialStore(), Accounts: infra.NewAccountStore(keys.emails),
 		Refresh: infra.NewRefreshTokenStore(), Access: keys.access,
-		Failures: limits.Bucket(usecase.LoginFailuresPolicy), Logger: w.logger,
+		Failures: limits.Bucket(usecase.LoginFailuresPolicy), Ceiling: limits.Bucket(usecase.LoginCeilingPolicy), Logger: w.logger,
 	})
 	if err != nil {
 		return authModule{}, err

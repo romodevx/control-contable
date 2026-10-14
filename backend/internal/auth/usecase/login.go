@@ -31,9 +31,14 @@ type LoginDeps struct {
 	Accounts    LoginAccounts
 	Refresh     RefreshTokens
 	Access      AccessTokens
-	// Failures limits the failed logins of each email (MODULE-auth §5),
-	// keyed by its blind index whether or not an account holds it. Required.
+	// Failures limits the failed logins of each email from each client
+	// network (MODULE-auth §5), keyed by the email's blind index (whether or
+	// not an account holds it) and LoginInput.Client: a stranger spending it
+	// locks out only their own network (ADR-0005). Required.
 	Failures ResettableLimiter
+	// Ceiling limits the failed logins of each email from all networks
+	// together, bounding distributed guessing. Required.
+	Ceiling ResettableLimiter
 	// Logger receives the login_failed audit event; nil discards it.
 	Logger *slog.Logger
 }
@@ -42,6 +47,9 @@ type LoginDeps struct {
 type LoginInput struct {
 	Email    string
 	Password string
+	// Client is the caller's network (IPv4 /24, IPv6 /64) as the HTTP edge
+	// resolved it; "" when unknown (those share one budget).
+	Client string
 }
 
 // Login signs an account in with email and password (US-A2a).
@@ -56,8 +64,8 @@ type Login struct {
 // NewLogin builds the use case. It hashes a random phrase under the current
 // password policy once, for the unknown-email path.
 func NewLogin(deps LoginDeps) (*Login, error) {
-	if deps.Failures == nil {
-		return nil, errors.New("auth: NewLogin needs a Failures limiter: login without a failure limit is a wiring error")
+	if deps.Failures == nil || deps.Ceiling == nil {
+		return nil, errors.New("auth: NewLogin needs Failures and Ceiling limiters: login without failure limits is a wiring error")
 	}
 	if deps.Logger == nil {
 		deps.Logger = slog.New(slog.DiscardHandler)
@@ -86,9 +94,10 @@ func NewLogin(deps LoginDeps) (*Login, error) {
 // Only an infrastructure failure is a different error.
 //
 // Before the lookup, each attempt spends one event of the email's failure
-// budget (keyed by its blind index, for known and unknown addresses alike);
-// none left is a *RateLimitedError, with no lookup and no argon2id run. A
-// success refills the budget, so only failures count (MODULE-auth §5).
+// budget for its client network, then one of the email's ceiling (both keyed
+// by its blind index, for known and unknown addresses alike); none left is a
+// *RateLimitedError, with no lookup and no argon2id run. A success refills
+// both, so only failures count (MODULE-auth §5, ADR-0005).
 func (uc *Login) Execute(ctx context.Context, in LoginInput) (Session, error) {
 	password, passwordErr := domain.PasswordForVerification(in.Password)
 	email, emailErr := domain.NewEmail(in.Email)
@@ -99,25 +108,39 @@ func (uc *Login) Execute(ctx context.Context, in LoginInput) (Session, error) {
 	if err != nil {
 		return Session{}, err
 	}
-	budget := hex.EncodeToString(emailHash)
-	if err := uc.spendAttempt(ctx, budget); err != nil {
-		return Session{}, err
+	index := hex.EncodeToString(emailHash)
+	budgets := []loginBudget{
+		{uc.deps.Failures, index + " " + in.Client},
+		{uc.deps.Ceiling, index},
+	}
+	for _, b := range budgets {
+		if err := uc.spendAttempt(ctx, b); err != nil {
+			return Session{}, err
+		}
 	}
 	session, err := uc.authenticate(ctx, password, emailHash)
 	if err != nil {
 		return Session{}, err
 	}
-	if err := uc.deps.Failures.Reset(ctx, budget); err != nil {
-		// The session exists: a budget left partly spent only makes the
-		// next failures count from where they were.
-		uc.deps.Logger.WarnContext(ctx, "auth: login failure budget not refilled", slog.Any("error", err))
+	for _, b := range budgets {
+		if err := b.limiter.Reset(ctx, b.key); err != nil {
+			// The session exists: a budget left partly spent only makes the
+			// next failures count from where they were.
+			uc.deps.Logger.WarnContext(ctx, "auth: login failure budget not refilled", slog.Any("error", err))
+		}
 	}
 	return session, nil
 }
 
-// spendAttempt takes one event of the email's failure budget.
-func (uc *Login) spendAttempt(ctx context.Context, budget string) error {
-	allowed, wait, err := uc.deps.Failures.Take(ctx, budget)
+// loginBudget is one failure budget of a login: a limiter and its key.
+type loginBudget struct {
+	limiter ResettableLimiter
+	key     string
+}
+
+// spendAttempt takes one event of a failure budget.
+func (uc *Login) spendAttempt(ctx context.Context, b loginBudget) error {
+	allowed, wait, err := b.limiter.Take(ctx, b.key)
 	if err != nil {
 		return fmt.Errorf("auth: login failure budget: %w", err)
 	}
