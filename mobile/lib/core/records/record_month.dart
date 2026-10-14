@@ -41,7 +41,7 @@ class RecordMonth {
   /// location is user input).
   factory opening(String? period, DateTime now) {
     final current = RecordMonth.current(now);
-    if (period == null || !_periodPattern.hasMatch(period)) return current;
+    if (period == null || !isMonthPeriod(period)) return current;
     final named = RecordMonth.parse(period);
     return current.isBefore(named) ? current : named;
   }
@@ -79,6 +79,10 @@ class RecordMonth {
   @override
   String toString() => period;
 }
+
+/// Whether [value] is a `YYYY-MM` month (the one period grammar a location
+/// may carry).
+bool isMonthPeriod(String value) => _periodPattern.hasMatch(value);
 
 /// Today's calendar date in America/Mexico_City at [now] (the server's
 /// bound for record dates).

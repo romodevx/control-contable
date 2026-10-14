@@ -1,4 +1,5 @@
 import 'package:control_contable/core/flags/app_module.dart';
+import 'package:control_contable/core/records/record_month.dart';
 import 'package:control_contable/core/router/feature_module.dart';
 import 'package:control_contable/features/tax_engine/presentation/breakdown_screen.dart';
 import 'package:control_contable/features/tax_engine/presentation/estimate_screen.dart';
@@ -11,9 +12,6 @@ const String _regimeCode = 'regimeCode';
 const String _fiscalYear = 'ejercicio';
 const String _field = 'campo';
 const String _estimatePeriod = 'periodo';
-
-/// A `YYYY-MM` month; anything else in the location is ignored.
-final RegExp _periodPattern = RegExp(r'^\d{4}-(0[1-9]|1[0-2])$');
 
 /// Locations owned by `module_tax_engine`. Ids, periods and regime codes
 /// travel in the location; never an amount or the RFC.
@@ -81,4 +79,4 @@ final FeatureModule taxEngineFeature = FeatureModule(
 
 /// [value] when it is a `YYYY-MM` month, else `null` (the current month).
 String? _periodIn(String? value) =>
-    value != null && _periodPattern.hasMatch(value) ? value : null;
+    value != null && isMonthPeriod(value) ? value : null;
