@@ -29,7 +29,7 @@ abstract class ExpensesClient {
   Future<ExpenseCategoryList> listExpenseCategories({
     @Path('taxpayerId') required Uuid taxpayerId,
     @Query('regime') required RegimeCode regime,
-    @Query('on') DateTime? onValue,
+    @Query('on') String? onValue,
   });
 
   /// List a month's expenses (keyset pagination) with period totals.

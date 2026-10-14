@@ -67,7 +67,7 @@ abstract class IncomesClient {
     @Path('taxpayerId') required Uuid taxpayerId,
     @Query('regime') required RegimeCode regime,
     @Query('counterparty_type') required CounterpartyType counterpartyType,
-    @Query('on') DateTime? onValue,
+    @Query('on') String? onValue,
     @Query('platform_activity') PlatformActivity? platformActivity,
   });
 

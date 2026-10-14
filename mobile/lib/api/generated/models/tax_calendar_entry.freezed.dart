@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TaxCalendarEntry {
 
- Period get period; TaxCalendarEntryObligation get obligation;@JsonKey(name: 'nominal_due_date') DateTime get nominalDueDate;@JsonKey(name: 'due_date') DateTime get dueDate;@JsonKey(includeIfNull: false, name: 'moved_reason') TaxCalendarEntryMovedReason? get movedReason;
+ Period get period; TaxCalendarEntryObligation get obligation;@JsonKey(name: 'nominal_due_date') String get nominalDueDate;@JsonKey(name: 'due_date') String get dueDate;@JsonKey(includeIfNull: false, name: 'moved_reason') TaxCalendarEntryMovedReason? get movedReason;
 /// Create a copy of TaxCalendarEntry
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -54,7 +54,7 @@ abstract mixin class $TaxCalendarEntryCopyWith<$Res>  {
   factory $TaxCalendarEntryCopyWith(TaxCalendarEntry value, $Res Function(TaxCalendarEntry) _then) = _$TaxCalendarEntryCopyWithImpl;
 @useResult
 $Res call({
- Period period, TaxCalendarEntryObligation obligation,@JsonKey(name: 'nominal_due_date') DateTime nominalDueDate,@JsonKey(name: 'due_date') DateTime dueDate,@JsonKey(includeIfNull: false, name: 'moved_reason') TaxCalendarEntryMovedReason? movedReason
+ Period period, TaxCalendarEntryObligation obligation,@JsonKey(name: 'nominal_due_date') String nominalDueDate,@JsonKey(name: 'due_date') String dueDate,@JsonKey(includeIfNull: false, name: 'moved_reason') TaxCalendarEntryMovedReason? movedReason
 });
 
 
@@ -76,8 +76,8 @@ class _$TaxCalendarEntryCopyWithImpl<$Res>
 period: null == period ? _self.period : period // ignore: cast_nullable_to_non_nullable
 as Period,obligation: null == obligation ? _self.obligation : obligation // ignore: cast_nullable_to_non_nullable
 as TaxCalendarEntryObligation,nominalDueDate: null == nominalDueDate ? _self.nominalDueDate : nominalDueDate // ignore: cast_nullable_to_non_nullable
-as DateTime,dueDate: null == dueDate ? _self.dueDate : dueDate // ignore: cast_nullable_to_non_nullable
-as DateTime,movedReason: freezed == movedReason ? _self.movedReason : movedReason // ignore: cast_nullable_to_non_nullable
+as String,dueDate: null == dueDate ? _self.dueDate : dueDate // ignore: cast_nullable_to_non_nullable
+as String,movedReason: freezed == movedReason ? _self.movedReason : movedReason // ignore: cast_nullable_to_non_nullable
 as TaxCalendarEntryMovedReason?,
   ));
 }
@@ -163,7 +163,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Period period,  TaxCalendarEntryObligation obligation, @JsonKey(name: 'nominal_due_date')  DateTime nominalDueDate, @JsonKey(name: 'due_date')  DateTime dueDate, @JsonKey(includeIfNull: false, name: 'moved_reason')  TaxCalendarEntryMovedReason? movedReason)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Period period,  TaxCalendarEntryObligation obligation, @JsonKey(name: 'nominal_due_date')  String nominalDueDate, @JsonKey(name: 'due_date')  String dueDate, @JsonKey(includeIfNull: false, name: 'moved_reason')  TaxCalendarEntryMovedReason? movedReason)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TaxCalendarEntry() when $default != null:
 return $default(_that.period,_that.obligation,_that.nominalDueDate,_that.dueDate,_that.movedReason);case _:
@@ -184,7 +184,7 @@ return $default(_that.period,_that.obligation,_that.nominalDueDate,_that.dueDate
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Period period,  TaxCalendarEntryObligation obligation, @JsonKey(name: 'nominal_due_date')  DateTime nominalDueDate, @JsonKey(name: 'due_date')  DateTime dueDate, @JsonKey(includeIfNull: false, name: 'moved_reason')  TaxCalendarEntryMovedReason? movedReason)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Period period,  TaxCalendarEntryObligation obligation, @JsonKey(name: 'nominal_due_date')  String nominalDueDate, @JsonKey(name: 'due_date')  String dueDate, @JsonKey(includeIfNull: false, name: 'moved_reason')  TaxCalendarEntryMovedReason? movedReason)  $default,) {final _that = this;
 switch (_that) {
 case _TaxCalendarEntry():
 return $default(_that.period,_that.obligation,_that.nominalDueDate,_that.dueDate,_that.movedReason);case _:
@@ -204,7 +204,7 @@ return $default(_that.period,_that.obligation,_that.nominalDueDate,_that.dueDate
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Period period,  TaxCalendarEntryObligation obligation, @JsonKey(name: 'nominal_due_date')  DateTime nominalDueDate, @JsonKey(name: 'due_date')  DateTime dueDate, @JsonKey(includeIfNull: false, name: 'moved_reason')  TaxCalendarEntryMovedReason? movedReason)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Period period,  TaxCalendarEntryObligation obligation, @JsonKey(name: 'nominal_due_date')  String nominalDueDate, @JsonKey(name: 'due_date')  String dueDate, @JsonKey(includeIfNull: false, name: 'moved_reason')  TaxCalendarEntryMovedReason? movedReason)?  $default,) {final _that = this;
 switch (_that) {
 case _TaxCalendarEntry() when $default != null:
 return $default(_that.period,_that.obligation,_that.nominalDueDate,_that.dueDate,_that.movedReason);case _:
@@ -224,8 +224,8 @@ class _TaxCalendarEntry implements TaxCalendarEntry {
 
 @override final  Period period;
 @override final  TaxCalendarEntryObligation obligation;
-@override@JsonKey(name: 'nominal_due_date') final  DateTime nominalDueDate;
-@override@JsonKey(name: 'due_date') final  DateTime dueDate;
+@override@JsonKey(name: 'nominal_due_date') final  String nominalDueDate;
+@override@JsonKey(name: 'due_date') final  String dueDate;
 @override@JsonKey(includeIfNull: false, name: 'moved_reason') final  TaxCalendarEntryMovedReason? movedReason;
 
 /// Create a copy of TaxCalendarEntry
@@ -263,7 +263,7 @@ abstract mixin class _$TaxCalendarEntryCopyWith<$Res> implements $TaxCalendarEnt
   factory _$TaxCalendarEntryCopyWith(_TaxCalendarEntry value, $Res Function(_TaxCalendarEntry) _then) = __$TaxCalendarEntryCopyWithImpl;
 @override @useResult
 $Res call({
- Period period, TaxCalendarEntryObligation obligation,@JsonKey(name: 'nominal_due_date') DateTime nominalDueDate,@JsonKey(name: 'due_date') DateTime dueDate,@JsonKey(includeIfNull: false, name: 'moved_reason') TaxCalendarEntryMovedReason? movedReason
+ Period period, TaxCalendarEntryObligation obligation,@JsonKey(name: 'nominal_due_date') String nominalDueDate,@JsonKey(name: 'due_date') String dueDate,@JsonKey(includeIfNull: false, name: 'moved_reason') TaxCalendarEntryMovedReason? movedReason
 });
 
 
@@ -285,8 +285,8 @@ class __$TaxCalendarEntryCopyWithImpl<$Res>
 period: null == period ? _self.period : period // ignore: cast_nullable_to_non_nullable
 as Period,obligation: null == obligation ? _self.obligation : obligation // ignore: cast_nullable_to_non_nullable
 as TaxCalendarEntryObligation,nominalDueDate: null == nominalDueDate ? _self.nominalDueDate : nominalDueDate // ignore: cast_nullable_to_non_nullable
-as DateTime,dueDate: null == dueDate ? _self.dueDate : dueDate // ignore: cast_nullable_to_non_nullable
-as DateTime,movedReason: freezed == movedReason ? _self.movedReason : movedReason // ignore: cast_nullable_to_non_nullable
+as String,dueDate: null == dueDate ? _self.dueDate : dueDate // ignore: cast_nullable_to_non_nullable
+as String,movedReason: freezed == movedReason ? _self.movedReason : movedReason // ignore: cast_nullable_to_non_nullable
 as TaxCalendarEntryMovedReason?,
   ));
 }

@@ -161,6 +161,16 @@ contract 0.5.0),
   sends a hand-written request type or `Map` body for the clearing call, kept in contract
   tests, M3-09/M4-10. Until then no mobile screen clears one of these fields.
 
+## Calendar dates on the wire (M3-08, 2026-10-14)
+
+swagger_parser maps `type: string, format: date` (`BusinessDate`, the `on` query parameter,
+the tax-calendar dates) to `DateTime`, and json_serializable writes it with
+`toIso8601String()`: `2026-09-10T00:00:00.000`, which is not a `date` (Prism and the server
+answer 400). The normalizer (condition 1) now also drops `format: date`, so these fields are
+`String` in Dart and travel as the contract's `YYYY-MM-DD`; `date-time` keeps its format.
+Guarded by `normalize_openapi_test.dart` and `request_serialization_test.dart`. Screens parse
+and format the string at their edge (`core/forms/flexible_date.dart`).
+
 ## Consequences
 
 - (+) Pure-Dart toolchain, no JVM in mobile CI; idiomatic Freezed 3 + retrofit output;

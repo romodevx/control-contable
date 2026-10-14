@@ -16,8 +16,8 @@ abstract class TaxCalendarEntry with _$TaxCalendarEntry {
   const factory TaxCalendarEntry({
     required Period period,
     required TaxCalendarEntryObligation obligation,
-    @JsonKey(name: 'nominal_due_date') required DateTime nominalDueDate,
-    @JsonKey(name: 'due_date') required DateTime dueDate,
+    @JsonKey(name: 'nominal_due_date') required String nominalDueDate,
+    @JsonKey(name: 'due_date') required String dueDate,
     @JsonKey(includeIfNull: false, name: 'moved_reason')
     TaxCalendarEntryMovedReason? movedReason,
   }) = _TaxCalendarEntry;
