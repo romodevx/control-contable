@@ -92,11 +92,11 @@ func (g *importGraph) reachesFramework(pkg string) bool {
 }
 
 // selfPoliced reports a package whose own rules already keep frameworks out,
-// transitively (domain, usecase, pure platform): a breach there is reported
+// transitively (domain, usecase, pure platform, kernel): a breach there is reported
 // at its source, not again at every importer.
 func (g *importGraph) selfPoliced(pkg string) bool {
 	loc := locate(g.modulePath, pkg)
-	return isInnerLayer(loc) || isPurePlatform(loc)
+	return isInnerLayer(loc) || isPurePlatform(loc) || loc.kind == kindKernel
 }
 
 func (g *importGraph) inModule(pkg string) bool {

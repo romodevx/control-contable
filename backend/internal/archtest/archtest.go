@@ -33,6 +33,10 @@ const (
 	// unit-of-work port (P0-30 D-2): adapters call use cases, which own the
 	// transactions, so no handler can reach tx.SystemManager.
 	RuleAdapterUnitOfWork Rule = "adapter-unit-of-work"
+	// RuleKernelImports reports a shared-kernel package (internal/kernel,
+	// ADR-0007) importing anything the domain could not: every module's
+	// domain imports the kernel, so it is held to the same rule.
+	RuleKernelImports Rule = "kernel-imports"
 )
 
 // Violation is one forbidden import found in a non-test Go file.
@@ -52,6 +56,7 @@ const (
 const (
 	internalDir = "internal"
 	platformDir = "platform"
+	kernelDir   = "kernel"
 )
 
 // domainPlatformAllowlist lists the pure platform packages a domain may import.
@@ -83,13 +88,14 @@ type kind int
 const (
 	kindExternal kind = iota // outside this module's internal/ tree (stdlib, third-party, cmd/)
 	kindPlatform
+	kindKernel // internal/kernel: pure business concepts shared by modules (ADR-0007)
 	kindModule
 )
 
 // location is where a package sits in the backend layout.
 type location struct {
 	kind   kind
-	module string // module name for kindModule, sub-package name for kindPlatform
+	module string // module name for kindModule, sub-package name for kindPlatform and kindKernel
 	layer  string // first directory under the module; empty for kindPlatform
 }
 
@@ -102,8 +108,11 @@ func locate(modulePath, pkg string) location {
 	if len(parts) < 2 || parts[0] != internalDir {
 		return location{kind: kindExternal}
 	}
-	if parts[1] == platformDir {
+	switch parts[1] {
+	case platformDir:
 		return location{kind: kindPlatform, module: elementAt(parts, 2)}
+	case kernelDir:
+		return location{kind: kindKernel, module: elementAt(parts, 2)}
 	}
 	return location{kind: kindModule, module: parts[1], layer: elementAt(parts, 2)}
 }
@@ -135,6 +144,8 @@ func checkImport(modulePath, importer, imported string) Rule {
 	switch from.kind {
 	case kindPlatform:
 		rule = checkPlatformImport(from, to, imported)
+	case kindKernel:
+		rule = checkKernelImport(to, imported)
 	case kindModule:
 		rule = checkModuleImport(from, to, imported)
 	}
@@ -186,7 +197,7 @@ func checkModuleImport(from, to location, imported string) Rule {
 // checkPlatformImport keeps platform free of modules, and keeps the pure
 // platform packages (domainPlatformAllowlist) as clean as the domain itself.
 func checkPlatformImport(from, to location, imported string) Rule {
-	if to.kind == kindModule {
+	if to.kind == kindModule || to.kind == kindKernel {
 		return RulePlatformModules
 	}
 	if !isPurePlatform(from) {
@@ -218,8 +229,23 @@ func checkDomainImport(from, to location, imported string) Rule {
 		if isPurePlatform(to) {
 			return ""
 		}
+	case kindKernel:
+		return ""
 	}
 	return RuleDomainImports
+}
+
+// checkKernelImport holds the shared kernel to the domain's rule without the
+// external allowlist: the standard library minus frameworks, the pure
+// platform packages and other kernel packages. Never a module.
+func checkKernelImport(to location, imported string) Rule {
+	switch {
+	case to.kind == kindExternal && isPureStdlib(imported),
+		to.kind == kindKernel,
+		isPurePlatform(to):
+		return ""
+	}
+	return RuleKernelImports
 }
 
 func isPurePlatform(loc location) bool {
