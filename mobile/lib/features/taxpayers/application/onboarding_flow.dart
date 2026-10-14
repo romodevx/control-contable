@@ -75,8 +75,9 @@ class OnboardingFlow extends ChangeNotifier {
   final Clock _clock;
   final String _clientId;
 
-  /// Whether `module_tax_engine` is on (adds the optional step 5).
-  final bool taxEngineEnabled;
+  /// Whether `module_tax_engine` is on (adds the optional step 5). The
+  /// screen keeps it in step with the flag; it notifies nobody.
+  bool taxEngineEnabled;
 
   OnboardingStep _step = OnboardingStep.personType;
   int _page = 0;

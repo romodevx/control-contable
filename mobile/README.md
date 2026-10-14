@@ -154,6 +154,39 @@ Every record form is built from `core/forms/`, which encodes
   deadline, so time in the background counts.
 - The new session starts like a login's (`sessionProvider`; see "Session tokens" below).
 
+## Taxpayer onboarding (`module_taxpayers`, M2-08/M2-09)
+
+`features/taxpayers/` registers `/contribuyentes/nuevo` as a `FeatureModule`; home shows
+*Registrar contribuyente* only while the flag is on (`FlagGate`). The server's `404` is the
+boundary.
+
+- `OnboardingFlow` (`application/`) holds the draft and the step; screens only render it.
+  Steps, one screen each (≤ 6 fields): 1 · persona física / moral (two large cards, nothing
+  asked before, OD-3) → 2 · display name + RFC → 3 · regimes → 4 · options, one page per
+  chosen regime that has `option_defs`. Back (app bar or system) goes one step and keeps
+  every value; changing the person type drops the regimes of the other catalog.
+- RFC: typed with spaces, dashes or lower case, upper-cased on blur; length by person type,
+  shape, real date and the generic RFCs are checked on blur (`domain/rfc.dart` mirrors the
+  server, which decides). The check digit is never checked client-side (D-RFC).
+- Regimes (`GET /v1/regimes?person_type=`) are grouped by support level (cálculo completo /
+  parcial / solo explicación), each explained, under the mandatory legend
+  (`core/widgets/estimate_legend.dart`). Física is multi-select, moral single-select. An
+  incompatible pair (`incompatible_with`) shows its reason inline at once and blocks the step.
+- Options render from `option_defs`: boolean → switch, enum → radio group, multi_enum →
+  checkboxes, rate → es-MX decimal field kept as a string (`domain/decimal_rate.dart`, bounds
+  compared exactly, never a float). Catalog defaults are prefilled.
+- One `POST /v1/taxpayers` with a client `id` (stable across retries) creates everything.
+  Server verdicts send the user to the step that owns them: RFC errors and
+  `409 rfc_already_registered` to step 2, `regimes.N.options.<key>` to that regime's page,
+  `422 invalid_regime_combination` to step 3; `402` shows the read-only message (no form).
+- Warnings are non-blocking: `rfc_check_digit_mismatch` shows "Revisa que tu RFC esté bien
+  escrito" with the RFC editable (*Continuar* as typed confirms; a change is sent with
+  `PATCH rfc` first); `regime_combination_needs_cpa_review` shows the server's reason.
+- With `module_tax_engine` on, an optional step 5 offers each regime's `required_inputs` for
+  the current fiscal year (America/Mexico_City), written with `PUT …/tax-inputs`; *Omitir*
+  skips it.
+- Not here yet: the active taxpayer and the switcher (M2-10).
+
 ## Session tokens (M1-12)
 
 - `core/session/session.dart` (`Session`): the access token lives **in memory only**; the
