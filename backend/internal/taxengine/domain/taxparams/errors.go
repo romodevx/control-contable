@@ -41,7 +41,8 @@ const (
 	ErrNegativeMoney Error = "taxparams: negative amount"
 	// ErrInvalidTable reports a table without rows, a first row not starting
 	// at 0.01, a row ending below its start, an unbounded row that is not the
-	// last (or has an upper bound), or a fixed fee on a flat table.
+	// last (or has an upper bound), a marginal table whose last row is
+	// bounded, or a fixed fee on a flat table.
 	ErrInvalidTable Error = "taxparams: invalid table"
 	// ErrNotContiguous reports consecutive rows where upper + 0.01 is not the
 	// next lower (a gap or an overlap).

@@ -112,14 +112,15 @@ its path (`values[3] uma.monthly: ...`, `tables[5] isr.art106.accumulated rows[2
 | Rates in [0, 1], including tariff rates | `ErrRateOutOfRange` |
 | Amounts and fixed fees >= 0 | `ErrNegativeMoney` |
 | **No overlap**: two entries of one key (and month) in force on the same day | `ErrOverlap` |
-| Tables: rows present; first `lower` is 0.01; `upper` >= `lower`; only the last row may omit `upper`; no `fixed_fee` on a flat table | `ErrInvalidTable` |
+| Tables: rows present; first `lower` is 0.01; `upper` >= `lower`; only the last row may omit `upper`, and a **marginal** table's last row must omit it ("en adelante"; a flat table may end bounded, as RESICO PF does); no `fixed_fee` on a flat table | `ErrInvalidTable` |
+| Every marginal row states `fixed_fee` (`"0.00"` on the first row); an omitted one is never read as zero | `ErrMissingFixedFee` (loader) |
 | **Contiguous rows**: `upper[i] + 0.01 == lower[i+1]` (no gap, no overlap) | `ErrNotContiguous` |
 | `month` within 1-12 (absent = not monthly) | `ErrInvalidMonth` |
 | A key is all monthly or all plain | `ErrMonthlyMixed` |
 | **Exactly twelve**: each validity window of a monthly key holds months 1-12 once | `ErrMonthlyIncomplete` (a repeated month is also `ErrOverlap`) |
 
 Regime strategies also declare what they read, for example
-`taxparams.RequireMonthlyTables("isr.art106.accumulated")` or `RequireRate("iva.rate.general")`.
+`taxparams.RequireMonthlyTables("isr.art106.accumulated")` or `RequireRate("iva.rate.general_16")`.
 The composition root checks them with `Params.Require` at boot, so a missing or mistyped key
 (`ErrUnknownKey`, `ErrKindMismatch`) fails the boot as well.
 

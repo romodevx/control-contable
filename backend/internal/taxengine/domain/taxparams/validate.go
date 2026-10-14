@@ -148,7 +148,9 @@ func (v *validator) table(i int, t Table) {
 }
 
 // rows checks a tariff is total from 0.01: contiguous rows (upper + 0.01 ==
-// next lower), each well-formed, and only the last may be unbounded.
+// next lower), each well-formed, and only the last may be unbounded. A
+// marginal tariff (LISR 96, 106) must end unbounded; a flat one may end
+// bounded (the RESICO PF ceiling, LISR 113-E).
 func (v *validator) rows(path string, t Table) {
 	if len(t.Rows) == 0 {
 		v.report("%s: no rows: %w", path, ErrInvalidTable)
@@ -164,6 +166,9 @@ func (v *validator) rows(path string, t Table) {
 		v.amount(rowPath, r.FixedFee)
 		if t.Kind == TableFlat && r.FixedFee != 0 {
 			v.report("%s: fixed fee on a flat table: %w", rowPath, ErrInvalidTable)
+		}
+		if i == last && !r.Unbounded && t.Kind == TableMarginal {
+			v.report("%s: a marginal tariff ends with an unbounded row (en adelante): %w", rowPath, ErrInvalidTable)
 		}
 		if r.Unbounded {
 			if i != last || r.Upper != 0 {

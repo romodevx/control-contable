@@ -71,7 +71,7 @@ type tableDoc struct {
 type rowDoc struct {
 	Lower    decimalText  `yaml:"lower"`
 	Upper    *decimalText `yaml:"upper"`     // absent on the last row: "en adelante"
-	FixedFee *decimalText `yaml:"fixed_fee"` // absent = 0.00 (flat tables have none)
+	FixedFee *decimalText `yaml:"fixed_fee"` // required on marginal rows; flat rows have none
 	Rate     decimalText  `yaml:"rate"`
 }
 
@@ -197,8 +197,11 @@ func (c *converter) table(path string, doc tableDoc) taxparams.Table {
 		if r.Upper != nil {
 			row.Upper = c.cents(rowPath+" upper", *r.Upper)
 		}
-		if r.FixedFee != nil {
+		switch {
+		case r.FixedFee != nil:
 			row.FixedFee = c.cents(rowPath+" fixed_fee", *r.FixedFee)
+		case kind == taxparams.TableMarginal:
+			c.report(fmt.Errorf("%s: %w", rowPath, ErrMissingFixedFee))
 		}
 		t.Rows = append(t.Rows, row)
 	}
