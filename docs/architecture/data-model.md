@@ -146,16 +146,27 @@ erDiagram
         text person_type PK "626 and 610 exist for both"
         text name
         text treatment "full|partial|informational"
-        text explanation
-        jsonb option_defs
-        jsonb required_inputs
+        text periodicity "NULL only if needs_cpa_review"
+        text explanation "M5-19"
+        jsonb option_defs "CHECK: openapi RegimeOptionDef[]"
+        jsonb required_inputs "CHECK: openapi TaxInputDef[]"
+        date valid_from
+        date valid_to
+        text legal_basis
+        text source_url
+        boolean needs_cpa_review
+        text review_note
     }
     regime_compatibility {
         text person_type PK
-        text regime_a PK
+        text regime_a PK "regime_a < regime_b"
         text regime_b PK
-        boolean allowed
+        boolean allowed "NULL = undetermined (needs_cpa_review)"
         text reason
+        text legal_basis
+        text source_url
+        boolean needs_cpa_review
+        text review_note
     }
     taxpayer_regimes {
         uuid taxpayer_id PK
