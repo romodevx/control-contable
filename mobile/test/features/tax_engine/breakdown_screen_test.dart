@@ -1,13 +1,14 @@
 import 'dart:async';
+import 'dart:ui' show Tristate;
 
 import 'package:control_contable/api/generated/models/breakdown.dart';
 import 'package:control_contable/api/generated/models/error_code.dart';
 import 'package:control_contable/api/generated/models/field_error.dart';
 import 'package:control_contable/core/network/api_failure.dart';
+import 'package:control_contable/core/router/app_router.dart';
 import 'package:control_contable/features/tax_engine/presentation/breakdown_screen.dart';
 import 'package:control_contable/features/tax_engine/tax_engine_routes.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'breakdown_fixtures.dart';
@@ -195,7 +196,7 @@ void main() {
         Tristate.isTrue,
       );
       await tester.tap(
-        _inLine(8, find.text('Leer la Ley del Impuesto sobre la Renta')),
+        _inLine(8, find.text('Leer: Ley del Impuesto sobre la Renta')),
       );
       await tester.pumpAndSettle();
 
@@ -208,10 +209,11 @@ void main() {
       tester,
     ) async {
       await _open(harness, tester);
+      final toggle = _inLine(4, find.text('Fundamento: Anexo 8 RMF 2026 B.VI'));
+      await tester.ensureVisible(toggle);
+      await tester.pumpAndSettle();
 
-      await tester.tap(
-        _inLine(4, find.text('Fundamento: Anexo 8 RMF 2026 B.VI')),
-      );
+      await tester.tap(toggle);
       await tester.pumpAndSettle();
 
       expect(_inLine(4, find.text('Anexo 8 RMF 2026, B.VI')), findsOneWidget);
@@ -367,7 +369,7 @@ void main() {
       );
       expect(
         find.bySemanticsLabel(
-          RegExp(r'^Ingresos cobrados acumulados ene–mar: '),
+          RegExp('^Ingresos cobrados acumulados ene–mar: '),
         ),
         findsOneWidget,
         reason: 'a figure from the records does not depend on the inputs',
@@ -427,7 +429,10 @@ void main() {
       final pending = Completer<Breakdown>();
       harness.repository.breakdownReplies.add(pending);
       await harness.pump(tester, location: null);
-      await harness.push(tester, _breakdown612);
+      unawaited(
+        harness.container.read(appRouterProvider).push<void>(_breakdown612),
+      );
+      await tester.pump();
       await tester.pump();
 
       expect(find.text('Cargando el desglose…'), findsOneWidget);

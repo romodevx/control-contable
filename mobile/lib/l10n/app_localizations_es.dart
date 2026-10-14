@@ -1317,6 +1317,78 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get comingSoon => 'Disponible pronto.';
+
+  @override
+  String get breakdownLoading => 'Cargando el desglose…';
+
+  @override
+  String breakdownSubtitle(String code, String month) {
+    return 'Régimen $code · $month';
+  }
+
+  @override
+  String breakdownVersions(String year, String version, String engine) {
+    return 'Parámetros $year v$version · Motor $engine';
+  }
+
+  @override
+  String get breakdownGroupIsr => 'ISR';
+
+  @override
+  String get breakdownGroupIva => 'IVA';
+
+  @override
+  String get breakdownWithholdingsHelp =>
+      'Lo que retuviste a otros y debes enterar al SAT. Se paga aparte de tus impuestos.';
+
+  @override
+  String get breakdownIvaHelp =>
+      'El IVA del mes es uno solo: sumamos lo cobrado y lo pagado en todos tus regímenes y resulta un solo pago (LIVA 5-D).';
+
+  @override
+  String get breakdownIvaNettingUnverified =>
+      'Esta suma entre regímenes aún no la valida un contador; tómala con reserva.';
+
+  @override
+  String breakdownRate(String rate) {
+    return 'Tasa: $rate';
+  }
+
+  @override
+  String get breakdownSourceRecords => 'De tus registros';
+
+  @override
+  String get breakdownSourceComputed => 'Calculado';
+
+  @override
+  String get breakdownSourceInput => 'Dato que capturaste';
+
+  @override
+  String get breakdownSourceParams => 'Tarifa oficial';
+
+  @override
+  String get breakdownCpaLine => 'Sin validar por un contador';
+
+  @override
+  String breakdownLegalBasis(String references) {
+    return 'Fundamento: $references';
+  }
+
+  @override
+  String breakdownReadLaw(String law) {
+    return 'Leer: $law';
+  }
+
+  @override
+  String get breakdownRoundingHelp =>
+      'Cada línea se muestra redondeada al centavo; este ajuste hace que la suma coincida con el resultado. No es un cobro extra.';
+
+  @override
+  String get breakdownNoLines =>
+      'Este régimen no tiene desglose: no estimamos su impuesto.';
+
+  @override
+  String get breakdownRegimeNotActive => 'No tenías este régimen en ese mes.';
 }
 
 /// The translations for Spanish Castilian, as used in Mexico (`es_MX`).

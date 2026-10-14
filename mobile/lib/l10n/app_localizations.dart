@@ -2261,6 +2261,120 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Disponible pronto.'**
   String get comingSoon;
+
+  /// Announced while the breakdown loads.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando el desglose…'**
+  String get breakdownLoading;
+
+  /// Breakdown header: the regime code and the month.
+  ///
+  /// In es, this message translates to:
+  /// **'Régimen {code} · {month}'**
+  String breakdownSubtitle(String code, String month);
+
+  /// Breakdown header: the tax parameter set and engine version used.
+  ///
+  /// In es, this message translates to:
+  /// **'Parámetros {year} v{version} · Motor {engine}'**
+  String breakdownVersions(String year, String version, String engine);
+
+  /// Heading of the breakdown's ISR lines.
+  ///
+  /// In es, this message translates to:
+  /// **'ISR'**
+  String get breakdownGroupIsr;
+
+  /// Heading of the breakdown's IVA lines.
+  ///
+  /// In es, this message translates to:
+  /// **'IVA'**
+  String get breakdownGroupIva;
+
+  /// Under the withholdings-to-remit heading of the breakdown.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que retuviste a otros y debes enterar al SAT. Se paga aparte de tus impuestos.'**
+  String get breakdownWithholdingsHelp;
+
+  /// Under the IVA heading: the month's IVA is netted per taxpayer (OQ-T2).
+  ///
+  /// In es, this message translates to:
+  /// **'El IVA del mes es uno solo: sumamos lo cobrado y lo pagado en todos tus regímenes y resulta un solo pago (LIVA 5-D).'**
+  String get breakdownIvaHelp;
+
+  /// Under the IVA heading when the IVA was netted across regimes (CPA-unverified, OQ-T2/T8).
+  ///
+  /// In es, this message translates to:
+  /// **'Esta suma entre regímenes aún no la valida un contador; tómala con reserva.'**
+  String get breakdownIvaNettingUnverified;
+
+  /// Rate of a multiplication line.
+  ///
+  /// In es, this message translates to:
+  /// **'Tasa: {rate}'**
+  String breakdownRate(String rate);
+
+  /// Source tag: the figure sums the user's incomes or expenses.
+  ///
+  /// In es, this message translates to:
+  /// **'De tus registros'**
+  String get breakdownSourceRecords;
+
+  /// Source tag: the figure is computed from the lines above.
+  ///
+  /// In es, this message translates to:
+  /// **'Calculado'**
+  String get breakdownSourceComputed;
+
+  /// Source tag: the figure is a tax input the user entered.
+  ///
+  /// In es, this message translates to:
+  /// **'Dato que capturaste'**
+  String get breakdownSourceInput;
+
+  /// Source tag: the figure comes from the official tariffs and parameters.
+  ///
+  /// In es, this message translates to:
+  /// **'Tarifa oficial'**
+  String get breakdownSourceParams;
+
+  /// Marker of a line that applies a rule no CPA has validated yet.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin validar por un contador'**
+  String get breakdownCpaLine;
+
+  /// Collapsed legal basis of a line; expands to the full citations.
+  ///
+  /// In es, this message translates to:
+  /// **'Fundamento: {references}'**
+  String breakdownLegalBasis(String references);
+
+  /// Opens the official text of a cited law.
+  ///
+  /// In es, this message translates to:
+  /// **'Leer: {law}'**
+  String breakdownReadLaw(String law);
+
+  /// Explains the 'Ajuste por redondeo' line.
+  ///
+  /// In es, this message translates to:
+  /// **'Cada línea se muestra redondeada al centavo; este ajuste hace que la suma coincida con el resultado. No es un cobro extra.'**
+  String get breakdownRoundingHelp;
+
+  /// Breakdown of an informational regime (no lines).
+  ///
+  /// In es, this message translates to:
+  /// **'Este régimen no tiene desglose: no estimamos su impuesto.'**
+  String get breakdownNoLines;
+
+  /// 422 regime_not_active on the breakdown.
+  ///
+  /// In es, this message translates to:
+  /// **'No tenías este régimen en ese mes.'**
+  String get breakdownRegimeNotActive;
 }
 
 class _AppLocalizationsDelegate

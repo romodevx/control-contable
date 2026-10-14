@@ -1723,5 +1723,123 @@
   "comingSoon": "Disponible pronto.",
   "@comingSoon": {
     "description": "Placeholder body of a screen still being built."
+  },
+  "breakdownLoading": "Cargando el desglose…",
+  "@breakdownLoading": {
+    "description": "Announced while the breakdown loads."
+  },
+  "breakdownSubtitle": "Régimen {code} · {month}",
+  "@breakdownSubtitle": {
+    "description": "Breakdown header: the regime code and the month.",
+    "placeholders": {
+      "code": {
+        "type": "String",
+        "example": "612"
+      },
+      "month": {
+        "type": "String",
+        "example": "marzo de 2026"
+      }
+    }
+  },
+  "breakdownVersions": "Parámetros {year} v{version} · Motor {engine}",
+  "@breakdownVersions": {
+    "description": "Breakdown header: the tax parameter set and engine version used.",
+    "placeholders": {
+      "year": {
+        "type": "String",
+        "example": "2026"
+      },
+      "version": {
+        "type": "String",
+        "example": "1"
+      },
+      "engine": {
+        "type": "String",
+        "example": "1.0.0"
+      }
+    }
+  },
+  "breakdownGroupIsr": "ISR",
+  "@breakdownGroupIsr": {
+    "description": "Heading of the breakdown's ISR lines."
+  },
+  "breakdownGroupIva": "IVA",
+  "@breakdownGroupIva": {
+    "description": "Heading of the breakdown's IVA lines."
+  },
+  "breakdownWithholdingsHelp": "Lo que retuviste a otros y debes enterar al SAT. Se paga aparte de tus impuestos.",
+  "@breakdownWithholdingsHelp": {
+    "description": "Under the withholdings-to-remit heading of the breakdown."
+  },
+  "breakdownIvaHelp": "El IVA del mes es uno solo: sumamos lo cobrado y lo pagado en todos tus regímenes y resulta un solo pago (LIVA 5-D).",
+  "@breakdownIvaHelp": {
+    "description": "Under the IVA heading: the month's IVA is netted per taxpayer (OQ-T2)."
+  },
+  "breakdownIvaNettingUnverified": "Esta suma entre regímenes aún no la valida un contador; tómala con reserva.",
+  "@breakdownIvaNettingUnverified": {
+    "description": "Under the IVA heading when the IVA was netted across regimes (CPA-unverified, OQ-T2/T8)."
+  },
+  "breakdownRate": "Tasa: {rate}",
+  "@breakdownRate": {
+    "description": "Rate of a multiplication line.",
+    "placeholders": {
+      "rate": {
+        "type": "String",
+        "example": "21.36 %"
+      }
+    }
+  },
+  "breakdownSourceRecords": "De tus registros",
+  "@breakdownSourceRecords": {
+    "description": "Source tag: the figure sums the user's incomes or expenses."
+  },
+  "breakdownSourceComputed": "Calculado",
+  "@breakdownSourceComputed": {
+    "description": "Source tag: the figure is computed from the lines above."
+  },
+  "breakdownSourceInput": "Dato que capturaste",
+  "@breakdownSourceInput": {
+    "description": "Source tag: the figure is a tax input the user entered."
+  },
+  "breakdownSourceParams": "Tarifa oficial",
+  "@breakdownSourceParams": {
+    "description": "Source tag: the figure comes from the official tariffs and parameters."
+  },
+  "breakdownCpaLine": "Sin validar por un contador",
+  "@breakdownCpaLine": {
+    "description": "Marker of a line that applies a rule no CPA has validated yet."
+  },
+  "breakdownLegalBasis": "Fundamento: {references}",
+  "@breakdownLegalBasis": {
+    "description": "Collapsed legal basis of a line; expands to the full citations.",
+    "placeholders": {
+      "references": {
+        "type": "String",
+        "example": "LISR 103, LISR 105"
+      }
+    }
+  },
+  "breakdownReadLaw": "Leer: {law}",
+  "@breakdownReadLaw": {
+    "description": "Opens the official text of a cited law.",
+    "placeholders": {
+      "law": {
+        "type": "String",
+        "example": "Ley del Impuesto sobre la Renta"
+      }
+    }
+  },
+  "breakdownRoundingHelp": "Cada línea se muestra redondeada al centavo; este ajuste hace que la suma coincida con el resultado. No es un cobro extra.",
+  "@breakdownRoundingHelp": {
+    "description": "Explains the 'Ajuste por redondeo' line."
+  },
+  "breakdownNoLines": "Este régimen no tiene desglose: no estimamos su impuesto.",
+  "@breakdownNoLines": {
+    "description": "Breakdown of an informational regime (no lines)."
+  },
+  "breakdownRegimeNotActive": "No tenías este régimen en ese mes.",
+  "@breakdownRegimeNotActive": {
+    "description": "422 regime_not_active on the breakdown."
   }
 }

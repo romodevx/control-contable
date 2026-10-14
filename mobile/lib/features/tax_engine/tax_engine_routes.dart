@@ -1,5 +1,6 @@
 import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/router/feature_module.dart';
+import 'package:control_contable/features/tax_engine/presentation/breakdown_screen.dart';
 import 'package:control_contable/features/tax_engine/presentation/coming_soon_screen.dart';
 import 'package:control_contable/features/tax_engine/presentation/estimate_screen.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
@@ -17,7 +18,7 @@ abstract final class TaxEngineRoutes {
   /// The active taxpayer's monthly estimate (M5-25).
   static const estimate = '/estimado';
 
-  /// One regime's breakdown for [period] (M5-26; a placeholder until then).
+  /// One regime's breakdown for [period] (M5-26).
   static String breakdown(String taxpayerId, String period, String regime) =>
       '$estimate/$taxpayerId/$period/regimenes/$regime';
 
@@ -49,8 +50,11 @@ final FeatureModule taxEngineFeature = FeatureModule(
         ':$_period',
         ':$_regimeCode',
       ),
-      builder: (context, state) =>
-          ComingSoonScreen(title: AppLocalizations.of(context).breakdownTitle),
+      builder: (context, state) => BreakdownScreen(
+        taxpayerId: state.pathParameters[_taxpayerId]!,
+        period: state.pathParameters[_period]!,
+        regime: state.pathParameters[_regimeCode]!,
+      ),
     ),
     GoRoute(
       path: '${TaxEngineRoutes.estimate}/:$_taxpayerId/datos/:$_regimeCode',
