@@ -19,9 +19,6 @@ const (
 	// ErrRFCInvalidDate reports an RFC whose YYMMDD part is not a calendar
 	// date (validation_failed).
 	ErrRFCInvalidDate Error = "taxpayers: rfc date is not a calendar date"
-	// ErrRFCCheckDigit reports an RFC whose last character is not the SAT
-	// check digit of the characters before it (validation_failed).
-	ErrRFCCheckDigit Error = "taxpayers: rfc check digit does not match"
 	// ErrRFCGeneric reports one of the SAT's generic RFCs, which identify no
 	// taxpayer (validation_failed).
 	ErrRFCGeneric Error = "taxpayers: generic rfc is not a taxpayer"

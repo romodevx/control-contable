@@ -46,8 +46,9 @@ var genericRFCs = []string{"XAXX010101000", "XEXX010101000"}
 // value is not a valid RFC (see IsZero).
 type RFC struct {
 	redactor
-	value      string
-	personType PersonType
+	value           string
+	personType      PersonType
+	checkDigitValid bool
 }
 
 // NewRFC validates and normalizes raw, inferring the person type from the
@@ -68,7 +69,10 @@ type RFC struct {
 //     not encoded, so YY is read as 20YY: 29 February is accepted whenever
 //     YY is a multiple of 4. That is exact for 1901-2099; the one
 //     over-acceptance is "000229" read as 1900, which was not a leap year.
-//  4. The last character is the SAT check digit, else ErrRFCCheckDigit.
+//
+// The last character is then compared with the SAT check digit, and the
+// result is exposed as CheckDigitValid: a mismatch is NOT an error
+// (decision D-RFC, ADR-0006).
 //
 // The check digit (dígito verificador) follows the SAT's "Algoritmo para
 // generar el RFC con homoclave para personas físicas y morales", Anexo 3,
@@ -82,10 +86,10 @@ type RFC struct {
 // by python-stdnum (stdnum.mx.rfc.calc_check_digit), which the tests use as
 // an independent oracle for their fixtures.
 //
-// Known limitation: python-stdnum reports that about 1.5% of RFCs in use
+// python-stdnum reports that about 1.5% of the RFCs the SAT has issued
 // carry a check digit that does not match, and leaves the check off by
-// default. PRD Q9 requires it here; a taxpayer holding such an RFC is
-// rejected until that decision changes.
+// default. Rejecting them would lock real taxpayers out, so the digit is a
+// warning the caller may surface, never a validation failure.
 func NewRFC(raw string) (RFC, error) {
 	value := strings.Map(upperRFCRune, strings.TrimSpace(norm.NFC.String(raw)))
 	if slices.Contains(genericRFCs, value) {
@@ -100,10 +104,11 @@ func NewRFC(raw string) (RFC, error) {
 		return RFC{}, ErrRFCInvalidDate
 	}
 	last := len(runes) - 1
-	if runes[last] != checkDigit(runes[:last]) {
-		return RFC{}, ErrRFCCheckDigit
-	}
-	return RFC{value: value, personType: personType}, nil
+	return RFC{
+		value:           value,
+		personType:      personType,
+		checkDigitValid: runes[last] == checkDigit(runes[:last]),
+	}, nil
 }
 
 // NewRFCFor validates raw as NewRFC does and checks that its inferred person
@@ -128,6 +133,11 @@ func (r RFC) String() string { return r.value }
 
 // PersonType returns the person type implied by the RFC's length.
 func (r RFC) PersonType() PersonType { return r.personType }
+
+// CheckDigitValid reports whether the RFC's last character is the SAT check
+// digit of the characters before it. False is a warning, not a validation
+// failure (see NewRFC); the zero RFC reports false.
+func (r RFC) CheckDigitValid() bool { return r.checkDigitValid }
 
 // IsZero reports whether r is the zero RFC.
 func (r RFC) IsZero() bool { return r.value == "" }

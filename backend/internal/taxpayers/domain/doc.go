@@ -2,8 +2,9 @@
 // errors:
 //
 //   - PersonType: "fisica" or "moral", the contract's PersonType enum.
-//   - RFC: a normalized Registro Federal de Contribuyentes with its shape,
-//     date and SAT check digit validated; the person type is inferred from
+//   - RFC: a normalized Registro Federal de Contribuyentes with its shape
+//     and date validated and its SAT check digit reported (CheckDigitValid,
+//     a warning, never an error); the person type is inferred from
 //     its length (13 física, 12 moral) and may be checked against a declared
 //     type (NewRFCFor). Generic RFCs are rejected.
 //   - OptionSet: a regime's option definitions (the catalog's option_defs)
