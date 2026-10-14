@@ -18,6 +18,7 @@ import (
 
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/money"
+	"github.com/romodevx/control-contable/backend/internal/taxengine"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/taxparams"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/golden"
@@ -33,22 +34,11 @@ const (
 	writeScope   = "internal/taxengine/"
 )
 
-// gateStrategies are the strategies the gate runs, through the real M5-10
-// registry. A strategy PR (M5-11..M5-19) adds its strategy here and removes
-// pending_strategy from its cases in the same PR, until M5-22 wires them all
-// at the composition root and the gate can take that list.
-func gateStrategies() []domain.Strategy {
-	return []domain.Strategy{
-		domain.NewGeneralPMStrategy(), // 601 PM (M5-15)
-		domain.NewStrategy612PF(),
-		domain.NewRentPFStrategy(),   // 606 PF (M5-12)
-		domain.NewRESICOPFStrategy(), // M5-13
-		domain.NewRESICOPMStrategy(), // M5-16
-		domain.NewStrategy621PF(),    // partial (M5-17)
-		domain.NewStrategy622PM(),    // partial (M5-18)
-		domain.NewStrategy603PM(),    // partial (M5-18)
-	}
-}
+// gateStrategies are the strategies the gate runs: the composition root's
+// list (M5-22), so a strategy is either wired and gated or neither. A
+// strategy PR adds its line to taxengine.Strategies and removes
+// pending_strategy from its cases in the same PR.
+func gateStrategies() []domain.Strategy { return taxengine.Strategies() }
 
 func registry(t *testing.T) domain.Registry {
 	t.Helper()
