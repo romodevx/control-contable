@@ -7,6 +7,7 @@ import 'package:control_contable/features/home/presentation/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../helpers/color_distance.dart';
 import '../../helpers/pump_app.dart';
 
 /// WCAG 2.x contrast ratio, the method DIRECTIONS.md uses.
@@ -116,6 +117,63 @@ void main() {
         _expectContrast(textPairs, _textMin);
         _expectContrast(nonTextPairs, _nonTextMin);
       });
+    }
+  });
+
+  group('chart series pass the dataviz color floor', () {
+    final modes = {
+      'light': confianzaSobria.light.colors,
+      'dark': confianzaSobria.dark.colors,
+    };
+    for (final MapEntry(key: mode, value: c) in modes.entries) {
+      test(mode, () {
+        // Every pair that shares a chart: the tax stack (IVA, ISR,
+        // withholdings) and the income/expense pair.
+        final pairs = {
+          'iva/isr': (c.iva, c.isr),
+          'isr/withholdings': (c.isr, c.withholdings),
+          'iva/withholdings': (c.iva, c.withholdings),
+          'income/expense': (c.income, c.expense),
+        };
+        for (final MapEntry(key: name, value: (a, b)) in pairs.entries) {
+          expect(
+            normalDeltaE(a, b),
+            greaterThanOrEqualTo(normalVisionFloor),
+            reason: '$name normal vision',
+          );
+          expect(
+            cvdDeltaE(a, b),
+            greaterThanOrEqualTo(cvdTarget),
+            reason: '$name protan/deutan',
+          );
+        }
+        // Marks stay ≥ 3:1 on the selected month's column too.
+        _expectContrast({
+          for (final (name, mark) in [
+            ('iva', c.iva),
+            ('isr', c.isr),
+            ('withholdings', c.withholdings),
+            ('income', c.income),
+            ('expense', c.expense),
+          ])
+            '$name/border': (mark, c.border),
+        }, _nonTextMin);
+      });
+    }
+  });
+
+  testWidgets('Material secondary keeps AA text contrast in both modes', (
+    tester,
+  ) async {
+    for (final brightness in Brightness.values) {
+      await pumpControlContableApp(tester, brightness: brightness);
+      final scheme = _themeOfHome(tester).colorScheme;
+
+      expect(
+        _contrast(scheme.onSecondary, scheme.secondary),
+        greaterThanOrEqualTo(_textMin),
+        reason: brightness.name,
+      );
     }
   });
 

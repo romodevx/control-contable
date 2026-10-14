@@ -64,7 +64,7 @@ ColorScheme _colorScheme(AppColors c, Brightness brightness) => ColorScheme(
   brightness: brightness,
   primary: c.primary,
   onPrimary: c.onPrimary,
-  secondary: c.isr,
+  secondary: c.accent,
   onSecondary: c.onPrimary,
   error: c.error,
   onError: c.surface,

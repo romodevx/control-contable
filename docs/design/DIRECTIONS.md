@@ -70,10 +70,11 @@ bank statement or a SAT acknowledgement, without copying either.
 | `border` | `#E1E6ED` | `#24344A` | Decorative dividers |
 | `primary` | `#1D4E89` | `#8DB8EC` | Primary button, active nav, links |
 | `onPrimary` | `#FFFFFF` | `#0B1420` | Text on primary |
+| `accent` | `#2B7470` | `#6FC7C0` | Material secondary (selected chips and segments); never a chart series |
 | `heroBg` / `heroText` / `heroMuted` | `#1D4E89` / `#FFFFFF` / `#C7D7EC` | `#16365C` / `#E8EEF5` / `#B4C6DD` | Estimate card |
-| `iva` (chart) | `#1D4E89` | `#8DB8EC` | IVA series |
-| `isr` (chart) | `#2B7470` | `#6FC7C0` | ISR series |
-| `withholdings` (chart) | `#9A6400` | `#E3B65C` | Withholdings to remit, third tax segment (M6, OQ-D4) |
+| `iva` (chart) | `#1C5293` | `#5178D6` | IVA series (re-stepped 2026-10-14, see Chart series) |
+| `isr` (chart) | `#04896A` | `#24A684` | ISR series (re-stepped 2026-10-14) |
+| `withholdings` (chart) | `#9A6400` | `#B88513` | Withholdings to remit, third tax segment (M6, OQ-D4) |
 | `income` (chart) | `#2E6FB7` | `#4F95DB` | "Ingresos cobrados" series (M6) |
 | `expense` (chart) | `#B4532A` | `#D06A3B` | "Gastos pagados" series (M6) |
 | `favor` | `#1C7046` | `#6FD49A` | Saldo a favor |
@@ -86,11 +87,12 @@ bank statement or a SAT acknowledgement, without copying either.
 | text / surface | 17.3 | 14.1 |
 | muted / surface | 7.5 | 8.0 |
 | onPrimary / primary | 8.4 | 9.0 |
+| onPrimary / accent | 5.5 | 9.3 |
 | heroText / heroBg | 8.4 | 10.5 |
 | heroMuted / heroBg | 5.7 | 7.0 |
-| iva mark / surface | 8.4 | 8.0 |
-| isr mark / surface | 5.5 | 8.3 |
-| withholdings mark / surface | 5.0 | 8.7 |
+| iva mark / surface | 7.8 | 3.9 |
+| isr mark / surface | 4.4 | 5.4 |
+| withholdings mark / surface | 5.0 | 5.0 |
 | income mark / surface | 5.2 | 5.2 |
 | expense mark / surface | 5.0 | 4.6 |
 | favor / surface | 6.1 | 9.1 |
@@ -112,12 +114,18 @@ Scale (px): 44 hero · 28 page · 20 title · 18 section · 17 input/button · 1
 - **Icons:** Lucide (`lucide_icons_flutter`), outline, 1.75 stroke, 22 px.
 - **Chart:** square-topped stacked bars, navy IVA under teal ISR. The active nav item gets a
   3 px top rule.
-- **Chart series (added for M6, 2026-10-14).** The M6 tokens pass the dataviz palette
-  validator (CVD ΔE ≥ 8, normal-vision ΔE ≥ 15) as pairs: income/expense in both modes;
-  withholdings against ISR (its neighbour in the stack). The owner-decided navy IVA / teal
-  ISR pair is below the normal-vision floor (ΔE 13.7 light, 9.3 dark), so the Home chart
-  never relies on their color alone: a 2 px surface gap between segments, a 45° hatch on the
-  ISR segment and its key swatch, a text key, the selected month's values as text and a
+- **Chart series (M6, 2026-10-14).** Every pair that shares a chart passes the dataviz palette
+  validator in both modes (normal-vision ΔE ≥ 15, protan/deutan ΔE ≥ 8, OKLCH lightness band
+  and chroma floor, marks ≥ 3:1 on `surface` and on `border`, the selected month's column):
+  the tax stack IVA / ISR / withholdings (worst pair 17.1 light, 17.6 dark) and
+  income / expense (25.9 / 26.3). The original navy IVA / teal ISR pair (`#1D4E89` /
+  `#2B7470`, dark `#8DB8EC` / `#6FC7C0`) was below the normal-vision floor (13.7 light,
+  9.3 dark) and outside the lightness band, so it was re-stepped within direction A's hues:
+  IVA stays an ink blue, ISR a deeper green-teal, withholdings an ochre. The old teal lives
+  on as `accent`, the Material secondary role, because a chart token is not a control color
+  (white on the new ISR would be 4.4:1). `theme_tokens_test.dart` enforces the ΔE and contrast floors.
+  Color is still never the only carrier: a 2 px surface gap between segments, a 45° hatch on
+  the ISR segment and its key swatch, a text key, the selected month's values as text and a
   table view.
 - **Copy tone:** formal and impersonal, avoiding both *tú* and *usted* where possible ("Vence
   el 17 de noviembre", "Registrar ingreso"). Short, factual, with the legal basis on every line.

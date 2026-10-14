@@ -16,6 +16,7 @@ class AppColors {
     required this.border,
     required this.primary,
     required this.onPrimary,
+    required this.accent,
     required this.heroBg,
     required this.heroText,
     required this.heroMuted,
@@ -53,6 +54,11 @@ class AppColors {
 
   /// Text and icons on [primary].
   final Color onPrimary;
+
+  /// Material secondary role (selected chips and segments, with
+  /// [onPrimary] on it); never a chart series, so chart tokens can move
+  /// without touching controls.
+  final Color accent;
 
   /// Estimate card background.
   final Color heroBg;
@@ -101,6 +107,7 @@ class AppColors {
     Color? border,
     Color? primary,
     Color? onPrimary,
+    Color? accent,
     Color? heroBg,
     Color? heroText,
     Color? heroMuted,
@@ -122,6 +129,7 @@ class AppColors {
     border: border ?? this.border,
     primary: primary ?? this.primary,
     onPrimary: onPrimary ?? this.onPrimary,
+    accent: accent ?? this.accent,
     heroBg: heroBg ?? this.heroBg,
     heroText: heroText ?? this.heroText,
     heroMuted: heroMuted ?? this.heroMuted,
@@ -148,6 +156,7 @@ class AppColors {
       border: mix(border, other.border),
       primary: mix(primary, other.primary),
       onPrimary: mix(onPrimary, other.onPrimary),
+      accent: mix(accent, other.accent),
       heroBg: mix(heroBg, other.heroBg),
       heroText: mix(heroText, other.heroText),
       heroMuted: mix(heroMuted, other.heroMuted),

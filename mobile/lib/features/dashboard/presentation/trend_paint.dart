@@ -15,8 +15,8 @@ const double _pairWidth = 14;
 /// A non-zero value is never drawn thinner than this.
 const double _minVisible = 2;
 
-/// Hatch spacing and stroke on the ISR segment (secondary encoding: the
-/// owner-decided IVA/ISR pair is below the normal-vision color floor).
+/// Hatch spacing and stroke on the ISR segment: redundant encoding, so the
+/// IVA/ISR pair never relies on color alone (print, forced colors, CVD).
 const double _hatchStep = 6;
 const double _hatchStroke = 1.5;
 
