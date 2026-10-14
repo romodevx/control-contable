@@ -107,7 +107,7 @@ values:
       - {source: rliva, article: "Art. 3 fr. II"}
       - {source: liva, article: "Art. 1o.-A fr. II inciso c)"}
   - key: iva.withholding.scrap_pm
-    # Desperdicios (and reciclables bought as such) carry "la retención del
+    # Desperdicios bought as an industrial input or to resell carry "la retención del
     # impuesto que se les traslade": the whole IVA. RLIVA 3 lowers it only for
     # fr. I (2/3) and fr. II (4 % freight); scrap is in neither, so 100 %.
     rate: "1"
@@ -135,7 +135,7 @@ values:
   - key: isr.withholding.rent_pm
     rate: "0.10"            # "la tasa del 10%"
     valid_from: 2026-01-01
-    basis: [{source: lisr, article: "Art. 116"}]
+    basis: [{source: lisr, article: "Art. 116, penúltimo párrafo"}]
   - key: isr.withholding.resico_pf
     rate: "0.0125"          # "la tasa del 1.25%"
     valid_from: 2026-01-01
