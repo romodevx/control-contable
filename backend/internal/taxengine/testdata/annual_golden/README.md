@@ -73,6 +73,9 @@ examples state some figures and not others, and every asserted value must come f
 Line codes other than the deductions notes (`deductions.cap_applied`,
 `deductions.excluded_cash`, `deductions.excluded_unverified`, ANN-07) are proposals until the
 section's strategy PR fixes them, by hand, in the same PR that removes `pending_strategy`.
+When a section lists `lines`, its `deductions.*` lines are compared **exactly** (every "Tope
+aplicado" and exclusion, in order): a cap line the golden does not list fails. Every computed
+line other than `info` and rounding must cite its legal basis, as in the monthly harness.
 
 ## Skips, pending sections and the ratchet (never silent)
 

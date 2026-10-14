@@ -120,7 +120,9 @@ type SectionWant struct {
 	Difference    *money.Cents // pf_resico_check informative difference
 	PMExtras      *PMExtras
 	// Lines must appear in the section's breakdown in this relative order
-	// (by code, operation and amount); other lines may sit between them.
+	// (by code, operation and amount); other lines may sit between them,
+	// except deductions notes: when Lines is given, the section's
+	// deductions.* lines must be exactly the listed ones.
 	Lines []Line
 }
 
@@ -176,7 +178,14 @@ type SectionResult struct {
 	Tax           *TaxFigures
 	Difference    *money.Cents
 	PMExtras      *PMExtrasResult
-	Lines         []Line
+	Lines         []ResultLine
+}
+
+// ResultLine is one computed breakdown line: what a golden compares, and
+// whether the engine's line carries a legal basis (domain.Line.Basis).
+type ResultLine struct {
+	Line
+	Cited bool
 }
 
 // TaxFigures are a section's computed figures.

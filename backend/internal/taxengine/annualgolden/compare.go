@@ -4,8 +4,10 @@ import (
 	"cmp"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/romodevx/control-contable/backend/internal/platform/money"
+	"github.com/romodevx/control-contable/backend/internal/taxengine/domain"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/annual"
 )
 
@@ -57,10 +59,42 @@ func compareSection(w SectionWant, g SectionResult) []string {
 	m.tax(w.Tax, g.Tax)
 	m.optionalCents("difference", w.Difference, g.Difference)
 	m.pmExtras(w.PMExtras, g.PMExtras)
-	if w.Lines != nil && !subsequence(w.Lines, g.Lines) {
-		m.add("lines (in this order)", w.Lines, g.Lines)
+	got := make([]Line, len(g.Lines))
+	for i, l := range g.Lines {
+		got[i] = l.Line
 	}
+	if w.Lines != nil && !subsequence(w.Lines, got) {
+		m.add("lines (in this order)", w.Lines, got)
+	}
+	if w.Lines != nil && !slices.Equal(deductionNotes(w.Lines), deductionNotes(got)) {
+		m.add("deductions notes (exactly, in this order)", deductionNotes(w.Lines), deductionNotes(got))
+	}
+	m.uncited(g.Lines)
 	return m.out
+}
+
+// deductionNotesPrefix is the code family of the ANN-07 notes ("Tope
+// aplicado", exclusions): fixed codes, so a golden lists all of them.
+const deductionNotesPrefix = "deductions."
+
+func deductionNotes(lines []Line) []Line {
+	var out []Line
+	for _, l := range lines {
+		if strings.HasPrefix(string(l.Code), deductionNotesPrefix) {
+			out = append(out, l)
+		}
+	}
+	return out
+}
+
+// uncited reports every computed line without a legal basis, as the
+// monthly harness does; info and rounding lines are exempt.
+func (m *mismatches) uncited(lines []ResultLine) {
+	for i, l := range lines {
+		if l.Op != domain.OpInfo && l.Op != domain.OpRoundingAdjustment && !l.Cited {
+			m.out = append(m.out, fmt.Sprintf("%s line %d %s: no legal basis", m.prefix, i+1, l.Code))
+		}
+	}
 }
 
 // mismatches collects one section's differences, each named
