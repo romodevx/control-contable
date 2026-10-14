@@ -44,6 +44,8 @@ type expenseRow struct {
 	CFDIUUID             *string    `gorm:"column:cfdi_uuid"`
 	Deductible           bool       `gorm:"column:deductible"`
 	DeductibleOverridden bool       `gorm:"column:deductible_overridden"`
+	CashOverLimit        bool       `gorm:"column:cash_over_limit"`
+	CreditableIVACents   int64      `gorm:"column:creditable_iva_cents"`
 	ISRWithheldCents     int64      `gorm:"column:isr_withheld_cents"`
 	IVAWithheldCents     int64      `gorm:"column:iva_withheld_cents"`
 	PaidOn               time.Time  `gorm:"column:paid_on"`
@@ -56,8 +58,8 @@ func (expenseRow) TableName() string { return "expenses" }
 
 // columns lists every column of an expenseRow.
 const columns = `id, taxpayer_id, regime_code, category_code, description, amount_cents, iva_rate, iva_cents,
-	payment_method, has_cfdi, cfdi_uuid, deductible, deductible_overridden, isr_withheld_cents, iva_withheld_cents,
-	paid_on, deleted_at, created_at, updated_at`
+	payment_method, has_cfdi, cfdi_uuid, deductible, deductible_overridden, cash_over_limit, creditable_iva_cents,
+	isr_withheld_cents, iva_withheld_cents, paid_on, deleted_at, created_at, updated_at`
 
 // returning hands back the written row.
 const returning = " RETURNING " + columns
@@ -82,6 +84,7 @@ func (r expenseRow) toStored() (usecase.StoredExpense, error) {
 		IVARate: fiscal.IVARate(r.IVARate), IVA: money.Cents(r.IVACents),
 		PaymentMethod: domain.PaymentMethod(r.PaymentMethod), PaidOn: paidOn, HasCFDI: r.HasCFDI, CFDIUUID: folio,
 		Deductible: r.Deductible, Overridden: r.DeductibleOverridden,
+		CashOverLimit: r.CashOverLimit, CreditableIVA: money.Cents(r.CreditableIVACents),
 		Withheld:  fiscal.Withholdings{ISR: money.Cents(r.ISRWithheldCents), IVA: money.Cents(r.IVAWithheldCents)},
 		Deleted:   r.DeletedAt != nil,
 		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
@@ -142,8 +145,8 @@ func (Store) Insert(ctx context.Context, userID string, e usecase.StoredExpense)
 	}
 	statement := `INSERT INTO expenses (id, user_id, taxpayer_id, regime_code, category_code, description,
 		amount_cents, iva_rate, iva_cents, payment_method, has_cfdi, cfdi_uuid, deductible, deductible_overridden,
-		isr_withheld_cents, iva_withheld_cents, paid_on)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::date)` + returning
+		cash_over_limit, creditable_iva_cents, isr_withheld_cents, iva_withheld_cents, paid_on)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::date)` + returning
 	args := []any{e.ID, userID, e.TaxpayerID}
 	return write(db.Raw(statement, append(args, editable(e)...)...), "insert expense")
 }
@@ -156,7 +159,8 @@ func (Store) Update(ctx context.Context, e usecase.StoredExpense) (usecase.Store
 	}
 	statement := `UPDATE expenses SET regime_code = ?, category_code = ?, description = ?, amount_cents = ?,
 		iva_rate = ?, iva_cents = ?, payment_method = ?, has_cfdi = ?, cfdi_uuid = ?, deductible = ?,
-		deductible_overridden = ?, isr_withheld_cents = ?, iva_withheld_cents = ?, paid_on = ?::date
+		deductible_overridden = ?, cash_over_limit = ?, creditable_iva_cents = ?, isr_withheld_cents = ?,
+		iva_withheld_cents = ?, paid_on = ?::date
 		WHERE id = ?` + returning
 	return write(db.Raw(statement, append(editable(e), e.ID)...), "update expense")
 }
@@ -167,7 +171,7 @@ func editable(e usecase.StoredExpense) []any {
 	return []any{
 		string(e.Regime), string(e.Category), nullable(e.Description), int64(e.Amount), string(e.IVARate),
 		int64(e.IVA), string(e.PaymentMethod), e.HasCFDI, folioOf(e.CFDIUUID), e.Deductible, e.Overridden,
-		int64(e.Withheld.ISR), int64(e.Withheld.IVA), e.PaidOn.String(),
+		e.CashOverLimit, int64(e.CreditableIVA), int64(e.Withheld.ISR), int64(e.Withheld.IVA), e.PaidOn.String(),
 	}
 }
 

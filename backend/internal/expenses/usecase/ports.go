@@ -100,13 +100,19 @@ type StoredExpense struct {
 	HasCFDI       bool
 	CFDIUUID      fiscal.CFDIUUID
 	// Deductible is the effective verdict; Overridden says the user set it.
-	Deductible  bool
-	Overridden  bool
-	Withheld    fiscal.Withholdings
-	Description string // "" is NULL
-	Deleted     bool
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	Deductible bool
+	Overridden bool
+	// CashOverLimit and CreditableIVA are the assessed tax facts the tax
+	// engine's aggregate sums (domain.Assessment): stored on every write,
+	// like Deductible, so a later rule or parameter change never rewrites a
+	// past month.
+	CashOverLimit bool
+	CreditableIVA money.Cents
+	Withheld      fiscal.Withholdings
+	Description   string // "" is NULL
+	Deleted       bool
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // ExpenseStore persists expenses on the unit of work in ctx, as the ctx

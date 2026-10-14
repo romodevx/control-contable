@@ -4,7 +4,6 @@
 # The company started in June 2026 (active_months), so no prior month exists.
 id: PM-601-ISR-02
 source: research:PM-601-ISR-02
-pending_strategy: true # M5-15
 input:
   regime: "601"
   person_type: moral

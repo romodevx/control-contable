@@ -4,6 +4,7 @@ import 'package:control_contable/core/theme/app_spacing.dart';
 import 'package:control_contable/features/auth/presentation/account_button.dart';
 import 'package:control_contable/features/auth/presentation/sign_out_button.dart';
 import 'package:control_contable/features/incomes/presentation/incomes_entry_button.dart';
+import 'package:control_contable/features/tax_engine/presentation/open_estimate_button.dart';
 import 'package:control_contable/features/taxpayers/presentation/add_taxpayer_button.dart';
 import 'package:control_contable/features/taxpayers/presentation/no_regime_prompt.dart';
 import 'package:control_contable/features/taxpayers/presentation/onboarding_launcher.dart';
@@ -41,6 +42,10 @@ class HomeScreen extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: AppSpacing.xl),
+            const FlagGate(
+              module: AppModule.taxEngine,
+              child: OpenEstimateButton(),
+            ),
             const FlagGate(
               module: AppModule.taxpayers,
               child: NoRegimePrompt(),

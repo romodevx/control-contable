@@ -1,6 +1,7 @@
 import 'package:control_contable/core/router/feature_module.dart';
 import 'package:control_contable/features/auth/auth_routes.dart';
 import 'package:control_contable/features/incomes/incomes_routes.dart';
+import 'package:control_contable/features/tax_engine/tax_engine_routes.dart';
 import 'package:control_contable/features/taxpayers/taxpayers_routes.dart';
 
 /// Every module slice this build ships, composed at the app root so `core/`
@@ -10,4 +11,5 @@ final List<FeatureModule> appFeatureModules = [
   authFeature,
   taxpayersFeature,
   incomesFeature,
+  taxEngineFeature,
 ];
