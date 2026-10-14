@@ -5623,7 +5623,7 @@ components:
         opaque to the client). Bumped whenever an engine change can move a figure.
       examples: [1.0.1]
     TaxpayerEstimate:
-      x-frozen: sha256:577fbd4d801fa3e49d7fe788548aab695c6b3ba3d2a1bbc2535161e3a0f240d3
+      x-frozen: sha256:e5824557c23ffd39fc20267b21ba354cc646fd0f8cc5bdd4c54c96f4a58bf5dc
       type: object
       required: [taxpayer_id, period, due_date, legend, disclaimers, regimes, totals, parameter_set, records_fingerprint, engine_version]
       description: >-
@@ -5650,10 +5650,12 @@ components:
         figures_fingerprint:
           $ref: '#/components/schemas/FiguresFingerprint'
           description: >-
-            Hash of the figures shown (M8-01, additive). Sent on every estimate once M8-03
-            ships (the app posts it, with `records_fingerprint`, `engine_version` and
-            `parameter_set`, to `markHistoryViewed`); a client that receives no value skips
-            marking the month viewed.
+            Hash of the figures shown (M8-01, additive). Optional only until M8-03 ships the
+            M5 domain function that computes it: M8-03 **will make it required** (a response
+            narrowing, non-breaking; tracked in PLAN M8-03). The app posts it, with
+            `records_fingerprint`, `engine_version` and `parameter_set`, to
+            `markHistoryViewed`; until then a client that receives no value skips marking the
+            month viewed.
         engine_version: { type: string, examples: [1.0.0] }
       examples:
         - taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
@@ -6142,7 +6144,7 @@ components:
       examples:
         - { isr_payable_rounded_cents: 15096, iva_payable_rounded_cents: 213333, iva_outcome: payable, iva_in_favor_cents: 0, withholdings_to_remit_cents: 0, total_payable_rounded_cents: 228429 }
     HistoryMonth:
-      x-frozen: sha256:b0b6777c93e213a5a04d08b7a90ebd5bda142c01e4bc5a1e062c97f5c0c11506
+      x-frozen: sha256:7616d572c07fd5038886a890ee7c98c9fa0dc2ca7adadd01a6a9cf07b29794d7
       type: object
       required: [period, status, has_records, tax, due_date, cpa_review_pending, is_current, records_fingerprint, figures_fingerprint, engine_version, parameter_set, viewed_at, changed_since_viewed, change_reason]
       description: >-
@@ -6193,7 +6195,7 @@ components:
           figures_fingerprint: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb202606
           engine_version: 1.0.1
           parameter_set: { fiscal_year: 2026, version: 1 }
-          viewed_at: '2026-07-10T15:30:00Z'
+          viewed_at: '2026-09-20T15:30:00Z'
           changed_since_viewed: true
           change_reason: records
     HistoryYearTotals:
@@ -6213,7 +6215,7 @@ components:
       examples:
         - { isr_payable_rounded_cents: 91096, iva_payable_rounded_cents: 675333, withholdings_to_remit_cents: 12500, total_payable_rounded_cents: 778929 }
     HistoryYear:
-      x-frozen: sha256:82104374fe6cdc9e5164a2af22e75b2b9a444c1da49a39bf26d9b124954e9658
+      x-frozen: sha256:ee4d2f36b5e218ce2c4085c4db0d92835d4ef1f40b59035f63270bea17497266
       type: object
       required: [taxpayer_id, fiscal_year, months, year_totals, legend, disclaimers]
       description: >-
@@ -6309,7 +6311,7 @@ components:
               figures_fingerprint: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb202606
               engine_version: 1.0.1
               parameter_set: { fiscal_year: 2026, version: 1 }
-              viewed_at: '2026-07-10T15:30:00Z'
+              viewed_at: '2026-09-20T15:30:00Z'
               changed_since_viewed: true
               change_reason: records
             - period: '2026-05'

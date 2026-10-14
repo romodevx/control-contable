@@ -437,9 +437,9 @@ Backend can start right after P0 + M1-07, in parallel with M5/M6. With the flag 
 
 | ID | Task | Owner | Deps | Est (h) | Par | Branch | Blocked by | Done |
 |---|---|---|---|---|---|---|---|---|
-| M8-01 | Contract freeze: history paths | architect | P0-05 | 1 | — | `feature/history-contract` | — | [[x] |
+| M8-01 | Contract freeze: history paths | architect | P0-05 | 1 | — | `feature/history-contract` | — | [x] |
 | M8-02 | Migration `estimate_views` with RLS + isolation tests | db-sr | M2-03 | 2 | — | `feature/history-migration` | — | [ ] |
-| M8-03 | History use case: fiscal-year summaries in one aggregate pass, changed-since-viewed via fingerprint, mark viewed | backend-sr | M5-22, M8-01, M8-02 | 3.5 | — | `feature/history-backend` | — | [ ] |
+| M8-03 | History use case: fiscal-year summaries in one aggregate pass, changed-since-viewed via fingerprint, mark viewed; **contract follow-up (M8-01):** make `TaxpayerEstimate.figures_fingerprint` required and type `TaxpayerEstimate.engine_version` as `EngineVersion` (re-freeze, regenerate clients) | backend-sr | M5-22, M8-01, M8-02 | 3.5 | — | `feature/history-backend` | — | [ ] |
 | M8-04 | History handlers, contract tests, flag ON/OFF (implies M5) | backend-sr | M8-03, M5-23 | 2 | — | `feature/history-backend` | — | [ ] |
 | M8-05 | Flutter history list, changed marker, open breakdown (reuses M5-26) | frontend-sr | M8-01, M5-26 | 4 | — | `feature/history-mobile` | — | [ ] |
 | M8-06 | Register flag `module_history` | backend-sr | M8-04, M8-05 | 0.5 | — | `feature/history-flag` | — | [ ] |

@@ -24,7 +24,7 @@
   `HistoryViewedRequest` (`records_fingerprint`, `figures_fingerprint`, `engine_version`,
   `parameter_set`) copied from the `TaxpayerEstimate` the app rendered, from any entry point
   (OQ-H7). Idempotent upsert, `204`. The current month is accepted, never marked.
-- `TaxpayerEstimate.figures_fingerprint` is new and additive (optional until M8-03 ships it).
+- `TaxpayerEstimate.figures_fingerprint` is new and additive (optional until M8-03, which will make it required; tracked in PLAN M8-03).
 - Flags: `module_history`, `module_tax_engine` or `module_taxpayers` OFF → both routes `404`,
   indistinguishable from an unknown taxpayer. `module_incomes` / `module_expenses` OFF only
   narrow `has_records`; figures are unaffected.

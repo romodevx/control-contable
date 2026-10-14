@@ -347,7 +347,7 @@ Item 3: `parameter_set` travels as the estimate's `ParameterSetRef` object
 from the rendered `TaxpayerEstimate`; the `"2026/v1"` text of §2.3 is the storage form only.
 Item 5: `TaxpayerEstimate.figures_fingerprint` (`FiguresFingerprint`) is additive and
 **optional** until M8-03 computes it (an M5 handler that does not send a required field would
-fail its contract tests); M8-03 may make it required (a response narrowing, non-breaking for
+fail its contract tests); M8-03 **will** make it required (tracked in PLAN M8-03, with `TaxpayerEstimate.engine_version` typed as `EngineVersion`, so a value the app echoes always passes `HistoryViewedRequest`) (a response narrowing, non-breaking for
 clients). `engine_version` was already required at taxpayer level. The `400`, `404` and `422`
 are inline on each operation; `500` reuses `RecordInternalError`.
 
