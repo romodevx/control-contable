@@ -12,6 +12,7 @@ import 'treatment.dart';
 part 'taxpayer_regime.freezed.dart';
 part 'taxpayer_regime.g.dart';
 
+/// A regime the taxpayer holds over `[start_period, end_period]` (open end while `end_period` is `null`). `options` always carries every option of the regime, defaults included.
 @Freezed()
 abstract class TaxpayerRegime with _$TaxpayerRegime {
   const factory TaxpayerRegime({
@@ -20,7 +21,8 @@ abstract class TaxpayerRegime with _$TaxpayerRegime {
     required Treatment treatment,
     required RegimeOptions options,
     @JsonKey(name: 'start_period') required Period startPeriod,
-    @JsonKey(includeIfNull: false, name: 'end_period') Period? endPeriod,
+    @JsonKey(includeIfNull: true, name: 'end_period')
+    required Period? endPeriod,
   }) = _TaxpayerRegime;
 
   factory TaxpayerRegime.fromJson(Map<String, Object?> json) =>

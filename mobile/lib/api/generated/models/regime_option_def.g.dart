@@ -15,6 +15,8 @@ _RegimeOptionDef _$RegimeOptionDefFromJson(Map<String, dynamic> json) =>
       allowedValues: (json['allowed_values'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList(),
+      min: json['min'] as String?,
+      max: json['max'] as String?,
       defaultValue: json['default'],
     );
 
@@ -25,13 +27,15 @@ Map<String, dynamic> _$RegimeOptionDefToJson(_RegimeOptionDef instance) =>
       'type': _$RegimeOptionDefTypeEnumMap[instance.type]!,
       'required': instance.requiredValue,
       'allowed_values': ?instance.allowedValues,
+      'min': ?instance.min,
+      'max': ?instance.max,
       'default': ?instance.defaultValue,
     };
 
 const _$RegimeOptionDefTypeEnumMap = {
   RegimeOptionDefType.valueEnum: 'enum',
   RegimeOptionDefType.multiEnum: 'multi_enum',
-  RegimeOptionDefType.rate: 'rate',
   RegimeOptionDefType.boolean: 'boolean',
+  RegimeOptionDefType.rate: 'rate',
   RegimeOptionDefType.$unknown: r'$unknown',
 };

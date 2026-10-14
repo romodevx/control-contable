@@ -16,7 +16,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TaxpayerRegimeCreate {
 
-@JsonKey(name: 'regime_code') RegimeCode get regimeCode;@JsonKey(includeIfNull: false) RegimeOptions? get options;@JsonKey(includeIfNull: false, name: 'start_period') Period? get startPeriod;
+@JsonKey(name: 'regime_code') RegimeCode get regimeCode;@JsonKey(includeIfNull: false) RegimeOptions? get options;/// Defaults to the current month (America/Mexico_City); `2022-01` … current month.
+@JsonKey(includeIfNull: false, name: 'start_period') Period? get startPeriod;
 /// Create a copy of TaxpayerRegimeCreate
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -230,6 +231,7 @@ class _TaxpayerRegimeCreate implements TaxpayerRegimeCreate {
   return EqualUnmodifiableMapView(value);
 }
 
+/// Defaults to the current month (America/Mexico_City); `2022-01` … current month.
 @override@JsonKey(includeIfNull: false, name: 'start_period') final  Period? startPeriod;
 
 /// Create a copy of TaxpayerRegimeCreate

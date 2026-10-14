@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TaxpayerRegime {
 
-@JsonKey(name: 'regime_code') RegimeCode get regimeCode; String get name; Treatment get treatment; RegimeOptions get options;@JsonKey(name: 'start_period') Period get startPeriod;@JsonKey(includeIfNull: false, name: 'end_period') Period? get endPeriod;
+@JsonKey(name: 'regime_code') RegimeCode get regimeCode; String get name; Treatment get treatment; RegimeOptions get options;@JsonKey(name: 'start_period') Period get startPeriod;@JsonKey(includeIfNull: true, name: 'end_period') Period? get endPeriod;
 /// Create a copy of TaxpayerRegime
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -54,7 +54,7 @@ abstract mixin class $TaxpayerRegimeCopyWith<$Res>  {
   factory $TaxpayerRegimeCopyWith(TaxpayerRegime value, $Res Function(TaxpayerRegime) _then) = _$TaxpayerRegimeCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'regime_code') RegimeCode regimeCode, String name, Treatment treatment, RegimeOptions options,@JsonKey(name: 'start_period') Period startPeriod,@JsonKey(includeIfNull: false, name: 'end_period') Period? endPeriod
+@JsonKey(name: 'regime_code') RegimeCode regimeCode, String name, Treatment treatment, RegimeOptions options,@JsonKey(name: 'start_period') Period startPeriod,@JsonKey(includeIfNull: true, name: 'end_period') Period? endPeriod
 });
 
 
@@ -164,7 +164,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'regime_code')  RegimeCode regimeCode,  String name,  Treatment treatment,  RegimeOptions options, @JsonKey(name: 'start_period')  Period startPeriod, @JsonKey(includeIfNull: false, name: 'end_period')  Period? endPeriod)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'regime_code')  RegimeCode regimeCode,  String name,  Treatment treatment,  RegimeOptions options, @JsonKey(name: 'start_period')  Period startPeriod, @JsonKey(includeIfNull: true, name: 'end_period')  Period? endPeriod)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TaxpayerRegime() when $default != null:
 return $default(_that.regimeCode,_that.name,_that.treatment,_that.options,_that.startPeriod,_that.endPeriod);case _:
@@ -185,7 +185,7 @@ return $default(_that.regimeCode,_that.name,_that.treatment,_that.options,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'regime_code')  RegimeCode regimeCode,  String name,  Treatment treatment,  RegimeOptions options, @JsonKey(name: 'start_period')  Period startPeriod, @JsonKey(includeIfNull: false, name: 'end_period')  Period? endPeriod)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'regime_code')  RegimeCode regimeCode,  String name,  Treatment treatment,  RegimeOptions options, @JsonKey(name: 'start_period')  Period startPeriod, @JsonKey(includeIfNull: true, name: 'end_period')  Period? endPeriod)  $default,) {final _that = this;
 switch (_that) {
 case _TaxpayerRegime():
 return $default(_that.regimeCode,_that.name,_that.treatment,_that.options,_that.startPeriod,_that.endPeriod);case _:
@@ -205,7 +205,7 @@ return $default(_that.regimeCode,_that.name,_that.treatment,_that.options,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'regime_code')  RegimeCode regimeCode,  String name,  Treatment treatment,  RegimeOptions options, @JsonKey(name: 'start_period')  Period startPeriod, @JsonKey(includeIfNull: false, name: 'end_period')  Period? endPeriod)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'regime_code')  RegimeCode regimeCode,  String name,  Treatment treatment,  RegimeOptions options, @JsonKey(name: 'start_period')  Period startPeriod, @JsonKey(includeIfNull: true, name: 'end_period')  Period? endPeriod)?  $default,) {final _that = this;
 switch (_that) {
 case _TaxpayerRegime() when $default != null:
 return $default(_that.regimeCode,_that.name,_that.treatment,_that.options,_that.startPeriod,_that.endPeriod);case _:
@@ -220,7 +220,7 @@ return $default(_that.regimeCode,_that.name,_that.treatment,_that.options,_that.
 @JsonSerializable()
 
 class _TaxpayerRegime implements TaxpayerRegime {
-  const _TaxpayerRegime({@JsonKey(name: 'regime_code') required this.regimeCode, required this.name, required this.treatment, required  RegimeOptions options, @JsonKey(name: 'start_period') required this.startPeriod, @JsonKey(includeIfNull: false, name: 'end_period') this.endPeriod}): _options = options;
+  const _TaxpayerRegime({@JsonKey(name: 'regime_code') required this.regimeCode, required this.name, required this.treatment, required  RegimeOptions options, @JsonKey(name: 'start_period') required this.startPeriod, @JsonKey(includeIfNull: true, name: 'end_period') required this.endPeriod}): _options = options;
   factory _TaxpayerRegime.fromJson(Map<String, dynamic> json) => _$TaxpayerRegimeFromJson(json);
 
 @override@JsonKey(name: 'regime_code') final  RegimeCode regimeCode;
@@ -234,7 +234,7 @@ class _TaxpayerRegime implements TaxpayerRegime {
 }
 
 @override@JsonKey(name: 'start_period') final  Period startPeriod;
-@override@JsonKey(includeIfNull: false, name: 'end_period') final  Period? endPeriod;
+@override@JsonKey(includeIfNull: true, name: 'end_period') final  Period? endPeriod;
 
 /// Create a copy of TaxpayerRegime
 /// with the given fields replaced by the non-null parameter values.
@@ -271,7 +271,7 @@ abstract mixin class _$TaxpayerRegimeCopyWith<$Res> implements $TaxpayerRegimeCo
   factory _$TaxpayerRegimeCopyWith(_TaxpayerRegime value, $Res Function(_TaxpayerRegime) _then) = __$TaxpayerRegimeCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'regime_code') RegimeCode regimeCode, String name, Treatment treatment, RegimeOptions options,@JsonKey(name: 'start_period') Period startPeriod,@JsonKey(includeIfNull: false, name: 'end_period') Period? endPeriod
+@JsonKey(name: 'regime_code') RegimeCode regimeCode, String name, Treatment treatment, RegimeOptions options,@JsonKey(name: 'start_period') Period startPeriod,@JsonKey(includeIfNull: true, name: 'end_period') Period? endPeriod
 });
 
 

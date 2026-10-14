@@ -4,6 +4,7 @@
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+/// Support level of a regime: `full` (estimated), `partial` (some taxes only, e.g. IVA) or `informational` (selectable, not estimated; carries an explanation).
 @JsonEnum()
 enum Treatment {
   @JsonValue('full')

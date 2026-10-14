@@ -16,8 +16,9 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TaxpayerCreate {
 
-@JsonKey(name: 'person_type') PersonType get personType;/// 13 chars for fisica, 12 for moral; check digit validated server-side.
- String get rfc;@JsonKey(name: 'display_name') String get displayName; List<TaxpayerRegimeCreate> get regimes;/// Optional client-generated id (idempotent retries).
+@JsonKey(name: 'person_type') PersonType get personType; RfcInput get rfc;/// Trimmed and NFC-normalized.
+@JsonKey(name: 'display_name') String get displayName;/// At least one regime; each code at most once (`regimes.N.regime_code` / `duplicate`).
+ List<TaxpayerRegimeCreate> get regimes;/// Optional client-generated id (idempotent retries).
 @JsonKey(includeIfNull: false) Uuid? get id;
 /// Create a copy of TaxpayerCreate
 /// with the given fields replaced by the non-null parameter values.
@@ -56,7 +57,7 @@ abstract mixin class $TaxpayerCreateCopyWith<$Res>  {
   factory $TaxpayerCreateCopyWith(TaxpayerCreate value, $Res Function(TaxpayerCreate) _then) = _$TaxpayerCreateCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'person_type') PersonType personType, String rfc,@JsonKey(name: 'display_name') String displayName, List<TaxpayerRegimeCreate> regimes,@JsonKey(includeIfNull: false) Uuid? id
+@JsonKey(name: 'person_type') PersonType personType, RfcInput rfc,@JsonKey(name: 'display_name') String displayName, List<TaxpayerRegimeCreate> regimes,@JsonKey(includeIfNull: false) Uuid? id
 });
 
 
@@ -77,7 +78,7 @@ class _$TaxpayerCreateCopyWithImpl<$Res>
   return _then(TaxpayerCreate(
 personType: null == personType ? _self.personType : personType // ignore: cast_nullable_to_non_nullable
 as PersonType,rfc: null == rfc ? _self.rfc : rfc // ignore: cast_nullable_to_non_nullable
-as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
+as RfcInput,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
 as String,regimes: null == regimes ? _self.regimes : regimes // ignore: cast_nullable_to_non_nullable
 as List<TaxpayerRegimeCreate>,id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as Uuid?,
@@ -165,7 +166,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'person_type')  PersonType personType,  String rfc, @JsonKey(name: 'display_name')  String displayName,  List<TaxpayerRegimeCreate> regimes, @JsonKey(includeIfNull: false)  Uuid? id)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'person_type')  PersonType personType,  RfcInput rfc, @JsonKey(name: 'display_name')  String displayName,  List<TaxpayerRegimeCreate> regimes, @JsonKey(includeIfNull: false)  Uuid? id)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TaxpayerCreate() when $default != null:
 return $default(_that.personType,_that.rfc,_that.displayName,_that.regimes,_that.id);case _:
@@ -186,7 +187,7 @@ return $default(_that.personType,_that.rfc,_that.displayName,_that.regimes,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'person_type')  PersonType personType,  String rfc, @JsonKey(name: 'display_name')  String displayName,  List<TaxpayerRegimeCreate> regimes, @JsonKey(includeIfNull: false)  Uuid? id)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'person_type')  PersonType personType,  RfcInput rfc, @JsonKey(name: 'display_name')  String displayName,  List<TaxpayerRegimeCreate> regimes, @JsonKey(includeIfNull: false)  Uuid? id)  $default,) {final _that = this;
 switch (_that) {
 case _TaxpayerCreate():
 return $default(_that.personType,_that.rfc,_that.displayName,_that.regimes,_that.id);case _:
@@ -206,7 +207,7 @@ return $default(_that.personType,_that.rfc,_that.displayName,_that.regimes,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'person_type')  PersonType personType,  String rfc, @JsonKey(name: 'display_name')  String displayName,  List<TaxpayerRegimeCreate> regimes, @JsonKey(includeIfNull: false)  Uuid? id)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'person_type')  PersonType personType,  RfcInput rfc, @JsonKey(name: 'display_name')  String displayName,  List<TaxpayerRegimeCreate> regimes, @JsonKey(includeIfNull: false)  Uuid? id)?  $default,) {final _that = this;
 switch (_that) {
 case _TaxpayerCreate() when $default != null:
 return $default(_that.personType,_that.rfc,_that.displayName,_that.regimes,_that.id);case _:
@@ -225,10 +226,12 @@ class _TaxpayerCreate implements TaxpayerCreate {
   factory _TaxpayerCreate.fromJson(Map<String, dynamic> json) => _$TaxpayerCreateFromJson(json);
 
 @override@JsonKey(name: 'person_type') final  PersonType personType;
-/// 13 chars for fisica, 12 for moral; check digit validated server-side.
-@override final  String rfc;
+@override final  RfcInput rfc;
+/// Trimmed and NFC-normalized.
 @override@JsonKey(name: 'display_name') final  String displayName;
+/// At least one regime; each code at most once (`regimes.N.regime_code` / `duplicate`).
  final  List<TaxpayerRegimeCreate> _regimes;
+/// At least one regime; each code at most once (`regimes.N.regime_code` / `duplicate`).
 @override List<TaxpayerRegimeCreate> get regimes {
   if (_regimes is EqualUnmodifiableListView) return _regimes;
   // ignore: implicit_dynamic_type
@@ -273,7 +276,7 @@ abstract mixin class _$TaxpayerCreateCopyWith<$Res> implements $TaxpayerCreateCo
   factory _$TaxpayerCreateCopyWith(_TaxpayerCreate value, $Res Function(_TaxpayerCreate) _then) = __$TaxpayerCreateCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'person_type') PersonType personType, String rfc,@JsonKey(name: 'display_name') String displayName, List<TaxpayerRegimeCreate> regimes,@JsonKey(includeIfNull: false) Uuid? id
+@JsonKey(name: 'person_type') PersonType personType, RfcInput rfc,@JsonKey(name: 'display_name') String displayName, List<TaxpayerRegimeCreate> regimes,@JsonKey(includeIfNull: false) Uuid? id
 });
 
 
@@ -294,7 +297,7 @@ class __$TaxpayerCreateCopyWithImpl<$Res>
   return _then(_TaxpayerCreate(
 personType: null == personType ? _self.personType : personType // ignore: cast_nullable_to_non_nullable
 as PersonType,rfc: null == rfc ? _self.rfc : rfc // ignore: cast_nullable_to_non_nullable
-as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
+as RfcInput,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
 as String,regimes: null == regimes ? _self._regimes : regimes // ignore: cast_nullable_to_non_nullable
 as List<TaxpayerRegimeCreate>,id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as Uuid?,

@@ -4,6 +4,7 @@
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+/// Chosen first at onboarding and immutable; fixes the RFC length (13 física, 12 moral).
 @JsonEnum()
 enum PersonType {
   @JsonValue('fisica')

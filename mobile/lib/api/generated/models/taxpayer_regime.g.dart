@@ -23,7 +23,7 @@ Map<String, dynamic> _$TaxpayerRegimeToJson(_TaxpayerRegime instance) =>
       'treatment': _$TreatmentEnumMap[instance.treatment]!,
       'options': instance.options,
       'start_period': instance.startPeriod,
-      'end_period': ?instance.endPeriod,
+      'end_period': instance.endPeriod,
     };
 
 const _$TreatmentEnumMap = {
