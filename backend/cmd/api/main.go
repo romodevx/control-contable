@@ -25,7 +25,6 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" database/sql driver
 
-	"github.com/romodevx/control-contable/backend/adapter/http/flaggate"
 	"github.com/romodevx/control-contable/backend/adapter/http/flagshttp"
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
 	"github.com/romodevx/control-contable/backend/adapter/http/health"
@@ -222,9 +221,9 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 		return nil, err
 	}
 	routes, err := router.New(server, spec, router.Options{
-		// A module whose routes read another module's data is hidden with
-		// it (flagPrerequisites); GET /v1/flags still lists the raw flags.
-		Flags:    flaggate.Requires(d.flags, flagPrerequisites),
+		// The flag service answers the effective state: a module whose
+		// prerequisite is OFF is OFF (flags.Prerequisites).
+		Flags:    d.flags,
 		Authn:    d.auth.authn, // bearer EdDSA access tokens (M1-07)
 		Logger:   d.logger,
 		NotBuilt: notBuiltOperations(),

@@ -17,13 +17,6 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/taxengine/usecase"
 )
 
-// flagPrerequisites are the modules a module's routes need ON besides its
-// own flag (MODULE-tax-engine §7: module_tax_engine is implied OFF when
-// module_taxpayers is OFF; its routes read taxpayer data).
-var flagPrerequisites = map[string][]string{
-	"module_tax_engine": {"module_taxpayers"},
-}
-
 // taxEngineWiring is what the tax engine module needs from the composition
 // root.
 type taxEngineWiring struct {

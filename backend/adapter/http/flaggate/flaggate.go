@@ -43,41 +43,6 @@ func Wrap(flags Checker, module string, next http.Handler) http.Handler {
 	})
 }
 
-// Requires returns a Checker where a module is ON only when its own flag and
-// every prerequisite's (transitively) are ON: a module whose routes read
-// another module's data is hidden with it (MODULE-tax-engine §7:
-// module_tax_engine is implied OFF when module_taxpayers is OFF). A module
-// without prerequisites answers its own flag. A cycle in prerequisites
-// counts each module once.
-func Requires(flags Checker, prerequisites map[string][]string) Checker {
-	return requiring{flags: flags, prerequisites: prerequisites}
-}
-
-type requiring struct {
-	flags         Checker
-	prerequisites map[string][]string
-}
-
-func (r requiring) Enabled(ctx context.Context, module string) bool {
-	return r.enabled(ctx, module, map[string]bool{})
-}
-
-func (r requiring) enabled(ctx context.Context, module string, visited map[string]bool) bool {
-	if visited[module] {
-		return true // already being checked higher up
-	}
-	visited[module] = true
-	if !r.flags.Enabled(ctx, module) {
-		return false
-	}
-	for _, p := range r.prerequisites[module] {
-		if !r.enabled(ctx, p, visited) {
-			return false
-		}
-	}
-	return true
-}
-
 // WriteNotFound writes the standard 404 ErrorResponse, the same answer for a
 // disabled module and for a route that does not exist.
 func WriteNotFound(w http.ResponseWriter, r *http.Request) {

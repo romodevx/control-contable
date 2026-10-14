@@ -121,7 +121,8 @@ func TestContract_platformOperations(t *testing.T) {
 
 			rec = c.ServeOp(t, contracttest.Op("listEnabledFlags"), env.handler, env.request(http.MethodGet, "/v1/flags"))
 			require.Equal(t, http.StatusOK, rec.Code)
-			assert.Equal(t, enabledKeys(f), decodeEnabled(t, rec), "GET /v1/flags lists exactly the ON modules")
+			assert.ElementsMatch(t, flags.EffectiveModules(flags.Prerequisites(), enabledKeys(f)), decodeEnabled(t, rec),
+				"GET /v1/flags lists exactly the effectively ON modules")
 
 			for _, op := range ops {
 				assertGate(t, c, env, op, effectiveOn(f, op.module))
@@ -150,17 +151,10 @@ func assertGate(t *testing.T, c *contracttest.Contract, env contractEnv, op gate
 }
 
 // effectiveOn is whether module's routes are served under f: its flag and
-// every prerequisite's are ON (flagPrerequisites, MODULE-tax-engine §7).
+// every prerequisite's are ON (flags.Prerequisites, MODULE-tax-engine §7).
 func effectiveOn(f flagtest.Static, module string) bool {
-	if !f[module] {
-		return false
-	}
-	for _, p := range flagPrerequisites[module] {
-		if !effectiveOn(f, p) {
-			return false
-		}
-	}
-	return true
+	isOn := func(m string) bool { return f[m] }
+	return f[module] && len(flags.MissingPrerequisites(flags.Prerequisites(), module, isOn)) == 0
 }
 
 // An unreachable database degrades /healthz without breaking its contract,
