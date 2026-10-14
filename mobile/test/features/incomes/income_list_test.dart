@@ -309,6 +309,38 @@ void main() {
       );
     });
 
+    // Tech-lead gate M3-12: the M4 rule (PR #85 follow-up) was not carried
+    // back; one refused income stranded the rest of the stack.
+    testWidgets('a stacked Undo restores every income it can and says how '
+        'many came back', (tester) async {
+      seed();
+      harness.incomes.failNext['restore'] = ApiRejected(
+        code: ErrorCode.businessRuleViolation,
+        details: [detail('regime_code', 'regime_not_active')],
+      );
+      await harness.pump(tester);
+
+      await tester.tap(_deleteButtonOf('Diseño de logotipo'));
+      await tester.pumpAndSettle();
+      await tester.tap(_deleteButtonOf('Renta de octubre'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Deshacer'));
+      await tester.pumpAndSettle();
+
+      expect(harness.incomes.calls.where((c) => c.startsWith('restore')), [
+        'restore:i-logo',
+        'restore:i-rent',
+      ]);
+      expect(find.text('Renta de octubre'), findsOneWidget);
+      expect(
+        find.text(
+          'Se restauró 1 de 2 ingresos. No se pudo restaurar: el régimen ya '
+          'no cubre la fecha del ingreso.',
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('a read-only user deletes with no confirmation and gets the '
         'same persistent Undo, which restores the income (contract 0.6.1)', (
       tester,
