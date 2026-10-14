@@ -28,6 +28,7 @@ const (
 	goldenRoot   = "golden" // under testdata/
 	paramsFile   = "params/data/2026/v1.yaml"
 	researchFile = "../../../docs/research/tax-regimes-mx-2026.md"
+	baselineFile = "testdata/golden_baseline.yaml"
 	moduleRoot   = "../.." // backend/
 	writeScope   = "internal/taxengine/"
 )
@@ -80,6 +81,17 @@ func TestGoldenCases(t *testing.T) {
 
 	t.Logf("authored %d, generated %d", len(authored), len(generated))
 	assert.Equal(t, len(cases), s.Total())
+	assert.Empty(t, s.Ratchet(baseline(t)),
+		"skipped and pending_strategy cases may only go down; edit %s by hand in the PR that changes them", baselineFile)
+}
+
+func baseline(t *testing.T) golden.Baseline {
+	t.Helper()
+	data, err := os.ReadFile(baselineFile)
+	require.NoError(t, err)
+	b, err := golden.ReadBaseline(data)
+	require.NoError(t, err)
+	return b
 }
 
 // TestGoldenSourcesAreTheResearchWorkedExamples ties every research case to
