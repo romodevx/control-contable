@@ -69,6 +69,10 @@ class _AddRegimeState extends ConsumerState<_AddRegime> {
       for (final regime in widget.taxpayer.regimes)
         if (regime.endPeriod == null) regime.regimeCode,
     },
+    endedStarts: {
+      for (final regime in widget.taxpayer.regimes)
+        if (regime.endPeriod != null) regime.regimeCode: regime.startPeriod,
+    },
     knownReadOnly: ref.read(taxpayerSettingsProvider).knownReadOnly,
   )..addListener(_handleStepChanged);
 

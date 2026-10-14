@@ -210,7 +210,8 @@ class _RegimesFormState extends State<_RegimesForm> {
 /// The month the chosen regimes start in, picked from a list (never out of
 /// range), with an always-visible hint: records and estimates exist only
 /// from that month, so a user who already paid taxes earlier picks the
-/// month they started. One month for every regime of the step.
+/// month they started. One month for every regime of the step. Re-adding
+/// an ended regime asks nothing: it reopens from its original start.
 class _StartPeriodField extends StatelessWidget {
   const new({required this.flow});
 
@@ -220,6 +221,14 @@ class _StartPeriodField extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final months = MaterialLocalizations.of(context);
+    final reopenedStart = flow.reopenedStartPeriod;
+    if (reopenedStart != null) {
+      return Text(
+        l10n.addRegimeReopensFrom(
+          months.formatMonthYear(periodMonth(reopenedStart)),
+        ),
+      );
+    }
     final label = flow.singleRegime
         ? l10n.onboardingStartPeriodLabelSingle
         : l10n.onboardingStartPeriodLabelMany;

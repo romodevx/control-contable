@@ -265,6 +265,10 @@ class OnboardingFlow extends ChangeNotifier implements RegimeWizard {
   @override
   void chooseStartPeriod(String period) => _startPeriod = period;
 
+  /// A new taxpayer holds no ended regime: nothing is reopened.
+  @override
+  String? get reopenedStartPeriod => null;
+
   /// Keeps the step 3 choice as picked (no rebuild): going back keeps it.
   @override
   void rememberRegimes(List<Regime> chosen) =>

@@ -558,7 +558,7 @@
   "@onboardingStartPeriodLabelMany": {
     "description": "Start-month picker of the regimes step for a persona física (several regimes, one start month)."
   },
-  "onboardingStartPeriodHint": "Solo podrás registrar ingresos y gastos desde el mes que elijas. Si ya tributabas antes de este mes, elige el mes en que empezaste (desde enero de 2026) para registrar y estimar los meses anteriores.",
+  "onboardingStartPeriodHint": "Solo podrás registrar ingresos y gastos desde el mes que elijas. Si ya tributabas antes de este mes, elige el mes en que empezaste, o enero de 2026 si empezaste antes de 2026.",
   "@onboardingStartPeriodHint": {
     "description": "Always-visible hint under the start-month picker (M5-29 QA D2)."
   },
@@ -1087,6 +1087,13 @@
   "addRegimeNoneLeft": "Ya tiene todos los regímenes disponibles para su tipo de persona.",
   "@addRegimeNoneLeft": {
     "description": "Nothing left to add."
+  },
+  "addRegimeReopensFrom": "Lo reactivamos desde {month}, el mes en que empezó.",
+  "@addRegimeReopensFrom": {
+    "description": "Add-regime step: the picked regime was ended before, so it reopens from its original start month and no month is asked (OQ-5).",
+    "placeholders": {
+      "month": { "type": "String", "example": "febrero de 2026" }
+    }
   },
   "addRegimeAdded": "Agregamos el régimen {code}.",
   "@addRegimeAdded": {

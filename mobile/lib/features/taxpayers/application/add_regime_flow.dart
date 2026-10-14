@@ -39,14 +39,16 @@ enum AddRegimeStep {
 /// start (OQ-5).
 class AddRegimeFlow extends ChangeNotifier implements RegimeWizard {
   /// The flow adding to [taxpayerId] (of [personType], holding
-  /// [heldCodes] open) through [_settings]; [clock] dates the current
-  /// month. [knownReadOnly] starts at the paywall.
+  /// [heldCodes] open, and the ended regimes' starts by code in
+  /// [endedStarts]) through [_settings]; [clock] dates the current month.
+  /// [knownReadOnly] starts at the paywall.
   new({
     required this._settings,
     required Clock clock,
     required this.taxpayerId,
     required this.personType,
     required this.heldCodes,
+    this.endedStarts = const {},
     bool knownReadOnly = false,
   }) : _step = knownReadOnly ? AddRegimeStep.readOnly : AddRegimeStep.regimes,
        _currentPeriod = periods.currentPeriod(clock()) {
@@ -63,6 +65,10 @@ class AddRegimeFlow extends ChangeNotifier implements RegimeWizard {
 
   @override
   final Set<String> heldCodes;
+
+  /// The start (`YYYY-MM`) of every ended regime, by code: re-adding one
+  /// reopens it from there.
+  final Map<String, String> endedStarts;
 
   AddRegimeStep _step;
   final String _currentPeriod;
@@ -124,6 +130,10 @@ class AddRegimeFlow extends ChangeNotifier implements RegimeWizard {
   void chooseStartPeriod(String period) => _startPeriod = period;
 
   @override
+  String? get reopenedStartPeriod =>
+      _regimes.length == 1 ? endedStarts[_regimes.single.code] : null;
+
+  @override
   void rememberRegimes(List<Regime> chosen) =>
       _regimes = List.unmodifiable(chosen);
 
@@ -168,10 +178,12 @@ class AddRegimeFlow extends ChangeNotifier implements RegimeWizard {
           taxpayerId: taxpayerId,
           regimeCode: regime.code,
           options: regime.optionDefs.isEmpty ? null : optionsFor(regime),
-          startPeriod: periods.startPeriodToSend(
-            chosen: _startPeriod,
-            current: _currentPeriod,
-          ),
+          startPeriod: reopenedStartPeriod == null
+              ? periods.startPeriodToSend(
+                  chosen: _startPeriod,
+                  current: _currentPeriod,
+                )
+              : null,
         ),
       );
       _go(AddRegimeStep.done);

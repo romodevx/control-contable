@@ -46,6 +46,11 @@ abstract interface class RegimeWizard implements Listenable {
   /// Keeps the start month the user picked; the form reads it back.
   void chooseStartPeriod(String period);
 
+  /// The original start (`YYYY-MM`) of the chosen regime when the pick
+  /// reopens an ended one: the server keeps that start (OQ-5), so no month
+  /// is asked. `null` when the pick starts a regime.
+  String? get reopenedStartPeriod;
+
   /// Step 3 done: options next, or the write when none has options.
   Future<void> submitRegimes(List<Regime> chosen);
 

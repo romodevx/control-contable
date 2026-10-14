@@ -463,7 +463,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get onboardingStartPeriodHint =>
-      'Solo podrás registrar ingresos y gastos desde el mes que elijas. Si ya tributabas antes de este mes, elige el mes en que empezaste (desde enero de 2026) para registrar y estimar los meses anteriores.';
+      'Solo podrás registrar ingresos y gastos desde el mes que elijas. Si ya tributabas antes de este mes, elige el mes en que empezaste, o enero de 2026 si empezaste antes de 2026.';
 
   @override
   String get onboardingStartPeriodRejected =>
@@ -832,6 +832,11 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get addRegimeNoneLeft =>
       'Ya tiene todos los regímenes disponibles para su tipo de persona.';
+
+  @override
+  String addRegimeReopensFrom(String month) {
+    return 'Lo reactivamos desde $month, el mes en que empezó.';
+  }
 
   @override
   String addRegimeAdded(String code) {
