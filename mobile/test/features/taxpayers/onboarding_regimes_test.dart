@@ -534,7 +534,7 @@ void main() {
         taxpayer(
           warnings: [
             const Warning(
-              code: 'regime_combination_needs_cpa_review',
+              code: WarningCode.regimeCombinationNeedsCpaReview,
               field: 'regimes.1.regime_code',
               message: cpaPendingReason,
             ),

@@ -233,7 +233,7 @@ void main() {
     ) async {
       harness.repository.warnNext['addRegime'] = const [
         Warning(
-          code: 'regime_combination_needs_cpa_review',
+          code: WarningCode.regimeCombinationNeedsCpaReview,
           field: 'regime_code',
           message: cpaPendingReason,
         ),
