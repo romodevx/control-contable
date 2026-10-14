@@ -77,9 +77,13 @@ type TaxpayerEstimate struct {
 
 // RecordTotals are one month's live records before IVA: incomes collected
 // (collected_on) and expenses paid (paid_on, every deductibility class).
+// HasIncomes and HasExpenses report any ledger row of the table in the
+// month, whatever its amounts (History's has_records, M8-03).
 type RecordTotals struct {
 	IncomeCollected money.Cents
 	ExpensesPaid    money.Cents
+	HasIncomes      bool
+	HasExpenses     bool
 }
 
 // Estimator computes a taxpayer's monthly estimate (Estimator, M5-22): the
@@ -251,11 +255,13 @@ func recordTotals(r ledgerRecords, month time.Month) (RecordTotals, error) {
 	}
 	for _, row := range r.incomes {
 		if row.Month == month {
+			out.HasIncomes = true
 			add(&out.IncomeCollected, row.Sums.Cash)
 		}
 	}
 	for _, row := range r.expenses {
 		if row.Month == month {
+			out.HasExpenses = true
 			add(&out.ExpensesPaid, row.Sums.DeductiblePaid)
 			add(&out.ExpensesPaid, row.Sums.NonDeductiblePaid)
 			add(&out.ExpensesPaid, row.Sums.CashOverLimitPaid)
