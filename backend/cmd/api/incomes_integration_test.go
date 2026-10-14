@@ -226,6 +226,49 @@ func TestIncomes_TrialCapRace(t *testing.T) {
 	assert.Equal(t, int64(access.TrialRecordCap), page.Totals.Count, "refused creates rolled back")
 }
 
+// A double submit of the fifth income (same id, same body, both in flight)
+// is one 201 and one 200 replay: the second never reads the counter the
+// first just filled and answers 402 for a record that exists.
+func TestIncomes_DoubleSubmitAtTheCapReplays(t *testing.T) {
+	e := newIncomesEnv(t, incUserA)
+	tp := e.taxpayer(t, incUserA, "fisica", incRFCFisica, "612")
+	for n := 1; n <= access.TrialRecordCap-1; n++ {
+		_, err := e.incomes.Create(t.Context(), incUserA, incomes.CreateInput{ID: incID(n), TaxpayerID: tp, Income: fees(t, "2026-09-10", 100_00)})
+		require.NoError(t, err)
+	}
+	blocker, err := e.app.BeginTx(t.Context(), nil)
+	require.NoError(t, err)
+	_, err = blocker.ExecContext(t.Context(), "SELECT set_config('app.current_user_id', $1, true)", incUserA)
+	require.NoError(t, err)
+	_, err = blocker.ExecContext(t.Context(), "SELECT 1 FROM user_usage WHERE user_id = $1 FOR UPDATE", incUserA)
+	require.NoError(t, err)
+
+	const submits = 2
+	results := make([]incomes.WriteResult, submits)
+	errs := make([]error, submits)
+	var wg sync.WaitGroup
+	for i := range submits {
+		wg.Go(func() {
+			results[i], errs[i] = e.incomes.Create(context.Background(), incUserA,
+				incomes.CreateInput{ID: incID(100), TaxpayerID: tp, Income: fees(t, "2026-09-11", 100_00)})
+		})
+	}
+	waitForIncomeLockWaiters(t, e.app, submits)
+	require.NoError(t, blocker.Commit())
+	wg.Wait()
+
+	created := 0
+	for i := range submits {
+		require.NoError(t, errs[i], "both submits answer the stored income")
+		assert.Equal(t, incID(100), results[i].Income.ID)
+		if results[i].Created {
+			created++
+		}
+	}
+	assert.Equal(t, 1, created, "exactly one 201, the other a replay")
+	assert.Equal(t, access.TrialRecordCap, e.incomesCreated(t, incUserA))
+}
+
 func waitForIncomeLockWaiters(t *testing.T, app *sql.DB, n int) {
 	t.Helper()
 	const query = "SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'"

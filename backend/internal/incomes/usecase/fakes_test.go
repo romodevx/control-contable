@@ -224,13 +224,15 @@ func (c *fakeCatalog) Provisional(on fiscal.Date) (bool, error) {
 // fakeStore is the incomes store in memory. It stands in for RLS by owning
 // the rows of one user only: another user's ids are in foreign.
 type fakeStore struct {
-	mu       sync.Mutex
-	rows     map[string]usecase.StoredIncome
-	foreign  map[string]bool // ids another user holds (PK collision, invisible)
-	inserts  int
-	updates  int
-	deletes  int
-	lastList struct {
+	mu      sync.Mutex
+	rows    map[string]usecase.StoredIncome
+	foreign map[string]bool // ids another user holds (PK collision, invisible)
+	// lockedIDs are the client ids LockID serialized, in order.
+	lockedIDs []string
+	inserts   int
+	updates   int
+	deletes   int
+	lastList  struct {
 		filter usecase.ListFilter
 		after  usecase.Keyset
 		limit  int
@@ -243,6 +245,13 @@ type fakeStore struct {
 
 func newFakeStore() *fakeStore {
 	return &fakeStore{rows: map[string]usecase.StoredIncome{}, foreign: map[string]bool{}, clock: today}
+}
+
+func (s *fakeStore) LockID(_ context.Context, id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.lockedIDs = append(s.lockedIDs, id)
+	return nil
 }
 
 func (s *fakeStore) Find(_ context.Context, id string, _ usecase.Lock) (usecase.StoredIncome, error) {

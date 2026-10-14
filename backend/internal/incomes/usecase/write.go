@@ -12,8 +12,8 @@ import (
 )
 
 // createAttempts bounds the units of work of one create: a primary-key
-// collision is retried once, so a concurrent double submit of the same id
-// sees the winner's committed row and replays it.
+// collision is retried once, so a create that still meets a committed row of
+// its id (the LockID wait is the primary guard) sees it and replays it.
 const createAttempts = 2
 
 // Create records an income (createIncome). Created is false for an
@@ -31,11 +31,12 @@ func (uc *Incomes) Create(ctx context.Context, userID string, in CreateInput) (W
 	if err != nil {
 		return WriteResult{}, present("create income", err)
 	}
+	fromClient := in.ID != ""
 	var res WriteResult
 	for attempt := 1; ; attempt++ {
 		err = uc.deps.Tx.ReadWrite(ctx, userID, func(ctx context.Context) error {
 			var err error
-			res, err = uc.create(ctx, userID, id, taxpayerID, fields)
+			res, err = uc.create(ctx, userID, id, taxpayerID, fields, fromClient)
 			return err
 		})
 		if !errors.Is(err, ErrIDTaken) || attempt == createAttempts {
@@ -60,8 +61,15 @@ func (uc *Incomes) clientID(raw string) (string, error) {
 	return id, nil
 }
 
-// create is one attempt, in the contract's order of checks.
-func (uc *Incomes) create(ctx context.Context, userID, id, taxpayerID string, f Fields) (WriteResult, error) {
+// create is one attempt, in the contract's order of checks. A client id is
+// locked first: a double submit in flight waits for the first and replays
+// it, never reading the trial counter the first just filled.
+func (uc *Incomes) create(ctx context.Context, userID, id, taxpayerID string, f Fields, fromClient bool) (WriteResult, error) {
+	if fromClient {
+		if err := uc.deps.Store.LockID(ctx, id); err != nil {
+			return WriteResult{}, err
+		}
+	}
 	existing, err := uc.deps.Store.Find(ctx, id, LockNone)
 	if err == nil {
 		return uc.replay(ctx, userID, existing, taxpayerID, f)

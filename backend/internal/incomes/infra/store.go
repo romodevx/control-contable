@@ -32,6 +32,11 @@ const (
 	primaryKey              = "incomes_pkey"
 )
 
+// incomeIDLockClass is the first key of the client-id advisory locks
+// (two-int form, objsubid 2): it keeps them apart from the worker's
+// single-key leader lock and from the expenses' id locks.
+const incomeIDLockClass int32 = 0x494E4331 // "INC1"
+
 // Store implements usecase.Store.
 type Store struct{}
 
@@ -121,6 +126,19 @@ type newIncomeRow struct {
 }
 
 func (newIncomeRow) TableName() string { return table }
+
+// LockID implements usecase.Store: a transaction-scoped advisory lock on
+// the id, released at commit or rollback.
+func (Store) LockID(ctx context.Context, id string) error {
+	db, err := pgdb.Conn(ctx)
+	if err != nil {
+		return err
+	}
+	if err := db.Exec("SELECT pg_advisory_xact_lock(?, hashtext(?))", incomeIDLockClass, id).Error; err != nil {
+		return fmt.Errorf("incomes infra: lock income id: %w", err)
+	}
+	return nil
+}
 
 // Find implements usecase.Store.
 func (Store) Find(ctx context.Context, id string, lock usecase.Lock) (usecase.StoredIncome, error) {

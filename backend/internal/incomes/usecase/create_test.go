@@ -155,6 +155,16 @@ func TestCreate_ConcurrentDoubleSubmitReplays(t *testing.T) {
 	assert.False(t, got.Created)
 }
 
+// A client id is locked before it is looked up, so a double submit in
+// flight waits for the first and replays it instead of reading the trial
+// counter the first just filled (402 for a record that exists).
+func TestCreate_LocksTheClientIDBeforeTheLookup(t *testing.T) {
+	h := newHarness(t)
+	_, err := h.uc.Create(t.Context(), userA, create(incomeID, taxpayerA, us1(t)))
+	require.NoError(t, err)
+	assert.Equal(t, []string{incomeID}, h.store.lockedIDs)
+}
+
 func TestCreate_AccessOrder(t *testing.T) {
 	t.Run("read-only is a 402 before the regime check", func(t *testing.T) {
 		h := newHarness(t)

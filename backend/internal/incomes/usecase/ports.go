@@ -89,6 +89,9 @@ type PeriodTotals struct {
 // Store is the incomes persistence port (infra). It runs on the unit of
 // work in ctx as the caller (RLS): another user's incomes are invisible.
 type Store interface {
+	// LockID serializes the creates of one client id until the unit of
+	// work ends: a double submit waits for the first, then finds it.
+	LockID(ctx context.Context, id string) error
 	// Find returns the income id, deleted or not, or ErrIncomeNotFound.
 	Find(ctx context.Context, id string, lock Lock) (StoredIncome, error)
 	// Insert stores a new income, or ErrIDTaken when the id exists (for
