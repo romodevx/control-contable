@@ -28,6 +28,9 @@ Future<void> _reveal(WidgetTester tester, Finder finder) async {
   await tester.pumpAndSettle();
 }
 
+/// A small phone in portrait (logical pixels).
+const Size _phone = Size(360, 740);
+
 Finder _inTotals(Finder finder) => find.descendant(
   of: find.byKey(const ValueKey('estimate-totals')),
   matching: finder,
@@ -191,6 +194,28 @@ void main() {
         findsOneWidget,
       );
       expect(find.textContaining('Faltan datos para este cálculo'), findsOne);
+    });
+
+    testWidgets('no figure reads as final, on screen or to a screen reader', (
+      tester,
+    ) async {
+      await harness.pump(tester, reply: incomplete());
+
+      expect(_inTotals(find.text('Total a pagar (incompleto)')), findsOne);
+      expect(_inTotals(find.text('ISR a pagar (incompleto)')), findsOne);
+      expect(
+        find.bySemanticsLabel(
+          RegExp(r'^Total a pagar \(incompleto\): .*pesos'),
+        ),
+        findsOneWidget,
+      );
+      await _reveal(tester, find.text('Completa tus datos'));
+      expect(_inCard('612', find.text('ISR a pagar (incompleto)')), findsOne);
+      expect(
+        find.bySemanticsLabel(RegExp(r'^ISR a pagar: ')),
+        findsNothing,
+        reason: 'an incomplete ISR is never announced as final',
+      );
     });
 
     testWidgets('the CTA opens the tax inputs of that regime and year', (
@@ -563,7 +588,11 @@ void main() {
     });
   });
 
-  testWidgets('survives 200 % text', (tester) async {
+  testWidgets('survives 200 % text on a phone', (tester) async {
+    tester.view
+      ..physicalSize = _phone
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     tester.platformDispatcher.textScaleFactorTestValue = 2;
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
