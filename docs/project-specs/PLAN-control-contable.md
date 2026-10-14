@@ -321,8 +321,8 @@ Task groups:
 | M5-25 | Flutter estimate screen: per-regime + totals, legend, disclaimers, `incomplete` CTA | frontend-sr | M5-01, M2-10 | 4.5 | — | `feature/tax-engine-mobile-estimate` | — | [ ] |
 | M5-26 | Flutter breakdown screen: lines, legal basis citations, rounding adjustment | frontend-sr | M5-25 | 4 | — | `feature/tax-engine-mobile-breakdown` | — | [ ] |
 | M5-27 | Flutter tax-inputs form per regime (target of the `incomplete` CTA) | frontend-sr | M5-25 | 4 | — | `feature/tax-engine-mobile-inputs` | — | [ ] |
-| M5-28 | Register flag `module_tax_engine` | backend-sr | M5-23, M5-24, M5-26, M5-27 | 0.5 | — | `feature/tax-engine-flag` | — | [ ] |
-| M5-29 | QA M5: UI figures equal golden figures for each full regime, informational regimes, incomplete flow, flag OFF | qa-sr | M5-28 | 4 | — | `feature/tax-engine-qa-fixes` | OB6 | [ ] |
+| M5-28 | Register flag `module_tax_engine` | backend-sr | M5-23, M5-24, M5-26, M5-27 | 0.5 | — | `feature/tax-engine-flag` | — | [x] |
+| M5-29 | QA M5: UI figures equal golden figures for each full regime, informational regimes, incomplete flow, flag OFF | qa-sr | M5-28 | 4 | — | `feature/tax-engine-qa-fixes` | OB6 | [x] |
 | M5-30 | Tech-lead gate M5 (OCP, purity, no floats, determinism) | tech-lead | M5-29 | 3 | — | (PR review) | — | [ ] |
 | M5-31 | Security gate M5 | security | M5-29 | 2 | — | (PR review) | — | [ ] |
 | M5-32 | Docs M5: engine guide, add-a-regime guide, Dec–Jan parameter update runbook | doc-writer | M5-30, M5-31 | 2.5 | — | `feature/tax-engine-docs` | — | [ ] |
