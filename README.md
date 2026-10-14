@@ -103,10 +103,16 @@ make -C backend flags ARGS="apply-preset demo_core"
 | `demo_monetization` | `demo_core` + subscriptions |
 | `demo_full` | every module, M1 to M9 |
 
-A running API sees a change within 5 s (the flag cache TTL). No product module is built yet, and
-a flag turned ON for an unbuilt module makes its routes answer 500 (P0 follow-up FU2, fixed in
-M1). Apply presets once their modules ship.
+A running API sees a change within 5 s (the flag cache TTL). A flag turned ON for a module that
+is not built yet changes nothing: its routes keep answering `404`.
 Enabling a flag in a shared environment requires the module's tech-lead and security gates.
+
+### Modules
+
+| Module | Flag | Status | Docs |
+|---|---|---|---|
+| M1 Auth & Account | `module_auth` | Built; gates M1-16 and M1-17 passed. **OFF in shared environments** until the [enable checklist](docs/runbooks/auth.md#6-enable-module_auth-in-a-shared-environment) holds (email provider M1-06 pending) | [module](docs/modules/auth.md), [runbook](docs/runbooks/auth.md) |
+| M2–M9 | `module_*` | Not built | [MODULES](docs/project-specs/MODULES.md) |
 
 ## API reference
 
@@ -118,6 +124,9 @@ make api-docs                 # build/api-docs/index.html (Redoc, pinned Redocly
 
 Open the file in a browser. The page loads the Redoc viewer script from Redocly's CDN, so it needs
 network access. `build/` is git-ignored: publish the generated page, do not commit it.
+
+Each module page's error table is generated from the contract too: `make api-error-tables`
+rewrites it, and CI (`make api-error-tables-check`) fails when it is stale.
 
 ## Testing
 
@@ -143,7 +152,7 @@ success without running its gates.
 | Required check | Workflow | Gates |
 |---|---|---|
 | `backend-ok` | `backend.yml` | gofmt, golangci-lint, codegen drift, govulncheck, unit tests, integration + contract tests, coverage ≥ 80 % |
-| `contract-ok` | `contract.yml` | ruleset self-test, OpenAPI lint |
+| `contract-ok` | `contract.yml` | ruleset and generator self-tests, OpenAPI lint, module error tables match the contract |
 | `mobile-ok` | `mobile.yml` | format, analyze, tests + coverage ≥ 80 %, Dart client drift and kind guard, obfuscated release build, artifact gate (no symbols or source maps shipped) |
 
 ## Contributing
