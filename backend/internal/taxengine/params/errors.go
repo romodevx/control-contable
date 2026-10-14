@@ -23,6 +23,10 @@ const (
 	// ErrValueKind reports a value with none, or more than one, of rate,
 	// money and flag.
 	ErrValueKind Error = "params: value needs exactly one of rate, money, flag"
+	// ErrMissingFixedFee reports a marginal tariff row without fixed_fee.
+	// Every published marginal row states its cuota fija (0.00 on the first
+	// row), so an omitted one is a transcription slip, never a silent zero.
+	ErrMissingFixedFee Error = "params: marginal tariff row needs fixed_fee"
 	// ErrTableKind reports a table kind other than marginal or flat.
 	ErrTableKind Error = "params: table kind must be marginal or flat"
 )

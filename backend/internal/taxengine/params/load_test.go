@@ -137,6 +137,7 @@ func TestLoadRejects(t *testing.T) {
 `, ``)), params.ErrValueKind},
 		{"value with two kinds", one("2026/v1.yaml", replace(`rate: "0.08"`, `rate: "0.08"
     money: "1.00"`)), params.ErrValueKind},
+		{"marginal row without fixed_fee", one("2026/v1.yaml", replace(`lower: "100.01", fixed_fee: "2.00", rate: "0.1"`, `lower: "100.01", rate: "0.1"`)), params.ErrMissingFixedFee},
 		{"unknown table kind", one("2026/v1.yaml", replace("kind: flat", "kind: progressive")), params.ErrTableKind},
 		{"date that is not a calendar day", one("2026/v1.yaml", replace("valid_to: 2026-01-31", "valid_to: 2026-02-30")), taxparams.ErrInvalidDate},
 		{"timestamp instead of a date", one("2026/v1.yaml", replace("published_on: 2026-10-13", "published_on: 2026-10-13T10:00:00Z")), taxparams.ErrInvalidDate},

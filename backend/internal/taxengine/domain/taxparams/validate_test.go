@@ -107,6 +107,10 @@ func TestNewParamsRejects(t *testing.T) {
 		{"gap between rows", func(t testing.TB, s *taxparams.Spec) { s.Tables[0].Rows[1].Lower = mustCents(t, "100.02") }, taxparams.ErrNotContiguous},
 		{"rows overlap", func(t testing.TB, s *taxparams.Spec) { s.Tables[0].Rows[1].Lower = mustCents(t, "100.00") }, taxparams.ErrNotContiguous},
 		{"unbounded row before the last", func(_ testing.TB, s *taxparams.Spec) { s.Tables[1].Rows[0].Unbounded = true }, taxparams.ErrInvalidTable},
+		{"marginal tariff with a bounded last row", func(t testing.TB, s *taxparams.Spec) {
+			last := &s.Tables[0].Rows[1]
+			last.Unbounded, last.Upper = false, mustCents(t, "200.00")
+		}, taxparams.ErrInvalidTable},
 		{"unbounded row with an upper bound", func(t testing.TB, s *taxparams.Spec) { s.Tables[0].Rows[1].Upper = mustCents(t, "999.99") }, taxparams.ErrInvalidTable},
 		{"row rate above one", func(t testing.TB, s *taxparams.Spec) { s.Tables[0].Rows[0].Rate = mustRate(t, "1.5") }, taxparams.ErrRateOutOfRange},
 		{"row rate negative", func(t testing.TB, s *taxparams.Spec) { s.Tables[1].Rows[1].Rate = money.Rate(-1) }, taxparams.ErrRateOutOfRange},
