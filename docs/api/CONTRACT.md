@@ -12,6 +12,23 @@ Tooling is pinned: Redocly CLI `2.62.1` in `tools/contract/package.json` + `pack
 installed with `npm ci`. Ruleset: [`redocly.yaml`](../../redocly.yaml); custom rules:
 [`tools/contract/plugin.js`](../../tools/contract/plugin.js).
 
+Transitive security pins (`overrides` in `tools/contract/package.json`, exact versions at
+least two weeks old). This tooling is dev-only and never ships in an artifact:
+
+| Override | Why |
+|---|---|
+| `postman-collection` → `lodash` `4.18.1` | GHSA-r5fr-rjxr-66jc (high), GHSA-f23m-r3pf-42rh, GHSA-xxjr-mmjv-4gpg; postman-collection pins `4.17.21` exactly |
+| `postman-collection` → `uuid` `11.1.1` | GHSA-w5hq-g745-h8pq; postman-collection pins `8.3.2` exactly (it only calls `v4()`, same API) |
+| `js-yaml` → `argparse` `2.0.1` | Drops `sprintf-js` (GHSA-hp3w-g68c-fv3c, no patched release). argparse is required only by js-yaml 3's own CLI binary, which nothing here runs; `json-schema-ref-parser@6` needs js-yaml 3's `safeLoad`, so js-yaml itself cannot move to 4 |
+
+Accepted risk: `postman-collection` keeps its exact pin `@faker-js/faker@5.5.3`
+(GHSA-qxc2-j82w-r537, patched only in `10.5.0`). Faker 10 breaks postman-collection at load
+time (`faker.address` was removed), and Prism loads it eagerly, so overriding it breaks the
+mock. The vulnerable path is `faker.helpers.fake` with an attacker-controlled template;
+postman-collection never calls it and Prism never reads Postman collections. Prism's own
+faker resolves to the patched `10.6.0`. Drop this note when postman-collection moves to a
+faker `>= 10.5.0`.
+
 ## Enforced rules
 
 | Rule | What it enforces |

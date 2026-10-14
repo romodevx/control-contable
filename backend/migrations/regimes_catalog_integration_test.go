@@ -99,8 +99,9 @@ func TestRegimes_KeyIsCodeAndPersonType(t *testing.T) {
 	assert.Equal(t, total, distinct, "no duplicate (code, person_type)")
 
 	_, err := owner.ExecContext(t.Context(), `
-		INSERT INTO regimes (code, person_type, name, treatment, periodicity, legal_basis, source_url, valid_from)
-		VALUES ('612', 'fisica', 'Duplicado', 'full', 'monthly', 'LISR', 'https://x.mx', '2022-01-01')`)
+		INSERT INTO regimes (code, person_type, name, treatment, periodicity, legal_basis, source_url, valid_from,
+		                     income_basis)
+		VALUES ('612', 'fisica', 'Duplicado', 'full', 'monthly', 'LISR', 'https://x.mx', '2022-01-01', 'cash')`)
 	requireSQLState(t, err, sqlstateUniqueViolation)
 }
 
@@ -206,8 +207,8 @@ func insertRegime(t *testing.T, owner *sql.DB, optionDefs, requiredInputs string
 	t.Helper()
 	_, err := owner.ExecContext(t.Context(), `
 		INSERT INTO regimes (code, person_type, name, treatment, periodicity, legal_basis, source_url,
-		                     valid_from, option_defs, required_inputs)
-		VALUES ('699', 'fisica', 'Prueba', 'full', 'monthly', 'LISR', 'https://x.mx', '2022-01-01', $1, $2)`,
+		                     valid_from, option_defs, required_inputs, income_basis)
+		VALUES ('699', 'fisica', 'Prueba', 'full', 'monthly', 'LISR', 'https://x.mx', '2022-01-01', $1, $2, 'cash')`,
 		optionDefs, requiredInputs)
 	return err
 }
@@ -296,20 +297,20 @@ func TestRegimes_RejectMalformedRequiredInputs(t *testing.T) {
 func TestRegimes_RejectMalformedColumns(t *testing.T) {
 	owner := pgtest.NewDatabase(t).Connect(t, pgtest.RoleOwner)
 	const insert = `INSERT INTO regimes (code, person_type, name, treatment, periodicity, legal_basis,
-		source_url, valid_from, valid_to, needs_cpa_review, review_note) VALUES `
+		source_url, valid_from, valid_to, needs_cpa_review, review_note, income_basis) VALUES `
 	bad := map[string]string{
-		"code not 3 digits":     `('61', 'fisica', 'X', 'full', 'monthly', 'L', 'https://x.mx', '2022-01-01', NULL, false, NULL)`,
-		"unknown person type":   `('699', 'otra', 'X', 'full', 'monthly', 'L', 'https://x.mx', '2022-01-01', NULL, false, NULL)`,
-		"unknown treatment":     `('699', 'fisica', 'X', 'explanation_only', 'monthly', 'L', 'https://x.mx', '2022-01-01', NULL, false, NULL)`,
-		"unknown periodicity":   `('699', 'fisica', 'X', 'full', 'weekly', 'L', 'https://x.mx', '2022-01-01', NULL, false, NULL)`,
-		"unstated periodicity":  `('699', 'fisica', 'X', 'full', NULL, 'L', 'https://x.mx', '2022-01-01', NULL, false, NULL)`,
-		"blank name":            `('699', 'fisica', ' ', 'full', 'monthly', 'L', 'https://x.mx', '2022-01-01', NULL, false, NULL)`,
-		"blank legal basis":     `('699', 'fisica', 'X', 'full', 'monthly', '', 'https://x.mx', '2022-01-01', NULL, false, NULL)`,
-		"source not a URL":      `('699', 'fisica', 'X', 'full', 'monthly', 'L', 'LISR.pdf', '2022-01-01', NULL, false, NULL)`,
-		"ends before it starts": `('699', 'fisica', 'X', 'full', 'monthly', 'L', 'https://x.mx', '2022-01-01', '2021-12-31', false, NULL)`,
-		"review without a note": `('699', 'fisica', 'X', 'full', 'monthly', 'L', 'https://x.mx', '2022-01-01', NULL, true, NULL)`,
-		"note without a review": `('699', 'fisica', 'X', 'full', 'monthly', 'L', 'https://x.mx', '2022-01-01', NULL, false, 'n')`,
-		"blank review note":     `('699', 'fisica', 'X', 'full', 'monthly', 'L', 'https://x.mx', '2022-01-01', NULL, true, ' ')`,
+		"code not 3 digits":     `('61', 'fisica', 'X', 'full', 'monthly', 'L', 'https://x.mx', '2022-01-01', NULL, false, NULL, 'cash')`,
+		"unknown person type":   `('699', 'otra', 'X', 'full', 'monthly', 'L', 'https://x.mx', '2022-01-01', NULL, false, NULL, 'cash')`,
+		"unknown treatment":     `('699', 'fisica', 'X', 'explanation_only', 'monthly', 'L', 'https://x.mx', '2022-01-01', NULL, false, NULL, 'cash')`,
+		"unknown periodicity":   `('699', 'fisica', 'X', 'full', 'weekly', 'L', 'https://x.mx', '2022-01-01', NULL, false, NULL, 'cash')`,
+		"unstated periodicity":  `('699', 'fisica', 'X', 'full', NULL, 'L', 'https://x.mx', '2022-01-01', NULL, false, NULL, 'cash')`,
+		"blank name":            `('699', 'fisica', ' ', 'full', 'monthly', 'L', 'https://x.mx', '2022-01-01', NULL, false, NULL, 'cash')`,
+		"blank legal basis":     `('699', 'fisica', 'X', 'full', 'monthly', '', 'https://x.mx', '2022-01-01', NULL, false, NULL, 'cash')`,
+		"source not a URL":      `('699', 'fisica', 'X', 'full', 'monthly', 'L', 'LISR.pdf', '2022-01-01', NULL, false, NULL, 'cash')`,
+		"ends before it starts": `('699', 'fisica', 'X', 'full', 'monthly', 'L', 'https://x.mx', '2022-01-01', '2021-12-31', false, NULL, 'cash')`,
+		"review without a note": `('699', 'fisica', 'X', 'full', 'monthly', 'L', 'https://x.mx', '2022-01-01', NULL, true, NULL, 'cash')`,
+		"note without a review": `('699', 'fisica', 'X', 'full', 'monthly', 'L', 'https://x.mx', '2022-01-01', NULL, false, 'n', 'cash')`,
+		"blank review note":     `('699', 'fisica', 'X', 'full', 'monthly', 'L', 'https://x.mx', '2022-01-01', NULL, true, ' ', 'cash')`,
 	}
 	for name, values := range bad {
 		t.Run(name, func(t *testing.T) {

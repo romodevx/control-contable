@@ -2,6 +2,7 @@ import 'package:control_contable/api/generated/models/person_type.dart';
 import 'package:control_contable/api/generated/models/regime.dart';
 import 'package:control_contable/core/forms/field_error.dart';
 import 'package:control_contable/features/taxpayers/application/onboarding_flow.dart';
+import 'package:control_contable/features/taxpayers/application/regime_wizard.dart';
 import 'package:control_contable/features/taxpayers/domain/rfc.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 
@@ -75,3 +76,18 @@ String _lengthMessage(PersonType personType, AppLocalizations l10n) =>
     personType == PersonType.moral
     ? l10n.onboardingRfcLengthMoral
     : l10n.onboardingRfcLengthFisica;
+
+/// The primary of a wizard's last page.
+String finishLabel(RegimeWizardPurpose purpose, AppLocalizations l10n) =>
+    switch (purpose) {
+      RegimeWizardPurpose.createTaxpayer => l10n.onboardingCreate,
+      RegimeWizardPurpose.addRegime => l10n.settingsAddRegime,
+    };
+
+/// What the regimes step asks for, in plain words.
+String regimesIntro(RegimeWizard flow, AppLocalizations l10n) =>
+    switch ((flow.purpose, flow.personType)) {
+      (RegimeWizardPurpose.addRegime, _) => l10n.addRegimeIntro,
+      (_, PersonType.moral) => l10n.onboardingRegimesIntroMoral,
+      _ => l10n.onboardingRegimesIntroFisica,
+    };

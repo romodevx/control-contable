@@ -15,17 +15,27 @@ const double _iconSize = 40;
 /// user was on, so it is announced (a live region alone stays silent on
 /// first appearance for TalkBack and VoiceOver).
 class ReadOnlyNotice extends StatefulWidget {
-  /// The notice; [onLeave] closes the onboarding.
-  const new({required this.onLeave, super.key});
+  /// The notice; [onLeave] closes the flow. [body] says what needs a plan
+  /// (registering a taxpayer by default).
+  const new({required this.onLeave, this.body, this.actionLabel, super.key});
 
-  /// Leaves the onboarding.
+  /// Leaves the flow.
   final VoidCallback onLeave;
+
+  /// What still works and what needs a plan.
+  final String? body;
+
+  /// The way out (*Volver al inicio* by default).
+  final String? actionLabel;
 
   @override
   State<ReadOnlyNotice> createState() => _ReadOnlyNoticeState();
 }
 
 class _ReadOnlyNoticeState extends State<ReadOnlyNotice> {
+  String _body(AppLocalizations l10n) =>
+      widget.body ?? l10n.onboardingPaywallBody;
+
   @override
   void initState() {
     super.initState();
@@ -35,7 +45,7 @@ class _ReadOnlyNoticeState extends State<ReadOnlyNotice> {
       unawaited(
         SemanticsService.sendAnnouncement(
           View.of(context),
-          '${l10n.onboardingPaywallTitle}. ${l10n.onboardingPaywallBody}',
+          '${l10n.onboardingPaywallTitle}. ${_body(l10n)}',
           Directionality.of(context),
         ),
       );
@@ -68,11 +78,11 @@ class _ReadOnlyNoticeState extends State<ReadOnlyNotice> {
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
-          Text(l10n.onboardingPaywallBody, style: theme.textTheme.bodyMedium),
+          Text(_body(l10n), style: theme.textTheme.bodyMedium),
           const SizedBox(height: AppSpacing.xl),
           FilledButton(
             onPressed: widget.onLeave,
-            child: Text(l10n.onboardingPaywallAction),
+            child: Text(widget.actionLabel ?? l10n.onboardingPaywallAction),
           ),
         ],
       ),

@@ -23,6 +23,8 @@ dependencies:
   intl: any
   json_annotation: 4.12.0
   retrofit: 4.10.0
+  # Active-taxpayer id only (a non-secret preference, M2-10); never the RFC or tokens.
+  shared_preferences: 2.5.5
   # Opens the legal documents (privacy notice, terms) in the in-app browser view (M1-11).
   url_launcher: 6.3.2
 
@@ -34,6 +36,8 @@ dev_dependencies:
   freezed: 4.0.2
   json_serializable: 6.14.1
   retrofit_generator: 10.2.11
+  # In-memory preferences backend for the active-taxpayer store test.
+  shared_preferences_platform_interface: 2.4.2
   swagger_parser: 1.45.0
   very_good_analysis: 11.0.0
   # Read by tool/normalize_openapi.dart (the contract is YAML).

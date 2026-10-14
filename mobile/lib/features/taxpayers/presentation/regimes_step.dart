@@ -9,8 +9,8 @@ import 'package:control_contable/core/forms/form_notice.dart';
 import 'package:control_contable/core/theme/app_spacing.dart';
 import 'package:control_contable/core/widgets/estimate_legend.dart';
 import 'package:control_contable/core/widgets/load_status.dart';
-import 'package:control_contable/features/taxpayers/application/onboarding_flow.dart';
 import 'package:control_contable/features/taxpayers/application/regime_catalog.dart';
+import 'package:control_contable/features/taxpayers/application/regime_wizard.dart';
 import 'package:control_contable/features/taxpayers/presentation/onboarding_copy.dart';
 import 'package:control_contable/features/taxpayers/presentation/regime_list.dart';
 import 'package:control_contable/features/taxpayers/presentation/regime_selection_field.dart';
@@ -23,13 +23,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Step 3: the regimes of the chosen person type (`GET /v1/regimes`),
 /// grouped by what the app can do with them, each group explained in
 /// plain words, with the mandatory legend. Multi-select for a persona
-/// física, single-select for a persona moral.
+/// física, single-select for a persona moral or when adding one regime
+/// (regimes already held are not offered again).
 class RegimesStep extends ConsumerWidget {
   /// The step of [flow].
   const new({required this.flow, super.key});
 
-  /// The onboarding.
-  final OnboardingFlow flow;
+  /// The wizard (onboarding, or adding a regime).
+  final RegimeWizard flow;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -41,7 +42,18 @@ class RegimesStep extends ConsumerWidget {
         flow: flow,
         child: LoadStatus(message: l10n.onboardingRegimesEmpty),
       ),
-      AsyncData(:final value) => _RegimesForm(flow: flow, catalog: value),
+      AsyncData(:final value) when _offered(value).isEmpty => _Status(
+        flow: flow,
+        child: LoadStatus(message: l10n.addRegimeNoneLeft),
+      ),
+      AsyncData(:final value) => _RegimesForm(
+        flow: flow,
+        catalog: _offered(value),
+        held: [
+          for (final regime in value)
+            if (flow.heldCodes.contains(regime.code)) regime,
+        ],
+      ),
       AsyncError() => _Status(
         flow: flow,
         child: LoadFailed(
@@ -55,13 +67,18 @@ class RegimesStep extends ConsumerWidget {
       ),
     };
   }
+
+  List<Regime> _offered(List<Regime> catalog) => [
+    for (final regime in catalog)
+      if (!flow.heldCodes.contains(regime.code)) regime,
+  ];
 }
 
 /// The step's header over a load status.
 class _Status extends StatelessWidget {
   const new({required this.flow, required this.child});
 
-  final OnboardingFlow flow;
+  final RegimeWizard flow;
   final Widget child;
 
   @override
@@ -82,10 +99,11 @@ class _Status extends StatelessWidget {
 }
 
 class _RegimesForm extends StatefulWidget {
-  const new({required this.flow, required this.catalog});
+  const new({required this.flow, required this.catalog, required this.held});
 
-  final OnboardingFlow flow;
+  final RegimeWizard flow;
   final List<Regime> catalog;
+  final List<Regime> held;
 
   @override
   State<_RegimesForm> createState() => _RegimesFormState();
@@ -95,7 +113,7 @@ class _RegimesFormState extends State<_RegimesForm> {
   final AppFormController _form = AppFormController();
   RegimeSelectionField? _selectionField;
 
-  OnboardingFlow get _flow => widget.flow;
+  RegimeWizard get _flow => widget.flow;
   RegimeSelectionField get _selection => _selectionField!;
 
   @override
@@ -106,7 +124,8 @@ class _RegimesFormState extends State<_RegimesForm> {
     _selectionField = _form.add(
       RegimeSelectionField(
         label: l10n.onboardingRegimesLabel,
-        single: _flow.personType == PersonType.moral,
+        single: _flow.singleRegime,
+        held: widget.held,
         missingError: CustomFieldError(l10n.onboardingRegimesRequired),
         conflictError: CustomFieldError(l10n.onboardingRegimesConflict),
         initial: _flow.regimes,
@@ -152,7 +171,6 @@ class _RegimesFormState extends State<_RegimesForm> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isMoral = _flow.personType == PersonType.moral;
     return ListenableBuilder(
       listenable: Listenable.merge([_selection, _flow]),
       builder: (context, _) {
@@ -166,15 +184,13 @@ class _RegimesFormState extends State<_RegimesForm> {
           controller: _form,
           onSave: () => _flow.submitRegimes(_selection.selected),
           primaryLabel: createsNow
-              ? l10n.onboardingCreate
+              ? finishLabel(_flow.purpose, l10n)
               : l10n.onboardingNext,
           children: [
             StepHeader(
               flow: _flow,
               title: l10n.onboardingRegimesTitle,
-              intro: isMoral
-                  ? l10n.onboardingRegimesIntroMoral
-                  : l10n.onboardingRegimesIntroFisica,
+              intro: regimesIntro(_flow, l10n),
             ),
             if (notice != null)
               FormNotice(message: describeNotice(notice, l10n)),
