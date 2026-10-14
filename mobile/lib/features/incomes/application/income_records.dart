@@ -113,6 +113,7 @@ class LastCounterpartyNotifier extends Notifier<CounterpartyType> {
   }
 
   /// [income] was just recorded: its payer starts the next form.
+  // ignore: deprecated_member_use_from_same_package, deprecated until WH-11 (ADR-0008).
   void rememberPayerOf(IncomeCreate income) => state = income.counterpartyType;
 }
 

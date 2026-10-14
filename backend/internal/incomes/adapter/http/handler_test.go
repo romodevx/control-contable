@@ -285,7 +285,7 @@ func TestHandler_passesUseCaseErrorsThrough(t *testing.T) {
 func TestUpdateIncome_mergePatch(t *testing.T) {
 	fake := &fakeIncomes{result: usecase.WriteResult{Income: sample(t)}}
 	h := incomeshttp.NewHandler(fake)
-	regime, counterparty, rateValue := "601", gen.CounterpartyType("persona_moral"), gen.IvaRate("rate_8")
+	regime, counterparty, rateValue := "601", gen.CounterpartyType("persona_moral"), gen.IvaRate("rate_8") //nolint:staticcheck // SA1019: deprecated field tested until WH-06 (ADR-0008)
 	amount, iva, isr, ivaWithheld := int64(2), int64(3), int64(4), int64(5)
 
 	resp, err := h.UpdateIncome(authed(t), gen.UpdateIncomeRequestObject{

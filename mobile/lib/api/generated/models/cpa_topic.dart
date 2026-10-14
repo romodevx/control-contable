@@ -4,7 +4,7 @@
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-/// Append-only. A rule a CPA has not validated yet (MODULE-tax-engine §2.9, each mapped to a `docs/reviews/CPA-REVIEW.md` item): `rif_reduction` (any 621 figure), `rif_bimonthly_iva` (621 IVA by bimester, OQ-T7), `platform_definitive_iva` (625 definitive option with IVA), `cross_regime_iva_netting` (two or more regimes contribute IVA, OQ-T2), `resico_pm_interest_withholding` (626 PM with interest withholding).
+/// Append-only. A rule a CPA has not validated yet (MODULE-tax-engine §2.9, each mapped to a `docs/reviews/CPA-REVIEW.md` item): `rif_reduction` (any 621 figure), `rif_bimonthly_iva` (621 IVA by bimester, OQ-T7), `platform_definitive_iva` (625 definitive option with IVA), `cross_regime_iva_netting` (two or more regimes contribute IVA, OQ-T2), `resico_pm_interest_withholding` (626 PM with interest withholding), `withholding_rule_unverified` (a line fed by records whose derived withholding matched a ⚠️ rule, MODULE-withholdings §6), `withheld_iva_credit_timing` (IVA withheld from suppliers credited the month after, assuming timely remittance, LIVA 5 fr. IV; 0.10.0).
 @JsonEnum()
 enum CpaTopic {
   @JsonValue('rif_reduction')
@@ -17,6 +17,10 @@ enum CpaTopic {
   crossRegimeIvaNetting('cross_regime_iva_netting'),
   @JsonValue('resico_pm_interest_withholding')
   resicoPmInterestWithholding('resico_pm_interest_withholding'),
+  @JsonValue('withholding_rule_unverified')
+  withholdingRuleUnverified('withholding_rule_unverified'),
+  @JsonValue('withheld_iva_credit_timing')
+  withheldIvaCreditTiming('withheld_iva_credit_timing'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);

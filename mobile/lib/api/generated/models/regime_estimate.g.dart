@@ -72,5 +72,7 @@ const _$CpaTopicEnumMap = {
   CpaTopic.platformDefinitiveIva: 'platform_definitive_iva',
   CpaTopic.crossRegimeIvaNetting: 'cross_regime_iva_netting',
   CpaTopic.resicoPmInterestWithholding: 'resico_pm_interest_withholding',
+  CpaTopic.withholdingRuleUnverified: 'withholding_rule_unverified',
+  CpaTopic.withheldIvaCreditTiming: 'withheld_iva_credit_timing',
   CpaTopic.$unknown: r'$unknown',
 };

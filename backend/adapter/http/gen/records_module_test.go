@@ -22,6 +22,8 @@ var recordModuleRoutes = map[string]map[string]string{
 		"updateIncome":      "PATCH /v1/taxpayers/{taxpayerId}/incomes/{incomeId}",
 		"deleteIncome":      "DELETE /v1/taxpayers/{taxpayerId}/incomes/{incomeId}",
 		"restoreIncome":     "POST /v1/taxpayers/{taxpayerId}/incomes/{incomeId}/restore",
+		// ADR-0008: one preview per module, so each is hidden with its own flag.
+		"previewIncomeWithholdings": "GET /v1/taxpayers/{taxpayerId}/incomes/withholding-preview",
 	},
 	"module_expenses": {
 		"listExpenseCategories": "GET /v1/taxpayers/{taxpayerId}/expense-categories",
@@ -31,6 +33,8 @@ var recordModuleRoutes = map[string]map[string]string{
 		"updateExpense":         "PATCH /v1/taxpayers/{taxpayerId}/expenses/{expenseId}",
 		"deleteExpense":         "DELETE /v1/taxpayers/{taxpayerId}/expenses/{expenseId}",
 		"restoreExpense":        "POST /v1/taxpayers/{taxpayerId}/expenses/{expenseId}/restore",
+		// ADR-0008: one preview per module, so each is hidden with its own flag.
+		"previewExpenseWithholdings": "GET /v1/taxpayers/{taxpayerId}/expenses/withholding-preview",
 	},
 }
 

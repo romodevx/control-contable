@@ -69,6 +69,7 @@ extension IncomeFormRequest on IncomeFormModel {
     final wanted = toCreate();
     final desired = <String, Object?>{
       'regime_code': wanted.regimeCode,
+      // ignore: deprecated_member_use_from_same_package, deprecated until WH-11 (ADR-0008).
       'counterparty_type': wanted.counterpartyType.json,
       'amount_cents': wanted.amountCents,
       'iva_rate': wanted.ivaRate.json,

@@ -10,58 +10,60 @@ const ModulePlatform = "platform"
 
 // operationModules maps every operationId in the contract to its x-module.
 var operationModules = map[string]string{
-	"addTaxpayerRegime":        "module_taxpayers",     // POST /v1/taxpayers/{taxpayerId}/regimes
-	"archiveTaxpayer":          "module_taxpayers",     // POST /v1/taxpayers/{taxpayerId}/archive
-	"archiveTaxpayerRegime":    "module_taxpayers",     // DELETE /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}
-	"createExpense":            "module_expenses",      // POST /v1/taxpayers/{taxpayerId}/expenses
-	"createIncome":             "module_incomes",       // POST /v1/taxpayers/{taxpayerId}/incomes
-	"createTaxpayer":           "module_taxpayers",     // POST /v1/taxpayers
-	"deleteExpense":            "module_expenses",      // DELETE /v1/taxpayers/{taxpayerId}/expenses/{expenseId}
-	"deleteIncome":             "module_incomes",       // DELETE /v1/taxpayers/{taxpayerId}/incomes/{incomeId}
-	"deleteMe":                 "module_auth",          // DELETE /v1/me
-	"deleteTaxpayer":           "module_taxpayers",     // DELETE /v1/taxpayers/{taxpayerId}
-	"getDashboard":             "module_dashboard",     // GET /v1/taxpayers/{taxpayerId}/dashboard
-	"getEstimateBreakdown":     "module_tax_engine",    // GET /v1/taxpayers/{taxpayerId}/estimates/{period}/breakdown
-	"getExpense":               "module_expenses",      // GET /v1/taxpayers/{taxpayerId}/expenses/{expenseId}
-	"getHealth":                "platform",             // GET /healthz
-	"getHistory":               "module_history",       // GET /v1/taxpayers/{taxpayerId}/history
-	"getIncome":                "module_incomes",       // GET /v1/taxpayers/{taxpayerId}/incomes/{incomeId}
-	"getIncomeDefaults":        "module_incomes",       // GET /v1/taxpayers/{taxpayerId}/incomes/defaults
-	"getMe":                    "module_auth",          // GET /v1/me
-	"getReminderSettings":      "module_reminders",     // GET /v1/reminder-settings
-	"getSubscription":          "module_subscriptions", // GET /v1/subscription
-	"getTaxCalendar":           "module_reminders",     // GET /v1/tax-calendar
-	"getTaxInputs":             "module_tax_engine",    // GET /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/tax-inputs
-	"getTaxpayer":              "module_taxpayers",     // GET /v1/taxpayers/{taxpayerId}
-	"getTaxpayerEstimate":      "module_tax_engine",    // GET /v1/taxpayers/{taxpayerId}/estimates
-	"listEnabledFlags":         "platform",             // GET /v1/flags
-	"listExpenseCategories":    "module_expenses",      // GET /v1/taxpayers/{taxpayerId}/expense-categories
-	"listExpenses":             "module_expenses",      // GET /v1/taxpayers/{taxpayerId}/expenses
-	"listIncomes":              "module_incomes",       // GET /v1/taxpayers/{taxpayerId}/incomes
-	"listLegalDocuments":       "module_auth",          // GET /v1/legal/documents
-	"listRegimes":              "module_taxpayers",     // GET /v1/regimes
-	"listTaxpayers":            "module_taxpayers",     // GET /v1/taxpayers
-	"login":                    "module_auth",          // POST /v1/auth/login
-	"logout":                   "module_auth",          // POST /v1/auth/logout
-	"markHistoryViewed":        "module_history",       // POST /v1/taxpayers/{taxpayerId}/history/{period}/viewed
-	"putReminderSettings":      "module_reminders",     // PUT /v1/reminder-settings
-	"putTaxInputs":             "module_tax_engine",    // PUT /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/tax-inputs
-	"receiveRevenueCatWebhook": "module_subscriptions", // POST /v1/webhooks/revenuecat
-	"refreshSession":           "module_auth",          // POST /v1/auth/refresh
-	"register":                 "module_auth",          // POST /v1/auth/register
-	"registerDevice":           "module_reminders",     // POST /v1/devices
-	"resendVerification":       "module_auth",          // POST /v1/auth/verify-email/resend
-	"restoreExpense":           "module_expenses",      // POST /v1/taxpayers/{taxpayerId}/expenses/{expenseId}/restore
-	"restoreIncome":            "module_incomes",       // POST /v1/taxpayers/{taxpayerId}/incomes/{incomeId}/restore
-	"syncSubscription":         "module_subscriptions", // POST /v1/subscription/sync
-	"unarchiveTaxpayer":        "module_taxpayers",     // POST /v1/taxpayers/{taxpayerId}/unarchive
-	"unregisterDevice":         "module_reminders",     // DELETE /v1/devices/{deviceId}
-	"updateExpense":            "module_expenses",      // PATCH /v1/taxpayers/{taxpayerId}/expenses/{expenseId}
-	"updateIncome":             "module_incomes",       // PATCH /v1/taxpayers/{taxpayerId}/incomes/{incomeId}
-	"updateMe":                 "module_auth",          // PATCH /v1/me
-	"updateTaxpayer":           "module_taxpayers",     // PATCH /v1/taxpayers/{taxpayerId}
-	"updateTaxpayerRegime":     "module_taxpayers",     // PATCH /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}
-	"verifyEmail":              "module_auth",          // POST /v1/auth/verify-email
+	"addTaxpayerRegime":          "module_taxpayers",     // POST /v1/taxpayers/{taxpayerId}/regimes
+	"archiveTaxpayer":            "module_taxpayers",     // POST /v1/taxpayers/{taxpayerId}/archive
+	"archiveTaxpayerRegime":      "module_taxpayers",     // DELETE /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}
+	"createExpense":              "module_expenses",      // POST /v1/taxpayers/{taxpayerId}/expenses
+	"createIncome":               "module_incomes",       // POST /v1/taxpayers/{taxpayerId}/incomes
+	"createTaxpayer":             "module_taxpayers",     // POST /v1/taxpayers
+	"deleteExpense":              "module_expenses",      // DELETE /v1/taxpayers/{taxpayerId}/expenses/{expenseId}
+	"deleteIncome":               "module_incomes",       // DELETE /v1/taxpayers/{taxpayerId}/incomes/{incomeId}
+	"deleteMe":                   "module_auth",          // DELETE /v1/me
+	"deleteTaxpayer":             "module_taxpayers",     // DELETE /v1/taxpayers/{taxpayerId}
+	"getDashboard":               "module_dashboard",     // GET /v1/taxpayers/{taxpayerId}/dashboard
+	"getEstimateBreakdown":       "module_tax_engine",    // GET /v1/taxpayers/{taxpayerId}/estimates/{period}/breakdown
+	"getExpense":                 "module_expenses",      // GET /v1/taxpayers/{taxpayerId}/expenses/{expenseId}
+	"getHealth":                  "platform",             // GET /healthz
+	"getHistory":                 "module_history",       // GET /v1/taxpayers/{taxpayerId}/history
+	"getIncome":                  "module_incomes",       // GET /v1/taxpayers/{taxpayerId}/incomes/{incomeId}
+	"getIncomeDefaults":          "module_incomes",       // GET /v1/taxpayers/{taxpayerId}/incomes/defaults
+	"getMe":                      "module_auth",          // GET /v1/me
+	"getReminderSettings":        "module_reminders",     // GET /v1/reminder-settings
+	"getSubscription":            "module_subscriptions", // GET /v1/subscription
+	"getTaxCalendar":             "module_reminders",     // GET /v1/tax-calendar
+	"getTaxInputs":               "module_tax_engine",    // GET /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/tax-inputs
+	"getTaxpayer":                "module_taxpayers",     // GET /v1/taxpayers/{taxpayerId}
+	"getTaxpayerEstimate":        "module_tax_engine",    // GET /v1/taxpayers/{taxpayerId}/estimates
+	"listEnabledFlags":           "platform",             // GET /v1/flags
+	"listExpenseCategories":      "module_expenses",      // GET /v1/taxpayers/{taxpayerId}/expense-categories
+	"listExpenses":               "module_expenses",      // GET /v1/taxpayers/{taxpayerId}/expenses
+	"listIncomes":                "module_incomes",       // GET /v1/taxpayers/{taxpayerId}/incomes
+	"listLegalDocuments":         "module_auth",          // GET /v1/legal/documents
+	"listRegimes":                "module_taxpayers",     // GET /v1/regimes
+	"listTaxpayers":              "module_taxpayers",     // GET /v1/taxpayers
+	"login":                      "module_auth",          // POST /v1/auth/login
+	"logout":                     "module_auth",          // POST /v1/auth/logout
+	"markHistoryViewed":          "module_history",       // POST /v1/taxpayers/{taxpayerId}/history/{period}/viewed
+	"previewExpenseWithholdings": "module_expenses",      // GET /v1/taxpayers/{taxpayerId}/expenses/withholding-preview
+	"previewIncomeWithholdings":  "module_incomes",       // GET /v1/taxpayers/{taxpayerId}/incomes/withholding-preview
+	"putReminderSettings":        "module_reminders",     // PUT /v1/reminder-settings
+	"putTaxInputs":               "module_tax_engine",    // PUT /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/tax-inputs
+	"receiveRevenueCatWebhook":   "module_subscriptions", // POST /v1/webhooks/revenuecat
+	"refreshSession":             "module_auth",          // POST /v1/auth/refresh
+	"register":                   "module_auth",          // POST /v1/auth/register
+	"registerDevice":             "module_reminders",     // POST /v1/devices
+	"resendVerification":         "module_auth",          // POST /v1/auth/verify-email/resend
+	"restoreExpense":             "module_expenses",      // POST /v1/taxpayers/{taxpayerId}/expenses/{expenseId}/restore
+	"restoreIncome":              "module_incomes",       // POST /v1/taxpayers/{taxpayerId}/incomes/{incomeId}/restore
+	"syncSubscription":           "module_subscriptions", // POST /v1/subscription/sync
+	"unarchiveTaxpayer":          "module_taxpayers",     // POST /v1/taxpayers/{taxpayerId}/unarchive
+	"unregisterDevice":           "module_reminders",     // DELETE /v1/devices/{deviceId}
+	"updateExpense":              "module_expenses",      // PATCH /v1/taxpayers/{taxpayerId}/expenses/{expenseId}
+	"updateIncome":               "module_incomes",       // PATCH /v1/taxpayers/{taxpayerId}/incomes/{incomeId}
+	"updateMe":                   "module_auth",          // PATCH /v1/me
+	"updateTaxpayer":             "module_taxpayers",     // PATCH /v1/taxpayers/{taxpayerId}
+	"updateTaxpayerRegime":       "module_taxpayers",     // PATCH /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}
+	"verifyEmail":                "module_auth",          // POST /v1/auth/verify-email
 }
 
 // OperationModule returns the x-module of an operation: a module_<name> flag key,
@@ -100,10 +102,12 @@ var routeModules = map[string]string{
 	"GET /v1/taxpayers/{taxpayerId}/estimates/{period}/breakdown":    "module_tax_engine", // getEstimateBreakdown
 	"GET /v1/taxpayers/{taxpayerId}/expense-categories":              "module_expenses",   // listExpenseCategories
 	"GET /v1/taxpayers/{taxpayerId}/expenses":                        "module_expenses",   // listExpenses
+	"GET /v1/taxpayers/{taxpayerId}/expenses/withholding-preview":    "module_expenses",   // previewExpenseWithholdings
 	"GET /v1/taxpayers/{taxpayerId}/expenses/{expenseId}":            "module_expenses",   // getExpense
 	"GET /v1/taxpayers/{taxpayerId}/history":                         "module_history",    // getHistory
 	"GET /v1/taxpayers/{taxpayerId}/incomes":                         "module_incomes",    // listIncomes
 	"GET /v1/taxpayers/{taxpayerId}/incomes/defaults":                "module_incomes",    // getIncomeDefaults
+	"GET /v1/taxpayers/{taxpayerId}/incomes/withholding-preview":     "module_incomes",    // previewIncomeWithholdings
 	"GET /v1/taxpayers/{taxpayerId}/incomes/{incomeId}":              "module_incomes",    // getIncome
 	"GET /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/tax-inputs": "module_tax_engine", // getTaxInputs
 	"PATCH /v1/me":                                                   "module_auth",          // updateMe
