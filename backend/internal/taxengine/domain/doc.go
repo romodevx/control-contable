@@ -23,6 +23,10 @@
 //   - RegimeEstimate: lines, ISR TaxResult, IVA components, withholdings to
 //     remit, missing inputs, CPA topics and disclaimers; Status applies the
 //     precedence informational > incomplete > partial > complete.
+//   - ConsolidateIVA, NewTotals, EstimateDisclaimers, Fingerprint: the
+//     taxpayer-level rules of one month (M5-22): IVA netted across regimes
+//     with its own trace, totals counting each amount once, disclaimers in
+//     contract order, and the records fingerprint.
 //   - Registry: the immutable StrategyKey -> Strategy map built at the
 //     composition root (duplicates fail at startup), falling back to the
 //     InformationalStrategy; its Estimate checks the period's RequiredInputs
