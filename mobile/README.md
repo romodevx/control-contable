@@ -152,8 +152,7 @@ Every record form is built from `core/forms/`, which encodes
   forgotten password (idle timeout) shows the password field again. *Enviar otro código* appears after
   the 60 s cooldown, or after `Retry-After` when longer; the countdown runs on a clock
   deadline, so time in the background counts.
-- The new session goes to `sessionStoreProvider`: in memory until M1-12 brings
-  `flutter_secure_storage`.
+- The new session starts like a login's (`sessionProvider`; see "Session tokens" below).
 
 ## Session tokens (M1-12)
 
