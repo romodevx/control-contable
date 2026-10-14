@@ -17,8 +17,8 @@ T _$identity<T>(T value) => value;
 mixin _$Regime {
 
  RegimeCode get code; String get name;@JsonKey(name: 'person_type') PersonType get personType; Treatment get treatment;/// Plain-language explanation for a partial or informational regime; `null` for full.
-@JsonKey(includeIfNull: true) String? get explanation;@JsonKey(name: 'option_defs') List<RegimeOptionDef> get optionDefs;/// Per-fiscal-year tax-input keys the estimate needs (see `TaxInputs`, M5); not options.
-@JsonKey(name: 'required_inputs') List<String> get requiredInputs;@JsonKey(name: 'incompatible_with') List<RegimeIncompatibility> get incompatibleWith;
+@JsonKey(includeIfNull: true) String? get explanation;@JsonKey(name: 'option_defs') List<RegimeOptionDef> get optionDefs;/// Per-fiscal-year tax inputs the estimate needs (`PUT …/tax-inputs`, M5); not options. Exactly the stored `regimes.required_inputs` (CHECK `regime_required_inputs_valid`).
+@JsonKey(name: 'required_inputs') List<TaxInputDef> get requiredInputs;@JsonKey(name: 'incompatible_with') List<RegimeIncompatibility> get incompatibleWith;
 /// Create a copy of Regime
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -56,7 +56,7 @@ abstract mixin class $RegimeCopyWith<$Res>  {
   factory $RegimeCopyWith(Regime value, $Res Function(Regime) _then) = _$RegimeCopyWithImpl;
 @useResult
 $Res call({
- RegimeCode code, String name,@JsonKey(name: 'person_type') PersonType personType, Treatment treatment,@JsonKey(includeIfNull: true) String? explanation,@JsonKey(name: 'option_defs') List<RegimeOptionDef> optionDefs,@JsonKey(name: 'required_inputs') List<String> requiredInputs,@JsonKey(name: 'incompatible_with') List<RegimeIncompatibility> incompatibleWith
+ RegimeCode code, String name,@JsonKey(name: 'person_type') PersonType personType, Treatment treatment,@JsonKey(includeIfNull: true) String? explanation,@JsonKey(name: 'option_defs') List<RegimeOptionDef> optionDefs,@JsonKey(name: 'required_inputs') List<TaxInputDef> requiredInputs,@JsonKey(name: 'incompatible_with') List<RegimeIncompatibility> incompatibleWith
 });
 
 
@@ -82,7 +82,7 @@ as PersonType,treatment: null == treatment ? _self.treatment : treatment // igno
 as Treatment,explanation: freezed == explanation ? _self.explanation : explanation // ignore: cast_nullable_to_non_nullable
 as String?,optionDefs: null == optionDefs ? _self.optionDefs : optionDefs // ignore: cast_nullable_to_non_nullable
 as List<RegimeOptionDef>,requiredInputs: null == requiredInputs ? _self.requiredInputs : requiredInputs // ignore: cast_nullable_to_non_nullable
-as List<String>,incompatibleWith: null == incompatibleWith ? _self.incompatibleWith : incompatibleWith // ignore: cast_nullable_to_non_nullable
+as List<TaxInputDef>,incompatibleWith: null == incompatibleWith ? _self.incompatibleWith : incompatibleWith // ignore: cast_nullable_to_non_nullable
 as List<RegimeIncompatibility>,
   ));
 }
@@ -168,7 +168,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( RegimeCode code,  String name, @JsonKey(name: 'person_type')  PersonType personType,  Treatment treatment, @JsonKey(includeIfNull: true)  String? explanation, @JsonKey(name: 'option_defs')  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs')  List<String> requiredInputs, @JsonKey(name: 'incompatible_with')  List<RegimeIncompatibility> incompatibleWith)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( RegimeCode code,  String name, @JsonKey(name: 'person_type')  PersonType personType,  Treatment treatment, @JsonKey(includeIfNull: true)  String? explanation, @JsonKey(name: 'option_defs')  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs')  List<TaxInputDef> requiredInputs, @JsonKey(name: 'incompatible_with')  List<RegimeIncompatibility> incompatibleWith)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Regime() when $default != null:
 return $default(_that.code,_that.name,_that.personType,_that.treatment,_that.explanation,_that.optionDefs,_that.requiredInputs,_that.incompatibleWith);case _:
@@ -189,7 +189,7 @@ return $default(_that.code,_that.name,_that.personType,_that.treatment,_that.exp
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( RegimeCode code,  String name, @JsonKey(name: 'person_type')  PersonType personType,  Treatment treatment, @JsonKey(includeIfNull: true)  String? explanation, @JsonKey(name: 'option_defs')  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs')  List<String> requiredInputs, @JsonKey(name: 'incompatible_with')  List<RegimeIncompatibility> incompatibleWith)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( RegimeCode code,  String name, @JsonKey(name: 'person_type')  PersonType personType,  Treatment treatment, @JsonKey(includeIfNull: true)  String? explanation, @JsonKey(name: 'option_defs')  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs')  List<TaxInputDef> requiredInputs, @JsonKey(name: 'incompatible_with')  List<RegimeIncompatibility> incompatibleWith)  $default,) {final _that = this;
 switch (_that) {
 case _Regime():
 return $default(_that.code,_that.name,_that.personType,_that.treatment,_that.explanation,_that.optionDefs,_that.requiredInputs,_that.incompatibleWith);case _:
@@ -209,7 +209,7 @@ return $default(_that.code,_that.name,_that.personType,_that.treatment,_that.exp
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( RegimeCode code,  String name, @JsonKey(name: 'person_type')  PersonType personType,  Treatment treatment, @JsonKey(includeIfNull: true)  String? explanation, @JsonKey(name: 'option_defs')  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs')  List<String> requiredInputs, @JsonKey(name: 'incompatible_with')  List<RegimeIncompatibility> incompatibleWith)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( RegimeCode code,  String name, @JsonKey(name: 'person_type')  PersonType personType,  Treatment treatment, @JsonKey(includeIfNull: true)  String? explanation, @JsonKey(name: 'option_defs')  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs')  List<TaxInputDef> requiredInputs, @JsonKey(name: 'incompatible_with')  List<RegimeIncompatibility> incompatibleWith)?  $default,) {final _that = this;
 switch (_that) {
 case _Regime() when $default != null:
 return $default(_that.code,_that.name,_that.personType,_that.treatment,_that.explanation,_that.optionDefs,_that.requiredInputs,_that.incompatibleWith);case _:
@@ -224,7 +224,7 @@ return $default(_that.code,_that.name,_that.personType,_that.treatment,_that.exp
 @JsonSerializable()
 
 class _Regime implements Regime {
-  const _Regime({required this.code, required this.name, @JsonKey(name: 'person_type') required this.personType, required this.treatment, @JsonKey(includeIfNull: true) required this.explanation, @JsonKey(name: 'option_defs') required  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs') required  List<String> requiredInputs, @JsonKey(name: 'incompatible_with') required  List<RegimeIncompatibility> incompatibleWith}): _optionDefs = optionDefs,_requiredInputs = requiredInputs,_incompatibleWith = incompatibleWith;
+  const _Regime({required this.code, required this.name, @JsonKey(name: 'person_type') required this.personType, required this.treatment, @JsonKey(includeIfNull: true) required this.explanation, @JsonKey(name: 'option_defs') required  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs') required  List<TaxInputDef> requiredInputs, @JsonKey(name: 'incompatible_with') required  List<RegimeIncompatibility> incompatibleWith}): _optionDefs = optionDefs,_requiredInputs = requiredInputs,_incompatibleWith = incompatibleWith;
   factory _Regime.fromJson(Map<String, dynamic> json) => _$RegimeFromJson(json);
 
 @override final  RegimeCode code;
@@ -240,10 +240,10 @@ class _Regime implements Regime {
   return EqualUnmodifiableListView(_optionDefs);
 }
 
-/// Per-fiscal-year tax-input keys the estimate needs (see `TaxInputs`, M5); not options.
- final  List<String> _requiredInputs;
-/// Per-fiscal-year tax-input keys the estimate needs (see `TaxInputs`, M5); not options.
-@override@JsonKey(name: 'required_inputs') List<String> get requiredInputs {
+/// Per-fiscal-year tax inputs the estimate needs (`PUT …/tax-inputs`, M5); not options. Exactly the stored `regimes.required_inputs` (CHECK `regime_required_inputs_valid`).
+ final  List<TaxInputDef> _requiredInputs;
+/// Per-fiscal-year tax inputs the estimate needs (`PUT …/tax-inputs`, M5); not options. Exactly the stored `regimes.required_inputs` (CHECK `regime_required_inputs_valid`).
+@override@JsonKey(name: 'required_inputs') List<TaxInputDef> get requiredInputs {
   if (_requiredInputs is EqualUnmodifiableListView) return _requiredInputs;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_requiredInputs);
@@ -292,7 +292,7 @@ abstract mixin class _$RegimeCopyWith<$Res> implements $RegimeCopyWith<$Res> {
   factory _$RegimeCopyWith(_Regime value, $Res Function(_Regime) _then) = __$RegimeCopyWithImpl;
 @override @useResult
 $Res call({
- RegimeCode code, String name,@JsonKey(name: 'person_type') PersonType personType, Treatment treatment,@JsonKey(includeIfNull: true) String? explanation,@JsonKey(name: 'option_defs') List<RegimeOptionDef> optionDefs,@JsonKey(name: 'required_inputs') List<String> requiredInputs,@JsonKey(name: 'incompatible_with') List<RegimeIncompatibility> incompatibleWith
+ RegimeCode code, String name,@JsonKey(name: 'person_type') PersonType personType, Treatment treatment,@JsonKey(includeIfNull: true) String? explanation,@JsonKey(name: 'option_defs') List<RegimeOptionDef> optionDefs,@JsonKey(name: 'required_inputs') List<TaxInputDef> requiredInputs,@JsonKey(name: 'incompatible_with') List<RegimeIncompatibility> incompatibleWith
 });
 
 
@@ -318,7 +318,7 @@ as PersonType,treatment: null == treatment ? _self.treatment : treatment // igno
 as Treatment,explanation: freezed == explanation ? _self.explanation : explanation // ignore: cast_nullable_to_non_nullable
 as String?,optionDefs: null == optionDefs ? _self._optionDefs : optionDefs // ignore: cast_nullable_to_non_nullable
 as List<RegimeOptionDef>,requiredInputs: null == requiredInputs ? _self._requiredInputs : requiredInputs // ignore: cast_nullable_to_non_nullable
-as List<String>,incompatibleWith: null == incompatibleWith ? _self._incompatibleWith : incompatibleWith // ignore: cast_nullable_to_non_nullable
+as List<TaxInputDef>,incompatibleWith: null == incompatibleWith ? _self._incompatibleWith : incompatibleWith // ignore: cast_nullable_to_non_nullable
 as List<RegimeIncompatibility>,
   ));
 }

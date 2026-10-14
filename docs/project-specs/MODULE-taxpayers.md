@@ -118,10 +118,14 @@ Informational/partial regimes show their plain-language `explanation` at selecti
 - Two regimes conflict only if their **period windows overlap** (`[start_period, end_period]`,
   open end = ∞). A RESICO PF that exits to 612 from the next month (113-E) is therefore valid:
   626 ends `2026-06`, 612 starts `2026-07`.
-- `regime_compatibility` stores **disallowed pairs** with a `reason` (shown to the user);
-  normalized `regime_a < regime_b`; an absent pair = allowed. A catalog test asserts
-  normalization, that every code exists for that person type, and that every reason is
-  non-empty. Initial seed (⚠️ CPA review before launch, OQ-6):
+- `regime_compatibility` is the **complete matrix** (M2-02): one row per unordered pair of
+  the same person type (`regime_a < regime_b`) with `allowed` and a `reason` (shown to the
+  user). `allowed = false` → `422 invalid_regime_combination`. A pair whose verdict is not
+  verified (`needs_cpa_review`) is **always allowed** (DB CHECK) and the write answers with
+  the non-blocking warning `regime_combination_needs_cpa_review` (field
+  `regimes.N.regime_code` on create, `regime_code` on add regime; `message` = `reason`).
+  A catalog test asserts normalization, that every code exists for that person type, and
+  that every reason is non-empty. Initial seed (⚠️ CPA review before launch, OQ-6):
 
 | Person type | Pair(s) | Reason (basis) |
 |---|---|---|
@@ -315,6 +319,8 @@ Informational/partial regimes show their plain-language `explanation` at selecti
 
 No new `ErrorCode` values are needed; detail codes are added to the contract descriptions in M2-01.
 A check-digit mismatch is not an error: `Taxpayer.warnings` carries `rfc_check_digit_mismatch` (D-RFC).
+An overlapping regime pair still under CPA review is not an error either: `Taxpayer.warnings`
+(create) or `TaxpayerRegime.warnings` (add regime) carries `regime_combination_needs_cpa_review` (§2.5).
 
 ## 5. Security requirements (gate M2-14)
 

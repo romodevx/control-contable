@@ -10,7 +10,7 @@ import 'regime_option_def_type.dart';
 part 'regime_option_def.freezed.dart';
 part 'regime_option_def.g.dart';
 
-/// One per-regime option (`regimes.option_defs`, data not code). `enum` takes one of `allowed_values`; `multi_enum` takes a non-empty array of distinct `allowed_values`; `boolean` takes `true`/`false`; `rate` takes a decimal string (`DecimalRate`, 0.16 = 16%) within `[min, max]`. An omitted option with a `default` is filled server-side; a `required` option with `default: null` must be sent.
+/// One per-regime option (`regimes.option_defs`, data not code). `enum` takes one of `allowed_values`; `multi_enum` takes a non-empty array of distinct `allowed_values`; `boolean` takes `true`/`false`; `rate` takes a decimal string (`DecimalRate`, 0.16 = 16%) within `[min, max]`; both bounds are always present for `rate` and absent for every other type. An omitted option with a `default` is filled server-side; a `required` option with `default: null` must be sent. The shape is exactly the stored `regimes.option_defs` element (its CHECK `regime_option_defs_valid` enforces it).
 @Freezed()
 abstract class RegimeOptionDef with _$RegimeOptionDef {
   const factory RegimeOptionDef({

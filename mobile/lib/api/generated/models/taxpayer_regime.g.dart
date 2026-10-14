@@ -14,6 +14,9 @@ _TaxpayerRegime _$TaxpayerRegimeFromJson(Map<String, dynamic> json) =>
       options: json['options'] as Map<String, dynamic>,
       startPeriod: json['start_period'] as String,
       endPeriod: json['end_period'] as String?,
+      warnings: (json['warnings'] as List<dynamic>?)
+          ?.map((e) => Warning.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
 
 Map<String, dynamic> _$TaxpayerRegimeToJson(_TaxpayerRegime instance) =>
@@ -24,6 +27,7 @@ Map<String, dynamic> _$TaxpayerRegimeToJson(_TaxpayerRegime instance) =>
       'options': instance.options,
       'start_period': instance.startPeriod,
       'end_period': instance.endPeriod,
+      'warnings': ?instance.warnings,
     };
 
 const _$TreatmentEnumMap = {

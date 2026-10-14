@@ -28,7 +28,7 @@ abstract class Taxpayer with _$Taxpayer {
     required DateTime? archivedAt,
     @JsonKey(name: 'created_at') required DateTime createdAt,
 
-    /// Non-blocking notices about the input just written. Present only on `createTaxpayer` (201 and 200) and `updateTaxpayer` responses, and only when non-empty; never stored, never on reads.
+    /// Non-blocking notices about the input just written (`rfc_check_digit_mismatch`, `regime_combination_needs_cpa_review`). Present only on `createTaxpayer` (201 and 200) and `updateTaxpayer` responses, and only when non-empty; never stored, never on reads.
     @JsonKey(includeIfNull: false) List<Warning>? warnings,
   }) = _Taxpayer;
 

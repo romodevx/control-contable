@@ -16,7 +16,7 @@ _Regime _$RegimeFromJson(Map<String, dynamic> json) => _Regime(
       .map((e) => RegimeOptionDef.fromJson(e as Map<String, dynamic>))
       .toList(),
   requiredInputs: (json['required_inputs'] as List<dynamic>)
-      .map((e) => e as String)
+      .map((e) => TaxInputDef.fromJson(e as Map<String, dynamic>))
       .toList(),
   incompatibleWith: (json['incompatible_with'] as List<dynamic>)
       .map((e) => RegimeIncompatibility.fromJson(e as Map<String, dynamic>))

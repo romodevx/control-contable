@@ -566,7 +566,7 @@ paths:
     post:
       tags: [Taxpayers]
       operationId: createTaxpayer
-      x-frozen: sha256:f0a85c0d5280017b07327b2791f765f18df76e485142b14bc9edd2729ca1a346
+      x-frozen: sha256:cbdea1b229bfdf0165e0af312527f456d5ca051935a4f407d3e3bd81cf69033a
       summary: Create a taxpayer with its regimes and options in one transaction (onboarding)
       description: >-
         Onboarding order (OD-3): person type, then RFC and display name, then regimes, then
@@ -600,6 +600,13 @@ paths:
         body); `regimes.N.options.<key>` → `unknown_option`, `invalid_option`, `required`;
         `regimes.N.start_period` → `out_of_range` (allowed `2022-01` … the current month,
         America/Mexico_City).
+
+
+        Regime compatibility (`regime_compatibility`): an overlapping pair the catalog marks
+        not allowed answers `422 invalid_regime_combination`; an overlapping pair whose
+        verdict still needs CPA review is allowed and the response carries one warning per
+        such pair, `{code: regime_combination_needs_cpa_review, field: regimes.N.regime_code}`
+        (N = the later of the two in the body), with the pair's `reason` as `message`.
       x-module: module_taxpayers
       security:
         - bearerAuth: []
@@ -634,7 +641,9 @@ paths:
                       options: { iva_fully_taxable: true }
       responses:
         '201':
-          description: Created (with `warnings` when the RFC check digit does not match).
+          description: >-
+            Created (with `warnings` when the RFC check digit does not match or a regime pair
+            still needs CPA review).
           headers:
             Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
@@ -665,7 +674,7 @@ paths:
                     rfc_masked: GOMA******AB3
                     regimes:
                       - regime_code: '612'
-                        name: Actividad Empresarial y Profesional
+                        name: Personas Físicas con Actividades Empresariales y Profesionales
                         treatment: full
                         options: { iva_fully_taxable: true }
                         start_period: '2026-01'
@@ -938,7 +947,7 @@ paths:
     post:
       tags: [Taxpayers]
       operationId: addTaxpayerRegime
-      x-frozen: sha256:b1f6f33896a83d54e4ae7b1de7160a6a5b15fb96f75cd7b9e1cc50a249953ec4
+      x-frozen: sha256:900e976ca22b0db38039b719dfec9e15255b345e13d6c93a6675c42eb06bee96
       summary: Add a regime to a taxpayer (or reopen an ended one)
       description: >-
         `start_period` defaults to the current month (America/Mexico_City); allowed
@@ -948,7 +957,10 @@ paths:
         in the catalog for the taxpayer's person type answers `400` (`regime_code` /
         `not_for_person_type`). A regime whose period window overlaps an incompatible one
         answers `422 invalid_regime_combination`; regimes that do not overlap in time never
-        conflict. Adding a regime that is already active answers `409 conflict`; adding an
+        conflict; an overlapping pair whose compatibility still needs CPA review is allowed
+        and the response carries the warning `{code: regime_combination_needs_cpa_review,
+        field: regime_code}` (one per such pair, `message` = the pair's `reason`). Adding a
+        regime that is already active answers `409 conflict`; adding an
         ended one reopens it (`end_period` cleared, original `start_period` kept, body
         options applied) and answers `201`. A read-only user gets `402`; an archived taxpayer
         `422 business_rule_violation` (`taxpayer_archived`).
@@ -962,12 +974,34 @@ paths:
             schema: { $ref: '#/components/schemas/TaxpayerRegimeCreate' }
       responses:
         '201':
-          description: Added (or reopened).
+          description: Added (or reopened); `warnings` when a regime pair still needs CPA review.
           headers:
             Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/TaxpayerRegime' }
+              examples:
+                added:
+                  value:
+                    regime_code: '606'
+                    name: Arrendamiento
+                    treatment: full
+                    options: { deduction_mode: blind_35 }
+                    start_period: '2026-01'
+                    end_period: null
+                pairNeedsCpaReview:
+                  summary: Allowed; the pair's compatibility is not yet verified, so the app shows the reason
+                  value:
+                    regime_code: '607'
+                    name: Régimen de Enajenación o Adquisición de Bienes
+                    treatment: informational
+                    options: {}
+                    start_period: '2026-10'
+                    end_period: null
+                    warnings:
+                      - code: regime_combination_needs_cpa_review
+                        field: regime_code
+                        message: Esta combinación de regímenes está pendiente de revisión por un contador; verifícala con tu contador.
         '400':
           description: Input does not match the contract, or a regime, option or period rule.
           content:
@@ -2271,17 +2305,19 @@ components:
 
     # ------------------------------------------------------------ taxpayers
     RegimeOptionDef:
-      x-frozen: sha256:292ada6777634d1983fd825ec081c584a6de839b220ab5a103a1a1f0cd8b9651
+      x-frozen: sha256:9ebe84365f3228b32dcccc873d35a7c2db344d452f30e854755679efd5ddb50b
       type: object
       required: [key, label, type, required]
       description: >-
         One per-regime option (`regimes.option_defs`, data not code). `enum` takes one of
         `allowed_values`; `multi_enum` takes a non-empty array of distinct `allowed_values`;
         `boolean` takes `true`/`false`; `rate` takes a decimal string (`DecimalRate`, 0.16 =
-        16%) within `[min, max]`. An omitted option with a `default` is filled server-side; a
-        `required` option with `default: null` must be sent.
+        16%) within `[min, max]`; both bounds are always present for `rate` and absent for
+        every other type. An omitted option with a `default` is filled server-side; a
+        `required` option with `default: null` must be sent. The shape is exactly the stored
+        `regimes.option_defs` element (its CHECK `regime_option_defs_valid` enforces it).
       properties:
-        key: { type: string, pattern: '^[a-z][a-z0-9_]{0,63}$', examples: [deduction_mode] }
+        key: { type: string, pattern: '^[a-z][a-z0-9]*(_[a-z0-9]+)*$', maxLength: 64, examples: [deduction_mode] }
         label: { type: string, description: Spanish label shown in the options form. }
         type: { type: string, enum: [enum, multi_enum, boolean, rate] }
         allowed_values:
@@ -2321,7 +2357,7 @@ components:
         - code: '612'
           reason: El RESICO sustituye al régimen de actividad empresarial y profesional (art. 113-E LISR).
     Regime:
-      x-frozen: sha256:0a6c8fe633378337f3d96d284d5cb40134d2d30126dd28799523084c0ab2ca5c
+      x-frozen: sha256:f60828e0154cea0d795463fbc903ee39ce770da26b609a1e404b592a154b2417
       type: object
       required: [code, name, person_type, treatment, explanation, option_defs, required_inputs, incompatible_with]
       description: >-
@@ -2341,8 +2377,11 @@ components:
           items: { $ref: '#/components/schemas/RegimeOptionDef' }
         required_inputs:
           type: array
-          items: { type: string, pattern: '^[a-z][a-z0-9_]{0,63}$' }
-          description: Per-fiscal-year tax-input keys the estimate needs (see `TaxInputs`, M5); not options.
+          items: { $ref: '#/components/schemas/TaxInputDef' }
+          description: >-
+            Per-fiscal-year tax inputs the estimate needs (`PUT …/tax-inputs`, M5); not
+            options. Exactly the stored `regimes.required_inputs` (CHECK
+            `regime_required_inputs_valid`).
         incompatible_with:
           type: array
           items: { $ref: '#/components/schemas/RegimeIncompatibility' }
@@ -2360,7 +2399,7 @@ components:
             - code: '612'
               reason: El RESICO sustituye al régimen de actividad empresarial y profesional (art. 113-E LISR).
     RegimeList:
-      x-frozen: sha256:b5f154e08e2dd863dcc4a947cb2c8626a91b103b55bf57ec85bfd5d717e19f17
+      x-frozen: sha256:e929dd388229d4119fb0a60cebb1a76d36ae67fea1958524b9297ada8ffee38b
       type: object
       required: [items]
       properties:
@@ -2386,7 +2425,7 @@ components:
                 - code: '626'
                   reason: El RESICO cubre los ingresos por arrendamiento (art. 113-E LISR).
             - code: '625'
-              name: Actividades a través de plataformas tecnológicas
+              name: Régimen de las Actividades Empresariales con ingresos a través de Plataformas Tecnológicas
               person_type: fisica
               treatment: full
               explanation: null
@@ -2435,7 +2474,7 @@ components:
       examples:
         - { deduction_mode: blind_35 }
     TaxpayerRegime:
-      x-frozen: sha256:d89ad93b0b6e1a1a7668aa18b46b346ffe26f43f721d03f4734d6a4893d0991a
+      x-frozen: sha256:e0e4054664ce458169711283e5a8235e7f34a3429dc27ab6a0f2a1a2b508ffc0
       type: object
       required: [regime_code, name, treatment, options, start_period, end_period]
       description: >-
@@ -2452,6 +2491,13 @@ components:
           oneOf:
             - $ref: '#/components/schemas/Period'
             - type: 'null'
+        warnings:
+          type: array
+          description: >-
+            Non-blocking notices about the regime just added. Present only on the
+            `addTaxpayerRegime` response, and only when non-empty; never stored, never on
+            reads or inside `Taxpayer.regimes`.
+          items: { $ref: '#/components/schemas/Warning' }
       examples:
         - regime_code: '606'
           name: Arrendamiento
@@ -2484,17 +2530,20 @@ components:
       examples:
         - options: { deduction_mode: actual }
     Warning:
-      x-frozen: sha256:93c7b8149df0efe186aed25e4f8f8883d9d557ca73c7e514a42fba05990d70b0
+      x-frozen: sha256:332c36045dc41d4d2bbd41e9d7633f0a204e758e6f4f64369de1a8fe21a6d27d
       type: object
       required: [code, field, message]
       description: >-
         A non-blocking notice: the write succeeded, the client should ask the user to
         double-check `field`. `code` is append-only (unknown codes: show `message`). Today:
-        `rfc_check_digit_mismatch` (D-RFC).
+        `rfc_check_digit_mismatch` on `rfc` (D-RFC); `regime_combination_needs_cpa_review` on
+        `regimes.N.regime_code` (create) or `regime_code` (add regime): the pair overlaps in
+        time and its compatibility is not yet verified by a CPA (`regime_compatibility.needs_cpa_review`),
+        so it is allowed and `message` carries the pair's `reason`.
       properties:
         code: { type: string, pattern: '^[a-z][a-z0-9_]{0,63}$', examples: [rfc_check_digit_mismatch] }
         field: { type: string, description: Same dotted naming as `FieldError.field`. }
-        message: { type: string, description: Safe to show; never contains the RFC. }
+        message: { type: string, description: Safe to show (es-MX); never contains the RFC. }
       examples:
         - code: rfc_check_digit_mismatch
           field: rfc
@@ -2513,7 +2562,7 @@ components:
         accepted with the warning `rfc_check_digit_mismatch`. Never echoed back.
       examples: [GOMA800101AB6]
     Taxpayer:
-      x-frozen: sha256:ef71939fae1e20fb486d6ef76ff003d7cf8aef997c2ae6959317012f79e6f804
+      x-frozen: sha256:56949cfe30b6876d1531ce2581affd135bdbe304dc3afdff801ebd3de600c457
       type: object
       required: [id, person_type, display_name, rfc_masked, regimes, archived_at, created_at]
       properties:
@@ -2535,9 +2584,10 @@ components:
         warnings:
           type: array
           description: >-
-            Non-blocking notices about the input just written. Present only on
-            `createTaxpayer` (201 and 200) and `updateTaxpayer` responses, and only when
-            non-empty; never stored, never on reads.
+            Non-blocking notices about the input just written (`rfc_check_digit_mismatch`,
+            `regime_combination_needs_cpa_review`). Present only on `createTaxpayer` (201 and
+            200) and `updateTaxpayer` responses, and only when non-empty; never stored, never
+            on reads.
           items: { $ref: '#/components/schemas/Warning' }
       examples:
         - id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
@@ -2552,7 +2602,7 @@ components:
               start_period: '2026-01'
               end_period: null
             - regime_code: '625'
-              name: Actividades a través de plataformas tecnológicas
+              name: Régimen de las Actividades Empresariales con ingresos a través de Plataformas Tecnológicas
               treatment: full
               options: { activities: [goods_services], definitive_option: false, rfc_given_to_platform: true }
               start_period: '2026-01'
@@ -2597,7 +2647,7 @@ components:
       examples:
         - display_name: Ana (negocio)
     TaxpayerList:
-      x-frozen: sha256:f7ed88145bda07058238541e8ff5c0b648147fef283aba0065173b583b741f15
+      x-frozen: sha256:6d4e7e51abe6e0a482d390d94223a28c687bcf7612e1236fe83ffa5aaca636cc
       type: object
       required: [items]
       properties:
@@ -2612,7 +2662,7 @@ components:
               rfc_masked: GOMA******AB6
               regimes:
                 - regime_code: '612'
-                  name: Actividad Empresarial y Profesional
+                  name: Personas Físicas con Actividades Empresariales y Profesionales
                   treatment: full
                   options: { iva_fully_taxable: true }
                   start_period: '2026-01'
@@ -3080,7 +3130,7 @@ components:
       type: object
       required: [key, label, kind, required]
       properties:
-        key: { type: string, examples: [coeficiente_utilidad] }
+        key: { type: string, pattern: '^[a-z][a-z0-9]*(_[a-z0-9]+)*$', maxLength: 64, examples: [coeficiente_utilidad] }
         label: { type: string }
         kind: { type: string, enum: [money, rate] }
         required: { type: boolean }

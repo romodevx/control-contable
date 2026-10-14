@@ -18,7 +18,7 @@ mixin _$Taxpayer {
 
  Uuid get id;@JsonKey(name: 'person_type') PersonType get personType;@JsonKey(name: 'display_name') String get displayName;/// Name part, six asterisks for the date, then homoclave and check digit (física `AAAA******XX9`, moral `AAA******XX9`). The full RFC is never returned.
 @JsonKey(name: 'rfc_masked') String get rfcMasked;/// Every regime the taxpayer holds or held (ended ones carry `end_period`), ordered by `start_period`, then code.
- List<TaxpayerRegime> get regimes;@JsonKey(includeIfNull: true, name: 'archived_at') DateTime? get archivedAt;@JsonKey(name: 'created_at') DateTime get createdAt;/// Non-blocking notices about the input just written. Present only on `createTaxpayer` (201 and 200) and `updateTaxpayer` responses, and only when non-empty; never stored, never on reads.
+ List<TaxpayerRegime> get regimes;@JsonKey(includeIfNull: true, name: 'archived_at') DateTime? get archivedAt;@JsonKey(name: 'created_at') DateTime get createdAt;/// Non-blocking notices about the input just written (`rfc_check_digit_mismatch`, `regime_combination_needs_cpa_review`). Present only on `createTaxpayer` (201 and 200) and `updateTaxpayer` responses, and only when non-empty; never stored, never on reads.
 @JsonKey(includeIfNull: false) List<Warning>? get warnings;
 /// Create a copy of Taxpayer
 /// with the given fields replaced by the non-null parameter values.
@@ -244,9 +244,9 @@ class _Taxpayer implements Taxpayer {
 
 @override@JsonKey(includeIfNull: true, name: 'archived_at') final  DateTime? archivedAt;
 @override@JsonKey(name: 'created_at') final  DateTime createdAt;
-/// Non-blocking notices about the input just written. Present only on `createTaxpayer` (201 and 200) and `updateTaxpayer` responses, and only when non-empty; never stored, never on reads.
+/// Non-blocking notices about the input just written (`rfc_check_digit_mismatch`, `regime_combination_needs_cpa_review`). Present only on `createTaxpayer` (201 and 200) and `updateTaxpayer` responses, and only when non-empty; never stored, never on reads.
  final  List<Warning>? _warnings;
-/// Non-blocking notices about the input just written. Present only on `createTaxpayer` (201 and 200) and `updateTaxpayer` responses, and only when non-empty; never stored, never on reads.
+/// Non-blocking notices about the input just written (`rfc_check_digit_mismatch`, `regime_combination_needs_cpa_review`). Present only on `createTaxpayer` (201 and 200) and `updateTaxpayer` responses, and only when non-empty; never stored, never on reads.
 @override@JsonKey(includeIfNull: false) List<Warning>? get warnings {
   final value = _warnings;
   if (value == null) return null;

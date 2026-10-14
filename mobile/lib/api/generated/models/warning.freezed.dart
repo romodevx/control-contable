@@ -17,7 +17,7 @@ T _$identity<T>(T value) => value;
 mixin _$Warning {
 
  String get code;/// Same dotted naming as `FieldError.field`.
- String get field;/// Safe to show; never contains the RFC.
+ String get field;/// Safe to show (es-MX); never contains the RFC.
  String get message;
 /// Create a copy of Warning
 /// with the given fields replaced by the non-null parameter values.
@@ -225,7 +225,7 @@ class _Warning implements Warning {
 @override final  String code;
 /// Same dotted naming as `FieldError.field`.
 @override final  String field;
-/// Safe to show; never contains the RFC.
+/// Safe to show (es-MX); never contains the RFC.
 @override final  String message;
 
 /// Create a copy of Warning

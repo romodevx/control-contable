@@ -8,6 +8,7 @@ import 'person_type.dart';
 import 'regime_code.dart';
 import 'regime_incompatibility.dart';
 import 'regime_option_def.dart';
+import 'tax_input_def.dart';
 import 'treatment.dart';
 
 part 'regime.freezed.dart';
@@ -26,8 +27,8 @@ abstract class Regime with _$Regime {
     @JsonKey(includeIfNull: true) required String? explanation,
     @JsonKey(name: 'option_defs') required List<RegimeOptionDef> optionDefs,
 
-    /// Per-fiscal-year tax-input keys the estimate needs (see `TaxInputs`, M5); not options.
-    @JsonKey(name: 'required_inputs') required List<String> requiredInputs,
+    /// Per-fiscal-year tax inputs the estimate needs (`PUT …/tax-inputs`, M5); not options. Exactly the stored `regimes.required_inputs` (CHECK `regime_required_inputs_valid`).
+    @JsonKey(name: 'required_inputs') required List<TaxInputDef> requiredInputs,
     @JsonKey(name: 'incompatible_with')
     required List<RegimeIncompatibility> incompatibleWith,
   }) = _Regime;

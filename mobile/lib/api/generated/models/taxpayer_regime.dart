@@ -8,6 +8,7 @@ import 'period.dart';
 import 'regime_code.dart';
 import 'regime_options.dart';
 import 'treatment.dart';
+import 'warning.dart';
 
 part 'taxpayer_regime.freezed.dart';
 part 'taxpayer_regime.g.dart';
@@ -23,6 +24,9 @@ abstract class TaxpayerRegime with _$TaxpayerRegime {
     @JsonKey(name: 'start_period') required Period startPeriod,
     @JsonKey(includeIfNull: true, name: 'end_period')
     required Period? endPeriod,
+
+    /// Non-blocking notices about the regime just added. Present only on the `addTaxpayerRegime` response, and only when non-empty; never stored, never on reads or inside `Taxpayer.regimes`.
+    @JsonKey(includeIfNull: false) List<Warning>? warnings,
   }) = _TaxpayerRegime;
 
   factory TaxpayerRegime.fromJson(Map<String, Object?> json) =>
