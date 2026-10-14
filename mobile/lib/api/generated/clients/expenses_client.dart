@@ -91,7 +91,7 @@ abstract class ExpensesClient {
 
   /// Undo a delete (never consumes a trial slot).
   ///
-  /// As `restoreIncome`: clears `deleted_at` without consuming a trial slot (Undo works at 5/5), read-only check only (`402`), regime window re-checked (`422 regime_not_active`), archived taxpayer `422 taxpayer_archived`, a live expense `200` unchanged, a purged one `404`. `deductible` is not recomputed; `warnings` are computed as on create.
+  /// As `restoreIncome`: clears `deleted_at` without consuming a trial slot (Undo works at 5/5), allowed for a read-only user (never `402`, 0.6.1), regime window re-checked (`422 regime_not_active`), archived taxpayer `422 taxpayer_archived`, a live expense `200` unchanged, a purged one or another user's `404`. `deductible` is not recomputed; `warnings` are computed as on create.
   @POST('/v1/taxpayers/{taxpayerId}/expenses/{expenseId}/restore')
   Future<Expense> restoreExpense({
     @Path('taxpayerId') required Uuid taxpayerId,

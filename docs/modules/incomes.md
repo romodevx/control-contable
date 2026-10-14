@@ -71,7 +71,6 @@ it by hand. CI (`make api-error-tables-check`) fails when it differs from `opena
 | `deleteIncome` | `DELETE /v1/taxpayers/{taxpayerId}/incomes/{incomeId}` | 500 | `internal_error` | Unexpected server error. |
 | `restoreIncome` | `POST /v1/taxpayers/{taxpayerId}/incomes/{incomeId}/restore` | 400 | `validation_failed` | Input does not match the contract (query parameter, path or body). |
 | `restoreIncome` | `POST /v1/taxpayers/{taxpayerId}/incomes/{incomeId}/restore` | 401 | `unauthorized` | Missing, invalid or expired credentials. |
-| `restoreIncome` | `POST /v1/taxpayers/{taxpayerId}/incomes/{incomeId}/restore` | 402 | `entitlement_required` | Read-only access (trial over, no active plan). Never a trial-cap refusal. |
 | `restoreIncome` | `POST /v1/taxpayers/{taxpayerId}/incomes/{incomeId}/restore` | 404 | `not_found` | The taxpayer or record does not exist, belongs to another user, is deleted or purged, its id is malformed, or the module is disabled (indistinguishable on purpose). |
 | `restoreIncome` | `POST /v1/taxpayers/{taxpayerId}/incomes/{incomeId}/restore` | 422 | `business_rule_violation` | The regime no longer covers the record's dates (`regime_not_active`), or the taxpayer is archived (`taxpayer_archived`). |
 | `restoreIncome` | `POST /v1/taxpayers/{taxpayerId}/incomes/{incomeId}/restore` | 429 | `rate_limited` | Rate limit exceeded. |

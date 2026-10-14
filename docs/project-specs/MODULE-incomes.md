@@ -154,16 +154,19 @@ Applicability is decided by the taxpayer's person type, the regime and `counterp
 
 - `DELETE` sets `deleted_at` (soft). The income leaves lists, totals, `LedgerReader` and
   `LatestRecordPeriod` at once. `204`; deleting an already-deleted income is `204` (idempotent).
-- `POST …/restore` clears `deleted_at` after re-running §2.4 and the read-only check.
+- `POST …/restore` clears `deleted_at` after re-running §2.4. **DECIDED (coordinator,
+  2026-10-14; contract 0.6.1): a read-only user may restore (Undo) their own deleted records**:
+  no access check runs and restore never answers `402` (it gives back the user's own record
+  and creates nothing). Another user's record stays `404`.
   **DECIDED (coordinator, 2026-10-13): restore never consumes a trial slot.** The slot was
   consumed once at creation and never freed, so the restored record never left the count:
   Undo works at 5/5 with no paywall. Restoring a live income is `200` (no-op). After the 30-day
   purge (M9-08) → `404`.
 - **Backend requirement (M3-05/M4-05):** P0-16 `access` currently documents "restoring a deleted
   record reserves a slot like a create". The restore use cases must **not** call
-  `ReserveRecord` (no `user_usage` bump), and the `access` package doc/tests are amended so
-  restore is a read-only check only (`ErrReadOnly`), never `ErrTrialCapReached`. Test: at 5/5,
-  delete + restore → `200` and `incomes_created` stays 5.
+  `ReserveRecord` (no `user_usage` bump) and run no access check (amended 2026-10-14: not even
+  `ErrReadOnly`). Tests: at 5/5, delete + restore → `200` and `incomes_created` stays 5;
+  read-only, delete + restore → `200`.
 - `GET` of a soft-deleted income → `404`.
 - On an **archived taxpayer**, delete and restore are refused (`422 taxpayer_archived`): archive
   freezes the data (OQ-5).
@@ -192,7 +195,7 @@ Warnings are computed per write, not stored, and never echo the UUID or the desc
 |---|---|---|---|---|
 | list, get, defaults | ✓ | ✓ | ✓ | ✓ |
 | create | ✓ (uses a slot) | `402` `incomes_remaining` | `402` | ✓ |
-| restore a deleted income | ✓ (no slot) | ✓ (no slot) | `402` | ✓ |
+| restore a deleted income | ✓ (no slot) | ✓ (no slot) | ✓ (no slot) | ✓ |
 | edit | ✓ | ✓ | `402` | ✓ |
 | delete | ✓ | ✓ | ✓ | ✓ |
 
@@ -275,8 +278,8 @@ Warnings are computed per write, not stored, and never echo the UUID or the desc
   incomes_remaining`, `code = trial_cap_reached`; **when** they create an expense, **then** `201`.
 - **Given** 4/5 and 3 concurrent creates, **then** exactly one `201` and two `402`
   (integration test, real PostgreSQL, `synctest`/goroutines).
-- **Given** a read-only user, **when** they list or delete, **then** it works; **when** they
-  create, edit or restore, **then** `402` and nothing changes.
+- **Given** a read-only user, **when** they list, delete or restore (Undo) their own income,
+  **then** it works; **when** they create or edit, **then** `402` and nothing changes.
 
 ### US-I6 Isolation and archive
 - **Given** user B's taxpayer or income id, **when** user A calls any M3 endpoint with it,
@@ -295,7 +298,7 @@ Warnings are computed per write, not stored, and never echo the UUID or the desc
 | Date in the future or before 2022-01-01 | 400 | `validation_failed` | `out_of_range` |
 | `platform_activity` on a non-625 income | 400 | `validation_failed` | `not_for_regime` |
 | Missing/invalid session | 401 | `unauthorized` | |
-| Read-only user (create, edit, restore) | 402 | `entitlement_required` | |
+| Read-only user (create, edit; never restore) | 402 | `entitlement_required` | |
 | Trial cap spent (create only; never restore) | 402 | `entitlement_required` | `trial_cap_reached` (field `incomes_remaining`) |
 | Flag OFF (or `module_taxpayers` OFF), foreign/unknown taxpayer or income, purged income, malformed path id | 404 | `not_found` | |
 | `id` reused with other content / other taxpayer / deleted; foreign `id` | 409 | `conflict` | `id_reused` (caller's only) |

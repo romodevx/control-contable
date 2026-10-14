@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Control Contable API
-  version: 0.6.0
+  version: 0.6.1
   summary: Monthly IVA and provisional ISR estimates for Mexican taxpayers.
   description: |
     Spec-first contract (single source of truth). Server stubs (oapi-codegen),
@@ -1722,15 +1722,17 @@ paths:
     post:
       tags: [Incomes]
       operationId: restoreIncome
-      x-frozen: sha256:4ec6aab1542fd898db80cb5876aa2df84154306a667c081b79d55e338ce03206
+      x-frozen: sha256:7cedebf6a7b4a7114a46b2e1b9fc26fdb5470372f6d3837289a8d819107f66a3
       summary: Undo a delete (never consumes a trial slot)
       description: >-
         Clears `deleted_at`. **Never consumes a trial slot**: the slot was used once at
-        creation and never freed, so Undo works at 5/5 with no paywall. Only the read-only
-        check applies (`402` without `details`). The regime window is re-checked
+        creation and never freed, so Undo works at 5/5 with no paywall. **Allowed for a
+        read-only user** (no access check, never `402`): Undo gives back the user's own record
+        and creates nothing (0.6.1, MODULE-incomes §2.7). The regime window is re-checked
         (`422 regime_not_active` when the regime no longer covers the income's dates); an
         archived taxpayer answers `422 taxpayer_archived`. Restoring a live income answers
-        `200` unchanged; a purged one `404`. `warnings` are computed as on create.
+        `200` unchanged; a purged one, or another user's, `404`. `warnings` are computed as on
+        create.
       x-module: module_incomes
       security:
         - bearerAuth: []
@@ -1744,7 +1746,6 @@ paths:
               schema: { $ref: '#/components/schemas/Income' }
         '400': { $ref: '#/components/responses/RecordBadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '402': { $ref: '#/components/responses/RecordReadOnly' }
         '404': { $ref: '#/components/responses/RecordNotFound' }
         '422': { $ref: '#/components/responses/RecordRestoreRefused' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
@@ -2181,13 +2182,14 @@ paths:
     post:
       tags: [Expenses]
       operationId: restoreExpense
-      x-frozen: sha256:923da02d2c138a33a89d0cf8b751919b711fad0bb8c73ae5c018e5086996a7a7
+      x-frozen: sha256:42d3e633e71eb891a52a9f212d7e15df31aac0408c4c0d1c07a73012bb572f4c
       summary: Undo a delete (never consumes a trial slot)
       description: >-
         As `restoreIncome`: clears `deleted_at` without consuming a trial slot (Undo works at
-        5/5), read-only check only (`402`), regime window re-checked (`422 regime_not_active`),
-        archived taxpayer `422 taxpayer_archived`, a live expense `200` unchanged, a purged one
-        `404`. `deductible` is not recomputed; `warnings` are computed as on create.
+        5/5), allowed for a read-only user (never `402`, 0.6.1), regime window re-checked
+        (`422 regime_not_active`), archived taxpayer `422 taxpayer_archived`, a live expense
+        `200` unchanged, a purged one or another user's `404`. `deductible` is not recomputed;
+        `warnings` are computed as on create.
       x-module: module_expenses
       security:
         - bearerAuth: []
@@ -2201,7 +2203,6 @@ paths:
               schema: { $ref: '#/components/schemas/Expense' }
         '400': { $ref: '#/components/responses/RecordBadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '402': { $ref: '#/components/responses/RecordReadOnly' }
         '404': { $ref: '#/components/responses/RecordNotFound' }
         '422': { $ref: '#/components/responses/RecordRestoreRefused' }
         '429': { $ref: '#/components/responses/TooManyRequests' }

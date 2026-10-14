@@ -224,7 +224,8 @@ the next contract bump). Each carries `field` (contract change: align
   expense, **then** `402` with `details[0].field = expenses_remaining`; **when** they create an
   income, **then** `201` (independent caps).
 - **Given** 4/5 and 3 concurrent creates, **then** exactly one `201`.
-- Read-only: list/get/categories/delete ✓; create/edit/restore `402`.
+- Read-only: list/get/categories/delete/restore ✓; create/edit `402` (restore: M3 §2.7, DECIDED
+  2026-10-14, contract 0.6.1).
 
 ### US-E4 Isolation, archive, flag
 - Foreign ids → `404`; archived taxpayer → reads ✓, writes `422 taxpayer_archived`.

@@ -1,7 +1,7 @@
 // Integration test against the Prism mock (`make mock`; see
 // docs/runbooks/mock-server.md): the income calls of M3-08/M3-09 (list,
 // defaults, create, delete, restore) through the generated client and the
-// app's own interceptor, validated by the frozen contract (0.6.0). Runs
+// app's own interceptor, validated by the frozen contract (0.6.1). Runs
 // only when MOCK_API_URL is set: `make mobile-test-mock`.
 @Tags(['mock'])
 library;
