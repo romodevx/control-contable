@@ -36,8 +36,14 @@
 --                   per-user uniqueness key; including user_id keeps the same RFC of two
 --                   users unlinkable.
 --   * rfc_masked    the only form ever returned (S-3): PF AAAA******XX9, PM AAA******XX9.
--- The RFC itself is validated in the domain (M2-04: length, date, módulo 11 check digit,
--- generic RFCs refused) before it reaches this table, so every stored RFC is valid.
+--   * rfc_check_digit_valid  whether the SAT módulo 11 check digit matched. A mismatch is
+--                   ACCEPTED (D-RFC: ~1.5% of real SAT-issued RFCs fail the published
+--                   algorithm) and answered with the non-blocking rfc_check_digit_mismatch
+--                   warning, so a stored RFC is NOT necessarily check-digit valid. No
+--                   default: every write of the RFC states the verdict. The warning itself
+--                   is still never stored nor returned on reads (contract 0.4.0).
+-- The domain (M2-04) rejects bad length, alphabet, date and the generic RFCs before the
+-- RFC reaches this table; the check digit is the one rule it only reports.
 -- ---------------------------------------------------------------------------------------
 CREATE TABLE taxpayers (
   id            uuid        PRIMARY KEY DEFAULT uuidv7(),
@@ -48,6 +54,7 @@ CREATE TABLE taxpayers (
   rfc_key_id    smallint    NOT NULL,
   rfc_hash      bytea       NOT NULL,
   rfc_masked    text        NOT NULL,
+  rfc_check_digit_valid boolean NOT NULL,
   archived_at   timestamptz,
   created_at    timestamptz NOT NULL DEFAULT now(),
   updated_at    timestamptz NOT NULL DEFAULT now(),
@@ -86,6 +93,8 @@ COMMENT ON TABLE taxpayers IS
   'Taxpayers (RFCs) a user manages (RLS on user_id). RFC kept as AES-GCM ciphertext + HMAC blind index + mask.';
 COMMENT ON COLUMN taxpayers.rfc_encrypted IS
   'AES-256-GCM, crypto.Keyring frame. AAD = key_id || taxpayers.id || user_id (row binding, S-1).';
+COMMENT ON COLUMN taxpayers.rfc_check_digit_valid IS
+  'SAT módulo 11 check digit matched. false = accepted with the rfc_check_digit_mismatch warning (D-RFC).';
 COMMENT ON COLUMN taxpayers.person_type IS
   'fisica | moral. Immutable: no UPDATE grant, trigger taxpayers_forbid_identity_change.';
 
@@ -135,13 +144,15 @@ CREATE POLICY taxpayers_update_own ON taxpayers FOR UPDATE TO cc_app
 CREATE POLICY taxpayers_delete_own ON taxpayers FOR DELETE TO cc_app
   USING (user_id = (SELECT app_user_id()));
 -- INSERT names the id (S-1: the use case generates it before encrypting). UPDATE covers
--- rename, archive/unarchive and the RFC correction (OQ-1: the four rfc_* columns move
--- together; the use case re-validates, re-encrypts and re-hashes). Never person_type,
+-- rename, archive/unarchive and the RFC correction (OQ-1: the five rfc_* columns move
+-- together; the use case re-validates, re-encrypts, re-hashes and restates the check-digit
+-- verdict). Never person_type,
 -- user_id, id or the audit columns. cc_webhook and cc_worker get nothing.
 GRANT SELECT, DELETE ON taxpayers TO cc_app;
-GRANT INSERT (id, user_id, person_type, display_name, rfc_encrypted, rfc_key_id, rfc_hash, rfc_masked)
+GRANT INSERT (id, user_id, person_type, display_name, rfc_encrypted, rfc_key_id, rfc_hash, rfc_masked,
+              rfc_check_digit_valid)
   ON taxpayers TO cc_app;
-GRANT UPDATE (display_name, rfc_encrypted, rfc_key_id, rfc_hash, rfc_masked, archived_at)
+GRANT UPDATE (display_name, rfc_encrypted, rfc_key_id, rfc_hash, rfc_masked, rfc_check_digit_valid, archived_at)
   ON taxpayers TO cc_app;
 
 -- ---------------------------------------------------------------------------------------
@@ -253,7 +264,9 @@ COMMENT ON TABLE taxpayer_regimes IS
 -- data (regime_compatibility), not a property of the row. So the trigger first locks the
 -- parent taxpayer (FOR NO KEY UPDATE: serializes regime writes of one taxpayer without
 -- blocking FK checks), then looks for a clash with a fresh READ COMMITTED snapshot, so
--- two concurrent adds of 612 and 626 cannot both pass. SECURITY INVOKER: it sees only the
+-- two concurrent adds of 612 and 626 cannot both pass. REPEATABLE READ is refused (25000),
+-- as in taxpayer_count_for_create(): its snapshot predates the wait for the lock, so it
+-- would miss a clashing regime committed meanwhile; SERIALIZABLE (SSI) is safe. SECURITY INVOKER: it sees only the
 -- caller's rows (RLS), so it can neither leak nor be fooled by another user's data.
 -- No EXECUTE grant: checked at CREATE TRIGGER time.
 -- +goose StatementBegin
@@ -265,6 +278,11 @@ DECLARE
   clash_code   text;
   clash_reason text;
 BEGIN
+  IF current_setting('transaction_isolation') = 'repeatable read' THEN
+    RAISE EXCEPTION 'taxpayer_regimes writes cannot run under REPEATABLE READ'
+      USING ERRCODE = '25000',
+            HINT = 'Its snapshot would miss an incompatible regime committed while waiting for the lock; use READ COMMITTED.';
+  END IF;
   PERFORM 1 FROM public.taxpayers t
   WHERE t.id = NEW.taxpayer_id AND t.user_id = NEW.user_id
   FOR NO KEY UPDATE;

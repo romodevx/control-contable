@@ -139,6 +139,7 @@ erDiagram
         smallint rfc_key_id
         bytea rfc_hash "HMAC; UK(user_id,rfc_hash)"
         text rfc_masked "e.g. GOMA******AB3"
+        boolean rfc_check_digit_valid "false = accepted with warning (D-RFC)"
         timestamptz archived_at
     }
     regimes {
@@ -297,9 +298,10 @@ in MODULES.md M5 are dropped (MODULES.md updated to match).
 | Table | Constraint / index | Purpose |
 |---|---|---|
 | taxpayers | `UNIQUE (user_id, rfc_hash)`; `UNIQUE (id, user_id)` | US-T2 no duplicate RFC per user; composite-FK target |
+| taxpayers | `rfc_check_digit_valid boolean NOT NULL` (no default) | D-RFC: a módulo 11 mismatch is accepted with a warning, so the stored RFC records the verdict; every RFC write states it |
 | taxpayers | `CHECK person_type IN ('fisica','moral')`; `UNIQUE (user_id, id, person_type)` | person_type is immutable (no UPDATE grant on the column + `taxpayers_forbid_identity_change` trigger) |
 | taxpayers | `taxpayer_count_for_create()`: locks the context user `FOR NO KEY UPDATE`, returns its taxpayer count (archived included); refuses REPEATABLE READ | Atomic cap of 10 (OD-2, S-5): concurrent creates of one user serialize |
-| taxpayer_regimes | PK `(taxpayer_id, regime_code)`; trigger `taxpayer_regimes_check_compatible` raises 23P01 when two regimes with `regime_compatibility.allowed = false` overlap in `[start_period, end_period]` | One row per regime (reopen on re-add); DB backstop of 422 `invalid_regime_combination` |
+| taxpayer_regimes | PK `(taxpayer_id, regime_code)`; trigger `taxpayer_regimes_check_compatible` raises 23P01 when two regimes with `regime_compatibility.allowed = false` overlap in `[start_period, end_period]`; refuses REPEATABLE READ (25000) | One row per regime (reopen on re-add); DB backstop of 422 `invalid_regime_combination` |
 | taxpayer_regimes | FK `(taxpayer_id, user_id, person_type) → taxpayers(id, user_id, person_type)`; FK `(regime_code, person_type) → regimes` | Ownership integrity. A moral can never hold a física-only regime, and 626 resolves to RESICO PF or PM |
 | incomes / expenses | FK `(taxpayer_id, regime_code, user_id) → taxpayer_regimes`; taxpayer_tax_inputs: same FK | A record must belong to a regime its taxpayer holds |
 | incomes / expenses | `CHECK amount_cents >= 0`, `iva_cents >= 0`, withholdings ≥ 0 | Whether an `iva_rate` is valid on the record date (e.g. `rate_8` until 2026-12-31) is checked in the use case through the engine's `RateCatalog` port, because validity is date-ranged parameter data (ADR-0002 §3), not a DB constraint |

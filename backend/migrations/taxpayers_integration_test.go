@@ -46,11 +46,12 @@ var (
 // derive from the taxpayer id like crypto output would: a framed AES-GCM ciphertext
 // (key_id 1 || nonce || ct || tag), a 32-byte HMAC blind index and the masked form.
 const insertTaxpayerSQL = `
-INSERT INTO taxpayers (id, user_id, person_type, display_name, rfc_encrypted, rfc_key_id, rfc_hash, rfc_masked)
+INSERT INTO taxpayers (id, user_id, person_type, display_name, rfc_encrypted, rfc_key_id, rfc_hash, rfc_masked,
+                       rfc_check_digit_valid)
 VALUES ($2::text::uuid, $1, $3, 'Ana (personal)',
         '\x0001'::bytea || sha256(convert_to($2::text, 'UTF8')) || sha256(convert_to($2::text, 'UTF8')),
         1, sha256(convert_to($2::text || '/rfc', 'UTF8')),
-        CASE $3 WHEN 'fisica' THEN 'GOMA******AB6' ELSE 'GOM******AB6' END)`
+        CASE $3 WHEN 'fisica' THEN 'GOMA******AB6' ELSE 'GOM******AB6' END, true)`
 
 // insertRegimeSQL adds regime $3 to taxpayer $2 of user $1 (person type $4) from $5 to $6.
 const insertRegimeSQL = `
@@ -221,11 +222,12 @@ func TestTaxpayers_RejectInvalidRows(t *testing.T) {
 	app := db.Connect(t, pgtest.RoleApp)
 	seedUsers(t, app, userA)
 	const insert = `
-INSERT INTO taxpayers (user_id, person_type, display_name, rfc_encrypted, rfc_key_id, rfc_hash, rfc_masked)
-VALUES ($1, $2, $3, $4, $5, $6, $7)`
+INSERT INTO taxpayers (user_id, person_type, display_name, rfc_encrypted, rfc_key_id, rfc_hash, rfc_masked,
+                       rfc_check_digit_valid)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 	framed := append([]byte{0x00, 0x01}, make([]byte, 40)...)
 	hash := make([]byte, 32)
-	valid := []any{userA, "fisica", "Ana", framed, 1, hash, "GOMA******AB6"}
+	valid := []any{userA, "fisica", "Ana", framed, 1, hash, "GOMA******AB6", true}
 	with := func(i int, v any) []any {
 		args := append([]any(nil), valid...)
 		args[i] = v
@@ -249,6 +251,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)`
 		{"moral mask on a física", with(6, "GOM******AB6"), sqlstateCheckViolation},
 		{"mask that reveals the date", with(6, "GOMA800101AB6"), sqlstateCheckViolation},
 		{"null display name", with(2, nil), sqlstateNotNullViolation},
+		{"check-digit verdict not stated", with(7, nil), sqlstateNotNullViolation},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -277,8 +280,9 @@ func TestTaxpayers_RFCHashIsUniquePerUserOnly(t *testing.T) {
 	app := db.Connect(t, pgtest.RoleApp)
 	seedUsers(t, app, userA, userB)
 	const insert = `
-INSERT INTO taxpayers (user_id, person_type, display_name, rfc_encrypted, rfc_key_id, rfc_hash, rfc_masked)
-VALUES ($1, 'fisica', 'Ana', '\x0001'::bytea || sha256('n') || sha256('c'), 1, sha256('same rfc'), 'GOMA******AB6')`
+INSERT INTO taxpayers (user_id, person_type, display_name, rfc_encrypted, rfc_key_id, rfc_hash, rfc_masked,
+                       rfc_check_digit_valid)
+VALUES ($1, 'fisica', 'Ana', '\x0001'::bytea || sha256('n') || sha256('c'), 1, sha256('same rfc'), 'GOMA******AB6', true)`
 	for _, user := range []string{userA, userB} {
 		_, err := execAsUser(t, app, user, insert, user)
 		require.NoError(t, err, user)
@@ -581,7 +585,7 @@ func TestTaxpayerTables_NoAccessBeyondTheGrants(t *testing.T) {
 	t.Run("cc_app writes what the use cases need", func(t *testing.T) {
 		for _, query := range []string{
 			"UPDATE taxpayers SET display_name = 'Ana (negocio)'",
-			"UPDATE taxpayers SET rfc_encrypted = rfc_encrypted, rfc_key_id = rfc_key_id, rfc_hash = rfc_hash, rfc_masked = rfc_masked",
+			"UPDATE taxpayers SET rfc_encrypted = rfc_encrypted, rfc_key_id = rfc_key_id, rfc_hash = rfc_hash, rfc_masked = rfc_masked, rfc_check_digit_valid = false",
 			"UPDATE taxpayers SET archived_at = now()",
 			"UPDATE taxpayers SET archived_at = NULL",
 			"UPDATE taxpayer_regimes SET options = '{\"iva_fully_taxable\": true}', needs_cpa_review_ack = true",
@@ -647,4 +651,158 @@ func TestTaxpayersMigration_DownRemovesEverything(t *testing.T) {
 	var exists bool
 	require.NoError(t, owner.QueryRowContext(t.Context(), "SELECT to_regclass('public.taxpayer_regimes') IS NOT NULL").Scan(&exists))
 	assert.True(t, exists)
+}
+
+// D-RFC (MODULE-taxpayers §2.2): a módulo 11 mismatch is ACCEPTED with a warning, so a
+// stored RFC is not necessarily check-digit valid. The verdict is a column the use case
+// must state on every write of the RFC (no default), and it moves with the RFC correction.
+func TestTaxpayers_StoreTheCheckDigitVerdict(t *testing.T) {
+	db := pgtest.NewDatabase(t)
+	app := db.Connect(t, pgtest.RoleApp)
+	seedUsers(t, app, userA)
+	const insertMismatch = `
+INSERT INTO taxpayers (id, user_id, person_type, display_name, rfc_encrypted, rfc_key_id, rfc_hash, rfc_masked,
+                       rfc_check_digit_valid)
+VALUES ($2, $1, 'fisica', 'Ana', '\x0001'::bytea || sha256('n') || sha256('c'), 1, sha256('mismatch'),
+        'GOMA******AB7', false)`
+	_, err := execAsUser(t, app, userA, insertMismatch, userA, taxpayerA)
+	require.NoError(t, err, "a check-digit mismatch is stored, not rejected")
+
+	readVerdict := func() bool {
+		var valid bool
+		require.NoError(t, pgtest.AsUser(t.Context(), app, userA, func(tx *sql.Tx) error {
+			return tx.QueryRowContext(t.Context(),
+				"SELECT rfc_check_digit_valid FROM taxpayers WHERE id = $1", taxpayerA).Scan(&valid)
+		}))
+		return valid
+	}
+	assert.False(t, readVerdict())
+
+	_, err = execAsUser(t, app, userA, `
+UPDATE taxpayers SET rfc_hash = sha256('corrected'), rfc_masked = 'GOMA******AB6', rfc_check_digit_valid = true
+WHERE id = $1`, taxpayerA)
+	require.NoError(t, err, "the RFC correction (OQ-1) restates the verdict")
+	assert.True(t, readVerdict())
+
+	t.Run("not nullable on update", func(t *testing.T) {
+		_, err := execAsUser(t, app, userA, "UPDATE taxpayers SET rfc_check_digit_valid = NULL WHERE id = $1", taxpayerA)
+		requireSQLState(t, err, sqlstateNotNullViolation)
+	})
+}
+
+// OQ-5 with the (taxpayer_id, regime_code) primary key: re-adding an ended regime is an
+// upsert that reopens the same row (end_period cleared, original start_period kept, body
+// options applied). cc_app's grants must allow exactly that statement, and the
+// compatibility trigger still guards the reopened window. An active regime is left alone
+// (0 rows -> the use case answers 409 conflict).
+func TestTaxpayerRegimes_ReAddingAnEndedRegimeReopensItsRow(t *testing.T) {
+	const reAdd = `
+INSERT INTO taxpayer_regimes (user_id, taxpayer_id, regime_code, person_type, options, start_period)
+VALUES ($1, $2, $3, 'fisica', $4, '2026-10')
+ON CONFLICT (taxpayer_id, regime_code) DO UPDATE
+  SET end_period = NULL, options = EXCLUDED.options, needs_cpa_review_ack = EXCLUDED.needs_cpa_review_ack
+  WHERE taxpayer_regimes.end_period IS NOT NULL`
+	setup := func(t *testing.T) *sql.DB {
+		t.Helper()
+		app := pgtest.NewDatabase(t).Connect(t, pgtest.RoleApp)
+		seedUsers(t, app, userA)
+		seedTaxpayer(t, app, userA, taxpayerA, "fisica")
+		require.NoError(t, addRegime(t, app, taxpayerA, "fisica", "606", "2026-01", "2026-03"))
+		return app
+	}
+
+	t.Run("an ended regime reopens with its original start", func(t *testing.T) {
+		app := setup(t)
+		affected, err := execAsUser(t, app, userA, reAdd, userA, taxpayerA, "606", `{"deduction_mode": "actual"}`)
+		require.NoError(t, err)
+		require.EqualValues(t, 1, affected)
+		var start, options string
+		var end sql.NullString
+		var rows int
+		require.NoError(t, pgtest.AsUser(t.Context(), app, userA, func(tx *sql.Tx) error {
+			return tx.QueryRowContext(t.Context(), `
+SELECT start_period, end_period, options::text, (SELECT count(*) FROM taxpayer_regimes)
+FROM taxpayer_regimes WHERE taxpayer_id = $1 AND regime_code = '606'`, taxpayerA).Scan(&start, &end, &options, &rows)
+		}))
+		assert.Equal(t, "2026-01", start)
+		assert.False(t, end.Valid)
+		assert.JSONEq(t, `{"deduction_mode": "actual"}`, options)
+		assert.Equal(t, 1, rows)
+	})
+	t.Run("an active regime is not touched", func(t *testing.T) {
+		app := setup(t)
+		_, err := execAsUser(t, app, userA, reAdd, userA, taxpayerA, "606", `{}`)
+		require.NoError(t, err)
+		affected, err := execAsUser(t, app, userA, reAdd, userA, taxpayerA, "606", `{}`)
+		require.NoError(t, err)
+		assert.Zero(t, affected)
+	})
+	t.Run("the reopened window is still checked for incompatible overlaps", func(t *testing.T) {
+		app := setup(t)
+		require.NoError(t, addRegime(t, app, taxpayerA, "fisica", "626", "2026-04", ""))
+		_, err := execAsUser(t, app, userA, reAdd, userA, taxpayerA, "606", `{}`)
+		requireSQLState(t, err, sqlstateExclusionViolation)
+	})
+	t.Run("another user's ended regime cannot be reopened", func(t *testing.T) {
+		app := setup(t)
+		seedUsers(t, app, userB)
+		_, err := execAsUser(t, app, userB, reAdd, userB, taxpayerA, "606", `{}`)
+		require.Error(t, err, "the composite FK refuses the cross-user upsert")
+		var end sql.NullString
+		require.NoError(t, pgtest.AsUser(t.Context(), app, userA, func(tx *sql.Tx) error {
+			return tx.QueryRowContext(t.Context(),
+				"SELECT end_period FROM taxpayer_regimes WHERE taxpayer_id = $1", taxpayerA).Scan(&end)
+		}))
+		assert.Equal(t, "2026-03", end.String, "the victim's row is untouched")
+	})
+}
+
+// The integrity triggers are invoker functions with a pinned search_path, and cc_app has
+// no way to switch them off or replace what they run.
+func TestTaxpayerTriggers_CannotBeBypassedByTheAppRole(t *testing.T) {
+	db := pgtest.NewDatabase(t)
+	app := db.Connect(t, pgtest.RoleApp)
+	seedUsers(t, app, userA)
+	seedTaxpayer(t, app, userA, taxpayerA, "fisica")
+
+	t.Run("invoker functions with a pinned search_path", func(t *testing.T) {
+		owner := db.Connect(t, pgtest.RoleOwner)
+		for _, fn := range []string{
+			"taxpayers_forbid_identity_change()", "taxpayer_regimes_check_compatible()", "taxpayer_count_for_create()",
+		} {
+			var definer bool
+			var config sql.NullString
+			require.NoError(t, owner.QueryRowContext(t.Context(),
+				"SELECT prosecdef, array_to_string(proconfig, ',') FROM pg_proc WHERE oid = $1::regprocedure", fn).
+				Scan(&definer, &config))
+			assert.False(t, definer, "%s must be SECURITY INVOKER", fn)
+			assert.Equal(t, "search_path=pg_catalog, pg_temp", config.String, fn)
+		}
+	})
+	for _, stmt := range []string{
+		"ALTER TABLE taxpayer_regimes DISABLE TRIGGER taxpayer_regimes_check_compatible",
+		"ALTER TABLE taxpayers DISABLE TRIGGER taxpayers_forbid_identity_change",
+		"ALTER TABLE taxpayer_regimes DISABLE TRIGGER ALL",
+		"SET LOCAL session_replication_role = replica",
+		"CREATE TABLE public.regime_compatibility_shadow (x int)",
+		"CREATE OR REPLACE FUNCTION public.taxpayer_regimes_check_compatible() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN RETURN NEW; END'",
+	} {
+		t.Run("cc_app: "+stmt, func(t *testing.T) {
+			_, err := execAsUser(t, app, userA, stmt)
+			requireSQLState(t, err, sqlstateInsufficientPrivilege)
+		})
+	}
+
+	// Under REPEATABLE READ the trigger's clash lookup would use the snapshot taken before
+	// it waited for the taxpayer lock, so two concurrent adds of 612 and 626 could both
+	// pass. Like taxpayer_count_for_create(), the trigger refuses that isolation level.
+	t.Run("refuses REPEATABLE READ", func(t *testing.T) {
+		tx, err := app.BeginTx(t.Context(), &sql.TxOptions{Isolation: sql.LevelRepeatableRead})
+		require.NoError(t, err)
+		defer func() { _ = tx.Rollback() }()
+		_, err = tx.ExecContext(t.Context(), "SELECT set_config('app.current_user_id', $1, true)", userA)
+		require.NoError(t, err)
+		_, err = tx.ExecContext(t.Context(), insertRegimeSQL, userA, taxpayerA, "612", "fisica", "2026-01", nil)
+		requireSQLState(t, err, sqlstateInvalidTransactionState)
+	})
 }
