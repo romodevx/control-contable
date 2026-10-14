@@ -443,11 +443,73 @@ func TestGeneralPMStrategyIVAAndWithholdingsToRemit(t *testing.T) {
 	}, gpmLines(est.Lines, domain.TaxIVA))
 	assert.Equal(t, []gpmLine{
 		{domain.TaxWithholding, domain.LineIVAWithheldToRemit, domain.OpInput, "5333.33"},
-		{domain.TaxWithholding, "withholding.isr_to_remit", domain.OpInput, "5000.00"},
+		{domain.TaxWithholding, "withholding.isr_to_remit", domain.OpAdd, "5000.00"},
+		{domain.TaxWithholding, "withholding.to_remit", domain.OpResult, "10333.33"},
 	}, gpmLines(est.Lines, domain.TaxWithholding))
 	isrToRemit := lineByCode(t, est.Lines, "withholding.isr_to_remit")
 	assert.Equal(t, []string{"106", "116", "113-J"}, articles(isrToRemit.Basis))
 	assertCited(t, est.Lines)
+}
+
+// TestGeneralPMStrategyWithholdingsToRemitAreOneGroup: the ISR and IVA the
+// PM withheld from its suppliers are one ledger segment, apart from its own
+// ISR and IVA, and WithheldToRemit is that segment's last line: the amount
+// is reported once and the breakdown shows it (ADR-0002 §1 totals rule).
+func TestGeneralPMStrategyWithholdingsToRemitAreOneGroup(t *testing.T) {
+	tests := []struct {
+		name      string
+		iva, isr  string
+		want      string
+		wantLines []gpmLine
+	}{
+		{
+			name: "none: no withholding line", iva: "0.00", isr: "0.00", want: "0.00",
+		},
+		{
+			name: "IVA only: its one line is the total", iva: "5333.33", isr: "0.00", want: "5333.33",
+			wantLines: []gpmLine{{domain.TaxWithholding, domain.LineIVAWithheldToRemit, domain.OpInput, "5333.33"}},
+		},
+		{
+			name: "ISR only: starts its own segment, never the IVA's", iva: "0.00", isr: "5000.00", want: "5000.00",
+			wantLines: []gpmLine{{domain.TaxWithholding, "withholding.isr_to_remit", domain.OpInput, "5000.00"}},
+		},
+		{
+			name: "both: IVA + ISR closed by one total", iva: "5333.33", isr: "5000.00", want: "10333.33",
+			wantLines: []gpmLine{
+				{domain.TaxWithholding, domain.LineIVAWithheldToRemit, domain.OpInput, "5333.33"},
+				{domain.TaxWithholding, "withholding.isr_to_remit", domain.OpAdd, "5000.00"},
+				{domain.TaxWithholding, "withholding.to_remit", domain.OpResult, "10333.33"},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			june := domain.MonthSums{
+				Income: domain.IncomeSums{
+					ByRate: domain.IVAByRate{Rate16: domain.RateSums{Base: cents(t, "1000.00"), IVA: cents(t, "160.00")}},
+				},
+				Expenses: domain.ExpenseSums{
+					IVAWithheldToRemit: cents(t, tt.iva),
+					ISRWithheldToRemit: cents(t, tt.isr),
+				},
+			}
+			sums, err := domain.NewYearSums(time.June, domain.MonthEntry{Month: time.June, Sums: june})
+			require.NoError(t, err)
+			in := domain.Input{
+				Key: gpmKey, Period: period(t, "2026-06"), Sums: sums,
+				Inputs: inputs(t, gpmCoeficiente(t, "0.1500")),
+			}
+
+			est, err := domain.NewGeneralPMStrategy().Estimate(in, gpmParams(t, "0.30"))
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, est.WithheldToRemit.String())
+			assert.Equal(t, tt.wantLines, gpmLines(est.Lines, domain.TaxWithholding))
+			assert.Equal(t, "160.00", lineByCode(t, est.Lines, domain.LineIVANet).Amount.String(),
+				"the own IVA never absorbs a withholding to remit")
+			assertCited(t, est.Lines)
+		})
+	}
 }
 
 // TestGeneralPMStrategyIVAIsTheMonthOnly: the ISR accumulates January..n,
