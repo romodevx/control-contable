@@ -1,0 +1,21 @@
+# golden: hand-authored from docs/project-specs/MODULE-tax-engine.md §2.4 (explanation-only regimes). Never generated or rewritten by a tool.
+# 610 Residentes en el extranjero, persona física: explanation only (the
+# Mexican payer withholds, LISR Título V). 610 exists for both person types
+# as distinct catalog rows, so each has its own explanation key.
+id: PF-610-INFO-01
+source: spec:module-tax-engine-2.4
+input:
+  regime: "610"
+  person_type: fisica
+  period: "2026-06"
+  months:
+    - {month: 6, income: {cash: "40000.00", isr_withheld: {by_moral: "10000.00"}}}
+expected:
+  status: informational
+  taxes: [isr, iva, withholding]
+  withheld_to_remit: "0.00"
+  lines: []
+  missing_inputs: []
+  cpa_topics: []
+  disclaimers: []
+  explanation: "regime_explanation:610/fisica"

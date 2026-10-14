@@ -1,0 +1,29 @@
+# golden: hand-authored from docs/project-specs/MODULE-tax-engine.md US-X1c and §2.4 (621 row). Never generated or rewritten by a tool.
+# RIF, September 2026 (the first month of the Sep-Oct bimester), year 6,
+# with PF-621-01's September records. The RIF pays by bimester, so
+# September has no ISR and no IVA figure: only the line pointing to
+# October ("El RIF se paga por bimestre; consulta octubre") and the
+# catalog explanation. No figure means no unverified rule applied, so no
+# CPA topic.
+id: PF-621-ODD-01
+source: spec:module-tax-engine-us-x1c
+input:
+  regime: "621"
+  person_type: fisica
+  period: "2026-09"
+  active_months: [9]
+  options:
+    rif_year: "6"
+  months:
+    - month: 9
+      income: {cash: "50000.00", by_rate: {rate_16: {base: "50000.00", iva: "8000.00"}}}
+      expenses: {deductible_paid: "30000.00", creditable_iva_paid: "4800.00"}
+expected:
+  status: partial
+  taxes: [isr, iva, withholding]
+  withheld_to_remit: "0.00"
+  lines:
+    - {tax: isr, code: isr.rif_bimester_pending, op: info, amount: "0.00"}
+  cpa_topics: []
+  disclaimers: []
+  explanation: "regime_explanation:621/fisica"
