@@ -106,12 +106,17 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err != nil {
 		return err
 	}
+	incomes, err := newRecordModules(taxpayers, logger)
+	if err != nil {
+		return err
+	}
 	handler, err := newHandler(cfg, deps{
 		logger:    logger,
 		db:        pgdb.NewPinger(pool),
 		flags:     flagSvc,
 		auth:      auth,
 		taxpayers: taxpayers,
+		incomes:   incomes,
 		now:       time.Now,
 	})
 	if err != nil {
@@ -166,7 +171,10 @@ type deps struct {
 	flags     flagService
 	auth      authModule
 	taxpayers taxpayersModule
-	now       func() time.Time
+	// incomes is built at boot (its rate catalog fails a broken params
+	// file there); M3-06 serves it.
+	incomes incomesModule
+	now     func() time.Time
 }
 
 // flagService is what the HTTP layer needs from the flags service: the
