@@ -107,6 +107,7 @@ func TestDisclaimerSeverity(t *testing.T) {
 		domain.DisclaimerNoCoefficientFirstYear:  domain.SeverityInfo,
 		domain.DisclaimerIVAMixedActivity:        domain.SeverityWarning,
 		domain.DisclaimerCPAReviewPending:        domain.SeverityStrong,
+		domain.DisclaimerRESICOCapExceeded:       domain.SeverityWarning,
 		domain.DisclaimerCode("unknown_to_this"): "",
 	}
 	for code, severity := range want {

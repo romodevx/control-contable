@@ -4,7 +4,6 @@
 # it). IVA = 9,600 - 2,000 - 2,133.33 = 5,466.67.
 id: PF-626-IVA-01
 source: research:PF-626-IVA-01
-pending_strategy: true # M5-13
 input:
   regime: "626"
   person_type: fisica
@@ -28,8 +27,9 @@ expected:
     withheld_from_taxpayer: "2133.33"
     definitive_excluded: "0.00"
     net: "5466.67"
-  lines:
-    - {tax: iva, code: iva.charged_collected, op: input, amount: "9600.00"}
-    - {tax: iva, code: iva.creditable_paid, op: subtract, amount: "2000.00"}
-    - {tax: iva, code: iva.withheld_from_taxpayer, op: subtract, amount: "2133.33"}
-    - {tax: iva, code: iva.net, op: result, amount: "5466.67"}
+  lines: # the shared IVA calculator's codes (M5-09), set by hand in M5-13
+    - {tax: iva, code: iva.charged.rate_16, op: input, amount: "9600.00"}
+    - {tax: iva, code: iva.charged, op: result, amount: "9600.00"}
+    - {tax: iva, code: iva.creditable, op: subtract, amount: "2000.00"}
+    - {tax: iva, code: iva.withheld.moral, op: subtract, amount: "2133.33"}
+    - {tax: iva, code: iva.regime_net, op: result, amount: "5466.67"}
