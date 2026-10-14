@@ -405,10 +405,10 @@ holds, first the CPA sign-off (M5-33).
 | M6-02 | Dashboard use case: one aggregate pass for 12 months, Estimator, income vs expense, trial banner via AccessPolicy | backend-sr | M5-22, M6-01 | 4 | — | `feature/dashboard-backend` | — | [ ] |
 | M6-03 | Dashboard handler, contract tests, flag ON/OFF, benchmark p95 < 1 s, EXPLAIN ANALYZE | backend-sr | M6-02, M5-23 | 3 | — | `feature/dashboard-backend` | — | [ ] |
 | M6-04 | Flutter Home: this month's estimate, income vs expense, trend chart, trial banner, empty state | frontend-sr | M6-01, M5-25 | 5 | — | `feature/dashboard-mobile` | — | [ ] |
-| M6-05 | Register flag `module_dashboard` + preset `demo_core` | backend-sr | M6-03, M6-04 | 0.5 | — | `feature/dashboard-flag` | — | [ ] |
-| M6-06 | QA M6 + `demo_core` preset smoke | qa-sr | M6-05 | 2.5 | — | `feature/dashboard-qa-fixes` | OB6 | [ ] |
-| M6-07 | Tech-lead gate M6 | tech-lead | M6-06 | 1 | — | (PR review) | — | [ ] |
-| M6-08 | Security gate M6 | security | M6-06 | 1 | — | (PR review) | — | [ ] |
+| M6-05 | Register flag `module_dashboard` + preset `demo_core` | backend-sr | M6-03, M6-04 | 0.5 | — | `feature/dashboard-flag` | — | [x] |
+| M6-06 | QA M6 + `demo_core` preset smoke | qa-sr | M6-05 | 2.5 | — | `feature/dashboard-qa-fixes` | OB6 | [x] |
+| M6-07 | Tech-lead gate M6 ([PASS](../reviews/M6-07-tech-lead-gate.md)) | tech-lead | M6-06 | 1 | — | (PR review) | — | [x] |
+| M6-08 | Security gate M6 | security | M6-06 | 1 | — | (PR review) | — | [x] |
 | M6-09 | Docs M6 | doc-writer | M6-07, M6-08 | 1 | — | `feature/dashboard-docs` | — | [ ] |
 
 ### M7 — Subscriptions (`module_subscriptions`)
@@ -437,9 +437,9 @@ Backend can start right after P0 + M1-07, in parallel with M5/M6. With the flag 
 
 | ID | Task | Owner | Deps | Est (h) | Par | Branch | Blocked by | Done |
 |---|---|---|---|---|---|---|---|---|
-| M8-01 | Contract freeze: history paths | architect | P0-05 | 1 | — | `feature/history-contract` | — | [ ] |
+| M8-01 | Contract freeze: history paths | architect | P0-05 | 1 | — | `feature/history-contract` | — | [x] |
 | M8-02 | Migration `estimate_views` with RLS + isolation tests | db-sr | M2-03 | 2 | — | `feature/history-migration` | — | [ ] |
-| M8-03 | History use case: fiscal-year summaries in one aggregate pass, changed-since-viewed via fingerprint, mark viewed | backend-sr | M5-22, M8-01, M8-02 | 3.5 | — | `feature/history-backend` | — | [ ] |
+| M8-03 | History use case: fiscal-year summaries in one aggregate pass, changed-since-viewed via fingerprint, mark viewed; **contract follow-up (M8-01):** make `TaxpayerEstimate.figures_fingerprint` required and type `TaxpayerEstimate.engine_version` as `EngineVersion` (re-freeze, regenerate clients) | backend-sr | M5-22, M8-01, M8-02 | 3.5 | — | `feature/history-backend` | — | [ ] |
 | M8-04 | History handlers, contract tests, flag ON/OFF (implies M5) | backend-sr | M8-03, M5-23 | 2 | — | `feature/history-backend` | — | [ ] |
 | M8-05 | Flutter history list, changed marker, open breakdown (reuses M5-26) | frontend-sr | M8-01, M5-26 | 4 | — | `feature/history-mobile` | — | [ ] |
 | M8-06 | Register flag `module_history` | backend-sr | M8-04, M8-05 | 0.5 | — | `feature/history-flag` | — | [ ] |

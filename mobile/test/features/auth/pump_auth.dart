@@ -9,6 +9,7 @@ import 'package:control_contable/features/auth/data/auth_repository.dart';
 import 'package:control_contable/features/auth/data/profile_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -48,6 +49,7 @@ class AuthHarness {
     Set<AppModule> alsoEnabled = const {},
     List<FeatureModule> extraFeatures = const [],
     Brightness brightness = Brightness.light,
+    List<Override> overrides = const [],
   }) async {
     if (signedIn) tokens.token = storedRefreshToken;
     await pumpControlContableApp(
@@ -65,6 +67,7 @@ class AuthHarness {
           opened.add(uri);
           return canOpen;
         }),
+        ...overrides,
       ],
     );
     container = ProviderScope.containerOf(

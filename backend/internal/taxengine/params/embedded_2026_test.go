@@ -87,12 +87,13 @@ func TestEmbedded2026DefinesEveryKeyTheModulesRead(t *testing.T) {
 		// incomes/domain/catalog.go and expenses/domain/catalog.go
 		"isr.withholding.resico_pf", "isr.platform.transport_delivery", "isr.platform.lodging",
 		"isr.platform.goods_services", "isr.platform.no_rfc", "isr.platform.persona_moral",
-		"iva.withholding.freight_pm",
+		"iva.withholding.freight_pm", "iva.withholding.scrap_pm", // MODULE-withholdings §3 (WH-05)
 		"isr.platform.persona_moral_no_rfc", "isr.rate.persona_moral", "isr.withholding.interest_annual",
 		"isr.rent.blind_deduction",
 	}
 	amounts := []taxparams.Key{
-		"deduction.cash_payment_limit", // expenses/domain/catalog.go
+		"deduction.cash_payment_limit",      // expenses/domain/catalog.go
+		"iva.withholding.federal_threshold", // kernel/fiscal DeriveWithholdings, IVA-7 (RMF 4.1.3)
 		"uma.daily", "uma.monthly", "uma.annual",
 		"regime.resico_pf.income_cap", "regime.resico_pm.income_cap", "regime.platform.definitive_option_cap",
 	}
@@ -231,6 +232,7 @@ func TestEmbedded2026Rates(t *testing.T) {
 		{"iva.rate.border_8", "2026-01-01", "0.08"},           // 16 % less the 50 % credit
 		{"iva.rate.border_8", "2026-12-31", "0.08"},           // decree in force until 31-12-2026
 		{"iva.withholding.freight_pm", "2026-06-30", "0.04"},  // RLIVA 3 fr. II
+		{"iva.withholding.scrap_pm", "2026-06-30", "1"},       // LIVA 1-A fr. II b), no RLIVA 3 reduction
 		{"isr.rate.persona_moral", "2026-06-30", "0.30"},      // LISR 9
 		{"isr.withholding.fees_pm", "2026-06-30", "0.10"},     // LISR 106
 		{"isr.withholding.rent_pm", "2026-06-30", "0.10"},     // LISR 116
@@ -253,6 +255,35 @@ func TestEmbedded2026Rates(t *testing.T) {
 	}
 }
 
+// The withholding rates MODULE-withholdings §3 derives from (WH-05) start
+// with the set on January 1, still hold on December 31, and are absent the
+// day before: a record dated outside a value's validity never gets a silent
+// rate.
+func TestEmbedded2026WithholdingRatesAtTheYearBoundaries(t *testing.T) {
+	p := embedded2026(t)
+	tests := []struct {
+		key  taxparams.Key
+		want string
+	}{
+		{"isr.withholding.fees_pm", "0.10"},     // LISR 106, honorarios
+		{"isr.withholding.rent_pm", "0.10"},     // LISR 116, arrendamiento
+		{"isr.withholding.resico_pf", "0.0125"}, // LISR 113-J
+		{"iva.withholding.freight_pm", "0.04"},  // RLIVA 3 fr. II, of the price
+		{"iva.withholding.scrap_pm", "1"},       // LIVA 1-A fr. II b), of the IVA
+	}
+	for _, tt := range tests {
+		t.Run(string(tt.key), func(t *testing.T) {
+			for _, on := range []string{"2026-01-01", "2026-12-31"} {
+				got, err := p.Rate(tt.key, date(t, on))
+				require.NoError(t, err, on)
+				assert.Equal(t, rate(t, tt.want), got, on)
+			}
+			_, err := p.Rate(tt.key, date(t, "2025-12-31"))
+			require.ErrorIs(t, err, taxparams.ErrNotInForce)
+		})
+	}
+}
+
 // Rates set by the annual LIF or by a decree with a sunset lapse with it.
 func TestEmbedded2026RatesThatLapseAtYearEnd(t *testing.T) {
 	p := embedded2026(t)
@@ -261,6 +292,18 @@ func TestEmbedded2026RatesThatLapseAtYearEnd(t *testing.T) {
 		"isr.platform.persona_moral_no_rfc", "isr.withholding.interest_annual",
 	} {
 		_, err := p.Rate(key, date(t, "2027-01-01"))
+		require.ErrorIs(t, err, taxparams.ErrNotInForce, key)
+	}
+}
+
+// An RMF rule lives one year: the RMF 2026 threshold of rule 4.1.3 is not in
+// force in 2027 until the RMF 2027 is transcribed.
+func TestEmbedded2026AmountsThatLapseAtYearEnd(t *testing.T) {
+	p := embedded2026(t)
+	for _, key := range []taxparams.Key{"iva.withholding.federal_threshold"} {
+		_, err := p.Money(key, date(t, "2026-12-31"))
+		require.NoError(t, err, key)
+		_, err = p.Money(key, date(t, "2027-01-01"))
 		require.ErrorIs(t, err, taxparams.ErrNotInForce, key)
 	}
 }
@@ -300,6 +343,7 @@ func TestEmbedded2026Thresholds(t *testing.T) {
 		{"regime.resico_pm.income_cap", "35000000.00"},         // LISR 206
 		{"regime.platform.definitive_option_cap", "300000.00"}, // LISR 113-B fr. I
 		{"deduction.cash_payment_limit", "2000.00"},            // LISR 27 fr. III
+		{"iva.withholding.federal_threshold", "2000.00"},       // RMF 2026 4.1.3
 	}
 	for _, tt := range tests {
 		t.Run(string(tt.key), func(t *testing.T) {

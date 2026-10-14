@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Control Contable API
-  version: 0.8.0
+  version: 0.9.0
   summary: Monthly IVA and provisional ISR estimates for Mexican taxpayers.
   description: |
     Spec-first contract (single source of truth). Server stubs (oapi-codegen),
@@ -3187,31 +3187,142 @@ paths:
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
 
   # ---------------------------------------------------------------- M8 History
+  # Frozen at M8-01 (docs/project-specs/MODULE-history.md §9, OQ-H1..OQ-H7 DECIDED).
   /v1/taxpayers/{taxpayerId}/history:
     parameters:
       - $ref: '#/components/parameters/TaxpayerId'
     get:
       tags: [History]
       operationId: getHistory
-      summary: Monthly summaries for a fiscal year
+      x-frozen: sha256:507b2c6921d3b3566befb9d27e8494ea66ed65f89a2dcbab57d6f335a91bcc15
+      summary: Fiscal-year history of one taxpayer - every month's estimate, status and changed marker
+      description: >-
+        For the taxpayer and `fiscal_year`, one row per month with the estimated totals,
+        the taxpayer-level status and whether the displayed figures changed since the caller
+        last viewed that month. Every figure is recalculated from the current records on each
+        read (ADR-0002 §5); History stores only what the user saw, never a tax figure.
+
+
+        **Months.** January .. December for a past year; January .. the current month
+        (America/Mexico_City) for the current year. Ordered **newest first** (the current
+        month, `is_current: true`, at the top). The list is always contiguous: a month in
+        which the taxpayer held no regime comes back with `status: none` and `tax: null`
+        ("Sin régimen en este mes"), never as a hole. Each month's figures are the same
+        `totals` that `getTaxpayerEstimate` answers for that `period`, to the centavo; the
+        client never recomputes or re-rounds them. `year_totals` is the sum of the returned
+        months' estimates ("Suma de estimados mensuales"), **not** an annual return; a saldo a
+        favor never subtracts from it.
+
+
+        **Changed since viewed** (driven only by `figures_fingerprint`, OQ-H4). For a month
+        with a stored view: same figures fingerprint → `changed_since_viewed: false`,
+        whatever the inputs or the engine did; different, and the engine version or parameter
+        set differs from the one viewed → `true`, `change_reason: engine`; different
+        otherwise → `true`, `change_reason: records` (when both causes apply, `engine` wins).
+        A never-viewed month (`viewed_at: null`, OQ-H1) and the current month (OQ-H3) are
+        never marked. `change_reason` is non-null if and only if `changed_since_viewed` is
+        `true`. Opening a month and calling `markHistoryViewed` clears its marker; the marker
+        also clears by itself when the figures return to the viewed ones.
+
+
+        **Flags (server-enforced).** `module_history` requires `module_tax_engine` (and,
+        through it, `module_taxpayers`): with any of them OFF the module is effectively OFF
+        and this route answers `404`, indistinguishable from an unknown taxpayer; no tax
+        figure leaves the server. `module_incomes` / `module_expenses` OFF never change the
+        figures (the engine still reads the records); `has_records` then counts only the
+        enabled modules' records, and the app hides the matching "Ver ingresos" / "Ver
+        gastos" link.
+
+
+        **Access.** Open to read-only users (no `402`) and to archived taxpayers. Per-user
+        budget `history_reads`, 600 per hour (burst 600, ADR-0005), separate from
+        `estimate_reads`; spent → `429 rate_limited` with `Retry-After`. No partial mode: if
+        any month's estimate fails the whole request fails (`500`).
+
+
+        `FieldError.code` values beyond JSON Schema keywords: `fiscal_year` → `out_of_range`
+        (a year after the current one, America/Mexico_City). `422 business_rule_violation`
+        details: `fiscal_year` → `parameters_unavailable` (2022..2025: no published tax
+        parameters).
       x-module: module_history
+      security:
+        - bearerAuth: []
       parameters:
         - name: fiscal_year
           in: query
           required: true
+          description: >-
+            Fiscal year to list (2026 .. the current year; the app's year picker offers only
+            those). Before 2026 → `422`; after the current year → `400 out_of_range`.
           schema: { $ref: '#/components/schemas/FiscalYear' }
       responses:
         '200':
-          description: Months of the fiscal year.
+          description: Months of the fiscal year, newest first, with their year totals.
           headers:
             Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/HistoryYear' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+        '400':
+          description: >-
+            Input does not match the contract (malformed `fiscal_year` or path id, unknown
+            query parameter), or a `fiscal_year` after the current one (`out_of_range`).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                malformedFiscalYear:
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: fiscal_year, code: type, message: Usa un año de cuatro dígitos. }
+                futureFiscalYear:
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: fiscal_year, code: out_of_range, message: Aún no hay datos de un año futuro. }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '404':
+          description: >-
+            The taxpayer does not exist or belongs to another user, or `module_history` is
+            effectively OFF (`module_history`, `module_tax_engine` or `module_taxpayers`
+            disabled), which answers `404` before any input check, a malformed request
+            included (indistinguishable on purpose). With the module ON a malformed id is
+            `400`.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error: { code: not_found, message: Not found., request_id: req_01J9Z6Q4X8 }
+        '422':
+          description: >-
+            `fiscal_year` is before 2026, the first fiscal year with published tax parameters
+            (`parameters_unavailable`). A well-formed request with nothing to show, hence
+            `422`, as `getTaxpayerEstimate`.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: business_rule_violation
+                  message: There is no data before 2026.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: fiscal_year, code: parameters_unavailable, message: Sólo hay datos desde 2026. }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
   /v1/taxpayers/{taxpayerId}/history/{period}/viewed:
     parameters:
       - $ref: '#/components/parameters/TaxpayerId'
@@ -3219,17 +3330,110 @@ paths:
     post:
       tags: [History]
       operationId: markHistoryViewed
-      summary: Mark a month as viewed (stores the current records fingerprint)
+      x-frozen: sha256:428120cfe76ea48381bd2d4c4133ef21f9f45d05052254623569afb5ec57b87d
+      summary: Record that the caller saw a month's estimate (clears its changed marker)
+      description: >-
+        Stores, for the caller, the taxpayer and `period`, the fingerprints and versions of
+        the estimate the app **rendered**: the body is copied from the `TaxpayerEstimate`
+        shown (`records_fingerprint`, `figures_fingerprint`, `engine_version`,
+        `parameter_set`), not recomputed by the server, so a record changed between render and
+        POST still marks the month on the next `getHistory`. Idempotent: one upsert per
+        (user, taxpayer, period), the last view wins; repeating it answers `204` again.
+
+
+        The app calls it whenever the estimate screen of a past month renders successfully,
+        **from any entry point** (History row, dashboard "Ver detalle"; OQ-H7), only while
+        `module_history` is ON; fire-and-forget (a failure never blocks the screen). The
+        current month is accepted and stored but is never marked. The values are only ever
+        compared with later estimates of the caller's own month (RLS); they never feed a
+        figure.
+
+
+        **Flags.** Same as `getHistory`: `module_history`, `module_tax_engine` or
+        `module_taxpayers` OFF → `404`.
+
+
+        **Access.** Allowed for read-only users and archived taxpayers (it creates no record:
+        no `402`, no cap). Per-user budget `history_views`, 1,200 per hour (burst 120,
+        ADR-0005); spent → `429 rate_limited` with `Retry-After`.
+
+
+        `FieldError.code` values beyond JSON Schema keywords: `period` → `out_of_range` (a
+        future month, America/Mexico_City). `422 business_rule_violation` details: `period`
+        → `parameters_unavailable` (before 2026-01).
       x-module: module_history
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HistoryViewedRequest' }
       responses:
         '204':
-          description: Marked.
+          description: Recorded (or already recorded with the same values).
           headers:
             Cache-Control: { $ref: '#/components/headers/NoStore' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+        '400':
+          description: >-
+            Input does not match the contract (malformed `period` or path id; missing,
+            malformed or unknown body field, e.g. a fingerprint that is not 64 lower-case hex
+            characters), or a future `period` (`out_of_range`).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                malformedFingerprint:
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: figures_fingerprint, code: pattern, message: Formato no válido. }
+                futurePeriod:
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: period, code: out_of_range, message: Aún no hay datos de un mes futuro. }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '500': { $ref: '#/components/responses/InternalError' }
+        '404':
+          description: >-
+            The taxpayer does not exist or belongs to another user, or `module_history` is
+            effectively OFF (`module_history`, `module_tax_engine` or `module_taxpayers`
+            disabled), which answers `404` before any input check, a malformed request
+            included (indistinguishable on purpose). With the module ON a malformed id is
+            `400`.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error: { code: not_found, message: Not found., request_id: req_01J9Z6Q4X8 }
+        '422':
+          description: >-
+            `period` is before 2026-01, the first month any estimate can exist
+            (`parameters_unavailable`).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: business_rule_violation
+                  message: There is no data before January 2026.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: period, code: parameters_unavailable, message: Sólo hay datos desde enero de 2026. }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
 
   # ---------------------------------------------------------------- M9 Reminders
   /v1/devices:
@@ -5385,16 +5589,41 @@ components:
           withholdings_to_remit_cents: 0
           total_payable_rounded_cents: 228429
     RecordsFingerprint:
-      x-frozen: sha256:4d4c79ebb4abb473c19edbcdf19db79d4dad5e88121672bc9a3185d73b606408
+      x-frozen: sha256:84b7d31edaa2c0d12b9f5e5632b428899a90a20791770095218b1db45ab612ea
       type: string
       pattern: '^[0-9a-f]{64}$'
       description: >-
         SHA-256 (lower-case hex) over the canonical aggregated input, the parameter version
-        and the engine version (ADR-0002 §5). Equal fingerprints mean an identical estimate;
-        M8 uses it to mark months "changed since viewed".
+        and the engine version (ADR-0002 §5). Equal fingerprints mean an identical estimate.
+        M8 stores it with each view only to explain *why* a month changed
+        (`HistoryChangeReason`); the changed marker itself is driven by `FiguresFingerprint`.
       examples: [3f6c2a9e8d7b1c4f5a0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a]
+    FiguresFingerprint:
+      x-frozen: sha256:8a5f412e6e942bee31af6092e924edfb6903aa2bbf50dfab90a2821915b250fd
+      type: string
+      pattern: '^[0-9a-f]{64}$'
+      description: >-
+        SHA-256 (lower-case hex) over a canonical text of the figures the user sees for the
+        month: totals (ISR, IVA payable / in favor, withholdings to remit, total), each
+        regime's code, status, ISR, IVA and withholdings, `cpa_review_pending` and the due
+        date. Versions, texts, explanations, citations and breakdown line order are excluded,
+        so an input or engine change that leaves every figure identical keeps it (M8 OQ-H4).
+        Computed in the M5 domain next to `RecordsFingerprint` (one golden-tested function).
+        Changing the canonical text is an ADR-0002 amendment with a one-time re-baseline of
+        stored views.
+      examples: [bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb202606]
+    EngineVersion:
+      x-frozen: sha256:79866a608595d0529021753202384f61c2a031213e1bd2487ceba9969d59314e
+      type: string
+      minLength: 1
+      maxLength: 32
+      pattern: '^[0-9A-Za-z./-]+$'
+      description: >-
+        Version of the tax engine that produced an estimate (`TaxpayerEstimate.engine_version`,
+        opaque to the client). Bumped whenever an engine change can move a figure.
+      examples: [1.0.1]
     TaxpayerEstimate:
-      x-frozen: sha256:b393ced5ab07bc1d43d3c9642b3870c1232a3fd6e1dbeb6e738db9353e456d02
+      x-frozen: sha256:e5824557c23ffd39fc20267b21ba354cc646fd0f8cc5bdd4c54c96f4a58bf5dc
       type: object
       required: [taxpayer_id, period, due_date, legend, disclaimers, regimes, totals, parameter_set, records_fingerprint, engine_version]
       description: >-
@@ -5418,6 +5647,15 @@ components:
         totals: { $ref: '#/components/schemas/EstimateTotals' }
         parameter_set: { $ref: '#/components/schemas/ParameterSetRef' }
         records_fingerprint: { $ref: '#/components/schemas/RecordsFingerprint' }
+        figures_fingerprint:
+          $ref: '#/components/schemas/FiguresFingerprint'
+          description: >-
+            Hash of the figures shown (M8-01, additive). Optional only until M8-03 ships the
+            M5 domain function that computes it: M8-03 **will make it required** (a response
+            narrowing, non-breaking; tracked in PLAN M8-03). The app posts it, with
+            `records_fingerprint`, `engine_version` and `parameter_set`, to
+            `markHistoryViewed`; until then a client that receives no value skips marking the
+            month viewed.
         engine_version: { type: string, examples: [1.0.0] }
       examples:
         - taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
@@ -5452,6 +5690,7 @@ components:
             total_payable_rounded_cents: 228429
           parameter_set: { fiscal_year: 2026, version: 1 }
           records_fingerprint: 3f6c2a9e8d7b1c4f5a0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a
+          figures_fingerprint: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb202603
           engine_version: 1.0.0
     Citation:
       x-frozen: sha256:55a7c9b8131aed8d55139b301ec8451e0f652e8309b1e97dd229cd134ad25122
@@ -5872,46 +6111,315 @@ components:
             expiration_at_ms: 1794585600000
 
     # ------------------------------------------------------------ history
-    HistoryMonth:
+    # Frozen at M8-01 (docs/project-specs/MODULE-history.md §9).
+    HistoryChangeReason:
+      x-frozen: sha256:a082aec6d9a21421266d937ec304f5b52d478497b487f49537aadddf3863b2ce
+      type: string
+      enum: [records, engine]
+      description: >-
+        Why a viewed month's displayed figures changed: `engine` when the engine version or
+        the parameter set differs from the one viewed (it wins when both causes apply),
+        `records` otherwise (a record, tax input or regime changed). es-MX copy: `engine` →
+        "Se actualizó el cálculo desde que lo viste"; `records` → "Cambió desde que lo
+        viste: hubo cambios en tus registros o datos fiscales".
+    HistoryTax:
+      x-frozen: sha256:d082910c16d7dbba4d99a353223f93026f12e23879316aa902bef4cbae6bdb07
       type: object
-      required: [period, status, total_payable_rounded_cents, changed_since_viewed]
+      required: [isr_payable_rounded_cents, iva_payable_rounded_cents, iva_outcome, iva_in_favor_cents, withholdings_to_remit_cents, total_payable_rounded_cents]
+      description: >-
+        One month's taxpayer-level figures, from the same estimate `getTaxpayerEstimate`
+        answers for that month (`totals`), to the centavo. A saldo a favor is shown in words
+        (`iva_outcome: in_favor`, `iva_in_favor_cents` > 0) and never adds to a total:
+        `iva_payable_rounded_cents` is then `0`. `total_payable_rounded_cents =
+        isr_payable_rounded_cents + iva_payable_rounded_cents + withholdings_to_remit_cents`.
+      properties:
+        isr_payable_rounded_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        iva_payable_rounded_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        iva_outcome: { type: string, enum: [payable, in_favor, zero] }
+        iva_in_favor_cents:
+          $ref: '#/components/schemas/NonNegativeCents'
+          description: Saldo a favor of the consolidated IVA (the magnitude of a negative `totals.iva.amount_cents`); `0` unless `iva_outcome` is `in_favor`.
+        withholdings_to_remit_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        total_payable_rounded_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+      examples:
+        - { isr_payable_rounded_cents: 15096, iva_payable_rounded_cents: 213333, iva_outcome: payable, iva_in_favor_cents: 0, withholdings_to_remit_cents: 0, total_payable_rounded_cents: 228429 }
+    HistoryMonth:
+      x-frozen: sha256:7616d572c07fd5038886a890ee7c98c9fa0dc2ca7adadd01a6a9cf07b29794d7
+      type: object
+      required: [period, status, has_records, tax, due_date, cpa_review_pending, is_current, records_fingerprint, figures_fingerprint, engine_version, parameter_set, viewed_at, changed_since_viewed, change_reason]
+      description: >-
+        One month of `HistoryYear`. `status` uses the M5 precedence (`TaxpayerEstimateStatus`;
+        `none` when no regime is held that month). `tax` is `null` if and only if `status` is
+        `none` or every regime is informational (no amount shown). `has_records`: any live
+        income or expense dated in the month, counting only enabled modules ("Sin registros
+        en este mes" when `false`; a YTD regime may still show a figure). `is_current`: the
+        current month (America/Mexico_City), labelled "Mes en curso", never marked.
+        `records_fingerprint`, `figures_fingerprint`, `engine_version` and `parameter_set`
+        are the current estimate's (opaque to the client; the app posts the values of the
+        estimate it renders to `markHistoryViewed`). `viewed_at`: the caller's last view
+        (server clock), `null` if never viewed. `changed_since_viewed` and `change_reason`
+        follow `getHistory`: `change_reason` is non-null if and only if
+        `changed_since_viewed` is `true`, which needs a view and a non-current month.
       properties:
         period: { $ref: '#/components/schemas/Period' }
-        status: { type: string, enum: [complete, incomplete, informational, no_records] }
-        iva: { oneOf: [{ $ref: '#/components/schemas/TaxResult' }, { type: 'null' }] }
-        isr: { oneOf: [{ $ref: '#/components/schemas/TaxResult' }, { type: 'null' }] }
-        total_payable_rounded_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        status: { $ref: '#/components/schemas/TaxpayerEstimateStatus' }
+        has_records: { type: boolean }
+        tax:
+          oneOf:
+            - $ref: '#/components/schemas/HistoryTax'
+            - type: 'null'
+        due_date: { type: string, format: date }
+        cpa_review_pending:
+          type: boolean
+          description: Any regime of the month is pending CPA review; the app shows the strong, non-dismissible banner.
+        is_current: { type: boolean }
+        records_fingerprint: { $ref: '#/components/schemas/RecordsFingerprint' }
+        figures_fingerprint: { $ref: '#/components/schemas/FiguresFingerprint' }
+        engine_version: { $ref: '#/components/schemas/EngineVersion' }
+        parameter_set: { $ref: '#/components/schemas/ParameterSetRef' }
+        viewed_at: { type: [string, 'null'], format: date-time }
         changed_since_viewed: { type: boolean }
-        last_viewed_at: { type: [string, 'null'], format: date-time }
-    HistoryYear:
+        change_reason:
+          oneOf:
+            - $ref: '#/components/schemas/HistoryChangeReason'
+            - type: 'null'
+      examples:
+        - period: '2026-06'
+          status: complete
+          has_records: true
+          tax: { isr_payable_rounded_cents: 18000, iva_payable_rounded_cents: 96000, iva_outcome: payable, iva_in_favor_cents: 0, withholdings_to_remit_cents: 0, total_payable_rounded_cents: 114000 }
+          due_date: '2026-07-17'
+          cpa_review_pending: false
+          is_current: false
+          records_fingerprint: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa202606
+          figures_fingerprint: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb202606
+          engine_version: 1.0.1
+          parameter_set: { fiscal_year: 2026, version: 1 }
+          viewed_at: '2026-09-20T15:30:00Z'
+          changed_since_viewed: true
+          change_reason: records
+    HistoryYearTotals:
+      x-frozen: sha256:be307be6a08e0c603e1dd30bb56ddfabde4656fbf0e60f33f19ce8d8f7c44d92
       type: object
-      required: [taxpayer_id, fiscal_year, months, legend]
+      required: [isr_payable_rounded_cents, iva_payable_rounded_cents, withholdings_to_remit_cents, total_payable_rounded_cents]
+      description: >-
+        "Suma de estimados mensuales": the sum over the returned months of their `tax`
+        figures (`null` months add nothing). A sum of provisional estimates, **not** the
+        annual return; a saldo a favor never subtracts from it. `total_payable_rounded_cents =
+        isr_payable_rounded_cents + iva_payable_rounded_cents + withholdings_to_remit_cents`.
+      properties:
+        isr_payable_rounded_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        iva_payable_rounded_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        withholdings_to_remit_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        total_payable_rounded_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+      examples:
+        - { isr_payable_rounded_cents: 91096, iva_payable_rounded_cents: 675333, withholdings_to_remit_cents: 12500, total_payable_rounded_cents: 778929 }
+    HistoryYear:
+      x-frozen: sha256:ee4d2f36b5e218ce2c4085c4db0d92835d4ef1f40b59035f63270bea17497266
+      type: object
+      required: [taxpayer_id, fiscal_year, months, year_totals, legend, disclaimers]
+      description: >-
+        Body of `getHistory`. `months` newest first (see the operation). `legend` is
+        mandatory under the list. `disclaimers` is the union of the months' disclaimers, in
+        the M5 order (`not_tax_advice` first, then by severity, then by code); a `strong`
+        `cpa_review_pending` is a non-dismissible banner. The example is a 612 taxpayer whose
+        regime starts in 2026-03, read on 2026-10-14: October is the current month, June
+        changed by records, July by an engine correction (1.0.0 → 1.0.1), August and April
+        were never viewed, January and February have no regime.
       properties:
         taxpayer_id: { $ref: '#/components/schemas/Uuid' }
         fiscal_year: { $ref: '#/components/schemas/FiscalYear' }
         months:
           type: array
+          minItems: 1
+          maxItems: 12
           items: { $ref: '#/components/schemas/HistoryMonth' }
+        year_totals: { $ref: '#/components/schemas/HistoryYearTotals' }
         legend: { $ref: '#/components/schemas/Legend' }
+        disclaimers:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/Disclaimer' }
       examples:
         - taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
           fiscal_year: 2026
           months:
-            - period: '2026-01'
+            - period: '2026-10'
+              status: incomplete
+              has_records: true
+              tax: { isr_payable_rounded_cents: 8000, iva_payable_rounded_cents: 120000, iva_outcome: payable, iva_in_favor_cents: 0, withholdings_to_remit_cents: 0, total_payable_rounded_cents: 128000 }
+              due_date: '2026-11-17'
+              cpa_review_pending: false
+              is_current: true
+              records_fingerprint: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa202610
+              figures_fingerprint: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb202610
+              engine_version: 1.0.1
+              parameter_set: { fiscal_year: 2026, version: 1 }
+              viewed_at: null
+              changed_since_viewed: false
+              change_reason: null
+            - period: '2026-09'
               status: complete
-              iva: { amount_cents: 213333, payable_rounded_cents: 213333, outcome: payable }
-              isr: { amount_cents: 15096, payable_rounded_cents: 15096, outcome: payable }
-              total_payable_rounded_cents: 228429
+              has_records: true
+              tax: { isr_payable_rounded_cents: 15096, iva_payable_rounded_cents: 213333, iva_outcome: payable, iva_in_favor_cents: 0, withholdings_to_remit_cents: 0, total_payable_rounded_cents: 228429 }
+              due_date: '2026-10-19'
+              cpa_review_pending: false
+              is_current: false
+              records_fingerprint: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa202609
+              figures_fingerprint: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb202609
+              engine_version: 1.0.1
+              parameter_set: { fiscal_year: 2026, version: 1 }
+              viewed_at: '2026-10-03T17:20:00Z'
               changed_since_viewed: false
-              last_viewed_at: '2026-02-10T18:00:00Z'
+              change_reason: null
+            - period: '2026-08'
+              status: complete
+              has_records: true
+              tax: { isr_payable_rounded_cents: 12000, iva_payable_rounded_cents: 0, iva_outcome: in_favor, iva_in_favor_cents: 45000, withholdings_to_remit_cents: 0, total_payable_rounded_cents: 12000 }
+              due_date: '2026-09-17'
+              cpa_review_pending: false
+              is_current: false
+              records_fingerprint: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa202608
+              figures_fingerprint: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb202608
+              engine_version: 1.0.1
+              parameter_set: { fiscal_year: 2026, version: 1 }
+              viewed_at: null
+              changed_since_viewed: false
+              change_reason: null
+            - period: '2026-07'
+              status: complete
+              has_records: true
+              tax: { isr_payable_rounded_cents: 20500, iva_payable_rounded_cents: 150000, iva_outcome: payable, iva_in_favor_cents: 0, withholdings_to_remit_cents: 12500, total_payable_rounded_cents: 183000 }
+              due_date: '2026-08-17'
+              cpa_review_pending: false
+              is_current: false
+              records_fingerprint: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa202607
+              figures_fingerprint: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb202607
+              engine_version: 1.0.1
+              parameter_set: { fiscal_year: 2026, version: 1 }
+              viewed_at: '2026-08-12T16:05:00Z'
+              changed_since_viewed: true
+              change_reason: engine
+            - period: '2026-06'
+              status: complete
+              has_records: true
+              tax: { isr_payable_rounded_cents: 18000, iva_payable_rounded_cents: 96000, iva_outcome: payable, iva_in_favor_cents: 0, withholdings_to_remit_cents: 0, total_payable_rounded_cents: 114000 }
+              due_date: '2026-07-17'
+              cpa_review_pending: false
+              is_current: false
+              records_fingerprint: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa202606
+              figures_fingerprint: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb202606
+              engine_version: 1.0.1
+              parameter_set: { fiscal_year: 2026, version: 1 }
+              viewed_at: '2026-09-20T15:30:00Z'
+              changed_since_viewed: true
+              change_reason: records
+            - period: '2026-05'
+              status: complete
+              has_records: true
+              tax: { isr_payable_rounded_cents: 9500, iva_payable_rounded_cents: 64000, iva_outcome: payable, iva_in_favor_cents: 0, withholdings_to_remit_cents: 0, total_payable_rounded_cents: 73500 }
+              due_date: '2026-06-17'
+              cpa_review_pending: false
+              is_current: false
+              records_fingerprint: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa202605
+              figures_fingerprint: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb202605
+              engine_version: 1.0.1
+              parameter_set: { fiscal_year: 2026, version: 1 }
+              viewed_at: '2026-06-15T18:00:00Z'
+              changed_since_viewed: false
+              change_reason: null
+            - period: '2026-04'
+              status: incomplete
+              has_records: false
+              tax: { isr_payable_rounded_cents: 3000, iva_payable_rounded_cents: 0, iva_outcome: zero, iva_in_favor_cents: 0, withholdings_to_remit_cents: 0, total_payable_rounded_cents: 3000 }
+              due_date: '2026-05-18'
+              cpa_review_pending: false
+              is_current: false
+              records_fingerprint: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa202604
+              figures_fingerprint: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb202604
+              engine_version: 1.0.1
+              parameter_set: { fiscal_year: 2026, version: 1 }
+              viewed_at: null
+              changed_since_viewed: false
+              change_reason: null
+            - period: '2026-03'
+              status: complete
+              has_records: true
+              tax: { isr_payable_rounded_cents: 5000, iva_payable_rounded_cents: 32000, iva_outcome: payable, iva_in_favor_cents: 0, withholdings_to_remit_cents: 0, total_payable_rounded_cents: 37000 }
+              due_date: '2026-04-17'
+              cpa_review_pending: false
+              is_current: false
+              records_fingerprint: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa202603
+              figures_fingerprint: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb202603
+              engine_version: 1.0.1
+              parameter_set: { fiscal_year: 2026, version: 1 }
+              viewed_at: '2026-04-20T19:45:00Z'
+              changed_since_viewed: false
+              change_reason: null
             - period: '2026-02'
-              status: no_records
-              iva: null
-              isr: null
-              total_payable_rounded_cents: 0
+              status: none
+              has_records: false
+              tax: null
+              due_date: '2026-03-17'
+              cpa_review_pending: false
+              is_current: false
+              records_fingerprint: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa202602
+              figures_fingerprint: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb202602
+              engine_version: 1.0.1
+              parameter_set: { fiscal_year: 2026, version: 1 }
+              viewed_at: null
               changed_since_viewed: false
-              last_viewed_at: null
+              change_reason: null
+            - period: '2026-01'
+              status: none
+              has_records: false
+              tax: null
+              due_date: '2026-02-17'
+              cpa_review_pending: false
+              is_current: false
+              records_fingerprint: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa202601
+              figures_fingerprint: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb202601
+              engine_version: 1.0.1
+              parameter_set: { fiscal_year: 2026, version: 1 }
+              viewed_at: null
+              changed_since_viewed: false
+              change_reason: null
+          year_totals: { isr_payable_rounded_cents: 91096, iva_payable_rounded_cents: 675333, withholdings_to_remit_cents: 12500, total_payable_rounded_cents: 778929 }
           legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
+          disclaimers:
+            - code: not_tax_advice
+              severity: info
+              text: Estimación informativa. No sustituye la declaración ante el SAT ni la asesoría de un contador. Cálculo basado en LISR, LIVA, LIF 2026 y Anexo 8 RMF 2026.
+    HistoryViewedParameterSet:
+      x-frozen: sha256:92493e657e3536ff72b46d2f7da4691dce172d9dadad494945dcebefa2ef7bd1
+      type: object
+      additionalProperties: false
+      required: [fiscal_year, version]
+      description: The `parameter_set` (`ParameterSetRef`) of the rendered estimate, copied as is; closed for input.
+      properties:
+        fiscal_year: { $ref: '#/components/schemas/FiscalYear' }
+        version: { type: integer, minimum: 1, maximum: 9999 }
+      examples:
+        - { fiscal_year: 2026, version: 1 }
+    HistoryViewedRequest:
+      x-frozen: sha256:c118f4cc54ba24c201d5a389d854cd659b706027f31305aa7414a8a8f7c1ca7a
+      type: object
+      additionalProperties: false
+      required: [records_fingerprint, figures_fingerprint, engine_version, parameter_set]
+      description: >-
+        What the user saw: the values of the `TaxpayerEstimate` the app rendered for the
+        month, copied verbatim. Format-validated and only ever compared (never used for a
+        figure, never logged).
+      properties:
+        records_fingerprint: { $ref: '#/components/schemas/RecordsFingerprint' }
+        figures_fingerprint: { $ref: '#/components/schemas/FiguresFingerprint' }
+        engine_version: { $ref: '#/components/schemas/EngineVersion' }
+        parameter_set: { $ref: '#/components/schemas/HistoryViewedParameterSet' }
+      examples:
+        - records_fingerprint: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa202606
+          figures_fingerprint: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb202606
+          engine_version: 1.0.1
+          parameter_set: { fiscal_year: 2026, version: 1 }
 
     # ------------------------------------------------------------ reminders
     DeviceCreate:

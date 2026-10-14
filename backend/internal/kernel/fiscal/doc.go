@@ -12,12 +12,16 @@
 //   - Share, SuggestAtRate, Suggestion: the withholding kinds of the law (a
 //     dated rate of a base, or a legal fraction of the IVA) and how a
 //     suggestion is computed and compared.
+//   - DeriveWithholdings, WithholdingInput, Derivation, WithholdingCatalog:
+//     the withholding decision table (MODULE-withholdings §3) incomes,
+//     expenses and the preview endpoint share, with its rule IDs and ⚠️
+//     ambiguities.
 //   - Error, Violation, Violations: the domain error model whose values are
 //     the contract details[].code. Modules declare their own codes with
 //     ValidationError and BusinessRuleError.
 //
-// Module-specific rules (withholding applicability, deductibility, cash
-// payments, income basis) stay in each module's domain. The kernel imports
+// Module-specific rules (deductibility, cash payments, income basis, the
+// side-specific withholding warnings) stay in each module's domain. The kernel imports
 // only the standard library and internal/platform/money (archtest
 // kernel-imports). Money is money.Cents, every product rounds once, half
 // away from zero; there is no float and no clock.

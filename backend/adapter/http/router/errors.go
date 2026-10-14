@@ -10,6 +10,13 @@ import (
 
 const invalidInputMessage = "One or more fields are invalid."
 
+// MaxFieldErrors caps the details of a validation_failed answer (M6-08
+// G-1). Without it a 64 KiB query of undeclared parameters, or a 1 MiB body
+// of unknown properties, answers with one detail each: a response up to
+// fifteen times the request, on public operations too. The first errors are
+// kept, in the validator's order; a client fixes those and resubmits.
+const MaxFieldErrors = 20
+
 // errorWriter writes the envelope for errors raised by the generated code
 // and by the strict handlers.
 type errorWriter struct {
@@ -32,7 +39,9 @@ func (e errorWriter) handlerError(w http.ResponseWriter, r *http.Request, err er
 	}
 }
 
-// invalid builds the validation_failed error for a rejected request.
+// invalid builds the validation_failed error for a rejected request, with
+// at most MaxFieldErrors details.
 func invalid(cause error, fields []apperr.FieldError) *apperr.Error {
+	fields = fields[:min(len(fields), MaxFieldErrors)]
 	return apperr.Wrap(cause, apperr.CodeValidationFailed, invalidInputMessage).WithFields(fields...)
 }
