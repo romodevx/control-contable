@@ -1,0 +1,149 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+
+	expensesdomain "github.com/romodevx/control-contable/backend/internal/expenses/domain"
+	incomesdomain "github.com/romodevx/control-contable/backend/internal/incomes/domain"
+	incomesinfra "github.com/romodevx/control-contable/backend/internal/incomes/infra"
+	incomes "github.com/romodevx/control-contable/backend/internal/incomes/usecase"
+	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
+	"github.com/romodevx/control-contable/backend/internal/platform/access"
+	"github.com/romodevx/control-contable/backend/internal/platform/access/accessgorm"
+	"github.com/romodevx/control-contable/backend/internal/platform/clock"
+	"github.com/romodevx/control-contable/backend/internal/platform/tx"
+	"github.com/romodevx/control-contable/backend/internal/taxengine/infra/ratecatalog"
+	"github.com/romodevx/control-contable/backend/internal/taxengine/params"
+	taxpayersdomain "github.com/romodevx/control-contable/backend/internal/taxpayers/domain"
+	taxpayers "github.com/romodevx/control-contable/backend/internal/taxpayers/usecase"
+)
+
+// The 625 options the income withholding rules read (regime catalog keys).
+const (
+	optionActivities         = "activities"
+	optionRFCGivenToPlatform = "rfc_given_to_platform"
+)
+
+// rateCatalog is the tax engine's RateCatalog adapter, bound once with the
+// expenses module's amount key so one value serves both record modules
+// (ADR-0007 §6): incomes reads fiscal.RateCatalog and Provisional,
+// expenses adds Amount.
+type rateCatalog = ratecatalog.Catalog[expensesdomain.AmountKey]
+
+// newRateCatalog builds the catalog over the parameter sets compiled into
+// the binary. A set without the IVA rates fails the boot (PR #77 FU).
+func newRateCatalog() (*rateCatalog, error) {
+	sets, err := params.Embedded()
+	if err != nil {
+		return nil, err
+	}
+	return ratecatalog.New[expensesdomain.AmountKey](sets)
+}
+
+// errNoIncomesTx reports wiring without the shared unit of work.
+var errNoIncomesTx = errors.New("incomes: the taxpayers module's unit of work is required")
+
+// incomesWiring is what the incomes module needs from the composition root.
+// tx must be the taxpayers module's manager: CheckRegime joins the income's
+// transaction only through it.
+type incomesWiring struct {
+	tx        tx.Manager
+	taxpayers taxpayerQueries
+	rates     *rateCatalog
+	// clock is the incomes' today; accessClock decides the trial (its rows
+	// start at the database's now()). Production passes the system clock
+	// to both.
+	clock       clock.Clock
+	accessClock clock.Clock
+	logger      *slog.Logger
+}
+
+// incomesModule is the incomes module's use cases; M3-06 adds the handler.
+type incomesModule struct {
+	incomes *incomes.Incomes
+}
+
+// newIncomesModule wires the incomes use cases (M3-04, M3-05) over the
+// shared cc_app unit of work, the taxpayers module, the access policy and
+// the rate catalog.
+func newIncomesModule(w incomesWiring) (incomesModule, error) {
+	if w.tx == nil {
+		return incomesModule{}, errNoIncomesTx
+	}
+	store := accessgorm.NewStore()
+	return incomesModule{incomes: incomes.NewIncomes(incomes.Deps{
+		Tx:        w.tx,
+		Store:     incomesinfra.NewStore(),
+		Taxpayers: incomesTaxpayers{queries: w.taxpayers},
+		Access:    access.NewPolicy(w.tx, store, store, w.accessClock),
+		Rates:     w.rates,
+		Clock:     w.clock,
+		Logger:    w.logger,
+	})}, nil
+}
+
+// taxpayerQueries is the taxpayers module's read side (*usecase.Queries).
+type taxpayerQueries interface {
+	taxpayers.TaxpayerRegimeChecker
+	taxpayers.TaxpayerProfileReader
+}
+
+// incomesTaxpayers adapts the taxpayers module to the incomes port: the
+// modules never import each other (archtest), only the composition root
+// sees both.
+type incomesTaxpayers struct {
+	queries taxpayerQueries
+}
+
+// CheckRegime implements incomes.Taxpayers.
+func (a incomesTaxpayers) CheckRegime(ctx context.Context, userID, taxpayerID, regimeCode, period string) error {
+	return a.queries.CheckRegime(ctx, userID, taxpayerID, regimeCode, period)
+}
+
+// Profile implements incomes.Taxpayers.
+func (a incomesTaxpayers) Profile(ctx context.Context, userID, taxpayerID string) (incomes.TaxpayerProfile, error) {
+	p, err := a.queries.Profile(ctx, userID, taxpayerID)
+	if err != nil {
+		return incomes.TaxpayerProfile{}, err
+	}
+	out := incomes.TaxpayerProfile{PersonType: fiscal.PersonType(p.PersonType), Archived: p.Archived}
+	for _, r := range p.Regimes {
+		out.Regimes = append(out.Regimes, incomes.RegimeProfile{
+			Code:               fiscal.RegimeCode(r.Code),
+			PlatformActivities: activities(r.Options[optionActivities]),
+			RFCGivenToPlatform: flag(r.Options[optionRFCGivenToPlatform]),
+		})
+	}
+	return out, nil
+}
+
+func activities(v taxpayersdomain.OptionValue) []incomesdomain.PlatformActivity {
+	list, ok := v.List()
+	if !ok {
+		return nil
+	}
+	out := make([]incomesdomain.PlatformActivity, len(list))
+	for i, a := range list {
+		out[i] = incomesdomain.PlatformActivity(a)
+	}
+	return out
+}
+
+func flag(v taxpayersdomain.OptionValue) bool {
+	b, _ := v.Bool()
+	return b
+}
+
+// newRecordModules wires the record modules over the taxpayers module's
+// unit of work and one rate catalog.
+func newRecordModules(t taxpayersModule, logger *slog.Logger) (incomesModule, error) {
+	rates, err := newRateCatalog()
+	if err != nil {
+		return incomesModule{}, err
+	}
+	return newIncomesModule(incomesWiring{
+		tx: t.tx, taxpayers: t.queries, rates: rates, clock: clock.NewSystem(), accessClock: clock.NewSystem(), logger: logger,
+	})
+}

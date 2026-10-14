@@ -1,6 +1,7 @@
 package ratecatalog
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
@@ -43,12 +44,52 @@ type Resolved[T any] struct {
 	Provisional bool
 }
 
-// New returns the adapter over sets, or ErrNoCatalog for a nil catalog.
+// requiredIVARates are the IVA rates every parameter set must hold. The
+// border 8 % is the one optional rate: it exists only while a decree does.
+var requiredIVARates = []taxparams.Requirement{
+	taxparams.RequireRate(taxparams.Key(fiscal.KeyIVAGeneral)),
+	taxparams.RequireRate(taxparams.Key(fiscal.KeyIVAZero)),
+}
+
+// New returns the adapter over sets: ErrNoCatalog for a nil catalog, and
+// ErrMissingIVARate when a fiscal year's set (the version Select serves)
+// lacks a required IVA rate, so a broken params file fails the boot.
 func New[K ~string](sets *taxparams.Catalog) (*Catalog[K], error) {
 	if sets == nil {
 		return nil, ErrNoCatalog
 	}
+	if err := requireIVARates(sets); err != nil {
+		return nil, err
+	}
 	return &Catalog[K]{sets: sets}, nil
+}
+
+// requireIVARates checks every set Select can serve: the highest version of
+// each fiscal year.
+func requireIVARates(sets *taxparams.Catalog) error {
+	var problems []error
+	for _, id := range sets.Sets() {
+		sel, err := sets.Select(id.FiscalYear)
+		if err != nil {
+			return fmt.Errorf("ratecatalog: select %d: %w", id.FiscalYear, err)
+		}
+		if sel.Params.Version() != id.Version {
+			continue // an older version Select never serves
+		}
+		if err := sel.Params.Require(requiredIVARates...); err != nil {
+			problems = append(problems, fmt.Errorf("%w: set %s: %w", ErrMissingIVARate, id, err))
+		}
+	}
+	return errors.Join(problems...)
+}
+
+// Provisional reports whether the values a record dated on reads come from
+// a provisional set (marked so, or the previous year's fallback), so the
+// record can carry the provisional_parameters warning. A date no set covers
+// is ErrDateNotCovered.
+func (c *Catalog[K]) Provisional(on fiscal.Date) (bool, error) {
+	r, err := resolve(c.sets, on, func(*taxparams.Params) (struct{}, error) { return struct{}{}, nil })
+	return r.Provisional, err
 }
 
 // Rate returns the rate key holds on day on, and false when none does: the
@@ -118,7 +159,7 @@ func (c *Catalog[K]) AllowedIVARates(on fiscal.Date) (Resolved[[]fiscal.IVARate]
 func resolve[T any](sets *taxparams.Catalog, on fiscal.Date, read func(*taxparams.Params) (T, error)) (Resolved[T], error) {
 	sel, err := sets.Select(on.Year())
 	if err != nil {
-		return Resolved[T]{}, fmt.Errorf("ratecatalog: %q: %w: %w", on, ErrDateNotCovered, err)
+		return Resolved[T]{}, fmt.Errorf("%w: %q: %w", ErrDateNotCovered, on, err)
 	}
 	v, err := read(sel.Params)
 	if err != nil {

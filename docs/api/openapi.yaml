@@ -4059,7 +4059,10 @@ components:
         time and its compatibility is not yet verified by a CPA, `message` carries the pair's
         `reason`. Incomes (M3): `duplicate_cfdi_uuid` on `cfdi_uuid` (another live record of
         the taxpayer has the same folio fiscal); `withholding_differs_from_rate` on
-        `isr_withheld_cents` / `iva_withheld_cents` (the CFDI wins). Expenses (M4):
+        `isr_withheld_cents` / `iva_withheld_cents` (the CFDI wins); `provisional_parameters`
+        on `collected_on` / `invoiced_on` (the rates checked on that date come from a
+        provisional parameter set: its fiscal year is not published yet, so the previous
+        year's values apply, or the set is marked provisional; M3-04). Expenses (M4):
         `cash_over_threshold` on `payment_method`; `no_cfdi` on `has_cfdi`;
         `not_isr_deductible_in_regime` and `category_not_deductible` on `deductible`;
         `duplicate_cfdi_uuid` on `cfdi_uuid`; `iva_not_creditable_cash_payment` on

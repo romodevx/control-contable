@@ -15,4 +15,9 @@ const (
 	// taxparams.ErrNoParameters). The contract maps it to
 	// parameters_unavailable.
 	ErrDateNotCovered Error = "ratecatalog: no parameter set covers the date"
+	// ErrMissingIVARate reports a parameter set without the general 16 % or
+	// the zero IVA rate (it also wraps the taxparams lookup error). New
+	// refuses it: the boolean port would otherwise turn the gap into "not in
+	// force" and refuse every such record with rate_not_valid_on_date.
+	ErrMissingIVARate Error = "ratecatalog: a parameter set lacks a required IVA rate"
 )
