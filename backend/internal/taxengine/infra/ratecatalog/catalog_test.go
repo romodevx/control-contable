@@ -11,6 +11,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/taxparams"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/infra/ratecatalog"
+	"github.com/romodevx/control-contable/backend/internal/taxengine/params"
 )
 
 // One adapter value satisfies both consumer-side ports (ADR-0007 §6):
@@ -277,21 +278,116 @@ func TestSetMarkedProvisional(t *testing.T) {
 }
 
 func TestKeyAbsentFromTheSet(t *testing.T) {
-	c := synthetic(t, syntheticSet(t, 2026, false))
+	c := synthetic(t, syntheticSetWithout(t, 2026, false, taxparams.Key(fiscal.KeyIVABorder)))
 	on := date(t, "2026-05-01")
 
-	_, err := c.RateOn(fiscal.KeyIVAZero, on)
+	_, err := c.RateOn(fiscal.KeyIVABorder, on)
 	require.ErrorIs(t, err, taxparams.ErrUnknownKey)
-	_, ok := c.Rate(fiscal.KeyIVAZero, on)
+	_, ok := c.Rate(fiscal.KeyIVABorder, on)
 	assert.False(t, ok)
 
-	// A set without the zero rate allows neither it nor anything it lacks.
+	// The border 8 % is the one optional IVA rate: a set without it does not
+	// allow it.
 	allowed, err := c.AllowedIVARates(on)
 	require.NoError(t, err)
-	assert.Equal(t, []fiscal.IVARate{fiscal.IVARate16, fiscal.IVARate8, fiscal.IVAExempt}, allowed.Value)
+	assert.Equal(t, []fiscal.IVARate{fiscal.IVARate16, fiscal.IVARate0, fiscal.IVAExempt}, allowed.Value)
 
 	_, err = c.UMA(ratecatalog.UMAMonthly, on)
 	require.ErrorIs(t, err, taxparams.ErrUnknownKey)
+}
+
+// PR #77 follow-up: a set without the general or the zero IVA rate (left out
+// or misspelled) fails at boot. Otherwise the boolean port would report "not
+// in force" and every 16 % record would be refused with
+// rate_not_valid_on_date, silently.
+func TestNewRequiresTheIVARatesInEverySet(t *testing.T) {
+	tests := []struct {
+		name string
+		sets []*taxparams.Params
+		want error
+	}{
+		{
+			name: "general 16 % missing",
+			sets: []*taxparams.Params{syntheticSetWithout(t, 2026, false, taxparams.Key(fiscal.KeyIVAGeneral))},
+			want: taxparams.ErrUnknownKey,
+		},
+		{
+			name: "zero rate missing",
+			sets: []*taxparams.Params{syntheticSetWithout(t, 2026, false, taxparams.Key(fiscal.KeyIVAZero))},
+			want: taxparams.ErrUnknownKey,
+		},
+		{
+			name: "missing from a later year only",
+			sets: []*taxparams.Params{
+				syntheticSet(t, 2026, false),
+				syntheticSetWithout(t, 2027, false, taxparams.Key(fiscal.KeyIVAGeneral)),
+			},
+			want: taxparams.ErrUnknownKey,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := newSynthetic(t, tt.sets...)
+			require.ErrorIs(t, err, ratecatalog.ErrMissingIVARate)
+			require.ErrorIs(t, err, tt.want)
+		})
+	}
+}
+
+// A superseded version is never served, so only the highest version of a
+// year must hold the rates: v2 fixes v1's gap.
+func TestNewChecksOnlyTheServedVersion(t *testing.T) {
+	fixed := synthetic(t,
+		syntheticVersion(t, 2026, 1, false, taxparams.Key(fiscal.KeyIVAGeneral)),
+		syntheticVersion(t, 2026, 2, false))
+	got, err := fixed.RateOn(fiscal.KeyIVAGeneral, date(t, "2026-05-01"))
+	require.NoError(t, err)
+	assert.Equal(t, taxparams.SetID{FiscalYear: 2026, Version: 2}, got.Set)
+
+	_, err = newSynthetic(t, syntheticVersion(t, 2026, 1, false), syntheticVersion(t, 2026, 2, false, taxparams.Key(fiscal.KeyIVAZero)))
+	require.ErrorIs(t, err, ratecatalog.ErrMissingIVARate, "a broken latest version is refused")
+}
+
+// The embedded 2026 set holds every required IVA rate.
+func TestNewAcceptsTheEmbeddedSets(t *testing.T) {
+	sets, err := params.Embedded()
+	require.NoError(t, err)
+	_, err = ratecatalog.New[expenses.AmountKey](sets)
+	require.NoError(t, err)
+}
+
+// Provisional reports whether a record dated on gets its values from a
+// provisional set (PR #77 follow-up: the flag must reach the records); a
+// date no set covers is ErrDateNotCovered, never a silent value.
+func TestProvisional(t *testing.T) {
+	tests := []struct {
+		name    string
+		sets    []*taxparams.Params
+		on      string
+		want    bool
+		wantErr error
+	}{
+		{name: "published year", sets: []*taxparams.Params{syntheticSet(t, 2026, false)}, on: "2026-05-01"},
+		{name: "set marked provisional", sets: []*taxparams.Params{syntheticSet(t, 2026, true)}, on: "2026-05-01", want: true},
+		{name: "fallback to the previous year", sets: []*taxparams.Params{syntheticSet(t, 2026, false)}, on: "2027-01-01", want: true},
+		{name: "before the first set", sets: []*taxparams.Params{syntheticSet(t, 2026, false)}, on: "2025-12-31", wantErr: ratecatalog.ErrDateNotCovered},
+		{name: "zero date", sets: []*taxparams.Params{syntheticSet(t, 2026, false)}, wantErr: ratecatalog.ErrDateNotCovered},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var on fiscal.Date
+			if tt.on != "" {
+				on = date(t, tt.on)
+			}
+			got, err := synthetic(t, tt.sets...).Provisional(on)
+			if tt.wantErr != nil {
+				require.ErrorIs(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }
 
 // A rate read as money (or money as a rate) is a wiring bug: an error, and
