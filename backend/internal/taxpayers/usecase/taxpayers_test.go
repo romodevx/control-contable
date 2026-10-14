@@ -488,6 +488,27 @@ func TestUpdate_CorrectsTheRFCResealedForTheSameRow(t *testing.T) {
 	assert.Equal(t, []byte("ct:"+id+":"+userA), h.store.rows[id].rfc.Ciphertext)
 }
 
+func TestUpdate_RFCCorrectionIsAuditedWithIDsOnly(t *testing.T) {
+	h := newHarness(t)
+	const id = "0199d4a2-0000-7000-8000-0000000000a1"
+	h.store.seedTaxpayer(userA, id, domain.PersonTypeFisica, false)
+	name, rfc := "Renamed", rfcFisicaOther
+
+	_, err := h.taxpayers.Update(t.Context(), userA, id, usecase.UpdateInput{DisplayName: &name})
+	require.NoError(t, err)
+	assert.NotContains(t, h.logs.String(), "taxpayer.rfc_corrected", "a rename alone is not an RFC correction")
+
+	_, err = h.taxpayers.Update(t.Context(), userA, id, usecase.UpdateInput{RFC: &rfc})
+	require.NoError(t, err)
+
+	logs := h.logs.String()
+	assert.Equal(t, 1, strings.Count(logs, `"msg":"taxpayer.rfc_corrected"`))
+	assert.Contains(t, logs, `"user_id":"`+userA+`"`)
+	assert.Contains(t, logs, `"taxpayer_id":"`+id+`"`)
+	assert.NotContains(t, logs, rfcFisicaOther, "the RFC is never logged (S-9)")
+	assert.NotContains(t, logs, "AAAA******AA0", "not even masked")
+}
+
 func TestUpdate_RFCCorrectionWithAMismatchedCheckDigitWarns(t *testing.T) {
 	h := newHarness(t)
 	const id = "0199d4a2-0000-7000-8000-0000000000a1"

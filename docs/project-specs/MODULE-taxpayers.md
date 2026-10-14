@@ -334,7 +334,7 @@ An overlapping regime pair still under CPA review is not an error either: `Taxpa
 | S-6 | RLS ENABLE + FORCE on `taxpayers`, `taxpayer_regimes`; owner policies; composite FKs `(taxpayer_id, user_id, person_type)` and `(regime_code, person_type)`; no UPDATE grant on `person_type`; `rfc_*` updated only by the RFC-correction use case (OQ-1) | Isolation suite (data-model §RLS) incl. cross-user composite-FK rejection |
 | S-7 | Account deletion cascades every M2 table; extend the deletion-cascade guard to indirect chains (M1-17 #43) | Guard test lists M2 tables |
 | S-8 | Repositories never commit/rollback or `SET` (P0-30 D-3 lint lands with the first M2 repository) | archtest |
-| S-9 | Audit log events `taxpayer.created/archived/unarchived/deleted`, `taxpayer_regime.added/archived` with user id + taxpayer id only | Log capture test |
+| S-9 | Audit log events `taxpayer.created/rfc_corrected/archived/unarchived/deleted`, `taxpayer_regime.added/archived` with user id + taxpayer id only | Log capture test |
 | S-10 | Per-user write budget on taxpayer/regime mutations (default 30/h) via the ADR-0005 limiter | 429 test |
 | S-11 | Contract validation at the edge, `additionalProperties: false` on every M2 request body | Contract tests |
 

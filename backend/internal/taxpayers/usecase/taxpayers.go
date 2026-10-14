@@ -12,10 +12,11 @@ import (
 
 // Audit events (S-9).
 const (
-	eventCreated    = "taxpayer.created"
-	eventArchived   = "taxpayer.archived"
-	eventUnarchived = "taxpayer.unarchived"
-	eventDeleted    = "taxpayer.deleted"
+	eventCreated      = "taxpayer.created"
+	eventRFCCorrected = "taxpayer.rfc_corrected"
+	eventArchived     = "taxpayer.archived"
+	eventUnarchived   = "taxpayer.unarchived"
+	eventDeleted      = "taxpayer.deleted"
 )
 
 // Taxpayers manages a user's taxpayers (US-T1..T3c).
@@ -346,6 +347,10 @@ func (uc *Taxpayers) Update(ctx context.Context, userID, rawID string, in Update
 	})
 	if err != nil {
 		return Taxpayer{}, present("update taxpayer", err)
+	}
+	if in.RFC != nil {
+		// A changed tax identity is a sensitive write: audited, ids only.
+		uc.audit(ctx, eventRFCCorrected, userID, id)
 	}
 	return out, nil
 }
