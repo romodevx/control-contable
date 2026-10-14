@@ -34,6 +34,32 @@ ApiFailure _failureOf(DioException exception) =>
 
 void main() {
   group('apiFailureFrom', () {
+    group('invalid_password is read by its code, not its status', () {
+      for (final status in [403, 400, 401]) {
+        test('$status invalid_password is an ApiInvalidPassword', () {
+          final failure = _failureOf(
+            _answer(status, body: _envelope('invalid_password')),
+          );
+
+          expect(failure, isA<ApiInvalidPassword>());
+        });
+      }
+
+      test('a 403 with another code is unexpected', () {
+        expect(
+          _failureOf(_answer(403, body: _envelope('conflict'))),
+          isA<ApiUnexpected>(),
+        );
+      });
+
+      test('a 401 without that code is the bearer', () {
+        expect(
+          _failureOf(_answer(401, body: _envelope('unauthorized'))),
+          isA<ApiUnauthorized>(),
+        );
+      });
+    });
+
     test('400 carries the field details of the error envelope', () {
       final failure = _failureOf(
         _answer(

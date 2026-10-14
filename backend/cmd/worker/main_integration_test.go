@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"io"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -50,6 +51,9 @@ type instance struct {
 	job    countingJob
 	cancel context.CancelFunc
 	done   chan error
+
+	stopOnce sync.Once
+	stopErr  error
 }
 
 func startInstance(t *testing.T, database *pgtest.Database) *instance {
@@ -68,7 +72,7 @@ func startInstance(t *testing.T, database *pgtest.Database) *instance {
 	ctx, cancel := context.WithCancel(context.Background())
 	in.cancel = cancel
 	go func() { in.done <- runner.Run(ctx) }()
-	t.Cleanup(func() { assert.NoError(t, in.stop()) })
+	t.Cleanup(func() { assert.NoError(t, in.stop(t)) })
 	return in
 }
 
@@ -84,11 +88,7 @@ func (in *instance) beat(t *testing.T) {
 func (in *instance) mustRun(t *testing.T) {
 	t.Helper()
 	in.ticks.Tick(t, testJobInterval)
-	select {
-	case <-in.job.runs:
-	case <-t.Context().Done():
-		t.Fatal("the leader did not run the job")
-	}
+	workertest.Await(t, in.job.runs, "the leader to run the job")
 }
 
 // mustSkip ticks the job twice (the second tick is received only once the
@@ -100,13 +100,15 @@ func (in *instance) mustSkip(t *testing.T) {
 	assert.Empty(t, in.job.runs, "a standby never runs jobs")
 }
 
-func (in *instance) stop() error {
-	in.cancel()
-	err, ok := <-in.done
-	if ok {
-		close(in.done)
-	}
-	return err
+// stop cancels the runner and waits, bounded, for Run to return; it is
+// idempotent.
+func (in *instance) stop(t *testing.T) error {
+	t.Helper()
+	in.stopOnce.Do(func() {
+		in.cancel()
+		in.stopErr = workertest.Await(t, in.done, "the worker to stop")
+	})
+	return in.stopErr
 }
 
 // leaderOf returns the instance that leads and the one that does not.
@@ -168,10 +170,10 @@ func TestWorker_aStoppedLeaderHandsOver(t *testing.T) {
 	database := pgtest.NewDatabase(t)
 	leader, standby := leaderOf(t, startInstance(t, database), startInstance(t, database))
 
-	require.NoError(t, leader.stop())
+	require.NoError(t, leader.stop(t))
 
 	standby.beat(t)
-	assert.True(t, standby.runner.Leading())
+	require.True(t, standby.runner.Leading(), "the standby takes over at its first heartbeat after the resign")
 	standby.mustRun(t)
 }
 

@@ -3,6 +3,7 @@
 package workertest
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -14,13 +15,25 @@ import (
 // Tickers are keyed by interval, so give the heartbeat and every job a distinct
 // interval.
 type Ticks struct {
+	waitLimit time.Duration
+
 	mu       sync.Mutex
 	channels map[time.Duration]*manualTicker
 }
 
+// Option customizes NewTicks.
+type Option func(*Ticks)
+
+// WithWaitLimit replaces WaitLimit as the longest Tick waits for a runner.
+func WithWaitLimit(d time.Duration) Option { return func(t *Ticks) { t.waitLimit = d } }
+
 // NewTicks returns an empty set of manual tickers.
-func NewTicks() *Ticks {
-	return &Ticks{channels: make(map[time.Duration]*manualTicker)}
+func NewTicks(opts ...Option) *Ticks {
+	t := &Ticks{waitLimit: WaitLimit, channels: make(map[time.Duration]*manualTicker)}
+	for _, opt := range opts {
+		opt(t)
+	}
+	return t
 }
 
 // NewTicker implements worker.NewTicker.
@@ -30,11 +43,16 @@ func (t *Ticks) NewTicker(interval time.Duration) worker.Ticker {
 
 // Tick fires the ticker of interval once. It blocks until the runner receives
 // the tick, which also means the runner finished handling the previous tick of
-// that ticker: two Ticks in a row are a barrier for the first one.
+// that ticker: two Ticks in a row are a barrier for the first one. A tick no
+// runner receives within the wait limit fails tb with every goroutine's stack.
 func (t *Ticks) Tick(tb testing.TB, interval time.Duration) {
 	tb.Helper()
+	timer := time.NewTimer(t.waitLimit)
+	defer timer.Stop()
 	select {
 	case t.get(interval).c <- time.Time{}:
+	case <-timer.C:
+		failHung(tb, t.waitLimit, fmt.Sprintf("a runner to receive the %s tick", interval))
 	case <-tb.Context().Done():
 		tb.Fatalf("workertest: no runner received the %s tick", interval)
 	}

@@ -9,6 +9,7 @@ import 'package:control_contable/features/auth/auth_routes.dart';
 import 'package:control_contable/features/auth/data/auth_repository.dart';
 import 'package:control_contable/features/auth/presentation/auth_copy.dart';
 import 'package:control_contable/features/auth/presentation/login_fields.dart';
+import 'package:control_contable/features/auth/presentation/session_wipe_notice.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -74,29 +75,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.authLoginTitle)),
       body: AutofillGroup(
-        child: AppForm(
-          controller: fields.form,
-          onSave: _login,
-          primaryLabel: l10n.authLoginSubmit,
-          children: [
-            if (notice != null) FormNotice(message: notice),
-            AppTextField(
-              field: fields.email,
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.next,
-              autofillHints: const [AutofillHints.email],
-            ),
-            AppPasswordField(
-              field: fields.password,
-              textInputAction: TextInputAction.done,
-              autofillHints: const [AutofillHints.password],
-            ),
-            const _CreateAccountLink(),
-          ],
+        child: _WithWipeNotice(
+          form: AppForm(
+            controller: fields.form,
+            onSave: _login,
+            primaryLabel: l10n.authLoginSubmit,
+            children: [
+              if (notice != null) FormNotice(message: notice),
+              AppTextField(
+                field: fields.email,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.email],
+              ),
+              AppPasswordField(
+                field: fields.password,
+                textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.password],
+              ),
+              const _CreateAccountLink(),
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+/// [form] under the warning that the last sign-out left a token behind.
+class _WithWipeNotice extends StatelessWidget {
+  const new({required this.form});
+
+  final Widget form;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      const SessionWipeNotice(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.gutter,
+          AppSpacing.gutter,
+          AppSpacing.gutter,
+          0,
+        ),
+      ),
+      Expanded(child: form),
+    ],
+  );
 }
 
 class _CreateAccountLink extends StatelessWidget {

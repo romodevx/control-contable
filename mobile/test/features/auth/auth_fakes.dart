@@ -9,6 +9,7 @@ import 'package:control_contable/api/generated/models/user.dart';
 import 'package:control_contable/api/generated/models/verify_email_request.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/features/auth/data/auth_repository.dart';
+import 'package:control_contable/features/auth/data/profile_repository.dart';
 
 /// The contract's current documents (the `LegalDocumentList` example).
 final List<LegalDocument> currentDocuments = [
@@ -107,6 +108,58 @@ class FakeAuthRepository implements AuthRepository {
   Future<void> logout(String refreshToken) async {
     loggedOut.add(refreshToken);
     if (logoutError case final error?) throw error;
+  }
+}
+
+/// The profile `GET /v1/me` answers by default.
+final User sampleUser = User(
+  id: '7a1f0c62-1b1e-4c1d-9a55-0f1e2d3c4b5a',
+  email: 'ana@example.mx',
+  name: 'Ana Gómez',
+  createdAt: DateTime.utc(2026, 10, 13),
+);
+
+/// A [ProfileRepository] scripted per test, like [FakeAuthRepository]. The
+/// calls are recorded in [calls] in order (`getMe`, `updateName`,
+/// `deleteAccount`).
+class FakeProfileRepository implements ProfileRepository {
+  User user = sampleUser;
+  final List<String> calls = [];
+
+  Exception? getMeError;
+  Completer<void>? getMeGate;
+
+  final List<String> names = [];
+  Exception? updateError;
+  Completer<void>? updateGate;
+
+  final List<String> deletePasswords = [];
+  Exception? deleteError;
+  Completer<void>? deleteGate;
+
+  @override
+  Future<User> getMe() async {
+    calls.add('getMe');
+    await getMeGate?.future;
+    if (getMeError case final error?) throw error;
+    return user;
+  }
+
+  @override
+  Future<User> updateName(String name) async {
+    calls.add('updateName');
+    names.add(name);
+    await updateGate?.future;
+    if (updateError case final error?) throw error;
+    return user = user.copyWith(name: name);
+  }
+
+  @override
+  Future<void> deleteAccount(String password) async {
+    calls.add('deleteAccount');
+    deletePasswords.add(password);
+    await deleteGate?.future;
+    if (deleteError case final error?) throw error;
   }
 }
 

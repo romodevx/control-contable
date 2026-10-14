@@ -125,7 +125,8 @@ Every record form is built from `core/forms/`, which encodes
   by dotted path (`accepted_documents.1.kind` → `accepted_documents`); the rest goes to a
   `FormNotice` (form-level message, announced).
 - `guardApi` (`core/network/api_failure.dart`) turns a generated-client failure into a sealed
-  `ApiFailure` (validation details, 401, 404, 429 with `Retry-After`, unreachable, unexpected);
+  `ApiFailure` (validation details, 401, `invalid_password` by its code, 404, 429 with
+  `Retry-After`, unreachable, unexpected);
   screens own their es-MX copy and never show the server's English `message`.
 
 ## Auth (`module_auth`, M1)
@@ -160,10 +161,27 @@ Every record form is built from `core/forms/`, which encodes
   rotating refresh token lives in `RefreshTokenStore` (`core/session/refresh_token_store.dart`,
   the only file that imports `flutter_secure_storage`; iOS item `first_unlock_this_device`,
   never synced). Every rotation stores the newly returned refresh token before any retry.
-- `core/network/auth_interceptor.dart`: bearer on each request; on a 401, one **single-flight**
-  refresh shared by every concurrent caller, then one retry. Never refreshes for `/v1/auth/*`.
-  A refused refresh (401/400) ends the session and the router shows login; an unreachable one
-  keeps it. The rotation runs on `bareDioProvider` (no interceptor), so it cannot recurse.
+- A failing secure store never logs the user out silently, and its error (which may echo the
+  token) is never surfaced. Each write and delete is tried 3 times. A rotated token that could not
+  be saved stays in memory, the session stays signed in, and the next rotation sends it. It never
+  sends the spent token still on disk, which the server would treat as reuse. A delete that keeps
+  failing at sign-out wipes the whole store. If even that fails, `Session.tokenLeftOnDevice`
+  turns on and the login and goodbye screens say so.
+- `core/network/auth_interceptor.dart`: the bearer goes only to the configured API origin (scheme,
+  host and port of `API_BASE_URL`). An absolute URL to anywhere else never sees it. On a 401, one
+  **single-flight** refresh is shared by every concurrent caller, then one retry. It never
+  refreshes for `/v1/auth/*`. Only a 401 (always the bearer, contract 0.3.0) refreshes: a wrong
+  re-entered password on `DELETE /v1/me` is a `403 invalid_password` and passes through. A refused refresh (401/400) ends the session
+  and the router shows login; an unreachable one keeps it. The rotation runs on `bareDioProvider`
+  (no interceptor), so it cannot recurse.
+- *Mi cuenta* (`/cuenta/perfil`, entry on the home app bar while `module_auth` is on): the name
+  is editable (`PATCH /v1/me`), the email is read-only, and the legal documents link to their
+  current versions. *Eliminar mi cuenta* opens the one confirmation dialog in the app, because
+  the action is irreversible. The dialog explains what is lost, that the free trial does not
+  restart and that a store subscription is cancelled in the store. It asks for the current
+  password and has a destructive primary that is never disabled. A `403 invalid_password` lands
+  on the password field (cleared, focused, announced); a `429` counts its `Retry-After` down, and
+  a tap during the wait sends nothing. On success it ends the session and the app shows `/cuenta/adios`.
 - Router guards (`core/router/app_router.dart`): while `module_auth` is on, a signed-out user
   goes to `/cuenta/entrar` (keeping `desde`), a signed-in user leaves the guest screens
   (login, sign-up, code). Login and a verified sign-up (`201 AuthSession`) both start the session.

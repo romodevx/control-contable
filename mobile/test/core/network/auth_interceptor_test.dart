@@ -14,12 +14,17 @@ import '../../helpers/session_fakes.dart';
 
 const _protected = '/v1/me';
 const _fresh = 'access-2';
+final Uri _base = Uri.parse('https://api.test');
 
 /// An API that accepts only the bearer in [validAccess] and answers 401 to
 /// anything else (every path, auth endpoints included). Counts its 401s so
 /// a test can hold the refresh until every request has been refused.
 class _Api implements HttpClientAdapter {
   String validAccess = _fresh;
+
+  /// Answers an authorized request `403 invalid_password` (a wrong current
+  /// password on `DELETE /v1/me`, contract 0.3.0).
+  bool wrongPassword = false;
   final List<RequestOptions> requests = [];
   int refusals = 0;
   void Function()? onRefusal;
@@ -37,6 +42,21 @@ class _Api implements HttpClientAdapter {
     if (!authorized) {
       refusals++;
       onRefusal?.call();
+    }
+    if (authorized && wrongPassword) {
+      return ResponseBody.fromString(
+        jsonEncode({
+          'error': {
+            'code': 'invalid_password',
+            'message': 'The password is incorrect.',
+            'request_id': 'req_1',
+          },
+        }),
+        HttpStatus.forbidden,
+        headers: {
+          Headers.contentTypeHeader: [ContentType.json.mimeType],
+        },
+      );
     }
     return ResponseBody.fromString(
       jsonEncode(<String, Object?>{}),
@@ -79,7 +99,9 @@ void main() {
     addTearDown(session.dispose);
     dio = Dio(BaseOptions(baseUrl: 'https://api.test'))
       ..httpClientAdapter = api;
-    dio.interceptors.add(AuthInterceptor(session: session, dio: dio));
+    dio.interceptors.add(
+      AuthInterceptor(session: session, dio: dio, apiBase: _base),
+    );
     await session.start(tokenPair(access: 'access-1', refresh: 'refresh-1'));
   });
 
@@ -157,7 +179,7 @@ void main() {
       );
       final handler = _RecordingErrorHandler();
 
-      await AuthInterceptor(session: session, dio: dio).onError(
+      await AuthInterceptor(session: session, dio: dio, apiBase: _base).onError(
         DioException(
           requestOptions: stale,
           response: Response(
@@ -227,7 +249,7 @@ void main() {
       await restored.restore();
       dio.interceptors
         ..clear()
-        ..add(AuthInterceptor(session: restored, dio: dio));
+        ..add(AuthInterceptor(session: restored, dio: dio, apiBase: _base));
 
       await dio.get<void>(_protected);
 
@@ -235,6 +257,87 @@ void main() {
       expect(api.requests.map(bearerOf), ['Bearer $_fresh'], reason: 'no 401');
     },
   );
+
+  group(
+    'only the configured API host gets the bearer (PR #42 follow-up a)',
+    () {
+      for (final foreign in [
+        'https://evil.test/v1/me',
+        'http://api.test/v1/me',
+        'https://api.test:8443/v1/me',
+        'https://api.test.evil.test/v1/me',
+      ]) {
+        test('no bearer and no refresh for $foreign', () async {
+          await expectLater(
+            dio.get<void>(foreign),
+            throwsA(isA<DioException>()),
+          );
+
+          expect(bearerOf(api.requests.single), isNull);
+          expect(rotation.calls, 0);
+        });
+      }
+
+      test('a cold start never refreshes for a foreign host', () async {
+        final restored = Session(store: store, rotate: rotation.call);
+        addTearDown(restored.dispose);
+        await restored.restore();
+        dio.interceptors
+          ..clear()
+          ..add(AuthInterceptor(session: restored, dio: dio, apiBase: _base));
+
+        await expectLater(
+          dio.get<void>('https://evil.test/v1/me'),
+          throwsA(isA<DioException>()),
+        );
+
+        expect(rotation.calls, 0);
+        expect(bearerOf(api.requests.single), isNull);
+      });
+
+      test('the host is compared without regard to case', () async {
+        api.validAccess = 'access-1';
+
+        await dio.get<void>('https://API.test/v1/me');
+
+        expect(bearerOf(api.requests.single), 'Bearer access-1');
+      });
+    },
+  );
+
+  test('a 403 invalid_password to DELETE /v1/me is answered as is: '
+      'no refresh, no second try', () async {
+    api
+      ..validAccess = 'access-1'
+      ..wrongPassword = true;
+
+    await expectLater(
+      dio.delete<void>(_protected, data: {'password': 'x'}),
+      throwsA(
+        isA<DioException>().having(
+          (e) => e.response?.statusCode,
+          'status',
+          HttpStatus.forbidden,
+        ),
+      ),
+    );
+
+    expect(rotation.calls, 0);
+    expect(api.requests, hasLength(1));
+    expect(session.status, SessionStatus.signedIn);
+  });
+
+  test('a 401 to DELETE /v1/me is the bearer (contract 0.3.0): '
+      'one refresh, one retry with the new token', () async {
+    final response = await dio.delete<void>(
+      _protected,
+      data: {'password': 'x'},
+    );
+
+    expect(response.statusCode, HttpStatus.ok);
+    expect(rotation.calls, 1);
+    expect(api.requests.map(bearerOf), ['Bearer access-1', 'Bearer $_fresh']);
+  });
 
   test('other errors pass through without a refresh', () async {
     api.validAccess = 'access-1';

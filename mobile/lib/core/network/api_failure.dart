@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:control_contable/api/generated/models/error_code.dart';
 import 'package:control_contable/api/generated/models/error_response.dart';
 import 'package:control_contable/api/generated/models/field_error.dart';
 import 'package:dio/dio.dart';
@@ -25,6 +26,14 @@ final class ApiValidationFailure extends ApiFailure {
 
 /// `401`: missing or bad credentials, code or token (one generic answer).
 final class ApiUnauthorized extends ApiFailure {
+  /// The failure.
+  const new();
+}
+
+/// `invalid_password` (a `403` on re-authentication, e.g. `DELETE /v1/me`):
+/// the bearer was fine, the current password was not. Read by its code,
+/// whatever the status, and never a cue to refresh.
+final class ApiInvalidPassword extends ApiFailure {
   /// The failure.
   const new();
 }
@@ -86,6 +95,9 @@ ApiFailure apiFailureFrom(
 }) {
   if (_unreachableTypes.contains(exception.type)) return const ApiUnreachable();
   final response = exception.response;
+  if (_codeOf(response?.data) == ErrorCode.invalidPassword) {
+    return const ApiInvalidPassword();
+  }
   return switch (response?.statusCode) {
     HttpStatus.badRequest => ApiValidationFailure(_details(response!.data)),
     HttpStatus.unauthorized => const ApiUnauthorized(),
@@ -110,6 +122,16 @@ Duration? parseRetryAfter(String? header, {required DateTime now}) {
     final wait = HttpDate.parse(header).difference(now);
     return wait > Duration.zero ? wait : null;
   } on HttpException {
+    return null;
+  }
+}
+
+ErrorCode? _codeOf(Object? body) {
+  if (body is! Map<String, Object?>) return null;
+  try {
+    return ErrorResponse.fromJson(body).error.code;
+  } on Object {
+    // Not the contract's envelope: the status alone decides.
     return null;
   }
 }
