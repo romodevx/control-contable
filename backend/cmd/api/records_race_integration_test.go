@@ -29,18 +29,22 @@ import (
 )
 
 // PR #93 review FU-1: ending a regime concurrently with a record write
-// (create or restore, incomes and expenses) must never leave a live record
+// (create, restore or update, incomes and expenses) must never leave a live record
 // in a period the regime no longer covers. The end path locks the
-// taxpayer_regimes row FOR NO KEY UPDATE before it reads the latest
-// record; every write's CheckRegime takes FOR SHARE on that row in the
-// write's own transaction. These tests stop the end path right after its
+// taxpayers row, then the taxpayer_regimes row, FOR NO KEY UPDATE before it
+// reads the latest record; every write's CheckRegime takes FOR SHARE on the
+// same rows in the write's own transaction (the taxpayers row is the one a
+// racing write waits on first). These tests stop the end path right after its
 // record lookup, start the write, and require it to wait on the lock and
 // then read the ended window (422 regime_not_active).
 
 // raceRecordDay is the record's day: October 2026, after the end period.
 const (
 	raceRecordDay = "2026-10-05"
-	raceEndPeriod = "2026-09"
+	// raceInWindowDay is a day the ended window still covers: an update
+	// races by moving a record from it to raceRecordDay.
+	raceInWindowDay = "2026-09-05"
+	raceEndPeriod   = "2026-09"
 	// raceAfterEnd is the first day the ended window no longer covers.
 	raceAfterEnd = "2026-10-01"
 	// raceWaitTimeout bounds every wait of these tests.
@@ -147,7 +151,7 @@ func (e *raceEnv) expense(t *testing.T, tp string, id int) expusecase.CreateInpu
 
 // raceEndAgainst ends 612 at raceEndPeriod while write runs: the end path
 // pauses after its record lookup, write starts and must wait on the
-// regime row; then the end commits. It returns both results.
+// taxpayer and regime row locks; then the end commits. It returns both results.
 func (e *raceEnv) raceEndAgainst(t *testing.T, tp string, write func(context.Context) error) (endErr, writeErr error) {
 	t.Helper()
 	ended := make(chan error, 1)
@@ -245,6 +249,24 @@ func TestRegimeEndRace_recordWrites(t *testing.T) {
 			},
 		},
 		{
+			// PR #97 review FU-3: an update moving a date past the end goes
+			// through the same CheckRegime; pinned so it stays that way.
+			name: "income update",
+			setup: func(t *testing.T, e *raceEnv, tp string) {
+				in := e.income(tp, 1)
+				in.Income.Dates.CollectedOn = incDate(t, raceInWindowDay)
+				_, err := e.incomes.Create(t.Context(), incUserA, in)
+				require.NoError(t, err)
+			},
+			write: func(t *testing.T, e *raceEnv, tp string) func(context.Context) error {
+				moved := incDate(t, raceRecordDay)
+				return func(ctx context.Context) error {
+					_, err := e.incomes.Update(ctx, incUserA, tp, incID(1), incomes.Patch{CollectedOn: &moved})
+					return err
+				}
+			},
+		},
+		{
 			name: "expense create",
 			write: func(t *testing.T, e *raceEnv, tp string) func(context.Context) error {
 				in := e.expense(t, tp, 1)
@@ -260,6 +282,22 @@ func TestRegimeEndRace_recordWrites(t *testing.T) {
 			},
 			write: func(_ *testing.T, e *raceEnv, tp string) func(context.Context) error {
 				return func(ctx context.Context) error { _, err := e.expenses.Restore(ctx, incUserA, tp, incID(1)); return err }
+			},
+		},
+		{
+			name: "expense update",
+			setup: func(t *testing.T, e *raceEnv, tp string) {
+				in := e.expense(t, tp, 1)
+				in.Draft.PaidOn = incDate(t, raceInWindowDay)
+				_, err := e.expenses.Create(t.Context(), in)
+				require.NoError(t, err)
+			},
+			write: func(t *testing.T, e *raceEnv, tp string) func(context.Context) error {
+				moved := incDate(t, raceRecordDay)
+				in := expusecase.UpdateInput{
+					UserID: incUserA, TaxpayerID: tp, ExpenseID: incID(1), Patch: expusecase.Patch{PaidOn: &moved},
+				}
+				return func(ctx context.Context) error { _, err := e.expenses.Update(ctx, in); return err }
 			},
 		},
 	}
