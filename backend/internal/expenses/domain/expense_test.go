@@ -54,6 +54,7 @@ func TestAssessUS1Software(t *testing.T) {
 func TestAssessDeductible(t *testing.T) {
 	cashOver := domain.Warning{Code: domain.WarningCashOverThreshold, Field: domain.FieldPaymentMethod}
 	noCFDI := domain.Warning{Code: domain.WarningNoCFDI, Field: domain.FieldHasCFDI}
+	ivaNotCreditable := domain.Warning{Code: domain.WarningIVANotCreditableCashPayment, Field: domain.FieldPaymentMethod}
 	tests := []struct {
 		name           string
 		payer          domain.Payer
@@ -133,9 +134,11 @@ func TestAssessDeductible(t *testing.T) {
 			wantDeductible: true, wantSource: domain.SourceUser, wantCreditable: 80_00,
 		},
 		{
-			name: "US-E1: switch on for personal expenses", payer: pf612, rule: personalBusiness,
+			// LIVA 5 fr. I: IVA is creditable only on a strictly indispensable
+			// expense; the ISR override never makes a personal expense's IVA so.
+			name: "US-E1: switch on for personal expenses, IVA still not creditable", payer: pf612, rule: personalBusiness,
 			edit:           func(d *domain.Draft) { d.Category, d.Deductible = "gastos_personales", domain.ClaimDeductible },
-			wantDeductible: true, wantSource: domain.SourceUser, wantCreditable: 80_00,
+			wantDeductible: true, wantSource: domain.SourceUser,
 			wantWarnings: []domain.Warning{{Code: domain.WarningCategoryNotDeductible, Field: domain.FieldDeductible}},
 		},
 		{
@@ -150,13 +153,40 @@ func TestAssessDeductible(t *testing.T) {
 			wantSource: domain.SourceUser,
 		},
 		{
-			name: "the override wins over the cash rule, the warning stays", payer: pf612, rule: papeleriaBusiness,
+			// LIVA 5 fr. II: the override keeps the ISR claim, but cash above
+			// the limit never yields creditable IVA, and the user is told.
+			name: "the override wins over the cash rule for ISR only", payer: pf612, rule: papeleriaBusiness,
 			edit: func(d *domain.Draft) {
 				d.Category, d.PaymentMethod, d.Deductible = "papeleria", domain.PaymentCash, domain.ClaimDeductible
 				d.Amount, d.IVA = 2_000_00, 320_00
 			},
-			wantDeductible: true, wantSource: domain.SourceUser, wantCashOver: true, wantCreditable: 320_00,
-			wantWarnings: []domain.Warning{cashOver},
+			wantDeductible: true, wantSource: domain.SourceUser, wantCashOver: true,
+			wantWarnings: []domain.Warning{cashOver, ivaNotCreditable},
+		},
+		{
+			name: "RESICO PF switch on in cash over the limit: IVA not creditable", payer: pf626, rule: softwareRESICOPF,
+			edit: func(d *domain.Draft) {
+				d.PaymentMethod, d.Deductible = domain.PaymentCash, domain.ClaimDeductible
+				d.Amount, d.IVA = 5_000_00, 800_00
+			},
+			wantDeductible: true, wantSource: domain.SourceUser, wantCashOver: true,
+			wantWarnings: []domain.Warning{
+				cashOver, ivaNotCreditable,
+				{Code: domain.WarningNotISRDeductibleInRegime, Field: domain.FieldDeductible},
+			},
+		},
+		{
+			// LIVA 5 fr. I: no ISR deduction in RESICO PF does not make every
+			// IVA creditable; the category rule says which are indispensable.
+			name: "RESICO PF personal expenses: no creditable IVA", payer: pf626, rule: personalRESICOPF,
+			edit:       func(d *domain.Draft) { d.Category = "gastos_personales" },
+			wantSource: domain.SourceCategoryDefault,
+		},
+		{
+			name: "RESICO PF switch on for personal expenses: still no creditable IVA", payer: pf626, rule: personalRESICOPF,
+			edit:           func(d *domain.Draft) { d.Category, d.Deductible = "gastos_personales", domain.ClaimDeductible },
+			wantDeductible: true, wantSource: domain.SourceUser,
+			wantWarnings: []domain.Warning{{Code: domain.WarningNotISRDeductibleInRegime, Field: domain.FieldDeductible}},
 		},
 		{
 			name: "no CFDI in cash over the limit: both warnings", payer: pf612, rule: papeleriaBusiness,
@@ -324,6 +354,8 @@ func TestAssessServerFaults(t *testing.T) {
 	none := func(*domain.Draft) {}
 	badRule := softwareBusiness
 	badRule.Deductibility = "maybe"
+	creditableButNotDeductible := personalBusiness
+	creditableButNotDeductible.IVACreditable = true
 	tests := []struct {
 		name    string
 		payer   domain.Payer
@@ -335,6 +367,8 @@ func TestAssessServerFaults(t *testing.T) {
 		{"unknown person type", domain.Payer{PersonType: "trust", Regime: "612"}, softwareBusiness, none, today, catalog2026(t)},
 		{"unknown deductibility in the rule", pf612, badRule, none, today, catalog2026(t)},
 		{"rule of another category", pf612, papeleriaBusiness, none, today, catalog2026(t)},
+		{"not_deductible rule with creditable IVA", pf612, creditableButNotDeductible,
+			func(d *domain.Draft) { d.Category = "gastos_personales" }, today, catalog2026(t)},
 		{"no today from the clock", pf612, softwareBusiness, none, "", catalog2026(t)},
 		{"no catalog", pf612, softwareBusiness, none, today, nil},
 		{"no cash-payment limit in force", pf612, softwareBusiness, cash, today, noCashLimit},

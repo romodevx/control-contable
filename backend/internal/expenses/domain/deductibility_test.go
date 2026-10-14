@@ -13,9 +13,19 @@ import (
 const diningCategory domain.CategoryCode = "restaurantes"
 
 // Category rule rows of MODULE-expenses §2.2, as category_regime_rules
-// serves them for one (category, regime, person type).
+// serves them for one (category, regime, person type). As in the M4-02
+// seed, iva_creditable_default is true where the row can lower ISR (D or P).
 func rule(category domain.CategoryCode, d domain.Deductibility, defaultDeductible bool) domain.CategoryRule {
-	return domain.CategoryRule{Category: category, Deductibility: d, DefaultDeductible: defaultDeductible}
+	return domain.CategoryRule{
+		Category: category, Deductibility: d, DefaultDeductible: defaultDeductible,
+		IVACreditable: d == domain.Deductible || d == domain.PartiallyDeductible,
+	}
+}
+
+// resicoPF is a 626 PF row: always isr_not_applicable, with
+// iva_creditable_default taken from the business column (LIVA 5 fr. I).
+func resicoPF(category domain.CategoryCode, ivaCreditable bool) domain.CategoryRule {
+	return domain.CategoryRule{Category: category, Deductibility: domain.ISRNotApplicable, IVACreditable: ivaCreditable}
 }
 
 var (
@@ -24,10 +34,12 @@ var (
 	personalBusiness  = rule("gastos_personales", domain.NotDeductible, false)
 	mantenimiento606  = rule("mantenimiento", domain.Deductible, true)
 	predial606        = rule(domain.CategoryPredial, domain.Deductible, true)
-	softwareRESICOPF  = rule("software", domain.ISRNotApplicable, false)
+	softwareRESICOPF  = resicoPF("software", true)
+	personalRESICOPF  = resicoPF("gastos_personales", false)
 	papeleriaBusiness = rule("papeleria", domain.Deductible, true)
 	fuelBusiness      = domain.CategoryRule{
-		Category: "combustible", Deductibility: domain.Deductible, DefaultDeductible: true, ElectronicPaymentOnly: true,
+		Category: "combustible", Deductibility: domain.Deductible, DefaultDeductible: true, IVACreditable: true,
+		ElectronicPaymentOnly: true,
 	}
 	feesBusiness = rule(domain.CategoryProfessionalFees, domain.Deductible, true)
 )
