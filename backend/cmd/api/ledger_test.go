@@ -30,7 +30,7 @@ func (f *fakeExpenseSums) ExpenseSums(_ context.Context, q expensesinfra.LedgerQ
 func TestExpenseLedger_MapsEveryField(t *testing.T) {
 	// Every field a distinct value, so a swapped or dropped field shows up.
 	source := &fakeExpenseSums{rows: []expensesinfra.ExpenseMonthSums{{
-		Regime: fiscal.RegimeBusiness, Month: time.March,
+		Regime: fiscal.RegimeBusiness, Year: 2027, Month: time.March,
 		DeductiblePaid: 1, NonDeductiblePaid: 2, CashOverLimitPaid: 3,
 		IVAPaid: expensesinfra.IVAByRate{
 			Rate16: expensesinfra.RateSums{Base: 4, IVA: 5}, Rate8: expensesinfra.RateSums{Base: 6, IVA: 7},
@@ -38,14 +38,14 @@ func TestExpenseLedger_MapsEveryField(t *testing.T) {
 		},
 		CreditableIVAPaid: 10, PredialPaid: 11, ISRWithheldToRemit: 12, IVAWithheldToRemit: 13,
 	}}}
-	q := taxusecase.LedgerQuery{TaxpayerID: "0199d4a2-1111-7000-8000-0000000e000a", FiscalYear: 2026, Through: time.March}
+	q := taxusecase.LedgerQuery{TaxpayerID: "0199d4a2-1111-7000-8000-0000000e000a", FirstYear: 2026, FiscalYear: 2027, Through: time.March}
 
 	got, err := newExpenseLedger(source).ExpenseSums(t.Context(), q)
 
 	require.NoError(t, err)
-	assert.Equal(t, expensesinfra.LedgerQuery{TaxpayerID: q.TaxpayerID, FiscalYear: 2026, Through: time.March}, source.got)
+	assert.Equal(t, expensesinfra.LedgerQuery{TaxpayerID: q.TaxpayerID, FirstYear: 2026, FiscalYear: 2027, Through: time.March}, source.got)
 	assert.Equal(t, []taxusecase.ExpenseMonthSums{{
-		Regime: fiscal.RegimeBusiness, Month: time.March,
+		Regime: fiscal.RegimeBusiness, Year: 2027, Month: time.March,
 		Sums: domain.ExpenseSums{
 			DeductiblePaid: 1, NonDeductiblePaid: 2, CashOverLimitPaid: 3,
 			IVAPaid: domain.IVAByRate{

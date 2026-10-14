@@ -99,7 +99,7 @@ func newEstimator(w taxEngineWiring) (*usecase.Estimator, error) {
 	if now == nil {
 		now = clock.NewSystem()
 	}
-	return usecase.NewEstimator(usecase.EstimateDeps{
+	return usecase.NewEstimator(usecase.EstimateDeps{ // a missing port fails the boot (FU4)
 		Tx:       w.tx,
 		Profiles: estimateProfiles{reader: w.taxpayers},
 		Ledger: taxLedger{
@@ -112,7 +112,7 @@ func newEstimator(w taxEngineWiring) (*usecase.Estimator, error) {
 		Strategies: registry,
 		Params:     catalog,
 		Clock:      now,
-	}), nil
+	})
 }
 
 // taxLedger is the incomes and expenses aggregate readers as the tax

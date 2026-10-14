@@ -105,11 +105,13 @@ func (c propCase) estimator(t testing.TB) *usecase.Estimator {
 		require.NoError(t, err, "case %d inputs %s", c.index, code)
 		inputs[code] = in
 	}
-	return usecase.NewEstimator(usecase.EstimateDeps{
+	est, err := usecase.NewEstimator(usecase.EstimateDeps{
 		Tx: txUnit{}, Profiles: txProfiles{usecase.TaxpayerProfile{PersonType: c.person, Regimes: c.holds}},
 		Ledger: txLedger{incomes: c.incomes, expenses: c.expenses}, Inputs: inputs, Texts: txNoTexts{}, Holidays: txNoHolidays{},
 		Strategies: registry, Params: catalog, Clock: clock.NewFixed(propToday),
 	})
+	require.NoError(t, err)
+	return est
 }
 
 func (c propCase) estimate(t testing.TB) usecase.TaxpayerEstimate {

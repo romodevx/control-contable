@@ -43,29 +43,57 @@ type estLedger struct {
 	expenses []usecase.ExpenseMonthSums
 	err      error
 	queries  []usecase.LedgerQuery
-	users    []string
+	// expenseQueries are ExpenseSums' queries (queries are IncomeSums').
+	expenseQueries []usecase.LedgerQuery
+	users          []string
 }
 
+// IncomeSums returns the rows; a row without a year is the query's fiscal
+// year (the single-year fixtures leave it out).
 func (f *estLedger) IncomeSums(ctx context.Context, q usecase.LedgerQuery) ([]usecase.IncomeMonthSums, error) {
 	f.queries = append(f.queries, q)
 	f.users = append(f.users, estUserOf(ctx))
-	return f.incomes, f.err
+	out := make([]usecase.IncomeMonthSums, 0, len(f.incomes))
+	for _, r := range f.incomes {
+		if r.Year == 0 {
+			r.Year = q.FiscalYear
+		}
+		out = append(out, r)
+	}
+	return out, f.err
 }
 
+// ExpenseSums returns the rows; a row without a year is the query's
+// fiscal year.
 func (f *estLedger) ExpenseSums(ctx context.Context, q usecase.LedgerQuery) ([]usecase.ExpenseMonthSums, error) {
+	f.expenseQueries = append(f.expenseQueries, q)
 	f.users = append(f.users, estUserOf(ctx))
-	return f.expenses, f.err
+	out := make([]usecase.ExpenseMonthSums, 0, len(f.expenses))
+	for _, r := range f.expenses {
+		if r.Year == 0 {
+			r.Year = q.FiscalYear
+		}
+		out = append(out, r)
+	}
+	return out, f.err
 }
 
-// estInputs serves the tax inputs of every regime.
+// estInputs serves the tax inputs of every regime, by fiscal year when
+// byYear has the year.
 type estInputs struct {
 	values map[fiscal.RegimeCode]domain.TaxInputs
+	byYear map[int]map[fiscal.RegimeCode]domain.TaxInputs
 	err    error
 	users  []string
+	years  []int
 }
 
-func (f *estInputs) TaxInputs(ctx context.Context, _ string, _ int) (map[fiscal.RegimeCode]domain.TaxInputs, error) {
+func (f *estInputs) TaxInputs(ctx context.Context, _ string, year int) (map[fiscal.RegimeCode]domain.TaxInputs, error) {
 	f.users = append(f.users, estUserOf(ctx))
+	f.years = append(f.years, year)
+	if values, ok := f.byYear[year]; ok {
+		return values, f.err
+	}
 	return f.values, f.err
 }
 
@@ -202,8 +230,16 @@ func (f *estFixture) estimator(strategies ...domain.Strategy) *usecase.Estimator
 	if err != nil {
 		panic(err)
 	}
-	return usecase.NewEstimator(usecase.EstimateDeps{
+	est, err := usecase.NewEstimator(f.deps(registry))
+	if err != nil {
+		panic(err)
+	}
+	return est
+}
+
+func (f *estFixture) deps(registry domain.Registry) usecase.EstimateDeps {
+	return usecase.EstimateDeps{
 		Tx: f.tx, Profiles: f.profiles, Ledger: f.ledger, Inputs: f.inputs, Texts: f.texts, Holidays: f.holidays,
 		Strategies: registry, Params: f.params, Clock: f.clock,
-	})
+	}
 }

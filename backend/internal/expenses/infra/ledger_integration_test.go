@@ -140,18 +140,18 @@ func TestLedgerReader_ExactSumsByRegimeAndMonth(t *testing.T) {
 
 	assert.Equal(t, []infra.ExpenseMonthSums{
 		{
-			Regime: fiscal.RegimeRent, Month: time.February,
+			Regime: fiscal.RegimeRent, Year: 2026, Month: time.February,
 			DeductiblePaid: 1200_00, NonDeductiblePaid: 800_00,
 			IVAPaid:     infra.IVAByRate{Rate16: infra.RateSums{Base: 700_00, IVA: 112_00}, ExemptBase: 1300_00},
 			PredialPaid: 1200_00,
 		},
 		{
-			Regime: fiscal.RegimeBusiness, Month: time.January,
+			Regime: fiscal.RegimeBusiness, Year: 2026, Month: time.January,
 			DeductiblePaid: 3500_00, NonDeductiblePaid: 500_00, CashOverLimitPaid: 3000_00,
 			IVAPaid: rate16(7000_00, 1120_00), CreditableIVAPaid: 160_00,
 		},
 		{
-			Regime: fiscal.RegimeBusiness, Month: time.March,
+			Regime: fiscal.RegimeBusiness, Year: 2026, Month: time.March,
 			DeductiblePaid: 500_00, NonDeductiblePaid: 400_00,
 			IVAPaid: infra.IVAByRate{
 				Rate8: infra.RateSums{Base: 200_00, IVA: 16_00}, Rate0Base: 300_00, ExemptBase: 400_00,
@@ -159,7 +159,7 @@ func TestLedgerReader_ExactSumsByRegimeAndMonth(t *testing.T) {
 			CreditableIVAPaid: 16_00,
 		},
 		{
-			Regime: fiscal.RegimeBusiness, Month: time.September,
+			Regime: fiscal.RegimeBusiness, Year: 2026, Month: time.September,
 			DeductiblePaid: 50_00, IVAPaid: rate16(50_00, 8_00), CreditableIVAPaid: 8_00,
 		},
 	}, got, "ordered by regime, then month; months without records absent")
@@ -178,6 +178,28 @@ func TestLedgerReader_DecemberReachesTheYearEnd(t *testing.T) {
 	assert.Equal(t, money.Cents(100_00), got[1].DeductiblePaid, "the next fiscal year never counts")
 }
 
+// M6-02: one statement reads January of FirstYear through Through of FiscalYear, each row
+// naming its year, so the dashboard's two-fiscal-year window is one round trip.
+func TestLedgerReader_RangeSpansTwoFiscalYears(t *testing.T) {
+	e := newEnv(t)
+	seedLedger(t, e, card("2025-12-31", 777_00), card("2026-01-02", 100_00), card("2026-11-05", 200_00),
+		card("2027-02-03", 300_00), card("2027-02-28", 1_00), card("2027-03-01", 999_00))
+
+	got := readExpenseSums(t, e, userA, infra.LedgerQuery{
+		TaxpayerID: taxpayerA, FirstYear: 2026, FiscalYear: 2027, Through: time.February,
+	})
+
+	paid := func(year int, month time.Month, amount money.Cents) infra.ExpenseMonthSums {
+		return infra.ExpenseMonthSums{
+			Regime: fiscal.RegimeBusiness, Year: year, Month: month, DeductiblePaid: amount,
+			IVAPaid: rate16(amount, amount*16/100), CreditableIVAPaid: amount * 16 / 100,
+		}
+	}
+	assert.Equal(t, []infra.ExpenseMonthSums{
+		paid(2026, time.January, 100_00), paid(2026, time.November, 200_00), paid(2027, time.February, 301_00),
+	}, got, "ordered by regime, year, month; nothing before January 2026 or after February 2027")
+}
+
 func TestLedgerReader_WithholdingsMadeToSuppliers(t *testing.T) {
 	e := newEnv(t)
 	fees := ledgerFixture{
@@ -194,7 +216,7 @@ func TestLedgerReader_WithholdingsMadeToSuppliers(t *testing.T) {
 	got := readExpenseSums(t, e, userA, infra.LedgerQuery{TaxpayerID: taxpayerM, FiscalYear: 2026, Through: time.April})
 
 	assert.Equal(t, []infra.ExpenseMonthSums{{
-		Regime: fiscal.RegimeCode("601"), Month: time.April,
+		Regime: fiscal.RegimeCode("601"), Year: 2026, Month: time.April,
 		DeductiblePaid: 10000_00, NonDeductiblePaid: 5000_00,
 		IVAPaid: rate16(15000_00, 2400_00), CreditableIVAPaid: 1600_00,
 		ISRWithheldToRemit: 1500_00, IVAWithheldToRemit: 1600_00,
@@ -226,6 +248,8 @@ func TestLedgerReader_RefusesAnInvalidQuery(t *testing.T) {
 		"before the floor":  {TaxpayerID: taxpayerA, FiscalYear: 2021, Through: time.January},
 		"malformed payer":   {TaxpayerID: "not-a-uuid", FiscalYear: 2026, Through: time.January},
 		"no taxpayer given": {FiscalYear: 2026, Through: time.January},
+		"first year after":  {TaxpayerID: taxpayerA, FirstYear: 2027, FiscalYear: 2026, Through: time.January},
+		"first year floor":  {TaxpayerID: taxpayerA, FirstYear: 2021, FiscalYear: 2026, Through: time.January},
 	} {
 		t.Run(name, func(t *testing.T) {
 			err := e.txm.ReadOnly(t.Context(), userA, func(ctx context.Context) error {
@@ -268,7 +292,7 @@ func TestLedgerReader_SumsWhatTheUseCasesStored(t *testing.T) {
 	got := readExpenseSums(t, e, userA, infra.LedgerQuery{TaxpayerID: taxpayerA, FiscalYear: 2026, Through: time.September})
 
 	assert.Equal(t, []infra.ExpenseMonthSums{{
-		Regime: fiscal.RegimeBusiness, Month: time.September,
+		Regime: fiscal.RegimeBusiness, Year: 2026, Month: time.September,
 		DeductiblePaid: 2000_00, CashOverLimitPaid: 2300_00,
 		IVAPaid: rate16(4300_00, 688_00), CreditableIVAPaid: 320_00,
 	}}, got)

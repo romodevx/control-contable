@@ -31,6 +31,11 @@ var (
 	ErrFutureFiscalYear = errors.New("taxengine: future fiscal year")
 	// ErrFuturePeriod: a period after the current month (400 out_of_range).
 	ErrFuturePeriod = errors.New("taxengine: future period")
+	// ErrInvalidRange: an estimate range whose first month is after its
+	// last (or unset). The caller builds the range, so it is a bug (500).
+	ErrInvalidRange = errors.New("taxengine: invalid estimate range")
+	// ErrMissingDependency: a use case wired without one of its ports.
+	ErrMissingDependency = errors.New("taxengine: missing dependency")
 )
 
 // FieldError.code values of the tax engine (MODULE-tax-engine §5).
