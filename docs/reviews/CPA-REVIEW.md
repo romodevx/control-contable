@@ -49,3 +49,17 @@ For each, the CPA answers: may one taxpayer hold both regimes at the same time?
 - [ ] PM 601/603/620/622/623/624 among themselves (15 pairs), and 620 with 626 (1 pair). CAT
 - [ ] PF Título IV pairs among 605, 606, 607, 608, 611, 612, 614, 615, 625 are seeded as allowed (separate chapters, combined in the annual return) by inference, not by an explicit rule. CAT
 - [ ] 616 (sin obligaciones) and 610 (residentes en el extranjero) are seeded as excluding every other regime by definition. CAT
+
+## Expense categories (`expense_categories`, `category_regime_rules`, all rows needs_cpa_review = true)
+
+Seeded in M4-02 from [MODULE-expenses §2.2](../project-specs/MODULE-expenses.md) (OQ-E3, OQ-E4),
+migration `backend/migrations/20261013210000_expense_categories.sql` (EXP). Every category and
+every (category, regime) rule waits for this review; the legal basis is article level only.
+
+- [ ] The 26 categories and their per-regime hint (D / P / N / ISR not applicable) for the business regimes, 606 (actual deductions) and 626 PF. MODULE-expenses §2.2, EXP
+- [ ] Conservative defaults: investments (equipo de cómputo, mobiliario, automóvil, construcciones), restaurantes, gastos personales and "otros" start non-deductible. OQ-E3, EXP
+- [ ] Cash rule (LISR art. 27 fr. III): cash above $2,000.00 on the total with IVA is not deductible; fuel paid in cash never is. Not in the research. OQ-E4, §2.5, EXP `cash_payment_rule`
+- [ ] 620 PM (cooperativas que difieren) gets the business rows although the regime catalog marks it informational. EXP
+- [ ] The profit-coefficient note on 601 and 622 (regimes requiring `coeficiente_utilidad`): expenses do not lower the 601/622 provisional ISR, only IVA and the annual return. EXP
+- [ ] `iva_creditable_default`: true where the expense is (or, for RESICO PF, would be under the business column) ISR-deductible, per LIVA art. 5 fr. I; partial cases assume IVA creditable in the deductible proportion. R §A.3, EXP
+- [ ] 606 rows: only servicios profesionales, agua (servicios básicos), construcciones, sueldos, IMSS, intereses, seguros, mantenimiento and predial count (LISR art. 115). R §A.2.4, EXP
