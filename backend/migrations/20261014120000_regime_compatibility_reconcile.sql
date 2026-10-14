@@ -11,6 +11,8 @@
 -- Existing taxpayer_regimes rows are not re-checked: the verdict applies to new writes
 -- (create, add regime), as every catalog verdict does. module_taxpayers is OFF in every
 -- shared environment until FU1 is settled, so no shared row holds a newly refused pair.
+-- A dev database that holds one can still end either regime: the overlap trigger lets a
+-- window shrink (20261014130000_regime_overlap_narrowing.sql).
 --
 -- RLS: regime_compatibility is global config (ENABLE, SELECT-only policy for cc_app, no
 -- write grant); this migration runs as the owner and changes no policy or grant.
