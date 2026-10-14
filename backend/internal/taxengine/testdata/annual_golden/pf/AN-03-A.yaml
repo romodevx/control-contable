@@ -1,0 +1,20 @@
+# golden: hand-authored from research AN-03 (a) (docs/research/annual-return-2026.md Part D). Never generated or rewritten by a tool.
+id: AN-03-A
+source: research:AN-03
+pending_strategy: true # ANN-09 registers pf_resico_check
+input:
+  fiscal_year: 2026
+  person_type: fisica
+  regimes:
+    - regime: "626"
+      income: "480000.00" # Jan-Jun 20,000/month, Jul-Dec 60,000/month
+  payments:
+    - {regime: "626", amount: "6600.00", source: filed} # monthly ISR incl. the 1.25 % withheld: 1,200 + 5,400
+expected:
+  sections:
+    - kind: pf_resico_check
+      regimes: ["626"]
+      status: informational
+      obligation: relieved
+      cpa_topics: [resico_pf_relief_renewal]
+      difference: "-1320.00" # annual 480,000 x 1.10 % = 5,280.00 - 6,600.00; never payable nor refundable

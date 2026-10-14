@@ -1,0 +1,28 @@
+# golden: hand-authored from research AN-04 (docs/research/annual-return-2026.md Part D). Never generated or rewritten by a tool.
+id: AN-04
+source: research:AN-04
+skip_reason: "⚠️ LISR 152 names Cap. II Sección I only; non-definitive platform income is computed like 612 (research §A.1, CPA item 2, topic platform_nondefinitive_annual) until the CPA sign-off (ANN-27)"
+pending_strategy: true # ANN-08 registers pf_art152
+input:
+  fiscal_year: 2026
+  person_type: fisica
+  regimes:
+    - regime: "625"
+      income: "480000.00" # platform sales excl. IVA (> 300,000: no definitive option)
+      deductions: "300000.00"
+      isr_withheld: "12000.00" # 2.5 % platform withholding
+      options: {definitive_option: "false"}
+expected:
+  sections:
+    - kind: pf_art152
+      regimes: ["625"]
+      status: complete
+      obligation: obligated
+      cpa_topics: [platform_nondefinitive_annual]
+      tax:
+        accumulable_income: "180000.00"
+        personal_deductions: "0.00"
+        base: "180000.00"
+        isr: "16833.81" # row 5: 16,069.64 + (180,000 - 175,735.67) x 17.92 %
+        credits: {payments: "0.00", withholdings: "12000.00", salary_isr: "0.00"}
+        balance: {kind: a_cargo, amount: "4833.81"}
