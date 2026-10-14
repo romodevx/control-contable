@@ -154,6 +154,7 @@ class AppFormController extends ChangeNotifier {
 
   /// Readies the form for the next record ("Guardar y crear otro"): keeps
   /// context fields, clears the rest, and focuses the first cleared field.
+  /// The next record starts pristine: kept values are not unsaved changes.
   void prepareNext() {
     final cleared = [
       for (final field in _fields)
@@ -161,6 +162,9 @@ class AppFormController extends ChangeNotifier {
     ];
     for (final field in cleared) {
       field.reset();
+    }
+    for (final field in _fields) {
+      field.markPristine();
     }
     if (cleared.isNotEmpty) cleared.first.focusNode.requestFocus();
   }

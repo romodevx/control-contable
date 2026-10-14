@@ -43,7 +43,7 @@ class AppFieldController extends AppFormFieldModel {
   final TextEditingController text;
 
   final String Function(String value)? _canonicalize;
-  final String _initialText;
+  String _initialText;
   String _lastChecked;
 
   /// The value: trimmed, or exactly as typed when [verbatim].
@@ -51,6 +51,9 @@ class AppFieldController extends AppFormFieldModel {
 
   @override
   bool get isDirty => text.text != _initialText;
+
+  @override
+  void markPristine() => _initialText = text.text;
 
   /// Policy on leaving the field: a non-empty value is checked and, when
   /// valid, rewritten in its canonical form.

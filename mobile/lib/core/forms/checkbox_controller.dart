@@ -16,7 +16,7 @@ class AppCheckboxController extends AppFormFieldModel {
   }) : _initialValue = initialValue,
        _checked = initialValue;
 
-  final bool _initialValue;
+  bool _initialValue;
   bool _checked;
 
   /// Whether the box is checked.
@@ -31,6 +31,9 @@ class AppCheckboxController extends AppFormFieldModel {
 
   @override
   bool get isDirty => _checked != _initialValue;
+
+  @override
+  void markPristine() => _initialValue = _checked;
 
   @override
   void reset() {

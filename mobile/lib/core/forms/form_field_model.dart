@@ -42,6 +42,10 @@ abstract class AppFormFieldModel extends ChangeNotifier {
   /// Clears the value and any error (used by "Guardar y crear otro").
   void reset();
 
+  /// Makes the current value the one [isDirty] compares with (the next
+  /// record of "Guardar y crear otro" starts here).
+  void markPristine();
+
   /// The error the current value has, or `null`.
   @protected
   FieldError? check();
