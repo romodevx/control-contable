@@ -54,7 +54,7 @@ var requiredIVARates = []taxparams.Requirement{
 // New returns the adapter over sets: ErrNoCatalog for a nil catalog,
 // ErrMissingIVARate when a fiscal year's set (the version Select serves)
 // lacks a required IVA rate, and ErrMissingWithholdingRate when it lacks a
-// withholding rate, so a broken params file fails the boot.
+// withholding rate or threshold, so a broken params file fails the boot.
 func New[K ~string](sets *taxparams.Catalog) (*Catalog[K], error) {
 	if sets == nil {
 		return nil, ErrNoCatalog
@@ -68,7 +68,7 @@ func New[K ~string](sets *taxparams.Catalog) (*Catalog[K], error) {
 // requireRates checks every set Select can serve: the highest version of
 // each fiscal year.
 func requireRates(sets *taxparams.Catalog) error {
-	withholding := requiredWithholdingRates()
+	withholding := requiredWithholdingParams()
 	var problems []error
 	for _, id := range sets.Sets() {
 		sel, err := sets.Select(id.FiscalYear)

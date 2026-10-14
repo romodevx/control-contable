@@ -37,6 +37,38 @@ const (
 	KeyISRWithholdingRent RateKey = "isr.withholding.rent_pm" // 10 %, LISR 116
 )
 
+// The withholding rates DeriveWithholdings reads besides the fees and rent
+// ones (MODULE-withholdings §3.2; params/data, WH-05).
+const (
+	KeyISRWithholdingRESICO         RateKey = "isr.withholding.resico_pf"         // 1.25 %, LISR 113-J
+	KeyIVAWithholdingFreight        RateKey = "iva.withholding.freight_pm"        // 4 % of the price, RLIVA 3 fr. II
+	KeyISRPlatformTransport         RateKey = "isr.platform.transport_delivery"   // 2.1 %, LISR 113-A fr. I
+	KeyISRPlatformLodging           RateKey = "isr.platform.lodging"              // 4 %, LISR 113-A fr. II
+	KeyISRPlatformGoods             RateKey = "isr.platform.goods_services"       // 2.5 % in 2026, LIF art. 25 fr. VI
+	KeyISRPlatformNoRFC             RateKey = "isr.platform.no_rfc"               // 20 %, LISR 113-C fr. IV
+	KeyISRPlatformPersonaMoral      RateKey = "isr.platform.persona_moral"        // 2.5 % in 2026, LIF art. 25 fr. VI
+	KeyISRPlatformPersonaMoralNoRFC RateKey = "isr.platform.persona_moral_no_rfc" // 20 % in 2026, LIF art. 25 fr. VI
+)
+
+// WithholdingCatalog is DeriveWithholdings' consumer-side port: the dated
+// rates plus the one dated money threshold it reads. WH-05 provides the
+// values over the versioned params (ADR-0002 §3).
+type WithholdingCatalog interface {
+	RateCatalog
+	// Amount returns the money parameter key holds on day on, and false
+	// when no value is in force that day.
+	Amount(key AmountKey, on Date) (money.Cents, bool)
+}
+
+// AmountKey names a dated money parameter, spelled as the params files
+// spell it.
+type AmountKey string
+
+// KeyIVAFederalWithholdingThreshold is the payment above which the
+// Federación withholds IVA from a persona física on an operation other than
+// professional services: $2,000.00, RMF 4.1.3 (⚠️ WM A2).
+const KeyIVAFederalWithholdingThreshold AmountKey = "iva.withholding.federal_threshold"
+
 // ApplyRate returns base × r rounded once to the centavo, half away from
 // zero. Only an absurd catalog rate can overflow, a parameter fault.
 func ApplyRate(base money.Cents, r money.Rate) (money.Cents, error) {

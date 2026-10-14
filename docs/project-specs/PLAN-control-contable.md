@@ -375,7 +375,7 @@ holds, first the CPA sign-off (M5-33).
 | FU1, D6 | **Surface the collection date.** Accrual regimes (601): show *Fecha de cobro* outside the collapsed *Más detalles* (it decides the IVA; or ask "¿Ya te pagaron?" with the date), plus a hint on the 601 estimate card when income is invoiced but not collected (IVA is 0 until then) | pm + frontend-sr | M3 hardening, before `module_incomes` for PM users |
 | FU2 | CPA-REVIEW: PM-601-IVA-01's withheld-to-remit is IVA only; the app adds the LISR 106 ISR withheld from PF fees | qa-sr | M5-33 |
 | FU3 | ~~Add-a-regime guide lists every touch point, including both `EngineVersion` pins~~ **Done** ([add-a-regime guide](../guides/add-a-regime.md)) | doc-writer | M5-32 |
-| FU4 | M5-31 G-2: validate `EstimateDeps` in `NewEstimator` so a missing port fails the boot | backend-sr | Before M6 wires a second caller |
+| FU4 | ~~M5-31 G-2: validate `EstimateDeps` in `NewEstimator` so a missing port fails the boot~~ **Done** (#114: `ErrMissingDependency`) | backend-sr | Before M6 wires a second caller |
 | FU5 | M5-31 G-4: the prior-payment suggestion spends up to 6 estimate reads per half; count it in the `estimate_reads` budget or batch it | backend-sr + frontend-sr | M5 hardening / M6 |
 | FU6 | M5-31 G-5: check that every embedded parameter set defines every key the modules read (not only 2026), at boot or in CI. Until then the [parameter runbook §5](../runbooks/tax-params-update.md#5-tests-for-the-new-year) requires a per-year `TestEmbedded<year>DefinesEveryKeyTheModulesRead` | backend-sr | Before the 2027 parameter file |
 | FU7 | Whole-peso payment rounding (CFF 20) is planned as the parameter `rounding.payment_whole_pesos` (ADR-0002 §4), but no file defines it and no code reads it: wire it (default off) so the CPA's answer is a data change | backend-sr | M5-33 (if the CPA confirms rounding) |
@@ -384,7 +384,7 @@ holds, first the CPA sign-off (M5-33).
 | D3 | *Datos fiscales*: the suggestion row disappears on the first keystroke and the fields below jump ~260 px, so a second tap lands on the wrong month. Keep the row's space, or hide the suggestion on save | frontend-sr | M5 UX polish |
 | D4 | Breakdown: result lines use a smaller label than input lines (inverted hierarchy); every line repeats a source chip and a *Fundamento* disclosure, so 612 takes ~7 screens. Also: the totals card shows no *Completo* chip when everything is complete | frontend-sr + design | M5 UX polish |
 | D5 | RESICO expense hint repeats the same sentence twice | frontend-sr | M3/M4 UX polish |
-| D7 | MODULE-tax-engine §7 "M5 OFF implies M6 and M8 OFF" is declared by the M6/M8 flag tasks | backend-sr | M6-xx / M8-xx flag tasks |
+| D7 | MODULE-tax-engine §7 "M5 OFF implies M6 and M8 OFF" is declared by the M6/M8 flag tasks. **M6 settled by design**: the engine is not a dashboard prerequisite, it degrades Home (MODULE-dashboard OQ-D7, pinned by the M6-05 tests); M8 still open | backend-sr | M8 flag task |
 | G-3 | `infra/taxinputs` and the profile reader read taxpayers by id under RLS alone: add an owner check in the query if shared access (accountant, delegated users) is ever designed | architect | ADR for any delegated-access feature |
 | #77 should-fix 2 | `provisional_parameters` notice on the records forms (categories/defaults responses) | architect | Next contract re-freeze |
 | #98 FU1 | Fingerprint hashes informational sums and multi-enum order (false "changed" marks in M8) | backend-sr | M8 |
@@ -402,14 +402,42 @@ holds, first the CPA sign-off (M5-33).
 | ID | Task | Owner | Deps | Est (h) | Par | Branch | Blocked by | Done |
 |---|---|---|---|---|---|---|---|---|
 | M6-01 | Contract freeze: `/v1/taxpayers/{id}/dashboard` | architect | P0-05 | 1 | — | `feature/dashboard-contract` | — | [x] |
-| M6-02 | Dashboard use case: one aggregate pass for 12 months, Estimator, income vs expense, trial banner via AccessPolicy | backend-sr | M5-22, M6-01 | 4 | — | `feature/dashboard-backend` | — | [ ] |
-| M6-03 | Dashboard handler, contract tests, flag ON/OFF, benchmark p95 < 1 s, EXPLAIN ANALYZE | backend-sr | M6-02, M5-23 | 3 | — | `feature/dashboard-backend` | — | [ ] |
-| M6-04 | Flutter Home: this month's estimate, income vs expense, trend chart, trial banner, empty state | frontend-sr | M6-01, M5-25 | 5 | — | `feature/dashboard-mobile` | — | [ ] |
-| M6-05 | Register flag `module_dashboard` + preset `demo_core` | backend-sr | M6-03, M6-04 | 0.5 | — | `feature/dashboard-flag` | — | [ ] |
-| M6-06 | QA M6 + `demo_core` preset smoke | qa-sr | M6-05 | 2.5 | — | `feature/dashboard-qa-fixes` | OB6 | [ ] |
-| M6-07 | Tech-lead gate M6 | tech-lead | M6-06 | 1 | — | (PR review) | — | [ ] |
-| M6-08 | Security gate M6 | security | M6-06 | 1 | — | (PR review) | — | [x] |
-| M6-09 | Docs M6 | doc-writer | M6-07, M6-08 | 1 | — | `feature/dashboard-docs` | — | [ ] |
+| M6-02 | Dashboard use case: one aggregate pass for 12 months, Estimator, income vs expense, trial banner via AccessPolicy | backend-sr | M5-22, M6-01 | 4 | — | `feature/dashboard-backend` | — | [x] |
+| M6-03 | Dashboard handler, contract tests, flag ON/OFF, benchmark p95 < 1 s, EXPLAIN ANALYZE | backend-sr | M6-02, M5-23 | 3 | — | `feature/dashboard-backend` | — | [x] |
+| M6-04 | Flutter Home: this month's estimate, income vs expense, trend chart, trial banner, empty state | frontend-sr | M6-01, M5-25 | 5 | — | `feature/dashboard-mobile` | — | [x] |
+| M6-05 | Register flag `module_dashboard` + preset `demo_core` | backend-sr | M6-03, M6-04 | 0.5 | — | `feature/dashboard-flag` | — | [x] |
+| M6-06 | QA M6 + `demo_core` preset smoke | qa-sr | M6-05 | 2.5 | — | `feature/dashboard-qa-fixes` | OB6 | [x] |
+| M6-07 | Tech-lead gate M6 ([PASS](../reviews/M6-07-tech-lead-gate.md)) | tech-lead | M6-06 | 1 | — | (PR review) | — | [x] |
+| M6-08 | Security gate M6 ([PASS](../reviews/M6-08-security-gate.md)) | security | M6-06 | 1 | — | (PR review) | — | [x] |
+| M6-09 | Docs M6: [module page](../modules/dashboard.md), [runbook](../runbooks/dashboard.md) | doc-writer | M6-07, M6-08 | 1 | — | `feature/dashboard-docs` | — | [x] |
+
+#### M6 follow-ups
+
+Deferred by the M6 gates and QA; none blocks M6's merge. Each lands with the task or module in
+its target column. Sources: [M6-07 tech-lead gate](../reviews/M6-07-tech-lead-gate.md#follow-ups)
+(FU*), [M6-08 security gate](../reviews/M6-08-security-gate.md#4-consolidated-m6-follow-ups) (G-*,
+PR numbers), [M6-06 QA](../reviews/M6-06-qa.md#7-deferred-not-defects-of-this-modules-acceptance-for-the-owners)
+(D-*). The module stays **OFF in shared environments** until
+[M6-08 §5](../reviews/M6-08-security-gate.md#5-preconditions-to-enable-module_dashboard-in-staging-or-production)
+holds; the first two rows are preconditions there (P-5, P-8).
+
+| ID | Item | Owner | Target |
+|---|---|---|---|
+| FU6 (P-5) | **Owner: manual TalkBack pass on a real Android device and VoiceOver on iOS** (OB6). Checklist in M6-07 FU6: swipe order banner → hero → legend → month card → summary → bars → key → selection; double-tap a bar selects it; "Ver como tabla" reads each month as a heading; 200 % text | owner + qa-sr | Before `module_dashboard` is enabled in a shared environment |
+| G-5 (P-8) | **Dashboard p95 < 1 s on staging**, cold start included (the first call after start-up took 5.7 s at 100k rows locally) | qa-sr | REL-06 |
+| FU1 (a, b) | State the router's undeclared-query-parameter rule and the 20-detail cap in the shared `ValidationFailed` response or `info.description` (an ADR-0004-style note: it applies to every endpoint); align MODULE-tax-engine §5 (`invalid` → `additionalProperties`) | architect | Next contract re-freeze |
+| QA D-3 | `TrendTax` has no saldo-a-favor amount, so the table cannot say "Saldo a favor $X" (US-D3): add `iva_in_favor_cents` (additive) | architect | 0.8.x |
+| #111 FU1–3 | One `NullableNonNegativeCents` schema instead of four inline copies; the `engineOn` example is inconsistent with its own trend; other `*NotFound` descriptions still say "malformed id ⇒ 404" | architect | Next contract re-freeze |
+| FU2 | ICU plural for "Últimos {count} meses" and the two chart summaries ("últimos 1 meses" with `period=2026-01`) | frontend-sr | M8 (first caller with a `period`) |
+| FU3 | `dashboardProvider`: `ref.watch` instead of `ref.read` for the repository | frontend-sr | Next touch of `features/dashboard` |
+| FU4 | `Service.Get` reads `Clock.Now()` twice (read it once); `trendTax` maps an empty `IVAOutcome` to `zero` instead of failing | backend-sr | Next touch of `dashboard/usecase` |
+| FU7 | Repo-wide guard against a button node without a tap action (second occurrence: taxpayer switcher M3/M4 D1, chart bar G1) | frontend-sr | M6 hardening |
+| #113 nits | `trialDaysLeft ?? 1`; hero disappears when `legend` is null; `$0.00` for `tax == null` in the table; 200 % text tests for the table and "Ingresos y gastos" views | frontend-sr | M6 UX polish |
+| QA D-2 | With one record module OFF the view is still titled "Ingresos y gastos" and its summary says so | owner (copy) | UX polish |
+| QA D-4 | *usted* vs *tú* copy pass ("Registre un contribuyente…", "…todos sus contribuyentes") | pm (copy) | UX polish |
+| QA obs. | Returning from the estimate screen keeps the chart's scroll (selected month can be off screen); the status chip shows in the "Ingresos y gastos" view | frontend-sr | UX polish |
+| G-4 | Ledger `HasLive`/sums and the profile read filter by taxpayer id under RLS alone: add an owner check in the query if delegated access is designed | architect | ADR for any delegated-access feature |
+| FU5 | ~~MODULE-dashboard §6 "real table" wording; PLAN M6-02..M6-04 ticks~~ **Done** (M6-09) | doc-writer | M6-09 |
 
 ### M7 — Subscriptions (`module_subscriptions`)
 

@@ -187,15 +187,17 @@ func TestRegimes_RequiredInputsFollowADR0002(t *testing.T) {
 
 	ytdPM := []string{"prior_provisional_payments", "ptu_paid", "prior_year_losses", "interest_withholding"}
 	assert.Equal(t, map[string][]string{
-		// M5-20 adds first_fiscal_year to 601 only (MODULE-tax-engine §9 item 6).
-		"601/moral": append([]string{"coeficiente_utilidad", "first_fiscal_year"}, ytdPM...),
+		// M5-20 adds first_fiscal_year to 601 only (MODULE-tax-engine §9 item 6); ANN-03
+		// appends annual_depreciation to 601 PM, 612 PF and 626 PM (MODULE-annual §2.6).
+		"601/moral": append(append([]string{"coeficiente_utilidad", "first_fiscal_year"}, ytdPM...),
+			"annual_depreciation"),
 		"612/fisica": {"prior_provisional_payments", "ytd_before_app_income", "ytd_before_app_deductions",
-			"ptu_paid", "prior_year_losses"},
+			"ptu_paid", "prior_year_losses", "annual_depreciation"},
 		"622/moral":  append([]string{"coeficiente_utilidad"}, ytdPM...),
 		"625/fisica": {"prior_year_income"},
 		// Research §B.2.2 step 4 credits the art. 54 interest withholding, as 601 does.
 		"626/moral": {"prior_provisional_payments", "ytd_before_app_income", "ytd_before_app_deductions",
-			"ptu_paid", "prior_year_losses", "interest_withholding"},
+			"ptu_paid", "prior_year_losses", "interest_withholding", "annual_depreciation"},
 	}, jsonKeys(t, owner, "required_inputs"))
 
 	var coeficiente string

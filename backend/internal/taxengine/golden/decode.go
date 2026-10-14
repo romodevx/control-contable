@@ -149,15 +149,23 @@ type centsText struct{ cents money.Cents }
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (c *centsText) UnmarshalYAML(n *yaml.Node) error {
+	v, err := DecodeCents(n)
+	c.cents = v
+	return err
+}
+
+// DecodeCents decodes an amount node: a quoted peso decimal with exactly
+// two places ("150.96", "-1320.00"). An unquoted number is a YAML float and
+// is ErrInexactAmount. The annual harness shares it (PLAN ANN-06).
+func DecodeCents(n *yaml.Node) (money.Cents, error) {
 	if n.Kind != yaml.ScalarNode || n.ShortTag() != tagString || !centsLexeme.MatchString(n.Value) {
-		return fmt.Errorf("line %d: %s %q: %w", n.Line, n.ShortTag(), n.Value, ErrInexactAmount)
+		return 0, fmt.Errorf("line %d: %s %q: %w", n.Line, n.ShortTag(), n.Value, ErrInexactAmount)
 	}
 	v, err := money.ParseCents(n.Value)
 	if err != nil {
-		return fmt.Errorf("line %d: %w: %w", n.Line, ErrInexactAmount, err)
+		return 0, fmt.Errorf("line %d: %w: %w", n.Line, ErrInexactAmount, err)
 	}
-	c.cents = v
-	return nil
+	return v, nil
 }
 
 // rateText is a quoted decimal fraction ("0.15").
@@ -165,15 +173,21 @@ type rateText struct{ rate money.Rate }
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (r *rateText) UnmarshalYAML(n *yaml.Node) error {
+	v, err := DecodeRate(n)
+	r.rate = v
+	return err
+}
+
+// DecodeRate decodes a rate node: a quoted decimal fraction ("0.1380").
+func DecodeRate(n *yaml.Node) (money.Rate, error) {
 	if n.Kind != yaml.ScalarNode || n.ShortTag() != tagString {
-		return fmt.Errorf("line %d: %s %q: %w", n.Line, n.ShortTag(), n.Value, ErrInexactAmount)
+		return 0, fmt.Errorf("line %d: %s %q: %w", n.Line, n.ShortTag(), n.Value, ErrInexactAmount)
 	}
 	v, err := money.ParseRate(n.Value)
 	if err != nil {
-		return fmt.Errorf("line %d: %w: %w", n.Line, ErrInexactAmount, err)
+		return 0, fmt.Errorf("line %d: %w: %w", n.Line, ErrInexactAmount, err)
 	}
-	r.rate = v
-	return nil
+	return v, nil
 }
 
 // optionDoc is a regime option: a boolean, a string, or a list of strings.

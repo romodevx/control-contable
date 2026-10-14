@@ -28,6 +28,11 @@
 //	IVAWithholdingFreight  iva.withholding.freight_pm  4 %    of the subtotal  LIVA 1-A II c; RLIVA 3 II
 //	IVAWithholdingScrap    iva.withholding.scrap_pm    100 %  of the IVA       LIVA 1-A II b
 //
+// plus IVAWithholdingFederalThreshold (iva.withholding.federal_threshold,
+// $2,000.00, RMF 2026 rule 4.1.3, lapses with its RMF). Withholdings
+// returns the WithholdingView that implements fiscal.WithholdingCatalog
+// whatever amount key the Catalog was built with.
+//
 // New refuses a served set lacking any of them (ErrMissingWithholdingRate).
 // The 2/3 IVA share (RLIVA 3 fr. I) and the platform 50 %/100 % IVA shares
 // (LIVA 18-J) stay in code as fiscal.ShareTwoThirds / ShareHalf /

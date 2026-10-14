@@ -21,8 +21,9 @@ const (
 	// force" and refuse every such record with rate_not_valid_on_date.
 	ErrMissingIVARate Error = "ratecatalog: a parameter set lacks a required IVA rate"
 	// ErrMissingWithholdingRate reports a parameter set without one of the
-	// withholding rates fiscal.DeriveWithholdings reads (it also wraps the
-	// taxparams lookup error). New refuses it, so the gap fails the boot
+	// withholding rates, or the RMF 4.1.3 threshold, that
+	// fiscal.DeriveWithholdings reads (it also wraps the taxparams lookup
+	// error). New refuses it, so the gap fails the boot
 	// instead of every record that needs the rate.
 	ErrMissingWithholdingRate Error = "ratecatalog: a parameter set lacks a required withholding rate"
 )

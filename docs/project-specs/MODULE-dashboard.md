@@ -310,9 +310,11 @@ Home refreshes.
   text, e.g. "Impuestos estimados, últimos 10 meses. Octubre: 2,284.29 pesos, incompleto. Mes más
   alto: marzo, 3,100 pesos." The income/expense view states both series for the current month and
   the window totals.
-- **Data-table alternative**: "Ver como tabla" toggles a real table (month, Ingresos cobrados,
-  Gastos pagados, IVA, ISR, Retenciones, Total, Estado), reachable by screen reader and keyboard,
-  with the legend under it. Same data as the chart, from the same response.
+- **Data-table alternative**: "Ver como tabla" replaces the chart with one block per month: a
+  heading (month and Estado) and one sentence per figure in column order (Ingresos cobrados,
+  Gastos pagados, IVA, ISR, Retenciones, Total), reachable by screen reader and keyboard, with the
+  legend under it. Same data as the chart, from the same response. A block per month instead of
+  an 8-column grid, so it wraps at 200 % text on a phone (M6-07 C, FU5).
 - Each bar is focusable/tappable (target ≥ 44 × 44 px, merged per month) and announces its month
   and values; selection shows a value label, not a hover-only tooltip.
 - Colour is never the only carrier: key with text labels, status markers with text, saldo a favor
