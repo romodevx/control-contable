@@ -264,6 +264,75 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get authVerifyNoPending => 'No hay un registro en curso.';
+
+  @override
+  String get accountTitle => 'Mi cuenta';
+
+  @override
+  String get accountLoading => 'Cargando tu cuenta…';
+
+  @override
+  String get accountLoadFailed => 'No se pudo cargar tu cuenta.';
+
+  @override
+  String get accountEmailReadOnly => 'El correo no se puede cambiar.';
+
+  @override
+  String get accountSave => 'Guardar cambios';
+
+  @override
+  String get accountSaved => 'Guardamos tu nombre.';
+
+  @override
+  String get accountDeleteHeading => 'Eliminar cuenta';
+
+  @override
+  String get accountDeleteIntro =>
+      'Borra tu cuenta y todos sus datos de forma permanente.';
+
+  @override
+  String get accountDeleteOpen => 'Eliminar mi cuenta';
+
+  @override
+  String get accountDeleteTitle => '¿Eliminar tu cuenta?';
+
+  @override
+  String get accountDeleteWhat =>
+      'Se borrarán para siempre tu cuenta y todo lo que guardaste: contribuyentes, ingresos, gastos, estimados y recordatorios. No se puede deshacer.';
+
+  @override
+  String get accountDeleteTrial =>
+      'La prueba gratuita no se reinicia: si vuelves a registrarte con este correo, no tendrás otra.';
+
+  @override
+  String get accountDeleteSubscription =>
+      'Si pagas una suscripción, cancélala en la tienda de tu teléfono (App Store o Google Play): eliminar la cuenta no la cancela.';
+
+  @override
+  String get accountDeletePasswordLabel => 'Contraseña actual';
+
+  @override
+  String get accountDeleteConfirm => 'Eliminar cuenta';
+
+  @override
+  String get accountDeleting => 'Eliminando cuenta…';
+
+  @override
+  String get accountDeleteWrongPassword => 'La contraseña no es correcta.';
+
+  @override
+  String get goodbyeTitle => 'Cuenta eliminada';
+
+  @override
+  String get goodbyeBody =>
+      'Eliminamos tu cuenta y todos sus datos. Gracias por usar Control Contable.';
+
+  @override
+  String get goodbyeToLogin => 'Ir a iniciar sesión';
+
+  @override
+  String get sessionTokenLeftOnDevice =>
+      'No pudimos borrar la sesión guardada en este teléfono. Cierra la app y vuelve a abrirla; si el aviso sigue, borra los datos de la app desde los ajustes del teléfono.';
 }
 
 /// The translations for Spanish Castilian, as used in Mexico (`es_MX`).

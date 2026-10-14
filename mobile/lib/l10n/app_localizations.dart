@@ -534,6 +534,132 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No hay un registro en curso.'**
   String get authVerifyNoPending;
+
+  /// Title of the account (profile) screen and tooltip of its entry on home.
+  ///
+  /// In es, this message translates to:
+  /// **'Mi cuenta'**
+  String get accountTitle;
+
+  /// Status while the profile loads.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando tu cuenta…'**
+  String get accountLoading;
+
+  /// The profile could not be loaded; a retry button follows.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo cargar tu cuenta.'**
+  String get accountLoadFailed;
+
+  /// Note under the read-only email of the account screen.
+  ///
+  /// In es, this message translates to:
+  /// **'El correo no se puede cambiar.'**
+  String get accountEmailReadOnly;
+
+  /// Primary button of the account screen (saves the name).
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar cambios'**
+  String get accountSave;
+
+  /// Confirmation after the name is saved.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardamos tu nombre.'**
+  String get accountSaved;
+
+  /// Heading of the account-deletion section.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar cuenta'**
+  String get accountDeleteHeading;
+
+  /// One line under the account-deletion heading.
+  ///
+  /// In es, this message translates to:
+  /// **'Borra tu cuenta y todos sus datos de forma permanente.'**
+  String get accountDeleteIntro;
+
+  /// Button that opens the account-deletion confirmation.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar mi cuenta'**
+  String get accountDeleteOpen;
+
+  /// Title of the account-deletion confirmation dialog.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Eliminar tu cuenta?'**
+  String get accountDeleteTitle;
+
+  /// What the deletion removes; it is irreversible.
+  ///
+  /// In es, this message translates to:
+  /// **'Se borrarán para siempre tu cuenta y todo lo que guardaste: contribuyentes, ingresos, gastos, estimados y recordatorios. No se puede deshacer.'**
+  String get accountDeleteWhat;
+
+  /// The trial registry keeps the email hash: no second free trial.
+  ///
+  /// In es, this message translates to:
+  /// **'La prueba gratuita no se reinicia: si vuelves a registrarte con este correo, no tendrás otra.'**
+  String get accountDeleteTrial;
+
+  /// A store subscription is not cancelled by the deletion.
+  ///
+  /// In es, this message translates to:
+  /// **'Si pagas una suscripción, cancélala en la tienda de tu teléfono (App Store o Google Play): eliminar la cuenta no la cancela.'**
+  String get accountDeleteSubscription;
+
+  /// Password re-entered to confirm the deletion.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña actual'**
+  String get accountDeletePasswordLabel;
+
+  /// Destructive primary button of the deletion dialog.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar cuenta'**
+  String get accountDeleteConfirm;
+
+  /// Busy state of the deletion button, read by screen readers.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminando cuenta…'**
+  String get accountDeleting;
+
+  /// The re-entered password was refused; nothing was deleted.
+  ///
+  /// In es, this message translates to:
+  /// **'La contraseña no es correcta.'**
+  String get accountDeleteWrongPassword;
+
+  /// Title of the screen shown after the account is deleted.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuenta eliminada'**
+  String get goodbyeTitle;
+
+  /// Body of the goodbye screen.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminamos tu cuenta y todos sus datos. Gracias por usar Control Contable.'**
+  String get goodbyeBody;
+
+  /// Button from the goodbye screen to the login form.
+  ///
+  /// In es, this message translates to:
+  /// **'Ir a iniciar sesión'**
+  String get goodbyeToLogin;
+
+  /// Sign-out could not remove the stored session token, even by wiping the secure store.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos borrar la sesión guardada en este teléfono. Cierra la app y vuelve a abrirla; si el aviso sigue, borra los datos de la app desde los ajustes del teléfono.'**
+  String get sessionTokenLeftOnDevice;
 }
 
 class _AppLocalizationsDelegate
