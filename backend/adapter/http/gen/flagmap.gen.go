@@ -53,6 +53,7 @@ var operationModules = map[string]string{
 	"restoreExpense":           "module_expenses",      // POST /v1/taxpayers/{taxpayerId}/expenses/{expenseId}/restore
 	"restoreIncome":            "module_incomes",       // POST /v1/taxpayers/{taxpayerId}/incomes/{incomeId}/restore
 	"syncSubscription":         "module_subscriptions", // POST /v1/subscription/sync
+	"unarchiveTaxpayer":        "module_taxpayers",     // POST /v1/taxpayers/{taxpayerId}/unarchive
 	"unregisterDevice":         "module_reminders",     // DELETE /v1/devices/{deviceId}
 	"updateExpense":            "module_expenses",      // PATCH /v1/taxpayers/{taxpayerId}/expenses/{expenseId}
 	"updateIncome":             "module_incomes",       // PATCH /v1/taxpayers/{taxpayerId}/incomes/{incomeId}
@@ -124,6 +125,7 @@ var routeModules = map[string]string{
 	"POST /v1/taxpayers/{taxpayerId}/incomes":                        "module_incomes",       // createIncome
 	"POST /v1/taxpayers/{taxpayerId}/incomes/{incomeId}/restore":     "module_incomes",       // restoreIncome
 	"POST /v1/taxpayers/{taxpayerId}/regimes":                        "module_taxpayers",     // addTaxpayerRegime
+	"POST /v1/taxpayers/{taxpayerId}/unarchive":                      "module_taxpayers",     // unarchiveTaxpayer
 	"POST /v1/webhooks/revenuecat":                                   "module_subscriptions", // receiveRevenueCatWebhook
 	"PUT /v1/reminder-settings":                                      "module_reminders",     // putReminderSettings
 	"PUT /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/tax-inputs": "module_tax_engine",    // putTaxInputs

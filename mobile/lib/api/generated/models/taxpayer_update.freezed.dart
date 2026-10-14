@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TaxpayerUpdate {
 
-@JsonKey(name: 'display_name') String get displayName;
+@JsonKey(includeIfNull: false, name: 'display_name') String? get displayName;@JsonKey(includeIfNull: false) RfcInput? get rfc;
 /// Create a copy of TaxpayerUpdate
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +30,20 @@ $TaxpayerUpdateCopyWith<TaxpayerUpdate> get copyWith => _$TaxpayerUpdateCopyWith
 @override
 bool operator ==(Object other) {
   final _this = this as TaxpayerUpdate;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TaxpayerUpdate&&(identical(other.displayName, _this.displayName) || other.displayName == _this.displayName));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TaxpayerUpdate&&(identical(other.displayName, _this.displayName) || other.displayName == _this.displayName)&&(identical(other.rfc, _this.rfc) || other.rfc == _this.rfc));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as TaxpayerUpdate;
-  return Object.hash(runtimeType,_this.displayName);
+  return Object.hash(runtimeType,_this.displayName,_this.rfc);
 }
 
 @override
 String toString() {
   final _this = this as TaxpayerUpdate;
-  return 'TaxpayerUpdate(displayName: ${_this.displayName})';
+  return 'TaxpayerUpdate(displayName: ${_this.displayName}, rfc: ${_this.rfc})';
 }
 
 
@@ -54,7 +54,7 @@ abstract mixin class $TaxpayerUpdateCopyWith<$Res>  {
   factory $TaxpayerUpdateCopyWith(TaxpayerUpdate value, $Res Function(TaxpayerUpdate) _then) = _$TaxpayerUpdateCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'display_name') String displayName
+@JsonKey(includeIfNull: false, name: 'display_name') String? displayName,@JsonKey(includeIfNull: false) RfcInput? rfc
 });
 
 
@@ -71,10 +71,11 @@ class _$TaxpayerUpdateCopyWithImpl<$Res>
 
 /// Create a copy of TaxpayerUpdate
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? displayName = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? displayName = freezed,Object? rfc = freezed,}) {
   return _then(TaxpayerUpdate(
-displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
-as String,
+displayName: freezed == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
+as String?,rfc: freezed == rfc ? _self.rfc : rfc // ignore: cast_nullable_to_non_nullable
+as RfcInput?,
   ));
 }
 
@@ -159,10 +160,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'display_name')  String displayName)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(includeIfNull: false, name: 'display_name')  String? displayName, @JsonKey(includeIfNull: false)  RfcInput? rfc)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TaxpayerUpdate() when $default != null:
-return $default(_that.displayName);case _:
+return $default(_that.displayName,_that.rfc);case _:
   return orElse();
 
 }
@@ -180,10 +181,10 @@ return $default(_that.displayName);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'display_name')  String displayName)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(includeIfNull: false, name: 'display_name')  String? displayName, @JsonKey(includeIfNull: false)  RfcInput? rfc)  $default,) {final _that = this;
 switch (_that) {
 case _TaxpayerUpdate():
-return $default(_that.displayName);case _:
+return $default(_that.displayName,_that.rfc);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -200,10 +201,10 @@ return $default(_that.displayName);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'display_name')  String displayName)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(includeIfNull: false, name: 'display_name')  String? displayName, @JsonKey(includeIfNull: false)  RfcInput? rfc)?  $default,) {final _that = this;
 switch (_that) {
 case _TaxpayerUpdate() when $default != null:
-return $default(_that.displayName);case _:
+return $default(_that.displayName,_that.rfc);case _:
   return null;
 
 }
@@ -215,10 +216,11 @@ return $default(_that.displayName);case _:
 @JsonSerializable()
 
 class _TaxpayerUpdate implements TaxpayerUpdate {
-  const _TaxpayerUpdate({@JsonKey(name: 'display_name') required this.displayName});
+  const _TaxpayerUpdate({@JsonKey(includeIfNull: false, name: 'display_name') this.displayName, @JsonKey(includeIfNull: false) this.rfc});
   factory _TaxpayerUpdate.fromJson(Map<String, dynamic> json) => _$TaxpayerUpdateFromJson(json);
 
-@override@JsonKey(name: 'display_name') final  String displayName;
+@override@JsonKey(includeIfNull: false, name: 'display_name') final  String? displayName;
+@override@JsonKey(includeIfNull: false) final  RfcInput? rfc;
 
 /// Create a copy of TaxpayerUpdate
 /// with the given fields replaced by the non-null parameter values.
@@ -233,18 +235,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TaxpayerUpdate&&(identical(other.displayName, displayName) || other.displayName == displayName));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TaxpayerUpdate&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.rfc, rfc) || other.rfc == rfc));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,displayName);
+    return Object.hash(runtimeType,displayName,rfc);
 }
 
 @override
 String toString() {
-    return 'TaxpayerUpdate(displayName: $displayName)';
+    return 'TaxpayerUpdate(displayName: $displayName, rfc: $rfc)';
 }
 
 
@@ -255,7 +257,7 @@ abstract mixin class _$TaxpayerUpdateCopyWith<$Res> implements $TaxpayerUpdateCo
   factory _$TaxpayerUpdateCopyWith(_TaxpayerUpdate value, $Res Function(_TaxpayerUpdate) _then) = __$TaxpayerUpdateCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'display_name') String displayName
+@JsonKey(includeIfNull: false, name: 'display_name') String? displayName,@JsonKey(includeIfNull: false) RfcInput? rfc
 });
 
 
@@ -272,10 +274,11 @@ class __$TaxpayerUpdateCopyWithImpl<$Res>
 
 /// Create a copy of TaxpayerUpdate
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? displayName = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? displayName = freezed,Object? rfc = freezed,}) {
   return _then(_TaxpayerUpdate(
-displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
-as String,
+displayName: freezed == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
+as String?,rfc: freezed == rfc ? _self.rfc : rfc // ignore: cast_nullable_to_non_nullable
+as RfcInput?,
   ));
 }
 

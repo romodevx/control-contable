@@ -7,7 +7,13 @@ part of 'taxpayer_update.dart';
 // **************************************************************************
 
 _TaxpayerUpdate _$TaxpayerUpdateFromJson(Map<String, dynamic> json) =>
-    _TaxpayerUpdate(displayName: json['display_name'] as String);
+    _TaxpayerUpdate(
+      displayName: json['display_name'] as String?,
+      rfc: json['rfc'] as String?,
+    );
 
 Map<String, dynamic> _$TaxpayerUpdateToJson(_TaxpayerUpdate instance) =>
-    <String, dynamic>{'display_name': instance.displayName};
+    <String, dynamic>{
+      'display_name': ?instance.displayName,
+      'rfc': ?instance.rfc,
+    };

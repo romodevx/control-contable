@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Control Contable API
-  version: 0.3.1
+  version: 0.4.0
   summary: Monthly IVA and provisional ISR estimates for Mexican taxpayers.
   description: |
     Spec-first contract (single source of truth). Server stubs (oapi-codegen),
@@ -491,8 +491,20 @@ paths:
     get:
       tags: [Taxpayers]
       operationId: listRegimes
-      summary: Regime catalog filtered by person type
+      x-frozen: sha256:b30f8e0186b7950098de3f8da90920293d786db5cbb7b9d72a242ec27dbffff7
+      summary: Regime catalog for one person type (support level, options, inputs, compatibility)
+      description: >-
+        Every SAT `c_RegimenFiscal` key selectable for `person_type` (catalog key is
+        `(code, person_type)`: 626 and 610 exist for both). `treatment` is the support level:
+        `full`, `partial` or `informational` (an informational or partial regime carries a
+        plain-language `explanation`, shown at selection time). `option_defs` drive the
+        per-regime options form and their server-side validation; `required_inputs` are the
+        per-fiscal-year tax-input keys the estimate needs (M5, not options);
+        `incompatible_with` lists the regimes it cannot overlap in time, with the reason.
+        Global, read-only data: a read-only user may list it.
       x-module: module_taxpayers
+      security:
+        - bearerAuth: []
       parameters:
         - name: person_type
           in: query
@@ -500,83 +512,249 @@ paths:
           schema: { $ref: '#/components/schemas/PersonType' }
       responses:
         '200':
-          description: Regimes selectable for the person type.
+          description: Regimes selectable for the person type, ordered by code.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RegimeList' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+        '400':
+          description: '`person_type` is missing or not `fisica`/`moral`.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: validation_failed
+                  message: One or more fields are invalid.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: person_type, code: required, message: Choose persona física or persona moral. }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
   /v1/taxpayers:
     get:
       tags: [Taxpayers]
       operationId: listTaxpayers
-      summary: Taxpayers managed by the user
+      x-frozen: sha256:fd8d9a031b4264454442720fa03d8b008a8394b86998de7d009733ec9e0bc8ee
+      summary: Taxpayers managed by the user (feeds the active-taxpayer switcher)
+      description: >-
+        The caller's taxpayers ordered by `created_at`, then `id`. Archived taxpayers are
+        left out unless `include_archived=true`. At most 10 exist per user (OD-2), so the list
+        is not paginated.
       x-module: module_taxpayers
+      security:
+        - bearerAuth: []
       parameters:
         - name: include_archived
           in: query
+          required: false
           schema: { type: boolean, default: false }
       responses:
         '200':
           description: Taxpayers.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/TaxpayerList' }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
     post:
       tags: [Taxpayers]
       operationId: createTaxpayer
-      summary: Create a taxpayer (onboarding order - person type, RFC, regimes, options)
+      x-frozen: sha256:cbdea1b229bfdf0165e0af312527f456d5ca051935a4f407d3e3bd81cf69033a
+      summary: Create a taxpayer with its regimes and options in one transaction (onboarding)
+      description: >-
+        Onboarding order (OD-3): person type, then RFC and display name, then regimes, then
+        per-regime options. The taxpayer, every regime and every option are written in one
+        transaction: on any failure nothing is persisted. `regimes` is required (at least
+        one); year-to-date tax inputs are not part of this call (M5).
+
+
+        The RFC is normalized (trim, upper-case, NFC, inner spaces and `-` removed), then
+        validated: length for the person type (13 física, 12 moral), alphabet, real calendar
+        date; the generic RFCs `XAXX010101000` and `XEXX010101000` are refused. The SAT
+        módulo 11 check digit does NOT reject (D-RFC: some SAT-issued RFCs fail the published
+        algorithm): a mismatch is accepted and the response carries the non-blocking warning
+        `{code: rfc_check_digit_mismatch, field: rfc}` so the app asks the user to double-check.
+        It is never checked against the SAT. The full RFC is never returned or echoed in an
+        error: the response carries only `rfc_masked`.
+
+
+        Order of checks: schema (400) → access policy (`402 entitlement_required` for a
+        read-only user) → idempotent retry → cap → business rules. Retrying with a client
+        `id` the caller already owns answers `200` with the existing taxpayer, even at the
+        cap or for a read-only user; an `id` that exists outside the caller's scope answers
+        `409 conflict`. The cap is 10 taxpayers per user for every plan, archived included,
+        counted under a row lock so concurrent creates cannot overshoot
+        (`422 taxpayer_limit_reached`, not 402: paying does not lift it).
+
+
+        `FieldError.code` values beyond JSON Schema keywords: `rfc` → `rfc_length_mismatch`,
+        `rfc_format`, `rfc_date`, `rfc_generic`;
+        `regimes.N.regime_code` → `not_for_person_type`, `duplicate` (same code twice in the
+        body); `regimes.N.options.<key>` → `unknown_option`, `invalid_option`, `required`;
+        `regimes.N.start_period` → `out_of_range` (allowed `2022-01` … the current month,
+        America/Mexico_City).
+
+
+        Regime compatibility (`regime_compatibility`): an overlapping pair the catalog marks
+        not allowed answers `422 invalid_regime_combination`; an overlapping pair whose
+        verdict still needs CPA review is allowed and the response carries one warning per
+        such pair, `{code: regime_combination_needs_cpa_review, field: regimes.N.regime_code}`
+        (N = the later of the two in the body), with the pair's `reason` as `message`.
       x-module: module_taxpayers
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/TaxpayerCreate' }
+            examples:
+              personaFisica:
+                summary: Persona física with 606 and 625 (options defaulted where omitted)
+                value:
+                  id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                  person_type: fisica
+                  rfc: GOMA800101AB6
+                  display_name: Ana (personal)
+                  regimes:
+                    - regime_code: '606'
+                      options: { deduction_mode: blind_35 }
+                      start_period: '2026-01'
+                    - regime_code: '625'
+                      options: { activities: [goods_services] }
+                      start_period: '2026-01'
+              personaMoral:
+                summary: Persona moral with one regime
+                value:
+                  person_type: moral
+                  rfc: EEJ150310QK2
+                  display_name: Empresa Ejemplo
+                  regimes:
+                    - regime_code: '601'
+                      options: { iva_fully_taxable: true }
       responses:
         '201':
-          description: Created.
+          description: >-
+            Created (with `warnings` when the RFC check digit does not match or a regime pair
+            still needs CPA review).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Taxpayer' }
+              examples:
+                created:
+                  value:
+                    id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                    person_type: moral
+                    display_name: Empresa Ejemplo
+                    rfc_masked: EEJ******QK2
+                    regimes:
+                      - regime_code: '601'
+                        name: General de Ley Personas Morales
+                        treatment: full
+                        options: { iva_fully_taxable: true }
+                        start_period: '2026-10'
+                        end_period: null
+                    archived_at: null
+                    created_at: '2026-10-13T16:20:00Z'
+                checkDigitMismatch:
+                  summary: Accepted; the check digit does not match, so the app asks to double-check (D-RFC)
+                  value:
+                    id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                    person_type: fisica
+                    display_name: Ana (personal)
+                    rfc_masked: GOMA******AB3
+                    regimes:
+                      - regime_code: '612'
+                        name: Personas Físicas con Actividades Empresariales y Profesionales
+                        treatment: full
+                        options: { iva_fully_taxable: true }
+                        start_period: '2026-01'
+                        end_period: null
+                    archived_at: null
+                    created_at: '2026-10-13T16:05:00Z'
+                    warnings:
+                      - code: rfc_check_digit_mismatch
+                        field: rfc
+                        message: Revisa tu RFC; la homoclave no coincide con el dígito verificador.
         '200':
-          description: Idempotent retry; the taxpayer with this `id` already exists.
+          description: Idempotent retry; the caller already owns a taxpayer with this `id`.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Taxpayer' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422':
-          description: |
-            Well-formed but violates a business rule: an invalid regime combination, or
-            `taxpayer_limit_reached` when the user already has the fair-use maximum of
-            taxpayers (PRD Q4). The cap is not an entitlement (402): paying does not lift it.
+        '400':
+          description: >-
+            Input does not match the contract, or an RFC, regime, option or period rule
+            (`details[].code`: see the operation description).
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
               examples:
-                invalid_regime_combination:
+                rfcDate:
+                  summary: The RFC date is not a real calendar date (the RFC is never echoed)
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: rfc, code: rfc_date, message: La fecha del RFC no es válida. }
+                missingOption:
+                  summary: A required option without default was not sent
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: regimes.0.options.rif_year, code: required, message: Indica el año de tributación en el RIF. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/PaymentRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: >-
+            The RFC is already registered in the caller's account (active or archived), or the
+            client `id` exists outside the caller's scope (generic, reveals nothing).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                rfcAlreadyRegistered:
+                  value:
+                    error: { code: rfc_already_registered, message: This RFC is already registered in your account., request_id: req_01J9Z6Q4X8 }
+                idConflict:
+                  value:
+                    error: { code: conflict, message: The request conflicts with the current state., request_id: req_01J9Z6Q4X8 }
+        '422':
+          description: >-
+            Two regimes in the body overlap in time and are incompatible, or the user already
+            has 10 taxpayers (archived included).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                invalidRegimeCombination:
                   value:
                     error:
                       code: invalid_regime_combination
-                      message: RESICO cannot be combined with regime 612 for the same taxpayer.
+                      message: A persona moral holds one regime at a time.
                       request_id: req_01J9Z6Q4X8
                       details:
-                        - field: regimes
-                          code: incompatible
-                          message: 626 is incompatible with 612.
-                taxpayer_limit_reached:
+                        - { field: regimes.1.regime_code, code: incompatible, message: 626 is incompatible with 601. }
+                taxpayerLimitReached:
                   value:
-                    error:
-                      code: taxpayer_limit_reached
-                      message: You have reached the maximum number of taxpayers. Contact support to raise it.
-                      request_id: req_01J9Z6Q4X8
+                    error: { code: taxpayer_limit_reached, message: You have reached the maximum of 10 taxpayers., request_id: req_01J9Z6Q4X8 }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
   /v1/taxpayers/{taxpayerId}:
     parameters:
@@ -584,49 +762,127 @@ paths:
     get:
       tags: [Taxpayers]
       operationId: getTaxpayer
-      summary: Get a taxpayer
+      x-frozen: sha256:18cebfe15967d9099675416948a10b6ef08d7eeee5df4021194a4a18ebfe8d88
+      summary: Get a taxpayer (archived ones too)
       x-module: module_taxpayers
+      security:
+        - bearerAuth: []
       responses:
         '200':
           description: Taxpayer.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Taxpayer' }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
     patch:
       tags: [Taxpayers]
       operationId: updateTaxpayer
-      summary: Rename a taxpayer (person type and RFC are immutable)
+      x-frozen: sha256:50ce91097e7650fdc040acd7e8f91c3472b8f55faaa78a70780afbf46843823e
+      summary: Rename a taxpayer or correct its RFC (person type is immutable)
+      description: >-
+        `display_name` is trimmed and NFC-normalized (1–80 characters). `rfc` corrects a
+        mistyped RFC of the same person type (OQ-1): it is normalized and validated as in
+        `createTaxpayer` (same `details[].code` values; a check-digit mismatch is accepted with
+        the `rfc_check_digit_mismatch` warning), re-encrypted, re-hashed and checked
+        for uniqueness in the caller's account. `person_type` or any other field answers
+        `400` (`additionalProperties`). A read-only user gets `402`; an archived taxpayer
+        `422 business_rule_violation` (`taxpayer_archived`).
       x-module: module_taxpayers
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/TaxpayerUpdate' }
+            examples:
+              rename:
+                value: { display_name: Ana (negocio) }
+              correctRfc:
+                value: { rfc: GOMA800101AB6 }
       responses:
         '200':
           description: Updated.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Taxpayer' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+        '400':
+          description: Input does not match the contract, or the corrected RFC is invalid.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: validation_failed
+                  message: One or more fields are invalid.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: rfc, code: rfc_length_mismatch, message: Una persona física tiene un RFC de 13 caracteres. }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/PaymentRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The corrected RFC is already registered in the caller's account.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error: { code: rfc_already_registered, message: This RFC is already registered in your account., request_id: req_01J9Z6Q4X8 }
+        '422':
+          description: The taxpayer is archived; unarchive it first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: business_rule_violation
+                  message: This taxpayer is archived. Unarchive it to make changes.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: taxpayerId, code: taxpayer_archived, message: Unarchive the taxpayer first. }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
     delete:
       tags: [Taxpayers]
       operationId: deleteTaxpayer
-      summary: Permanently delete a taxpayer and its records (irreversible)
+      x-frozen: sha256:4b523d4214dede0eb27a738bdb280847475740d9452f3d1b92a1623de085d657
+      summary: Permanently delete a taxpayer and all its records (irreversible)
+      description: >-
+        Requires `confirm=true`; without it answers `400 validation_failed` (`confirm` /
+        `confirm_required`) and deletes nothing. Deletes the taxpayer, its regimes, incomes,
+        expenses, tax inputs and estimate history in one transaction. Frees one cap slot and
+        the RFC; trial usage counters are not decremented. Allowed for a read-only user and
+        for an archived taxpayer.
       x-module: module_taxpayers
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/Confirm'
       responses:
         '204': { description: Deleted. }
-        '400': { $ref: '#/components/responses/BadRequest' }
+        '400':
+          description: '`confirm=true` is missing, or the input does not match the contract.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: validation_failed
+                  message: One or more fields are invalid.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: confirm, code: confirm_required, message: Confirm the deletion. }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
   /v1/taxpayers/{taxpayerId}/archive:
     parameters:
@@ -634,16 +890,56 @@ paths:
     post:
       tags: [Taxpayers]
       operationId: archiveTaxpayer
+      x-frozen: sha256:dc4626288854dbaa450f5aa7bb2f378ddfa5f6c56765168659e7a2f233e69519
       summary: Archive (hide) a taxpayer, keeping its data
+      description: >-
+        Sets `archived_at`. The taxpayer leaves the list and the switcher; reads by id and
+        past estimates still work; writes are refused until it is unarchived. It still counts
+        toward the cap and keeps its RFC reserved. Archiving an archived taxpayer answers
+        `200` unchanged. Allowed for a read-only user.
       x-module: module_taxpayers
+      security:
+        - bearerAuth: []
       responses:
         '200':
           description: Archived.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Taxpayer' }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /v1/taxpayers/{taxpayerId}/unarchive:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+    post:
+      tags: [Taxpayers]
+      operationId: unarchiveTaxpayer
+      x-frozen: sha256:04938ab95f1f7946a0678c69a0f876f504e56a662759eec48ff745e75e432404
+      summary: Unarchive a taxpayer (it returns to the list and the switcher)
+      description: >-
+        Clears `archived_at` (OQ-2). No cap check: an archived taxpayer already counts.
+        Unarchiving an active taxpayer answers `200` unchanged. A read-only user gets `402`.
+      x-module: module_taxpayers
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Unarchived.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Taxpayer' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/PaymentRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
   /v1/taxpayers/{taxpayerId}/regimes:
     parameters:
@@ -651,8 +947,26 @@ paths:
     post:
       tags: [Taxpayers]
       operationId: addTaxpayerRegime
-      summary: Add a regime to a taxpayer
+      x-frozen: sha256:900e976ca22b0db38039b719dfec9e15255b345e13d6c93a6675c42eb06bee96
+      summary: Add a regime to a taxpayer (or reopen an ended one)
+      description: >-
+        `start_period` defaults to the current month (America/Mexico_City); allowed
+        `2022-01` … the current month (`out_of_range`). Options are validated against the
+        regime's `option_defs` (omitted options with a default are filled; same
+        `details[].code` values as `createTaxpayer`, with `options.<key>` paths). A code not
+        in the catalog for the taxpayer's person type answers `400` (`regime_code` /
+        `not_for_person_type`). A regime whose period window overlaps an incompatible one
+        answers `422 invalid_regime_combination`; regimes that do not overlap in time never
+        conflict; an overlapping pair whose compatibility still needs CPA review is allowed
+        and the response carries the warning `{code: regime_combination_needs_cpa_review,
+        field: regime_code}` (one per such pair, `message` = the pair's `reason`). Adding a
+        regime that is already active answers `409 conflict`; adding an
+        ended one reopens it (`end_period` cleared, original `start_period` kept, body
+        options applied) and answers `201`. A read-only user gets `402`; an archived taxpayer
+        `422 business_rule_violation` (`taxpayer_archived`).
       x-module: module_taxpayers
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -660,15 +974,79 @@ paths:
             schema: { $ref: '#/components/schemas/TaxpayerRegimeCreate' }
       responses:
         '201':
-          description: Added.
+          description: Added (or reopened); `warnings` when a regime pair still needs CPA review.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/TaxpayerRegime' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+              examples:
+                added:
+                  value:
+                    regime_code: '606'
+                    name: Arrendamiento
+                    treatment: full
+                    options: { deduction_mode: blind_35 }
+                    start_period: '2026-01'
+                    end_period: null
+                pairNeedsCpaReview:
+                  summary: Allowed; the pair's compatibility is not yet verified, so the app shows the reason
+                  value:
+                    regime_code: '607'
+                    name: Régimen de Enajenación o Adquisición de Bienes
+                    treatment: informational
+                    options: {}
+                    start_period: '2026-10'
+                    end_period: null
+                    warnings:
+                      - code: regime_combination_needs_cpa_review
+                        field: regime_code
+                        message: Esta combinación de regímenes está pendiente de revisión por un contador; verifícala con tu contador.
+        '400':
+          description: Input does not match the contract, or a regime, option or period rule.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: validation_failed
+                  message: One or more fields are invalid.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: regime_code, code: not_for_person_type, message: This regime is not available for a persona física. }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/PaymentRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '409':
+          description: The regime is already active for this taxpayer.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error: { code: conflict, message: This regime is already active., request_id: req_01J9Z6Q4X8 }
+        '422':
+          description: The regime overlaps an incompatible one, or the taxpayer is archived.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                invalidRegimeCombination:
+                  value:
+                    error:
+                      code: invalid_regime_combination
+                      message: RESICO replaces regime 612 for the same periods.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: regime_code, code: incompatible, message: 626 is incompatible with 612. }
+                taxpayerArchived:
+                  value:
+                    error:
+                      code: business_rule_violation
+                      message: This taxpayer is archived. Unarchive it to make changes.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: taxpayerId, code: taxpayer_archived, message: Unarchive the taxpayer first. }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
   /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}:
     parameters:
@@ -677,8 +1055,18 @@ paths:
     patch:
       tags: [Taxpayers]
       operationId: updateTaxpayerRegime
-      summary: Update regime options
+      x-frozen: sha256:2b0138ebf69af4dc9c104424a5dea233f7499f5d06a27250bcc47e63c5832e63
+      summary: Change a regime's options (applies to every period of the regime)
+      description: >-
+        Merge semantics: each key sent replaces its value, keys not sent keep theirs.
+        Validated against the regime's `option_defs` (`options.<key>` / `unknown_option`,
+        `invalid_option`). Options are not versioned in time (OQ-7): the change applies to
+        every period of the regime. A regime the taxpayer does not hold answers `404`. A
+        read-only user gets `402`; an archived taxpayer `422 business_rule_violation`
+        (`taxpayer_archived`).
       x-module: module_taxpayers
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -687,20 +1075,57 @@ paths:
       responses:
         '200':
           description: Updated.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/TaxpayerRegime' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+        '400':
+          description: Input does not match the contract, or an option fails its definition.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: validation_failed
+                  message: One or more fields are invalid.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: options.activities, code: invalid_option, message: Elige al menos una actividad. }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/PaymentRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '422':
+          description: The taxpayer is archived; unarchive it first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: business_rule_violation
+                  message: This taxpayer is archived. Unarchive it to make changes.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: taxpayerId, code: taxpayer_archived, message: Unarchive the taxpayer first. }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
     delete:
       tags: [Taxpayers]
       operationId: archiveTaxpayerRegime
-      summary: Archive a regime with an end period (records are kept)
-      description: If the regime has records and `confirm` is not `true`, answers `409 regime_has_records`.
+      x-frozen: sha256:b01928ce49d1c5cef31038c52b90a3405095fed5b39a02b4fc6be1478111000a
+      summary: End a regime at `end_period` (records are kept; never a hard delete)
+      description: >-
+        Sets `end_period`: `start_period` ≤ `end_period` ≤ the current month
+        (`end_period` / `out_of_range`), and not before the latest period holding a record in
+        the regime (`422`, `records_after_end_period`). Records are kept and still count for
+        periods up to `end_period`. When the regime has records and `confirm` is not `true`
+        the call answers `409 regime_has_records` and changes nothing. The last active regime
+        cannot be ended (`422`, `last_active_regime`): archive the taxpayer instead. A regime
+        already ended answers `409 conflict`. Allowed for a read-only user; an archived
+        taxpayer answers `422` (`taxpayer_archived`).
       x-module: module_taxpayers
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/Confirm'
         - name: end_period
@@ -709,15 +1134,65 @@ paths:
           schema: { $ref: '#/components/schemas/Period' }
       responses:
         '200':
-          description: Archived.
+          description: Ended.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/TaxpayerRegime' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+        '400':
+          description: '`end_period` is missing, malformed or out of range.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: validation_failed
+                  message: One or more fields are invalid.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: end_period, code: out_of_range, message: El periodo final no puede ser posterior al mes actual. }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '409':
+          description: >-
+            The regime has records and `confirm=true` was not sent, or the regime has already
+            ended.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                regimeHasRecords:
+                  value:
+                    error: { code: regime_has_records, message: This regime has records. Confirm to end it; the records are kept., request_id: req_01J9Z6Q4X8 }
+                alreadyEnded:
+                  value:
+                    error: { code: conflict, message: This regime has already ended., request_id: req_01J9Z6Q4X8 }
+        '422':
+          description: >-
+            Records exist after `end_period`, it is the last active regime, or the taxpayer
+            is archived.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                recordsAfterEndPeriod:
+                  value:
+                    error:
+                      code: business_rule_violation
+                      message: This regime has records after the end period.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: end_period, code: records_after_end_period, message: Elige un periodo igual o posterior al último registro. }
+                lastActiveRegime:
+                  value:
+                    error:
+                      code: business_rule_violation
+                      message: A taxpayer needs at least one active regime. Archive the taxpayer instead.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: regimeCode, code: last_active_regime, message: Archive the taxpayer instead. }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
 
   # ---------------------------------------------------------------- M3 Incomes
@@ -1484,6 +1959,7 @@ components:
       maximum: 2100
       examples: [2026]
     RegimeCode:
+      x-frozen: sha256:3f49f98d72a3b659908b61f100b5335d9748fd3ede9229802c6a4c82c1904014
       type: string
       pattern: '^[0-9]{3}$'
       description: SAT c_RegimenFiscal code.
@@ -1506,8 +1982,10 @@ components:
       description: Decimal fraction as string (0.16 = 16%). Never a float.
       examples: ['0.16']
     PersonType:
+      x-frozen: sha256:af437a6aad19e5eb477200d38631e6231245088525568857b0539688ad28e27c
       type: string
       enum: [fisica, moral]
+      description: Chosen first at onboarding and immutable; fixes the RFC length (13 física, 12 moral).
     IvaRate:
       type: string
       enum: [rate_16, rate_8, rate_0, exempt]
@@ -1516,8 +1994,12 @@ components:
         tax-parameter data (in force until 2026-12-31 per DOF 31-12-2025); a rate not valid
         on the record date is rejected with 422 business_rule_violation.
     Treatment:
+      x-frozen: sha256:fd1cccbfd11813bba72e268ca76b47439ba5c5725f79e01b68098d5c1c3c37a2
       type: string
       enum: [full, partial, informational]
+      description: >-
+        Support level of a regime: `full` (estimated), `partial` (some taxes only, e.g. IVA)
+        or `informational` (selectable, not estimated; carries an explanation).
     Legend:
       type: string
       const: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
@@ -1823,22 +2305,65 @@ components:
 
     # ------------------------------------------------------------ taxpayers
     RegimeOptionDef:
+      x-frozen: sha256:9ebe84365f3228b32dcccc873d35a7c2db344d452f30e854755679efd5ddb50b
       type: object
       required: [key, label, type, required]
-      description: Per-regime option definition (from the research catalog).
+      description: >-
+        One per-regime option (`regimes.option_defs`, data not code). `enum` takes one of
+        `allowed_values`; `multi_enum` takes a non-empty array of distinct `allowed_values`;
+        `boolean` takes `true`/`false`; `rate` takes a decimal string (`DecimalRate`, 0.16 =
+        16%) within `[min, max]`; both bounds are always present for `rate` and absent for
+        every other type. An omitted option with a `default` is filled server-side; a
+        `required` option with `default: null` must be sent. The shape is exactly the stored
+        `regimes.option_defs` element (its CHECK `regime_option_defs_valid` enforces it).
       properties:
-        key: { type: string, examples: [deduction_mode] }
-        label: { type: string }
-        type: { type: string, enum: [enum, multi_enum, rate, boolean] }
+        key: { type: string, pattern: '^[a-z][a-z0-9]*(_[a-z0-9]+)*$', maxLength: 64, examples: [deduction_mode] }
+        label: { type: string, description: Spanish label shown in the options form. }
+        type: { type: string, enum: [enum, multi_enum, boolean, rate] }
         allowed_values:
           type: array
+          description: Present for `enum` and `multi_enum`.
           items: { type: string }
-        default: { type: [string, boolean, 'null'] }
+        min:
+          oneOf:
+            - $ref: '#/components/schemas/DecimalRate'
+            - type: 'null'
+          description: Inclusive lower bound for `rate`; `null` or absent otherwise.
+        max:
+          oneOf:
+            - $ref: '#/components/schemas/DecimalRate'
+            - type: 'null'
+          description: Inclusive upper bound for `rate`; `null` or absent otherwise.
+        default:
+          type: [string, boolean, 'null']
+          description: Default value, or `null` when the option has none.
         required: { type: boolean }
-    Regime:
+      examples:
+        - key: deduction_mode
+          label: Tipo de deducción
+          type: enum
+          allowed_values: [blind_35, actual]
+          default: blind_35
+          required: true
+    RegimeIncompatibility:
+      x-frozen: sha256:0e486d98d7d3d7d90adda66adf0efa114df60092b6d3965e04fa45b961d4f5ee
       type: object
-      required: [code, name, person_type, treatment, option_defs, required_inputs]
-      description: Catalog key is (code, person_type); e.g. 626 exists as RESICO PF and RESICO PM.
+      required: [code, reason]
+      description: A regime that cannot be held in overlapping periods (`regime_compatibility`).
+      properties:
+        code: { $ref: '#/components/schemas/RegimeCode' }
+        reason: { type: string, description: Plain-language reason shown to the user. }
+      examples:
+        - code: '612'
+          reason: El RESICO sustituye al régimen de actividad empresarial y profesional (art. 113-E LISR).
+    Regime:
+      x-frozen: sha256:f60828e0154cea0d795463fbc903ee39ce770da26b609a1e404b592a154b2417
+      type: object
+      required: [code, name, person_type, treatment, explanation, option_defs, required_inputs, incompatible_with]
+      description: >-
+        Catalog key is `(code, person_type)`; e.g. 626 exists as RESICO PF and RESICO PM.
+        `treatment` is the support level. `incompatible_with` is symmetric (if A lists B, B
+        lists A) and only applies to overlapping period windows; an absent pair is allowed.
       properties:
         code: { $ref: '#/components/schemas/RegimeCode' }
         name: { type: string }
@@ -1846,29 +2371,35 @@ components:
         treatment: { $ref: '#/components/schemas/Treatment' }
         explanation:
           type: [string, 'null']
-          description: Plain-language reason for partial/informational treatment.
+          description: Plain-language explanation for a partial or informational regime; `null` for full.
         option_defs:
           type: array
           items: { $ref: '#/components/schemas/RegimeOptionDef' }
         required_inputs:
           type: array
-          items: { type: string }
-          description: Tax-input keys the strategy needs (see TaxInputs).
+          items: { $ref: '#/components/schemas/TaxInputDef' }
+          description: >-
+            Per-fiscal-year tax inputs the estimate needs (`PUT …/tax-inputs`, M5); not
+            options. Exactly the stored `regimes.required_inputs` (CHECK
+            `regime_required_inputs_valid`).
+        incompatible_with:
+          type: array
+          items: { $ref: '#/components/schemas/RegimeIncompatibility' }
       examples:
-        - code: '606'
-          name: Arrendamiento
+        - code: '626'
+          name: Régimen Simplificado de Confianza
           person_type: fisica
           treatment: full
           explanation: null
-          option_defs:
-            - key: deduction_mode
-              label: Tipo de deducción
-              type: enum
-              allowed_values: [blind_35, actual]
-              default: blind_35
-              required: true
+          option_defs: []
           required_inputs: []
+          incompatible_with:
+            - code: '606'
+              reason: El RESICO cubre los ingresos por arrendamiento (art. 113-E LISR).
+            - code: '612'
+              reason: El RESICO sustituye al régimen de actividad empresarial y profesional (art. 113-E LISR).
     RegimeList:
+      x-frozen: sha256:e929dd388229d4119fb0a60cebb1a76d36ae67fea1958524b9297ada8ffee38b
       type: object
       required: [items]
       properties:
@@ -1890,20 +2421,66 @@ components:
                   default: blind_35
                   required: true
               required_inputs: []
+              incompatible_with:
+                - code: '626'
+                  reason: El RESICO cubre los ingresos por arrendamiento (art. 113-E LISR).
+            - code: '625'
+              name: Régimen de las Actividades Empresariales con ingresos a través de Plataformas Tecnológicas
+              person_type: fisica
+              treatment: full
+              explanation: null
+              option_defs:
+                - key: activities
+                  label: Actividades
+                  type: multi_enum
+                  allowed_values: [transport_delivery, lodging, goods_services]
+                  default: null
+                  required: true
+                - key: definitive_option
+                  label: Pago definitivo
+                  type: boolean
+                  default: false
+                  required: true
+                - key: rfc_given_to_platform
+                  label: Proporcioné mi RFC a la plataforma
+                  type: boolean
+                  default: true
+                  required: true
+              required_inputs: []
+              incompatible_with: []
+            - code: '605'
+              name: Sueldos y Salarios e Ingresos Asimilados a Salarios
+              person_type: fisica
+              treatment: informational
+              explanation: Tu patrón retiene y entera el ISR; la app no estima pagos mensuales de este régimen.
+              option_defs: []
+              required_inputs: []
+              incompatible_with: []
     RegimeOptions:
+      x-frozen: sha256:283f21cffbcd0366382669dd524292757426e770c50db4cefe66acb1e59271ef
       type: object
-      description: Values keyed by RegimeOptionDef.key; validated server-side against the catalog.
+      maxProperties: 16
+      description: >-
+        Values keyed by `RegimeOptionDef.key`; validated server-side against the regime's
+        `option_defs` (`unknown_option`, `invalid_option`, `required`).
       additionalProperties:
         oneOf:
           - type: string
+            maxLength: 64
           - type: boolean
           - type: array
-            items: { type: string }
+            maxItems: 16
+            items: { type: string, maxLength: 64 }
       examples:
         - { deduction_mode: blind_35 }
     TaxpayerRegime:
+      x-frozen: sha256:e0e4054664ce458169711283e5a8235e7f34a3429dc27ab6a0f2a1a2b508ffc0
       type: object
-      required: [regime_code, name, treatment, options, start_period]
+      required: [regime_code, name, treatment, options, start_period, end_period]
+      description: >-
+        A regime the taxpayer holds over `[start_period, end_period]` (open end while
+        `end_period` is `null`). `options` always carries every option of the regime, defaults
+        included.
       properties:
         regime_code: { $ref: '#/components/schemas/RegimeCode' }
         name: { type: string }
@@ -1914,6 +2491,13 @@ components:
           oneOf:
             - $ref: '#/components/schemas/Period'
             - type: 'null'
+        warnings:
+          type: array
+          description: >-
+            Non-blocking notices about the regime just added. Present only on the
+            `addTaxpayerRegime` response, and only when non-empty; never stored, never on
+            reads or inside `Taxpayer.regimes`.
+          items: { $ref: '#/components/schemas/Warning' }
       examples:
         - regime_code: '606'
           name: Arrendamiento
@@ -1922,84 +2506,148 @@ components:
           start_period: '2026-01'
           end_period: null
     TaxpayerRegimeCreate:
+      x-frozen: sha256:f6b36871609870c696644c73ccb13280789eab095e021e23b48724ca265c79dd
       type: object
       required: [regime_code]
+      additionalProperties: false
       properties:
         regime_code: { $ref: '#/components/schemas/RegimeCode' }
         options: { $ref: '#/components/schemas/RegimeOptions' }
-        start_period: { $ref: '#/components/schemas/Period' }
+        start_period:
+          $ref: '#/components/schemas/Period'
+          description: Defaults to the current month (America/Mexico_City); `2022-01` … current month.
       examples:
         - regime_code: '606'
           options: { deduction_mode: blind_35 }
           start_period: '2026-01'
     TaxpayerRegimeUpdate:
+      x-frozen: sha256:637077ed95b4f01dc378fe656002bfc4cb47f19fdeae7f8690604e1acf3a00df
       type: object
       required: [options]
+      additionalProperties: false
       properties:
         options: { $ref: '#/components/schemas/RegimeOptions' }
       examples:
         - options: { deduction_mode: actual }
-    Taxpayer:
+    Warning:
+      x-frozen: sha256:332c36045dc41d4d2bbd41e9d7633f0a204e758e6f4f64369de1a8fe21a6d27d
       type: object
-      required: [id, person_type, display_name, rfc_masked, regimes, created_at]
+      required: [code, field, message]
+      description: >-
+        A non-blocking notice: the write succeeded, the client should ask the user to
+        double-check `field`. `code` is append-only (unknown codes: show `message`). Today:
+        `rfc_check_digit_mismatch` on `rfc` (D-RFC); `regime_combination_needs_cpa_review` on
+        `regimes.N.regime_code` (create) or `regime_code` (add regime): the pair overlaps in
+        time and its compatibility is not yet verified by a CPA (`regime_compatibility.needs_cpa_review`),
+        so it is allowed and `message` carries the pair's `reason`.
+      properties:
+        code: { type: string, pattern: '^[a-z][a-z0-9_]{0,63}$', examples: [rfc_check_digit_mismatch] }
+        field: { type: string, description: Same dotted naming as `FieldError.field`. }
+        message: { type: string, description: Safe to show (es-MX); never contains the RFC. }
+      examples:
+        - code: rfc_check_digit_mismatch
+          field: rfc
+          message: Revisa tu RFC; la homoclave no coincide con el dígito verificador.
+    RfcInput:
+      x-frozen: sha256:fd37fdbdaecba3f8606df31b502d5391862219c4ff10dd2a013a199cf66b6c4c
+      type: string
+      minLength: 12
+      maxLength: 24
+      description: >-
+        RFC as typed: spaces, dashes and lower case are accepted and normalized server-side
+        (trim, upper-case, NFC, inner spaces and `-` removed). The edge bounds only the
+        length, so every RFC rule is reported on `rfc` with a domain code:
+        `rfc_length_mismatch` (13 for física, 12 for moral), `rfc_format`, `rfc_date`,
+        `rfc_generic`. A SAT módulo 11 check-digit mismatch is not an error (D-RFC): it is
+        accepted with the warning `rfc_check_digit_mismatch`. Never echoed back.
+      examples: [GOMA800101AB6]
+    Taxpayer:
+      x-frozen: sha256:56949cfe30b6876d1531ce2581affd135bdbe304dc3afdff801ebd3de600c457
+      type: object
+      required: [id, person_type, display_name, rfc_masked, regimes, archived_at, created_at]
       properties:
         id: { $ref: '#/components/schemas/Uuid' }
         person_type: { $ref: '#/components/schemas/PersonType' }
-        display_name: { type: string }
+        display_name: { type: string, minLength: 1, maxLength: 80 }
         rfc_masked:
           type: string
-          description: The full RFC is never returned.
+          pattern: '^[A-ZÑ&]{3,4}\*{6}[A-Z0-9]{3}$'
+          description: >-
+            Name part, six asterisks for the date, then homoclave and check digit
+            (física `AAAA******XX9`, moral `AAA******XX9`). The full RFC is never returned.
         regimes:
           type: array
+          description: Every regime the taxpayer holds or held (ended ones carry `end_period`), ordered by `start_period`, then code.
           items: { $ref: '#/components/schemas/TaxpayerRegime' }
         archived_at: { type: [string, 'null'], format: date-time }
         created_at: { type: string, format: date-time }
+        warnings:
+          type: array
+          description: >-
+            Non-blocking notices about the input just written (`rfc_check_digit_mismatch`,
+            `regime_combination_needs_cpa_review`). Present only on `createTaxpayer` (201 and
+            200) and `updateTaxpayer` responses, and only when non-empty; never stored, never
+            on reads.
+          items: { $ref: '#/components/schemas/Warning' }
       examples:
         - id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
           person_type: fisica
           display_name: Ana (personal)
-          rfc_masked: GOMA******AB3
+          rfc_masked: GOMA******AB6
           regimes:
-            - regime_code: '612'
-              name: Actividad Empresarial y Profesional
+            - regime_code: '606'
+              name: Arrendamiento
               treatment: full
-              options: {}
+              options: { deduction_mode: blind_35 }
+              start_period: '2026-01'
+              end_period: null
+            - regime_code: '625'
+              name: Régimen de las Actividades Empresariales con ingresos a través de Plataformas Tecnológicas
+              treatment: full
+              options: { activities: [goods_services], definitive_option: false, rfc_given_to_platform: true }
               start_period: '2026-01'
               end_period: null
           archived_at: null
           created_at: '2026-10-13T16:05:00Z'
     TaxpayerCreate:
+      x-frozen: sha256:8a383124069d2ae913c3ba8dea5cae752e986c3be12762529f0aca11e047ec7a
       type: object
       required: [person_type, rfc, display_name, regimes]
+      additionalProperties: false
       properties:
         id:
           $ref: '#/components/schemas/Uuid'
           description: Optional client-generated id (idempotent retries).
         person_type: { $ref: '#/components/schemas/PersonType' }
-        rfc:
-          type: string
-          pattern: '^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$'
-          description: 13 chars for fisica, 12 for moral; check digit validated server-side.
-        display_name: { type: string, minLength: 1, maxLength: 80 }
+        rfc: { $ref: '#/components/schemas/RfcInput' }
+        display_name: { type: string, minLength: 1, maxLength: 80, description: 'Trimmed and NFC-normalized.' }
         regimes:
           type: array
           minItems: 1
+          maxItems: 16
+          description: At least one regime; each code at most once (`regimes.N.regime_code` / `duplicate`).
           items: { $ref: '#/components/schemas/TaxpayerRegimeCreate' }
       examples:
         - person_type: fisica
-          rfc: GOMA800101AB3
+          rfc: GOMA800101AB6
           display_name: Ana (personal)
           regimes:
-            - regime_code: '612'
+            - regime_code: '606'
+              options: { deduction_mode: blind_35 }
               start_period: '2026-01'
     TaxpayerUpdate:
+      x-frozen: sha256:3a26eed74b7b3f1fa119b89b594b9c7ca810f1de32992568b3b046a90eda4274
       type: object
-      required: [display_name]
+      minProperties: 1
+      additionalProperties: false
+      description: Person type is immutable. `rfc` corrects a mistyped RFC of the same person type (OQ-1).
       properties:
         display_name: { type: string, minLength: 1, maxLength: 80 }
+        rfc: { $ref: '#/components/schemas/RfcInput' }
       examples:
         - display_name: Ana (negocio)
     TaxpayerList:
+      x-frozen: sha256:6d4e7e51abe6e0a482d390d94223a28c687bcf7612e1236fe83ffa5aaca636cc
       type: object
       required: [items]
       properties:
@@ -2011,16 +2659,29 @@ components:
             - id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
               person_type: fisica
               display_name: Ana (personal)
-              rfc_masked: GOMA******AB3
+              rfc_masked: GOMA******AB6
               regimes:
                 - regime_code: '612'
-                  name: Actividad Empresarial y Profesional
+                  name: Personas Físicas con Actividades Empresariales y Profesionales
                   treatment: full
-                  options: {}
+                  options: { iva_fully_taxable: true }
                   start_period: '2026-01'
                   end_period: null
               archived_at: null
               created_at: '2026-10-13T16:05:00Z'
+            - id: 0199d4a2-9a10-7d55-b2c3-4d5e6f7a8b91
+              person_type: moral
+              display_name: Empresa Ejemplo
+              rfc_masked: EEJ******QK2
+              regimes:
+                - regime_code: '601'
+                  name: General de Ley Personas Morales
+                  treatment: full
+                  options: { iva_fully_taxable: true }
+                  start_period: '2026-01'
+                  end_period: null
+              archived_at: null
+              created_at: '2026-10-13T16:20:00Z'
 
     # ------------------------------------------------------------ records
     CounterpartyType:
@@ -2469,7 +3130,7 @@ components:
       type: object
       required: [key, label, kind, required]
       properties:
-        key: { type: string, examples: [coeficiente_utilidad] }
+        key: { type: string, pattern: '^[a-z][a-z0-9]*(_[a-z0-9]+)*$', maxLength: 64, examples: [coeficiente_utilidad] }
         label: { type: string }
         kind: { type: string, enum: [money, rate] }
         required: { type: boolean }

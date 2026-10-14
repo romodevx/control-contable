@@ -20,7 +20,7 @@ Owner decisions applied (2026-10-13):
 | OD-1 | One user manages many taxpayers (RFCs) under one subscription; no per-RFC pricing |
 | OD-2 | Cap **10 taxpayers per user for every plan, trial included**; the count is taken under a lock so concurrent creates cannot overshoot (security carry-over) |
 | OD-3 | Onboarding order: **persona física / moral FIRST → RFC (+ display name) → regimes → per-regime options** |
-| OD-4 | RFC **required**: format + date + homoclave check digit validated; **no SAT lookup** |
+| OD-4 | RFC **required**: format + date validated (reject); homoclave check digit verified but **non-blocking** (D-RFC, §9); **no SAT lookup** |
 | OD-5 | RFC stored **AES-256-GCM encrypted** + **HMAC blind index**, unique per user; only the masked form is ever returned |
 | OD-6 | Year-to-date tax inputs are **optional** at onboarding (US-T4 lives in M5) |
 | OD-7 | Dashboard is **per active taxpayer** with a switcher; a combined view is later (Q14, Could) |
@@ -59,7 +59,7 @@ Ports M2 provides to other modules (M2-06):
 | Name part | 4 letters `[A-ZÑ&]` | 3 letters `[A-ZÑ&]` |
 | Date | `YYMMDD`, a real calendar date (Feb 29 only when `YY % 4 == 0`) | same |
 | Homoclave | 2 chars `[A-Z0-9]` | same |
-| Check digit | last char `[0-9A]`, SAT módulo 11 | same |
+| Check digit | last char `[0-9A]`, SAT módulo 11 — **warning, not rejection** (D-RFC) | same |
 
 - **Normalization** before any check, hash or encryption: trim, upper-case, NFC, strip inner
   spaces and `-`. The client normalizes too (UX: accept the RFC typed with spaces or dashes).
@@ -68,6 +68,11 @@ Ports M2 provides to other modules (M2-06):
   `value(c_i) × (13 − i)` for `i = 0..11`; `r = sum mod 11`; digit = `0` if `r = 0`, `A` if
   `11 − r = 10`, else `11 − r`. The algorithm is cited in the domain code and its tests
   include real published RFCs (SAT examples) plus mutated digits.
+- **Check-digit mismatch is non-blocking (D-RFC).** About 1.5% of real SAT-issued RFCs fail
+  the published algorithm, so a mismatch never rejects: the taxpayer is created/updated and
+  the response carries `warnings: [{code: rfc_check_digit_mismatch, field: rfc, message}]`;
+  the app asks the user to double-check. Format, date, charset, length and generic RFCs still
+  reject (`400 validation_failed`). The warning is not stored and never echoes the RFC.
 - **Generic RFCs are refused** (`XAXX010101000` público en general, `XEXX010101000` extranjero), checked before the check digit because they do not satisfy módulo 11;
   they do not identify a taxpayer.
 - Never verified against SAT (PRD NG6).
@@ -99,6 +104,8 @@ Informational/partial regimes show their plain-language `explanation` at selecti
 | 626 PM | `iva_fully_taxable` | boolean | | `true` | yes |
 | others | — | | | | |
 
+- Option types: `enum`, `multi_enum`, `boolean`, and `rate` (a `DecimalRate` string bounded by
+  the def's inclusive `min`/`max`; no v1 regime uses it yet, the shape is frozen for M5).
 - Omitted options with a default are filled server-side; required options with no default
   must be sent. Unknown keys, wrong types and values outside `allowed_values` →
   `400 validation_failed` naming `regimes.N.options.<key>`.
@@ -111,10 +118,14 @@ Informational/partial regimes show their plain-language `explanation` at selecti
 - Two regimes conflict only if their **period windows overlap** (`[start_period, end_period]`,
   open end = ∞). A RESICO PF that exits to 612 from the next month (113-E) is therefore valid:
   626 ends `2026-06`, 612 starts `2026-07`.
-- `regime_compatibility` stores **disallowed pairs** with a `reason` (shown to the user);
-  normalized `regime_a < regime_b`; an absent pair = allowed. A catalog test asserts
-  normalization, that every code exists for that person type, and that every reason is
-  non-empty. Initial seed (⚠️ CPA review before launch, OQ-6):
+- `regime_compatibility` is the **complete matrix** (M2-02): one row per unordered pair of
+  the same person type (`regime_a < regime_b`) with `allowed` and a `reason` (shown to the
+  user). `allowed = false` → `422 invalid_regime_combination`. A pair whose verdict is not
+  verified (`needs_cpa_review`) is **always allowed** (DB CHECK) and the write answers with
+  the non-blocking warning `regime_combination_needs_cpa_review` (field
+  `regimes.N.regime_code` on create, `regime_code` on add regime; `message` = `reason`).
+  A catalog test asserts normalization, that every code exists for that person type, and
+  that every reason is non-empty. Initial seed (⚠️ CPA review before launch, OQ-6):
 
 | Person type | Pair(s) | Reason (basis) |
 |---|---|---|
@@ -204,7 +215,7 @@ Informational/partial regimes show their plain-language `explanation` at selecti
 | Given | Then |
 |---|---|
 | física + 12-char RFC, or moral + 13-char RFC | `400 validation_failed`, `rfc` / `rfc_length_mismatch` |
-| wrong check digit (e.g. last char changed) | `400`, `rfc` / `rfc_check_digit` |
+| wrong check digit (e.g. last char changed) | `201` (or `200` on PATCH), `warnings[0]` = `rfc` / `rfc_check_digit_mismatch` (D-RFC) |
 | impossible date (`ABCD991332XX1`) | `400`, `rfc` / `rfc_date` |
 | characters outside the alphabet | `400`, `rfc` / `rfc_format` (edge pattern) |
 | `XAXX010101000` or `XEXX010101000` | `400`, `rfc` / `rfc_generic` |
@@ -289,7 +300,7 @@ Informational/partial regimes show their plain-language `explanation` at selecti
 | Case | HTTP | `error.code` | `details[].code` |
 |---|---|---|---|
 | Schema/pattern violation, unknown field | 400 | `validation_failed` | per field |
-| RFC length vs person type / check digit / date / generic | 400 | `validation_failed` | `rfc_length_mismatch`, `rfc_check_digit`, `rfc_date`, `rfc_generic` |
+| RFC length vs person type / format / date / generic | 400 | `validation_failed` | `rfc_length_mismatch`, `rfc_format`, `rfc_date`, `rfc_generic` |
 | Regime not in catalog for the person type | 400 | `validation_failed` | `not_for_person_type` |
 | Bad option key/type/value, missing required option | 400 | `validation_failed` | `unknown_option`, `invalid_option`, `required` |
 | `start_period` / `end_period` out of range | 400 | `validation_failed` | `out_of_range` |
@@ -307,6 +318,9 @@ Informational/partial regimes show their plain-language `explanation` at selecti
 | Anything else | 500 | `internal_error` | |
 
 No new `ErrorCode` values are needed; detail codes are added to the contract descriptions in M2-01.
+A check-digit mismatch is not an error: `Taxpayer.warnings` carries `rfc_check_digit_mismatch` (D-RFC).
+An overlapping regime pair still under CPA review is not an error either: `Taxpayer.warnings`
+(create) or `TaxpayerRegime.warnings` (add regime) carries `regime_combination_needs_cpa_review` (§2.5).
 
 ## 5. Security requirements (gate M2-14)
 
@@ -372,3 +386,4 @@ No new `ErrorCode` values are needed; detail codes are added to the contract des
 | OQ-7 | Option changes mid-year | **DECIDED:** not versioned in v1, UI warns; CPA to confirm whether to lock per fiscal year |
 | OQ-8 | What may a read-only user (trial expired, no `pro`/`comp`) do in M2? | **DECIDED (overrides the PM default): read, delete and archive only.** Creating a taxpayer, unarchiving, adding a regime, renaming, correcting the RFC and changing options are refused with `402 entitlement_required` (`ErrReadOnly`), consistent with the access policy. Archiving a regime is an archive and stays allowed. See §2.10 |
 | OQ-9 | Does an archived taxpayer count toward the cap? | **DECIDED: yes**; delete frees the slot |
+| D-RFC | Reject an RFC whose módulo 11 check digit does not match? | **DECIDED (coordinator, 2026-10-13): no.** ~1.5% of real SAT-issued RFCs fail the published algorithm. A mismatch is accepted with a non-blocking `warnings` entry (`rfc_check_digit_mismatch`, field `rfc`) on `createTaxpayer`/`updateTaxpayer`; format, date, charset, length and generic RFCs still reject. Frozen in the M2-01 contract (0.4.0) |
