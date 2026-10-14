@@ -203,8 +203,9 @@ func TestRESICOPFWithholdingAboveTheTax(t *testing.T) {
 }
 
 // TestRESICOPFAnnualCap: past 3,500,000 collected in the year the taxpayer
-// leaves RESICO from the next month (LISR 113-E): the month is still
-// computed, with an info line saying so.
+// leaves RESICO from the next month (LISR 113-E, 113-I): the month is still
+// computed, and the estimate carries the resico_cap_exceeded warning. The
+// breakdown stays money lines only: the cap is a disclaimer, never a line.
 func TestRESICOPFAnnualCap(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -225,13 +226,8 @@ func TestRESICOPFAnnualCap(t *testing.T) {
 			require.NotNil(t, est.ISR)
 			assert.Equal(t, "2000.00", est.ISR.Amount.String(), "100,000 × 2 %")
 			assert.Equal(t, domain.StatusComplete, est.Status())
-			assert.Equal(t, tt.wantCap, containsCode(est.Lines, domain.LineRESICOPFCapExceeded))
-			if tt.wantCap {
-				l := lineByCode(t, est.Lines, domain.LineRESICOPFCapExceeded)
-				assert.Equal(t, domain.OpInfo, l.Operation)
-				assert.Equal(t, "3500000.01", l.Amount.String(), "the year's collected income")
-				assert.Contains(t, articles(l.Basis), "113-E")
-			}
+			assert.Equal(t, tt.wantCap, slices.Contains(est.Disclaimers, domain.DisclaimerRESICOCapExceeded))
+			assertMoneyLinesOnly(t, est.Lines)
 		})
 	}
 }
@@ -253,7 +249,8 @@ func TestRESICOPFMonthAboveTheTable(t *testing.T) {
 	assert.Equal(t, domain.TreatmentPartial, est.Coverage)
 	assert.Equal(t, domain.StatusPartial, est.Status())
 	assert.Equal(t, domain.LabelRESICOPFAboveTable, est.Explanation)
-	assert.Equal(t, []lineView{{domain.LineRESICOPFCapExceeded, domain.OpInfo, "3500000.01"}}, isrLines(est.Lines))
+	assert.Empty(t, isrLines(est.Lines), "no ISR figure, and the cap is not a line")
+	assert.Contains(t, est.Disclaimers, domain.DisclaimerRESICOCapExceeded)
 	require.NotNil(t, est.IVA)
 	assert.Equal(t, "560000.00", est.IVA.ChargedCollected.String())
 }
@@ -344,6 +341,15 @@ func mustPeriod(t testing.TB, m time.Month) domain.Period {
 	p, err := domain.NewPeriod(2026, m)
 	require.NoError(t, err)
 	return p
+}
+
+// assertMoneyLinesOnly: a breakdown line carries an amount the computation
+// uses; notices (the RESICO cap) are disclaimers, never info lines.
+func assertMoneyLinesOnly(t *testing.T, lines []domain.Line) {
+	t.Helper()
+	for _, l := range lines {
+		assert.NotEqual(t, domain.OpInfo, l.Operation, "line %s is not a money line", l.Code)
+	}
 }
 
 func containsCode(lines []domain.Line, code domain.LineCode) bool {

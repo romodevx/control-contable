@@ -1,6 +1,7 @@
 package domain_test
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -215,7 +216,8 @@ func TestRESICOPMJanuaryHasNoPriorPayments(t *testing.T) {
 
 // TestRESICOPMAnnualCap: past 35,000,000 collected in the year the entity
 // leaves RESICO from the next fiscal year (LISR 206 ¶2, 214): this year is
-// still computed, with an info line saying so.
+// still computed, and the estimate carries the resico_cap_exceeded warning.
+// The breakdown stays money lines only.
 func TestRESICOPMAnnualCap(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -234,13 +236,8 @@ func TestRESICOPMAnnualCap(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, est.ISR)
 			assert.Equal(t, domain.StatusComplete, est.Status())
-			assert.Equal(t, tt.wantCap, containsCode(est.Lines, domain.LineRESICOPMCapExceeded))
-			if tt.wantCap {
-				l := lineByCode(t, est.Lines, domain.LineRESICOPMCapExceeded)
-				assert.Equal(t, domain.OpInfo, l.Operation)
-				assert.Equal(t, tt.income, l.Amount.String())
-				assert.Contains(t, articles(l.Basis), "206")
-			}
+			assert.Equal(t, tt.wantCap, slices.Contains(est.Disclaimers, domain.DisclaimerRESICOCapExceeded))
+			assertMoneyLinesOnly(t, est.Lines)
 		})
 	}
 }
@@ -254,7 +251,8 @@ func TestRESICOPMCapCountsIncomeBeforeTheApp(t *testing.T) {
 	est, err := domain.NewRESICOPMStrategy().Estimate(in, params2026(t))
 
 	require.NoError(t, err)
-	assert.Equal(t, "35000000.01", lineByCode(t, est.Lines, domain.LineRESICOPMCapExceeded).Amount.String())
+	assert.Contains(t, est.Disclaimers, domain.DisclaimerRESICOCapExceeded)
+	assertMoneyLinesOnly(t, est.Lines)
 }
 
 func TestRESICOPMIVAIsTheSharedCalculator(t *testing.T) {
