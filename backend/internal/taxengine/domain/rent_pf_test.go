@@ -375,20 +375,37 @@ func TestRentPFStrategyIVAMixedActivityAndRemit(t *testing.T) {
 		rentLines(est.Lines, domain.TaxWithholding))
 }
 
+// rentQuarterlyOptions holds the 606 catalog option pays_quarterly
+// (migration 20261014150000_regime_606_pays_quarterly.sql), spelled as the
+// taxpayers module stores it, so a renamed engine key fails here.
+func rentQuarterlyOptions(quarterly bool) domain.Options {
+	return domain.NewOptions(map[domain.OptionKey]domain.OptionValue{
+		"deduction_mode": domain.TextOption("blind_35"),
+		"pays_quarterly": domain.BoolOption(quarterly),
+	})
+}
+
 func TestRentPFStrategyQuarterlyIsInformational(t *testing.T) {
 	in := rentInput(t, "blind_35", domain.MonthSums{Income: domain.IncomeSums{Cash: 2_000_000}})
-	in.Options = domain.NewOptions(map[domain.OptionKey]domain.OptionValue{
-		domain.OptionRentDeductionMode:    domain.TextOption("blind_35"),
-		domain.OptionRentQuarterlyPayment: domain.BoolOption(true),
-	})
+	in.Options = rentQuarterlyOptions(true)
 
 	est := rentEstimate(t, in)
 
-	assert.Equal(t, domain.StatusInformational, est.Status())
+	assert.Equal(t, domain.StatusInformational, est.Status(), "LISR 116 ¶3: the quarterly table is not transcribed")
 	assert.Equal(t, domain.RegimeExplanation(rentKey), est.Explanation)
 	assert.Nil(t, est.ISR)
 	assert.Nil(t, est.IVA)
 	assert.Empty(t, est.Lines)
+}
+
+func TestRentPFStrategyMonthlyPayerIsComputed(t *testing.T) {
+	in := rentInput(t, "blind_35", domain.MonthSums{Income: domain.IncomeSums{Cash: 2_000_000}})
+	in.Options = rentQuarterlyOptions(false)
+
+	est := rentEstimate(t, in)
+
+	assert.Equal(t, domain.StatusComplete, est.Status())
+	require.NotNil(t, est.ISR)
 }
 
 func TestRentPFStrategyFailures(t *testing.T) {
