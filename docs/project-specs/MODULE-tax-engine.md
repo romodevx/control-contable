@@ -118,7 +118,7 @@ TaxpayerEstimate(taxpayer, period)
 | `partial_regime` (**new**) | info | Any regime `partial` | "En algunos regímenes sólo estimamos parte de los impuestos." |
 | `deductibility_claimed` | info | Any deductible expense entered the ISR base | "Tomamos como deducibles los gastos que marcaste así; el SAT puede no aceptarlos todos." (research Part C) |
 | `no_coefficient_first_year` | info | 601 with `first_fiscal_year = true` | "En el primer ejercicio no hay pagos provisionales de ISR (LISR art. 14)." |
-| `iva_mixed_activity` (**new**) | warning | `iva_fully_taxable = false` on a regime with creditable IVA | "Tienes actividades exentas: el IVA acreditable debe ser proporcional y aquí se acreditó completo." (LIVA 5 fr. V, research Part C) |
+| `iva_mixed_activity` (**new**) | warning | A regime with creditable IVA and exempt acts: `iva_fully_taxable = false`, or exempt (`iva_rate = exempt`) collections in the month (M5-09 review) | "Tienes actividades exentas: el IVA acreditable debe ser proporcional y aquí se acreditó completo." (LIVA 5 fr. V, research Part C) |
 | `cpa_review_pending` (**new**) | **strong** | Any line uses a rule still open in CPA-REVIEW (§2.9) | "Este cálculo usa reglas que un contador aún no valida: {topics}. Tómalo con mayor reserva." |
 
 `not_tax_advice` sits first; then by severity (strong, warning, info), then by code. Deterministic order.
@@ -204,8 +204,11 @@ The breakdown header shows the parameter set (fiscal year, version) and the engi
   components and links to the consolidated line.
 - **A prior month's saldo a favor is not carried forward** in v1 (LIVA 6 allows it; out of scope,
   OQ-T5). The breakdown says so in an `info` line when the previous month was `in_favor`.
-- `iva_fully_taxable = false`: creditable IVA is taken in full (no proportion, LIVA 5 fr. V / 5-B
-  deferred) and `iva_mixed_activity` is added.
+- `iva_fully_taxable = false`, **or exempt collections in the month** (the only signal for regimes
+  without the option, e.g. 606 with residential and commercial rent): creditable IVA is taken in full
+  (no proportion, LIVA 5 fr. V / 5-B deferred) and `iva_mixed_activity` is added, both only when the
+  regime has creditable IVA. 0 % collections are taxed acts and do not trigger it. Mixing across
+  regimes (one regime taxed, another exempt) is not detected per regime; M5-22 owns it.
 - Two different withholdings, never confused (OQ-T6, DECIDED):
   - **IVA withheld *from* the taxpayer** by a persona moral or platform, as **recorded on the income**
     (`iva_withheld_cents`), **reduces** the taxpayer's monthly IVA (`withheld_from_taxpayer`; IVA a
