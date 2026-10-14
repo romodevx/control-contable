@@ -1,0 +1,28 @@
+# golden: hand-authored from docs/research/tax-regimes-mx-2026.md §A.5 PF-606-ISR-02. Never generated or rewritten by a tool.
+# Same as PF-606-ISR-01, but the tenant is a PM and withholds 10 % = 2,000.
+# 1,076.00 - 2,000 = -924.00: pay 0.00, credit balance (saldo a favor) 924.00.
+id: PF-606-ISR-02
+source: research:PF-606-ISR-02
+pending_strategy: true # M5-12
+input:
+  regime: "606"
+  person_type: fisica
+  period: "2026-03"
+  options:
+    deduction_mode: blind_35
+  months:
+    - {month: 3, income: {cash: "20000.00", isr_withheld: {by_moral: "2000.00"}}}
+expected:
+  status: complete
+  taxes: [isr]
+  isr: "-924.00"
+  lines:
+    - {tax: isr, code: isr.rent_month, op: input, amount: "20000.00"}
+    - {tax: isr, code: isr.blind_deduction, op: subtract, amount: "7000.00"}
+    - {tax: isr, code: isr.predial, op: subtract, amount: "0.00"}
+    - {tax: isr, code: isr.base, op: result, amount: "13000.00"}
+    - {tax: isr, code: isr.tariff_row, op: lookup, amount: "1011.68"}
+    - {tax: isr, code: isr.tariff_excess, op: multiply, amount: "64.32"}
+    - {tax: isr, code: isr.caused, op: result, amount: "1076.00"}
+    - {tax: isr, code: isr.withheld_by_moral, op: subtract, amount: "2000.00"}
+    - {tax: isr, code: isr.payable, op: result, amount: "-924.00"}

@@ -1,0 +1,28 @@
+# golden: hand-authored from docs/research/tax-regimes-mx-2026.md §A.5 PF-625-02. Never generated or rewritten by a tool.
+# Platform lodging (March 2026), definitive option: 15,000 through the app,
+# ISR withheld 4 % (LISR 113-A fr. II) = 600.00, definitive: additional ISR 0.
+# The research states no IVA for this example; the records carry none.
+id: PF-625-02
+source: research:PF-625-02
+pending_strategy: true # M5-14
+input:
+  regime: "625"
+  person_type: fisica
+  period: "2026-03"
+  options:
+    definitive_option: true
+    activities: [lodging]
+    rfc_given_to_platform: true
+  months:
+    - {month: 3, income: {cash: "15000.00", isr_withheld: {by_platform: "600.00"}}}
+  tax_inputs:
+    - {key: prior_year_income, kind: money, money: "120000.00"}
+expected:
+  status: complete
+  taxes: [isr]
+  isr: "0.00"
+  lines:
+    - {tax: isr, code: isr.platform_income, op: input, amount: "15000.00"}
+    - {tax: isr, code: isr.platform_rate, op: multiply, amount: "600.00"}
+    - {tax: isr, code: isr.withheld_by_platform, op: subtract, amount: "600.00"}
+    - {tax: isr, code: isr.payable, op: result, amount: "0.00"}

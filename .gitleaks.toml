@@ -1,0 +1,9 @@
+# Secret scanning for pre-commit and CI. Extends the gitleaks defaults.
+# Do NOT allowlist test fixtures here: generate test secrets at runtime instead
+# (see CONTRIBUTING / docs/runbooks/local-dev.md "Test secrets").
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Generated code that embeds the public OpenAPI contract"
+paths = ['''backend/adapter/http/gen/.*\.gen\.go''']

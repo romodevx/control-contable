@@ -168,7 +168,7 @@ func stubTaxpayersModule() taxpayersModule {
 
 func TestNewHandler_refusesToServeWithoutTheTaxpayersHandler(t *testing.T) {
 	_, err := newHandler(testConfig(), deps{db: pingOK{}, flags: flagtest.Static{}, auth: stubAuthModule(t), now: time.Now,
-		logger: logging.New(io.Discard, nil)})
+		taxEngine: stubTaxEngineModule(), logger: logging.New(io.Discard, nil)})
 
 	assert.ErrorContains(t, err, "no taxpayers handler")
 }

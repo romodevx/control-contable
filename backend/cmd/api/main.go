@@ -110,6 +110,10 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err != nil {
 		return err
 	}
+	taxEngine, err := newTaxEngineModule(taxEngineWiring{pool: pool, limits: auth.limits, logger: logger})
+	if err != nil {
+		return err
+	}
 	handler, err := newHandler(cfg, deps{
 		logger:    logger,
 		db:        pgdb.NewPinger(pool),
@@ -117,6 +121,7 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 		auth:      auth,
 		taxpayers: taxpayers,
 		incomes:   incomes,
+		taxEngine: taxEngine,
 		now:       time.Now,
 	})
 	if err != nil {
@@ -173,8 +178,9 @@ type deps struct {
 	taxpayers taxpayersModule
 	// incomes is built at boot (its rate catalog fails a broken params
 	// file there); M3-06 serves it.
-	incomes incomesModule
-	now     func() time.Time
+	incomes   incomesModule
+	taxEngine taxEngineModule
+	now       func() time.Time
 }
 
 // flagService is what the HTTP layer needs from the flags service: the
@@ -207,6 +213,7 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 		accountHandler:   d.auth.account,
 		SessionHandler:   d.auth.sessions,
 		taxpayersHandler: d.taxpayers.handler,
+		taxEngineHandler: d.taxEngine.handler,
 	}
 	if d.auth.authn == nil {
 		return nil, errors.New("api: no authenticator: secured operations would run unauthenticated")
@@ -214,7 +221,16 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 	if d.taxpayers.handler == nil {
 		return nil, errors.New("api: no taxpayers handler: module_taxpayers operations would panic")
 	}
+	if d.taxEngine.handler == nil {
+		return nil, errors.New("api: no tax engine handler: module_tax_engine operations would panic")
+	}
+	userLimits, err := mergeLimits(d.taxpayers.userLimits, d.taxEngine.userLimits)
+	if err != nil {
+		return nil, err
+	}
 	routes, err := router.New(server, spec, router.Options{
+		// The flag service answers the effective state: a module whose
+		// prerequisite is OFF is OFF (flags.Prerequisites).
 		Flags:    d.flags,
 		Authn:    d.auth.authn, // bearer EdDSA access tokens (M1-07)
 		Logger:   d.logger,
@@ -223,9 +239,9 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 		// (MODULE-auth §5), keyed like the edge limiter.
 		OperationLimits: d.auth.clientLimits,
 		ClientKey:       middleware.ClientIP(cfg.TrustedProxyHops),
-		// The per-user write budget of the taxpayer mutations (MODULE-taxpayers
-		// S-10), keyed by the authenticated user.
-		UserLimits: d.taxpayers.userLimits,
+		// The per-user write budgets (MODULE-taxpayers S-10, MODULE-tax-engine
+		// §5), keyed by the authenticated user.
+		UserLimits: userLimits,
 	})
 	if err != nil {
 		return nil, err

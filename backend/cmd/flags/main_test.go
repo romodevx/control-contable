@@ -118,11 +118,63 @@ func TestListPrintsATableAndASummary(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, ""+
-		"KEY               STATE  DESCRIPTION\n"+
-		"module_auth       ON     M1 Auth & Account\n"+
-		"module_incomes    off    M3 Incomes\n"+
-		"module_taxpayers  off    M2 Taxpayers & Onboarding\n"+
+		"KEY               STATE  REQUIRES  DESCRIPTION\n"+
+		"module_auth       ON     -         M1 Auth & Account\n"+
+		"module_incomes    off    -         M3 Incomes\n"+
+		"module_taxpayers  off    -         M2 Taxpayers & Onboarding\n"+
 		"1 of 3 modules ON\n", out)
+}
+
+// withTaxEngine adds module_tax_engine, whose declared prerequisite is
+// module_taxpayers (flags.Prerequisites).
+func withTaxEngine(store *memStore, enabled bool) *memStore {
+	store.flags = append(store.flags, flags.Flag{Key: "module_tax_engine", Enabled: enabled, Description: "M5 Tax Engine"})
+	return store
+}
+
+// A module whose prerequisite is OFF is hidden by the API (404, absent from
+// GET /v1/flags); the CLI says so instead of showing it ON.
+func TestListShowsAModuleHiddenByAnOffPrerequisite(t *testing.T) {
+	store := withTaxEngine(newMemStore(), true)
+	store.flags[0].Enabled = true
+
+	out, err := runOn(t, store, "list")
+
+	require.NoError(t, err)
+	assert.Contains(t, out, "module_tax_engine  hidden  module_taxpayers  M5 Tax Engine\n")
+	assert.Contains(t, out, "1 of 4 modules ON\n")
+	assert.Contains(t, out, "module_tax_engine is hidden until module_taxpayers is ON\n")
+}
+
+func TestListShowsAModuleWhosePrerequisiteIsOn(t *testing.T) {
+	store := withTaxEngine(newMemStore(), true)
+	store.flags[2].Enabled = true // module_taxpayers
+
+	out, err := runOn(t, store, "list")
+
+	require.NoError(t, err)
+	assert.Contains(t, out, "module_tax_engine  ON     module_taxpayers  M5 Tax Engine\n")
+	assert.Contains(t, out, "2 of 4 modules ON\n")
+	assert.NotContains(t, out, "hidden")
+}
+
+func TestEnableWarnsWhenAPrerequisiteIsOff(t *testing.T) {
+	out, err := runOn(t, withTaxEngine(newMemStore(), false), "enable", "module_tax_engine")
+
+	require.NoError(t, err)
+	assert.Contains(t, out, "module_tax_engine: off -> ON\n")
+	assert.Contains(t, out, "module_tax_engine is hidden until module_taxpayers is ON\n")
+}
+
+func TestDisableWarnsWhatItHides(t *testing.T) {
+	store := withTaxEngine(newMemStore(), true)
+	store.flags[2].Enabled = true // module_taxpayers
+
+	out, err := runOn(t, store, "disable", "module_taxpayers")
+
+	require.NoError(t, err)
+	assert.Contains(t, out, "module_taxpayers: ON -> off\n")
+	assert.Contains(t, out, "module_tax_engine is hidden until module_taxpayers is ON\n")
 }
 
 func TestEnableReportsTheTransition(t *testing.T) {
@@ -159,8 +211,8 @@ func TestApplyPresetPrintsTheResultingState(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Contains(t, out, "applied preset demo_core\n")
-	assert.Contains(t, out, "module_incomes    off")
-	assert.Contains(t, out, "module_auth       ON")
+	assert.Contains(t, out, "module_incomes    off  ")
+	assert.Contains(t, out, "module_auth       ON   ")
 	assert.Contains(t, out, "2 of 3 modules ON\n")
 }
 

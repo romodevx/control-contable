@@ -1,0 +1,29 @@
+# golden: hand-authored from docs/research/tax-regimes-mx-2026.md §A.5 PF-606-ISR-01. Never generated or rewritten by a tool.
+# Rent, monthly (March 2026), blind deduction, the tenant is a PF: rent
+# 20,000, predial 0. Base 20,000 - 7,000 = 13,000 -> art. 116 row 4:
+# 1,011.68 + (13,000 - 12,598.03) x 16 % = 1,076.00.
+id: PF-606-ISR-01
+source: research:PF-606-ISR-01
+pending_strategy: true # M5-12 removes this when the 606 PF strategy is registered
+input:
+  regime: "606"
+  person_type: fisica
+  period: "2026-03"
+  options:
+    deduction_mode: blind_35
+  months:
+    - {month: 3, income: {cash: "20000.00"}}
+expected:
+  status: complete
+  taxes: [isr]
+  isr: "1076.00"
+  lines:
+    - {tax: isr, code: isr.rent_month, op: input, amount: "20000.00"}
+    - {tax: isr, code: isr.blind_deduction, op: subtract, amount: "7000.00"}
+    - {tax: isr, code: isr.predial, op: subtract, amount: "0.00"}
+    - {tax: isr, code: isr.base, op: result, amount: "13000.00"}
+    - {tax: isr, code: isr.tariff_row, op: lookup, amount: "1011.68"}
+    - {tax: isr, code: isr.tariff_excess, op: multiply, amount: "64.32"}
+    - {tax: isr, code: isr.caused, op: result, amount: "1076.00"}
+    - {tax: isr, code: isr.withheld_by_moral, op: subtract, amount: "0.00"}
+    - {tax: isr, code: isr.payable, op: result, amount: "1076.00"}
