@@ -25,14 +25,6 @@ var pendingOperations = map[string]string{
 	"updateIncome":      "M3-06",
 	"deleteIncome":      "M3-06",
 	"restoreIncome":     "M3-06",
-	// M4 module_expenses
-	"listExpenseCategories": "M4-07",
-	"listExpenses":          "M4-07",
-	"createExpense":         "M4-07",
-	"getExpense":            "M4-07",
-	"updateExpense":         "M4-07",
-	"deleteExpense":         "M4-07",
-	"restoreExpense":        "M4-07",
 	// M5 module_tax_engine
 	"getTaxpayerEstimate":  "M5-23",
 	"getEstimateBreakdown": "M5-23",

@@ -9,7 +9,8 @@
 //   - Catalog: the global regimes and regime_compatibility tables (M2-02).
 //   - RFCVault: AES-256-GCM sealing of the RFC bound to its row and owner,
 //     and the per-user HMAC blind index (S-1, S-2).
-//   - NoRecords: the record lookup until M3/M4 own incomes and expenses.
+//   - NoRecords: a record lookup with no records, for suites without the
+//     record modules (cmd/api reads the record tables).
 //
 // Stores never begin, commit or roll back a transaction and never set
 // session state: the use case's unit of work does (P0-30 D-3).

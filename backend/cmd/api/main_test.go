@@ -97,13 +97,14 @@ func newHandlerWith(t *testing.T, cfg config.Config, db health.Pinger, f flagSer
 func newHandlerWithModules(t *testing.T, cfg config.Config, db health.Pinger, f flagService, auth authModule,
 	taxpayers taxpayersModule, logger *slog.Logger) http.Handler {
 	t.Helper()
-	return newHandlerWithAll(t, cfg, db, f, auth, taxpayers, stubTaxEngineModule(), logger)
+	return newHandlerWithAll(t, cfg, db, f, auth, taxpayers, stubExpensesModule(), stubTaxEngineModule(), logger)
 }
 
 func newHandlerWithAll(t *testing.T, cfg config.Config, db health.Pinger, f flagService, auth authModule,
-	taxpayers taxpayersModule, taxEngine taxEngineModule, logger *slog.Logger) http.Handler {
+	taxpayers taxpayersModule, expenses expensesModule, taxEngine taxEngineModule, logger *slog.Logger) http.Handler {
 	t.Helper()
-	h, err := newHandler(cfg, deps{logger: logger, db: db, flags: f, auth: auth, taxpayers: taxpayers, taxEngine: taxEngine, now: time.Now})
+	h, err := newHandler(cfg, deps{logger: logger, db: db, flags: f, auth: auth, taxpayers: taxpayers,
+		expenses: expenses, taxEngine: taxEngine, now: time.Now})
 	require.NoError(t, err)
 	return h
 }
