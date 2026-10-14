@@ -26,9 +26,13 @@
 --     tolerance against the rate are use-case rules (dated RateCatalog data, ADR-0002 §3);
 --   * withholdings the taxpayer made to its supplier (§2.6): never above their base. Only
 --     a persona moral may make them: a person-type rule of the use case (422);
---   * paid_on is the only date (deductions and creditable IVA are on a paid basis for
---     every regime in scope); 2022-01-01 is the catalog floor, "not after today" is a
---     clock rule of the use case;
+--   * paid_on is the only date, and the booking date of every regime in v1's monthly
+--     scope: PF regimes (LISR 103/105, 115) and RESICO PM (208, 211) deduct when paid,
+--     creditable IVA is paid basis (LIVA 5 fr. III), and the Título II PM provisional ISR
+--     (601, 622; art. 14) uses the profit coefficient, so their accrual-basis deductions
+--     never enter a monthly figure. An annual PM computation would need an accrual date
+--     (CPA-REVIEW, EXP). 2022-01-01 is the catalog floor; "not after today" is a clock
+--     rule of the use case;
 --   * cfdi_uuid: the CFDI folio fiscal, normalized to upper case, only with has_cfdi
 --     (SE-2). NOT unique: a duplicate is the duplicate_cfdi_uuid warning;
 --   * deductible: the effective verdict the use case computed (§2.4: category default AND
