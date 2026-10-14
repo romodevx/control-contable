@@ -27,11 +27,16 @@ const (
 // §2.8). Codes are append-only.
 type WarningCode string
 
-// The income warnings. DuplicateCFDIUUID needs the stored incomes, so the
-// use case adds it.
+// The income warnings. DuplicateCFDIUUID needs the stored incomes and
+// ProvisionalRates the parameter set a date reads, so the use case
+// adds them.
 const (
 	WarningWithholdingDiffersFromRate WarningCode = "withholding_differs_from_rate"
 	WarningDuplicateCFDIUUID          WarningCode = "duplicate_cfdi_uuid"
+	// WarningProvisionalRates: the rates checked on a date of the
+	// income come from a provisional parameter set (the year is not
+	// published yet, or the set is marked provisional).
+	WarningProvisionalRates WarningCode = "provisional_rates"
 )
 
 // Warning is a notice on one field. It never echoes an amount, a description

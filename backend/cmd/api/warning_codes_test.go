@@ -20,6 +20,7 @@ func TestModuleWarningCodesAreInTheContract(t *testing.T) {
 		taxpayers.WarningRegimeNeedsCPAReview,
 		string(incomes.WarningWithholdingDiffersFromRate),
 		string(incomes.WarningDuplicateCFDIUUID),
+		string(incomes.WarningProvisionalRates),
 		string(expenses.WarningCashOverThreshold),
 		string(expenses.WarningNoCFDI),
 		string(expenses.WarningNotISRDeductibleInRegime),
