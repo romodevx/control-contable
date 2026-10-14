@@ -67,7 +67,15 @@ END
 $$;
 -- +goose StatementEnd
 
+-- A regime the engine does not fully estimate has no figure to show without its text, so
+-- the text is mandatory for it, for these rows and for any regime added later.
+ALTER TABLE regimes
+  ADD CONSTRAINT regimes_explanation_when_not_full
+  CHECK (treatment = 'full' OR explanation IS NOT NULL);
+
 -- +goose Down
+
+ALTER TABLE regimes DROP CONSTRAINT regimes_explanation_when_not_full;
 
 UPDATE regimes
    SET explanation = NULL
