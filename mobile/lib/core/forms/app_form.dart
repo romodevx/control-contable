@@ -24,6 +24,7 @@ class AppForm extends StatelessWidget {
     required this.children,
     this.onCancel,
     this.allowCreateAnother = false,
+    this.onSaveForNext,
     this.primaryLabel,
     super.key,
   });
@@ -43,13 +44,24 @@ class AppForm extends StatelessWidget {
   /// Adds *Guardar y crear otro* (repetitive entry).
   final bool allowCreateAnother;
 
+  /// The save of *Guardar y crear otro*, when it differs from [onSave]
+  /// (the primary leaves the page, this one stays). It answers whether the
+  /// record was saved: only then does the form ready the next one, so a
+  /// refused save keeps everything the user typed.
+  final Future<bool> Function()? onSaveForNext;
+
   /// The primary's label; *Guardar* by default.
   final String? primaryLabel;
 
   void _submit() => unawaited(controller.submit(onSave));
 
   Future<void> _saveAndCreateAnother() async {
-    if (await controller.submit(onSave)) controller.prepareNext();
+    final saveForNext = onSaveForNext;
+    var saved = true;
+    final ran = await controller.submit(
+      saveForNext == null ? onSave : () async => saved = await saveForNext(),
+    );
+    if (ran && saved) controller.prepareNext();
   }
 
   @override

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:control_contable/api/generated/models/error_code.dart';
 import 'package:control_contable/core/access/read_only_access.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/router/app_router.dart';
@@ -283,6 +284,29 @@ void main() {
 
       expect(find.text('Diseño de logotipo'), findsOneWidget);
       expect(find.text('No se pudo eliminar el ingreso.'), findsOneWidget);
+    });
+
+    testWidgets('an Undo whose regime no longer covers the date says why', (
+      tester,
+    ) async {
+      seed();
+      harness.incomes.failNext['restore'] = ApiRejected(
+        code: ErrorCode.businessRuleViolation,
+        details: [detail('regime_code', 'regime_not_active')],
+      );
+      await harness.pump(tester);
+
+      await tester.tap(_deleteButtonOf('Diseño de logotipo'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Deshacer'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'No se pudo restaurar: el régimen ya no cubre la fecha del ingreso.',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('a read-only user deletes; an Undo the server refuses (402) '
