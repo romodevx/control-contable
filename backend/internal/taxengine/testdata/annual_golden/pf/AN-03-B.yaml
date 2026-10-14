@@ -1,0 +1,20 @@
+# golden: hand-authored from research AN-03 (b) (docs/research/annual-return-2026.md Part D). Never generated or rewritten by a tool.
+id: AN-03-B
+source: research:AN-03
+pending_strategy: true # ANN-09 registers pf_resico_check
+input:
+  fiscal_year: 2026
+  person_type: fisica
+  regimes:
+    - regime: "626"
+      income: "300001.00" # 11 months x 25,000 + 1 month x 25,001
+  payments:
+    - {regime: "626", amount: "3025.01", source: filed} # 2,750.00 + 275.01
+expected:
+  sections:
+    - kind: pf_resico_check
+      regimes: ["626"]
+      status: informational
+      obligation: relieved
+      cpa_topics: [resico_pf_relief_renewal]
+      difference: "275.00" # annual 300,001 x 1.10 % = 3,300.01 - 3,025.01; informative only
