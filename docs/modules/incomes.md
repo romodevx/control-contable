@@ -202,10 +202,10 @@ and `module_incomes` ON. Get `ACCESS` from the [M1 walkthrough](auth.md#try-it-l
 API=http://localhost:3000
 AUTH="Authorization: Bearer $ACCESS"
 
-# 0. A física with 612 since 2025-01 (records before a regime's start_period answer 422).
+# 0. A física with 612 since 2026-01, the earliest start (records before a regime's start_period answer 422).
 TAXPAYER_ID=$(curl -s -X POST "$API/v1/taxpayers" -H "$AUTH" -H 'Content-Type: application/json' -d '{
   "person_type": "fisica", "rfc": "GOMA800101AB6", "display_name": "Ana (honorarios)",
-  "regimes": [{"regime_code": "612", "start_period": "2025-01"}]}' | jq -r .id)
+  "regimes": [{"regime_code": "612", "start_period": "2026-01"}]}' | jq -r .id)
 
 # 1. Form prefill for a 612 income from a persona moral: IVA rates, suggested withholdings.
 curl -s "$API/v1/taxpayers/$TAXPAYER_ID/incomes/defaults?regime=612&counterparty_type=persona_moral&on=2026-10-05" \
@@ -228,7 +228,7 @@ curl -s -X POST "$API/v1/taxpayers/$TAXPAYER_ID/incomes" -H "$AUTH" -H 'Content-
   -d "$(echo "$INCOME" | jq -c '.amount_cents = 2000000')" \
   | jq -c '{code: .error.code, details: [.error.details[] | {field, code}]}'
 
-# 5. A date before 2026 (no tax parameters): 400, collected_on / out_of_range.
+# 5. A date before 2026: the regime window is checked first, so 422 regime_code / regime_not_active.
 curl -s -X POST "$API/v1/taxpayers/$TAXPAYER_ID/incomes" -H "$AUTH" -H 'Content-Type: application/json' \
   -d "$(echo "$INCOME" | jq -c 'del(.id) | .collected_on = "2025-12-31"')" \
   | jq -c '{code: .error.code, details: [.error.details[] | {field, code}]}'
@@ -249,7 +249,7 @@ Output, in order:
 201
 200
 {"code":"conflict","details":[{"field":"id","code":"id_reused"}]}
-{"code":"validation_failed","details":[{"field":"collected_on","code":"out_of_range"}]}
+{"code":"business_rule_violation","details":[{"field":"regime_code","code":"regime_not_active"}]}
 {"items":1,"totals":{"amount_cents":1000000,"count":1,"isr_withheld_cents":100000,"iva_cents":160000,"iva_withheld_cents":106667}}
 204
 200
