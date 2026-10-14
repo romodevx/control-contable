@@ -180,13 +180,17 @@ erDiagram
         boolean needs_cpa_review_ack "user acknowledged the CPA-review warning"
     }
     taxpayer_tax_inputs {
-        uuid taxpayer_id PK
-        text regime_code PK
-        smallint fiscal_year PK
-        text input_key PK
-        uuid user_id FK
+        uuid user_id FK "UK (user, taxpayer, regime, year, key, month) NULLS NOT DISTINCT"
+        uuid taxpayer_id FK
+        text regime_code FK
+        smallint fiscal_year "2022..2100"
+        text input_key "from regimes.required_inputs"
+        smallint month "1-12, money_monthly only"
+        text kind "derived: money|money_monthly|rate|boolean"
         bigint value_cents
-        numeric value_rate
+        numeric value_rate "[0, 1], <= 6 decimals"
+        boolean value_bool
+        timestamptz updated_at
     }
     incomes {
         uuid id PK
@@ -317,6 +321,7 @@ in MODULES.md M5 are dropped (MODULES.md updated to match).
 | taxpayer_regimes | PK `(taxpayer_id, regime_code)`; trigger `taxpayer_regimes_check_compatible` raises 23P01 when two regimes with `regime_compatibility.allowed = false` overlap in `[start_period, end_period]`; refuses REPEATABLE READ (25000) | One row per regime (reopen on re-add); DB backstop of 422 `invalid_regime_combination` |
 | taxpayer_regimes | FK `(taxpayer_id, user_id, person_type) → taxpayers(id, user_id, person_type)`; FK `(regime_code, person_type) → regimes` | Ownership integrity. A moral can never hold a física-only regime, and 626 resolves to RESICO PF or PM |
 | incomes / expenses | FK `(taxpayer_id, regime_code, user_id) → taxpayer_regimes`; taxpayer_tax_inputs: same FK | A record must belong to a regime its taxpayer holds |
+| taxpayer_tax_inputs | `UNIQUE NULLS NOT DISTINCT (user_id, taxpayer_id, regime_code, fiscal_year, input_key, month)` (its btree is the only index: RLS, estimate read path, upsert, both cascades); `kind` derived by trigger `taxpayer_tax_inputs_derive_kind` from `regimes.required_inputs` (unknown key → 23514); `CHECK` exactly the value column of the kind, `month` only for `money_monthly`; money in `[0, NonNegativeCents.maximum]`; rate in `[0, 1]`, scale ≤ 6 | MODULE-tax-engine §2.8, S-1, OQ-T1 (M5-20). No PK: `month` is NULL for annual inputs |
 | incomes / expenses | `CHECK amount_cents >= 0`, `iva_cents >= 0`, withholdings ≥ 0 | Whether an `iva_rate` is valid on the record date (e.g. `rate_8` until 2026-12-31) is checked in the use case through the engine's `RateCatalog` port, because validity is date-ranged parameter data (ADR-0002 §3), not a DB constraint |
 | incomes | `CHECK collected_on IS NOT NULL OR invoiced_on IS NOT NULL`; `amount_cents >= 1`; withholdings bounded by their base; zero-IVA rates carry no IVA; no withholding by `persona_fisica` / `publico_general` | Per-regime requirement (cash vs. accrual) enforced in the use case |
 | incomes | `booked_on NOT NULL`, derived by trigger `incomes_derive_booked_on` from `regimes.income_basis` (`invoiced_on` accrual, `collected_on` cash); no grant to write it | MODULE-incomes §2.2: the list period and ISR date; a cash income without `collected_on` fails NOT NULL |
@@ -417,7 +422,7 @@ Every table below has `ENABLE` + `FORCE ROW LEVEL SECURITY` in its first migrati
 | user_usage | owner | owner | owner | — | |
 | taxpayers | owner | owner | owner | owner | |
 | taxpayer_regimes | owner | owner | owner | — | DELETE archives (end_period); rows leave only by cascade |
-| taxpayer_tax_inputs | owner | owner | owner | owner | |
+| taxpayer_tax_inputs | owner | owner | owner (value columns only) | owner | DELETE is the replace of PUT; cc_worker/cc_webhook get nothing |
 | incomes | owner | owner | owner | — | Soft delete and restore = UPDATE of `deleted_at`; rows leave by cascade or the purge definer (M9-08) |
 | expenses | owner | owner | owner | owner | |
 | subscriptions | owner | owner (cc_webhook) | owner (cc_webhook) | — | cc_app: SELECT only. The webhook sets `app.current_user_id` to the event's `app_user_id` (our user id) before touching `subscriptions` / `entitlements` |
