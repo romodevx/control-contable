@@ -20,6 +20,11 @@ type CategoryRule struct {
 	Category          CategoryCode
 	Deductibility     Deductibility
 	DefaultDeductible bool
+	// IVACreditable is iva_creditable_default: the category is strictly
+	// indispensable for the activity, so its IVA can be credited (LIVA 5
+	// fr. I). For RESICO PF it comes from the business column: the absence
+	// of ISR deductions never makes an expense indispensable (⚠️ CPA).
+	IVACreditable bool
 	// ElectronicPaymentOnly marks a category never deductible when paid in
 	// cash, whatever the amount (fuel, LISR 27 fr. III ⚠️ CPA).
 	ElectronicPaymentOnly bool

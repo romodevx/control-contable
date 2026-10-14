@@ -133,7 +133,12 @@ deductible = override if the user sent a boolean, else default
   method, amount, `has_cfdi` or `paid_on` change; an override is kept as is.
 - `deductible` means "the user claims it lowers ISR"; M5 adds the `deductibility_claimed`
   disclaimer (research Part C). Creditable IVA is M5's rule (LIVA 5: CFDI, IVA shown, paid,
-  ISR-deductible — or would be, for RESICO PF); M4 stores the facts it needs.
+  ISR-deductible — or would be, for RESICO PF); M4 stores the facts it needs. The domain's
+  creditable-IVA candidate (PR #67, ⚠️ CPA) is the IVA only when there is a CFDI, the payment
+  is not cash over the limit (fr. II, **whatever the override**), the rule's
+  `iva_creditable_default` is true (fr. I: never inferred from the absence of ISR deductions,
+  so `gastos_personales` is 0 in RESICO PF too) and the expense is deductible (or the payer is
+  RESICO PF).
 - Overriding to `true` a category whose hint is `not_deductible`/`isr_not_applicable` is
   allowed with the warning `category_not_deductible` (or `not_isr_deductible_in_regime`).
 
@@ -144,6 +149,9 @@ deductible = override if the user sent a boolean, else default
   dated parameter data (`deduction.cash_payment_limit`, ADR-0002 §3), never hard-coded.
 - Effect: warning `cash_over_threshold` ("Los pagos en efectivo de más de $2,000 no son
   deducibles") and default deductible `false`. Never an error.
+- An override to `true` keeps the ISR claim, but the IVA stays non-creditable (LIVA 5 fr. II)
+  and the expense also carries `iva_not_creditable_cash_payment` on `payment_method`
+  ("El IVA de un pago en efectivo de más de $2,000 no es acreditable").
 
 ### 2.6 Withholdings the taxpayer made (retenciones a proveedores)
 
@@ -166,7 +174,9 @@ deductible = override if the user sent a boolean, else default
 ### 2.8 Warnings (`Expense.warnings`, codes append-only)
 
 `cash_over_threshold`, `no_cfdi`, `not_isr_deductible_in_regime`, `category_not_deductible`
-(existing) + **`duplicate_cfdi_uuid`** (new). Each carries `field` (contract change: align
+(existing) + **`duplicate_cfdi_uuid`** (new) + **`iva_not_creditable_cash_payment`** (PR #67,
+§2.5; `Warning.code` is append-only, so the frozen `createExpense` description lists it at
+the next contract bump). Each carries `field` (contract change: align
 `ExpenseWarning` with the generic `Warning` shape, OQ-E5).
 
 ## 3. User stories (Given / When / Then)

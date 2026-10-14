@@ -35,6 +35,10 @@ const (
 	WarningNotISRDeductibleInRegime WarningCode = "not_isr_deductible_in_regime"
 	WarningCategoryNotDeductible    WarningCode = "category_not_deductible"
 	WarningDuplicateCFDIUUID        WarningCode = "duplicate_cfdi_uuid"
+	// WarningIVANotCreditableCashPayment: the user claims a cash payment over
+	// the limit as deductible; the claim stands for ISR, but its IVA is not
+	// creditable (LIVA 5 fr. II ⚠️ CPA).
+	WarningIVANotCreditableCashPayment WarningCode = "iva_not_creditable_cash_payment"
 )
 
 // Warning is a notice on one field. It never echoes an amount, a description
@@ -78,9 +82,10 @@ type Assessment struct {
 	Source        DeductibleSource
 	CashOverLimit bool
 	// CreditableIVA is the IVA that may be credited (LIVA 5, ⚠️ CPA): with a
-	// CFDI, and deductible for ISR — or, in RESICO PF, where ISR deductions
-	// do not exist, deductible but for the regime (not a cash payment over
-	// the limit). M5 applies the final rule.
+	// CFDI, never on a cash payment over the limit (fr. II, whatever the
+	// override), only for a category the rule marks creditable (fr. I,
+	// strictly indispensable), and deductible for ISR, except in RESICO PF,
+	// where ISR deductions do not exist. M5 applies the final rule.
 	CreditableIVA money.Cents
 	Suggested     fiscal.Suggested
 	Totals        Totals
@@ -114,6 +119,8 @@ func checkContext(d Draft, p Payer, rule CategoryRule, today fiscal.Date, catalo
 		return fmt.Errorf("person type %q: %w", p.PersonType, fiscal.ErrInvalidParameter)
 	case !rule.Deductibility.Valid():
 		return fmt.Errorf("category rule deductibility %q: %w", rule.Deductibility, fiscal.ErrInvalidParameter)
+	case rule.Deductibility == NotDeductible && rule.IVACreditable:
+		return fmt.Errorf("category rule %q: not deductible yet IVA creditable: %w", rule.Category, fiscal.ErrInvalidParameter)
 	case rule.Category != d.Category:
 		return fmt.Errorf("rule of category %q for %q: %w", rule.Category, d.Category, fiscal.ErrInvalidParameter)
 	case today.IsZero():
@@ -199,7 +206,7 @@ func applyRules(d Draft, p Payer, rule CategoryRule, catalog RateCatalog) (Asses
 		Deductible:    deductible,
 		Source:        source,
 		CashOverLimit: cashOver,
-		CreditableIVA: creditableIVA(d, p, deductible, cashOver),
+		CreditableIVA: creditableIVA(d, p, rule, deductible, cashOver),
 		Suggested:     suggested,
 		Totals:        totalsOf(d),
 		Warnings:      warningsOf(hint, d, cashOver),
@@ -263,9 +270,12 @@ func effectiveDeductible(hint Hint, d Draft, cashOver bool) (bool, DeductibleSou
 }
 
 // creditableIVA is the IVA candidate for crediting (see Assessment).
-func creditableIVA(d Draft, p Payer, deductible, cashOver bool) money.Cents {
+func creditableIVA(d Draft, p Payer, rule CategoryRule, deductible, cashOver bool) money.Cents {
+	if !d.HasCFDI || cashOver || !rule.IVACreditable {
+		return 0
+	}
 	resicoPF := p.Regime == fiscal.RegimeRESICO && p.PersonType == fiscal.PersonFisica
-	if d.HasCFDI && (deductible || (resicoPF && !cashOver)) {
+	if deductible || resicoPF {
 		return d.IVA
 	}
 	return 0
@@ -275,6 +285,9 @@ func warningsOf(hint Hint, d Draft, cashOver bool) []Warning {
 	var warnings []Warning
 	if cashOver {
 		warnings = append(warnings, Warning{Code: WarningCashOverThreshold, Field: FieldPaymentMethod})
+	}
+	if cashOver && d.Deductible == ClaimDeductible {
+		warnings = append(warnings, Warning{Code: WarningIVANotCreditableCashPayment, Field: FieldPaymentMethod})
 	}
 	if !d.HasCFDI {
 		warnings = append(warnings, Warning{Code: WarningNoCFDI, Field: FieldHasCFDI})
