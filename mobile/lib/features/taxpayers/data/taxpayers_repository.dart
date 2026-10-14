@@ -6,12 +6,15 @@ import 'package:control_contable/api/generated/models/tax_input_value.dart';
 import 'package:control_contable/api/generated/models/tax_inputs_update.dart';
 import 'package:control_contable/api/generated/models/taxpayer.dart';
 import 'package:control_contable/api/generated/models/taxpayer_create.dart';
+import 'package:control_contable/api/generated/models/taxpayer_regime.dart';
+import 'package:control_contable/api/generated/models/taxpayer_regime_create.dart';
+import 'package:control_contable/api/generated/models/taxpayer_regime_update.dart';
 import 'package:control_contable/api/generated/models/taxpayer_update.dart';
 import 'package:control_contable/core/network/api_client_provider.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// The taxpayer operations onboarding needs (`/v1/regimes`,
+/// The taxpayer operations of onboarding and settings (`/v1/regimes`,
 /// `/v1/taxpayers/**`, and M5's tax inputs). Every method throws an
 /// `ApiFailure` when the server refuses or cannot be reached.
 abstract interface class TaxpayersRepository {
@@ -28,6 +31,51 @@ abstract interface class TaxpayersRepository {
   Future<Taxpayer> correctRfc({
     required String taxpayerId,
     required String rfc,
+  });
+
+  /// Every taxpayer of the user, archived ones too, by `created_at`
+  /// (`GET /v1/taxpayers?include_archived=true`; at most 10, unpaginated).
+  Future<List<Taxpayer>> listTaxpayers();
+
+  /// Renames a taxpayer (`PATCH /v1/taxpayers/{id}`).
+  Future<Taxpayer> rename({
+    required String taxpayerId,
+    required String displayName,
+  });
+
+  /// Archives a taxpayer (`POST …/archive`; allowed while read-only).
+  Future<Taxpayer> archive(String taxpayerId);
+
+  /// Unarchives a taxpayer (`POST …/unarchive`).
+  Future<Taxpayer> unarchive(String taxpayerId);
+
+  /// Deletes a taxpayer and every record of it (`DELETE …?confirm=true`).
+  /// Irreversible: call it only after the user confirmed.
+  Future<void> delete(String taxpayerId);
+
+  /// Adds a regime, or reopens an ended one (`POST …/regimes`), starting
+  /// in the current month.
+  Future<TaxpayerRegime> addRegime({
+    required String taxpayerId,
+    required String regimeCode,
+    Map<String, Object>? options,
+  });
+
+  /// Replaces the options sent (`PATCH …/regimes/{code}`); the change
+  /// applies to every period of the regime (OQ-7).
+  Future<TaxpayerRegime> updateRegimeOptions({
+    required String taxpayerId,
+    required String regimeCode,
+    required Map<String, Object> options,
+  });
+
+  /// Ends a regime at [endPeriod] (`DELETE …/regimes/{code}`); [confirm]
+  /// keeps its records when it has some (`409 regime_has_records` without).
+  Future<TaxpayerRegime> endRegime({
+    required String taxpayerId,
+    required String regimeCode,
+    required String endPeriod,
+    bool confirm = false,
   });
 
   /// Replaces one regime's tax inputs for [fiscalYear]
@@ -68,6 +116,78 @@ class ApiTaxpayersRepository implements TaxpayersRepository {
     () => _taxpayers.updateTaxpayer(
       taxpayerId: taxpayerId,
       body: TaxpayerUpdate(rfc: rfc),
+    ),
+  );
+
+  @override
+  Future<List<Taxpayer>> listTaxpayers() async {
+    final list = await guardApi(
+      () => _taxpayers.listTaxpayers(includeArchived: true),
+    );
+    return list.items;
+  }
+
+  @override
+  Future<Taxpayer> rename({
+    required String taxpayerId,
+    required String displayName,
+  }) => guardApi(
+    () => _taxpayers.updateTaxpayer(
+      taxpayerId: taxpayerId,
+      body: TaxpayerUpdate(displayName: displayName),
+    ),
+  );
+
+  @override
+  Future<Taxpayer> archive(String taxpayerId) =>
+      guardApi(() => _taxpayers.archiveTaxpayer(taxpayerId: taxpayerId));
+
+  @override
+  Future<Taxpayer> unarchive(String taxpayerId) =>
+      guardApi(() => _taxpayers.unarchiveTaxpayer(taxpayerId: taxpayerId));
+
+  @override
+  Future<void> delete(String taxpayerId) => guardApi(
+    () => _taxpayers.deleteTaxpayer(taxpayerId: taxpayerId, confirm: true),
+  );
+
+  @override
+  Future<TaxpayerRegime> addRegime({
+    required String taxpayerId,
+    required String regimeCode,
+    Map<String, Object>? options,
+  }) => guardApi(
+    () => _taxpayers.addTaxpayerRegime(
+      taxpayerId: taxpayerId,
+      body: TaxpayerRegimeCreate(regimeCode: regimeCode, options: options),
+    ),
+  );
+
+  @override
+  Future<TaxpayerRegime> updateRegimeOptions({
+    required String taxpayerId,
+    required String regimeCode,
+    required Map<String, Object> options,
+  }) => guardApi(
+    () => _taxpayers.updateTaxpayerRegime(
+      taxpayerId: taxpayerId,
+      regimeCode: regimeCode,
+      body: TaxpayerRegimeUpdate(options: options),
+    ),
+  );
+
+  @override
+  Future<TaxpayerRegime> endRegime({
+    required String taxpayerId,
+    required String regimeCode,
+    required String endPeriod,
+    bool confirm = false,
+  }) => guardApi(
+    () => _taxpayers.archiveTaxpayerRegime(
+      taxpayerId: taxpayerId,
+      regimeCode: regimeCode,
+      endPeriod: endPeriod,
+      confirm: confirm,
     ),
   );
 
