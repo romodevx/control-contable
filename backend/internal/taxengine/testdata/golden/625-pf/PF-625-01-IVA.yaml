@@ -20,7 +20,7 @@ input:
     - month: 3
       income:
         cash: "30000.00"
-        iva_collected: "4800.00"
+        by_rate: {rate_16: {base: "30000.00", iva: "4800.00"}}
         iva_withheld: {by_platform: "2400.00"}
         isr_withheld: {by_platform: "750.00"}
   tax_inputs:

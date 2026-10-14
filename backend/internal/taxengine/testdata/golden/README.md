@@ -30,7 +30,7 @@ input:
   options: {deduction_mode: blind_35, definitive_option: true, activities: [lodging]}
   months:                         # MonthSums per month, January..period; absent amounts are 0
     - month: 3
-      income:   {cash, accrual, iva_collected, iva_withheld: {by_moral, by_platform}, isr_withheld: {...}}
+      income:   {cash, accrual, by_rate: {rate_16: {base, iva}, rate_8: {base, iva}, rate_0_base, exempt_base}, iva_withheld: {by_moral, by_platform}, isr_withheld: {...}}
       expenses: {deductible_paid, creditable_iva_paid, predial_paid, isr_withheld_to_remit, iva_withheld_to_remit}
   tax_inputs:                     # one value, matching the kind
     - {key: prior_provisional_payments, kind: money_monthly, month: 1, money: "2000.00"}

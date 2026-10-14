@@ -12,7 +12,7 @@ input:
     deduction_mode: blind_35
     iva_fully_taxable: true
   months:
-    - {month: 3, income: {cash: "20000.00"}}
+    - {month: 3, income: {cash: "20000.00", by_rate: {exempt_base: "20000.00"}}}
 expected:
   status: complete
   taxes: [iva]

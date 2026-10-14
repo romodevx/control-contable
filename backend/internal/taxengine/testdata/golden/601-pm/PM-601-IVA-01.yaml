@@ -14,7 +14,7 @@ input:
     iva_fully_taxable: true
   months:
     - month: 6
-      income: {cash: "2000000.00", accrual: "2000000.00", iva_collected: "320000.00"}
+      income: {cash: "2000000.00", accrual: "2000000.00", by_rate: {rate_16: {base: "2000000.00", iva: "320000.00"}}}
       expenses: {creditable_iva_paid: "200000.00", iva_withheld_to_remit: "5333.33"}
   tax_inputs:
     - {key: coeficiente_utilidad, kind: rate, rate: "0.1500"}

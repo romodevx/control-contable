@@ -61,11 +61,24 @@ type monthDoc struct {
 }
 
 type incomeDoc struct {
-	Cash         centsText   `yaml:"cash"`
-	Accrual      centsText   `yaml:"accrual"`
-	IVACollected centsText   `yaml:"iva_collected"`
-	IVAWithheld  withheldDoc `yaml:"iva_withheld"`
-	ISRWithheld  withheldDoc `yaml:"isr_withheld"`
+	Cash        centsText   `yaml:"cash"`
+	Accrual     centsText   `yaml:"accrual"`
+	ByRate      byRateDoc   `yaml:"by_rate"`
+	IVAWithheld withheldDoc `yaml:"iva_withheld"`
+	ISRWithheld withheldDoc `yaml:"isr_withheld"`
+}
+
+// byRateDoc is domain.IVAByRate: the collected income by IVA treatment.
+type byRateDoc struct {
+	Rate16     rateSumsDoc `yaml:"rate_16"`
+	Rate8      rateSumsDoc `yaml:"rate_8"`
+	Rate0Base  centsText   `yaml:"rate_0_base"`
+	ExemptBase centsText   `yaml:"exempt_base"`
+}
+
+type rateSumsDoc struct {
+	Base centsText `yaml:"base"`
+	IVA  centsText `yaml:"iva"`
 }
 
 type withheldDoc struct {
@@ -281,12 +294,21 @@ func (cv *converter) options(docs map[string]optionDoc) domain.Options {
 	return domain.NewOptions(values)
 }
 
+func byRate(d byRateDoc) domain.IVAByRate {
+	return domain.IVAByRate{
+		Rate16:     domain.RateSums{Base: d.Rate16.Base.cents, IVA: d.Rate16.IVA.cents},
+		Rate8:      domain.RateSums{Base: d.Rate8.Base.cents, IVA: d.Rate8.IVA.cents},
+		Rate0Base:  d.Rate0Base.cents,
+		ExemptBase: d.ExemptBase.cents,
+	}
+}
+
 func (cv *converter) sums(through time.Month, docs []monthDoc) domain.YearSums {
 	entries := make([]domain.MonthEntry, 0, len(docs))
 	for _, m := range docs {
 		entries = append(entries, domain.MonthEntry{Month: time.Month(m.Month), Sums: domain.MonthSums{
 			Income: domain.IncomeSums{
-				Cash: m.Income.Cash.cents, Accrual: m.Income.Accrual.cents, IVACollected: m.Income.IVACollected.cents,
+				Cash: m.Income.Cash.cents, Accrual: m.Income.Accrual.cents, ByRate: byRate(m.Income.ByRate),
 				IVAWithheld: withheld(m.Income.IVAWithheld), ISRWithheld: withheld(m.Income.ISRWithheld),
 			},
 			Expenses: domain.ExpenseSums{

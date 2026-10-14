@@ -15,7 +15,7 @@ input:
     - month: 3
       income:
         cash: "20000.00"
-        iva_collected: "3200.00"
+        by_rate: {rate_16: {base: "20000.00", iva: "3200.00"}}
         iva_withheld: {by_moral: "2133.33"}
         isr_withheld: {by_moral: "2000.00"}
 expected:
