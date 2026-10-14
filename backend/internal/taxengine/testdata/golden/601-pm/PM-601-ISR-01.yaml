@@ -6,7 +6,6 @@
 # 0.15 x 5,000,000 = 750,000 - 30,000 = 720,000 x 30 % = 216,000 - 180,000 = 36,000.00.
 id: PM-601-ISR-01
 source: research:PM-601-ISR-01
-pending_strategy: true # M5-15 removes this when the 601 PM strategy is registered
 input:
   regime: "601"
   person_type: moral
