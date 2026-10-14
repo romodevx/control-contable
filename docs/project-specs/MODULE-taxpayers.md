@@ -30,7 +30,7 @@ Owner decisions applied (2026-10-13):
 | listRegimes | `GET /v1/regimes?person_type=fisica\|moral` | exists |
 | listTaxpayers | `GET /v1/taxpayers?include_archived=` | exists |
 | createTaxpayer | `POST /v1/taxpayers` (taxpayer + regimes + options, one transaction) | exists; add `additionalProperties: false`; the `GOMA800101AB3` example fails módulo 11 (expected digit `6`): replace it with `GOMA800101AB6` |
-| getTaxpayer / updateTaxpayer | `GET / PATCH /v1/taxpayers/{taxpayerId}` | exists (rename only; see OQ-1) |
+| getTaxpayer / updateTaxpayer | `GET / PATCH /v1/taxpayers/{taxpayerId}` | exists; add `rfc` correction (OQ-1) |
 | deleteTaxpayer | `DELETE /v1/taxpayers/{taxpayerId}?confirm=true` | exists |
 | archiveTaxpayer | `POST /v1/taxpayers/{taxpayerId}/archive` | exists |
 | unarchiveTaxpayer | `POST /v1/taxpayers/{taxpayerId}/unarchive` | **new — add in M2-01 (OQ-2)** |
@@ -159,6 +159,22 @@ Informational/partial regimes show their plain-language `explanation` at selecti
 - The switcher (from any main screen) lists non-archived taxpayers: display name, person type,
   masked RFC. Switching reloads the current screen for the new taxpayer.
 
+### 2.10 Read-only access (OQ-8, DECIDED)
+- Every M2 mutation except delete and archive goes through `access.Policy` in its use case:
+  with no running trial and no `pro`/`comp` entitlement the user is **read-only**.
+
+| Operation | Read-only user |
+|---|---|
+| list/get taxpayers, list regimes | allowed |
+| archive taxpayer, archive regime (`DELETE …/regimes/{code}`), delete taxpayer | allowed |
+| create taxpayer, unarchive, add regime, rename, `PATCH rfc`, `PATCH` options | `402 entitlement_required` |
+
+- The policy check runs **before** the cap check and before validation of business rules
+  (schema validation at the edge still answers 400 first). An idempotent create retry whose
+  `id` already exists returns `200` regardless (no write happens).
+- Client: these actions open the paywall (UX only); onboarding a first taxpayer after expiry
+  is therefore paywalled too.
+
 ## 3. User stories (Given / When / Then)
 
 ### US-T1 Onboard a persona física
@@ -235,7 +251,10 @@ Informational/partial regimes show their plain-language `explanation` at selecti
 
 ### US-T3c Rename, archive, unarchive, delete
 - **When** I PATCH `display_name` (1–80 chars, trimmed, NFC), **then** `200`; `person_type`
-  and `rfc` in the body are rejected (`400`, `additionalProperties`).
+  in the body is rejected (`400`, `additionalProperties`).
+- **When** I PATCH `rfc` with a valid RFC of the same person type (OQ-1), **then** `200`, it is
+  re-encrypted with the row-id AAD and re-hashed; a duplicate under my account → `409
+  rfc_already_registered`; a wrong length for the type → `400 rfc_length_mismatch`.
 - **When** I archive the active taxpayer, **then** `200`, it leaves the switcher and the app
   switches to the next non-archived one (or onboarding if none).
 - **Given** an archived taxpayer, **when** I add an income, a regime, or rename it, **then**
@@ -253,6 +272,13 @@ Informational/partial regimes show their plain-language `explanation` at selecti
   expenses and estimates show B; after an app restart B is still selected.
 - **Given** the stored active taxpayer was deleted on another device, **when** the app opens,
   **then** it falls back silently to the first non-archived taxpayer.
+
+### US-T4b Read-only user (OQ-8)
+- **Given** my trial ended and I have no plan, **when** I create a taxpayer, unarchive one,
+  add a regime, rename, correct an RFC or change options, **then** `402 entitlement_required`
+  and nothing changes.
+- **Given** the same, **when** I list, open, archive a taxpayer or regime, or delete a
+  taxpayer (with `confirm=true`), **then** it succeeds as for a paying user.
 
 ### US-T5 Cross-user isolation
 - **Given** user B's taxpayer id, **when** user A calls any M2 endpoint with it, **then** `404
@@ -276,6 +302,7 @@ Informational/partial regimes show their plain-language `explanation` at selecti
 | Overlapping incompatible regimes | 422 | `invalid_regime_combination` | `incompatible` (+ pair) |
 | 11th taxpayer | 422 | `taxpayer_limit_reached` | |
 | Write on archived taxpayer; last active regime; records after end | 422 | `business_rule_violation` | `taxpayer_archived`, `last_active_regime`, `records_after_end_period` |
+| Read-only user: create, unarchive, add regime, rename, PATCH rfc/options | 402 | `entitlement_required` | |
 | Per-user write budget exceeded | 429 | `rate_limited` | |
 | Anything else | 500 | `internal_error` | |
 
@@ -290,7 +317,7 @@ No new `ErrorCode` values are needed; detail codes are added to the contract des
 | S-3 | `rfc_masked` derived server-side (PF `AAAA******XX9`, PM `AAA******XX9`); the full RFC never leaves the server (no endpoint returns it) | Contract + response-body scan |
 | S-4 | RFC never logged, traced or put in error messages; redaction test on the create path at debug level | Log capture test |
 | S-5 | Cap count under `SELECT … FOR UPDATE` on the user row in the create transaction (OD-2) | Concurrency test (§3 US-T2) |
-| S-6 | RLS ENABLE + FORCE on `taxpayers`, `taxpayer_regimes`; owner policies; composite FKs `(taxpayer_id, user_id, person_type)` and `(regime_code, person_type)`; no UPDATE grant on `person_type`, `rfc_*` (see OQ-1) | Isolation suite (data-model §RLS) incl. cross-user composite-FK rejection |
+| S-6 | RLS ENABLE + FORCE on `taxpayers`, `taxpayer_regimes`; owner policies; composite FKs `(taxpayer_id, user_id, person_type)` and `(regime_code, person_type)`; no UPDATE grant on `person_type`; `rfc_*` updated only by the RFC-correction use case (OQ-1) | Isolation suite (data-model §RLS) incl. cross-user composite-FK rejection |
 | S-7 | Account deletion cascades every M2 table; extend the deletion-cascade guard to indirect chains (M1-17 #43) | Guard test lists M2 tables |
 | S-8 | Repositories never commit/rollback or `SET` (P0-30 D-3 lint lands with the first M2 repository) | archtest |
 | S-9 | Audit log events `taxpayer.created/archived/unarchived/deleted`, `taxpayer_regime.added/archived` with user id + taxpayer id only | Log capture test |
@@ -332,16 +359,16 @@ No new `ErrorCode` values are needed; detail codes are added to the contract des
   treatment; RESICO expulsion/eligibility automation (prompted annually, later).
 - Versioned (time-ranged) regime options (OQ-7).
 
-## 9. Open questions (recommended default in bold)
+## 9. Decisions (coordinator, 2026-10-13) — all DECIDED
 
-| # | Question | Recommended default |
+| # | Question | Decision |
 |---|---|---|
-| OQ-1 | Allow correcting a mistyped RFC (same person type) instead of delete + recreate with all records? | **Yes: `PATCH rfc` re-validates, re-encrypts (S-1), re-hashes, rechecks uniqueness; contract change in M2-01.** Today's contract says immutable |
-| OQ-2 | Add `POST …/unarchive`? | **Yes**, otherwise an archived RFC is stuck (it blocks re-creation) |
-| OQ-3 | Where do the 601 coeficiente / YTD inputs go in onboarding? | **Optional, skippable step 5 "Datos para el cálculo", shown only when `module_tax_engine` is ON, writing through M5's tax-inputs endpoint; otherwise the estimate shows the `incomplete` CTA** |
-| OQ-4 | How is the cap "raised on request"? | **Not in v1: fixed `TaxpayerCap = 10`; a per-user override column when the first request arrives** |
-| OQ-5 | Re-adding an archived regime: reopen the row, or keep history of several windows? | **Reopen (PK unchanged); revisit if users switch back and forth** |
-| OQ-6 | Compatibility matrix (§2.5), incl. 625 × 626 and PM single-regime | **Ship the seed as written, ⚠️ marked; CPA review before launch; 625 × 626 allowed** |
-| OQ-7 | Changing an option (e.g. 606 deduction mode) mid-year rewrites past estimates; the law may fix the choice for the year | **v1: not versioned, warn in UI; CPA to confirm whether to lock per fiscal year** |
-| OQ-8 | Can a read-only user (trial over, no plan) create taxpayers? | **Yes: taxpayers carry no records; only records are paywalled (402)** |
-| OQ-9 | Does an archived taxpayer count toward the cap? | **Yes; delete frees the slot** |
+| OQ-1 | Correct a mistyped RFC (same person type) instead of delete + recreate? | **DECIDED: yes.** `PATCH rfc` re-validates, re-encrypts (S-1), re-hashes, rechecks uniqueness; contract change in M2-01 (today's contract says immutable). `rfc_*` columns get an UPDATE grant only through this use case |
+| OQ-2 | Add `POST …/unarchive`? | **DECIDED: yes** (otherwise an archived RFC blocks re-creation) |
+| OQ-3 | Where do the 601 coeficiente / YTD inputs go in onboarding? | **DECIDED:** optional, skippable step 5 "Datos para el cálculo", shown only when `module_tax_engine` is ON, writing through M5's tax-inputs endpoint; otherwise the estimate shows the `incomplete` CTA |
+| OQ-4 | How is the cap "raised on request"? | **DECIDED: not in v1.** Fixed `TaxpayerCap = 10`; a per-user override column when the first request arrives |
+| OQ-5 | Re-adding an archived regime | **DECIDED: reopen the row** (PK unchanged); revisit if users switch back and forth |
+| OQ-6 | Compatibility matrix (§2.5) | **DECIDED:** ship the seed as written, ⚠️ marked; CPA review before launch; 625 × 626 allowed; PM single-regime |
+| OQ-7 | Option changes mid-year | **DECIDED:** not versioned in v1, UI warns; CPA to confirm whether to lock per fiscal year |
+| OQ-8 | What may a read-only user (trial expired, no `pro`/`comp`) do in M2? | **DECIDED (overrides the PM default): read, delete and archive only.** Creating a taxpayer, unarchiving, adding a regime, renaming, correcting the RFC and changing options are refused with `402 entitlement_required` (`ErrReadOnly`), consistent with the access policy. Archiving a regime is an archive and stays allowed. See §2.10 |
+| OQ-9 | Does an archived taxpayer count toward the cap? | **DECIDED: yes**; delete frees the slot |
