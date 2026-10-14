@@ -355,19 +355,23 @@ Task groups:
 | M5-28 | Register flag `module_tax_engine` | backend-sr | M5-23, M5-24, M5-26, M5-27 | 0.5 | — | `feature/tax-engine-flag` | — | [x] |
 | M5-29 | QA M5: UI figures equal golden figures for each full regime, informational regimes, incomplete flow, flag OFF | qa-sr | M5-28 | 4 | — | `feature/tax-engine-qa-fixes` | OB6 | [x] |
 | M5-30 | Tech-lead gate M5 (OCP, purity, no floats, determinism) | tech-lead | M5-29 | 3 | — | (PR review) | — | [[x] |
-| M5-31 | Security gate M5 | security | M5-29 | 2 | — | (PR review) | — | [ ] |
+| M5-31 | Security gate M5 | security | M5-29 | 2 | — | `feature/tax-engine-security-gate` | — | [x] |
 | M5-32 | Docs M5: engine guide, add-a-regime guide, Dec–Jan parameter update runbook | doc-writer | M5-30, M5-31 | 2.5 | — | `feature/tax-engine-docs` | — | [ ] |
 | M5-33 | CPA sign-off of golden suite; un-skip ⚠️ cases or record decisions | qa-sr | M5-29 | 2 | — | `feature/tax-engine-cpa-signoff` | OB5 | [ ] |
 
 #### M5 follow-ups
 
-Deferred by the M5 gates; none blocks M5's merge. Source: [M5-30 tech-lead gate](../reviews/M5-30-tech-lead-gate.md#follow-ups).
+Deferred by the M5 gates; none blocks M5's merge. Sources: [M5-30 tech-lead gate](../reviews/M5-30-tech-lead-gate.md#follow-ups),
+[M5-31 security gate](../reviews/M5-31-security-gate.md#4-carried-m5-follow-ups) (FU4–FU6; flag preconditions in its §5).
 
 | ID | Item | Owner | Target |
 |---|---|---|---|
 | FU1 | Accrual regimes (601): show *Fecha de cobro* outside the collapsed *Más detalles* (it decides the IVA), with M5-29 D6's hint for invoiced-but-uncollected income | pm + frontend-sr | M3 hardening |
 | FU2 | CPA-REVIEW: PM-601-IVA-01's withheld-to-remit is IVA only; the app adds the LISR 106 ISR withheld from PF fees | qa-sr | M5-33 |
 | FU3 | Add-a-regime guide lists every touch point, including both `EngineVersion` pins | doc-writer | M5-32 |
+| FU4 | M5-31 G-2: validate `EstimateDeps` in `NewEstimator` so a missing port fails the boot | backend-sr | Before M6 wires a second caller |
+| FU5 | M5-31 G-4: the prior-payment suggestion spends up to 6 estimate reads per half; count it in the `estimate_reads` budget or batch it | backend-sr + frontend-sr | M5 hardening / M6 |
+| FU6 | M5-31 G-5: check that every embedded parameter set defines every key the modules read (not only 2026) | backend-sr | M5-32 runbook, before any 2027 file |
 
 ### M6 — Dashboard (`module_dashboard`)
 
