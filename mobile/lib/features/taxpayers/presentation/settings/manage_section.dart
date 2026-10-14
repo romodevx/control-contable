@@ -16,7 +16,9 @@ import 'package:go_router/go_router.dart';
 /// Archive or unarchive (reversible: done at once, then Undo in a toast
 /// that does not auto-dismiss) and delete (irreversible: a confirmation
 /// dialog first). Archive and delete work for a read-only user; unarchive
-/// (and so Undo) needs a plan (OQ-8).
+/// (and so Undo) needs a plan (OQ-8). Once the session knows the user is
+/// read-only, an archive is one-way: it is confirmed first and offers no
+/// Undo (QA M2-12 D2).
 class ManageSection extends ConsumerWidget {
   /// The actions on [taxpayer].
   const new({required this.taxpayer, super.key});
@@ -29,6 +31,9 @@ class ManageSection extends ConsumerWidget {
     // and never reads [context] before checking it is still mounted.
     final feedback = _Feedback.of(context);
     final settings = ref.read(taxpayerSettingsProvider);
+    final oneWay = settings.knownReadOnly;
+    if (oneWay && !await _confirmOneWayArchive(context)) return;
+    if (!context.mounted) return;
     if (!await _run(
       context,
       feedback,
@@ -40,11 +45,37 @@ class ManageSection extends ConsumerWidget {
     }
     feedback.toast(
       feedback.l10n.settingsArchived(taxpayer.displayName),
-      action: SnackBarAction(
-        label: feedback.l10n.settingsUndo,
-        onPressed: () => unawaited(_unarchiveWith(context, feedback, settings)),
+      action: oneWay
+          ? null
+          : SnackBarAction(
+              label: feedback.l10n.settingsUndo,
+              onPressed: () =>
+                  unawaited(_unarchiveWith(context, feedback, settings)),
+            ),
+    );
+  }
+
+  /// Asks a read-only user to confirm an archive they cannot undo.
+  Future<bool> _confirmOneWayArchive(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.settingsArchiveOneWayTitle(taxpayer.displayName)),
+        content: Text(l10n.settingsArchiveOneWayBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.formCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.settingsArchiveOneWayConfirm),
+          ),
+        ],
       ),
     );
+    return confirmed ?? false;
   }
 
   Future<void> _unarchive(BuildContext context, WidgetRef ref) =>

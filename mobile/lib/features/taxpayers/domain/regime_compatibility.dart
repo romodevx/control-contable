@@ -31,3 +31,18 @@ String? _reasonBetween(Regime a, Regime b) {
   }
   return null;
 }
+
+/// The regimes among [others] that [regime] may overlap only with the
+/// warning `regime_combination_needs_cpa_review`: a pair the catalog lists
+/// in `review_pending_with` on either side (QA M2-12 D3). [regime] itself
+/// is never a partner.
+List<Regime> reviewPendingPartners(Regime regime, Iterable<Regime> others) => [
+  for (final other in others)
+    if (other.code != regime.code && _pendingBetween(regime, other)) other,
+];
+
+bool _pendingBetween(Regime a, Regime b) => [(a, b), (b, a)].any(
+  (pair) => (pair.$1.reviewPendingWith ?? const <RegimeIncompatibility>[]).any(
+    (link) => link.code == pair.$2.code,
+  ),
+);
