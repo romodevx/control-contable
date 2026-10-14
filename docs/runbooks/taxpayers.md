@@ -212,8 +212,10 @@ is verified by whoever flips the flag and recorded in the deploy PR. Source:
 - [ ] **P-3 `APP_ENV` is not `dev`**: only `dev` starts with ephemeral RFC keys.
 - [ ] **P-4 No RFC key rotation** until the M9 re-seal job ships (§2): `RFC_ENC_KEY_ID` stays
       at its first value.
-- [ ] **P-5 `module_incomes` and `module_expenses` stay OFF** until `NoRecords` is replaced by
-      the M3/M4 record lookup (G-1). This does not block `module_taxpayers` itself.
+- [x] **P-5 `module_incomes` and `module_expenses` stay OFF** until `NoRecords` is replaced by
+      the M3/M4 record lookup (G-1). Done: the lookup is wired in `backend/cmd/api/records.go`
+      ([M3/M4 security gate](../reviews/M3-M4-security-gate.md)); enabling those two modules
+      follows [incomes and expenses runbook §5](incomes-expenses.md#5-enable-module_incomes-and-module_expenses-in-a-shared-environment).
 - [ ] **P-6 Monitoring**: logs retained with the audit events of §1; alert on
       `rate limit unavailable` errors (the limiter fails closed, so an outage turns every M2
       write into `429`).

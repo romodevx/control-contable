@@ -384,5 +384,5 @@ or an operator can notice:
 - A duplicate RFC always gets the generic `rfc_already_registered` message, even when the
   existing taxpayer is archived (M2-13 FU2).
 - `RFC_ENC_KEY` and `RFC_INDEX_PEPPER` cannot be rotated until M9 (G-2).
-- Ending a regime does not yet look at incomes and expenses (G-1): `module_incomes` and
-  `module_expenses` stay OFF until it does.
+- Ending a regime checks the taxpayer's incomes and expenses since M3/M4 (G-1 closed); see
+  [incomes and expenses runbook §4](../runbooks/incomes-expenses.md#4-regime-end-and-records).

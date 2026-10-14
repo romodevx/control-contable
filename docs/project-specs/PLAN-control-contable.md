@@ -232,7 +232,7 @@ marked **pre-enable** must land before `module_taxpayers` is ON in a shared envi
 | FU10 | Regimes step uses `review_pending_with` to warn before submit | frontend-sr | M2 hardening |
 | FU11 | PR #68 leftovers: probe comment, preset state, one `gen` helper for module-owned operations | qa-sr | Next touch |
 | FU12 | Re-verify M1-16 FU3, FU7, FU10 | backend-sr / tech-lead | As tracked in M1 follow-ups |
-| G-1 | Replace `infra.NoRecords{}` with the M3/M4 latest-record lookup before any record write path is enabled (P-5: `module_incomes` / `module_expenses` stay OFF until then) | backend-sr | M3-04 / M4-05 |
+| G-1 | ~~Replace `infra.NoRecords{}` with the M3/M4 latest-record lookup before any record write path is enabled (P-5)~~ **Done** (`cmd/api/records.go`; verified by the [M3/M4 security gate](../reviews/M3-M4-security-gate.md)) | backend-sr | M3-04 / M4-05 |
 | G-2, #59 | **RFC key-rotation re-seal job** (previous keyring entry, resumable per-row re-seal, pepper re-hash with a hash-version column). Until then no rotation of `RFC_ENC_KEY` / `RFC_INDEX_PEPPER` ([runbook §2](../runbooks/taxpayers.md#2-do-not-rotate-rfc_enc_key-until-the-m9-re-seal-job-exists), P-4) | backend-sr + db-sr | M9 |
 | G-3 | `RFCVault.Seal` stores the key id parsed from the ciphertext (`crypto.KeyIDOf`) | backend-sr | With the M9 re-seal job |
 | #59 nit | Contract note: an idempotent create retry ignores a different body | architect | Next contract touch |
@@ -249,40 +249,71 @@ M3 and M4 run side by side (different tables, packages and screens). Their Flutt
 
 | ID | Task | Owner | Deps | Est (h) | Par | Branch | Blocked by | Done |
 |---|---|---|---|---|---|---|---|---|
-| M3-01 | Contract freeze: incomes paths, lint | architect | P0-05 | 1 | — | `feature/incomes-contract` | — | [ ] |
-| M3-02 | Migration `incomes` with RLS, composite FK to taxpayer_regimes, partial indexes, isolation tests, EXPLAIN ANALYZE | db-sr | M2-03 | 3 | PG-M34 | `feature/incomes-migration` | — | [ ] |
-| M3-03 | Income domain: amounts, dates (cash vs accrual), withholdings (TDD) | backend-sr | P0-13 | 2.5 | PG-M34 | `feature/incomes-domain` | — | [ ] |
-| M3-04 | Income create/update use cases: ReserveRecord (402), regime check, RateCatalog date validity, idempotent client id | backend-sr | M3-01, M3-02, M3-03, M2-06, P0-16, M5-08 | 4 | — | `feature/incomes-usecases` | — | [ ] |
-| M3-05 | Income list (keyset, period + regime filter), soft delete, restore | backend-sr | M3-04 | 3 | — | `feature/incomes-usecases` | — | [ ] |
-| M3-06 | Income handlers, contract tests, flag ON/OFF, trial-cap 402 test | backend-sr | M3-05, M2-07 | 2.5 | — | `feature/incomes-http` | — | [ ] |
-| M3-07 | LedgerReader income aggregates adapter (GROUP BY month, regime) + EXPLAIN ANALYZE | backend-sr | M3-02, M5-02 | 2.5 | — | `feature/incomes-ledger-reader` | — | [ ] |
-| M3-08 | Flutter income list: month navigation, regime filter, delete + persistent Undo | frontend-sr | M2-10, M3-01 | 4 | — | `feature/incomes-mobile` | — | [ ] |
-| M3-09 | Flutter income form as its own page (>6 fields), defaults prefilled, save-and-create-another | frontend-sr | M3-08 | 4.5 | — | `feature/incomes-mobile` | — | [ ] |
+| M3-01 | Contract freeze: incomes paths, lint | architect | P0-05 | 1 | — | `feature/incomes-contract` | — | [x] |
+| M3-02 | Migration `incomes` with RLS, composite FK to taxpayer_regimes, partial indexes, isolation tests, EXPLAIN ANALYZE | db-sr | M2-03 | 3 | PG-M34 | `feature/incomes-migration` | — | [x] |
+| M3-03 | Income domain: amounts, dates (cash vs accrual), withholdings (TDD) | backend-sr | P0-13 | 2.5 | PG-M34 | `feature/incomes-domain` | — | [x] |
+| M3-04 | Income create/update use cases: ReserveRecord (402), regime check, RateCatalog date validity, idempotent client id | backend-sr | M3-01, M3-02, M3-03, M2-06, P0-16, M5-08 | 4 | — | `feature/incomes-usecases` | — | [x] |
+| M3-05 | Income list (keyset, period + regime filter), soft delete, restore | backend-sr | M3-04 | 3 | — | `feature/incomes-usecases` | — | [x] |
+| M3-06 | Income handlers, contract tests, flag ON/OFF, trial-cap 402 test | backend-sr | M3-05, M2-07 | 2.5 | — | `feature/incomes-http` | — | [x] |
+| M3-07 | LedgerReader income aggregates adapter (GROUP BY month, regime) + EXPLAIN ANALYZE | backend-sr | M3-02, M5-02 | 2.5 | — | `feature/incomes-ledger-reader` | — | [x] |
+| M3-08 | Flutter income list: month navigation, regime filter, delete + persistent Undo | frontend-sr | M2-10, M3-01 | 4 | — | `feature/incomes-mobile` | — | [x] |
+| M3-09 | Flutter income form as its own page (>6 fields), defaults prefilled, save-and-create-another | frontend-sr | M3-08 | 4.5 | — | `feature/incomes-mobile` | — | [x] |
 | M3-10 | Register flag `module_incomes` | backend-sr | M3-06, M3-07, M3-09 | 0.5 | — | `feature/incomes-flag` | — | [x] |
 | M3-11 | QA M3 (CRUD, undo, trial cap, flag OFF) | qa-sr | M3-10 | 2.5 | — | `feature/incomes-qa-fixes` | OB6 | [x] |
 | M3-12 | Tech-lead gate M3 | tech-lead | M3-11 | 1 | — | (PR review) | — | [x] |
 | M3-13 | Security gate M3 | security | M3-11 | 1.5 | — | `feature/incomes-expenses-security-gate` | — | [x] |
-| M3-14 | Docs M3 | doc-writer | M3-12, M3-13 | 1 | — | `feature/incomes-docs` | — | [ ] |
+| M3-14 | Docs M3 | doc-writer | M3-12, M3-13 | 1 | — | `feature/incomes-docs` | — | [x] |
 
 ### M4 — Expenses (`module_expenses`)
 
 | ID | Task | Owner | Deps | Est (h) | Par | Branch | Blocked by | Done |
 |---|---|---|---|---|---|---|---|---|
-| M4-01 | Contract freeze: expenses + `/v1/expense-categories`, lint | architect | P0-05 | 1 | — | `feature/expenses-contract` | — | [ ] |
-| M4-02 | Migration `expense_categories` + `category_regime_rules` (global seed with legal basis) | db-sr | M2-02 | 2.5 | PG-M34 | `feature/expenses-migrations` | — | [ ] |
-| M4-03 | Migration `expenses` with RLS, composite FK, partial indexes, isolation tests | db-sr | M2-03, M4-02 | 3 | — | `feature/expenses-migrations` | — | [ ] |
-| M4-04 | Expense domain incl. cash-payment threshold warning (TDD) | backend-sr | P0-13 | 2.5 | PG-M34 | `feature/expenses-domain` | — | [ ] |
-| M4-05 | Expense create/update use cases (ReserveRecord, regime check, RateCatalog, category rules) | backend-sr | M4-01, M4-03, M4-04, M2-06, P0-16, M5-08 | 3.5 | — | `feature/expenses-usecases` | — | [ ] |
-| M4-06 | Expense list, soft delete, restore | backend-sr | M4-05 | 2.5 | — | `feature/expenses-usecases` | — | [ ] |
-| M4-07 | Expense handlers + categories endpoint, contract tests, flag ON/OFF | backend-sr | M4-06, M2-07 | 3 | — | `feature/expenses-http` | — | [ ] |
-| M4-08 | LedgerReader expense aggregates (by deductibility class, IVA paid, withholdings made) + EXPLAIN ANALYZE | backend-sr | M4-03, M5-02 | 2.5 | — | `feature/expenses-ledger-reader` | — | [ ] |
-| M4-09 | Flutter expense list (reuses M3 list widgets) | frontend-sr | M3-09, M4-01 | 3 | — | `feature/expenses-mobile` | — | [ ] |
-| M4-10 | Flutter expense form page: category with deductibility hint, payment method, cash warning | frontend-sr | M4-09 | 4.5 | — | `feature/expenses-mobile` | — | [ ] |
+| M4-01 | Contract freeze: expenses + `/v1/expense-categories`, lint | architect | P0-05 | 1 | — | `feature/expenses-contract` | — | [x] |
+| M4-02 | Migration `expense_categories` + `category_regime_rules` (global seed with legal basis) | db-sr | M2-02 | 2.5 | PG-M34 | `feature/expenses-migrations` | — | [x] |
+| M4-03 | Migration `expenses` with RLS, composite FK, partial indexes, isolation tests | db-sr | M2-03, M4-02 | 3 | — | `feature/expenses-migrations` | — | [x] |
+| M4-04 | Expense domain incl. cash-payment threshold warning (TDD) | backend-sr | P0-13 | 2.5 | PG-M34 | `feature/expenses-domain` | — | [x] |
+| M4-05 | Expense create/update use cases (ReserveRecord, regime check, RateCatalog, category rules) | backend-sr | M4-01, M4-03, M4-04, M2-06, P0-16, M5-08 | 3.5 | — | `feature/expenses-usecases` | — | [x] |
+| M4-06 | Expense list, soft delete, restore | backend-sr | M4-05 | 2.5 | — | `feature/expenses-usecases` | — | [x] |
+| M4-07 | Expense handlers + categories endpoint, contract tests, flag ON/OFF | backend-sr | M4-06, M2-07 | 3 | — | `feature/expenses-http` | — | [x] |
+| M4-08 | LedgerReader expense aggregates (by deductibility class, IVA paid, withholdings made) + EXPLAIN ANALYZE | backend-sr | M4-03, M5-02 | 2.5 | — | `feature/expenses-ledger-reader` | — | [x] |
+| M4-09 | Flutter expense list (reuses M3 list widgets) | frontend-sr | M3-09, M4-01 | 3 | — | `feature/expenses-mobile` | — | [x] |
+| M4-10 | Flutter expense form page: category with deductibility hint, payment method, cash warning | frontend-sr | M4-09 | 4.5 | — | `feature/expenses-mobile` | — | [x] |
 | M4-11 | Register flag `module_expenses` | backend-sr | M4-07, M4-08, M4-10 | 0.5 | — | `feature/expenses-flag` | — | [x] |
 | M4-12 | QA M4 | qa-sr | M4-11 | 2.5 | — | `feature/expenses-qa-fixes` | OB6 | [x] |
 | M4-13 | Tech-lead gate M4 | tech-lead | M4-12 | 1 | — | (PR review) | — | [x] |
 | M4-14 | Security gate M4 | security | M4-12 | 1.5 | — | `feature/incomes-expenses-security-gate` | — | [x] |
-| M4-15 | Docs M4 | doc-writer | M4-13, M4-14 | 1 | — | `feature/expenses-docs` | — | [ ] |
+| M4-15 | Docs M4 | doc-writer | M4-13, M4-14 | 1 | — | `feature/expenses-docs` | — | [x] |
+
+#### M3/M4 follow-ups
+
+Deferred by the M3/M4 gates; none blocks M3 or M4. Each lands with the task or module in its
+target column. Sources: [M3-M4 security gate](../reviews/M3-M4-security-gate.md) §3–§4 (G-*,
+PR numbers), [M3-M4 tech-lead gate](../reviews/M3-M4-tech-lead-gate.md) (FU*, QA decisions) and
+[M3-M4 QA](../reviews/M3-M4-QA.md) §4 (D-*). Items marked **pre-enable** must hold before
+`module_incomes` / `module_expenses` are ON in a shared environment
+([runbook §5](../runbooks/incomes-expenses.md#5-enable-module_incomes-and-module_expenses-in-a-shared-environment)).
+
+| ID | Item | Owner | Target |
+|---|---|---|---|
+| #97 FU-2 | **Contract text: dates before 2026 ⇒ `400 out_of_range`.** `createIncome`, `updateIncome`, `getIncomeDefaults` (`on`), `createExpense`, `updateExpense` and `listExpenseCategories` (`on`) say "before 2022-01-01"; the server refuses every date before the first parameter set (2026-01-01), and a date outside the regime window answers `422 regime_not_active` first. Also fix the served message ("anterior a 2022") and `fiscal.MinRecordDate`'s doc. Documented in [incomes](../modules/incomes.md#date-limits) | architect (+ backend-sr for the message) | Next contract re-freeze |
+| G-1, M1-17 G-3, P0-30 D-6, S-11 | `Cache-Control: no-store` on error responses: declare it on the shared error responses and set it in `platform/httperr.Write` (record bodies already have it; the M3/M4 errors declare it optional) | architect + backend-sr | Next contract re-freeze (with #97 FU-2) |
+| FU1, FU2 | Incomes/expenses duplication (root cause of tech-lead H1/H2): extract the record shell to `core/records` (mobile) and `internal/kernel/records` (backend: cursor codec, `canonicalID`, description normalization, audit, error tables) | tech-lead + frontend-sr / backend-sr | `/refactor` before M6 |
+| FU3 | Income *Guardar y crear otro* keeps the withholdings section open; expenses resets it | frontend-sr | With FU1 |
+| G-2, #83 FU | `FOR SHARE` on the taxpayer row in `Delete` (incomes and expenses) | backend-sr | Next records touch |
+| #83 FU | Remove the PK-collision retry loop once the advisory lock is proven alone | backend-sr | Next records touch |
+| #93 FU-2 | Inject the clock into `access.NewPolicy` in `newExpensesModule` | backend-sr | Next records touch |
+| #67 nit | `fiscal.MinRecordDate` is an exported mutable `var` | backend-sr | Next kernel touch |
+| #64 FU2 | Immutability trigger on `user_id` / `taxpayer_id` of records (grants already block `cc_app`) | db-sr | M9 hardening |
+| #91 note 2 | New constraints on populated tables use `NOT VALID` + `VALIDATE` | db-sr | Standing rule |
+| #66 F5, F6 | `PeriodTotals` bound; es-MX vs English example messages | architect | Next contract re-freeze |
+| #85 FU | Form date labels keep the first regime's basis when a PM switches 601 ↔ 626 | frontend-sr | M3/M4 UX polish |
+| #99 FU 1–4 | Failed delete hidden behind a pending Undo; Prism mock suites not in CI; "5 gastos" hard-coded; withholding suggestions not prefilled | frontend-sr (1, 3, 4), devops-sr (2) | M3/M4 UX polish; CI backlog |
+| D-1 | IVA note for cash over the limit shown before the override, while the server warns only with it: show it only with the override, or have MODULE-expenses §2.5 always return the warning | pm + frontend-sr | M3/M4 UX polish |
+| D-5 | 8 % border rate offered with the regime's border option off | pm | M3/M4 UX polish |
+| D-6 | Regime filter reset on month change; empty-month copy when other months have records | pm + frontend-sr | M3/M4 UX polish |
+| D-7 | 612 filter chip clipped: needs a short regime name in the catalog/contract | architect + pm | Contract 0.7 |
+| D-9 | Onboarding starts every regime this month, so earlier records answer `422 regime_not_active`: ask the start month (or default to January) | pm | M2 follow-up |
+| P-8, #64 FU1, #65, #67, #91 note 1 | **Pre-enable (product).** CPA review: income basis of 620/622/624, booking dates, category catalog, cash rule and LIVA 5 creditable IVA, override on cash over the limit ([CPA-REVIEW.md](../reviews/CPA-REVIEW.md)) | owner + CPA | Before launch |
 
 ### M5 — Tax Engine (`module_tax_engine`)
 
