@@ -26,9 +26,9 @@ import (
 // and get a taxpayer.
 
 const (
-	incomeTaxpayerA  = "0199d4a2-8f00-7c44-a1b2-3c4d5e6f7c01" // Ana's física: 612 since 2025-01, 625 (lodging) since 2026-01
+	incomeTaxpayerA  = "0199d4a2-8f00-7c44-a1b2-3c4d5e6f7c01" // Ana's física: 612 since 2025-01 (backdated), 625 (lodging) since 2026-01
 	incomeTaxpayerB  = "0199d4a2-8f00-7c44-a1b2-3c4d5e6f7c02" // Bea's física: 612 since 2026-01
-	incomeTaxpayerPM = "0199d4a2-8f00-7c44-a1b2-3c4d5e6f7c03" // Ana's moral: 601 since 2025-01 (accrual)
+	incomeTaxpayerPM = "0199d4a2-8f00-7c44-a1b2-3c4d5e6f7c03" // Ana's moral: 601 since 2025-01 (backdated; accrual)
 	incomeFolio      = "6F3B2C1D-8A4E-4B7F-9C2D-1E5A7B9C3D4F"
 	incomeNote       = "Diseño de logotipo"
 )
@@ -92,9 +92,9 @@ func incomeWarnings(i gen.Income) []string {
 	return out
 }
 
-// incomeActors signs Ana and Bea up. Ana's 612 started in 2025, so a 2025
-// date reaches the parameter check (no set before 2026) rather than the
-// regime window.
+// incomeActors signs Ana and Bea up. Ana's 612 and 601 are backdated to
+// 2025 (the API starts no regime before 2026-01), so a 2025 date reaches the
+// parameter check (no set before 2026) rather than the regime window.
 type incomeActors struct {
 	ana, bea, anaID string
 }
@@ -105,9 +105,11 @@ func (e contractEnv) incomeActors(t *testing.T, c *contracttest.Contract) income
 	bea := e.signUp(t, beaEmail, otherSample).Tokens.AccessToken
 	token := ana.Tokens.AccessToken
 	e.createIncomeTaxpayer(t, c, token, incomeTaxpayerA, "fisica", rfcAna,
-		`{"regime_code":"612","start_period":"2025-01"}`,
+		`{"regime_code":"612","start_period":"2026-01"}`,
 		`{"regime_code":"625","start_period":"2026-01","options":{"activities":["lodging"]}}`)
-	e.createIncomeTaxpayer(t, c, token, incomeTaxpayerPM, "moral", rfcMoral, `{"regime_code":"601","start_period":"2025-01"}`)
+	e.createIncomeTaxpayer(t, c, token, incomeTaxpayerPM, "moral", rfcMoral, `{"regime_code":"601","start_period":"2026-01"}`)
+	e.backdateRegime(t, incomeTaxpayerA, "612", "2025-01")
+	e.backdateRegime(t, incomeTaxpayerPM, "601", "2025-01")
 	e.createIncomeTaxpayer(t, c, bea, incomeTaxpayerB, "fisica", rfcOther, `{"regime_code":"612","start_period":"2026-01"}`)
 	return incomeActors{ana: token, bea: bea, anaID: ana.User.Id.String()}
 }

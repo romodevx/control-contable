@@ -212,6 +212,69 @@ void main() {
       expect(find.text('605 · Régimen 605'), findsOneWidget);
     });
 
+    testWidgets('asks from which month the regime counts; this month by '
+        'default, an earlier one when picked (M5-29 QA D2)', (tester) async {
+      await pumpSettings(tester);
+      await tapText(tester, 'Agregar régimen');
+
+      expect(
+        find.text('¿Desde qué mes tributas en este régimen?'),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'Solo podrás registrar ingresos y gastos desde el mes que elijas. '
+          'Si ya tributabas antes de este mes, elige el mes en que empezaste, '
+          'o enero de 2026 si empezaste antes de 2026.',
+        ),
+        findsOneWidget,
+        reason: 'the hint names what an earlier start is for and the floor',
+      );
+      await _pick(tester, '605');
+      await tapText(tester, 'octubre de 2026');
+      await tapText(tester, 'marzo de 2026');
+      await tapText(tester, 'Agregar régimen');
+
+      expect(harness.repository.addedStarts, ['2026-03']);
+      expect(
+        harness.repository.taxpayers.single.regimes.last.startPeriod,
+        '2026-03',
+      );
+    });
+
+    testWidgets('re-adding an ended regime offers no month: it reopens from '
+        'its original start, which the server keeps (OQ-5)', (tester) async {
+      final withEnded = taxpayer(
+        regimes: [
+          heldRegime('612'),
+          heldRegime('605', startPeriod: '2026-02', endPeriod: '2026-06'),
+        ],
+      );
+      await pumpSettings(tester, of: withEnded);
+      await tapText(tester, 'Agregar régimen');
+      await _pick(tester, '605');
+
+      expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+      expect(
+        find.text(
+          'Lo reactivamos desde febrero de 2026, el mes en que empezó.',
+        ),
+        findsOneWidget,
+      );
+      await tapText(tester, 'Agregar régimen');
+
+      expect(harness.repository.addedStarts, [null]);
+    });
+
+    testWidgets('this month is left to the server', (tester) async {
+      await pumpSettings(tester);
+      await tapText(tester, 'Agregar régimen');
+      await _pick(tester, '605');
+      await tapText(tester, 'Agregar régimen');
+
+      expect(harness.repository.addedStarts, [null]);
+    });
+
     testWidgets('a regime with options goes through its options page', (
       tester,
     ) async {

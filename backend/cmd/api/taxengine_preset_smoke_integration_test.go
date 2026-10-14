@@ -64,7 +64,7 @@ func TestPresetSmoke_taxEngineReachableOnlyWhenThePresetIncludesIt(t *testing.T)
 
 	token := env.signUp(t, signUpEmail, acceptableSample).Tokens.AccessToken
 	rec := env.do(env.send(http.MethodPost, "/v1/taxpayers",
-		createJSON("", "fisica", rfcAna, "Ana", `{"regime_code":"612","start_period":"2025-01"}`), token))
+		createJSON("", "fisica", rfcAna, "Ana", `{"regime_code":"612","start_period":"2026-01"}`), token))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	base := "/v1/taxpayers/" + decodeTaxpayer(t, rec).Id.String()
 

@@ -474,6 +474,67 @@ void main() {
     });
   });
 
+  group('start month (M5-29 QA D2: mid-year onboarding)', () {
+    test('defaults to the current Mexico City month, offers every month back '
+        'to January 2026, and leaves the default to the server', () async {
+      fillIdentity();
+
+      expect(flow.startPeriod, '2026-12', reason: '03:00 UTC is Dec 31');
+      expect(flow.startPeriodChoices.first, '2026-12');
+      expect(flow.startPeriodChoices.last, '2026-01');
+      await flow.submitRegimes([_byCode(fisicaCatalog, '626')]);
+
+      expect(
+        repository.creates.single.regimes.single.startPeriod,
+        isNull,
+        reason:
+            'the current month is the server default; omitting it '
+            'avoids a clock-skew out_of_range at a month boundary',
+      );
+    });
+
+    test('an earlier month is sent for every chosen regime', () async {
+      fillIdentity();
+      flow.chooseStartPeriod('2026-01');
+
+      await flow.submitRegimes([
+        _byCode(fisicaCatalog, '626'),
+        _byCode(fisicaCatalog, '605'),
+      ]);
+
+      expect(repository.creates.single.regimes.map((r) => r.startPeriod), [
+        '2026-01',
+        '2026-01',
+      ]);
+    });
+
+    test('going back keeps the chosen month', () {
+      fillIdentity();
+      flow.chooseStartPeriod('2026-03');
+
+      expect(flow.back(), isTrue);
+      flow.submitIdentity(displayName: 'Ana', rfc: 'GOMA800101AB6');
+
+      expect(flow.startPeriod, '2026-03');
+    });
+
+    test('400 regimes.N.start_period: back to the regimes with a notice about '
+        'the month', () async {
+      fillIdentity();
+      flow.chooseStartPeriod('2026-01');
+      repository.createAnswers.add(
+        ApiValidationFailure([
+          detail('regimes.0.start_period', 'out_of_range'),
+        ]),
+      );
+
+      await flow.submitRegimes([_byCode(fisicaCatalog, '626')]);
+
+      expect(flow.step, OnboardingStep.regimes);
+      expect(flow.notice, OnboardingNotice.startPeriodRejected);
+    });
+  });
+
   group('after create: warnings (non-blocking)', () {
     Future<void> createWith(List<Warning> warnings) async {
       fillIdentity();

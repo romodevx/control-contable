@@ -859,6 +859,30 @@ abstract class AppLocalizations {
   /// **'Elige el régimen de la empresa. Una persona moral tiene un solo régimen a la vez.'**
   String get onboardingRegimesIntroMoral;
 
+  /// Start-month picker of the regimes step when one regime is chosen (persona moral, or adding one).
+  ///
+  /// In es, this message translates to:
+  /// **'¿Desde qué mes tributas en este régimen?'**
+  String get onboardingStartPeriodLabelSingle;
+
+  /// Start-month picker of the regimes step for a persona física (several regimes, one start month).
+  ///
+  /// In es, this message translates to:
+  /// **'¿Desde qué mes tributas en estos regímenes?'**
+  String get onboardingStartPeriodLabelMany;
+
+  /// Always-visible hint under the start-month picker (M5-29 QA D2).
+  ///
+  /// In es, this message translates to:
+  /// **'Solo podrás registrar ingresos y gastos desde el mes que elijas. Si ya tributabas antes de este mes, elige el mes en que empezaste, o enero de 2026 si empezaste antes de 2026.'**
+  String get onboardingStartPeriodHint;
+
+  /// Form notice: the server refused the start month (400 out_of_range).
+  ///
+  /// In es, this message translates to:
+  /// **'Ese mes no se puede elegir. Elige un mes entre enero de 2026 y el mes actual.'**
+  String get onboardingStartPeriodRejected;
+
   /// Name of the regime selection in the error summary.
   ///
   /// In es, this message translates to:
@@ -1431,7 +1455,7 @@ abstract class AppLocalizations {
   /// Intro of the add-regime step.
   ///
   /// In es, this message translates to:
-  /// **'Elige el régimen que vas a agregar. Cuenta a partir de este mes.'**
+  /// **'Elige el régimen que vas a agregar y el mes desde el que tributas en él.'**
   String get addRegimeIntro;
 
   /// Nothing left to add.
@@ -1439,6 +1463,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ya tiene todos los regímenes disponibles para su tipo de persona.'**
   String get addRegimeNoneLeft;
+
+  /// Add-regime step: the picked regime was ended before, so it reopens from its original start month and no month is asked (OQ-5).
+  ///
+  /// In es, this message translates to:
+  /// **'Lo reactivamos desde {month}, el mes en que empezó.'**
+  String addRegimeReopensFrom(String month);
 
   /// Confirmation after adding a regime.
   ///

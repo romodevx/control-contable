@@ -550,6 +550,22 @@
   "@onboardingRegimesIntroMoral": {
     "description": "Step 3 explanation for a persona moral (single-select)."
   },
+  "onboardingStartPeriodLabelSingle": "¿Desde qué mes tributas en este régimen?",
+  "@onboardingStartPeriodLabelSingle": {
+    "description": "Start-month picker of the regimes step when one regime is chosen (persona moral, or adding one)."
+  },
+  "onboardingStartPeriodLabelMany": "¿Desde qué mes tributas en estos regímenes?",
+  "@onboardingStartPeriodLabelMany": {
+    "description": "Start-month picker of the regimes step for a persona física (several regimes, one start month)."
+  },
+  "onboardingStartPeriodHint": "Solo podrás registrar ingresos y gastos desde el mes que elijas. Si ya tributabas antes de este mes, elige el mes en que empezaste, o enero de 2026 si empezaste antes de 2026.",
+  "@onboardingStartPeriodHint": {
+    "description": "Always-visible hint under the start-month picker (M5-29 QA D2)."
+  },
+  "onboardingStartPeriodRejected": "Ese mes no se puede elegir. Elige un mes entre enero de 2026 y el mes actual.",
+  "@onboardingStartPeriodRejected": {
+    "description": "Form notice: the server refused the start month (400 out_of_range)."
+  },
   "onboardingRegimesLabel": "Regímenes",
   "@onboardingRegimesLabel": {
     "description": "Name of the regime selection in the error summary."
@@ -1064,13 +1080,20 @@
   "@paywallClose": {
     "description": "Closes the paywall message."
   },
-  "addRegimeIntro": "Elige el régimen que vas a agregar. Cuenta a partir de este mes.",
+  "addRegimeIntro": "Elige el régimen que vas a agregar y el mes desde el que tributas en él.",
   "@addRegimeIntro": {
     "description": "Intro of the add-regime step."
   },
   "addRegimeNoneLeft": "Ya tiene todos los regímenes disponibles para su tipo de persona.",
   "@addRegimeNoneLeft": {
     "description": "Nothing left to add."
+  },
+  "addRegimeReopensFrom": "Lo reactivamos desde {month}, el mes en que empezó.",
+  "@addRegimeReopensFrom": {
+    "description": "Add-regime step: the picked regime was ended before, so it reopens from its original start month and no month is asked (OQ-5).",
+    "placeholders": {
+      "month": { "type": "String", "example": "febrero de 2026" }
+    }
   },
   "addRegimeAdded": "Agregamos el régimen {code}.",
   "@addRegimeAdded": {

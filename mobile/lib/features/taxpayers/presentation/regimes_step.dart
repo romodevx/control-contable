@@ -11,6 +11,7 @@ import 'package:control_contable/core/widgets/estimate_legend.dart';
 import 'package:control_contable/core/widgets/load_status.dart';
 import 'package:control_contable/features/taxpayers/application/regime_catalog.dart';
 import 'package:control_contable/features/taxpayers/application/regime_wizard.dart';
+import 'package:control_contable/features/taxpayers/domain/periods.dart';
 import 'package:control_contable/features/taxpayers/presentation/onboarding_copy.dart';
 import 'package:control_contable/features/taxpayers/presentation/regime_list.dart';
 import 'package:control_contable/features/taxpayers/presentation/regime_selection_field.dart';
@@ -24,7 +25,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// grouped by what the app can do with them, each group explained in
 /// plain words, with the mandatory legend. Multi-select for a persona
 /// física, single-select for a persona moral or when adding one regime
-/// (regimes already held are not offered again).
+/// (regimes already held are not offered again). Then the month the
+/// regimes start in: this month by default, back to January 2026 for a
+/// user who starts using the app mid-year (M5-29 QA D2).
 class RegimesStep extends ConsumerWidget {
   /// The step of [flow].
   const new({required this.flow, super.key});
@@ -196,9 +199,67 @@ class _RegimesFormState extends State<_RegimesForm> {
               FormNotice(message: describeNotice(notice, l10n)),
             const EstimateLegend(),
             RegimeList(catalog: widget.catalog, selection: _selection),
+            _StartPeriodField(flow: _flow),
           ],
         );
       },
     );
   }
 }
+
+/// The month the chosen regimes start in, picked from a list (never out of
+/// range), with an always-visible hint: records and estimates exist only
+/// from that month, so a user who already paid taxes earlier picks the
+/// month they started. One month for every regime of the step. Re-adding
+/// an ended regime asks nothing: it reopens from its original start.
+class _StartPeriodField extends StatelessWidget {
+  const new({required this.flow});
+
+  final RegimeWizard flow;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final months = MaterialLocalizations.of(context);
+    final reopenedStart = flow.reopenedStartPeriod;
+    if (reopenedStart != null) {
+      return Text(
+        l10n.addRegimeReopensFrom(
+          months.formatMonthYear(periodMonth(reopenedStart)),
+        ),
+      );
+    }
+    final label = flow.singleRegime
+        ? l10n.onboardingStartPeriodLabelSingle
+        : l10n.onboardingStartPeriodLabelMany;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: AppSpacing.xxs),
+        Semantics(
+          label: label,
+          child: DropdownButtonFormField<String>(
+            initialValue: flow.startPeriod,
+            isExpanded: true,
+            decoration: InputDecoration(
+              helperText: l10n.onboardingStartPeriodHint,
+              helperMaxLines: _hintLines,
+            ),
+            items: [
+              for (final period in flow.startPeriodChoices)
+                DropdownMenuItem(
+                  value: period,
+                  child: Text(months.formatMonthYear(periodMonth(period))),
+                ),
+            ],
+            onChanged: (period) => flow.chooseStartPeriod(period!),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Lines the start-month hint may take before it wraps no further.
+const int _hintLines = 4;

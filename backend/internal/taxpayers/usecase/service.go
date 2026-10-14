@@ -14,9 +14,12 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/taxpayers/domain"
 )
 
-// catalogFloor is the first period the regime catalog covers (§2.6, the
-// taxpayer_regimes_start_period_valid CHECK).
-var catalogFloor = mustPeriod("2022-01")
+// startFloor is the earliest start a regime may be given: January of the
+// first fiscal year with tax parameters (taxengine/params/data/2026). A
+// month before it could hold no record (no rate covers it) nor an estimate.
+// The database CHECK taxpayer_regimes_start_period_valid stays at the
+// catalog's 2022-01, so rows stored before this floor remain valid.
+var startFloor = mustPeriod("2026-01")
 
 // Deps are the ports the taxpayers use cases need. Each use case type uses
 // the subset it needs; cmd/api wires one Deps for all of them.
@@ -98,7 +101,7 @@ func (s service) findWritable(ctx context.Context, id string) (StoredTaxpayer, e
 }
 
 // startPeriod resolves a regime start: "" is the current month; otherwise
-// "YYYY-MM" within [catalogFloor, current month]. On failure it returns the
+// "YYYY-MM" within [startFloor, current month]. On failure it returns the
 // detail code and the cause.
 func (s service) startPeriod(raw string) (domain.Period, string, error) {
 	current := s.currentPeriod()
@@ -109,7 +112,7 @@ func (s service) startPeriod(raw string) (domain.Period, string, error) {
 	if err != nil {
 		return domain.Period{}, DetailInvalid, err
 	}
-	if start.Before(catalogFloor) || start.After(current) {
+	if start.Before(startFloor) || start.After(current) {
 		return domain.Period{}, DetailOutOfRange, ErrPeriodOutOfRange
 	}
 	return start, "", nil

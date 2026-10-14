@@ -276,6 +276,16 @@ void main() {
       expect(added.regimeCode, '606');
     });
 
+    test('addRegime sends the start month when one is chosen', () async {
+      await repository.addRegime(
+        taxpayerId: _taxpayerId,
+        regimeCode: '612',
+        startPeriod: '2026-01',
+      );
+
+      expect(lastBody(), {'regime_code': '612', 'start_period': '2026-01'});
+    });
+
     test('updateRegimeOptions patches the options', () async {
       await repository.updateRegimeOptions(
         taxpayerId: _taxpayerId,

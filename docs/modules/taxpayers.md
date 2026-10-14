@@ -211,8 +211,10 @@ migration ([runbook §3](../runbooks/taxpayers.md#3-update-the-regimes-catalog))
 
 ### Period windows
 
-- `start_period` is `YYYY-MM`, from `2022-01` up to the current month (America/Mexico_City);
-  it defaults to the current month.
+- `start_period` is `YYYY-MM`, from `2026-01` (the first fiscal year with tax parameters) up to
+  the current month (America/Mexico_City); it defaults to the current month. The app asks for it
+  in onboarding step 3 and in *Agregar régimen*, so a taxpayer who starts mid-year can pick
+  January and record and estimate the earlier months (contract 0.7.1).
 - Ending a regime (`DELETE …/regimes/{code}?end_period=`) sets `end_period`. Records already
   in that regime need `confirm=true` (`409 regime_has_records` without it), and records after
   `end_period` refuse it (`422`, `records_after_end_period`). The last active regime cannot be

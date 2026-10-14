@@ -190,6 +190,49 @@ void main() {
     });
   });
 
+  group('step 3: start month (M5-29 QA D2)', () {
+    testWidgets('asks from which month, defaults to this month and explains '
+        'that earlier months need an earlier start', (tester) async {
+      await openRegimes(tester);
+
+      expect(
+        find.text('¿Desde qué mes tributas en estos regímenes?'),
+        findsOneWidget,
+      );
+      expect(find.text('octubre de 2026'), findsOneWidget);
+      expect(
+        find.textContaining('elige el mes en que empezaste'),
+        findsOneWidget,
+      );
+      await _pick(tester, '626');
+      await tapText(tester, _create);
+
+      expect(
+        harness.repository.creates.single.regimes.single.startPeriod,
+        isNull,
+        reason: 'this month is the server default',
+      );
+    });
+
+    testWidgets('a user onboarding in October picks January', (tester) async {
+      await openRegimes(tester, card: 'Persona moral', rfc: 'ABC680524P76');
+      expect(
+        find.text('¿Desde qué mes tributas en este régimen?'),
+        findsOneWidget,
+      );
+      await _pick(tester, '626');
+
+      await tapText(tester, 'octubre de 2026');
+      await tapText(tester, 'enero de 2026');
+      await tapText(tester, _create);
+
+      expect(
+        harness.repository.creates.single.regimes.single.startPeriod,
+        '2026-01',
+      );
+    });
+  });
+
   group('step 4: per-regime options', () {
     testWidgets('606 is prefilled blind_35; 625 asks for activities with none '
         'preselected and shows its boolean defaults', (tester) async {

@@ -100,7 +100,7 @@ func TestAddRegime_Refusals(t *testing.T) {
 		{"bad options", false, taxpayerA, usecase.RegimeInput{Code: "625", Options: map[string]domain.OptionValue{
 			"activities": domain.ListOption(nil), "extra": domain.BoolOption(true)}}, apperr.CodeValidationFailed, domain.ErrOptionValue,
 			[][2]string{{"options.extra", usecase.DetailUnknownOption}, {"options.activities", usecase.DetailInvalidOption}}},
-		{"start before the floor", false, taxpayerA, usecase.RegimeInput{Code: "606", Start: "2021-12"}, apperr.CodeValidationFailed,
+		{"start before the first parameter year", false, taxpayerA, usecase.RegimeInput{Code: "606", Start: "2025-12"}, apperr.CodeValidationFailed,
 			usecase.ErrPeriodOutOfRange, [][2]string{{"start_period", usecase.DetailOutOfRange}}},
 		{"start in the future", false, taxpayerA, usecase.RegimeInput{Code: "606", Start: "2026-11"}, apperr.CodeValidationFailed,
 			usecase.ErrPeriodOutOfRange, [][2]string{{"start_period", usecase.DetailOutOfRange}}},
@@ -139,19 +139,19 @@ func TestAddRegime_ReopensAnEndedRegimeKeepingItsStart(t *testing.T) {
 }
 
 func TestAddRegime_ReopenChecksCompatibilityOnTheStoredWindowNotTheBodyStart(t *testing.T) {
-	// 626 held 2023-01..2023-12; 606 held 2024-01..2024-06. Reopening 606 spans
-	// 2024-01..open, which never meets 626. A body start of 2023-06 must not be
+	// 626 held 2026-01..2026-02; 606 held 2026-03..2026-04. Reopening 606 spans
+	// 2026-03..open, which never meets 626. A body start of 2026-02 must not be
 	// used: it would invent an overlap with 626 (the false 23P01 of PR #57).
 	h := newHarness(t)
 	h.store.seedTaxpayer(userA, taxpayerA, domain.PersonTypeFisica, false,
-		seedRegime{code: "626", window: window(t, "2023-01", "2023-12")},
-		seedRegime{code: "606", window: window(t, "2024-01", "2024-06")},
-		seedRegime{code: "612", window: window(t, "2024-07", "")})
+		seedRegime{code: "626", window: window(t, "2026-01", "2026-02")},
+		seedRegime{code: "606", window: window(t, "2026-03", "2026-04")},
+		seedRegime{code: "612", window: window(t, "2026-05", "")})
 
-	got, err := h.regimes.Add(t.Context(), userA, taxpayerA, usecase.RegimeInput{Code: "606", Start: "2023-06"})
+	got, err := h.regimes.Add(t.Context(), userA, taxpayerA, usecase.RegimeInput{Code: "606", Start: "2026-02"})
 
 	require.NoError(t, err)
-	assert.Equal(t, window(t, "2024-01", ""), got.Window)
+	assert.Equal(t, window(t, "2026-03", ""), got.Window)
 }
 
 func TestAddRegime_ReopenStillRefusesARealOverlap(t *testing.T) {

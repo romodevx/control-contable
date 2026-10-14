@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Control Contable API
-  version: 0.7.0
+  version: 0.7.1
   summary: Monthly IVA and provisional ISR estimates for Mexican taxpayers.
   description: |
     Spec-first contract (single source of truth). Server stubs (oapi-codegen),
@@ -596,7 +596,7 @@ paths:
     post:
       tags: [Taxpayers]
       operationId: createTaxpayer
-      x-frozen: sha256:46dbd5f0d21eb4c4805071f4a8174ff8fa1bc521cd62aff5db39a43002a6ae3f
+      x-frozen: sha256:af3025c4a46145a86e9ff8f7ad164c94c88529c418668d6f834c14cdc496b53b
       summary: Create a taxpayer with its regimes and options in one transaction (onboarding)
       description: >-
         Onboarding order (OD-3): person type, then RFC and display name, then regimes, then
@@ -628,8 +628,8 @@ paths:
         `rfc_format`, `rfc_date`, `rfc_generic`;
         `regimes.N.regime_code` → `not_for_person_type`, `duplicate` (same code twice in the
         body); `regimes.N.options.<key>` → `unknown_option`, `invalid_option`, `required`;
-        `regimes.N.start_period` → `out_of_range` (allowed `2022-01` … the current month,
-        America/Mexico_City).
+        `regimes.N.start_period` → `out_of_range` (allowed `2026-01`, the first fiscal year
+        with tax parameters, … the current month, America/Mexico_City).
 
 
         Regime compatibility (`regime_compatibility`): an overlapping pair the catalog marks
@@ -994,11 +994,12 @@ paths:
     post:
       tags: [Taxpayers]
       operationId: addTaxpayerRegime
-      x-frozen: sha256:7a17a2a0fee24f9b38b47178320343403a9f8bcbb28542589f2601815fe73867
+      x-frozen: sha256:7235ffd91972db345773b2cff01594b2c65bd77c255e38bb25bc9141bf7f22cb
       summary: Add a regime to a taxpayer (or reopen an ended one)
       description: >-
         `start_period` defaults to the current month (America/Mexico_City); allowed
-        `2022-01` … the current month (`out_of_range`). Options are validated against the
+        `2026-01` (the first fiscal year with tax parameters) … the current month
+        (`out_of_range`). Options are validated against the
         regime's `option_defs` (omitted options with a default are filled; same
         `details[].code` values as `createTaxpayer`, with `options.<key>` paths). A code not
         in the catalog for the taxpayer's person type answers `400` (`regime_code` /
@@ -4124,7 +4125,7 @@ components:
           start_period: '2026-01'
           end_period: null
     TaxpayerRegimeCreate:
-      x-frozen: sha256:f6b36871609870c696644c73ccb13280789eab095e021e23b48724ca265c79dd
+      x-frozen: sha256:773b5225401cc614ee28351b2090799919b56d4a198edb394fbda5908e97a8c3
       type: object
       required: [regime_code]
       additionalProperties: false
@@ -4133,7 +4134,7 @@ components:
         options: { $ref: '#/components/schemas/RegimeOptions' }
         start_period:
           $ref: '#/components/schemas/Period'
-          description: Defaults to the current month (America/Mexico_City); `2022-01` … current month.
+          description: Defaults to the current month (America/Mexico_City); `2026-01` (the first fiscal year with tax parameters) … current month. A taxpayer who starts using the app mid-year sends an earlier month to record and estimate the months before.
       examples:
         - regime_code: '606'
           options: { deduction_mode: blind_35 }
