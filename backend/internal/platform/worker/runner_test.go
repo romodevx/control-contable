@@ -37,6 +37,7 @@ type fakeElector struct {
 	resigned  int
 	resignErr error
 	onResign  func()
+	onTry     func(ctx context.Context) // runs inside TryLead, outside mu
 }
 
 func (f *fakeElector) set(lead bool, err error) {
@@ -45,7 +46,10 @@ func (f *fakeElector) set(lead bool, err error) {
 	f.lead, f.err = lead, err
 }
 
-func (f *fakeElector) TryLead(context.Context) (bool, error) {
+func (f *fakeElector) TryLead(ctx context.Context) (bool, error) {
+	if f.onTry != nil {
+		f.onTry(ctx)
+	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.tries++
@@ -135,7 +139,7 @@ func (h *harness) beat(t *testing.T) {
 func (h *harness) stop(t *testing.T) error {
 	t.Helper()
 	h.cancel()
-	err, ok := <-h.done // t.Context is already done in Cleanup, so no select on it
+	err, ok := <-h.done // fake elector: Run returns as soon as its loops do
 	if ok {
 		close(h.done)
 	}
@@ -144,13 +148,7 @@ func (h *harness) stop(t *testing.T) error {
 
 func receive(t *testing.T, runs <-chan context.Context) context.Context {
 	t.Helper()
-	select {
-	case ctx := <-runs:
-		return ctx
-	case <-t.Context().Done():
-		t.Fatal("the job did not run")
-		return nil
-	}
+	return workertest.Await(t, runs, "the job to run")
 }
 
 func TestNewRunner_requiresARegistryAndAnElector(t *testing.T) {
@@ -331,6 +329,33 @@ func TestRunner_shutdownWaitsForRunningJobsBeforeResigning(t *testing.T) {
 	assert.True(t, h.ticks.Stopped(jobInterval))
 	assert.False(t, h.runner.Leading())
 	assert.Contains(t, h.logs.String(), `"msg":"worker stopped"`)
+}
+
+// Shutdown must not abort an election in flight: a leader whose lock check is
+// cancelled loses its session instead of resigning, and PostgreSQL releases
+// the lock only when it notices, after Run returned, so the standby's next
+// attempt can still find it taken (regression: TestWorker_aStoppedLeaderHandsOver
+// hung in CI).
+func TestRunner_shutdownLetsAnElectionInFlightFinishThenResigns(t *testing.T) {
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	tryCtxErr := make(chan error, 1)
+	e := &fakeElector{lead: true}
+	e.onTry = func(ctx context.Context) {
+		close(entered)
+		<-release
+		tryCtxErr <- ctx.Err()
+	}
+	h := start(t, e)
+	workertest.Await(t, entered, "the first election")
+
+	h.cancel()
+	close(release)
+	require.NoError(t, h.stop(t))
+
+	assert.NoError(t, workertest.Await(t, tryCtxErr, "the election to end"), "the election in flight was cancelled by the shutdown")
+	_, resigned := e.counts()
+	assert.Equal(t, 1, resigned)
 }
 
 func TestRunner_reportsAFailedResign(t *testing.T) {
