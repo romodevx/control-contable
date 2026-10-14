@@ -144,6 +144,21 @@ void main() {
       expect(find.byType(AlertDialog), findsOneWidget);
     });
 
+    testWidgets('a wrong password is announced to screen readers, '
+        'every time', (tester) async {
+      harness.profile.deleteError = const ApiUnauthorized();
+      await openDialog(tester);
+      tester.takeAnnouncements();
+
+      for (var attempt = 1; attempt <= 2; attempt++) {
+        await tester.enterText(inputLabeled(_password), syntheticPassword());
+        await confirm(tester);
+
+        final announced = tester.takeAnnouncements().map((a) => a.message);
+        expect(announced, contains(_wrongPassword), reason: 'try $attempt');
+      }
+    });
+
     testWidgets('too many tries say how long to wait', (tester) async {
       harness.profile.deleteError = const ApiRateLimited(Duration(minutes: 5));
       await openDialog(tester);

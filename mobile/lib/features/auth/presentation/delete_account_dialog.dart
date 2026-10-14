@@ -15,6 +15,7 @@ import 'package:control_contable/features/auth/presentation/auth_copy.dart';
 import 'package:control_contable/features/auth/presentation/delete_busy_label.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -95,12 +96,24 @@ class _DeleteAccountDialogState extends ConsumerState<DeleteAccountDialog> {
     router.go(AuthRoutes.goodbye);
   }
 
+  /// Focus alone is silent for TalkBack and VoiceOver (it moves input
+  /// focus, not the screen reader's), and an unchanged error is not read
+  /// again: the verdict is announced on every wrong try.
   void _rejectPassword(AppLocalizations l10n) {
     if (!mounted) return;
+    final message = l10n.accountDeleteWrongPassword;
     _password
       ..text.clear()
-      ..showError(CustomFieldError(l10n.accountDeleteWrongPassword));
+      ..showError(CustomFieldError(message));
     _password.focusNode.requestFocus();
+    unawaited(
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        message,
+        Directionality.of(context),
+        assertiveness: Assertiveness.assertive,
+      ),
+    );
   }
 
   void _showNotice(String? message) {
