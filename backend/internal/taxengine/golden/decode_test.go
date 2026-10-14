@@ -49,8 +49,8 @@ expected:
     definitive_excluded: "0.00"
     net: "2133.33"
   lines:
-    - {tax: isr, code: isr.income_ytd, amount: "90000.00"}
-    - {tax: iva, code: iva.net, amount: "2133.33"}
+    - {tax: isr, code: isr.income_ytd, op: input, amount: "90000.00"}
+    - {tax: iva, code: iva.net, op: result, amount: "2133.33"}
   disclaimers: [deductibility_claimed]
 `
 
@@ -121,8 +121,8 @@ func TestDecodeReadsEveryField(t *testing.T) {
 		WithheldFromTaxpayer: cents(t, "1066.67"),
 	}, *w.IVA)
 	assert.Equal(t, []golden.LineWant{
-		{Tax: domain.TaxISR, Code: "isr.income_ytd", Amount: cents(t, "90000.00")},
-		{Tax: domain.TaxIVA, Code: "iva.net", Amount: cents(t, "2133.33")},
+		{Tax: domain.TaxISR, Code: "isr.income_ytd", Op: domain.OpInput, Amount: cents(t, "90000.00")},
+		{Tax: domain.TaxIVA, Code: "iva.net", Op: domain.OpResult, Amount: cents(t, "2133.33")},
 	}, w.Lines)
 	assert.Equal(t, []domain.DisclaimerCode{domain.DisclaimerDeductibilityClaimed}, w.Disclaimers)
 	// Absent lists are asserted empty, never skipped: an authored case
@@ -200,7 +200,9 @@ func TestDecodeRejectsWhatAHandAuthorCouldGetWrong(t *testing.T) {
 		{"isr not asserted", "taxes: [isr, iva]", "taxes: [iva]", golden.ErrInvalidCase},
 		{"withheld_to_remit not asserted", "  isr: \"150.96\"\n", "  isr: \"150.96\"\n  withheld_to_remit: \"1.00\"\n", golden.ErrInvalidCase},
 		{"iva net disagrees with its components", `net: "2133.33"`, `net: "2133.34"`, golden.ErrInvalidCase},
-		{"no lines", "  lines:\n    - {tax: isr, code: isr.income_ytd, amount: \"90000.00\"}\n    - {tax: iva, code: iva.net, amount: \"2133.33\"}\n", "", golden.ErrInvalidCase},
+		{"no lines", "  lines:\n    - {tax: isr, code: isr.income_ytd, op: input, amount: \"90000.00\"}\n    - {tax: iva, code: iva.net, op: result, amount: \"2133.33\"}\n", "", golden.ErrInvalidCase},
+		{"line with an unknown op", "op: result", "op: divide", golden.ErrInvalidCase},
+		{"line without an op", "op: result, ", "", golden.ErrInvalidCase},
 		{"line of an unasserted tax", "{tax: iva, code: iva.net", "{tax: withholding, code: iva.net", golden.ErrInvalidCase},
 		{"line without a code", "code: iva.net", "code: \"\"", golden.ErrInvalidCase},
 		{"unknown disclaimer", "[deductibility_claimed]", "[maybe]", golden.ErrInvalidCase},

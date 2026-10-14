@@ -82,9 +82,9 @@ func baseCase(t *testing.T) golden.Case {
 	require.NoError(t, err)
 	c.PendingStrategy = false
 	c.Want.Lines = []golden.LineWant{
-		{Tax: domain.TaxISR, Code: "isr.income_ytd", Amount: 9000000},
-		{Tax: domain.TaxISR, Code: "isr.note", Amount: 0},
-		{Tax: domain.TaxIVA, Code: "iva.net", Amount: 213333},
+		{Tax: domain.TaxISR, Code: "isr.income_ytd", Op: domain.OpInput, Amount: 9000000},
+		{Tax: domain.TaxISR, Code: "isr.note", Op: domain.OpInfo, Amount: 0},
+		{Tax: domain.TaxIVA, Code: "iva.net", Op: domain.OpResult, Amount: 213333},
 	}
 	return c
 }
@@ -189,8 +189,8 @@ func TestEvaluateReportsEveryMismatch(t *testing.T) {
 		"status: want complete, got partial",
 		"isr: want 150.96, got 150.97",
 		"iva: want",
-		"line 1: want isr isr.income_ytd 90000.00, got isr isr.income_ytd 90000.01",
-		"line 4: unexpected iva iva.extra 0.01",
+		"line 1: want isr isr.income_ytd input 90000.00, got isr isr.income_ytd input 90000.01",
+		"line 4: unexpected iva iva.extra add 0.01",
 		"disclaimers: want [deductibility_claimed], got []",
 		"cpa_topics: want [], got [cross_regime_iva_netting]",
 		"line 4 iva.extra: no legal basis",
@@ -205,7 +205,17 @@ func TestEvaluateReportsAMissingLine(t *testing.T) {
 
 	o := evaluate(baseCase(t), &fakeStrategy{estimate: got})
 
-	assert.Contains(t, strings.Join(o.Mismatches, "\n"), "line 3: missing iva iva.net 2133.33")
+	assert.Contains(t, strings.Join(o.Mismatches, "\n"), "line 3: missing iva iva.net result 2133.33")
+}
+
+func TestEvaluateComparesTheOperationOfALine(t *testing.T) {
+	got := matching()
+	got.Lines[0].Operation = domain.OpAdd
+
+	o := evaluate(baseCase(t), &fakeStrategy{estimate: got})
+
+	assert.Contains(t, strings.Join(o.Mismatches, "\n"),
+		"line 1: want isr isr.income_ytd input 90000.00, got isr isr.income_ytd add 90000.00")
 }
 
 func TestEvaluateComparesOnlyTheAssertedTaxes(t *testing.T) {
