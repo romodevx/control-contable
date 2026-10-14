@@ -64,8 +64,16 @@ var (
 	}
 	basisRate8 = []Citation{
 		{
-			Law: "Decreto de estímulos fiscales región fronteriza norte (DOF 31-12-2018)", Article: "11",
-			Note: "crédito del 50 % del IVA; igual en la región fronteriza sur; prórroga DOF 31-12-2025",
+			Law: "Decreto de estímulos fiscales región fronteriza norte (DOF 31-12-2018)", Article: "Décimo Primero",
+			Note: "crédito del 50 % de la tasa del IVA",
+		},
+		{
+			Law: "Decreto de estímulos fiscales región fronteriza sur (DOF 30-12-2020)", Article: "Décimo",
+			Note: "crédito del 50 % de la tasa del IVA",
+		},
+		{
+			Law:     "Decreto que modifica los decretos de estímulos fiscales región fronteriza norte y sur (DOF 31-12-2025)",
+			Article: "Primero y Segundo", Note: "vigencia hasta el 31-12-2026",
 		},
 		{Law: "LIVA", Article: "1-B", Note: "IVA efectivamente cobrado"},
 	}

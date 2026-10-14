@@ -38,6 +38,14 @@ func codes(lines []domain.Line) []domain.LineCode {
 	return out
 }
 
+func articles(basis []domain.Citation) []string {
+	out := make([]string, len(basis))
+	for i, c := range basis {
+		out[i] = c.Article
+	}
+	return out
+}
+
 func lineByCode(t testing.TB, lines []domain.Line, code domain.LineCode) domain.Line {
 	t.Helper()
 	for _, l := range lines {
@@ -301,7 +309,8 @@ func TestComputeIVAOptionalLines(t *testing.T) {
 	border := lineByCode(t, lines, domain.LineIVAChargedRate8)
 	assert.Equal(t, domain.OpAdd, border.Operation)
 	assert.Equal(t, money.Cents(8_00), border.Amount)
-	assert.Contains(t, border.Basis[0].Law, "región fronteriza")
+	assert.Equal(t, []string{"Décimo Primero", "Décimo", "Primero y Segundo", "1-B"},
+		articles(border.Basis), "the border citations match the params' decree articles")
 
 	for code, want := range map[domain.LineCode]money.Cents{domain.LineIVABaseRate0: 50_00, domain.LineIVABaseExempt: 70_00} {
 		info := lineByCode(t, lines, code)
