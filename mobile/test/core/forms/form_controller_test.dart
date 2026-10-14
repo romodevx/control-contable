@@ -241,6 +241,41 @@ void main() {
     expect(amount.error, isNull);
   });
 
+  // QA M3/M4 D-8: the next record starts where prepareNext leaves it, so
+  // kept context values (any kind of field) are not unsaved changes.
+  test('after prepareNext the form is pristine until a value changes', () {
+    final date = form.dateField(label: 'Fecha', keepForNext: true)
+      ..text.text = '01/02/2026';
+    final amount = form.moneyField(label: 'Monto')..text.text = '12,34';
+    final payer = form.add(
+      ChoiceFieldController(label: 'Pagador', keepForNext: true),
+    )..value = 'moral';
+    final box = form.checkboxField(label: 'Con factura', keepForNext: true)
+      ..checked = true;
+    final set = form.add(
+      MultiChoiceFieldController(label: 'Actividades', keepForNext: true),
+    )..toggle('a');
+    final cleared = form.add(ChoiceFieldController(label: 'Tasa'))
+      ..value = '16';
+    expect(form.isDirty, isTrue);
+
+    form.prepareNext();
+    expect(form.isDirty, isFalse);
+
+    for (final change in <void Function()>[
+      () => date.text.text = '02/02/2026',
+      () => amount.text.text = '1',
+      () => payer.value = 'fisica',
+      () => box.checked = false,
+      () => set.toggle('b'),
+      () => cleared.value = '8',
+    ]) {
+      change();
+      expect(form.isDirty, isTrue);
+      form.prepareNext();
+    }
+  });
+
   test('isDirty is true once any field differs from its start', () {
     final name = form.textField(label: 'Nombre', initialText: 'Ana');
     expect(form.isDirty, isFalse);

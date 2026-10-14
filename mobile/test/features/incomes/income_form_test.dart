@@ -570,6 +570,26 @@ void main() {
       await tapText(tester, 'Descartar');
       expect(harness.location, isNot(IncomesRoutes.create));
     });
+
+    // QA M3/M4 D-8: the kept context fields of the next record are not
+    // unsaved changes; what is typed after them is.
+    testWidgets('after "Guardar y crear otro", Cancelar on the untouched '
+        'next record leaves at once; a typed value still asks', (tester) async {
+      await pumpForm(tester);
+      await typeInto(tester, _collectedOn, '05102026');
+      await fillUsI1(tester);
+      await _saveAndAnother(tester);
+
+      await typeInto(tester, _amount, '1000');
+      await tapText(tester, 'Cancelar');
+      expect(find.text('¿Descartar este ingreso?'), findsOneWidget);
+      await tapText(tester, 'Seguir editando');
+
+      await typeInto(tester, _amount, '');
+      await tapText(tester, 'Cancelar');
+      expect(find.text('¿Descartar este ingreso?'), findsNothing);
+      expect(harness.location, isNot(IncomesRoutes.create));
+    });
   });
 
   for (final brightness in Brightness.values) {
