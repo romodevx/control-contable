@@ -124,6 +124,8 @@ Map<String, Object?> estimateJson({
   'parameter_set': {'fiscal_year': 2026, 'version': 1},
   'records_fingerprint':
       '3f6c2a9e8d7b1c4f5a0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a',
+  'figures_fingerprint':
+      'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc202603',
   'engine_version': '1.0.0',
 };
 

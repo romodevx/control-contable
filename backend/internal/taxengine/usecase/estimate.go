@@ -64,7 +64,11 @@ type TaxpayerEstimate struct {
 	// and ParameterSet is an earlier year's (ADR-0002 §3).
 	ProvisionalParameters bool
 	RecordsFingerprint    string
-	EngineVersion         string
+	// FiguresFingerprint hashes the figures this estimate shows
+	// (domain.FiguresFingerprint, MODULE-history §2.4): M8 marks a viewed
+	// month changed only when it moves.
+	FiguresFingerprint string
+	EngineVersion      string
 	// Records are the period's live records the estimate read, summed over
 	// every regime (informational ones included): no contract field of the
 	// estimate, the dashboard's income vs expense view (M6-02).
@@ -201,6 +205,7 @@ func (uc *Estimator) EstimateRange(ctx context.Context, userID, taxpayerID strin
 			return nil, fmt.Errorf("taxengine: records of %s: %w", p, err)
 		}
 		est.TaxpayerID, est.DueDate = id.String(), dues[i]
+		est.FiguresFingerprint = figuresFingerprintOf(est)
 		out = append(out, est)
 	}
 	return out, nil
@@ -514,6 +519,16 @@ func fingerprintOf(p domain.Period, sel taxparams.Selection, years map[fiscal.Re
 		in.Regimes = append(in.Regimes, domain.FingerprintRegime{Input: regime, Treatment: hold.Treatment, ActiveMonths: active})
 	}
 	return domain.Fingerprint(in), nil
+}
+
+// figuresFingerprintOf hashes what est shows; it needs the due date, so it
+// runs once the estimate is complete.
+func figuresFingerprintOf(est TaxpayerEstimate) string {
+	regimes := make([]domain.RegimeEstimate, 0, len(est.Regimes))
+	for _, r := range est.Regimes {
+		regimes = append(regimes, r.RegimeEstimate)
+	}
+	return domain.FiguresFingerprint(domain.FiguresInput{Totals: est.Totals, DueDate: est.DueDate, Regimes: regimes})
 }
 
 // yearSumsThrough folds the rows of January..p into each regime's sums.

@@ -336,6 +336,28 @@ them.
 - `getTaxpayerEstimate.period` is optional (current month, America/Mexico_City); periods
   before 2026 answer `422 parameters_unavailable` (OQ-T9).
 
+## Amendment 2 (M8-03, 2026-10-14)
+
+### A2.1 Figures fingerprint
+
+Every estimate also carries `figures_fingerprint` (contract 0.9.1, required): the SHA-256 of
+a canonical text of the figures the user sees, computed by `domain.FiguresFingerprint` next
+to `Fingerprint`. Scheme `figures/1`: the due date; the totals' ISR and IVA amounts,
+withholdings to remit and total payable; per regime (sorted by key) its key, status,
+`cpa_review_pending`, withholdings to remit, ISR amount and IVA components, an absent figure
+written `-`. Versions, texts, explanations, disclaimers, breakdown lines and sub-centavo
+precision are out. M8 marks a viewed month changed only when this hash moves
+(MODULE-history §2.4, OQ-H4). Changing the scheme marks every viewed month: it needs a
+further amendment and a one-time re-baseline of `estimate_views` in the same migration. The
+golden test `TestFiguresFingerprintGolden` pins it.
+
+### A2.2 Records fingerprint ignores what never changes a figure (#98 FU1)
+
+An informational regime contributes only its key, treatment and active months: its record
+sums, options and tax inputs are no longer hashed. A `multi_enum` option is hashed as a
+sorted set. Values change once; no view was stored before M8 shipped, so nothing is
+re-baselined.
+
 ## Engine version log
 
 `domain.EngineVersion` is hashed into the records fingerprint (§5). It changes whenever a
