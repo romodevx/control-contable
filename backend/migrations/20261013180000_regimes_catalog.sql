@@ -12,9 +12,12 @@
 -- calls the last one "explanation only". explanation stays NULL until M5-19 writes the
 -- plain-language text in a forward migration.
 --
--- Where the research is silent or marked ⚠️, the row says so instead of guessing:
--- needs_cpa_review = true with a review_note (PRD Q11), and a compatibility verdict is
--- left NULL (undetermined). The M2-06 use case decides how to treat an undetermined pair.
+-- Where the research is silent, inferred or marked ⚠️, the row says so instead of
+-- guessing: needs_cpa_review = true with a review_note (PRD Q11). For a compatibility
+-- pair that means ALLOWED WITH A WARNING: allowed = true and needs_cpa_review = true,
+-- which M2-06 returns to the client as a non-blocking warning. An unverified rule never
+-- refuses a taxpayer's regimes (CHECK regime_compatibility_unverified_never_blocks);
+-- every list of open items lives in docs/reviews/CPA-REVIEW.md.
 --
 -- Global configuration, not user data (the P0-10 pattern of feature_flags):
 --   * no user_id to key a policy on, and FORCE would lock out cc_owner, the only writer;
@@ -30,16 +33,28 @@
 
 -- regime_option_defs_valid: the shape of regimes.option_defs, which must match
 -- docs/api/openapi.yaml RegimeOptionDef because GET /v1/regimes returns it as is:
---   [{key, label, type, allowed_values?, default?, required}]
---   * key: snake_case, unique in the array; label: non-blank text; required: boolean;
---   * type enum | multi_enum: allowed_values is a non-empty array of distinct strings;
---     an enum default is one of them, a multi_enum default is null (the API types
---     default as string | boolean | null);
---   * type boolean | rate: no allowed_values; a boolean default is a boolean, a rate
---     default is a DecimalRate string (never a JSON number: no floats);
+--   [{key, label, type, allowed_values?, min?, max?, default?, required}]
+--   * key: snake_case, at most 64 characters (contract ^[a-z][a-z0-9_]{0,63}$), unique in
+--     the array; label: non-blank text; required: boolean;
+--   * type enum | multi_enum: allowed_values is a non-empty array of distinct, non-empty
+--     strings (domain OptionDef); an enum default is one of them, a multi_enum default
+--     is null (the API types default as string | boolean | null); no min/max;
+--   * type boolean: no allowed_values, min or max; the default is a boolean;
+--   * type rate: inclusive bounds min and max are required DecimalRate strings with
+--     min <= max (domain OptionDef.Min/Max), no allowed_values, and a default, if any,
+--     is a DecimalRate string inside them (never a JSON number: no floats);
 --   * no other property.
 -- Each test is its own IF: SQL does not promise left-to-right evaluation of OR, and a
 -- jsonb function applied to the wrong JSON type raises instead of returning false.
+-- regime_is_decimal_rate: v is a JSON string holding a docs/api/openapi.yaml DecimalRate.
+-- A SQL NULL (absent property) is not one.
+CREATE FUNCTION regime_is_decimal_rate(v jsonb) RETURNS boolean
+  LANGUAGE sql IMMUTABLE PARALLEL SAFE
+  SET search_path = pg_catalog, pg_temp
+  RETURN coalesce(jsonb_typeof(v) = 'string' AND (v #>> '{}') ~ '^[0-9]{1,3}(\.[0-9]{1,6})?$', false);
+COMMENT ON FUNCTION regime_is_decimal_rate(jsonb) IS
+  'True when the JSON value is a string in openapi DecimalRate format (used by regime_option_defs_valid).';
+
 -- +goose StatementBegin
 CREATE FUNCTION regime_option_defs_valid(defs jsonb) RETURNS boolean
   LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
@@ -50,6 +65,8 @@ DECLARE
   opt_type text;
   allowed  jsonb;
   dflt     jsonb;
+  lo       jsonb;
+  hi       jsonb;
   seen     text[] := '{}';
 BEGIN
   IF jsonb_typeof(defs) IS DISTINCT FROM 'array' THEN
@@ -63,7 +80,7 @@ BEGIN
       RETURN false;
     END IF;
     IF EXISTS (SELECT 1 FROM jsonb_object_keys(def) AS k
-               WHERE k NOT IN ('key', 'label', 'type', 'allowed_values', 'default', 'required')) THEN
+               WHERE k NOT IN ('key', 'label', 'type', 'allowed_values', 'min', 'max', 'default', 'required')) THEN
       RETURN false;
     END IF;
     IF jsonb_typeof(def -> 'key') <> 'string'
@@ -73,6 +90,7 @@ BEGIN
       RETURN false;
     END IF;
     IF (def ->> 'key') !~ '^[a-z][a-z0-9]*(_[a-z0-9]+)*$'
+       OR length(def ->> 'key') > 64
        OR (def ->> 'key') = ANY (seen)
        OR btrim(def ->> 'label') = '' THEN
       RETURN false;
@@ -82,6 +100,11 @@ BEGIN
     opt_type := def ->> 'type';
     allowed := def -> 'allowed_values';               -- SQL NULL when absent
     dflt := nullif(def -> 'default', 'null'::jsonb);  -- absent and JSON null alike
+    lo := def -> 'min';
+    hi := def -> 'max';
+    IF opt_type <> 'rate' AND (lo IS NOT NULL OR hi IS NOT NULL) THEN
+      RETURN false;
+    END IF;
     CASE opt_type
       WHEN 'enum', 'multi_enum' THEN
         IF jsonb_typeof(allowed) IS DISTINCT FROM 'array' THEN
@@ -89,6 +112,7 @@ BEGIN
         END IF;
         IF jsonb_array_length(allowed) = 0
            OR EXISTS (SELECT 1 FROM jsonb_array_elements(allowed) AS v WHERE jsonb_typeof(v) <> 'string')
+           OR allowed @> '[""]'::jsonb
            OR (SELECT count(DISTINCT v) <> count(*) FROM jsonb_array_elements(allowed) AS v) THEN
           RETURN false;
         END IF;
@@ -105,9 +129,16 @@ BEGIN
         IF allowed IS NOT NULL THEN
           RETURN false;
         END IF;
-        -- docs/api/openapi.yaml DecimalRate.
-        IF dflt IS NOT NULL AND (jsonb_typeof(dflt) <> 'string'
-                                 OR (dflt #>> '{}') !~ '^[0-9]{1,3}(\.[0-9]{1,6})?$') THEN
+        -- docs/api/openapi.yaml DecimalRate; compared as numeric (exact), never as float.
+        IF NOT public.regime_is_decimal_rate(lo) OR NOT public.regime_is_decimal_rate(hi) THEN
+          RETURN false;
+        END IF;
+        IF (lo #>> '{}')::numeric > (hi #>> '{}')::numeric THEN
+          RETURN false;
+        END IF;
+        IF dflt IS NOT NULL AND (NOT public.regime_is_decimal_rate(dflt)
+                                 OR (dflt #>> '{}')::numeric < (lo #>> '{}')::numeric
+                                 OR (dflt #>> '{}')::numeric > (hi #>> '{}')::numeric) THEN
           RETURN false;
         END IF;
       ELSE
@@ -123,7 +154,8 @@ COMMENT ON FUNCTION regime_option_defs_valid(jsonb) IS
 
 -- regime_required_inputs_valid: the shape of regimes.required_inputs, the tax-input
 -- definitions M5-21 validates PUT .../tax-inputs against (docs/api/openapi.yaml
--- TaxInputDef): [{key, label, kind: money | rate, required}], keys unique, nothing else.
+-- TaxInputDef): [{key, label, kind: money | rate, required}], keys snake_case of at most
+-- 64 characters (openapi Regime.required_inputs) and unique, nothing else.
 -- +goose StatementBegin
 CREATE FUNCTION regime_required_inputs_valid(inputs jsonb) RETURNS boolean
   LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
@@ -150,6 +182,7 @@ BEGIN
       RETURN false;
     END IF;
     IF (def ->> 'key') !~ '^[a-z][a-z0-9]*(_[a-z0-9]+)*$'
+       OR length(def ->> 'key') > 64
        OR (def ->> 'key') = ANY (seen)
        OR btrim(def ->> 'label') = ''
        OR (def -> 'kind') NOT IN ('"money"'::jsonb, '"rate"'::jsonb) THEN
@@ -215,13 +248,15 @@ GRANT SELECT ON regimes TO cc_app;
 
 -- regime_compatibility: one row per unordered pair of distinct regimes of the same person
 -- type (regime_a < regime_b), so the matrix is complete and a lookup never misses.
--- allowed: true = may coexist, false = may not, NULL = undetermined (needs_cpa_review).
+-- allowed: true = may coexist, false = may not. needs_cpa_review = the verdict is not
+-- verified: such a pair is always allowed, and M2-06 returns review_note's subject to the
+-- client as a non-blocking warning (`reason` is the user-facing text either way).
 CREATE TABLE regime_compatibility (
   person_type      text        NOT NULL,
   regime_a         text        NOT NULL,
   regime_b         text        NOT NULL,
-  allowed          boolean,
-  reason           text        NOT NULL,  -- es-MX, user-facing when a combination is refused
+  allowed          boolean     NOT NULL,
+  reason           text        NOT NULL,  -- es-MX, user-facing: the refusal or the warning
   legal_basis      text        NOT NULL,
   source_url       text        NOT NULL,
   needs_cpa_review boolean     NOT NULL DEFAULT false,
@@ -233,7 +268,8 @@ CREATE TABLE regime_compatibility (
   FOREIGN KEY (regime_a, person_type) REFERENCES regimes (code, person_type),
   FOREIGN KEY (regime_b, person_type) REFERENCES regimes (code, person_type),
   CONSTRAINT regime_compatibility_ordered_pair CHECK (regime_a < regime_b),
-  CONSTRAINT regime_compatibility_verdict_or_review CHECK (allowed IS NOT NULL OR needs_cpa_review),
+  -- Policy: an unverified rule never blocks a taxpayer; it allows with a warning.
+  CONSTRAINT regime_compatibility_unverified_never_blocks CHECK (allowed OR NOT needs_cpa_review),
   CONSTRAINT regime_compatibility_reason_present CHECK (btrim(reason) <> ''),
   CONSTRAINT regime_compatibility_legal_basis_present CHECK (btrim(legal_basis) <> ''),
   CONSTRAINT regime_compatibility_source_url_format CHECK (source_url ~ '^https?://[^[:space:]]+$'),
@@ -241,7 +277,7 @@ CREATE TABLE regime_compatibility (
     needs_cpa_review = (review_note IS NOT NULL) AND (review_note IS NULL OR btrim(review_note) <> ''))
 );
 COMMENT ON TABLE regime_compatibility IS
-  'Complete matrix of regime pairs per person type (M2-02). allowed NULL = undetermined, pending CPA review.';
+  'Complete matrix of regime pairs per person type (M2-02). needs_cpa_review rows are allowed with a non-blocking warning.';
 -- The PK (person_type, regime_a, ...) serves the FK on regime_a; this one serves regime_b.
 CREATE INDEX regime_compatibility_regime_b_idx ON regime_compatibility (person_type, regime_b);
 
@@ -355,7 +391,8 @@ INSERT INTO regimes (code, person_type, name, treatment, periodicity, option_def
       "type": "boolean", "default": true, "required": true},
      {"key": "iva_border_region", "label": "Aplico el estímulo de IVA al 8 % en región fronteriza",
       "type": "boolean", "default": false, "required": false}]',
-   '[]', '2022-01-01', 'LISR Título III', 'https://www.diputados.gob.mx/LeyesBiblio/pdf/LISR.pdf', false, NULL),
+   '[]', '2022-01-01', 'LISR Título III', 'https://www.diputados.gob.mx/LeyesBiblio/pdf/LISR.pdf', true,
+   'Periodicidad inferida: la investigación sólo dice "en general sin pagos provisionales de ISR"; el IVA depende de las actividades.'),
   ('610', 'moral', 'Residentes en el Extranjero sin Establecimiento Permanente en México', 'informational',
    'withheld_at_source', '[]', '[]', '2022-01-01', 'LISR Título V',
    'https://www.diputados.gob.mx/LeyesBiblio/pdf/LISR.pdf', false, NULL),
@@ -395,7 +432,8 @@ INSERT INTO regimes (code, person_type, name, treatment, periodicity, option_def
       "kind": "money", "required": false},
      {"key": "ptu_paid", "label": "PTU pagada en el ejercicio", "kind": "money", "required": false},
      {"key": "prior_year_losses", "label": "Pérdidas fiscales de ejercicios anteriores",
-      "kind": "money", "required": false}]',
+      "kind": "money", "required": false},
+     {"key": "interest_withholding", "label": "Retención de ISR por intereses", "kind": "money", "required": false}]',
    '2022-01-01', 'LISR arts. 206-215', 'https://www.diputados.gob.mx/LeyesBiblio/pdf/LISR.pdf', false, NULL);
 
 -- ---------------------------------------------------------------------------------------
@@ -473,19 +511,19 @@ FROM regimes r
 WHERE r.code <> '610'
 ON CONFLICT DO NOTHING;
 
--- Personas físicas: pairs the research does not settle (undetermined, CPA review).
+-- Personas físicas: pairs the research does not settle (allowed with a warning, CPA review).
 INSERT INTO regime_compatibility (person_type, regime_a, regime_b, allowed, reason, legal_basis, source_url,
                                   needs_cpa_review, review_note)
-SELECT 'fisica', least(c.code, '621'), greatest(c.code, '621'), NULL,
-       'Combinación por confirmar con un contador.',
+SELECT 'fisica', least(c.code, '621'), greatest(c.code, '621'), true,
+       'Combinación permitida, pendiente de confirmar con un contador.',
        'LISR art. 111 (texto vigente hasta el 31-12-2021)', 'https://www.diputados.gob.mx/LeyesBiblio/pdf/LISR.pdf',
        true, 'La investigación no cubre qué otros ingresos podía tener un contribuyente del RIF (art. 111 derogado).'
 FROM unnest(ARRAY['605', '606', '607', '608', '611', '612', '614', '615', '625', '626']) AS c(code);
 
 INSERT INTO regime_compatibility (person_type, regime_a, regime_b, allowed, reason, legal_basis, source_url,
                                   needs_cpa_review, review_note)
-SELECT 'fisica', c.code, '626', NULL,
-       'Combinación por confirmar con un contador.',
+SELECT 'fisica', c.code, '626', true,
+       'Combinación permitida, pendiente de confirmar con un contador.',
        'LISR art. 113-E', 'https://www.diputados.gob.mx/LeyesBiblio/pdf/LISR.pdf',
        true, 'La investigación sólo admite sueldos e intereses junto al RESICO; no dice nada de este capítulo.'
 FROM unnest(ARRAY['607', '608', '615']) AS c(code);
@@ -508,11 +546,11 @@ INSERT INTO regime_compatibility (person_type, regime_a, regime_b, allowed, reas
    'Las personas morales del Capítulo VII del Título II (coordinados) no pueden tributar en el RESICO.',
    'LISR art. 206', 'https://www.diputados.gob.mx/LeyesBiblio/pdf/LISR.pdf');
 
--- Personas morales: pairs the research does not settle (undetermined, CPA review).
+-- Personas morales: pairs the research does not settle (allowed with a warning, CPA review).
 INSERT INTO regime_compatibility (person_type, regime_a, regime_b, allowed, reason, legal_basis, source_url,
                                   needs_cpa_review, review_note)
-SELECT 'moral', a.code, b.code, NULL,
-       'Combinación por confirmar con un contador.',
+SELECT 'moral', a.code, b.code, true,
+       'Combinación permitida, pendiente de confirmar con un contador.',
        'LISR Títulos II, III y VII', 'https://www.diputados.gob.mx/LeyesBiblio/pdf/LISR.pdf',
        true, 'La investigación no establece si estos regímenes de personas morales son excluyentes entre sí.'
 FROM unnest(ARRAY['601', '603', '620', '622', '623', '624']) AS a(code)
@@ -524,3 +562,4 @@ DROP TABLE regime_compatibility;
 DROP TABLE regimes;
 DROP FUNCTION regime_required_inputs_valid(jsonb);
 DROP FUNCTION regime_option_defs_valid(jsonb);
+DROP FUNCTION regime_is_decimal_rate(jsonb);

@@ -161,7 +161,7 @@ erDiagram
         text person_type PK
         text regime_a PK "regime_a < regime_b"
         text regime_b PK
-        boolean allowed "NULL = undetermined (needs_cpa_review)"
+        boolean allowed "needs_cpa_review => true (allowed with a warning)"
         text reason
         text legal_basis
         text source_url
