@@ -12,7 +12,7 @@ import (
 type Case struct {
 	ID     string
 	File   string // path under the golden root; "" for a generated case
-	Source string // "research:<worked example id>", "cpa:<ref>" or "generated:<edge>"
+	Source string // "research:<worked example id>", "cpa:<ref>", "spec:<ref>" or "generated:<edge>"
 	// SkipReason, when set, names the unverified (⚠️) rule the expected
 	// values depend on: the case is reported as skipped and never run.
 	SkipReason string
@@ -46,6 +46,9 @@ type Expected struct {
 	MissingInputs   []domain.MissingInput
 	CPATopics       []domain.CPATopic
 	Disclaimers     []domain.DisclaimerCode
+	// Explanation is the label key of a partial or informational regime's
+	// text (regime_explanation:<regime>/<person type>); "" is not asserted.
+	Explanation domain.LabelKey
 }
 
 // LineWant is one expected breakdown line of an asserted tax, in order.

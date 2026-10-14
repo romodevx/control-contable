@@ -155,6 +155,32 @@ func TestEvaluateStrategyRegistrationRules(t *testing.T) {
 	}
 }
 
+func TestEvaluateComparesTheExplanationWhenGiven(t *testing.T) {
+	informational := func(t *testing.T, explanation domain.LabelKey) golden.Case {
+		t.Helper()
+		c := baseCase(t)
+		c.Input.Key = domain.StrategyKey{Regime: "605", PersonType: fiscal.PersonFisica}
+		c.Want = golden.Expected{
+			Status: domain.StatusInformational, Taxes: []domain.TaxKind{domain.TaxISR, domain.TaxIVA},
+			Lines: []golden.LineWant{}, Explanation: explanation,
+		}
+		return c
+	}
+
+	t.Run("match", func(t *testing.T) {
+		o := evaluate(t, informational(t, "regime_explanation:605/fisica"), nil)
+
+		assert.Equal(t, golden.VerdictPassed, o.Verdict, o.Reason, o.Mismatches)
+	})
+	t.Run("mismatch", func(t *testing.T) {
+		o := evaluate(t, informational(t, "regime_explanation:606/fisica"), nil)
+
+		assert.Equal(t, golden.VerdictFailed, o.Verdict)
+		assert.Contains(t, o.Mismatches,
+			"explanation: want regime_explanation:606/fisica, got regime_explanation:605/fisica")
+	})
+}
+
 func TestEvaluateRunsAnInformationalCaseThroughTheFallback(t *testing.T) {
 	c := baseCase(t)
 	c.Input.Key = domain.StrategyKey{Regime: "605", PersonType: fiscal.PersonFisica}
