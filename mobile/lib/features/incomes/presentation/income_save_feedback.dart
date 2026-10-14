@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:control_contable/api/generated/models/income.dart';
 import 'package:control_contable/api/generated/models/warning.dart';
 import 'package:control_contable/core/access/paywall_sheet.dart';
-import 'package:control_contable/core/forms/form_scope.dart';
 import 'package:control_contable/core/records/record_save.dart';
+import 'package:control_contable/core/records/record_save_toast.dart';
+import 'package:control_contable/core/records/stacked_undo.dart';
 import 'package:control_contable/features/incomes/presentation/income_form_copy.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -32,34 +34,28 @@ String incomeSaveNoticeText(RecordSaveNotice notice, AppLocalizations l10n) =>
       RecordSaveNotice.failed => l10n.incomeSaveFailed,
     };
 
-/// Confirms a save ([updated] for an edit) on [messenger]. Warnings never
-/// block: they are read in the toast, which then stays until closed so
-/// they are not missed. [overForm]: the form stays open (*Guardar y crear
-/// otro*), so the toast floats above its footer.
+/// Confirms a save ([updated] for an edit) on [messenger] (see
+/// [showRecordSavedToast]): warnings never block, and a pending Undo of
+/// [undo] is never closed by it.
 void showIncomeSavedToast(
   ScaffoldMessengerState messenger,
   AppLocalizations l10n,
   List<Warning> warnings, {
+  required StackedUndo<Income> undo,
   bool updated = false,
   bool overForm = false,
 }) {
-  final hasWarnings = warnings.isNotEmpty;
-  final notes = [for (final w in warnings) describeIncomeWarning(w, l10n)];
-  messenger
-    ..hideCurrentSnackBar()
-    ..showSnackBar(
-      SnackBar(
-        content: Text(switch ((hasWarnings, updated)) {
-          (true, false) => '${l10n.incomeSavedWithWarnings} ${notes.join(' ')}',
-          (true, true) =>
-            '${l10n.incomeUpdatedWithWarnings} ${notes.join(' ')}',
-          (false, false) => l10n.incomeSaved,
-          (false, true) => l10n.incomeUpdated,
-        }),
-        persist: hasWarnings,
-        showCloseIcon: hasWarnings,
-        behavior: overForm ? SnackBarBehavior.floating : null,
-        margin: overForm ? toastClearOfFormFooter : null,
-      ),
-    );
+  final count = warnings.length;
+  showRecordSavedToast(
+    messenger,
+    heading: switch ((count > 0, updated)) {
+      (true, false) => l10n.incomeSavedWithWarnings(count),
+      (true, true) => l10n.incomeUpdatedWithWarnings(count),
+      (false, false) => l10n.incomeSaved,
+      (false, true) => l10n.incomeUpdated,
+    },
+    notes: [for (final w in warnings) describeIncomeWarning(w, l10n)],
+    undo: undo,
+    overForm: overForm,
+  );
 }
