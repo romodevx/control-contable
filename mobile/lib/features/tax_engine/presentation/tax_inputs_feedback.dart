@@ -89,25 +89,3 @@ void leaveTaxInputs(BuildContext context) {
     context.go(TaxEngineRoutes.estimate);
   }
 }
-
-/// Routes every way out of the form (system back, the app bar's back)
-/// through [onLeave], which asks first when there are unsaved changes.
-class TaxInputsLeaveGuard extends StatelessWidget {
-  /// Guards [child].
-  const new({required this.onLeave, required this.child, super.key});
-
-  /// Leaves, asking first when needed.
-  final Future<void> Function() onLeave;
-
-  /// The page.
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: false,
-    onPopInvokedWithResult: (didPop, _) {
-      if (!didPop) unawaited(onLeave());
-    },
-    child: child,
-  );
-}

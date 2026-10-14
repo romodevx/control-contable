@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:control_contable/api/generated/models/tax_inputs.dart';
 import 'package:control_contable/core/access/read_only_access.dart';
 import 'package:control_contable/core/forms/app_form.dart';
+import 'package:control_contable/core/forms/form_leave_guard.dart';
 import 'package:control_contable/core/forms/form_notice.dart';
 import 'package:control_contable/core/time/clock.dart';
 import 'package:control_contable/features/tax_engine/application/breakdown.dart';
@@ -151,7 +152,7 @@ class _TaxInputsFormPageState extends ConsumerState<TaxInputsFormPage> {
   }
 
   @override
-  Widget build(BuildContext context) => TaxInputsLeaveGuard(
+  Widget build(BuildContext context) => FormLeaveGuard(
     onLeave: _requestLeave,
     child: Scaffold(
       appBar: AppBar(title: Text(_l10n.taxInputsTitle)),
