@@ -108,6 +108,9 @@ void main() {
         final nonTextPairs = {
           'iva/surface': (c.iva, c.surface),
           'isr/surface': (c.isr, c.surface),
+          'withholdings/surface': (c.withholdings, c.surface),
+          'income/surface': (c.income, c.surface),
+          'expense/surface': (c.expense, c.surface),
           'outline/surface': (c.outline, c.surface),
         };
         _expectContrast(textPairs, _textMin);

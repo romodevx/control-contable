@@ -73,6 +73,9 @@ bank statement or a SAT acknowledgement, without copying either.
 | `heroBg` / `heroText` / `heroMuted` | `#1D4E89` / `#FFFFFF` / `#C7D7EC` | `#16365C` / `#E8EEF5` / `#B4C6DD` | Estimate card |
 | `iva` (chart) | `#1D4E89` | `#8DB8EC` | IVA series |
 | `isr` (chart) | `#2B7470` | `#6FC7C0` | ISR series |
+| `withholdings` (chart) | `#9A6400` | `#E3B65C` | Withholdings to remit, third tax segment (M6, OQ-D4) |
+| `income` (chart) | `#2E6FB7` | `#4F95DB` | "Ingresos cobrados" series (M6) |
+| `expense` (chart) | `#B4532A` | `#D06A3B` | "Gastos pagados" series (M6) |
 | `favor` | `#1C7046` | `#6FD49A` | Saldo a favor |
 | `legendBg` / `legendText` | `#FFF4D6` / `#5C3F00` | `#2B2310` / `#F2D58A` | Mandatory legend |
 | `error` | `#B42318` | `#FF8A80` | Errors |
@@ -87,6 +90,9 @@ bank statement or a SAT acknowledgement, without copying either.
 | heroMuted / heroBg | 5.7 | 7.0 |
 | iva mark / surface | 8.4 | 8.0 |
 | isr mark / surface | 5.5 | 8.3 |
+| withholdings mark / surface | 5.0 | 8.7 |
+| income mark / surface | 5.2 | 5.2 |
+| expense mark / surface | 5.0 | 4.6 |
 | favor / surface | 6.1 | 9.1 |
 | legendText / legendBg | 8.8 | 10.9 |
 | error / surface | 6.6 | 7.2 |
@@ -106,6 +112,13 @@ Scale (px): 44 hero · 28 page · 20 title · 18 section · 17 input/button · 1
 - **Icons:** Lucide (`lucide_icons_flutter`), outline, 1.75 stroke, 22 px.
 - **Chart:** square-topped stacked bars, navy IVA under teal ISR. The active nav item gets a
   3 px top rule.
+- **Chart series (added for M6, 2026-10-14).** The M6 tokens pass the dataviz palette
+  validator (CVD ΔE ≥ 8, normal-vision ΔE ≥ 15) as pairs: income/expense in both modes;
+  withholdings against ISR (its neighbour in the stack). The owner-decided navy IVA / teal
+  ISR pair is below the normal-vision floor (ΔE 13.7 light, 9.3 dark), so the Home chart
+  never relies on their color alone: a 2 px surface gap between segments, a 45° hatch on the
+  ISR segment and its key swatch, a text key, the selected month's values as text and a
+  table view.
 - **Copy tone:** formal and impersonal, avoiding both *tú* and *usted* where possible ("Vence
   el 17 de noviembre", "Registrar ingreso"). Short, factual, with the legal basis on every line.
 
