@@ -125,15 +125,33 @@ Informational/partial regimes show their plain-language `explanation` at selecti
   the non-blocking warning `regime_combination_needs_cpa_review` (field
   `regimes.N.regime_code` on create, `regime_code` on add regime; `message` = `reason`).
   A catalog test asserts normalization, that every code exists for that person type, and
-  that every reason is non-empty. Initial seed (⚠️ CPA review before launch, OQ-6):
+  that every reason is non-empty. Seed (⚠️ CPA review before launch, OQ-6), reconciled
+  with the law in M2-13 FU1 (migration `20261014120000_regime_compatibility_reconcile.sql`,
+  [research Part E](../research/tax-regimes-mx-2026.md)). Authority order: the law, then
+  this spec, then the seed. A pair the law does not settle is **allowed with the CPA-review
+  warning**, never refused ([CPA-REVIEW](../reviews/CPA-REVIEW.md)). Refused pairs:
 
 | Person type | Pair(s) | Reason (basis) |
 |---|---|---|
-| fisica | 626 × 612, 626 × 606, 626 × 621 | RESICO PF covers business, professional and rental income; it replaces 612/606 (113-E) |
+| fisica | 626 × 612, 626 × 606 | RESICO PF covers business, professional and rental income; it replaces 612/606 (113-E) |
 | fisica | 616 × any | "Sin obligaciones" cannot coexist with an obligation |
 | fisica | 610 × any resident regime | A non-resident without PE is not a resident taxpayer |
-| fisica | 621 × 612 | RIF taxpayers move to 612 when they leave RIF; not both at once |
-| moral | every pair | A legal entity holds exactly one ISR regime at a time (601, 603, 620, 622, 623, 624, 626 PM, 610) |
+| fisica | 621 × 612 | RIF was only for business income without a professional degree; leaving RIF means 612 (LISR art. 111 ¶1, ¶15 as in force until 2021) |
+| fisica | 621 × 626 | A RIF taxpayer kept RIF or moved to RESICO; RESICO only admits salary and interest besides (LISR 113-E ¶1, ¶6; Transitorio 2º fr. IX DOF 12-11-2021) |
+| fisica | 626 × 611 | Shareholders may not use RESICO (113-E) |
+| moral | 626 × 601, 603, 622, 623, 624 | RESICO PM exclusions and exit to Título II (arts. 206, 214) |
+| moral | 620 × 601, 622, 623, 624 | The deferring cooperative applies its chapter *instead of* Título II (art. 194 ¶1) |
+| moral | 620 × 626 | Título VII Cap. VII is excluded from RESICO PM (art. 206 fr. IV) |
+| moral | 622 × 601 | An AGAPES PM must use Cap. VIII (art. 74 ¶1) |
+| moral | 622 × 623 | Cap. VIII does not apply to Cap. VI groups (art. 74 ¶2) |
+| moral | 622 × 624 | Each requires ≥ 90 % of income from its own activity (arts. 72, 74) |
+| moral | 610 × any | Non-resident (Título V) |
+
+Pairs the law does not settle stay **allowed with a warning** (not refused): PM 601 × 603,
+601 × 623, 601 × 624, 603 × 620, 603 × 622, 603 × 623, 603 × 624, 623 × 624; PF 621 and 626
+with the other Título IV regimes listed in CPA-REVIEW. "A legal entity holds exactly one
+ISR regime" is **not** a rule of the law (e.g. a Título III entity owes Título II tax on
+some income, art. 80; a Cap. VI group company stays under Título II, art. 59 ¶4).
 
 ### 2.6 Periods
 - `start_period` defaults to the **current month** (America/Mexico_City, server clock);
@@ -207,9 +225,10 @@ Informational/partial regimes show their plain-language `explanation` at selecti
 ### US-T1b Onboard a persona moral
 - **Given** I chose moral, **when** I enter a 12-char RFC, **then** the regime list is the
   moral catalog; picking 601 asks only `iva_fully_taxable` (default true); `201` on finish.
-- **Given** moral, **when** I select two regimes (e.g. 601 + 626), **then**
-  `422 invalid_regime_combination` with the catalog reason; the client prevents it first by
-  making the moral list single-select (UX only).
+- **Given** moral, **when** I select two regimes the law excludes (e.g. 601 + 626), **then**
+  `422 invalid_regime_combination` with the catalog reason; a pair under CPA review (e.g.
+  601 + 603) is `201` with `regime_combination_needs_cpa_review` (§2.5). The client keeps the
+  moral list single-select (UX only, the common case); the server is the authority.
 
 ### US-T1c RFC validation
 | Given | Then |
@@ -386,7 +405,7 @@ An overlapping regime pair still under CPA review is not an error either: `Taxpa
 | OQ-3 | Where do the 601 coeficiente / YTD inputs go in onboarding? | **DECIDED:** optional, skippable step 5 "Datos para el cálculo", shown only when `module_tax_engine` is ON, writing through M5's tax-inputs endpoint; otherwise the estimate shows the `incomplete` CTA |
 | OQ-4 | How is the cap "raised on request"? | **DECIDED: not in v1.** Fixed `TaxpayerCap = 10`; a per-user override column when the first request arrives |
 | OQ-5 | Re-adding an archived regime | **DECIDED: reopen the row** (PK unchanged); revisit if users switch back and forth |
-| OQ-6 | Compatibility matrix (§2.5) | **DECIDED:** ship the seed as written, ⚠️ marked; CPA review before launch; 625 × 626 allowed; PM single-regime |
+| OQ-6 | Compatibility matrix (§2.5) | **DECIDED:** ship the seed as written, ⚠️ marked; CPA review before launch; 625 × 626 allowed. **Amended (M2-13 FU1):** "PM single-regime" is a client UX default, not a server rule; the server refuses only the pairs the law excludes (§2.5) and warns on the rest |
 | OQ-7 | Option changes mid-year | **DECIDED:** not versioned in v1, UI warns; CPA to confirm whether to lock per fiscal year |
 | OQ-8 | What may a read-only user (trial expired, no `pro`/`comp`) do in M2? | **DECIDED (overrides the PM default): read, delete and archive only.** Creating a taxpayer, unarchiving, adding a regime, renaming, correcting the RFC and changing options are refused with `402 entitlement_required` (`ErrReadOnly`), consistent with the access policy. Archiving a regime is an archive and stays allowed. See §2.10 |
 | OQ-9 | Does an archived taxpayer count toward the cap? | **DECIDED: yes**; delete frees the slot |

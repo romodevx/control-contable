@@ -351,3 +351,34 @@ The rules are the same as §A.3 (16 %, 8 % border, 0 %, exempt, creditable IVA, 
 | 11 | PTU 10 %, Sexta Comisión (DOF 18-09-2020) ⚠️ secondary source | https://idconline.mx/laboral/2020/10/06/mantienen-el-mismo-porcentaje-de-ptu-a-repartir |
 
 **Not retrieved:** the full RMF 2026 text (the SAT host timed out). The rule numbers for RESICO and platform facilities (Title 3.13, 3.11.x) and a secondary-source claim that RMF rule 4.1.4 sets 100 % IVA withholding on rentals were **not confirmed**. That claim contradicts RLIVA art. 3 fr. I c), which sets 2/3 and is the version used here. Verify against the official RMF 2026 before release.
+
+# Part E: Regime coexistence (M2-13 FU1, accessed 2026-10-14)
+
+Which regime pairs one taxpayer may hold at the same time, for the pairs where
+MODULE-taxpayers §2.5 and the catalog seed disagreed. Texts read from the primary sources
+below (✅). A pair is refused only where the text excludes it; otherwise it stays allowed
+with a CPA-review warning.
+
+| Pair | Verdict | Text (LISR unless noted) | Source |
+|---|---|---|---|
+| PF 621 × 612 | Refused ✅ | Art. 111 ¶1 (in force until 2021): RIF is for PF "que realicen **únicamente** actividades empresariales … por los que no se requiera … título profesional". ¶15: after RIF they "deberán tributar conforme al régimen … Sección I del Capítulo II" (612). Transitorio 2º fr. IX keeps those rules for RIF taxpayers. | E1, E2 |
+| PF 621 × 626 | Refused ✅ | Art. 113-E ¶1: RESICO is for PF "que realicen **únicamente** actividades empresariales, profesionales u otorguen el uso o goce temporal de bienes"; ¶6 admits only Capítulos I and VI income besides. Transitorio 2º fr. IX: a RIF taxpayer "podrá optar por continuar" in RIF; otherwise the SAT moves it to Sección IV (RESICO). Either one, not both. | E2, D2 |
+| PM 620 × 601, 622, 623, 624 | Refused ✅ | Art. 194 ¶1: production cooperatives of PF "**en lugar de** aplicar lo dispuesto en el Título II … podrán aplicar" this chapter. 601, 622 (Cap. VIII), 623 (Cap. VI) and 624 (Cap. VII) are Título II. | D2 |
+| PM 620 × 626 | Refused ✅ | Art. 206 fr. IV: "No tributarán conforme a este Capítulo … Quienes tributen conforme al Capítulo VII del Título VII" (the cooperatives of art. 194). | D2 |
+| PM 601 × 622 | Refused ✅ | Art. 74 ¶1: PM dedicated exclusively to agricultural, livestock, forestry or fishing activities "**Deberán** cumplir … conforme al régimen establecido en el presente Capítulo". | D2 |
+| PM 622 × 623 | Refused ✅ | Art. 74 ¶2: "Lo dispuesto en este Capítulo no será aplicable a las personas morales que tributen en los términos del Capítulo VI del Título II". | D2 |
+| PM 622 × 624 | Refused ✅ | Art. 74 and art. 72 ¶3 each define "exclusively" as at least 90 % of total income from their own activity; both cannot hold at once. | D2 |
+| PM 601 × 603 | Allowed, CPA review | Art. 80: a Título III entity that sells goods other than fixed assets or serves non-members pays tax on that profit "en los términos del Título II" above 5 % of income. Not an exclusion. | D2 |
+| PM 601 × 623 | Allowed, CPA review | Art. 59 ¶4: group companies "estarán a lo establecido en las demás disposiciones de esta Ley" (Título II) save what Cap. VI says. Not an exclusion. | D2 |
+| PM 601 × 624, 603 × 620/622/623/624, 623 × 624 | Allowed, CPA review | No text found that excludes or allows the pair. | D2 |
+
+Observations for the CPA (not changed in FU1): read like the 621 × 626 row, art. 113-E ¶1
+and ¶6 would also exclude 626 PF with 607, 608 and 615; and art. 111 (2016 text: "Capítulos
+I, III y VI" besides, fr. I socios) would exclude 621 with 607, 608, 611, 615 and 625. Those
+pairs stay allowed with a warning until the CPA answers (CPA-REVIEW).
+
+| # | Source | URL |
+|---|---|---|
+| E1 | LISR, original text (DOF 11-12-2013), art. 111 | https://www.diputados.gob.mx/LeyesBiblio/ref/lisr/LISR_orig_11dic13.pdf |
+| E2 | LISR reform decree (DOF 12-11-2021): art. 113-E and Disposiciones Transitorias, art. Segundo fr. IX–XI | https://www.diputados.gob.mx/LeyesBiblio/ref/lisr/LISR_ref07_12nov21.pdf |
+| E3 | LISR reform decree (DOF 18-11-2015): art. 111, Capítulos I, III y VI paragraph and fr. I exceptions | https://www.diputados.gob.mx/LeyesBiblio/ref/lisr/LISR_ref01_18nov15.pdf |

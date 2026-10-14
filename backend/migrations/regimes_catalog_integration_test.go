@@ -380,6 +380,17 @@ func TestRegimeCompatibility_ResearchRules(t *testing.T) {
 		"moral 622/626":  "denied", // 206: Cap. VIII excluded
 		"moral 623/626":  "denied", // 206: Cap. VI excluded
 		"moral 624/626":  "denied", // 206: Cap. VII excluded
+		// M2-13 FU1 (20261014120000_regime_compatibility_reconcile.sql):
+		"fisica 612/621": "denied", // 111 (until 2021): RIF only for business income without a degree
+		"fisica 621/626": "denied", // 113-E; Transitorio 2º fr. IX: RIF or RESICO, not both
+		"moral 601/620":  "denied", // 194: the deferring cooperative applies instead of Título II
+		"moral 620/622":  "denied", // 194
+		"moral 620/623":  "denied", // 194
+		"moral 620/624":  "denied", // 194
+		"moral 620/626":  "denied", // 206 fr. IV: Título VII Cap. VII excluded
+		"moral 601/622":  "denied", // 74: AGAPES must use Cap. VIII
+		"moral 622/623":  "denied", // 74: Cap. VIII not for Cap. VI groups
+		"moral 622/624":  "denied", // 72, 74: two 90 % exclusivity tests
 	}
 	for pair, verdict := range want {
 		assert.Equal(t, verdict, rules[pair], pair)
@@ -415,12 +426,11 @@ func TestRegimeCompatibility_UndeterminedPairsAllowWithWarning(t *testing.T) {
 	}
 	assert.ElementsMatch(t, []string{
 		"fisica 605/621", "fisica 606/621", "fisica 607/621", "fisica 608/621", "fisica 611/621",
-		"fisica 612/621", "fisica 614/621", "fisica 615/621", "fisica 621/625", "fisica 621/626",
+		"fisica 614/621", "fisica 615/621", "fisica 621/625",
 		"fisica 607/626", "fisica 608/626", "fisica 615/626",
-		"moral 601/603", "moral 601/620", "moral 601/622", "moral 601/623", "moral 601/624",
+		"moral 601/603", "moral 601/623", "moral 601/624",
 		"moral 603/620", "moral 603/622", "moral 603/623", "moral 603/624",
-		"moral 620/622", "moral 620/623", "moral 620/624", "moral 620/626",
-		"moral 622/623", "moral 622/624", "moral 623/624",
+		"moral 623/624",
 	}, review)
 }
 
@@ -551,4 +561,34 @@ func TestRegimeCatalog_DownRemovesItAndUpReseedsIt(t *testing.T) {
 	var regimes int
 	require.NoError(t, owner.QueryRowContext(t.Context(), "SELECT count(*) FROM regimes").Scan(&regimes))
 	assert.Len(t, researchCatalog, regimes, "seeds applied exactly once")
+}
+
+// compatibilityReconcileVersion is the goose version of
+// 20261014120000_regime_compatibility_reconcile.sql (M2-13 FU1).
+const compatibilityReconcileVersion = 20261014120000
+
+var reconciledRefusals = []string{
+	"fisica 612/621", "fisica 621/626",
+	"moral 601/620", "moral 620/622", "moral 620/623", "moral 620/624", "moral 620/626",
+	"moral 601/622", "moral 622/623", "moral 622/624",
+}
+
+// Down puts the M2-02 seed verdict (allowed with a warning) back; up refuses again.
+func TestRegimeCompatibilityReconcile_DownRestoresTheSeedAndUpRefusesAgain(t *testing.T) {
+	owner := pgtest.NewDatabase(t).Connect(t, pgtest.RoleOwner)
+	p, err := migrations.NewProvider(owner)
+	require.NoError(t, err)
+
+	_, err = p.DownTo(t.Context(), compatibilityReconcileVersion-1)
+	require.NoError(t, err)
+	rules := compatibilityRules(t, owner)
+	for _, pair := range reconciledRefusals {
+		assert.Equal(t, "warn", rules[pair], "down: %s", pair)
+	}
+
+	require.NoError(t, migrations.Up(t.Context(), owner))
+	rules = compatibilityRules(t, owner)
+	for _, pair := range reconciledRefusals {
+		assert.Equal(t, "denied", rules[pair], "up: %s", pair)
+	}
 }
