@@ -72,7 +72,7 @@ Home renders the server's `TaxpayerEstimate` as is; the client never recomputes 
 Dashboard(taxpayer, period)
 ├── period, taxpayer_id
 ├── is_empty            true ⇔ the taxpayer has no live (non-deleted) income and no live expense, in any period
-├── month               { income_cents, expense_cents }        the `period` itself
+├── month               { income_cents | null, expense_cents | null }   the `period`; null ⇔ that module OFF (§3)
 ├── estimate            TaxpayerEstimate | null                null ⇔ module_tax_engine effectively OFF
 ├── trend[]             TrendPoint per month in the window
 │   ├── period, income_cents, expense_cents
@@ -170,7 +170,7 @@ own clock.
 | Only informational regimes | Hero shows the explanation "Este régimen es informativo: la app no estima su impuesto" + link to the estimate screen; no amount |
 | Archived taxpayer | Everything readable; quick actions hidden (creates would `422`) |
 | Read-only user | Quick actions stay visible; tapping opens the paywall (UX) — server answers `402` regardless |
-| `module_incomes` / `module_expenses` OFF | The matching quick action is hidden; the figures still show (M5 reads records with those flags OFF, MODULE-incomes OQ-8; see OQ-D3) |
+| `module_incomes` / `module_expenses` OFF | The matching quick action, month figure and chart series are hidden; the server returns them as `null` (§3, OQ-D3). Tax figures are unaffected (the estimator still reads records, MODULE-incomes OQ-8) |
 
 Quick actions open the existing create pages of M3/M4 prefilled with the active taxpayer; on return
 Home refreshes.
@@ -182,7 +182,7 @@ Home refreshes.
 - **Prerequisite (implied OFF)**: `module_taxpayers` only (the route lives under a taxpayer). M6-05
   adds `"module_dashboard": {"module_taxpayers"}` to `flags.Prerequisites`.
 - **`module_tax_engine` is NOT a prerequisite; it degrades Home** (set by the M6 spec brief,
-  2026-10-14; the owner confirms at this PR's review, OQ-D7). With the engine OFF:
+  2026-10-14; DECIDED OQ-D7). With the engine OFF:
   - the server does not call the estimator nor read tax inputs; `estimate = null`, every
     `trend[].tax = null`, `legend` absent. No tax figure leaves the server (security boundary is
     the server, not the client);
@@ -190,11 +190,19 @@ Home refreshes.
     "Impuestos" view, no view switcher) and quick actions.
   - This **amends** MODULE-tax-engine §7 / US-X4 ("M5 OFF implies M6 OFF"), updated in this PR, and
     the M5-29 QA note asking M6 to declare `module_dashboard → module_tax_engine` (not done, by design).
+- **`module_incomes` / `module_expenses` OFF hide their figures** (a disabled module is invisible,
+  module-workflow rule; DECIDED OQ-D3). The server does not compute them: `month.income_cents` and
+  every `trend[].income_cents` are `null` with incomes OFF (same for expenses), and the dashboard's
+  own aggregate for that table is skipped when the engine does not need it either. The app hides the
+  month figure, the chart series, "Diferencia" and the quick action. Both OFF: no "Ingresos y gastos"
+  view; with the engine also OFF Home shows only the access banner. `is_empty` counts only the
+  enabled modules' records; with both OFF it is `false` and no empty state shows.
 - `module_dashboard` OFF → `getDashboard` answers `404`; the app keeps today's placeholder Home
   (`features/home/presentation/home_screen.dart`) with its existing flag-gated buttons. Inicio stays
   in the bottom bar.
 - Client: one `FlagsProvider` / `FlagGate`; no scattered conditionals. Suites run with
-  (`dashboard`, `tax_engine`) ∈ {ON/ON, ON/OFF, OFF/ON} and with `module_taxpayers` OFF.
+  (`dashboard`, `tax_engine`) ∈ {ON/ON, ON/OFF, OFF/ON}, with `module_incomes` and
+  `module_expenses` each OFF, and with `module_taxpayers` OFF.
 
 ## 4. User stories (Given / When / Then)
 
@@ -254,6 +262,9 @@ Home refreshes.
   `GET /v1/flags`).
 - **Given** `module_tax_engine` OFF and the dashboard ON, **Then** the response has `estimate: null`,
   `trend[].tax: null`, no legend, and the app shows income/expense only.
+- **Given** `module_incomes` OFF and the dashboard ON, **Then** `month.income_cents` and every
+  `trend[].income_cents` are `null`, and the app shows no income figure, series or "Registrar
+  ingreso" (same for `module_expenses` and expenses).
 
 ### US-D9 Performance
 - **Given** 3 regimes and 10,000 records per fiscal year across two fiscal years, **When**
@@ -320,7 +331,9 @@ Home refreshes.
 1. `period`: optional own parameter (not the required `PeriodQuery`); absent → current month (MX).
 2. `estimate`: `TaxpayerEstimate | null`; `legend`: not required (present iff `estimate`).
 3. Replace top-level `income_cents` / `expense_cents` with `month: { income_cents, expense_cents }`
-   (or keep them flat; architect's call, but documented as collected/paid before IVA).
+   (or keep them flat; architect's call, but documented as collected/paid before IVA). Both
+   fields, and `TrendPoint.income_cents` / `expense_cents`, become nullable (`null` ⇔ the
+   module's flag is effectively OFF, §3).
 4. `TrendPoint`: replace `tax_payable_rounded_cents` with `tax: TrendTax | null`, `TrendTax =
    {iva_payable_rounded_cents, isr_payable_rounded_cents, withholdings_to_remit_cents,
    total_payable_rounded_cents, iva_outcome, status}`; `status` enum `complete | incomplete |
@@ -340,12 +353,14 @@ Home refreshes.
 
 ## 11. Open questions (defaults apply unless the owner says otherwise)
 
-| # | Question | Default |
+All decided by the coordinator on 2026-10-14.
+
+| # | Question | Decision |
 |---|---|---|
-| OQ-D1 | DIRECTIONS shows 6 months; the owner asked for a 12-month trend | **12** (`months=12`), 6 allowed by the API |
-| OQ-D2 | Income on Home: collected (cash) or invoiced? | **Collected** (`collected_on`), labeled "Ingresos cobrados" |
-| OQ-D3 | With `module_incomes`/`module_expenses` OFF, hide their figures too? | **No**: figures stay (data feeds the estimate, OQ-8); only quick actions hide |
-| OQ-D4 | Withholdings to remit in the tax bars? | **Yes**, third segment, only when non-zero; new token contrast-checked |
-| OQ-D5 | Separate rate budget or share `estimate_reads`? | **Separate** `dashboard_reads`, 600/h |
-| OQ-D6 | Trial days left: server or client clock? | **Server** (`trial_days_left`) |
-| OQ-D7 | Engine OFF: hide Home (old M5 §7 rule) or show income/expense only? | **Income/expense only**; M5 §7 / US-X4 amended in this PR |
+| OQ-D1 | DIRECTIONS shows 6 months; the owner asked for a 12-month trend | **DECIDED:** **12** (`months=12`), 6 allowed by the API |
+| OQ-D2 | Income on Home: collected (cash) or invoiced? | **DECIDED:** **Collected** (`collected_on`), labeled "Ingresos cobrados" |
+| OQ-D3 | With `module_incomes`/`module_expenses` OFF, hide their figures too? | **DECIDED (changed from the proposed default):** **Hide**. The server returns `null` and does not compute them; the app hides the figure, series and quick action (§3) |
+| OQ-D4 | Withholdings to remit in the tax bars? | **DECIDED:** **Yes**, third segment, only when non-zero; new token contrast-checked |
+| OQ-D5 | Separate rate budget or share `estimate_reads`? | **DECIDED:** **Separate** `dashboard_reads`, 600/h |
+| OQ-D6 | Trial days left: server or client clock? | **DECIDED:** **Server** (`trial_days_left`) |
+| OQ-D7 | Engine OFF: hide Home (old M5 §7 rule) or show income/expense only? | **DECIDED:** **Income/expense only**; M5 §7 / US-X4 amended in this PR |
