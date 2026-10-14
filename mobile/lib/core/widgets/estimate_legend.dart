@@ -7,9 +7,16 @@ import 'package:flutter/material.dart';
 /// aplican para tu giro comercial.") in its tinted block
 /// (docs/design/DIRECTIONS.md): wherever the app speaks of an estimate.
 /// Never hidden, never dismissible.
+///
+/// Next to a server estimate it reads the response's `legend` ([text]),
+/// never a client copy (MODULE-tax-engine §2.3); the app's own copy is the
+/// fallback where no estimate is loaded.
 class EstimateLegend extends StatelessWidget {
-  /// Creates the legend.
-  const new({super.key});
+  /// Creates the legend reading [text], or the app's copy.
+  const new({this.text, super.key});
+
+  /// The server's legend.
+  final String? text;
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +30,7 @@ class EstimateLegend extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Text(
-          AppLocalizations.of(context).estimateLegend,
+          text ?? AppLocalizations.of(context).estimateLegend,
           style: Theme.of(context).textTheme.bodyMedium
               ?.copyWith(color: colors.legendText),
         ),

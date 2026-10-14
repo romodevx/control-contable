@@ -841,6 +841,176 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get addRegimeTitle => 'Nuevo régimen';
+
+  @override
+  String get homeOpenEstimate => 'Ver estimado del mes';
+
+  @override
+  String get estimateTitle => 'Estimado del mes';
+
+  @override
+  String get estimatePeriodLabel => 'Mes';
+
+  @override
+  String get estimatePeriodHelp =>
+      'Se puede estimar desde enero de 2026 hasta el mes en curso. Los meses futuros aún no se pueden estimar y antes de 2026 no hay tarifas cargadas.';
+
+  @override
+  String get estimateCurrentMonth =>
+      'Mes en curso: se calcula con lo registrado hasta hoy.';
+
+  @override
+  String get estimateLoading => 'Cargando el estimado…';
+
+  @override
+  String get estimateLoadFailed => 'No se pudo cargar el estimado.';
+
+  @override
+  String get estimateUnreachable =>
+      'No hay conexión. Revisa tu internet e inténtalo de nuevo.';
+
+  @override
+  String get estimateParametersUnavailable =>
+      'No hay tarifas cargadas para ese mes. Elige un mes desde enero de 2026.';
+
+  @override
+  String get estimateFutureMonth =>
+      'Ese mes todavía no llega. Elige el mes en curso o uno anterior.';
+
+  @override
+  String get estimateNotFound =>
+      'No se encontró este contribuyente. Puede haberse eliminado en otro dispositivo.';
+
+  @override
+  String get estimateNoTaxpayer =>
+      'Agrega un contribuyente para ver su estimado.';
+
+  @override
+  String estimateNoRegimes(String month) {
+    return 'Este contribuyente no tiene regímenes en $month. No hay nada que estimar.';
+  }
+
+  @override
+  String get estimateIncomplete => 'Incompleto';
+
+  @override
+  String get estimateComplete => 'Completo';
+
+  @override
+  String get estimatePartial => 'Parcial';
+
+  @override
+  String get estimateInformational => 'Informativo';
+
+  @override
+  String get estimateTotalsIncomplete =>
+      'Faltan datos en algún régimen; las cifras usan ceros donde faltan.';
+
+  @override
+  String get estimateIsrPayable => 'ISR a pagar';
+
+  @override
+  String get estimateIsrInFavor => 'ISR: saldo a favor';
+
+  @override
+  String get estimateIvaPayable => 'IVA a pagar';
+
+  @override
+  String get estimateIvaInFavor => 'IVA: saldo a favor';
+
+  @override
+  String get estimateWithholdingsToRemit => 'Retenciones a enterar';
+
+  @override
+  String get estimateTotalPayable => 'Total a pagar';
+
+  @override
+  String estimateDueDate(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'Vence el $dateString';
+  }
+
+  @override
+  String get estimateDueDateNote => 'Fecha sujeta a confirmación.';
+
+  @override
+  String estimateIvaConsolidated(int count) {
+    return 'IVA consolidado de $count regímenes: se declara uno solo por RFC.';
+  }
+
+  @override
+  String get estimateCpaBannerTitle => 'Requiere validación de un contador';
+
+  @override
+  String estimateRegimeCode(String code) {
+    return 'Régimen $code';
+  }
+
+  @override
+  String get estimateIncompleteFigures =>
+      'Cifras con datos faltantes: se usaron ceros.';
+
+  @override
+  String get estimateMissingTitle => 'Falta:';
+
+  @override
+  String get estimateCompleteInputs => 'Completa tus datos';
+
+  @override
+  String get estimateViewBreakdown => 'Ver desglose';
+
+  @override
+  String estimateCpaTopics(String topics) {
+    return 'Pendiente de validar por un contador: $topics.';
+  }
+
+  @override
+  String get estimateIvaCharged => 'IVA trasladado cobrado';
+
+  @override
+  String get estimateIvaCreditable => 'IVA acreditable pagado';
+
+  @override
+  String get estimateIvaWithheld => 'IVA retenido por clientes';
+
+  @override
+  String get estimateIvaExcluded => 'IVA excluido por pago definitivo';
+
+  @override
+  String get estimateIvaContributes =>
+      'Se suma al IVA del mes; no se paga por separado.';
+
+  @override
+  String get cpaTopicRifReduction => 'la reducción del RIF por año';
+
+  @override
+  String get cpaTopicRifBimonthlyIva => 'el IVA bimestral del RIF';
+
+  @override
+  String get cpaTopicPlatformDefinitiveIva =>
+      'el IVA definitivo de plataformas';
+
+  @override
+  String get cpaTopicCrossRegimeIvaNetting =>
+      'la compensación del IVA entre regímenes';
+
+  @override
+  String get cpaTopicResicoPmInterestWithholding =>
+      'la retención de intereses en RESICO de personas morales';
+
+  @override
+  String get cpaTopicOther => 'otras reglas';
+
+  @override
+  String get breakdownTitle => 'Desglose';
+
+  @override
+  String get taxInputsTitle => 'Datos fiscales';
+
+  @override
+  String get comingSoon => 'Disponible pronto.';
 }
 
 /// The translations for Spanish Castilian, as used in Mexico (`es_MX`).

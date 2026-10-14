@@ -1475,6 +1475,294 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Nuevo régimen'**
   String get addRegimeTitle;
+
+  /// Home entry to the estimate screen (module_tax_engine).
+  ///
+  /// In es, this message translates to:
+  /// **'Ver estimado del mes'**
+  String get homeOpenEstimate;
+
+  /// App bar title of the estimate screen.
+  ///
+  /// In es, this message translates to:
+  /// **'Estimado del mes'**
+  String get estimateTitle;
+
+  /// Label above the month picker of the estimate screen.
+  ///
+  /// In es, this message translates to:
+  /// **'Mes'**
+  String get estimatePeriodLabel;
+
+  /// Always-visible explanation of which months can be estimated (future and pre-2026 are blocked).
+  ///
+  /// In es, this message translates to:
+  /// **'Se puede estimar desde enero de 2026 hasta el mes en curso. Los meses futuros aún no se pueden estimar y antes de 2026 no hay tarifas cargadas.'**
+  String get estimatePeriodHelp;
+
+  /// Shown when the chosen month is the still-open current month.
+  ///
+  /// In es, this message translates to:
+  /// **'Mes en curso: se calcula con lo registrado hasta hoy.'**
+  String get estimateCurrentMonth;
+
+  /// Announced while the estimate loads.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando el estimado…'**
+  String get estimateLoading;
+
+  /// Generic estimate load failure; followed by a retry button.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo cargar el estimado.'**
+  String get estimateLoadFailed;
+
+  /// Estimate load failed: the server could not be reached.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay conexión. Revisa tu internet e inténtalo de nuevo.'**
+  String get estimateUnreachable;
+
+  /// 422 parameters_unavailable: a month before the first fiscal year with parameters.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay tarifas cargadas para ese mes. Elige un mes desde enero de 2026.'**
+  String get estimateParametersUnavailable;
+
+  /// 400 out_of_range: a future month.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese mes todavía no llega. Elige el mes en curso o uno anterior.'**
+  String get estimateFutureMonth;
+
+  /// 404 on the estimate: unknown taxpayer (or module off).
+  ///
+  /// In es, this message translates to:
+  /// **'No se encontró este contribuyente. Puede haberse eliminado en otro dispositivo.'**
+  String get estimateNotFound;
+
+  /// Estimate screen with no active taxpayer.
+  ///
+  /// In es, this message translates to:
+  /// **'Agrega un contribuyente para ver su estimado.'**
+  String get estimateNoTaxpayer;
+
+  /// Estimate with no regime held in the month.
+  ///
+  /// In es, this message translates to:
+  /// **'Este contribuyente no tiene regímenes en {month}. No hay nada que estimar.'**
+  String estimateNoRegimes(String month);
+
+  /// Status chip: a regime (or the totals) misses inputs; figures used zeros.
+  ///
+  /// In es, this message translates to:
+  /// **'Incompleto'**
+  String get estimateIncomplete;
+
+  /// Status chip: every input present.
+  ///
+  /// In es, this message translates to:
+  /// **'Completo'**
+  String get estimateComplete;
+
+  /// Status chip: only some taxes are estimated.
+  ///
+  /// In es, this message translates to:
+  /// **'Parcial'**
+  String get estimatePartial;
+
+  /// Status chip: the app does not estimate this regime.
+  ///
+  /// In es, this message translates to:
+  /// **'Informativo'**
+  String get estimateInformational;
+
+  /// Totals card note when any regime is incomplete.
+  ///
+  /// In es, this message translates to:
+  /// **'Faltan datos en algún régimen; las cifras usan ceros donde faltan.'**
+  String get estimateTotalsIncomplete;
+
+  /// Row label: provisional ISR to pay.
+  ///
+  /// In es, this message translates to:
+  /// **'ISR a pagar'**
+  String get estimateIsrPayable;
+
+  /// Row label: ISR in favor (never shown as a payment).
+  ///
+  /// In es, this message translates to:
+  /// **'ISR: saldo a favor'**
+  String get estimateIsrInFavor;
+
+  /// Row label: monthly IVA to pay.
+  ///
+  /// In es, this message translates to:
+  /// **'IVA a pagar'**
+  String get estimateIvaPayable;
+
+  /// Row label: monthly IVA in favor (never shown as a payment).
+  ///
+  /// In es, this message translates to:
+  /// **'IVA: saldo a favor'**
+  String get estimateIvaInFavor;
+
+  /// Row label: ISR/IVA withheld from suppliers, to remit; never netted against IVA.
+  ///
+  /// In es, this message translates to:
+  /// **'Retenciones a enterar'**
+  String get estimateWithholdingsToRemit;
+
+  /// Hero label of the total to pay.
+  ///
+  /// In es, this message translates to:
+  /// **'Total a pagar'**
+  String get estimateTotalPayable;
+
+  /// Due date of the estimate.
+  ///
+  /// In es, this message translates to:
+  /// **'Vence el {date}'**
+  String estimateDueDate(DateTime date);
+
+  /// Note under the due date (CFF 12 business-day move pending CPA).
+  ///
+  /// In es, this message translates to:
+  /// **'Fecha sujeta a confirmación.'**
+  String get estimateDueDateNote;
+
+  /// Totals note when two or more regimes contribute IVA (OQ-T2).
+  ///
+  /// In es, this message translates to:
+  /// **'IVA consolidado de {count} regímenes: se declara uno solo por RFC.'**
+  String estimateIvaConsolidated(int count);
+
+  /// Title of the strong (CPA-unverified) warning above the figures.
+  ///
+  /// In es, this message translates to:
+  /// **'Requiere validación de un contador'**
+  String get estimateCpaBannerTitle;
+
+  /// Regime card subtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Régimen {code}'**
+  String estimateRegimeCode(String code);
+
+  /// Regime card marker: the figures depend on missing inputs.
+  ///
+  /// In es, this message translates to:
+  /// **'Cifras con datos faltantes: se usaron ceros.'**
+  String get estimateIncompleteFigures;
+
+  /// Heading of the missing inputs list.
+  ///
+  /// In es, this message translates to:
+  /// **'Falta:'**
+  String get estimateMissingTitle;
+
+  /// CTA of an incomplete regime: opens its tax-inputs form.
+  ///
+  /// In es, this message translates to:
+  /// **'Completa tus datos'**
+  String get estimateCompleteInputs;
+
+  /// Opens the breakdown of a regime.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver desglose'**
+  String get estimateViewBreakdown;
+
+  /// Regime card line listing CPA-unverified rules.
+  ///
+  /// In es, this message translates to:
+  /// **'Pendiente de validar por un contador: {topics}.'**
+  String estimateCpaTopics(String topics);
+
+  /// Regime IVA component.
+  ///
+  /// In es, this message translates to:
+  /// **'IVA trasladado cobrado'**
+  String get estimateIvaCharged;
+
+  /// Regime IVA component (subtracted).
+  ///
+  /// In es, this message translates to:
+  /// **'IVA acreditable pagado'**
+  String get estimateIvaCreditable;
+
+  /// Regime IVA component (subtracted).
+  ///
+  /// In es, this message translates to:
+  /// **'IVA retenido por clientes'**
+  String get estimateIvaWithheld;
+
+  /// Regime IVA component (subtracted).
+  ///
+  /// In es, this message translates to:
+  /// **'IVA excluido por pago definitivo'**
+  String get estimateIvaExcluded;
+
+  /// Note under a regime's IVA components.
+  ///
+  /// In es, this message translates to:
+  /// **'Se suma al IVA del mes; no se paga por separado.'**
+  String get estimateIvaContributes;
+
+  /// CPA topic rif_reduction in plain Spanish.
+  ///
+  /// In es, this message translates to:
+  /// **'la reducción del RIF por año'**
+  String get cpaTopicRifReduction;
+
+  /// CPA topic rif_bimonthly_iva.
+  ///
+  /// In es, this message translates to:
+  /// **'el IVA bimestral del RIF'**
+  String get cpaTopicRifBimonthlyIva;
+
+  /// CPA topic platform_definitive_iva.
+  ///
+  /// In es, this message translates to:
+  /// **'el IVA definitivo de plataformas'**
+  String get cpaTopicPlatformDefinitiveIva;
+
+  /// CPA topic cross_regime_iva_netting.
+  ///
+  /// In es, this message translates to:
+  /// **'la compensación del IVA entre regímenes'**
+  String get cpaTopicCrossRegimeIvaNetting;
+
+  /// CPA topic resico_pm_interest_withholding.
+  ///
+  /// In es, this message translates to:
+  /// **'la retención de intereses en RESICO de personas morales'**
+  String get cpaTopicResicoPmInterestWithholding;
+
+  /// A CPA topic this app version does not know.
+  ///
+  /// In es, this message translates to:
+  /// **'otras reglas'**
+  String get cpaTopicOther;
+
+  /// App bar title of the breakdown screen (M5-26).
+  ///
+  /// In es, this message translates to:
+  /// **'Desglose'**
+  String get breakdownTitle;
+
+  /// App bar title of the tax-inputs form (M5-27).
+  ///
+  /// In es, this message translates to:
+  /// **'Datos fiscales'**
+  String get taxInputsTitle;
+
+  /// Placeholder body of a screen still being built.
+  ///
+  /// In es, this message translates to:
+  /// **'Disponible pronto.'**
+  String get comingSoon;
 }
 
 class _AppLocalizationsDelegate

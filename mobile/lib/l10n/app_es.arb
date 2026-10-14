@@ -1119,5 +1119,225 @@
   "addRegimeTitle": "Nuevo régimen",
   "@addRegimeTitle": {
     "description": "App bar title of the add-regime screen."
+  },
+  "homeOpenEstimate": "Ver estimado del mes",
+  "@homeOpenEstimate": {
+    "description": "Home entry to the estimate screen (module_tax_engine)."
+  },
+  "estimateTitle": "Estimado del mes",
+  "@estimateTitle": {
+    "description": "App bar title of the estimate screen."
+  },
+  "estimatePeriodLabel": "Mes",
+  "@estimatePeriodLabel": {
+    "description": "Label above the month picker of the estimate screen."
+  },
+  "estimatePeriodHelp": "Se puede estimar desde enero de 2026 hasta el mes en curso. Los meses futuros aún no se pueden estimar y antes de 2026 no hay tarifas cargadas.",
+  "@estimatePeriodHelp": {
+    "description": "Always-visible explanation of which months can be estimated (future and pre-2026 are blocked)."
+  },
+  "estimateCurrentMonth": "Mes en curso: se calcula con lo registrado hasta hoy.",
+  "@estimateCurrentMonth": {
+    "description": "Shown when the chosen month is the still-open current month."
+  },
+  "estimateLoading": "Cargando el estimado…",
+  "@estimateLoading": {
+    "description": "Announced while the estimate loads."
+  },
+  "estimateLoadFailed": "No se pudo cargar el estimado.",
+  "@estimateLoadFailed": {
+    "description": "Generic estimate load failure; followed by a retry button."
+  },
+  "estimateUnreachable": "No hay conexión. Revisa tu internet e inténtalo de nuevo.",
+  "@estimateUnreachable": {
+    "description": "Estimate load failed: the server could not be reached."
+  },
+  "estimateParametersUnavailable": "No hay tarifas cargadas para ese mes. Elige un mes desde enero de 2026.",
+  "@estimateParametersUnavailable": {
+    "description": "422 parameters_unavailable: a month before the first fiscal year with parameters."
+  },
+  "estimateFutureMonth": "Ese mes todavía no llega. Elige el mes en curso o uno anterior.",
+  "@estimateFutureMonth": {
+    "description": "400 out_of_range: a future month."
+  },
+  "estimateNotFound": "No se encontró este contribuyente. Puede haberse eliminado en otro dispositivo.",
+  "@estimateNotFound": {
+    "description": "404 on the estimate: unknown taxpayer (or module off)."
+  },
+  "estimateNoTaxpayer": "Agrega un contribuyente para ver su estimado.",
+  "@estimateNoTaxpayer": {
+    "description": "Estimate screen with no active taxpayer."
+  },
+  "estimateNoRegimes": "Este contribuyente no tiene regímenes en {month}. No hay nada que estimar.",
+  "@estimateNoRegimes": {
+    "description": "Estimate with no regime held in the month.",
+    "placeholders": {
+      "month": {
+        "type": "String",
+        "example": "marzo de 2026"
+      }
+    }
+  },
+  "estimateIncomplete": "Incompleto",
+  "@estimateIncomplete": {
+    "description": "Status chip: a regime (or the totals) misses inputs; figures used zeros."
+  },
+  "estimateComplete": "Completo",
+  "@estimateComplete": {
+    "description": "Status chip: every input present."
+  },
+  "estimatePartial": "Parcial",
+  "@estimatePartial": {
+    "description": "Status chip: only some taxes are estimated."
+  },
+  "estimateInformational": "Informativo",
+  "@estimateInformational": {
+    "description": "Status chip: the app does not estimate this regime."
+  },
+  "estimateTotalsIncomplete": "Faltan datos en algún régimen; las cifras usan ceros donde faltan.",
+  "@estimateTotalsIncomplete": {
+    "description": "Totals card note when any regime is incomplete."
+  },
+  "estimateIsrPayable": "ISR a pagar",
+  "@estimateIsrPayable": {
+    "description": "Row label: provisional ISR to pay."
+  },
+  "estimateIsrInFavor": "ISR: saldo a favor",
+  "@estimateIsrInFavor": {
+    "description": "Row label: ISR in favor (never shown as a payment)."
+  },
+  "estimateIvaPayable": "IVA a pagar",
+  "@estimateIvaPayable": {
+    "description": "Row label: monthly IVA to pay."
+  },
+  "estimateIvaInFavor": "IVA: saldo a favor",
+  "@estimateIvaInFavor": {
+    "description": "Row label: monthly IVA in favor (never shown as a payment)."
+  },
+  "estimateWithholdingsToRemit": "Retenciones a enterar",
+  "@estimateWithholdingsToRemit": {
+    "description": "Row label: ISR/IVA withheld from suppliers, to remit; never netted against IVA."
+  },
+  "estimateTotalPayable": "Total a pagar",
+  "@estimateTotalPayable": {
+    "description": "Hero label of the total to pay."
+  },
+  "estimateDueDate": "Vence el {date}",
+  "@estimateDueDate": {
+    "description": "Due date of the estimate.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMMd"
+      }
+    }
+  },
+  "estimateDueDateNote": "Fecha sujeta a confirmación.",
+  "@estimateDueDateNote": {
+    "description": "Note under the due date (CFF 12 business-day move pending CPA)."
+  },
+  "estimateIvaConsolidated": "IVA consolidado de {count} regímenes: se declara uno solo por RFC.",
+  "@estimateIvaConsolidated": {
+    "description": "Totals note when two or more regimes contribute IVA (OQ-T2).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "estimateCpaBannerTitle": "Requiere validación de un contador",
+  "@estimateCpaBannerTitle": {
+    "description": "Title of the strong (CPA-unverified) warning above the figures."
+  },
+  "estimateRegimeCode": "Régimen {code}",
+  "@estimateRegimeCode": {
+    "description": "Regime card subtitle.",
+    "placeholders": {
+      "code": {
+        "type": "String",
+        "example": "612"
+      }
+    }
+  },
+  "estimateIncompleteFigures": "Cifras con datos faltantes: se usaron ceros.",
+  "@estimateIncompleteFigures": {
+    "description": "Regime card marker: the figures depend on missing inputs."
+  },
+  "estimateMissingTitle": "Falta:",
+  "@estimateMissingTitle": {
+    "description": "Heading of the missing inputs list."
+  },
+  "estimateCompleteInputs": "Completa tus datos",
+  "@estimateCompleteInputs": {
+    "description": "CTA of an incomplete regime: opens its tax-inputs form."
+  },
+  "estimateViewBreakdown": "Ver desglose",
+  "@estimateViewBreakdown": {
+    "description": "Opens the breakdown of a regime."
+  },
+  "estimateCpaTopics": "Pendiente de validar por un contador: {topics}.",
+  "@estimateCpaTopics": {
+    "description": "Regime card line listing CPA-unverified rules.",
+    "placeholders": {
+      "topics": {
+        "type": "String"
+      }
+    }
+  },
+  "estimateIvaCharged": "IVA trasladado cobrado",
+  "@estimateIvaCharged": {
+    "description": "Regime IVA component."
+  },
+  "estimateIvaCreditable": "IVA acreditable pagado",
+  "@estimateIvaCreditable": {
+    "description": "Regime IVA component (subtracted)."
+  },
+  "estimateIvaWithheld": "IVA retenido por clientes",
+  "@estimateIvaWithheld": {
+    "description": "Regime IVA component (subtracted)."
+  },
+  "estimateIvaExcluded": "IVA excluido por pago definitivo",
+  "@estimateIvaExcluded": {
+    "description": "Regime IVA component (subtracted)."
+  },
+  "estimateIvaContributes": "Se suma al IVA del mes; no se paga por separado.",
+  "@estimateIvaContributes": {
+    "description": "Note under a regime's IVA components."
+  },
+  "cpaTopicRifReduction": "la reducción del RIF por año",
+  "@cpaTopicRifReduction": {
+    "description": "CPA topic rif_reduction in plain Spanish."
+  },
+  "cpaTopicRifBimonthlyIva": "el IVA bimestral del RIF",
+  "@cpaTopicRifBimonthlyIva": {
+    "description": "CPA topic rif_bimonthly_iva."
+  },
+  "cpaTopicPlatformDefinitiveIva": "el IVA definitivo de plataformas",
+  "@cpaTopicPlatformDefinitiveIva": {
+    "description": "CPA topic platform_definitive_iva."
+  },
+  "cpaTopicCrossRegimeIvaNetting": "la compensación del IVA entre regímenes",
+  "@cpaTopicCrossRegimeIvaNetting": {
+    "description": "CPA topic cross_regime_iva_netting."
+  },
+  "cpaTopicResicoPmInterestWithholding": "la retención de intereses en RESICO de personas morales",
+  "@cpaTopicResicoPmInterestWithholding": {
+    "description": "CPA topic resico_pm_interest_withholding."
+  },
+  "cpaTopicOther": "otras reglas",
+  "@cpaTopicOther": {
+    "description": "A CPA topic this app version does not know."
+  },
+  "breakdownTitle": "Desglose",
+  "@breakdownTitle": {
+    "description": "App bar title of the breakdown screen (M5-26)."
+  },
+  "taxInputsTitle": "Datos fiscales",
+  "@taxInputsTitle": {
+    "description": "App bar title of the tax-inputs form (M5-27)."
+  },
+  "comingSoon": "Disponible pronto.",
+  "@comingSoon": {
+    "description": "Placeholder body of a screen still being built."
   }
 }
