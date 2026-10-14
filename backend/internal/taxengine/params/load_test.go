@@ -79,13 +79,6 @@ func TestLoadSyntheticFixtures(t *testing.T) {
 	assert.True(t, older.Provisional, "the 2025 fixture is marked provisional")
 }
 
-func TestEmbeddedHasNoSetsUntilM5_04(t *testing.T) {
-	// The real 2026 parameters are transcribed by M5-04, which replaces this
-	// test with one asserting the embedded catalog loads and selects 2026.
-	_, err := params.Embedded()
-	require.ErrorIs(t, err, taxparams.ErrNoParameterSets)
-}
-
 // fixture2026 is the valid synthetic 2026/v1 file, the base the invalid
 // cases edit.
 func fixture2026(t testing.TB) string {

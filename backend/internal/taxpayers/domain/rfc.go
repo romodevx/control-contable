@@ -63,8 +63,10 @@ type RFC struct {
 //
 // Validation, in order:
 //  1. Generic RFCs are ErrRFCGeneric (see genericRFCs).
-//  2. The shape is 3 or 4 letters from A-Z, Ñ and &, six digits and a
-//     homoclave of A-Z and 0-9, else ErrRFCMalformed.
+//  2. The shape is 3 or 4 letters from A-Z, Ñ and &, six digits, two
+//     homoclave characters from A-Z and 0-9 and a check digit from 0-9 and
+//     A (the only values the algorithm yields; MODULE-taxpayers §2.2 and
+//     the DB CHECK taxpayers_rfc_masked_format), else ErrRFCMalformed.
 //  3. YYMMDD is a calendar date, else ErrRFCInvalidDate. The century is
 //     not encoded, so YY is read as 20YY: 29 February is accepted whenever
 //     YY is a multiple of 4. That is exact for 1901-2099; the one
@@ -169,12 +171,14 @@ func layoutFor(length int) (PersonType, int, bool) {
 }
 
 // hasRFCShape reports whether runes are nameLength name letters, dateLength
-// digits and a homoclave.
+// digits, a homoclave and a check digit.
 func hasRFCShape(runes []rune, nameLength int) bool {
 	dateEnd := nameLength + dateLength
+	last := len(runes) - 1
 	return allRunes(runes[:nameLength], isNameRune) &&
 		allRunes(runes[nameLength:dateEnd], isDigit) &&
-		allRunes(runes[dateEnd:], isHomoclaveRune)
+		allRunes(runes[dateEnd:last], isHomoclaveRune) &&
+		isCheckDigitRune(runes[last])
 }
 
 func allRunes(runes []rune, valid func(rune) bool) bool {
@@ -184,6 +188,10 @@ func allRunes(runes []rune, valid func(rune) bool) bool {
 func isNameRune(r rune) bool { return isUpperASCII(r) || r == 'Ñ' || r == '&' }
 
 func isHomoclaveRune(r rune) bool { return isUpperASCII(r) || isDigit(r) }
+
+// isCheckDigitRune reports whether r is a value the check digit can take:
+// 0-9, or A for 10 (see checkDigit).
+func isCheckDigitRune(r rune) bool { return isDigit(r) || r == checkAlphabet[checkModulus-1] }
 
 func isUpperASCII(r rune) bool { return r >= 'A' && r <= 'Z' }
 

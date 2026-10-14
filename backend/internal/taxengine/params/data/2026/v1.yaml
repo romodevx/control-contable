@@ -1,0 +1,519 @@
+# Tax parameters for fiscal year 2026, version 1 (PLAN M5-04).
+#
+# Transcribed from the official publications listed under `sources`, all
+# fetched on 2026-10-14. Schema and rules: docs/architecture/tax-params-schema.md.
+#
+# Transcription rules followed here:
+# - Amounts are copied as printed, with the thousands separators removed.
+# - Percentages are written as fractions: "1.92 %" is "0.0192". Nothing else
+#   is computed.
+# - The art. 106 tables are the twelve tables Anexo 8 publishes, never derived
+#   from January (December row 2 is 194.59, not 12 x 16.22 = 194.64).
+# - The tariffs were extracted mechanically from the Anexo 8 PDF text and
+#   matched cell by cell against docs/research/tax-regimes-mx-2026.md §A.2.2.
+# - LISR 113-E/113-F print only "Hasta" (upper) amounts; each bracket's lower
+#   bound is the previous upper + 0.01, the first is 0.01 (schema rule).
+# - Legal fractions that are not a terminating decimal stay in code, exact:
+#   the 2/3 IVA withholding (RLIVA 3 fr. I) is fiscal.ShareTwoThirds, and the
+#   platform 50 % / 100 % IVA withholding (LIVA 18-J fr. II a) is
+#   fiscal.ShareHalf / ShareWhole. A 6-decimal rate cannot hold 2/3.
+fiscal_year: 2026
+version: 1
+published_on: 2026-10-14
+
+sources:
+  - id: anexo8-rmf-2026
+    title: Anexo 8 de la Resolución Miscelánea Fiscal para 2026, tarifas del ISR (SAT copy of the DOF edition; accessed 2026-10-14)
+    url: https://www.sat.gob.mx/minisitio/NormatividadRMFyRGCE/documentos2026/rmf/anexos/Anexo-8-RMF-2026_DOF-28122025.pdf
+    dof_date: 2025-12-28
+    reference: "Anexo 8, apartados B.V, B.VI, B.VII y C.II"
+  - id: lisr
+    title: Ley del Impuesto sobre la Renta, texto vigente, última reforma DOF 01-04-2024 (Cámara de Diputados; accessed 2026-10-14)
+    url: https://www.diputados.gob.mx/LeyesBiblio/pdf/LISR.pdf
+    dof_date: 2024-04-01
+    reference: "Arts. 9, 27 fr. III, 106, 113-A, 113-B, 113-C, 113-E, 113-F, 113-J, 115, 116, 206"
+  - id: lif-2026
+    title: Ley de Ingresos de la Federación para el Ejercicio Fiscal de 2026 (Cámara de Diputados; accessed 2026-10-14)
+    url: https://www.diputados.gob.mx/LeyesBiblio/pdf/LIF_2026.pdf
+    dof_date: 2025-11-07
+    reference: "Arts. 24 y 25 fr. VI"
+  - id: liva
+    title: Ley del Impuesto al Valor Agregado, texto vigente, última reforma DOF 12-11-2021 (Cámara de Diputados; accessed 2026-10-14)
+    url: https://www.diputados.gob.mx/LeyesBiblio/pdf/LIVA.pdf
+    dof_date: 2021-11-12
+    reference: "Arts. 1o. y 2o.-A"
+  - id: rliva
+    title: Reglamento de la Ley del Impuesto al Valor Agregado, última reforma DOF 25-09-2014 (Cámara de Diputados; accessed 2026-10-14)
+    url: https://www.diputados.gob.mx/LeyesBiblio/regley/Reg_LIVA_250914.pdf
+    dof_date: 2014-09-25
+    reference: "Art. 3 fr. II"
+  - id: dof-frontera-norte-2018
+    title: Decreto de estímulos fiscales región fronteriza norte (DOF; accessed 2026-10-14)
+    url: https://dof.gob.mx/nota_detalle.php?codigo=5547485&fecha=31/12/2018
+    dof_date: 2018-12-31
+    reference: "Artículo Décimo Primero (crédito del 50% de la tasa del IVA)"
+  - id: dof-frontera-sur-2020
+    title: Decreto de estímulos fiscales región fronteriza sur (DOF; accessed 2026-10-14)
+    url: https://dof.gob.mx/nota_detalle.php?codigo=5609182&fecha=30/12/2020
+    dof_date: 2020-12-30
+    reference: "Artículo Décimo (crédito del 50% de la tasa del IVA)"
+  - id: dof-fronteras-2025
+    title: Decreto por el que se modifican los decretos de estímulos fiscales región fronteriza norte y sur (DOF; accessed 2026-10-14)
+    url: https://dof.gob.mx/nota_detalle.php?codigo=5777697&fecha=31/12/2025
+    dof_date: 2025-12-31
+    reference: "Artículos Primero y Segundo (vigencia hasta el 31 de diciembre de 2026)"
+  - id: dof-uma-2025
+    title: Unidad de medida y actualización, valores vigentes a partir del 1 de febrero de 2025 (INEGI en el DOF; accessed 2026-10-14)
+    url: https://dof.gob.mx/nota_detalle.php?codigo=5746930&fecha=10/01/2025
+    dof_date: 2025-01-10
+    reference: "Valores diario, mensual y anual de la UMA 2025"
+  - id: dof-uma-2026
+    title: Unidad de medida y actualización, valores vigentes a partir del 1 de febrero de 2026 (INEGI en el DOF; accessed 2026-10-14)
+    url: https://dof.gob.mx/nota_detalle.php?codigo=5778072&fecha=09/01/2026
+    dof_date: 2026-01-09
+    reference: "Valores diario, mensual y anual de la UMA 2026"
+
+values:
+  # IVA rates -----------------------------------------------------------------
+  - key: iva.rate.general_16
+    rate: "0.16"            # "la tasa del 16%"
+    valid_from: 2026-01-01
+    basis: [{source: liva, article: "Art. 1o."}]
+  - key: iva.rate.zero
+    rate: "0"               # "la tasa del 0%"
+    valid_from: 2026-01-01
+    basis: [{source: liva, article: "Art. 2o.-A"}]
+  - key: iva.rate.border_8
+    # The decrees grant "un crédito equivalente al 50% de la tasa" of LIVA 1o.
+    # (16 %): the effective rate is 8 %. Extended to 31-12-2026 by DOF 31-12-2025.
+    rate: "0.08"
+    valid_from: 2026-01-01
+    valid_to: 2026-12-31
+    basis:
+      - {source: dof-frontera-norte-2018, article: "Art. Décimo Primero"}
+      - {source: dof-frontera-sur-2020, article: "Art. Décimo"}
+      - {source: dof-fronteras-2025, article: "Arts. Primero y Segundo"}
+      - {source: liva, article: "Art. 1o."}
+
+  # IVA withholding -----------------------------------------------------------
+  - key: iva.withholding.freight_pm
+    rate: "0.04"            # "el 4% del valor de la contraprestación"
+    valid_from: 2026-01-01
+    basis: [{source: rliva, article: "Art. 3 fr. II"}]
+
+  # ISR rates -----------------------------------------------------------------
+  - key: isr.rate.persona_moral
+    rate: "0.30"            # "la tasa del 30%"
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 9"}]
+  - key: isr.rent.blind_deduction
+    rate: "0.35"            # "deducir el 35% de los ingresos"
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 115, segundo párrafo"}]
+
+  # ISR withholding by personas morales ---------------------------------------
+  - key: isr.withholding.fees_pm
+    rate: "0.10"            # "la tasa del 10%"
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 106, penúltimo párrafo"}]
+  - key: isr.withholding.rent_pm
+    rate: "0.10"            # "la tasa del 10%"
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 116"}]
+  - key: isr.withholding.resico_pf
+    rate: "0.0125"          # "la tasa del 1.25%"
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 113-J"}]
+  - key: isr.withholding.interest_annual
+    rate: "0.009"           # "será del 0.90 por ciento" (annual LIF rate)
+    valid_from: 2026-01-01
+    valid_to: 2026-12-31
+    basis: [{source: lif-2026, article: "Art. 24"}]
+
+  # ISR withheld by digital platforms -----------------------------------------
+  - key: isr.platform.transport_delivery
+    rate: "0.021"           # "la retención se hará por el 2.1%"
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 113-A, fr. I"}]
+  - key: isr.platform.lodging
+    rate: "0.04"            # "la retención se hará por el 4%"
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 113-A, fr. II"}]
+  - key: isr.platform.goods_services
+    # LIF 2026 replaces the 1 % of LISR 113-A fr. III: "aplicarán la tasa del 2.5 por ciento".
+    rate: "0.025"
+    valid_from: 2026-01-01
+    valid_to: 2026-12-31
+    basis: [{source: lif-2026, article: "Art. 25, fr. VI, primer párrafo"}]
+  - key: isr.platform.no_rfc
+    rate: "0.20"            # "aplicando la tasa del 20%"
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 113-C, fr. IV, segundo párrafo"}]
+  - key: isr.platform.persona_moral
+    rate: "0.025"           # "aplicando una tasa del 2.5 por ciento sin deducción alguna"
+    valid_from: 2026-01-01
+    valid_to: 2026-12-31
+    basis: [{source: lif-2026, article: "Art. 25, fr. VI, segundo párrafo"}]
+  - key: isr.platform.persona_moral_no_rfc
+    rate: "0.20"            # "la tasa de retención del 20 por ciento en sustitución de la tasa del 2.5"
+    valid_from: 2026-01-01
+    valid_to: 2026-12-31
+    basis: [{source: lif-2026, article: "Art. 25, fr. VI, tercer párrafo"}]
+
+  # Thresholds ----------------------------------------------------------------
+  - key: regime.resico_pf.income_cap
+    money: "3500000.00"     # "tres millones quinientos mil pesos"
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 113-E, primer párrafo"}]
+  - key: regime.resico_pm.income_cap
+    money: "35000000.00"    # "35 millones de pesos"
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 206, primer párrafo"}]
+  - key: regime.platform.definitive_option_cap
+    money: "300000.00"      # "trescientos mil pesos"
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 113-B, fr. I"}]
+  - key: deduction.cash_payment_limit
+    money: "2000.00"        # "los pagos cuyo monto exceda de $2,000.00"
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 27, fr. III"}]
+
+  # UMA: January 2026 still uses the values in force from 1 February 2025 ------
+  - key: uma.daily
+    money: "113.14"
+    valid_from: 2026-01-01
+    valid_to: 2026-01-31
+    basis: [{source: dof-uma-2025, article: "Valor diario"}]
+  - key: uma.daily
+    money: "117.31"
+    valid_from: 2026-02-01
+    valid_to: 2027-01-31
+    basis: [{source: dof-uma-2026, article: "Valor diario"}]
+  - key: uma.monthly
+    money: "3439.46"
+    valid_from: 2026-01-01
+    valid_to: 2026-01-31
+    basis: [{source: dof-uma-2025, article: "Valor mensual"}]
+  - key: uma.monthly
+    money: "3566.22"
+    valid_from: 2026-02-01
+    valid_to: 2027-01-31
+    basis: [{source: dof-uma-2026, article: "Valor mensual"}]
+  - key: uma.annual
+    money: "41273.52"
+    valid_from: 2026-01-01
+    valid_to: 2026-01-31
+    basis: [{source: dof-uma-2025, article: "Valor anual"}]
+  - key: uma.annual
+    money: "42794.64"
+    valid_from: 2026-02-01
+    valid_to: 2027-01-31
+    basis: [{source: dof-uma-2026, article: "Valor anual"}]
+
+tables:
+  # LISR 113-E, TABLA MENSUAL: the rate applies to the whole income (flat).
+  - key: isr.resico_pf.monthly
+    kind: flat
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 113-E, tabla mensual"}]
+    rows:
+      - {lower: "0.01", upper: "25000.00", rate: "0.01"}
+      - {lower: "25000.01", upper: "50000.00", rate: "0.011"}
+      - {lower: "50000.01", upper: "83333.33", rate: "0.015"}
+      - {lower: "83333.34", upper: "208333.33", rate: "0.02"}
+      - {lower: "208333.34", upper: "3500000.00", rate: "0.025"}
+  # LISR 113-F, TABLA ANUAL.
+  - key: isr.resico_pf.annual
+    kind: flat
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 113-F, tabla anual"}]
+    rows:
+      - {lower: "0.01", upper: "300000.00", rate: "0.01"}
+      - {lower: "300000.01", upper: "600000.00", rate: "0.011"}
+      - {lower: "600000.01", upper: "1000000.00", rate: "0.015"}
+      - {lower: "1000000.01", upper: "2500000.00", rate: "0.02"}
+      - {lower: "2500000.01", upper: "3500000.00", rate: "0.025"}
+  # Anexo 8 B.V: monthly tariff, LISR art. 96 (also RLISR 175, regla 3.12.2).
+  - key: isr.art96.monthly
+    kind: marginal
+    valid_from: 2026-01-01
+    basis: [{source: anexo8-rmf-2026, article: "Anexo 8, B.V"}]
+    rows:
+      - {lower: "0.01", upper: "844.59", fixed_fee: "0.00", rate: "0.0192"}
+      - {lower: "844.60", upper: "7168.51", fixed_fee: "16.22", rate: "0.064"}
+      - {lower: "7168.52", upper: "12598.02", fixed_fee: "420.95", rate: "0.1088"}
+      - {lower: "12598.03", upper: "14644.64", fixed_fee: "1011.68", rate: "0.16"}
+      - {lower: "14644.65", upper: "17533.64", fixed_fee: "1339.14", rate: "0.1792"}
+      - {lower: "17533.65", upper: "35362.83", fixed_fee: "1856.84", rate: "0.2136"}
+      - {lower: "35362.84", upper: "55736.68", fixed_fee: "5665.16", rate: "0.2352"}
+      - {lower: "55736.69", upper: "106410.50", fixed_fee: "10457.09", rate: "0.30"}
+      - {lower: "106410.51", upper: "141880.66", fixed_fee: "25659.23", rate: "0.32"}
+      - {lower: "141880.67", upper: "425641.99", fixed_fee: "37009.69", rate: "0.34"}
+      - {lower: "425642.00", fixed_fee: "133488.54", rate: "0.35"}
+  # Anexo 8 B.VI: accumulated tariff, enero 2026, LISR art. 106 (published, not derived).
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 1
+    valid_from: 2026-01-01
+    basis: [{source: anexo8-rmf-2026, article: "Anexo 8, B.VI, tarifa del mes de enero de 2026"}]
+    rows:
+      - {lower: "0.01", upper: "844.59", fixed_fee: "0.00", rate: "0.0192"}
+      - {lower: "844.60", upper: "7168.51", fixed_fee: "16.22", rate: "0.064"}
+      - {lower: "7168.52", upper: "12598.02", fixed_fee: "420.95", rate: "0.1088"}
+      - {lower: "12598.03", upper: "14644.64", fixed_fee: "1011.68", rate: "0.16"}
+      - {lower: "14644.65", upper: "17533.64", fixed_fee: "1339.14", rate: "0.1792"}
+      - {lower: "17533.65", upper: "35362.83", fixed_fee: "1856.84", rate: "0.2136"}
+      - {lower: "35362.84", upper: "55736.68", fixed_fee: "5665.16", rate: "0.2352"}
+      - {lower: "55736.69", upper: "106410.50", fixed_fee: "10457.09", rate: "0.30"}
+      - {lower: "106410.51", upper: "141880.66", fixed_fee: "25659.23", rate: "0.32"}
+      - {lower: "141880.67", upper: "425641.99", fixed_fee: "37009.69", rate: "0.34"}
+      - {lower: "425642.00", fixed_fee: "133488.54", rate: "0.35"}
+  # Anexo 8 B.VI: accumulated tariff, febrero 2026, LISR art. 106 (published, not derived).
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 2
+    valid_from: 2026-01-01
+    basis: [{source: anexo8-rmf-2026, article: "Anexo 8, B.VI, tarifa del mes de febrero de 2026"}]
+    rows:
+      - {lower: "0.01", upper: "1689.18", fixed_fee: "0.00", rate: "0.0192"}
+      - {lower: "1689.19", upper: "14337.02", fixed_fee: "32.44", rate: "0.064"}
+      - {lower: "14337.03", upper: "25196.04", fixed_fee: "841.90", rate: "0.1088"}
+      - {lower: "25196.05", upper: "29289.28", fixed_fee: "2023.36", rate: "0.16"}
+      - {lower: "29289.29", upper: "35067.28", fixed_fee: "2678.28", rate: "0.1792"}
+      - {lower: "35067.29", upper: "70725.66", fixed_fee: "3713.68", rate: "0.2136"}
+      - {lower: "70725.67", upper: "111473.36", fixed_fee: "11330.32", rate: "0.2352"}
+      - {lower: "111473.37", upper: "212821.00", fixed_fee: "20914.18", rate: "0.30"}
+      - {lower: "212821.01", upper: "283761.32", fixed_fee: "51318.46", rate: "0.32"}
+      - {lower: "283761.33", upper: "851283.98", fixed_fee: "74019.38", rate: "0.34"}
+      - {lower: "851283.99", fixed_fee: "266977.08", rate: "0.35"}
+  # Anexo 8 B.VI: accumulated tariff, marzo 2026, LISR art. 106 (published, not derived).
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 3
+    valid_from: 2026-01-01
+    basis: [{source: anexo8-rmf-2026, article: "Anexo 8, B.VI, tarifa del mes de marzo de 2026"}]
+    rows:
+      - {lower: "0.01", upper: "2533.77", fixed_fee: "0.00", rate: "0.0192"}
+      - {lower: "2533.78", upper: "21505.53", fixed_fee: "48.66", rate: "0.064"}
+      - {lower: "21505.54", upper: "37794.06", fixed_fee: "1262.85", rate: "0.1088"}
+      - {lower: "37794.07", upper: "43933.92", fixed_fee: "3035.04", rate: "0.16"}
+      - {lower: "43933.93", upper: "52600.92", fixed_fee: "4017.42", rate: "0.1792"}
+      - {lower: "52600.93", upper: "106088.49", fixed_fee: "5570.52", rate: "0.2136"}
+      - {lower: "106088.50", upper: "167210.04", fixed_fee: "16995.48", rate: "0.2352"}
+      - {lower: "167210.05", upper: "319231.50", fixed_fee: "31371.27", rate: "0.30"}
+      - {lower: "319231.51", upper: "425641.98", fixed_fee: "76977.69", rate: "0.32"}
+      - {lower: "425641.99", upper: "1276925.97", fixed_fee: "111029.07", rate: "0.34"}
+      - {lower: "1276925.98", fixed_fee: "400465.62", rate: "0.35"}
+  # Anexo 8 B.VI: accumulated tariff, abril 2026, LISR art. 106 (published, not derived).
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 4
+    valid_from: 2026-01-01
+    basis: [{source: anexo8-rmf-2026, article: "Anexo 8, B.VI, tarifa del mes de abril de 2026"}]
+    rows:
+      - {lower: "0.01", upper: "3378.36", fixed_fee: "0.00", rate: "0.0192"}
+      - {lower: "3378.37", upper: "28674.04", fixed_fee: "64.88", rate: "0.064"}
+      - {lower: "28674.05", upper: "50392.08", fixed_fee: "1683.80", rate: "0.1088"}
+      - {lower: "50392.09", upper: "58578.56", fixed_fee: "4046.72", rate: "0.16"}
+      - {lower: "58578.57", upper: "70134.56", fixed_fee: "5356.56", rate: "0.1792"}
+      - {lower: "70134.57", upper: "141451.32", fixed_fee: "7427.36", rate: "0.2136"}
+      - {lower: "141451.33", upper: "222946.72", fixed_fee: "22660.64", rate: "0.2352"}
+      - {lower: "222946.73", upper: "425642.00", fixed_fee: "41828.36", rate: "0.30"}
+      - {lower: "425642.01", upper: "567522.64", fixed_fee: "102636.92", rate: "0.32"}
+      - {lower: "567522.65", upper: "1702567.96", fixed_fee: "148038.76", rate: "0.34"}
+      - {lower: "1702567.97", fixed_fee: "533954.16", rate: "0.35"}
+  # Anexo 8 B.VI: accumulated tariff, mayo 2026, LISR art. 106 (published, not derived).
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 5
+    valid_from: 2026-01-01
+    basis: [{source: anexo8-rmf-2026, article: "Anexo 8, B.VI, tarifa del mes de mayo de 2026"}]
+    rows:
+      - {lower: "0.01", upper: "4222.95", fixed_fee: "0.00", rate: "0.0192"}
+      - {lower: "4222.96", upper: "35842.55", fixed_fee: "81.10", rate: "0.064"}
+      - {lower: "35842.56", upper: "62990.10", fixed_fee: "2104.75", rate: "0.1088"}
+      - {lower: "62990.11", upper: "73223.20", fixed_fee: "5058.40", rate: "0.16"}
+      - {lower: "73223.21", upper: "87668.20", fixed_fee: "6695.70", rate: "0.1792"}
+      - {lower: "87668.21", upper: "176814.15", fixed_fee: "9284.20", rate: "0.2136"}
+      - {lower: "176814.16", upper: "278683.40", fixed_fee: "28325.80", rate: "0.2352"}
+      - {lower: "278683.41", upper: "532052.50", fixed_fee: "52285.45", rate: "0.30"}
+      - {lower: "532052.51", upper: "709403.30", fixed_fee: "128296.15", rate: "0.32"}
+      - {lower: "709403.31", upper: "2128209.95", fixed_fee: "185048.45", rate: "0.34"}
+      - {lower: "2128209.96", fixed_fee: "667442.70", rate: "0.35"}
+  # Anexo 8 B.VI: accumulated tariff, junio 2026, LISR art. 106 (published, not derived).
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 6
+    valid_from: 2026-01-01
+    basis: [{source: anexo8-rmf-2026, article: "Anexo 8, B.VI, tarifa del mes de junio de 2026"}]
+    rows:
+      - {lower: "0.01", upper: "5067.54", fixed_fee: "0.00", rate: "0.0192"}
+      - {lower: "5067.55", upper: "43011.06", fixed_fee: "97.32", rate: "0.064"}
+      - {lower: "43011.07", upper: "75588.12", fixed_fee: "2525.70", rate: "0.1088"}
+      - {lower: "75588.13", upper: "87867.84", fixed_fee: "6070.08", rate: "0.16"}
+      - {lower: "87867.85", upper: "105201.84", fixed_fee: "8034.84", rate: "0.1792"}
+      - {lower: "105201.85", upper: "212176.98", fixed_fee: "11141.04", rate: "0.2136"}
+      - {lower: "212176.99", upper: "334420.08", fixed_fee: "33990.96", rate: "0.2352"}
+      - {lower: "334420.09", upper: "638463.00", fixed_fee: "62742.54", rate: "0.30"}
+      - {lower: "638463.01", upper: "851283.96", fixed_fee: "153955.38", rate: "0.32"}
+      - {lower: "851283.97", upper: "2553851.94", fixed_fee: "222058.14", rate: "0.34"}
+      - {lower: "2553851.95", fixed_fee: "800931.24", rate: "0.35"}
+  # Anexo 8 B.VI: accumulated tariff, julio 2026, LISR art. 106 (published, not derived).
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 7
+    valid_from: 2026-01-01
+    basis: [{source: anexo8-rmf-2026, article: "Anexo 8, B.VI, tarifa del mes de julio de 2026"}]
+    rows:
+      - {lower: "0.01", upper: "5912.13", fixed_fee: "0.00", rate: "0.0192"}
+      - {lower: "5912.14", upper: "50179.57", fixed_fee: "113.54", rate: "0.064"}
+      - {lower: "50179.58", upper: "88186.14", fixed_fee: "2946.65", rate: "0.1088"}
+      - {lower: "88186.15", upper: "102512.48", fixed_fee: "7081.76", rate: "0.16"}
+      - {lower: "102512.49", upper: "122735.48", fixed_fee: "9373.98", rate: "0.1792"}
+      - {lower: "122735.49", upper: "247539.81", fixed_fee: "12997.88", rate: "0.2136"}
+      - {lower: "247539.82", upper: "390156.76", fixed_fee: "39656.12", rate: "0.2352"}
+      - {lower: "390156.77", upper: "744873.50", fixed_fee: "73199.63", rate: "0.30"}
+      - {lower: "744873.51", upper: "993164.62", fixed_fee: "179614.61", rate: "0.32"}
+      - {lower: "993164.63", upper: "2979493.93", fixed_fee: "259067.83", rate: "0.34"}
+      - {lower: "2979493.94", fixed_fee: "934419.78", rate: "0.35"}
+  # Anexo 8 B.VI: accumulated tariff, agosto 2026, LISR art. 106 (published, not derived).
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 8
+    valid_from: 2026-01-01
+    basis: [{source: anexo8-rmf-2026, article: "Anexo 8, B.VI, tarifa del mes de agosto de 2026"}]
+    rows:
+      - {lower: "0.01", upper: "6756.72", fixed_fee: "0.00", rate: "0.0192"}
+      - {lower: "6756.73", upper: "57348.08", fixed_fee: "129.76", rate: "0.064"}
+      - {lower: "57348.09", upper: "100784.16", fixed_fee: "3367.60", rate: "0.1088"}
+      - {lower: "100784.17", upper: "117157.12", fixed_fee: "8093.44", rate: "0.16"}
+      - {lower: "117157.13", upper: "140269.12", fixed_fee: "10713.12", rate: "0.1792"}
+      - {lower: "140269.13", upper: "282902.64", fixed_fee: "14854.72", rate: "0.2136"}
+      - {lower: "282902.65", upper: "445893.44", fixed_fee: "45321.28", rate: "0.2352"}
+      - {lower: "445893.45", upper: "851284.00", fixed_fee: "83656.72", rate: "0.30"}
+      - {lower: "851284.01", upper: "1135045.28", fixed_fee: "205273.84", rate: "0.32"}
+      - {lower: "1135045.29", upper: "3405135.92", fixed_fee: "296077.52", rate: "0.34"}
+      - {lower: "3405135.93", fixed_fee: "1067908.32", rate: "0.35"}
+  # Anexo 8 B.VI: accumulated tariff, septiembre 2026, LISR art. 106 (published, not derived).
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 9
+    valid_from: 2026-01-01
+    basis: [{source: anexo8-rmf-2026, article: "Anexo 8, B.VI, tarifa del mes de septiembre de 2026"}]
+    rows:
+      - {lower: "0.01", upper: "7601.31", fixed_fee: "0.00", rate: "0.0192"}
+      - {lower: "7601.32", upper: "64516.59", fixed_fee: "145.98", rate: "0.064"}
+      - {lower: "64516.60", upper: "113382.18", fixed_fee: "3788.55", rate: "0.1088"}
+      - {lower: "113382.19", upper: "131801.76", fixed_fee: "9105.12", rate: "0.16"}
+      - {lower: "131801.77", upper: "157802.76", fixed_fee: "12052.26", rate: "0.1792"}
+      - {lower: "157802.77", upper: "318265.47", fixed_fee: "16711.56", rate: "0.2136"}
+      - {lower: "318265.48", upper: "501630.12", fixed_fee: "50986.44", rate: "0.2352"}
+      - {lower: "501630.13", upper: "957694.50", fixed_fee: "94113.81", rate: "0.30"}
+      - {lower: "957694.51", upper: "1276925.94", fixed_fee: "230933.07", rate: "0.32"}
+      - {lower: "1276925.95", upper: "3830777.91", fixed_fee: "333087.21", rate: "0.34"}
+      - {lower: "3830777.92", fixed_fee: "1201396.86", rate: "0.35"}
+  # Anexo 8 B.VI: accumulated tariff, octubre 2026, LISR art. 106 (published, not derived).
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 10
+    valid_from: 2026-01-01
+    basis: [{source: anexo8-rmf-2026, article: "Anexo 8, B.VI, tarifa del mes de octubre de 2026"}]
+    rows:
+      - {lower: "0.01", upper: "8445.90", fixed_fee: "0.00", rate: "0.0192"}
+      - {lower: "8445.91", upper: "71685.10", fixed_fee: "162.20", rate: "0.064"}
+      - {lower: "71685.11", upper: "125980.20", fixed_fee: "4209.50", rate: "0.1088"}
+      - {lower: "125980.21", upper: "146446.40", fixed_fee: "10116.80", rate: "0.16"}
+      - {lower: "146446.41", upper: "175336.40", fixed_fee: "13391.40", rate: "0.1792"}
+      - {lower: "175336.41", upper: "353628.30", fixed_fee: "18568.40", rate: "0.2136"}
+      - {lower: "353628.31", upper: "557366.80", fixed_fee: "56651.60", rate: "0.2352"}
+      - {lower: "557366.81", upper: "1064105.00", fixed_fee: "104570.90", rate: "0.30"}
+      - {lower: "1064105.01", upper: "1418806.60", fixed_fee: "256592.30", rate: "0.32"}
+      - {lower: "1418806.61", upper: "4256419.90", fixed_fee: "370096.90", rate: "0.34"}
+      - {lower: "4256419.91", fixed_fee: "1334885.40", rate: "0.35"}
+  # Anexo 8 B.VI: accumulated tariff, noviembre 2026, LISR art. 106 (published, not derived).
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 11
+    valid_from: 2026-01-01
+    basis: [{source: anexo8-rmf-2026, article: "Anexo 8, B.VI, tarifa del mes de noviembre de 2026"}]
+    rows:
+      - {lower: "0.01", upper: "9290.49", fixed_fee: "0.00", rate: "0.0192"}
+      - {lower: "9290.50", upper: "78853.61", fixed_fee: "178.42", rate: "0.064"}
+      - {lower: "78853.62", upper: "138578.22", fixed_fee: "4630.45", rate: "0.1088"}
+      - {lower: "138578.23", upper: "161091.04", fixed_fee: "11128.48", rate: "0.16"}
+      - {lower: "161091.05", upper: "192870.04", fixed_fee: "14730.54", rate: "0.1792"}
+      - {lower: "192870.05", upper: "388991.13", fixed_fee: "20425.24", rate: "0.2136"}
+      - {lower: "388991.14", upper: "613103.48", fixed_fee: "62316.76", rate: "0.2352"}
+      - {lower: "613103.49", upper: "1170515.50", fixed_fee: "115027.99", rate: "0.30"}
+      - {lower: "1170515.51", upper: "1560687.26", fixed_fee: "282251.53", rate: "0.32"}
+      - {lower: "1560687.27", upper: "4682061.89", fixed_fee: "407106.59", rate: "0.34"}
+      - {lower: "4682061.90", fixed_fee: "1468373.94", rate: "0.35"}
+  # Anexo 8 B.VI: accumulated tariff, diciembre 2026, LISR art. 106 (published, not derived).
+  - key: isr.art106.accumulated
+    kind: marginal
+    month: 12
+    valid_from: 2026-01-01
+    basis: [{source: anexo8-rmf-2026, article: "Anexo 8, B.VI, tarifa del mes de diciembre de 2026"}]
+    rows:
+      - {lower: "0.01", upper: "10135.11", fixed_fee: "0.00", rate: "0.0192"}
+      - {lower: "10135.12", upper: "86022.11", fixed_fee: "194.59", rate: "0.064"}
+      - {lower: "86022.12", upper: "151176.19", fixed_fee: "5051.37", rate: "0.1088"}
+      - {lower: "151176.20", upper: "175735.66", fixed_fee: "12140.13", rate: "0.16"}
+      - {lower: "175735.67", upper: "210403.69", fixed_fee: "16069.64", rate: "0.1792"}
+      - {lower: "210403.70", upper: "424353.97", fixed_fee: "22282.14", rate: "0.2136"}
+      - {lower: "424353.98", upper: "668840.14", fixed_fee: "67981.92", rate: "0.2352"}
+      - {lower: "668840.15", upper: "1276925.98", fixed_fee: "125485.07", rate: "0.30"}
+      - {lower: "1276925.99", upper: "1702567.97", fixed_fee: "307910.81", rate: "0.32"}
+      - {lower: "1702567.98", upper: "5107703.92", fixed_fee: "444116.23", rate: "0.34"}
+      - {lower: "5107703.93", fixed_fee: "1601862.46", rate: "0.35"}
+  # Anexo 8 B.VI: monthly tariff for rental income, LISR art. 116.
+  - key: isr.art116.monthly
+    kind: marginal
+    valid_from: 2026-01-01
+    basis: [{source: anexo8-rmf-2026, article: "Anexo 8, B.VI, tarifa del artículo 116"}]
+    rows:
+      - {lower: "0.01", upper: "844.59", fixed_fee: "0.00", rate: "0.0192"}
+      - {lower: "844.60", upper: "7168.51", fixed_fee: "16.22", rate: "0.064"}
+      - {lower: "7168.52", upper: "12598.02", fixed_fee: "420.95", rate: "0.1088"}
+      - {lower: "12598.03", upper: "14644.64", fixed_fee: "1011.68", rate: "0.16"}
+      - {lower: "14644.65", upper: "17533.64", fixed_fee: "1339.14", rate: "0.1792"}
+      - {lower: "17533.65", upper: "35362.83", fixed_fee: "1856.84", rate: "0.2136"}
+      - {lower: "35362.84", upper: "55736.68", fixed_fee: "5665.16", rate: "0.2352"}
+      - {lower: "55736.69", upper: "106410.50", fixed_fee: "10457.09", rate: "0.30"}
+      - {lower: "106410.51", upper: "141880.66", fixed_fee: "25659.23", rate: "0.32"}
+      - {lower: "141880.67", upper: "425641.99", fixed_fee: "37009.69", rate: "0.34"}
+      - {lower: "425642.00", fixed_fee: "133488.54", rate: "0.35"}
+  # Anexo 8 B.VII: RIF bimonthly definitive payments (LISR art. 111 as in force until 2021).
+  - key: isr.rif.bimonthly
+    kind: marginal
+    valid_from: 2026-01-01
+    basis: [{source: anexo8-rmf-2026, article: "Anexo 8, B.VII"}]
+    rows:
+      - {lower: "0.01", upper: "1689.18", fixed_fee: "0.00", rate: "0.0192"}
+      - {lower: "1689.19", upper: "14337.02", fixed_fee: "32.44", rate: "0.064"}
+      - {lower: "14337.03", upper: "25196.04", fixed_fee: "841.90", rate: "0.1088"}
+      - {lower: "25196.05", upper: "29289.28", fixed_fee: "2023.36", rate: "0.16"}
+      - {lower: "29289.29", upper: "35067.28", fixed_fee: "2678.28", rate: "0.1792"}
+      - {lower: "35067.29", upper: "70725.66", fixed_fee: "3713.68", rate: "0.2136"}
+      - {lower: "70725.67", upper: "111473.36", fixed_fee: "11330.32", rate: "0.2352"}
+      - {lower: "111473.37", upper: "212821.00", fixed_fee: "20914.18", rate: "0.30"}
+      - {lower: "212821.01", upper: "283761.32", fixed_fee: "51318.46", rate: "0.32"}
+      - {lower: "283761.33", upper: "851283.98", fixed_fee: "74019.38", rate: "0.34"}
+      - {lower: "851283.99", fixed_fee: "266977.08", rate: "0.35"}
+  # Anexo 8 C.II: annual tariff for fiscal year 2026, LISR arts. 97 and 152.
+  - key: isr.art152.annual
+    kind: marginal
+    valid_from: 2026-01-01
+    basis: [{source: anexo8-rmf-2026, article: "Anexo 8, C.II"}]
+    rows:
+      - {lower: "0.01", upper: "10135.11", fixed_fee: "0.00", rate: "0.0192"}
+      - {lower: "10135.12", upper: "86022.11", fixed_fee: "194.59", rate: "0.064"}
+      - {lower: "86022.12", upper: "151176.19", fixed_fee: "5051.37", rate: "0.1088"}
+      - {lower: "151176.20", upper: "175735.66", fixed_fee: "12140.13", rate: "0.16"}
+      - {lower: "175735.67", upper: "210403.69", fixed_fee: "16069.64", rate: "0.1792"}
+      - {lower: "210403.70", upper: "424353.97", fixed_fee: "22282.14", rate: "0.2136"}
+      - {lower: "424353.98", upper: "668840.14", fixed_fee: "67981.92", rate: "0.2352"}
+      - {lower: "668840.15", upper: "1276925.98", fixed_fee: "125485.07", rate: "0.30"}
+      - {lower: "1276925.99", upper: "1702567.97", fixed_fee: "307910.81", rate: "0.32"}
+      - {lower: "1702567.98", upper: "5107703.92", fixed_fee: "444116.23", rate: "0.34"}
+      - {lower: "5107703.93", fixed_fee: "1601862.46", rate: "0.35"}

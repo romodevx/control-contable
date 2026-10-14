@@ -40,4 +40,25 @@ void main() {
 
     expect(conflicts['626']!.code, '612');
   });
+
+  group('reviewPendingPartners (QA M2-12 D3)', () {
+    const pending = 'Pendiente de confirmar.';
+    final rif = regime(
+      '621',
+      reviewPendingWith: [
+        const RegimeIncompatibility(code: '612', reason: pending),
+      ],
+    );
+    final business = regime('612');
+
+    test('names the partners declared on either side', () {
+      expect(reviewPendingPartners(business, [rif, rentals]), [rif]);
+      expect(reviewPendingPartners(rif, [business, rentals]), [business]);
+    });
+
+    test('a regime is never its own partner; none when nothing pends', () {
+      expect(reviewPendingPartners(rif, [rif]), isEmpty);
+      expect(reviewPendingPartners(rentals, [business, resico]), isEmpty);
+    });
+  });
 }

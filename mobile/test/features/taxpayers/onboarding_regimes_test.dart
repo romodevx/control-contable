@@ -526,6 +526,37 @@ void main() {
       expect(find.textContaining('No hay conexión.'), findsOneWidget);
     });
 
+    testWidgets('a CPA-review warning names the pair in plain words', (
+      tester,
+    ) async {
+      harness.repository.createAnswers.add(
+        taxpayer(
+          warnings: [
+            const Warning(
+              code: 'regime_combination_needs_cpa_review',
+              field: 'regimes.1.regime_code',
+              message: cpaPendingReason,
+            ),
+          ],
+        ),
+      );
+      await openRegimes(tester);
+      await _pick(tester, '612');
+      await _pick(tester, '621');
+      await tapText(tester, _next);
+      await tapText(tester, _next);
+      await tapText(tester, 'Año 2');
+      await tapText(tester, _create);
+
+      expect(
+        find.text(
+          'Registraste juntos «612 · Actividades empresariales y '
+          'profesionales» y «621 · Incorporación Fiscal». $cpaPendingReason',
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('a CPA-review pair is a warning with the server reason', (
       tester,
     ) async {

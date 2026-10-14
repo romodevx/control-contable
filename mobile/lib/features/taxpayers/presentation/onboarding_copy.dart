@@ -91,3 +91,22 @@ String regimesIntro(RegimeWizard flow, AppLocalizations l10n) =>
       (_, PersonType.moral) => l10n.onboardingRegimesIntroMoral,
       _ => l10n.onboardingRegimesIntroFisica,
     };
+
+/// [items] joined as a Spanish list reads: `a`, `a y b`, `a, b y c`.
+String joinAsList(List<String> items, AppLocalizations l10n) => items.length < 2
+    ? items.join()
+    : l10n.listAnd(items.take(items.length - 1).join(', '), items.last);
+
+/// A CPA-review warning in plain words: which regimes were registered
+/// together, then the server's reason; the reason alone when the warning
+/// names no pair (QA M2-12 D3).
+String describeCpaReview(CpaReview review, AppLocalizations l10n) {
+  if (review.regimes.length < 2) return review.reason;
+  final regimes = [
+    for (final regime in review.regimes) '«${regimeTitle(regime)}»',
+  ];
+  return l10n.onboardingCpaWarningBody(
+    joinAsList(regimes, l10n),
+    review.reason,
+  );
+}

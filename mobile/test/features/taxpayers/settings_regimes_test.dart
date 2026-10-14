@@ -227,6 +227,32 @@ void main() {
       expect(added.options, {'rif_year': '2'});
     });
 
+    testWidgets('a CPA-review warning names the regimes it pairs with', (
+      tester,
+    ) async {
+      harness.repository.warnNext['addRegime'] = const [
+        Warning(
+          code: 'regime_combination_needs_cpa_review',
+          field: 'regime_code',
+          message: cpaPendingReason,
+        ),
+      ];
+      await pumpSettings(tester);
+      await tapText(tester, 'Agregar régimen');
+      await _pick(tester, '621');
+      await tapText(tester, 'Siguiente');
+      await tapText(tester, 'Año 2');
+      await tapText(tester, 'Agregar régimen');
+
+      expect(
+        find.text(
+          'Agregamos el régimen 621. Un contador debe confirmar su '
+          'combinación con 606 y 612: $cpaPendingReason',
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('a pair under CPA review is added and explained', (
       tester,
     ) async {
