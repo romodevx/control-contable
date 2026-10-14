@@ -279,6 +279,53 @@ func TestStore_TaxInputsReader(t *testing.T) {
 	assert.Empty(t, got, "RLS: another user reads nothing")
 }
 
+// The catalog texts of the regimes a taxpayer holds or held, from the row of
+// its person type (626 PF and 626 PM differ), under RLS.
+func TestStore_RegimeTexts(t *testing.T) {
+	e := newEnv(t)
+	var reader usecase.RegimeTextReader = e.store
+
+	var got map[fiscal.RegimeCode]usecase.RegimeText
+	err := e.txm.ReadOnly(t.Context(), userA, func(ctx context.Context) error {
+		var err error
+		got, err = reader.RegimeTexts(ctx, moralA)
+		return err
+	})
+	require.NoError(t, err)
+
+	require.Len(t, got, 2, "the ended 626 and the open 601")
+	assert.Equal(t, "General de Ley Personas Morales", got["601"].Name)
+	assert.Empty(t, got["601"].Explanation, "a full regime has no explanation")
+	assert.NotEmpty(t, got["601"].InputLabels[domain.InputCoeficienteUtilidad])
+	assert.NotEmpty(t, got["626"].InputLabels[domain.InputPriorProvisionalPayments], "626 PM takes prior payments")
+
+	err = e.txm.ReadOnly(t.Context(), userB, func(ctx context.Context) error {
+		var err error
+		got, err = reader.RegimeTexts(ctx, moralA)
+		return err
+	})
+	require.NoError(t, err)
+	assert.Empty(t, got, "RLS: another user's taxpayer holds nothing")
+}
+
+// A partial regime's catalog explanation reaches the estimate.
+func TestStore_RegimeTextsCarryTheExplanation(t *testing.T) {
+	e := newEnv(t)
+	const rif = "0199d4a2-5555-7000-8000-0000000000a3"
+	e.seedTaxpayer(t, userA, rif, "fisica", regime{"621", "2022-01", nil})
+
+	var got map[fiscal.RegimeCode]usecase.RegimeText
+	err := e.txm.ReadOnly(t.Context(), userA, func(ctx context.Context) error {
+		var err error
+		got, err = e.store.RegimeTexts(ctx, rif)
+		return err
+	})
+	require.NoError(t, err)
+
+	assert.NotEmpty(t, got["621"].Name)
+	assert.NotEmpty(t, got["621"].Explanation)
+}
+
 type refuseAll struct{}
 
 func (refuseAll) EnsureWritable(context.Context, string) error {

@@ -50,19 +50,35 @@ type contractEnv struct {
 	app     *sql.DB     // cc_app, the API's own pool, for reading rows as a user
 }
 
+// contractWiring is what a contractOption may adjust: the record modules'
+// clocks, the estimate's clock and the API's cc_app pool.
+type contractWiring struct {
+	recordWiring
+	taxEngineClock clock.Clock
+	// wrapApp, when set, replaces the cc_app pool every module uses (the
+	// performance test traces its statements).
+	wrapApp func(t *testing.T, app *sql.DB) *sql.DB
+}
+
 // contractOption adjusts the composition of a contractEnv.
-type contractOption func(*recordWiring)
+type contractOption func(*contractWiring)
 
 // withExpensesDay pins the expense rules' clock to day (the auth, trial and
 // taxpayer clocks stay the system's).
 func withExpensesDay(day time.Time) contractOption {
-	return func(w *recordWiring) { w.expensesClock = clock.NewFixed(day) }
+	return func(w *contractWiring) { w.expensesClock = clock.NewFixed(day) }
 }
 
 // withIncomesDay pins the income rules' clock to day (the auth, trial and
 // taxpayer clocks stay the system's).
 func withIncomesDay(day time.Time) contractOption {
-	return func(w *recordWiring) { w.incomesClock = clock.NewFixed(day) }
+	return func(w *contractWiring) { w.incomesClock = clock.NewFixed(day) }
+}
+
+// withTaxEngineDay pins the estimate's "today" (the default period, the
+// future-month refusal) to day.
+func withTaxEngineDay(day time.Time) contractOption {
+	return func(w *contractWiring) { w.taxEngineClock = clock.NewFixed(day) }
 }
 
 func newContractEnv(t *testing.T, db health.Pinger, options ...contractOption) contractEnv {
@@ -71,7 +87,14 @@ func newContractEnv(t *testing.T, db health.Pinger, options ...contractOption) c
 	ownerDB := pg.Connect(t, pgtest.RoleOwner)
 	owner, err := flagsgorm.Open(ownerDB)
 	require.NoError(t, err)
+	var wiring contractWiring
+	for _, o := range options {
+		o(&wiring)
+	}
 	app := pg.Connect(t, pgtest.RoleApp)
+	if wiring.wrapApp != nil {
+		app = wiring.wrapApp(t, app)
+	}
 	svc, err := newFlagService(app, nil)
 	require.NoError(t, err)
 	logs := &syncBuffer{}
@@ -80,15 +103,12 @@ func newContractEnv(t *testing.T, db health.Pinger, options ...contractOption) c
 		env: config.EnvDev, keys: testAuthKeys(), pool: app, logger: logger, now: time.Now, argon2: fastArgon2,
 	})
 	require.NoError(t, err)
-	wiring := recordWiring{env: config.EnvDev, keys: testTaxpayerKeys(), pool: app, auth: auth, logger: logger}
-	for _, o := range options {
-		o(&wiring)
-	}
-	records, err := newRecordModules(wiring)
+	wiring.env, wiring.keys, wiring.pool, wiring.auth, wiring.logger = config.EnvDev, testTaxpayerKeys(), app, auth, logger
+	records, err := newRecordModules(wiring.recordWiring)
 	require.NoError(t, err)
 	taxEngine, err := newTaxEngineModule(taxEngineWiring{
 		pool: app, limits: auth.limits, logger: logger,
-		tx: records.taxpayers.tx, taxpayers: records.taxpayers.queries,
+		tx: records.taxpayers.tx, taxpayers: records.taxpayers.queries, clock: wiring.taxEngineClock,
 	})
 	require.NoError(t, err)
 	return contractEnv{

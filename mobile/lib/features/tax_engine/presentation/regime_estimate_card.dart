@@ -79,7 +79,7 @@ class RegimeEstimateCard extends StatelessWidget {
             ),
             if (regime.cpaReviewPending)
               Text(
-                l10n.estimateCpaTopics(_topics(l10n, regime.cpaTopics)),
+                l10n.estimateCpaTopics(cpaTopicsText(l10n, regime.cpaTopics)),
                 style: text.bodyMedium,
               ),
             if (explanation != null) Text(explanation, style: text.bodyMedium),
@@ -119,7 +119,9 @@ class RegimeEstimateCard extends StatelessWidget {
   }
 }
 
-String _topics(AppLocalizations l10n, List<CpaTopic> topics) => topics
+/// [topics] in plain Spanish, each named once ("la compensación del IVA
+/// entre regímenes, …").
+String cpaTopicsText(AppLocalizations l10n, List<CpaTopic> topics) => topics
     .map(
       (topic) => switch (topic) {
         CpaTopic.rifReduction => l10n.cpaTopicRifReduction,

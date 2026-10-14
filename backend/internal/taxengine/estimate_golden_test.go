@@ -62,6 +62,13 @@ func (f txInputs) TaxInputs(context.Context, string, int) (map[fiscal.RegimeCode
 	return f, nil
 }
 
+// txNoTexts is a catalog without texts: the figures do not read them.
+type txNoTexts struct{}
+
+func (txNoTexts) RegimeTexts(context.Context, string) (map[fiscal.RegimeCode]usecase.RegimeText, error) {
+	return nil, nil
+}
+
 type txNoHolidays struct{}
 
 func (txNoHolidays) IsHoliday(context.Context, fiscal.Date) (bool, error) { return false, nil }
@@ -90,7 +97,7 @@ func (c txCase) estimator(t testing.TB) *usecase.Estimator {
 	require.NoError(t, err)
 	return usecase.NewEstimator(usecase.EstimateDeps{
 		Tx: txUnit{}, Profiles: txProfiles{usecase.TaxpayerProfile{PersonType: c.personType, Regimes: c.regimes}},
-		Ledger: c.ledger, Inputs: c.inputs, Holidays: txNoHolidays{},
+		Ledger: c.ledger, Inputs: c.inputs, Texts: txNoTexts{}, Holidays: txNoHolidays{},
 		Strategies: registry, Params: catalog, Clock: clock.NewFixed(txToday),
 	})
 }

@@ -33,20 +33,63 @@ type InputsManager interface {
 	Put(ctx context.Context, userID string, req usecase.InputsRequest, values []domain.SubmittedInput) (usecase.TaxInputsView, error)
 }
 
+// EstimateReader is the estimate use case (usecase.Estimator).
+type EstimateReader interface {
+	EstimateMonth(ctx context.Context, userID, taxpayerID, rawPeriod string) (usecase.TaxpayerEstimate, error)
+	Breakdown(ctx context.Context, userID, taxpayerID, rawPeriod, regimeCode string) (usecase.RegimeBreakdown, error)
+}
+
 // Handler implements the module_tax_engine operations of
-// gen.StrictServerInterface built so far (getTaxInputs, putTaxInputs; M5-21).
-// cmd/api embeds it in the API server.
+// gen.StrictServerInterface: getTaxInputs, putTaxInputs (M5-21),
+// getTaxpayerEstimate and getEstimateBreakdown (M5-23). cmd/api embeds it in
+// the API server.
 //
 // Every operation is secured: the user id comes from the principal the
 // router's authenticator verified, never from the request. Use case errors
 // are client-ready *apperr.Error values and are returned as is; the router
 // writes the envelope (an infrastructure failure becomes the generic 500).
 type Handler struct {
-	inputs InputsManager
+	inputs    InputsManager
+	estimates EstimateReader
 }
 
-// NewHandler returns the handler over the use case.
-func NewHandler(inputs InputsManager) *Handler { return &Handler{inputs: inputs} }
+// NewHandler returns the handler over the use cases.
+func NewHandler(inputs InputsManager, estimates EstimateReader) *Handler {
+	return &Handler{inputs: inputs, estimates: estimates}
+}
+
+// GetTaxpayerEstimate implements gen.StrictServerInterface
+// (GET /v1/taxpayers/{taxpayerId}/estimates). No period is the current
+// month, which the use case resolves.
+func (h *Handler) GetTaxpayerEstimate(ctx context.Context, req gen.GetTaxpayerEstimateRequestObject) (gen.GetTaxpayerEstimateResponseObject, error) {
+	userID, ok := caller(ctx)
+	if !ok {
+		return gen.GetTaxpayerEstimate401JSONResponse{UnauthorizedJSONResponse: unauthorized(ctx)}, nil
+	}
+	var period string
+	if req.Params.Period != nil {
+		period = *req.Params.Period
+	}
+	est, err := h.estimates.EstimateMonth(ctx, userID, req.TaxpayerId.String(), period)
+	if err != nil {
+		return nil, err
+	}
+	return noStoreResponse{body: toEstimate(est)}, nil
+}
+
+// GetEstimateBreakdown implements gen.StrictServerInterface
+// (GET /v1/taxpayers/{taxpayerId}/estimates/{period}/breakdown).
+func (h *Handler) GetEstimateBreakdown(ctx context.Context, req gen.GetEstimateBreakdownRequestObject) (gen.GetEstimateBreakdownResponseObject, error) {
+	userID, ok := caller(ctx)
+	if !ok {
+		return gen.GetEstimateBreakdown401JSONResponse{UnauthorizedJSONResponse: unauthorized(ctx)}, nil
+	}
+	b, err := h.estimates.Breakdown(ctx, userID, req.TaxpayerId.String(), req.Period, req.Params.Regime)
+	if err != nil {
+		return nil, err
+	}
+	return noStoreResponse{body: toBreakdown(b)}, nil
+}
 
 // GetTaxInputs implements gen.StrictServerInterface
 // (GET /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/tax-inputs).

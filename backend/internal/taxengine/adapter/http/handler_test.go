@@ -86,7 +86,7 @@ const wantBody601 = `{
 
 func TestGetTaxInputs(t *testing.T) {
 	uc := &fakeInputs{view: view601}
-	h := taxenginehttp.NewHandler(uc)
+	h := taxenginehttp.NewHandler(uc, &fakeEstimates{})
 
 	resp, err := h.GetTaxInputs(authed(t), gen.GetTaxInputsRequestObject{
 		TaxpayerId: uuid.MustParse(taxpayerID), RegimeCode: "601", Params: gen.GetTaxInputsParams{FiscalYear: 2026},
@@ -105,7 +105,7 @@ func TestGetTaxInputs(t *testing.T) {
 
 func TestGetTaxInputs_emptyValuesAreAnArray(t *testing.T) {
 	uc := &fakeInputs{view: usecase.TaxInputsView{Regime: "612", FiscalYear: 2026, Definitions: []domain.InputDef{}, Values: []usecase.StoredInput{}}}
-	resp, err := taxenginehttp.NewHandler(uc).GetTaxInputs(authed(t), gen.GetTaxInputsRequestObject{
+	resp, err := taxenginehttp.NewHandler(uc, &fakeEstimates{}).GetTaxInputs(authed(t), gen.GetTaxInputsRequestObject{
 		TaxpayerId: uuid.MustParse(taxpayerID), RegimeCode: "612", Params: gen.GetTaxInputsParams{FiscalYear: 2026},
 	})
 	require.NoError(t, err)
@@ -117,7 +117,7 @@ func TestGetTaxInputs_emptyValuesAreAnArray(t *testing.T) {
 
 func TestPutTaxInputs(t *testing.T) {
 	uc := &fakeInputs{view: view601}
-	h := taxenginehttp.NewHandler(uc)
+	h := taxenginehttp.NewHandler(uc, &fakeEstimates{})
 
 	resp, err := h.PutTaxInputs(authed(t), gen.PutTaxInputsRequestObject{
 		TaxpayerId: uuid.MustParse(taxpayerID), RegimeCode: "601", Params: gen.PutTaxInputsParams{FiscalYear: 2026},
@@ -146,7 +146,7 @@ func TestPutTaxInputs(t *testing.T) {
 func TestPutTaxInputs_withoutBodyIsAValidationError(t *testing.T) {
 	uc := &fakeInputs{}
 
-	_, err := taxenginehttp.NewHandler(uc).PutTaxInputs(authed(t), gen.PutTaxInputsRequestObject{
+	_, err := taxenginehttp.NewHandler(uc, &fakeEstimates{}).PutTaxInputs(authed(t), gen.PutTaxInputsRequestObject{
 		TaxpayerId: uuid.MustParse(taxpayerID), RegimeCode: "601", Params: gen.PutTaxInputsParams{FiscalYear: 2026},
 	})
 
@@ -159,7 +159,7 @@ func TestPutTaxInputs_withoutBodyIsAValidationError(t *testing.T) {
 func TestTaxInputs_useCaseErrorsPassThrough(t *testing.T) {
 	refused := apperr.New(apperr.CodeEntitlementRequired, "Read-only.")
 	uc := &fakeInputs{err: refused}
-	h := taxenginehttp.NewHandler(uc)
+	h := taxenginehttp.NewHandler(uc, &fakeEstimates{})
 
 	_, getErr := h.GetTaxInputs(authed(t), gen.GetTaxInputsRequestObject{TaxpayerId: uuid.MustParse(taxpayerID), RegimeCode: "601"})
 	_, putErr := h.PutTaxInputs(authed(t), gen.PutTaxInputsRequestObject{TaxpayerId: uuid.MustParse(taxpayerID), RegimeCode: "601",
@@ -171,7 +171,7 @@ func TestTaxInputs_useCaseErrorsPassThrough(t *testing.T) {
 
 func TestTaxInputs_withoutPrincipalIs401(t *testing.T) {
 	uc := &fakeInputs{}
-	h := taxenginehttp.NewHandler(uc)
+	h := taxenginehttp.NewHandler(uc, &fakeEstimates{})
 
 	get, err := h.GetTaxInputs(t.Context(), gen.GetTaxInputsRequestObject{})
 	require.NoError(t, err)

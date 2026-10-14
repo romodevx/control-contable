@@ -35,6 +35,9 @@ List<String> endPeriodChoices({
   }
 }
 
+/// The `YYYY-MM` period of [month] (1-12) in [year].
+String periodOf(int year, int month) => _format(year, month);
+
 String _format(int year, int month) {
   assert(month >= 1 && month <= _monthsPerYear, 'month out of range');
   return '$year$_separator${month.toString().padLeft(_monthDigits, '0')}';

@@ -71,6 +71,8 @@ func TestEstimateMonthNetsIVAAcrossRegimes(t *testing.T) {
 	for _, r := range got.Regimes {
 		assert.Equal(t, domain.StatusComplete, r.Status)
 		assert.Equal(t, domain.TreatmentFull, r.Treatment)
+		assert.Equal(t, []domain.CPATopic{domain.TopicCrossRegimeIVANetting}, r.CPATopics,
+			"each contributing regime carries the netting topic (contract TX-NET-01)")
 	}
 	assert.Equal(t, money.Cents(200_00), got.Totals.IVA.Amount)
 	assert.Equal(t, money.Cents(150_96), got.Totals.ISR.Amount)
@@ -85,6 +87,41 @@ func TestEstimateMonthNetsIVAAcrossRegimes(t *testing.T) {
 	assert.Equal(t, taxparams.SetID{FiscalYear: 2026, Version: 3}, got.ParameterSet)
 	assert.Equal(t, taxpayerA, got.TaxpayerID)
 	assert.Equal(t, fiscal.PersonFisica, got.PersonType)
+}
+
+// Each regime carries its catalog texts (name, explanation, input labels)
+// for the presenter; a regime the catalog read misses gets none.
+func TestEstimateMonthAttachesTheCatalogTexts(t *testing.T) {
+	f := newEstFixture(fiscal.PersonFisica,
+		estHold(fiscal.RegimeBusiness, "2026-01", domain.TreatmentFull),
+		estHold("605", "2026-01", domain.TreatmentInformational))
+	text612 := usecase.RegimeText{
+		Name:        "Actividades Empresariales y Profesionales",
+		InputLabels: map[domain.InputKey]string{domain.InputPriorProvisionalPayments: "Pagos provisionales anteriores del ejercicio"},
+	}
+	f.texts.texts = map[fiscal.RegimeCode]usecase.RegimeText{fiscal.RegimeBusiness: text612}
+	s612 := &estStrategy{key: est612, treatment: domain.TreatmentFull}
+
+	got, err := f.estimator(s612).EstimateMonth(t.Context(), userA, taxpayerA, "2026-03")
+
+	require.NoError(t, err)
+	require.Len(t, got.Regimes, 2)
+	assert.Equal(t, usecase.RegimeText{}, got.Regimes[0].Text)
+	assert.Equal(t, text612, got.Regimes[1].Text)
+}
+
+// A single regime contributing IVA is not netted: no topic is added.
+func TestEstimateMonthOneIVARegimeHasNoNettingTopic(t *testing.T) {
+	f := newEstFixture(fiscal.PersonFisica, estHold(fiscal.RegimeBusiness, "2026-01", domain.TreatmentFull))
+	s612 := &estStrategy{key: est612, treatment: domain.TreatmentFull, byMonth: map[time.Month]domain.RegimeEstimate{
+		time.March: {Coverage: domain.TreatmentFull, ISR: estISR(150_96), IVA: estIVA612},
+	}}
+
+	got, err := f.estimator(s612).EstimateMonth(t.Context(), userA, taxpayerA, "2026-03")
+
+	require.NoError(t, err)
+	assert.Empty(t, got.Regimes[0].CPATopics)
+	assert.False(t, got.Regimes[0].CPAReviewPending())
 }
 
 // TX-601-REMIT-01: the PM's withholdings to remit are counted once, apart.
@@ -404,6 +441,7 @@ func TestEstimateMonthReadsInOneReadOnlyUnitOfWork(t *testing.T) {
 	assert.Equal(t, []string{userA + "|" + userA + "|" + taxpayerA}, f.profiles.users)
 	assert.Equal(t, []string{userA, userA}, f.ledger.users)
 	assert.Equal(t, []string{userA}, f.inputs.users)
+	assert.Equal(t, []string{userA}, f.texts.users)
 	assert.Equal(t, taxpayerA, got.TaxpayerID)
 }
 
@@ -419,6 +457,7 @@ func TestEstimateMonthPortFailures(t *testing.T) {
 		{"profile 404", func(f *estFixture) { f.profiles.err = notFound }, notFound},
 		{"ledger", func(f *estFixture) { f.ledger.err = errEstPortDown }, errEstPortDown},
 		{"tax inputs", func(f *estFixture) { f.inputs.err = errEstPortDown }, errEstPortDown},
+		{"regime texts", func(f *estFixture) { f.texts.err = errEstPortDown }, errEstPortDown},
 		{"holidays", func(f *estFixture) { f.holidays.err = errEstPortDown }, errEstPortDown},
 	}
 	for _, tt := range tests {

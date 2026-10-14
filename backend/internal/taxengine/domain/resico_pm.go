@@ -68,6 +68,8 @@ var (
 // a base below zero is no profit. Base × 30 % minus the prior provisional
 // payments and the art. 54 interest withholding (an open CPA question) is
 // the month's payment. IVA follows the general rules through ComputeIVA.
+// The ISR and IVA it withheld from its suppliers are remitted apart, as
+// 601 does (generalPMWithholdingsToRemit), never in its own taxes.
 type RESICOPMStrategy struct{}
 
 // NewRESICOPMStrategy returns the RESICO PM strategy.
@@ -154,7 +156,13 @@ func (s RESICOPMStrategy) estimate(in Input, p *taxparams.Params) (RegimeEstimat
 	if ytd.Expenses.DeductiblePaid > 0 || before.deductions > 0 {
 		est.Disclaimers = append(est.Disclaimers, DisclaimerDeductibilityClaimed)
 	}
-	return t.finish(est, IVAInput{Sums: in.Sums.Month(n), Options: in.Options})
+	month := in.Sums.Month(n)
+	est, err = t.addIVA(est, IVAInput{Sums: month, Options: in.Options})
+	if err != nil {
+		return RegimeEstimate{}, err
+	}
+	est.WithheldToRemit = generalPMWithholdingsToRemit(t.l, est.WithheldToRemit, month.Expenses.ISRWithheldToRemit)
+	return t.addLines(est)
 }
 
 // resicoPMInputs are the optional money inputs of 626 PM (§2.8); an absent

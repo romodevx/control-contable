@@ -69,6 +69,18 @@ func (f *estInputs) TaxInputs(ctx context.Context, _ string, _ int) (map[fiscal.
 	return f.values, f.err
 }
 
+// estTexts serves the catalog texts of the taxpayer's regimes.
+type estTexts struct {
+	texts map[fiscal.RegimeCode]usecase.RegimeText
+	err   error
+	users []string
+}
+
+func (f *estTexts) RegimeTexts(ctx context.Context, _ string) (map[fiscal.RegimeCode]usecase.RegimeText, error) {
+	f.users = append(f.users, estUserOf(ctx))
+	return f.texts, f.err
+}
+
 // estHolidays is the holidays calendar.
 type estHolidays struct {
 	days map[string]bool
@@ -168,6 +180,7 @@ type estFixture struct {
 	profiles *estProfiles
 	ledger   *estLedger
 	inputs   *estInputs
+	texts    *estTexts
 	holidays estHolidays
 	params   estParams
 	clock    clock.Clock
@@ -179,6 +192,7 @@ func newEstFixture(pt fiscal.PersonType, holds ...usecase.RegimeHold) *estFixtur
 		profiles: &estProfiles{profile: usecase.TaxpayerProfile{PersonType: pt, Regimes: holds}},
 		ledger:   &estLedger{},
 		inputs:   &estInputs{},
+		texts:    &estTexts{},
 		clock:    clock.NewFixed(today),
 	}
 }
@@ -189,7 +203,7 @@ func (f *estFixture) estimator(strategies ...domain.Strategy) *usecase.Estimator
 		panic(err)
 	}
 	return usecase.NewEstimator(usecase.EstimateDeps{
-		Tx: f.tx, Profiles: f.profiles, Ledger: f.ledger, Inputs: f.inputs, Holidays: f.holidays,
+		Tx: f.tx, Profiles: f.profiles, Ledger: f.ledger, Inputs: f.inputs, Texts: f.texts, Holidays: f.holidays,
 		Strategies: registry, Params: f.params, Clock: f.clock,
 	})
 }
