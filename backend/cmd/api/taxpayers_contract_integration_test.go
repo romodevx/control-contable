@@ -283,10 +283,8 @@ func TestContract_taxpayers(t *testing.T) {
 			assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
 			assert.Equal(t, gen.ErrorCodeInvalidRegimeCombination, decodeError(t, rec).Error.Code)
 			rec = serve(contracttest.Op("addTaxpayerRegime"), http.MethodPost, base, `{"regime_code":"621","options":{"rif_year":"2"}}`, ana)
-			require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-			var added gen.TaxpayerRegime
-			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &added))
-			assert.Contains(t, warningCodes(added.Warnings), "regime_combination_needs_cpa_review@regime_code")
+			assert.Equal(t, http.StatusUnprocessableEntity, rec.Code, "RIF excludes 612 (M2-13 FU1, LISR art. 111)")
+			assert.Equal(t, gen.ErrorCodeInvalidRegimeCombination, decodeError(t, rec).Error.Code)
 			rec = serve(contracttest.Op("addTaxpayerRegime"), http.MethodPost, base, `{"regime_code":"606"}`, bea)
 			assert.Equal(t, http.StatusNotFound, rec.Code)
 
@@ -298,13 +296,13 @@ func TestContract_taxpayers(t *testing.T) {
 			rec = serve(contracttest.Op("updateTaxpayerRegime"), http.MethodPatch, base+"/601", `{"options":{}}`, ana)
 			assert.Equal(t, http.StatusNotFound, rec.Code, "a regime the taxpayer does not hold")
 
-			rec = serve(contracttest.Op("archiveTaxpayerRegime"), http.MethodDelete, base+"/621?end_period=2026-10", "", ana)
+			rec = serve(contracttest.Op("archiveTaxpayerRegime"), http.MethodDelete, base+"/606?end_period=2026-10", "", ana)
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			var ended gen.TaxpayerRegime
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &ended))
 			require.NotNil(t, ended.EndPeriod)
 			assert.Equal(t, "2026-10", *ended.EndPeriod)
-			rec = serve(contracttest.Op("archiveTaxpayerRegime"), http.MethodDelete, base+"/621?end_period=2026-10", "", ana)
+			rec = serve(contracttest.Op("archiveTaxpayerRegime"), http.MethodDelete, base+"/606?end_period=2026-10", "", ana)
 			assert.Equal(t, http.StatusConflict, rec.Code, "already ended")
 			rec = serve(contracttest.Op("archiveTaxpayerRegime"), http.MethodDelete, base+"/606?end_period=2026-13", "", ana)
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
