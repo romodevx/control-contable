@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:control_contable/api/generated/models/person_type.dart';
 import 'package:control_contable/api/generated/models/regime.dart';
 import 'package:control_contable/core/forms/app_form.dart';
@@ -15,6 +17,7 @@ import 'package:control_contable/features/taxpayers/presentation/regime_selectio
 import 'package:control_contable/features/taxpayers/presentation/step_header.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Step 3: the regimes of the chosen person type (`GET /v1/regimes`),
@@ -109,10 +112,35 @@ class _RegimesFormState extends State<_RegimesForm> {
         initial: _flow.regimes,
       ),
     )..addListener(_remember);
+    _toldConflicts = _selection.conflicts.keys.toSet();
   }
 
-  /// Keeps the pick in the flow as it changes: going back keeps it.
-  void _remember() => _flow.rememberRegimes(_selection.selected);
+  /// Conflicts already announced, by the later regime's code.
+  Set<String> _toldConflicts = const {};
+
+  /// Keeps the pick in the flow as it changes (going back keeps it) and
+  /// announces a new incompatible pair: its reason appears in a row the
+  /// user did not move to, so a live region alone would stay silent.
+  void _remember() {
+    _flow.rememberRegimes(_selection.selected);
+    _announceNewConflicts();
+  }
+
+  void _announceNewConflicts() {
+    final conflicts = _selection.conflicts;
+    final l10n = AppLocalizations.of(context);
+    for (final MapEntry(key: code, value: conflict) in conflicts.entries) {
+      if (_toldConflicts.contains(code)) continue;
+      unawaited(
+        SemanticsService.sendAnnouncement(
+          View.of(context),
+          l10n.onboardingRegimeConflict(conflict.code, conflict.reason),
+          Directionality.of(context),
+        ),
+      );
+    }
+    _toldConflicts = conflicts.keys.toSet();
+  }
 
   @override
   void dispose() {

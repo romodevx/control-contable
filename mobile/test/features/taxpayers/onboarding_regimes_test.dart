@@ -157,6 +157,24 @@ void main() {
       expect(find.text(_incompatible), findsNothing);
     });
 
+    testWidgets('an incompatible pick is announced once, when it appears', (
+      tester,
+    ) async {
+      await openRegimes(tester);
+      await _pick(tester, '612');
+      tester.takeAnnouncements();
+
+      await _pick(tester, '626');
+      expect(tester.takeAnnouncements().map((a) => a.message), [_incompatible]);
+
+      await _pick(tester, '606');
+      expect(
+        tester.takeAnnouncements(),
+        isEmpty,
+        reason: 'a conflict already told is not repeated',
+      );
+    });
+
     testWidgets('a regime without options creates right away', (tester) async {
       await openRegimes(tester);
       await _pick(tester, '626');
@@ -336,6 +354,19 @@ void main() {
       expect(find.text('Persona física'), findsNothing);
       expect(find.textContaining('Paso 1'), findsNothing);
       expect(harness.repository.creates, hasLength(1));
+    });
+
+    testWidgets('402: the paywall is announced to screen readers, not only '
+        'drawn (a live region alone stays silent)', (tester) async {
+      harness.repository.createAnswers.add(const ApiEntitlementRequired());
+      await openRegimes(tester);
+      await _pick(tester, '626');
+      tester.takeAnnouncements();
+
+      await tapText(tester, _create);
+
+      final announced = tester.takeAnnouncements().map((a) => a.message);
+      expect(announced, contains(startsWith('Tu cuenta es de solo consulta')));
     });
 
     testWidgets('back from regimes keeps a pick not yet submitted', (

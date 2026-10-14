@@ -185,14 +185,13 @@ class _RegimeRow extends StatelessWidget {
       children: [
         if (explanation != null)
           Text(explanation, style: theme.textTheme.bodySmall),
+        // Announced by the regimes step when it appears (not a live
+        // region: that would speak it twice where live regions work).
         if (conflict != null)
-          Semantics(
-            liveRegion: true,
-            child: Text(
-              conflict,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: context.tokens.colors.error,
-              ),
+          Text(
+            conflict,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: context.tokens.colors.error,
             ),
           ),
       ],
