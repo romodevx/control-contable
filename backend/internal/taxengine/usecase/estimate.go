@@ -148,8 +148,8 @@ func (uc *Estimator) EstimateMonth(ctx context.Context, userID, taxpayerID, rawP
 // dashboard's trend, M6-02, MODULE-dashboard §2.4). It reads once, in one
 // read-only unit of work: the profile (404), one ledger statement per
 // table from January of from's fiscal year through to, the tax inputs of
-// each fiscal year and the catalog texts; then runs the pure engine per
-// month, each fiscal year on its own records. Each estimate is exactly
+// every fiscal year in one statement and the catalog texts; then runs the
+// pure engine per month, each fiscal year on its own records. Each estimate is exactly
 // what EstimateMonth answers for its month (EstimateMonth is the range of
 // one month).
 //
@@ -324,8 +324,8 @@ func (r rangeRecords) year(fiscalYear int) ledgerRecords {
 }
 
 // read loads the profile, the aggregates of January of from's fiscal year
-// through to (one statement per table), each fiscal year's tax inputs and
-// the catalog texts.
+// through to (one statement per table), the tax inputs of every fiscal year
+// of the range (one statement) and the catalog texts.
 func (uc *Estimator) read(ctx context.Context, userID, taxpayerID string, from, to domain.Period) (rangeRecords, error) {
 	profile, err := uc.deps.Profiles.Profile(ctx, userID, taxpayerID)
 	if err != nil {
@@ -343,11 +343,9 @@ func (uc *Estimator) read(ctx context.Context, userID, taxpayerID string, from, 
 	if err != nil {
 		return rangeRecords{}, fmt.Errorf("expense sums: %w", err)
 	}
-	inputs := map[int]map[fiscal.RegimeCode]domain.TaxInputs{}
-	for year := from.Year(); year <= to.Year(); year++ {
-		if inputs[year], err = uc.deps.Inputs.TaxInputs(ctx, taxpayerID, year); err != nil {
-			return rangeRecords{}, fmt.Errorf("tax inputs %d: %w", year, err)
-		}
+	inputs, err := uc.deps.Inputs.TaxInputs(ctx, taxpayerID, from.Year(), to.Year())
+	if err != nil {
+		return rangeRecords{}, fmt.Errorf("tax inputs %d..%d: %w", from.Year(), to.Year(), err)
 	}
 	texts, err := uc.deps.Texts.RegimeTexts(ctx, taxpayerID)
 	if err != nil {

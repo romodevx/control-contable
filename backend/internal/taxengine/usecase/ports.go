@@ -68,7 +68,9 @@ type LedgerReader interface {
 // TaxInputReader reads the taxpayer's tax inputs (taxpayer_tax_inputs,
 // M5-20/M5-21).
 type TaxInputReader interface {
-	// TaxInputs returns each regime's inputs for the fiscal year in one
-	// query; a regime without inputs is absent (the zero TaxInputs).
-	TaxInputs(ctx context.Context, taxpayerID string, fiscalYear int) (map[fiscal.RegimeCode]domain.TaxInputs, error)
+	// TaxInputs returns each regime's inputs for every fiscal year of
+	// firstYear..lastYear, by year, in one query (a range spanning two
+	// fiscal years is still one statement, MODULE-dashboard §2.4); a year
+	// or regime without inputs is absent (the zero TaxInputs).
+	TaxInputs(ctx context.Context, taxpayerID string, firstYear, lastYear int) (map[int]map[fiscal.RegimeCode]domain.TaxInputs, error)
 }

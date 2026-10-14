@@ -78,23 +78,30 @@ func (f *estLedger) ExpenseSums(ctx context.Context, q usecase.LedgerQuery) ([]u
 	return out, f.err
 }
 
-// estInputs serves the tax inputs of every regime, by fiscal year when
-// byYear has the year.
+// yearSpan is the fiscal years one TaxInputs call reads, first and last.
+type yearSpan struct{ first, last int }
+
+// estInputs serves the tax inputs of every regime for each fiscal year of
+// the span: byYear's when it has the year, values otherwise.
 type estInputs struct {
 	values map[fiscal.RegimeCode]domain.TaxInputs
 	byYear map[int]map[fiscal.RegimeCode]domain.TaxInputs
 	err    error
 	users  []string
-	years  []int
+	spans  []yearSpan
 }
 
-func (f *estInputs) TaxInputs(ctx context.Context, _ string, year int) (map[fiscal.RegimeCode]domain.TaxInputs, error) {
+func (f *estInputs) TaxInputs(ctx context.Context, _ string, firstYear, lastYear int) (map[int]map[fiscal.RegimeCode]domain.TaxInputs, error) {
 	f.users = append(f.users, estUserOf(ctx))
-	f.years = append(f.years, year)
-	if values, ok := f.byYear[year]; ok {
-		return values, f.err
+	f.spans = append(f.spans, yearSpan{firstYear, lastYear})
+	out := map[int]map[fiscal.RegimeCode]domain.TaxInputs{}
+	for year := firstYear; year <= lastYear; year++ {
+		out[year] = f.values
+		if values, ok := f.byYear[year]; ok {
+			out[year] = values
+		}
 	}
-	return f.values, f.err
+	return out, f.err
 }
 
 // estTexts serves the catalog texts of the taxpayer's regimes.

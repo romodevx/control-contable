@@ -70,8 +70,13 @@ func (f txLedger) ExpenseSums(_ context.Context, q usecase.LedgerQuery) ([]useca
 
 type txInputs map[fiscal.RegimeCode]domain.TaxInputs
 
-func (f txInputs) TaxInputs(context.Context, string, int) (map[fiscal.RegimeCode]domain.TaxInputs, error) {
-	return f, nil
+// TaxInputs serves the same inputs for every fiscal year of the span.
+func (f txInputs) TaxInputs(_ context.Context, _ string, firstYear, lastYear int) (map[int]map[fiscal.RegimeCode]domain.TaxInputs, error) {
+	out := make(map[int]map[fiscal.RegimeCode]domain.TaxInputs, lastYear-firstYear+1)
+	for year := firstYear; year <= lastYear; year++ {
+		out[year] = f
+	}
+	return out, nil
 }
 
 // txNoTexts is a catalog without texts: the figures do not read them.

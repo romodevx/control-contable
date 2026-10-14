@@ -58,7 +58,7 @@ func TestEstimateRangeReadsOnceAcrossTwoFiscalYears(t *testing.T) {
 	want := usecase.LedgerQuery{TaxpayerID: taxpayerA, FirstYear: 2026, FiscalYear: 2027, Through: time.February}
 	assert.Equal(t, []usecase.LedgerQuery{want}, f.ledger.queries, "one income statement for the whole window")
 	assert.Equal(t, []usecase.LedgerQuery{want}, f.ledger.expenseQueries, "one expense statement for the whole window")
-	assert.Equal(t, []int{2026, 2027}, f.inputs.years, "the tax inputs of each fiscal year, once")
+	assert.Equal(t, []yearSpan{{2026, 2027}}, f.inputs.spans, "one tax-inputs statement for both fiscal years")
 	assert.Equal(t, []string{"ro"}, f.tx.modes, "one read-only unit of work")
 	assert.Len(t, f.profiles.users, 1, "the profile is read once")
 }

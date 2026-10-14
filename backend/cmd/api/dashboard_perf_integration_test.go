@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -38,11 +39,15 @@ const (
 	dashPerfConcurrent = 200
 	dashPerfP95Budget  = time.Second
 	// dashPerfReads is the read statements of one engine-ON request: the
-	// profile (taxpayer + regimes), one aggregate per table, the tax inputs
-	// of each of the two fiscal years, the regime texts and the access
-	// summary (entitlements, usage). The window has records, so is_empty
-	// needs no EXISTS. It does not grow with months.
-	dashPerfReads = 9
+	// profile (taxpayer, regimes), one aggregate per table, the tax inputs
+	// of every fiscal year of the window (one statement), the regime texts
+	// and the access summary (entitlements, usage). The window has records,
+	// so is_empty needs no EXISTS. It does not grow with months
+	// (MODULE-dashboard §2.4 explains the 8 against the table's 6).
+	dashPerfReads = 8
+	// dashCountRecords of each table seed the statement-count check: few,
+	// yet every month of 2026-01..2027-06 has some.
+	dashCountRecords = 400
 	// dashPerfSpanDays is January 1st 2026 .. June 20th 2027.
 	dashPerfSpanDays = 536
 )
@@ -66,7 +71,7 @@ func TestPerf_dashboardReadPath(t *testing.T) {
 	created := env.do(env.send(http.MethodPost, "/v1/taxpayers", createJSON("", "fisica", rfcAna, "Rendimiento", perfRegimes...), token))
 	require.Equal(t, http.StatusCreated, created.Code, created.Body.String())
 	taxpayer := decodeTaxpayer(t, created).Id.String()
-	seedTwoYears(t, env, user, taxpayer)
+	seedTwoYears(t, env, user, taxpayer, perfIncomes, perfExpenses)
 
 	target := dashboardTarget(taxpayer, "")
 	get := func(string) time.Duration {
@@ -80,17 +85,9 @@ func TestPerf_dashboardReadPath(t *testing.T) {
 		get(target)
 	}
 
-	rec.record(true)
-	get(target)
-	stmts := rec.record(false)
+	stmts := recordOne(rec, func() { get(target) })
 	explainReadPath(t, env.app, user, stmts)
-	var reads int
-	for _, s := range stmts {
-		if readPathStatement(s.SQL) && !strings.Contains(s.SQL, "rate_limit_take") { // the budget is the router's
-			reads++
-		}
-	}
-	assert.Equal(t, dashPerfReads, reads, "statements per request, independent of months")
+	assert.Equal(t, dashPerfReads, readCount(stmts), "statements per request, independent of months")
 
 	sequential := make([]time.Duration, 0, dashPerfSequential)
 	for range dashPerfSequential {
@@ -103,26 +100,83 @@ func TestPerf_dashboardReadPath(t *testing.T) {
 	assert.Less(t, percentile(concurrent, perfPercentile), dashPerfP95Budget, "concurrent p95")
 }
 
-// seedTwoYears writes perfIncomes incomes and perfExpenses expenses over
+// TestContract_dashboardStatementCount pins the read statements of one
+// getDashboard (MODULE-dashboard §2.4, US-D9) in the regular integration
+// suite: the same for a one-year and a two-year window.
+func TestContract_dashboardStatementCount(t *testing.T) {
+	rec := &statementRecorder{}
+	env := newContractEnv(t, pingOK{}, withTaxEngineDay(dashPerfToday), func(w *contractWiring) { w.wrapApp = traced(rec) })
+	all := flagtest.Static{}
+	for _, m := range dashboardModules {
+		all[m] = true
+	}
+	env.apply(t, dashboardModules, all)
+	session := env.signUp(t, signUpEmail, acceptableSample)
+	user, token := session.User.Id.String(), session.Tokens.AccessToken
+	created := env.do(env.send(http.MethodPost, "/v1/taxpayers", createJSON("", "fisica", rfcAna, "Conteo", perfRegimes...), token))
+	require.Equal(t, http.StatusCreated, created.Code, created.Body.String())
+	taxpayer := decodeTaxpayer(t, created).Id.String()
+	seedTwoYears(t, env, user, taxpayer, dashCountRecords, dashCountRecords)
+
+	for _, months := range []int{6, 12} {
+		target := dashboardTarget(taxpayer, fmt.Sprintf("months=%d", months))
+		stmts := recordOne(rec, func() {
+			r := env.do(env.send(http.MethodGet, target, "", token))
+			require.Equal(t, http.StatusOK, r.Code, r.Body.String())
+			assert.Contains(t, r.Body.String(), `"is_empty":false`)
+		})
+		assert.Equal(t, dashPerfReads, readCount(stmts), "months=%d: statements per request", months)
+	}
+}
+
+// recordOne returns the statements issued while do runs.
+func recordOne(rec *statementRecorder, do func()) []pgx.TraceQueryStartData {
+	rec.record(true)
+	do()
+	return rec.record(false)
+}
+
+// readCount counts the read-path statements; the router's rate-limit
+// budget is not the use case's.
+func readCount(stmts []pgx.TraceQueryStartData) int {
+	var reads int
+	for _, s := range stmts {
+		if readPathStatement(s.SQL) && !strings.Contains(s.SQL, "rate_limit_take") {
+			reads++
+		}
+	}
+	return reads
+}
+
+// seedTwoYears writes the given number of incomes and expenses over
 // January 2026..June 2027, then analyzes both tables.
-func seedTwoYears(t *testing.T, env contractEnv, user, taxpayer string) {
+func seedTwoYears(t *testing.T, env contractEnv, user, taxpayer string, incomes, expenses int) {
 	t.Helper()
 	span := fmt.Sprintf("%% %d", dashPerfSpanDays)
-	incomes := strings.Replace(perfIncomesSQL, "% 365", span, 1)
-	expenses := strings.Replace(perfExpensesSQL, "% 365", span, 1)
-	require.NotEqual(t, perfIncomesSQL, incomes, "the incomes seed spans the two years")
-	require.NotEqual(t, perfExpensesSQL, expenses, "the expenses seed spans the two years")
+	incomesSQL := seedSQL(t, perfIncomesSQL, perfIncomes, incomes, span)
+	expensesSQL := seedSQL(t, perfExpensesSQL, perfExpenses, expenses, span)
 	start := time.Now()
 	require.NoError(t, pgtest.AsUser(t.Context(), env.app, user, func(tx *sql.Tx) error {
-		if _, err := tx.ExecContext(t.Context(), incomes, user, taxpayer); err != nil {
+		if _, err := tx.ExecContext(t.Context(), incomesSQL, user, taxpayer); err != nil {
 			return err
 		}
-		_, err := tx.ExecContext(t.Context(), expenses, user, taxpayer)
+		_, err := tx.ExecContext(t.Context(), expensesSQL, user, taxpayer)
 		return err
 	}))
 	_, err := env.owner.ExecContext(t.Context(), "ANALYZE incomes; ANALYZE expenses")
 	require.NoError(t, err)
-	t.Logf("seeded %d incomes and %d expenses over 2026-01..2027-06 in %s", perfIncomes, perfExpenses, time.Since(start).Round(time.Millisecond))
+	t.Logf("seeded %d incomes and %d expenses over 2026-01..2027-06 in %s", incomes, expenses, time.Since(start).Round(time.Millisecond))
+}
+
+// seedSQL rewrites a perf seed statement of rows rows to write n rows
+// over span days.
+func seedSQL(t *testing.T, statement string, rows, n int, span string) string {
+	t.Helper()
+	out := strings.Replace(statement, "% 365", span, 1)
+	require.NotEqual(t, statement, out, "the seed spans the two years")
+	series := fmt.Sprintf("generate_series(1, %d)", rows)
+	require.Contains(t, out, series)
+	return strings.Replace(out, series, fmt.Sprintf("generate_series(1, %d)", n), 1)
 }
 
 // measureConcurrentN issues n requests from perfWorkers goroutines.

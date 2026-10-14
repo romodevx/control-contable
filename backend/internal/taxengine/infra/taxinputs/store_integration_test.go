@@ -232,8 +232,8 @@ func TestInputs_ConcurrentReplacesSerialize(t *testing.T) {
 	}, got.Values)
 }
 
-// The TaxInputReader adapter (M5-02) reads every regime's inputs of a fiscal
-// year in one query, as domain.TaxInputs.
+// The TaxInputReader adapter (M5-02, M6-02) reads every regime's inputs of
+// a span of fiscal years in one query, as domain.TaxInputs by year.
 func TestStore_TaxInputsReader(t *testing.T) {
 	e := newEnv(t)
 	_, err := e.inputs.Put(t.Context(), userA, req(moralA, "601", 2026), []domain.SubmittedInput{
@@ -247,14 +247,16 @@ func TestStore_TaxInputsReader(t *testing.T) {
 		VALUES ($1, '`+moralA+`', '601', 2025, 'ptu_paid', 99)`)
 	var reader usecase.TaxInputReader = e.store
 
-	var got map[fiscal.RegimeCode]domain.TaxInputs
+	var years map[int]map[fiscal.RegimeCode]domain.TaxInputs
 	err = e.txm.ReadOnly(t.Context(), userA, func(ctx context.Context) error {
 		var err error
-		got, err = reader.TaxInputs(ctx, moralA, 2026)
+		years, err = reader.TaxInputs(ctx, moralA, 2026, 2026)
 		return err
 	})
 	require.NoError(t, err)
 
+	require.Len(t, years, 1, "only the span's fiscal years")
+	got := years[2026]
 	require.Len(t, got, 1, "regimes without inputs are absent")
 	in := got["601"]
 	cu, ok := in.Rate(domain.InputCoeficienteUtilidad)
@@ -270,13 +272,27 @@ func TestStore_TaxInputsReader(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, money.Cents(5_000_00), prior)
 
-	err = e.txm.ReadOnly(t.Context(), userB, func(ctx context.Context) error {
+	err = e.txm.ReadOnly(t.Context(), userA, func(ctx context.Context) error {
 		var err error
-		got, err = reader.TaxInputs(ctx, moralA, 2026)
+		years, err = reader.TaxInputs(ctx, moralA, 2025, 2026)
 		return err
 	})
 	require.NoError(t, err)
-	assert.Empty(t, got, "RLS: another user reads nothing")
+	require.Len(t, years, 2, "both fiscal years of the span, in one read")
+	prev, ok := years[2025]["601"].Money(domain.InputPTUPaid)
+	assert.True(t, ok)
+	assert.Equal(t, money.Cents(99), prev, "2025 keeps its own value")
+	ptu, ok = years[2026]["601"].Money(domain.InputPTUPaid)
+	assert.True(t, ok)
+	assert.Zero(t, ptu, "2026 keeps its own value")
+
+	err = e.txm.ReadOnly(t.Context(), userB, func(ctx context.Context) error {
+		var err error
+		years, err = reader.TaxInputs(ctx, moralA, 2025, 2026)
+		return err
+	})
+	require.NoError(t, err)
+	assert.Empty(t, years, "RLS: another user reads nothing")
 }
 
 // The catalog texts of the regimes a taxpayer holds or held, from the row of
