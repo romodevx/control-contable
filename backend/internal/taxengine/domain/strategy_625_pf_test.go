@@ -340,6 +340,14 @@ func TestStrategy625PFDefinitiveIVA(t *testing.T) {
 			want: domain.IVAComponents{ChargedCollected: 6_400_00, WithheldFromTaxpayer: 2_400_00, DefinitiveExcluded: 2_400_00},
 		},
 		{
+			// 100 % withheld contradicts rfc_given_to_platform: the platform
+			// had no RFC, its IVA is settled by the withholding itself, and
+			// the direct collections' IVA must stay payable, never excluded.
+			name: "a withholding above half the IVA despite the RFC excludes nothing: direct IVA stays payable",
+			rfc:  true, month: pf625Platform(t, "40000.00", "6400.00", "4800.00", "1000.00"),
+			want: domain.IVAComponents{ChargedCollected: 6_400_00, WithheldFromTaxpayer: 4_800_00},
+		},
+		{
 			name: "a withholding above half the IVA never excludes more than the rest",
 			rfc:  true, month: pf625Platform(t, "30000.00", "1000.00", "2400.00", "750.00"),
 			want: domain.IVAComponents{ChargedCollected: 1_000_00, WithheldFromTaxpayer: 2_400_00},
@@ -397,6 +405,31 @@ func TestStrategy625PFDefinitiveIVATakesNoCreditableIVA(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, cents(t, "1600.00"), est.IVA.CreditablePaid)
 	assert.NotContains(t, codes(est.Lines), domain.LineCode("iva.creditable_not_applied"))
+}
+
+func TestStrategy625PFDefinitiveIVARaisesItsCPATopic(t *testing.T) {
+	// MODULE-tax-engine §2.9: the topic triggers with the definitive option
+	// and IVA > 0, whether or not anything is excluded; the creditable IVA
+	// not applied is a ⚠️ treatment too.
+	onlyCredit := pf625Platform(t, "30000.00", "0.00", "0.00", "750.00")
+	onlyCredit.Expenses = domain.ExpenseSums{CreditableIVAPaid: 1_600_00}
+	tests := []struct {
+		name  string
+		rfc   bool
+		month domain.MonthSums
+	}{
+		{"no RFC: all IVA withheld, nothing excluded", false, pf625Platform(t, "30000.00", "4800.00", "4800.00", "6000.00")},
+		{"withholding above half despite the RFC", true, pf625Platform(t, "40000.00", "6400.00", "4800.00", "1000.00")},
+		{"only creditable IVA, not applied", true, onlyCredit},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			o := pf625Opts{activities: pf625Goods, definitive: true, rfc: tc.rfc}
+			est, err := domain.NewStrategy625PF().Estimate(pf625Input(t, o, tc.month, "250000.00"), pf625Params(t))
+			require.NoError(t, err)
+			assert.Equal(t, []domain.CPATopic{domain.TopicPlatformDefinitiveIVA}, est.CPATopics)
+		})
+	}
 }
 
 func TestStrategy625PFLinesCiteTheirBasis(t *testing.T) {
