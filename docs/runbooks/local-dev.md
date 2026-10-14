@@ -99,8 +99,9 @@ make -C backend flags ARGS="presets"                 # demo_core, demo_monetizat
 make -C backend flags ARGS="apply-preset demo_core"
 ```
 
-The CLI runs as `cc_owner`. A running API picks up a change within 5 s. Until a module is built,
-turning its flag ON makes its routes answer 500 (P0 follow-up FU2).
+The CLI runs as `cc_owner`. A running API picks up a change within 5 s. Turning ON the flag of a
+module that is not built yet changes nothing: its routes keep answering 404. Auth operations
+(sessions, rate limits, signing keys) are in the [auth runbook](auth.md).
 
 ## 5. Mock server and mobile
 

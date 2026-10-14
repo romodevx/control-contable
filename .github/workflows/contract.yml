@@ -31,7 +31,7 @@ jobs:
         id: filter
         env:
           EVENT: ${{ github.event_name }}
-          PATTERN: '^(docs/api/|redocly\.yaml$|tools/contract/|Makefile$|\.github/workflows/contract\.yml$)'
+          PATTERN: '^(docs/api/|docs/modules/|redocly\.yaml$|tools/contract/|Makefile$|\.github/workflows/contract\.yml$)'
         run: |
           if [ "$EVENT" != "pull_request" ] || git diff --name-only HEAD^1 HEAD | grep -qE "$PATTERN"; then
             echo "run=true" >> "$GITHUB_OUTPUT"
@@ -58,6 +58,8 @@ jobs:
         run: make contract-lint-test
       - name: Lint docs/api/openapi.yaml
         run: make contract-lint
+      - name: Module error tables match the contract
+        run: make api-error-tables-check
 
   # The single required status check for this workflow. It always runs and fails unless
   # every gate succeeded or was skipped because the PR does not touch this workflow's

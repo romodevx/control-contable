@@ -130,24 +130,65 @@ Mobile and QA deferrals keep their own lists: [P0-31 mobile review](../reviews/P
 
 | ID | Task | Owner | Deps | Est (h) | Par | Branch | Blocked by | Done |
 |---|---|---|---|---|---|---|---|---|
-| M1-01 | Contract freeze: `/v1/auth/*`, `/v1/me`, `/v1/legal/documents` (verification flow per owner decision), lint | architect | P0-05 | 1.5 | — | `feature/auth-contract` | OB2 | [ ] |
-| M1-02 | Migration `refresh_tokens` + `consents` with RLS + isolation tests | db-sr | P0-11 | 3 | — | `feature/auth-migrations` | — | [ ] |
-| M1-03 | Migration `legal_documents` (global seed) + `trial_registry` and `email_verifications` (service-only) + definer fns `auth_lookup_credentials`, `trial_registry_check_and_insert`, `email_verification_upsert` / `_consume` + tests | db-sr | P0-11 | 3 | — | `feature/auth-migrations` | — | [ ] |
-| M1-04 | Auth domain: email, password policy, refresh token VO `<uuid>.<secret>` (TDD) | backend-sr | P0-03 | 2 | — | `feature/auth-domain` | — | [ ] |
-| M1-05 | Register + verify-email use cases: EmailSender port (dev log adapter), generic duplicate response, consents, trial start via TrialStarter (TDD) | backend-sr | M1-01, M1-02, M1-03, M1-04, P0-29, P0-30 | 4.5 | — | `feature/auth-register` | — | [ ] |
-| M1-06 | Email provider adapter (SES / Postmark / Resend) behind EmailSender | backend-sr | M1-05 | 2 | — | `feature/auth-email-provider` | OB2 | [ ] |
-| M1-07 | Login + EdDSA JWT (kid rotation) + authn middleware (TDD) | backend-sr | M1-05, P0-17 | 3.5 | — | `feature/auth-session` | — | [ ] |
-| M1-08 | Refresh rotation, reuse detection (family revoke), logout (TDD + integration) | backend-sr | M1-07 | 3.5 | — | `feature/auth-session` | — | [ ] |
-| M1-09 | `GET/PATCH/DELETE /v1/me` (cascade delete; trial_registry survives) + `GET /v1/legal/documents` | backend-sr | M1-07 | 3 | — | `feature/auth-account` | — | [ ] |
-| M1-10 | Auth rate limits + contract tests for every M1 operation + flag ON/OFF suite | qa-sr | M1-08, M1-09, P0-18 | 3 | — | `feature/auth-contract-tests` | — | [ ] |
-| M1-11 | Flutter register + verify-email screens with consents (widget tests first, mock server) | frontend-sr | P0-24, P0-26, M1-01 | 4 | — | `feature/auth-mobile-register` | — | [ ] |
-| M1-12 | Flutter login screen, secure token storage, refresh interceptor, logout | frontend-sr | M1-11 | 4 | — | `feature/auth-mobile-session` | — | [ ] |
-| M1-13 | Flutter profile + in-app account deletion | frontend-sr | M1-12 | 2.5 | — | `feature/auth-mobile-account` | — | [ ] |
-| M1-14 | Register flag `module_auth` (migration + preset membership) and client gating | backend-sr | M1-10, M1-13 | 0.5 | — | `feature/auth-flag` | — | [ ] |
-| M1-15 | QA M1 on emulators: register → verify → login → refresh → delete; flag OFF = 404 | qa-sr | M1-14 | 3 | — | `feature/auth-qa-fixes` | OB6 | [ ] |
-| M1-16 | Tech-lead gate M1 | tech-lead | M1-15 | 1.5 | — | (PR review) | — | [ ] |
-| M1-17 | Security gate M1 (enumeration, token reuse, argon2 params, rate limits) | security | M1-15 | 2.5 | — | (PR review) | — | [ ] |
-| M1-18 | Docs M1 (module doc, auth runbook, generated API ref) | doc-writer | M1-16, M1-17 | 1 | — | `feature/auth-docs` | — | [ ] |
+| M1-01 | Contract freeze: `/v1/auth/*`, `/v1/me`, `/v1/legal/documents` (verification flow per owner decision), lint | architect | P0-05 | 1.5 | — | `feature/auth-contract` | OB2 | [x] |
+| M1-02 | Migration `refresh_tokens` + `consents` with RLS + isolation tests | db-sr | P0-11 | 3 | — | `feature/auth-migrations` | — | [x] |
+| M1-03 | Migration `legal_documents` (global seed) + `trial_registry` and `email_verifications` (service-only) + definer fns `auth_lookup_credentials`, `trial_registry_check_and_insert`, `email_verification_upsert` / `_consume` + tests | db-sr | P0-11 | 3 | — | `feature/auth-migrations` | — | [x] |
+| M1-04 | Auth domain: email, password policy, refresh token VO `<uuid>.<secret>` (TDD) | backend-sr | P0-03 | 2 | — | `feature/auth-domain` | — | [x] |
+| M1-05 | Register + verify-email use cases: EmailSender port (dev log adapter), generic duplicate response, consents, trial start via TrialStarter (TDD) | backend-sr | M1-01, M1-02, M1-03, M1-04, P0-29, P0-30 | 4.5 | — | `feature/auth-register` | — | [x] |
+| M1-06 | Email provider adapter (SES / Postmark / Resend) behind EmailSender | backend-sr | M1-05 | 2 | — | `feature/auth-email-provider` | OB2 | blocked (OB2) |
+| M1-07 | Login + EdDSA JWT (kid rotation) + authn middleware (TDD) | backend-sr | M1-05, P0-17 | 3.5 | — | `feature/auth-session` | — | [x] |
+| M1-08 | Refresh rotation, reuse detection (family revoke), logout (TDD + integration) | backend-sr | M1-07 | 3.5 | — | `feature/auth-session` | — | [x] |
+| M1-09 | `GET/PATCH/DELETE /v1/me` (cascade delete; trial_registry survives) + `GET /v1/legal/documents` | backend-sr | M1-07 | 3 | — | `feature/auth-account` | — | [x] |
+| M1-10 | Auth rate limits + contract tests for every M1 operation + flag ON/OFF suite | qa-sr | M1-08, M1-09, P0-18 | 3 | — | `feature/auth-contract-tests` | — | [x] |
+| M1-11 | Flutter register + verify-email screens with consents (widget tests first, mock server) | frontend-sr | P0-24, P0-26, M1-01 | 4 | — | `feature/auth-mobile-register` | — | [x] |
+| M1-12 | Flutter login screen, secure token storage, refresh interceptor, logout | frontend-sr | M1-11 | 4 | — | `feature/auth-mobile-session` | — | [x] |
+| M1-13 | Flutter profile + in-app account deletion | frontend-sr | M1-12 | 2.5 | — | `feature/auth-mobile-account` | — | [x] |
+| M1-14 | Register flag `module_auth` (migration + preset membership) and client gating | backend-sr | M1-10, M1-13 | 0.5 | — | `feature/auth-flag` | — | [x] |
+| M1-15 | QA M1 on emulators: register → verify → login → refresh → delete; flag OFF = 404 | qa-sr | M1-14 | 3 | — | `feature/auth-qa-fixes` | OB6 | [x] |
+| M1-16 | Tech-lead gate M1 | tech-lead | M1-15 | 1.5 | — | (PR review) | — | [x] |
+| M1-17 | Security gate M1 (enumeration, token reuse, argon2 params, rate limits) | security | M1-15 | 2.5 | — | (PR review) | — | [x] |
+| M1-18 | Docs M1 (module doc, auth runbook, generated API ref) | doc-writer | M1-16, M1-17 | 1 | — | `feature/auth-docs` | — | [x] |
+
+M1-06 stays open: the email provider (SES / Postmark / Resend) is the owner's choice (OB2).
+Until then the dev log adapter sends nothing, and `module_auth` cannot be enabled in a shared
+environment ([auth runbook §6](../runbooks/auth.md#6-enable-module_auth-in-a-shared-environment), P-1).
+
+#### M1 follow-ups
+
+Deferred by the M1 gates; none blocks M1's merge. Each lands with the task or module in its
+target column. Sources: [M1-16 tech-lead gate](../reviews/M1-16-tech-lead-gate.md) (FU*) and
+[M1-17 security gate](../reviews/M1-17-security-gate.md) §3–§4 (G-*, PR numbers). Items
+marked **pre-enable** must land before `module_auth` is ON in a shared environment.
+
+| ID | Item | Owner | Target |
+|---|---|---|---|
+| FU1 | **Pre-enable.** Mobile `guardApi` also maps `TypeError` / `CheckedFromJsonException` to `ApiUnexpected` (test: `access_token: null`) | frontend-sr | M1 hardening |
+| FU2 | **Pre-enable.** `Session.readRefreshToken` returns `null` on a store exception; add `sign_out_test.dart` | frontend-sr | M1 hardening |
+| FU3 | One error→HTTP mapper in `authhttp` (`ErrWrongPassword`, `ErrAccountNotFound`, dead `ErrorMapper` password rules) | backend-sr | Next touch of `authhttp` |
+| FU4 | One `FailureNotice` controller + `announce` helper in `core/forms`; `SignIn` / `CompleteSignUp` use cases | frontend-sr | Before M2 forms (M2-08) |
+| FU5 | Clear the "Espera N min" notice when the wait ends; countdown on verify/register `429`; round `formatCountdown` up | frontend-sr | With FU4 |
+| FU6 | ADR on `access` package ownership (P0-29 FU4, overdue) | architect | Before M2 |
+| FU7 | Move `platform/httperr` to `adapter/http/httperr`; dedupe the 429 and invalid-input messages (P0-29 FU3) | backend-sr | M1 refactor |
+| FU8 | Inject one `clock.Clock` in `cmd/api/auth.go` | backend-sr | M1 refactor |
+| FU9 | FORCE RLS (with definer policy) on `trial_registry`, `email_verifications`, `email_verification_failures`, `legal_documents`, or reword MODULE-auth §6.3; fix the stale `identity.sql` comment | db-sr | M1 refactor |
+| FU10 | archtest: denylist → allowlist (P0-29 FU5) | tech-lead | M2 |
+| FU11 | Measure secure-store restore latency on a low-end release build; decide Android `resetOnError` | frontend-sr + security | M1 hardening |
+| #40, G-2 | Async email (outbox): provider latency and failures never reach the response | backend-sr | M1-06 (pre-enable, P-1) |
+| #34 | Create `cc_auth_definer` in every shared environment before the M1 migrations | devops-sr | REL-09 (pre-enable, P-2) |
+| #34, OB10 | Real legal documents replace the `.invalid` placeholders | owner + legal | Before enable (P-5) |
+| #40, OB10 | Consents are those of the first registrant, not re-affirmed at verify | backend-sr + legal | With OB10 |
+| #47 FU1, G-1 | `rate_limit_take` returns a wait ≤ 0 under a concurrent reset (`greatest(…, 1 µs)`) | db-sr | M9 |
+| #47 FU2 | `rate_limit_take` returns NULL if the purge deletes the row mid-call | db-sr | M9 |
+| #33, #44 | Purge dead refresh-token families + `(absolute_expires_at)` index | db-sr | M9 |
+| #34 | Purge `email_verification_failures` and `rate_limit_buckets` past their windows | db-sr | M9 |
+| #41 | Suspension revokes refresh families; operator suspend path (definer function) | db-sr + backend-sr | Before any suspend feature |
+| #41 #3 | Router authenticates each operation with its declared security scheme (webhook) | backend-sr | Before M7-05 |
+| P0-30 D-6, G-3 | `Cache-Control: no-store` on error responses | backend-sr | Next platform touch |
+| P0-30 D-3 | Lint/archtest: repositories never Commit/Rollback/SET | tech-lead | M2 |
+| P0-31 F-08/D-8 | osv-scanner for pub deps in CI; Prism dev-tool advisories | devops-sr | REL-09 |
+| #43 | Deletion-cascade guard misses indirect chains | db-sr | When M2 tables land |
+| — | Raise argon2id memory (e.g. 46 MiB, t = 1) once the Cloud Run size is fixed | backend-sr | REL-09 sizing |
+| M1-18 | Support can't trace a failed login: show `request_id` in the app's error notice; operator email → user-id lookup without exposing PII ([auth runbook §4](../runbooks/auth.md#4-investigate-a-user-cant-log-in-without-pii)) | frontend-sr + backend-sr | M1 hardening |
 
 ### M2 — Taxpayers & Onboarding (`module_taxpayers`)
 
