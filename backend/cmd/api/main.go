@@ -195,6 +195,10 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 		Authn:    d.auth.authn, // bearer EdDSA access tokens (M1-07)
 		Logger:   d.logger,
 		NotBuilt: notBuiltOperations(),
+		// Per-client limits of each auth operation, after the flag gate
+		// (MODULE-auth §5), keyed like the edge limiter.
+		OperationLimits: d.auth.clientLimits,
+		ClientKey:       middleware.ClientIP(cfg.TrustedProxyHops),
 	})
 	if err != nil {
 		return nil, err
