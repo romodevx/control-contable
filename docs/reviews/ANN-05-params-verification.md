@@ -92,8 +92,8 @@ whenever the LISR is reformed.
 2. **Wrong article in PR #127.** `annual.Limits.TuitionCaps` is documented as "decree DOF
    26-12-2013 **art. 1.9**". The cap table is in **art. 1.10**; art. 1.9 is about payment means
    and proof. The YAML cites art. 1.10.
-   - **Recommendation:** correct the comment in PR #127 (`domain/annual/limits.go`,
-     `deduction.go`).
+   - **Fixed in this PR** (tech-lead review): the cap note cites art. 1.10 and the cash
+     exclusion art. 1.9, pinned by `TestTuitionNotesCiteTheDecreeArticleOfTheirRule`; the comments in `limits.go` and `deduction.go` say art. 1.10.
 3. **"Salario mínimo" vs UMA.** Art. 151 fr. II (funeral) and fr. V (retirement) still say
    "salario mínimo general … elevado al año"; only the last paragraph says UMA. The file stores
    the multiples as printed (1 and 5). Applying them to the UMA is the consumer's reading, and
@@ -103,7 +103,7 @@ whenever the LISR is reformed.
    official text in this session: the DOF day indexes I tried did not list it, and the SAT
    PTU manual timed out. The rule is never to type a value from memory, so the key is
    deferred. ANN-10 (`pm_601`) needs it before its PTU line. Follow-up: fetch the resolution
-   from the DOF and add `ptu.rate` with its citation.
+   from the DOF and add `ptu.rate` with its citation. Until then the rate is provisional ⚠️: CPA-REVIEW (Rates and Annual items), topic `ptu_rate`, golden AN-06-PTU skipped.
 5. **Later amendments to the colegiaturas decree.** Art. 1.10 is compared against the 2013
    publication, in two editions. I found no later DOF amendment of the amounts, but I did not
    read every decree that amends the compilation decree. Secondary sources dated 2023 and
