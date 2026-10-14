@@ -227,3 +227,15 @@ every flagged module is hidden (fail closed).
 
 Use the Node version in `.nvmrc` (`nvm use`). The tooling is installed from the lockfile in
 `tools/contract`; delete `tools/contract/node_modules` and retry if the install was interrupted.
+
+## Test secrets (read before writing any test)
+
+The repository is public and scanned by GitGuardian on every push. A fake value that
+*looks* like a secret still raises an incident. Rules:
+
+- Generate passwords, keys, tokens and JWTs at test time (`crypto/rand`, `ed25519.GenerateKey`,
+  Dart `Random.secure()`); never commit literals that look like credentials, even fake ones.
+- If a fixed vector is unavoidable (e.g. a published crypto test vector), build it from parts
+  at runtime or hex-encode it with a comment explaining why.
+- `make hooks` enables the gitleaks pre-commit hook (`.githooks/pre-commit`); commits with a
+  finding are refused locally, before anything reaches GitHub. CI re-runs the scan (`secrets.yml`).
