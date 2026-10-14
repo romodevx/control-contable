@@ -4,8 +4,9 @@
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+/// The caller's access (P0-16, PRD §7): `trial` (running trial, capped records), `pro` (store plan), `comp` (granted), `read_only` (trial over and no plan: reads, deletes and restores stay, creates and edits answer `402`).
 @JsonEnum()
-enum AccessSummaryAccess {
+enum AccessLevel {
   @JsonValue('trial')
   trial('trial'),
   @JsonValue('pro')
@@ -18,9 +19,9 @@ enum AccessSummaryAccess {
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);
 
-  const AccessSummaryAccess(this.json);
+  const AccessLevel(this.json);
 
-  factory AccessSummaryAccess.fromJson(String json) =>
+  factory AccessLevel.fromJson(String json) =>
       values.firstWhere((e) => e.json == json, orElse: () => $unknown);
 
   final String? json;
@@ -29,6 +30,6 @@ enum AccessSummaryAccess {
   String toString() => json?.toString() ?? super.toString();
 
   /// Returns all defined enum values excluding the $unknown value.
-  static List<AccessSummaryAccess> get $valuesDefined =>
+  static List<AccessLevel> get $valuesDefined =>
       values.where((value) => value != $unknown).toList();
 }

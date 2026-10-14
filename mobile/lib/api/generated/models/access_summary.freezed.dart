@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$AccessSummary {
 
- AccessSummaryAccess get access;@JsonKey(includeIfNull: false, name: 'trial_ends_at') DateTime? get trialEndsAt;@JsonKey(includeIfNull: false, name: 'incomes_remaining') int? get incomesRemaining;@JsonKey(includeIfNull: false, name: 'expenses_remaining') int? get expensesRemaining;
+ AccessLevel get access;@JsonKey(includeIfNull: true, name: 'trial_ends_at') DateTime? get trialEndsAt;@JsonKey(includeIfNull: true, name: 'trial_days_left') int? get trialDaysLeft;@JsonKey(includeIfNull: true, name: 'incomes_remaining') int? get incomesRemaining;@JsonKey(includeIfNull: true, name: 'expenses_remaining') int? get expensesRemaining;
 /// Create a copy of AccessSummary
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +30,20 @@ $AccessSummaryCopyWith<AccessSummary> get copyWith => _$AccessSummaryCopyWithImp
 @override
 bool operator ==(Object other) {
   final _this = this as AccessSummary;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AccessSummary&&(identical(other.access, _this.access) || other.access == _this.access)&&(identical(other.trialEndsAt, _this.trialEndsAt) || other.trialEndsAt == _this.trialEndsAt)&&(identical(other.incomesRemaining, _this.incomesRemaining) || other.incomesRemaining == _this.incomesRemaining)&&(identical(other.expensesRemaining, _this.expensesRemaining) || other.expensesRemaining == _this.expensesRemaining));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AccessSummary&&(identical(other.access, _this.access) || other.access == _this.access)&&(identical(other.trialEndsAt, _this.trialEndsAt) || other.trialEndsAt == _this.trialEndsAt)&&(identical(other.trialDaysLeft, _this.trialDaysLeft) || other.trialDaysLeft == _this.trialDaysLeft)&&(identical(other.incomesRemaining, _this.incomesRemaining) || other.incomesRemaining == _this.incomesRemaining)&&(identical(other.expensesRemaining, _this.expensesRemaining) || other.expensesRemaining == _this.expensesRemaining));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as AccessSummary;
-  return Object.hash(runtimeType,_this.access,_this.trialEndsAt,_this.incomesRemaining,_this.expensesRemaining);
+  return Object.hash(runtimeType,_this.access,_this.trialEndsAt,_this.trialDaysLeft,_this.incomesRemaining,_this.expensesRemaining);
 }
 
 @override
 String toString() {
   final _this = this as AccessSummary;
-  return 'AccessSummary(access: ${_this.access}, trialEndsAt: ${_this.trialEndsAt}, incomesRemaining: ${_this.incomesRemaining}, expensesRemaining: ${_this.expensesRemaining})';
+  return 'AccessSummary(access: ${_this.access}, trialEndsAt: ${_this.trialEndsAt}, trialDaysLeft: ${_this.trialDaysLeft}, incomesRemaining: ${_this.incomesRemaining}, expensesRemaining: ${_this.expensesRemaining})';
 }
 
 
@@ -54,7 +54,7 @@ abstract mixin class $AccessSummaryCopyWith<$Res>  {
   factory $AccessSummaryCopyWith(AccessSummary value, $Res Function(AccessSummary) _then) = _$AccessSummaryCopyWithImpl;
 @useResult
 $Res call({
- AccessSummaryAccess access,@JsonKey(includeIfNull: false, name: 'trial_ends_at') DateTime? trialEndsAt,@JsonKey(includeIfNull: false, name: 'incomes_remaining') int? incomesRemaining,@JsonKey(includeIfNull: false, name: 'expenses_remaining') int? expensesRemaining
+ AccessLevel access,@JsonKey(includeIfNull: true, name: 'trial_ends_at') DateTime? trialEndsAt,@JsonKey(includeIfNull: true, name: 'trial_days_left') int? trialDaysLeft,@JsonKey(includeIfNull: true, name: 'incomes_remaining') int? incomesRemaining,@JsonKey(includeIfNull: true, name: 'expenses_remaining') int? expensesRemaining
 });
 
 
@@ -71,11 +71,12 @@ class _$AccessSummaryCopyWithImpl<$Res>
 
 /// Create a copy of AccessSummary
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? access = null,Object? trialEndsAt = freezed,Object? incomesRemaining = freezed,Object? expensesRemaining = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? access = null,Object? trialEndsAt = freezed,Object? trialDaysLeft = freezed,Object? incomesRemaining = freezed,Object? expensesRemaining = freezed,}) {
   return _then(AccessSummary(
 access: null == access ? _self.access : access // ignore: cast_nullable_to_non_nullable
-as AccessSummaryAccess,trialEndsAt: freezed == trialEndsAt ? _self.trialEndsAt : trialEndsAt // ignore: cast_nullable_to_non_nullable
-as DateTime?,incomesRemaining: freezed == incomesRemaining ? _self.incomesRemaining : incomesRemaining // ignore: cast_nullable_to_non_nullable
+as AccessLevel,trialEndsAt: freezed == trialEndsAt ? _self.trialEndsAt : trialEndsAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,trialDaysLeft: freezed == trialDaysLeft ? _self.trialDaysLeft : trialDaysLeft // ignore: cast_nullable_to_non_nullable
+as int?,incomesRemaining: freezed == incomesRemaining ? _self.incomesRemaining : incomesRemaining // ignore: cast_nullable_to_non_nullable
 as int?,expensesRemaining: freezed == expensesRemaining ? _self.expensesRemaining : expensesRemaining // ignore: cast_nullable_to_non_nullable
 as int?,
   ));
@@ -162,10 +163,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( AccessSummaryAccess access, @JsonKey(includeIfNull: false, name: 'trial_ends_at')  DateTime? trialEndsAt, @JsonKey(includeIfNull: false, name: 'incomes_remaining')  int? incomesRemaining, @JsonKey(includeIfNull: false, name: 'expenses_remaining')  int? expensesRemaining)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( AccessLevel access, @JsonKey(includeIfNull: true, name: 'trial_ends_at')  DateTime? trialEndsAt, @JsonKey(includeIfNull: true, name: 'trial_days_left')  int? trialDaysLeft, @JsonKey(includeIfNull: true, name: 'incomes_remaining')  int? incomesRemaining, @JsonKey(includeIfNull: true, name: 'expenses_remaining')  int? expensesRemaining)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AccessSummary() when $default != null:
-return $default(_that.access,_that.trialEndsAt,_that.incomesRemaining,_that.expensesRemaining);case _:
+return $default(_that.access,_that.trialEndsAt,_that.trialDaysLeft,_that.incomesRemaining,_that.expensesRemaining);case _:
   return orElse();
 
 }
@@ -183,10 +184,10 @@ return $default(_that.access,_that.trialEndsAt,_that.incomesRemaining,_that.expe
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( AccessSummaryAccess access, @JsonKey(includeIfNull: false, name: 'trial_ends_at')  DateTime? trialEndsAt, @JsonKey(includeIfNull: false, name: 'incomes_remaining')  int? incomesRemaining, @JsonKey(includeIfNull: false, name: 'expenses_remaining')  int? expensesRemaining)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( AccessLevel access, @JsonKey(includeIfNull: true, name: 'trial_ends_at')  DateTime? trialEndsAt, @JsonKey(includeIfNull: true, name: 'trial_days_left')  int? trialDaysLeft, @JsonKey(includeIfNull: true, name: 'incomes_remaining')  int? incomesRemaining, @JsonKey(includeIfNull: true, name: 'expenses_remaining')  int? expensesRemaining)  $default,) {final _that = this;
 switch (_that) {
 case _AccessSummary():
-return $default(_that.access,_that.trialEndsAt,_that.incomesRemaining,_that.expensesRemaining);case _:
+return $default(_that.access,_that.trialEndsAt,_that.trialDaysLeft,_that.incomesRemaining,_that.expensesRemaining);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -203,10 +204,10 @@ return $default(_that.access,_that.trialEndsAt,_that.incomesRemaining,_that.expe
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( AccessSummaryAccess access, @JsonKey(includeIfNull: false, name: 'trial_ends_at')  DateTime? trialEndsAt, @JsonKey(includeIfNull: false, name: 'incomes_remaining')  int? incomesRemaining, @JsonKey(includeIfNull: false, name: 'expenses_remaining')  int? expensesRemaining)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( AccessLevel access, @JsonKey(includeIfNull: true, name: 'trial_ends_at')  DateTime? trialEndsAt, @JsonKey(includeIfNull: true, name: 'trial_days_left')  int? trialDaysLeft, @JsonKey(includeIfNull: true, name: 'incomes_remaining')  int? incomesRemaining, @JsonKey(includeIfNull: true, name: 'expenses_remaining')  int? expensesRemaining)?  $default,) {final _that = this;
 switch (_that) {
 case _AccessSummary() when $default != null:
-return $default(_that.access,_that.trialEndsAt,_that.incomesRemaining,_that.expensesRemaining);case _:
+return $default(_that.access,_that.trialEndsAt,_that.trialDaysLeft,_that.incomesRemaining,_that.expensesRemaining);case _:
   return null;
 
 }
@@ -218,13 +219,14 @@ return $default(_that.access,_that.trialEndsAt,_that.incomesRemaining,_that.expe
 @JsonSerializable()
 
 class _AccessSummary implements AccessSummary {
-  const _AccessSummary({required this.access, @JsonKey(includeIfNull: false, name: 'trial_ends_at') this.trialEndsAt, @JsonKey(includeIfNull: false, name: 'incomes_remaining') this.incomesRemaining, @JsonKey(includeIfNull: false, name: 'expenses_remaining') this.expensesRemaining});
+  const _AccessSummary({required this.access, @JsonKey(includeIfNull: true, name: 'trial_ends_at') required this.trialEndsAt, @JsonKey(includeIfNull: true, name: 'trial_days_left') required this.trialDaysLeft, @JsonKey(includeIfNull: true, name: 'incomes_remaining') required this.incomesRemaining, @JsonKey(includeIfNull: true, name: 'expenses_remaining') required this.expensesRemaining});
   factory _AccessSummary.fromJson(Map<String, dynamic> json) => _$AccessSummaryFromJson(json);
 
-@override final  AccessSummaryAccess access;
-@override@JsonKey(includeIfNull: false, name: 'trial_ends_at') final  DateTime? trialEndsAt;
-@override@JsonKey(includeIfNull: false, name: 'incomes_remaining') final  int? incomesRemaining;
-@override@JsonKey(includeIfNull: false, name: 'expenses_remaining') final  int? expensesRemaining;
+@override final  AccessLevel access;
+@override@JsonKey(includeIfNull: true, name: 'trial_ends_at') final  DateTime? trialEndsAt;
+@override@JsonKey(includeIfNull: true, name: 'trial_days_left') final  int? trialDaysLeft;
+@override@JsonKey(includeIfNull: true, name: 'incomes_remaining') final  int? incomesRemaining;
+@override@JsonKey(includeIfNull: true, name: 'expenses_remaining') final  int? expensesRemaining;
 
 /// Create a copy of AccessSummary
 /// with the given fields replaced by the non-null parameter values.
@@ -239,18 +241,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _AccessSummary&&(identical(other.access, access) || other.access == access)&&(identical(other.trialEndsAt, trialEndsAt) || other.trialEndsAt == trialEndsAt)&&(identical(other.incomesRemaining, incomesRemaining) || other.incomesRemaining == incomesRemaining)&&(identical(other.expensesRemaining, expensesRemaining) || other.expensesRemaining == expensesRemaining));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _AccessSummary&&(identical(other.access, access) || other.access == access)&&(identical(other.trialEndsAt, trialEndsAt) || other.trialEndsAt == trialEndsAt)&&(identical(other.trialDaysLeft, trialDaysLeft) || other.trialDaysLeft == trialDaysLeft)&&(identical(other.incomesRemaining, incomesRemaining) || other.incomesRemaining == incomesRemaining)&&(identical(other.expensesRemaining, expensesRemaining) || other.expensesRemaining == expensesRemaining));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,access,trialEndsAt,incomesRemaining,expensesRemaining);
+    return Object.hash(runtimeType,access,trialEndsAt,trialDaysLeft,incomesRemaining,expensesRemaining);
 }
 
 @override
 String toString() {
-    return 'AccessSummary(access: $access, trialEndsAt: $trialEndsAt, incomesRemaining: $incomesRemaining, expensesRemaining: $expensesRemaining)';
+    return 'AccessSummary(access: $access, trialEndsAt: $trialEndsAt, trialDaysLeft: $trialDaysLeft, incomesRemaining: $incomesRemaining, expensesRemaining: $expensesRemaining)';
 }
 
 
@@ -261,7 +263,7 @@ abstract mixin class _$AccessSummaryCopyWith<$Res> implements $AccessSummaryCopy
   factory _$AccessSummaryCopyWith(_AccessSummary value, $Res Function(_AccessSummary) _then) = __$AccessSummaryCopyWithImpl;
 @override @useResult
 $Res call({
- AccessSummaryAccess access,@JsonKey(includeIfNull: false, name: 'trial_ends_at') DateTime? trialEndsAt,@JsonKey(includeIfNull: false, name: 'incomes_remaining') int? incomesRemaining,@JsonKey(includeIfNull: false, name: 'expenses_remaining') int? expensesRemaining
+ AccessLevel access,@JsonKey(includeIfNull: true, name: 'trial_ends_at') DateTime? trialEndsAt,@JsonKey(includeIfNull: true, name: 'trial_days_left') int? trialDaysLeft,@JsonKey(includeIfNull: true, name: 'incomes_remaining') int? incomesRemaining,@JsonKey(includeIfNull: true, name: 'expenses_remaining') int? expensesRemaining
 });
 
 
@@ -278,11 +280,12 @@ class __$AccessSummaryCopyWithImpl<$Res>
 
 /// Create a copy of AccessSummary
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? access = null,Object? trialEndsAt = freezed,Object? incomesRemaining = freezed,Object? expensesRemaining = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? access = null,Object? trialEndsAt = freezed,Object? trialDaysLeft = freezed,Object? incomesRemaining = freezed,Object? expensesRemaining = freezed,}) {
   return _then(_AccessSummary(
 access: null == access ? _self.access : access // ignore: cast_nullable_to_non_nullable
-as AccessSummaryAccess,trialEndsAt: freezed == trialEndsAt ? _self.trialEndsAt : trialEndsAt // ignore: cast_nullable_to_non_nullable
-as DateTime?,incomesRemaining: freezed == incomesRemaining ? _self.incomesRemaining : incomesRemaining // ignore: cast_nullable_to_non_nullable
+as AccessLevel,trialEndsAt: freezed == trialEndsAt ? _self.trialEndsAt : trialEndsAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,trialDaysLeft: freezed == trialDaysLeft ? _self.trialDaysLeft : trialDaysLeft // ignore: cast_nullable_to_non_nullable
+as int?,incomesRemaining: freezed == incomesRemaining ? _self.incomesRemaining : incomesRemaining // ignore: cast_nullable_to_non_nullable
 as int?,expensesRemaining: freezed == expensesRemaining ? _self.expensesRemaining : expensesRemaining // ignore: cast_nullable_to_non_nullable
 as int?,
   ));
