@@ -46,9 +46,10 @@ catalog migration `backend/migrations/20261013180000_regimes_catalog.sql` (CAT).
 Each pair below is currently **allowed** and shows a "pending CPA confirmation" warning.
 For each, the CPA answers: may one taxpayer hold both regimes at the same time?
 
-- [ ] PF 621 (RIF) with 605, 606, 607, 608, 611, 612, 614, 615, 625, 626 (10 pairs). CAT
-- [ ] PF 626 (RESICO) with 607, 608, 615 (3 pairs; art. 113-E only names salary and interest). CAT
-- [ ] PM 601/603/620/622/623/624 among themselves (15 pairs), and 620 with 626 (1 pair). CAT
+- [ ] PF 621 (RIF) with 605, 606, 607, 608, 611, 614, 615, 625 (8 pairs). Art. 111 (2016 text) admits Capítulos I, III and VI income besides, and fr. I excludes shareholders: 605, 606, 614 look allowed; 607, 608, 611, 615, 625 look excluded. R Part E, CAT
+- [ ] PF 626 (RESICO) with 607, 608, 615 (3 pairs; art. 113-E ¶1 "únicamente" and ¶6 only name salary and interest, so they look excluded). R Part E, CAT
+- [ ] PM 601 × 603 (art. 80: a Título III entity owes Título II tax on some income), 601 × 623 (art. 59 ¶4: a Cap. VI company stays under Título II), 601 × 624, 603 × 620, 603 × 622, 603 × 623, 603 × 624, 623 × 624 (8 pairs; no text found either way). R Part E, CAT
+- [x] Settled from the law in M2-13 FU1 (refused, no longer under review): PF 612 × 621, 621 × 626; PM 601 × 620, 620 × 622, 620 × 623, 620 × 624, 620 × 626, 601 × 622, 622 × 623, 622 × 624. R Part E, migration `20261014120000_regime_compatibility_reconcile.sql`. The CPA may still contest a citation.
 - [ ] PF Título IV pairs among 605, 606, 607, 608, 611, 612, 614, 615, 625 are seeded as allowed (separate chapters, combined in the annual return) by inference, not by an explicit rule. CAT
 - [ ] 616 (sin obligaciones) and 610 (residentes en el extranjero) are seeded as excluding every other regime by definition. CAT
 
