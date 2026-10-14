@@ -25,6 +25,8 @@ final Taxpayer _archived = taxpayer(
 );
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('resolveActiveTaxpayer (MODULE-taxpayers §2.9)', () {
     test('the stored id wins while it exists and is not archived', () {
       expect(
