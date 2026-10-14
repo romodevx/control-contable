@@ -64,6 +64,16 @@ const (
 	ErrNotInForce Error = "taxparams: not in force on date"
 )
 
+// Tariff lookup errors (Table.Bracket, Table.Tax).
+const (
+	// ErrAmountNotPositive reports a tariff lookup of zero or less: a
+	// tariff is total over (0, ∞) only, and a base <= 0 owes no tax.
+	ErrAmountNotPositive Error = "taxparams: tariff amount not positive"
+	// ErrAboveTable reports an amount above the last row of a bounded
+	// (flat) table, such as income past the RESICO PF ceiling.
+	ErrAboveTable Error = "taxparams: amount above the table"
+)
+
 // Catalog errors.
 const (
 	// ErrNoParameterSets reports a catalog built from no set (or a nil one).
