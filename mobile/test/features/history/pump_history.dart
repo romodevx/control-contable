@@ -6,6 +6,7 @@ import 'package:control_contable/api/generated/models/taxpayer.dart';
 import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/router/app_router.dart';
 import 'package:control_contable/core/time/clock.dart';
+import 'package:control_contable/features/expenses/data/expenses_repository.dart';
 import 'package:control_contable/features/history/data/history_repository.dart';
 import 'package:control_contable/features/history/history_routes.dart';
 import 'package:control_contable/features/incomes/data/incomes_repository.dart';
@@ -17,6 +18,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../helpers/pump_app.dart';
+import '../expenses/expenses_fakes.dart';
 import '../incomes/incomes_fakes.dart';
 import '../tax_engine/pump_estimate.dart';
 import '../taxpayers/taxpayers_fakes.dart';
@@ -83,12 +85,13 @@ class FakeHistoryRepository implements HistoryRepository {
   }
 }
 
-/// The modules History needs, and the record list it links to.
+/// The modules History needs, and the record lists it links to.
 const Set<AppModule> historyModules = {
   AppModule.taxpayers,
   AppModule.taxEngine,
   AppModule.history,
   AppModule.incomes,
+  AppModule.expenses,
 };
 
 /// What a history widget test scripts and observes.
@@ -102,8 +105,11 @@ class HistoryHarness {
   /// The estimate server (behind each month).
   final FakeTaxEngineRepository estimates = FakeTaxEngineRepository();
 
-  /// The incomes server (behind "Registrar ingreso").
+  /// The incomes server (behind "Registrar ingreso" and "Ver ingresos").
   final FakeIncomesRepository incomes = FakeIncomesRepository();
+
+  /// The expenses server (behind "Ver gastos").
+  final FakeExpensesRepository expenses = FakeExpensesRepository();
 
   /// The running app's providers.
   late ProviderContainer container;
@@ -140,6 +146,7 @@ class HistoryHarness {
         historyRepositoryProvider.overrideWithValue(repository),
         taxEngineRepositoryProvider.overrideWithValue(estimates),
         incomesRepositoryProvider.overrideWithValue(incomes),
+        expensesRepositoryProvider.overrideWithValue(expenses),
         clockProvider.overrideWithValue(() => now),
         activeTaxpayerStoreProvider.overrideWithValue(
           InMemoryActiveTaxpayerStore(),

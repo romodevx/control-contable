@@ -6,6 +6,7 @@ import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/features/history/presentation/history_screen.dart';
 import 'package:control_contable/features/taxpayers/application/active_taxpayer.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../tax_engine/estimate_fixtures.dart';
@@ -371,6 +372,43 @@ void main() {
       expect(_inRow('2026-01', find.text('Visto el 20 mar')), findsOneWidget);
     });
 
+    testWidgets('returning announces the month\'s new state politely (§6)', (
+      tester,
+    ) async {
+      _tall(tester);
+      await harness.pump(tester);
+      await tester.tap(_row('2026-02'));
+      await tester.pumpAndSettle();
+      harness.repository.fallback = _year([
+        historyMonthJson('2026-02', viewedAt: '2026-03-20T18:00:00Z'),
+      ]);
+      tester.takeAnnouncements();
+
+      await harness.back(tester);
+
+      final announced = tester.takeAnnouncements();
+      expect(announced.map((a) => a.message), [
+        'Febrero de 2026. Visto el 20 mar.',
+      ]);
+      expect(announced.single.assertiveness, Assertiveness.polite);
+    });
+
+    testWidgets('a failed re-read on return announces nothing', (tester) async {
+      _tall(tester);
+      await harness.pump(tester);
+      await tester.tap(_row('2026-02'));
+      await tester.pumpAndSettle();
+      harness.repository.replies.add(const ApiUnexpected());
+      tester.takeAnnouncements();
+
+      await harness.back(tester);
+
+      expect(
+        tester.takeAnnouncements().map((a) => a.message),
+        isNot(contains(startsWith('Febrero de 2026'))),
+      );
+    });
+
     testWidgets('the row is one target read in order, marker included', (
       tester,
     ) async {
@@ -390,6 +428,72 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+  });
+
+  group('links to records (US-H6)', () {
+    testWidgets('"Ver ingresos" opens that month\'s incomes', (tester) async {
+      _tall(tester);
+      await harness.pump(tester);
+
+      await tester.tap(_inRow('2026-01', find.text('Ver ingresos')));
+      await tester.pumpAndSettle();
+
+      expect(harness.location, '/ingresos?periodo=2026-01');
+      expect(harness.incomes.calls.last, 'list:2026-01 * -');
+      expect(harness.repository.viewed, isEmpty);
+    });
+
+    testWidgets('"Ver gastos" opens that month\'s expenses', (tester) async {
+      _tall(tester);
+      await harness.pump(tester);
+
+      await tester.tap(_inRow('2026-02', find.text('Ver gastos')));
+      await tester.pumpAndSettle();
+
+      expect(harness.location, '/gastos?periodo=2026-02');
+      expect(harness.expenses.calls.last, 'list:2026-02 * -');
+    });
+
+    testWidgets('each link is its own target, named with its month', (
+      tester,
+    ) async {
+      _tall(tester);
+      await harness.pump(tester);
+
+      expect(
+        find.bySemanticsLabel('Ver ingresos de febrero de 2026'),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel('Ver gastos de febrero de 2026'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a link hides while its module is off', (tester) async {
+      _tall(tester);
+      await harness.pump(
+        tester,
+        modules: historyModules.difference({AppModule.expenses}),
+      );
+
+      expect(_inRow('2026-01', find.text('Ver ingresos')), findsOneWidget);
+      expect(find.text('Ver gastos'), findsNothing);
+    });
+
+    testWidgets('with both record modules off, no link at all', (tester) async {
+      _tall(tester);
+      await harness.pump(
+        tester,
+        modules: historyModules.difference({
+          AppModule.incomes,
+          AppModule.expenses,
+        }),
+      );
+
+      expect(find.text('Ver ingresos'), findsNothing);
+      expect(find.text('Ver gastos'), findsNothing);
     });
   });
 
