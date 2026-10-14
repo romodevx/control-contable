@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
@@ -18,7 +17,6 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit/ratelimitpg"
 	"github.com/romodevx/control-contable/backend/internal/platform/tx"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/infra/ratecatalog"
-	tpdomain "github.com/romodevx/control-contable/backend/internal/taxpayers/domain"
 	tpusecase "github.com/romodevx/control-contable/backend/internal/taxpayers/usecase"
 )
 
@@ -142,33 +140,4 @@ func (a expenseParameters) On(on fiscal.Date) (expusecase.DatedParameters, error
 	return expusecase.DatedParameters{
 		IVARatesAllowed: rates.Value, CashPaymentLimit: limit.Value, Provisional: limit.Provisional || rates.Provisional,
 	}, nil
-}
-
-// latestExpenses is the expenses store's lookup of a regime's latest live
-// expense (expinfra.Store).
-type latestExpenses interface {
-	LatestPaidOn(ctx context.Context, taxpayerID string, regime fiscal.RegimeCode) (fiscal.Date, error)
-}
-
-// regimeRecords implements the taxpayers RegimeRecords port over the
-// expenses table (M2-14 G-1: it replaces infra.NoRecords). M3 adds the
-// incomes and keeps the later of both periods.
-type regimeRecords struct {
-	expenses latestExpenses
-}
-
-var _ tpusecase.RegimeRecords = regimeRecords{}
-
-// LatestRecordPeriod implements tpusecase.RegimeRecords. It runs on the
-// taxpayers unit of work in ctx, as its user.
-func (r regimeRecords) LatestRecordPeriod(ctx context.Context, taxpayerID, code string) (tpdomain.Period, error) {
-	latest, err := r.expenses.LatestPaidOn(ctx, taxpayerID, fiscal.RegimeCode(code))
-	if err != nil || latest.IsZero() {
-		return tpdomain.Period{}, err
-	}
-	p, err := tpdomain.ParsePeriod(latest.Period())
-	if err != nil {
-		return tpdomain.Period{}, fmt.Errorf("expenses: period of %s: %w", latest, err)
-	}
-	return p, nil
 }

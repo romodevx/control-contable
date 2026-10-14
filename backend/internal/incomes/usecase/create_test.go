@@ -269,14 +269,16 @@ func detailOf(err error) string {
 }
 
 // A date whose fiscal year has no parameter set (nor a previous one to fall
-// back on) is a typed error, never a misleading rate_not_valid_on_date.
+// back on: before 2026) is outside the dates the server can check, 400
+// out_of_range on that field as for expenses (contract: dates answer
+// out_of_range), never a misleading rate_not_valid_on_date.
 func TestCreate_DateOutsideTheLoadedParameters(t *testing.T) {
 	h := newHarness(t)
 	in := us1(t)
 	in.Dates = domain.Dates{CollectedOn: date(t, "2025-06-10")}
 	_, err := h.uc.Create(t.Context(), userA, create(incomeID, taxpayerA, in))
-	requireApp(t, err, apperr.CodeBusinessRuleViolation, "collected_on", "parameters_unavailable")
-	require.ErrorIs(t, err, domain.ErrParametersUnavailable)
+	requireApp(t, err, apperr.CodeValidationFailed, "collected_on", "out_of_range")
+	require.ErrorIs(t, err, fiscal.ErrOutOfRange)
 	assert.Zero(t, h.access.reserves)
 }
 

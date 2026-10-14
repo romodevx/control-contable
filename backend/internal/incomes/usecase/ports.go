@@ -121,10 +121,15 @@ type TaxpayerProfile struct {
 	Regimes    []RegimeProfile
 }
 
-// RegimeProfile is one regime the taxpayer holds, with the 625 options the
-// withholding rules read.
+// RegimeProfile is one regime the taxpayer holds, with its window and the
+// 625 options the withholding rules read.
 type RegimeProfile struct {
-	Code               fiscal.RegimeCode
+	Code fiscal.RegimeCode
+	// StartPeriod and EndPeriod bound the window ("YYYY-MM", inclusive;
+	// an empty EndPeriod is open). Writes check the window through
+	// CheckRegime (locked); only reads use these.
+	StartPeriod        string
+	EndPeriod          string
 	PlatformActivities []domain.PlatformActivity // 625 option "activities"
 	RFCGivenToPlatform bool                      // 625 option "rfc_given_to_platform"
 }

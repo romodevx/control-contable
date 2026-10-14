@@ -89,34 +89,6 @@ func (notBuilt) MarkHistoryViewed(context.Context, gen.MarkHistoryViewedRequestO
 	return nil, errNotBuilt
 }
 
-func (notBuilt) ListIncomes(context.Context, gen.ListIncomesRequestObject) (gen.ListIncomesResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) CreateIncome(context.Context, gen.CreateIncomeRequestObject) (gen.CreateIncomeResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) GetIncomeDefaults(context.Context, gen.GetIncomeDefaultsRequestObject) (gen.GetIncomeDefaultsResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) DeleteIncome(context.Context, gen.DeleteIncomeRequestObject) (gen.DeleteIncomeResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) GetIncome(context.Context, gen.GetIncomeRequestObject) (gen.GetIncomeResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) UpdateIncome(context.Context, gen.UpdateIncomeRequestObject) (gen.UpdateIncomeResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) RestoreIncome(context.Context, gen.RestoreIncomeRequestObject) (gen.RestoreIncomeResponseObject, error) {
-	return nil, errNotBuilt
-}
-
 func (notBuilt) ReceiveRevenueCatWebhook(context.Context, gen.ReceiveRevenueCatWebhookRequestObject) (gen.ReceiveRevenueCatWebhookResponseObject, error) {
 	return nil, errNotBuilt
 }

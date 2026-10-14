@@ -20,7 +20,6 @@ func TestModuleErrorCodes(t *testing.T) {
 	}{
 		{domain.ErrNotForRegime, fiscal.ClassValidation, "not_for_regime"},
 		{domain.ErrActivityNotHeld, fiscal.ClassBusinessRule, "activity_not_held"},
-		{domain.ErrParametersUnavailable, fiscal.ClassBusinessRule, "parameters_unavailable"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.detail, func(t *testing.T) {

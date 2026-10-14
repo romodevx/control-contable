@@ -201,9 +201,10 @@ func (uc *Incomes) evaluate(ctx context.Context, userID, taxpayerID, incomeID st
 	return uc.assess(ctx, taxpayerID, incomeID, f, payee, today)
 }
 
-// assess runs the domain rules, then the parameter coverage: validation
-// (400) comes first, a date no parameter set covers (422
-// parameters_unavailable) before the rules that read its rates.
+// assess runs the domain rules, then the parameter coverage: the domain's
+// validation (400) comes first, then a date no parameter set covers (400
+// out_of_range: before 2026 no rate can be checked), before the business
+// rules that read its rates (422).
 func (uc *Incomes) assess(ctx context.Context, taxpayerID, incomeID string, f Fields, payee domain.Payee, today fiscal.Date) (evaluation, error) {
 	assessment, assessErr := domain.Assess(draftOf(f), payee, today, uc.deps.Rates)
 	if assessErr != nil && !isBusinessRule(assessErr) {
@@ -242,8 +243,9 @@ func (uc *Incomes) checkWindow(ctx context.Context, userID, taxpayerID string, f
 }
 
 // checkParameters checks that a parameter set covers the dates the rules
-// read rates on (the booking date and the IVA date): an uncovered date is a
-// parameters_unavailable violation, a provisional one a warning.
+// read rates on (the booking date and the IVA date): an uncovered date is
+// out_of_range, as for expenses (the contract's date code), a provisional
+// one a warning.
 func (uc *Incomes) checkParameters(basis domain.IncomeBasis, dates domain.Dates) ([]domain.Warning, error) {
 	var vs fiscal.Violations
 	var warnings []domain.Warning
@@ -256,7 +258,7 @@ func (uc *Incomes) checkParameters(basis domain.IncomeBasis, dates domain.Dates)
 		provisional, err := uc.deps.Rates.Provisional(d.on)
 		switch {
 		case err != nil:
-			vs.Add(d.field, domain.ErrParametersUnavailable)
+			vs.Add(d.field, fiscal.ErrOutOfRange)
 		case provisional:
 			warnings = append(warnings, domain.Warning{Code: domain.WarningProvisionalParameters, Field: d.field})
 		}
