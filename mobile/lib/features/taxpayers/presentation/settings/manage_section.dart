@@ -66,8 +66,8 @@ class ManageSection extends ConsumerWidget {
       WriteAccess.needsPlan,
       _unarchiveCall,
     );
-    if (done)
-      feedback.toast(feedback.l10n.settingsUnarchived(taxpayer.displayName));
+    if (!done) return;
+    feedback.toast(feedback.l10n.settingsUnarchived(taxpayer.displayName));
   }
 
   Future<void> _delete(BuildContext context) async {
@@ -150,7 +150,7 @@ class ManageSection extends ConsumerWidget {
 /// What a write's follow-up needs, read while the screen is mounted: the
 /// toast outlives the screen.
 final class _Feedback {
-  _Feedback.of(BuildContext context)
+  new of(BuildContext context)
     : messenger = ScaffoldMessenger.of(context),
       l10n = AppLocalizations.of(context);
 
