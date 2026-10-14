@@ -55,6 +55,9 @@ void main() {
     await harness.pump(tester, enabled: false, location: null);
 
     expect(find.text('Ver estimado del mes'), findsNothing);
+    // M5-29 QA: the home placeholder promised an estimate the hidden module
+    // never shows.
+    expect(find.textContaining('estimado'), findsNothing);
     for (final location in _locations) {
       harness.container.read(appRouterProvider).go(location);
       await tester.pumpAndSettle();
@@ -66,6 +69,7 @@ void main() {
 
   testWidgets('on: home opens the estimate', (tester) async {
     await harness.pump(tester, location: null);
+    expect(find.text('Aquí aparecerá el estimado del mes.'), findsOneWidget);
 
     await tester.tap(find.text('Ver estimado del mes'));
     await tester.pumpAndSettle();
