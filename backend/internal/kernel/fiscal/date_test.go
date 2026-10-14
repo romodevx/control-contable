@@ -78,3 +78,9 @@ func TestDatePeriod(t *testing.T) {
 	assert.Equal(t, "2026-09", date(t, "2026-09-05").Period())
 	assert.Empty(t, fiscal.Date{}.Period())
 }
+
+func TestDateYear(t *testing.T) {
+	assert.Equal(t, 2026, date(t, "2026-12-31").Year())
+	assert.Equal(t, 2027, date(t, "2027-01-01").Year())
+	assert.Zero(t, fiscal.Date{}.Year())
+}

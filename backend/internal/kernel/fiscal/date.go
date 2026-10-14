@@ -39,6 +39,10 @@ func ParseDate(raw string) (Date, error) {
 // IsZero reports whether d is "no date".
 func (d Date) IsZero() bool { return d.year == 0 }
 
+// Year returns the calendar (and fiscal, CFF 11) year of d, or 0 for the
+// zero Date.
+func (d Date) Year() int { return d.year }
+
 // String returns "YYYY-MM-DD", or "" for the zero Date.
 func (d Date) String() string { return d.format(dateLayout) }
 
