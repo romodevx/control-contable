@@ -48,7 +48,7 @@ func refreshBody(token string) *gen.RefreshSessionJSONRequestBody {
 	return &gen.RefreshSessionJSONRequestBody{RefreshToken: token}
 }
 
-func TestRefreshSession_answers200WithANoStorePair(t *testing.T) {
+func TestRefreshSession_answers200WithAPair(t *testing.T) {
 	userID, err := domain.ParseUserID(userIDText)
 	require.NoError(t, err)
 	refresh, err := domain.NewRefreshToken(userID, zeroes{})
@@ -64,7 +64,6 @@ func TestRefreshSession_answers200WithANoStorePair(t *testing.T) {
 	assert.Equal(t, "presented", r.got)
 	ok, isOK := resp.(gen.RefreshSession200JSONResponse)
 	require.True(t, isOK, "%T", resp)
-	assert.Equal(t, "no-store", ok.Headers.CacheControl)
 	assert.Equal(t, gen.TokenPair{
 		AccessToken: "jwt", AccessExpiresIn: 900, RefreshToken: refresh.Reveal(), RefreshExpiresIn: 7200, TokenType: gen.Bearer,
 	}, ok.Body)

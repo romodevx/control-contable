@@ -28,7 +28,6 @@ const (
 	taxpayerID = "0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80"
 	expenseID  = "0199d4a3-2b3c-7e4d-9f50-6b7c8d9e0f12"
 	folio      = "3A9C7E21-5B4D-4F6A-8E2C-9D1B7A3F5C60"
-	noStore    = "no-store"
 )
 
 var stamp = time.Date(2026, time.September, 12, 18, 30, 0, 0, time.UTC)
@@ -152,7 +151,6 @@ func TestCreateExpense_mapsTheRequestAndAnswers201(t *testing.T) {
 	require.NoError(t, err)
 	created, ok := res.(gen.CreateExpense201JSONResponse)
 	require.True(t, ok, "%T", res)
-	assert.Equal(t, noStore, created.Headers.CacheControl)
 	assert.Equal(t, usecase.CreateInput{
 		UserID: callerID, TaxpayerID: taxpayerID, ID: expenseID, Regime: "612", Description: description,
 		Draft: domain.Draft{
@@ -185,9 +183,8 @@ func TestCreateExpense_optionalFieldsAbsent(t *testing.T) {
 	})
 
 	require.NoError(t, err)
-	retry, ok := res.(gen.CreateExpense200JSONResponse)
+	_, ok := res.(gen.CreateExpense200JSONResponse)
 	require.True(t, ok, "an idempotent retry is 200, got %T", res)
-	assert.Equal(t, noStore, retry.Headers.CacheControl)
 	assert.Empty(t, fake.create.ID, "no client id: the server chooses one")
 	assert.Equal(t, domain.UseDefault, fake.create.Draft.Deductible)
 	assert.True(t, fake.create.Draft.CFDIUUID.IsZero())
@@ -337,9 +334,8 @@ func TestUpdateExpense_mergePatch(t *testing.T) {
 			})
 
 			require.NoError(t, err)
-			ok200, ok := res.(gen.UpdateExpense200JSONResponse)
+			_, ok := res.(gen.UpdateExpense200JSONResponse)
 			require.True(t, ok, "%T", res)
-			assert.Equal(t, noStore, ok200.Headers.CacheControl)
 			assert.Equal(t, usecase.UpdateInput{UserID: callerID, TaxpayerID: taxpayerID, ExpenseID: expenseID, Patch: tt.want}, fake.update)
 		})
 	}
@@ -385,7 +381,6 @@ func TestGetExpense_readsTheCallersExpense(t *testing.T) {
 	require.NoError(t, err)
 	got, ok := res.(gen.GetExpense200JSONResponse)
 	require.True(t, ok, "%T", res)
-	assert.Equal(t, noStore, got.Headers.CacheControl)
 	assert.Equal(t, []string{callerID, taxpayerID, expenseID}, []string{fake.userID, fake.taxpayerID, fake.expenseID})
 	body := encode(t, got.Body)
 	assert.Contains(t, body, "cfdi_uuid")
@@ -407,9 +402,8 @@ func TestDeleteAndRestoreExpense(t *testing.T) {
 	fake.userID = ""
 	res2, err := h.RestoreExpense(authed(t), gen.RestoreExpenseRequestObject{TaxpayerId: uid(taxpayerID), ExpenseId: uid(expenseID)})
 	require.NoError(t, err)
-	restored, ok := res2.(gen.RestoreExpense200JSONResponse)
+	_, ok := res2.(gen.RestoreExpense200JSONResponse)
 	require.True(t, ok, "%T", res2)
-	assert.Equal(t, noStore, restored.Headers.CacheControl)
 	assert.Equal(t, callerID, fake.userID)
 }
 
@@ -430,7 +424,6 @@ func TestListExpenses_mapsTheQueryAndThePage(t *testing.T) {
 	require.NoError(t, err)
 	page, ok := res.(gen.ListExpenses200JSONResponse)
 	require.True(t, ok, "%T", res)
-	assert.Equal(t, noStore, page.Headers.CacheControl)
 	assert.Equal(t, usecase.ListInput{
 		UserID: callerID, TaxpayerID: taxpayerID, Period: "2026-09", Regime: "612", Cursor: "opaque", Limit: 20,
 	}, fake.list)
@@ -476,7 +469,6 @@ func TestListExpenseCategories(t *testing.T) {
 	require.NoError(t, err)
 	list, ok := res.(gen.ListExpenseCategories200JSONResponse)
 	require.True(t, ok, "%T", res)
-	assert.Equal(t, noStore, list.Headers.CacheControl)
 	assert.Equal(t, usecase.CategoriesInput{UserID: callerID, TaxpayerID: taxpayerID, Regime: "612", On: "2026-09-12"}, fake.categories)
 	body := encode(t, list.Body)
 	assert.Equal(t, []any{"rate_16", "exempt"}, body["iva_rates_allowed"])

@@ -30,12 +30,12 @@ func TestGetHealth(t *testing.T) {
 		{
 			name: "database reachable",
 			ping: func(context.Context) error { return nil },
-			want: gen.GetHealth200JSONResponse{Status: gen.HealthStatusStatusOk, Database: gen.HealthStatusDatabaseOk, Version: version},
+			want: gen.GetHealth200JSONResponse{Body: gen.HealthStatus{Status: gen.HealthStatusStatusOk, Database: gen.HealthStatusDatabaseOk, Version: version}},
 		},
 		{
 			name: "database down: alive but degraded",
 			ping: func(context.Context) error { return errors.New("dial tcp: connection refused") },
-			want: gen.GetHealth200JSONResponse{Status: gen.HealthStatusStatusDegraded, Database: gen.HealthStatusDatabaseUnreachable, Version: version},
+			want: gen.GetHealth200JSONResponse{Body: gen.HealthStatus{Status: gen.HealthStatusStatusDegraded, Database: gen.HealthStatusDatabaseUnreachable, Version: version}},
 		},
 		{
 			name: "database hangs: the ping is bounded",
@@ -43,7 +43,7 @@ func TestGetHealth(t *testing.T) {
 				<-ctx.Done()
 				return ctx.Err()
 			},
-			want: gen.GetHealth200JSONResponse{Status: gen.HealthStatusStatusDegraded, Database: gen.HealthStatusDatabaseUnreachable, Version: version},
+			want: gen.GetHealth200JSONResponse{Body: gen.HealthStatus{Status: gen.HealthStatusStatusDegraded, Database: gen.HealthStatusDatabaseUnreachable, Version: version}},
 		},
 	}
 	for _, tt := range tests {

@@ -93,7 +93,7 @@ func signedIn(t *testing.T) context.Context {
 	return requestid.With(ctx, "req_test")
 }
 
-func TestGetMe_answersTheCallersProfileNoStore(t *testing.T) {
+func TestGetMe_answersTheCallersProfile(t *testing.T) {
 	f := newAccountFixture(t)
 
 	resp, err := f.handler.GetMe(signedIn(t), gen.GetMeRequestObject{})
@@ -101,7 +101,6 @@ func TestGetMe_answersTheCallersProfileNoStore(t *testing.T) {
 	require.NoError(t, err)
 	got, ok := resp.(gen.GetMe200JSONResponse)
 	require.True(t, ok, "%T", resp)
-	assert.Equal(t, "no-store", got.Headers.CacheControl)
 	assert.Equal(t, userIDText, got.Body.Id.String())
 	assert.Equal(t, "ana.gomez@example.mx", string(got.Body.Email))
 	require.NotNil(t, got.Body.Name)
@@ -156,16 +155,15 @@ func TestGetMe_aFailureIsReturnedForThe500(t *testing.T) {
 	assert.ErrorIs(t, err, errBoom)
 }
 
-func TestUpdateMe_renamesAndAnswersTheProfileNoStore(t *testing.T) {
+func TestUpdateMe_renamesAndAnswersTheProfile(t *testing.T) {
 	f := newAccountFixture(t)
 	name := "Ana Gómez de la Torre"
 
 	resp, err := f.handler.UpdateMe(signedIn(t), gen.UpdateMeRequestObject{Body: &gen.UpdateMeJSONRequestBody{Name: &name}})
 
 	require.NoError(t, err)
-	got, ok := resp.(gen.UpdateMe200JSONResponse)
+	_, ok := resp.(gen.UpdateMe200JSONResponse)
 	require.True(t, ok, "%T", resp)
-	assert.Equal(t, "no-store", got.Headers.CacheControl)
 	assert.Equal(t, name, f.profile.gotName)
 	assert.Equal(t, userIDText, f.profile.gotID.String())
 }

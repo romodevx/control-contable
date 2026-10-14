@@ -7,6 +7,14 @@ info:
   title: control-contable codegen workarounds
   version: 1.0.0
 actions:
+  # Cache-Control: no-store (components.headers.NoStore) is on every response, and one edge
+  # middleware writes it (adapter/http/middleware.NoStore, contract 0.7.0). Required on the
+  # wire, but optional here: a required header becomes a string field every handler must
+  # fill (a zero value would send an empty Cache-Control); optional, it is a nil *string that
+  # writes nothing, so no handler owns the header. The contract tests still check it.
+  - target: $.components.headers.NoStore
+    update:
+      required: false
   # Multi-type union `type: [string, boolean, 'null']`: v2.8.0 fails with
   # "unhandled Schema type: &[string boolean]" (its README says unions become `any`,
   # but only top-level ones do). Map the property to `any` explicitly; the

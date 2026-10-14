@@ -13,10 +13,6 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/clientnet"
 )
 
-// noStore is the Cache-Control of every response carrying tokens (contract
-// NoStore header).
-const noStore = "no-store"
-
 // Registerer starts a sign-up (usecase.Register).
 type Registerer interface {
 	Execute(ctx context.Context, in usecase.RegisterInput) error
@@ -75,8 +71,7 @@ func (h *Handler) Login(ctx context.Context, req gen.LoginRequestObject) (gen.Lo
 		return nil, toAppError(err)
 	}
 	return gen.Login200JSONResponse{
-		Body:    gen.AuthSession{User: toUser(session.Account), Tokens: toTokenPair(session.Tokens)},
-		Headers: gen.Login200ResponseHeaders{CacheControl: noStore},
+		Body: gen.AuthSession{User: toUser(session.Account), Tokens: toTokenPair(session.Tokens)},
 	}, nil
 }
 
@@ -100,7 +95,7 @@ func (h *Handler) Register(ctx context.Context, req gen.RegisterRequestObject) (
 	if err != nil {
 		return nil, toAppError(err)
 	}
-	return gen.Register202JSONResponse(verificationSent), nil
+	return gen.Register202JSONResponse{Body: verificationSent}, nil
 }
 
 // ResendVerification implements gen.StrictServerInterface
@@ -109,7 +104,7 @@ func (h *Handler) ResendVerification(ctx context.Context, req gen.ResendVerifica
 	if err := h.resend.Execute(ctx, string(req.Body.Email)); err != nil {
 		return nil, toAppError(err)
 	}
-	return gen.ResendVerification202JSONResponse(verificationSent), nil
+	return gen.ResendVerification202JSONResponse{Body: verificationSent}, nil
 }
 
 // VerifyEmail implements gen.StrictServerInterface (POST /v1/auth/verify-email):
@@ -126,8 +121,7 @@ func (h *Handler) VerifyEmail(ctx context.Context, req gen.VerifyEmailRequestObj
 		return nil, toAppError(err)
 	}
 	return gen.VerifyEmail201JSONResponse{
-		Body:    gen.AuthSession{User: toUser(session.Account), Tokens: toTokenPair(session.Tokens)},
-		Headers: gen.VerifyEmail201ResponseHeaders{CacheControl: noStore},
+		Body: gen.AuthSession{User: toUser(session.Account), Tokens: toTokenPair(session.Tokens)},
 	}, nil
 }
 

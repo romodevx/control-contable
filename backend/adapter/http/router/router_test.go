@@ -41,7 +41,7 @@ type fakeAPI struct {
 
 func (f fakeAPI) GetHealth(context.Context, gen.GetHealthRequestObject) (gen.GetHealthResponseObject, error) {
 	*f.calls = append(*f.calls, "getHealth")
-	return gen.GetHealth200JSONResponse{Status: gen.HealthStatusStatusOk, Database: gen.HealthStatusDatabaseOk, Version: "t"}, nil
+	return gen.GetHealth200JSONResponse{Body: gen.HealthStatus{Status: gen.HealthStatusStatusOk, Database: gen.HealthStatusDatabaseOk, Version: "t"}}, nil
 }
 
 func (f fakeAPI) Login(_ context.Context, req gen.LoginRequestObject) (gen.LoginResponseObject, error) {

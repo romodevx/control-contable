@@ -42,7 +42,7 @@ func (h *Handler) ListEnabledFlags(ctx context.Context, _ gen.ListEnabledFlagsRe
 	}
 	enabled := make([]gen.ModuleKey, 0, len(keys))
 	enabled = append(enabled, keys...)
-	return gen.ListEnabledFlags200JSONResponse{Enabled: enabled}, nil
+	return gen.ListEnabledFlags200JSONResponse{Body: gen.EnabledFlags{Enabled: enabled}}, nil
 }
 
 func internalError(ctx context.Context) gen.ListEnabledFlags500JSONResponse {
@@ -50,5 +50,5 @@ func internalError(ctx context.Context) gen.ListEnabledFlags500JSONResponse {
 	body.Error.Code = gen.ErrorCode(apperr.CodeInternalError)
 	body.Error.Message = apperr.InternalMessage
 	body.Error.RequestId = requestid.From(ctx)
-	return gen.ListEnabledFlags500JSONResponse{InternalErrorJSONResponse: gen.InternalErrorJSONResponse(body)}
+	return gen.ListEnabledFlags500JSONResponse{InternalErrorJSONResponse: gen.InternalErrorJSONResponse{Body: body}}
 }

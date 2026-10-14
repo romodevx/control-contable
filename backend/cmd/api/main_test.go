@@ -193,6 +193,19 @@ func TestHealthz(t *testing.T) {
 	}
 }
 
+// Every response is uncacheable, including a 404 written before any
+// operation is matched (S-11, M3/M4 security gate G-1).
+func TestNoStore_onResponsesOutsideTheContract(t *testing.T) {
+	h := newTestHandler(t, testConfig(), pingOK{})
+	for _, target := range []string{"/healthz", "/v1/not-a-route", "/healthz/../v1/flags"} {
+		t.Run(target, func(t *testing.T) {
+			_, rec := get(h, target)
+
+			assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"), "status %d", rec.Code)
+		})
+	}
+}
+
 func TestRateLimit_answers429WithRetryAfter(t *testing.T) {
 	h := newTestHandler(t, testConfig(), pingOK{})
 	for range testConfig().RateLimit.Burst {
