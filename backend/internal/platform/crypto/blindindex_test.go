@@ -245,3 +245,58 @@ func TestRFCIndexAcceptsBothRFCShapes(t *testing.T) {
 		})
 	}
 }
+
+// scopeA is the 16 bytes of uuid 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80. The
+// expected digest was computed independently with:
+//
+//	printf '\x01\x99\xd4\xa2\x8f\x00\x7c\x44\xa1\xb2\x3c\x4d\x5e\x6f\x7a\x80GOMA800101AB6' |
+//	  openssl dgst -sha256 -hmac 'test-pepper-rfc-0123456789abcdef'
+var scopeA = []byte{0x01, 0x99, 0xd4, 0xa2, 0x8f, 0x00, 0x7c, 0x44, 0xa1, 0xb2, 0x3c, 0x4d, 0x5e, 0x6f, 0x7a, 0x80}
+
+const wantScopedRFCHash = "6286cc187ab852f3af877365c61be11aaec6189460452c14ce1d90f389cfb358"
+
+func TestHashScoped_IsHMACOfScopeThenNormalizedValue(t *testing.T) {
+	idx, err := NewRFCIndex([]byte(testRFCPepper))
+	require.NoError(t, err)
+
+	for _, input := range []string{"GOMA800101AB6", " goma800101ab6\t"} {
+		got, err := idx.HashScoped(scopeA, input)
+
+		require.NoError(t, err)
+		assert.Equal(t, wantScopedRFCHash, hex.EncodeToString(got))
+	}
+}
+
+func TestHashScoped_SeparatesScopes(t *testing.T) {
+	idx, err := NewRFCIndex([]byte(testRFCPepper))
+	require.NoError(t, err)
+	scopeB := bytes.Clone(scopeA)
+	scopeB[15] ^= 0x01
+
+	a, err := idx.HashScoped(scopeA, "GOMA800101AB6")
+	require.NoError(t, err)
+	b, err := idx.HashScoped(scopeB, "GOMA800101AB6")
+	require.NoError(t, err)
+	unscoped, err := idx.Hash("GOMA800101AB6")
+	require.NoError(t, err)
+
+	assert.NotEqual(t, a, b, "two users holding one RFC are unlinkable")
+	assert.NotEqual(t, a, unscoped)
+}
+
+func TestHashScoped_RefusesABadScopeOrValue(t *testing.T) {
+	idx, err := NewRFCIndex([]byte(testRFCPepper))
+	require.NoError(t, err)
+
+	for name, scope := range map[string][]byte{"nil": nil, "short": scopeA[:15], "long": append(bytes.Clone(scopeA), 0)} {
+		t.Run(name, func(t *testing.T) {
+			got, err := idx.HashScoped(scope, "GOMA800101AB6")
+
+			require.ErrorIs(t, err, ErrInvalidScope)
+			assert.Nil(t, got)
+		})
+	}
+	got, err := idx.HashScoped(scopeA, "not an rfc")
+	require.ErrorIs(t, err, ErrInvalidRFC)
+	assert.Nil(t, got)
+}

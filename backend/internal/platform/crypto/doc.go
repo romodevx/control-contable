@@ -37,6 +37,8 @@ var (
 	// ErrInvalidRFC reports a value that is not a 12- or 13-character RFC
 	// after normalization.
 	ErrInvalidRFC = errors.New("crypto: invalid rfc")
+	// ErrInvalidScope reports a HashScoped scope that is not ScopeSize bytes.
+	ErrInvalidScope = errors.New("crypto: invalid blind index scope")
 	// ErrPasswordTooLong reports a password above MaxPasswordBytes.
 	ErrPasswordTooLong = errors.New("crypto: password too long")
 )

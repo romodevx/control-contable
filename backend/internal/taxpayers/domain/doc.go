@@ -10,6 +10,10 @@
 //   - OptionSet: a regime's option definitions (the catalog's option_defs)
 //     validating a taxpayer's per-regime options, independent of how either
 //     is stored.
+//   - Period and Window: a YYYY-MM tax period and the [start, end] span a
+//     regime is held over (open end = +infinity), with the overlap rule of
+//     the regime compatibility check.
+//   - DisplayName: a taxpayer's 1-80 character, trimmed, NFC label.
 //
 // Errors are constants of type Error matched with errors.Is; option errors
 // arrive wrapped in an *OptionError that names the offending key. None of
