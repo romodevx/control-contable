@@ -171,6 +171,26 @@ func (LedgerReader) ExpenseSums(ctx context.Context, q LedgerQuery) ([]ExpenseMo
 	return out, nil
 }
 
+// hasLiveSQL is HasLive's statement: an EXISTS the planner answers from
+// expenses_live_paid_on_idx (user_id from the RLS policy, then
+// taxpayer_id; its partial predicate is the live rows').
+const hasLiveSQL = `SELECT EXISTS (SELECT 1 FROM expenses WHERE taxpayer_id = ? AND deleted_at IS NULL)`
+
+// HasLive reports whether the taxpayer has any live expense, in any period
+// (the dashboard's is_empty, M6-02). It runs on the unit of work in ctx,
+// as its user (RLS): another user's taxpayer has none.
+func (LedgerReader) HasLive(ctx context.Context, taxpayerID string) (bool, error) {
+	db, err := pgdb.Conn(ctx)
+	if err != nil {
+		return false, err
+	}
+	var exists bool
+	if err := db.Raw(hasLiveSQL, taxpayerID).Scan(&exists).Error; err != nil {
+		return false, translate("live expenses exist", err)
+	}
+	return exists, nil
+}
+
 // expenseSums builds the statement for q on the unit of work in ctx,
 // prefixed (EXPLAIN in the tests).
 func expenseSums(ctx context.Context, q LedgerQuery, prefix string) (*gorm.DB, error) {

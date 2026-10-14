@@ -200,6 +200,30 @@ func TestLedgerReader_RangeSpansTwoFiscalYears(t *testing.T) {
 	}, got, "ordered by regime, year, month; nothing before January 2026 or after February 2027")
 }
 
+// M6-02 is_empty: any live expense of the taxpayer, in any period; a soft-deleted one and
+// another user's do not count.
+func TestLedgerReader_HasLive(t *testing.T) {
+	e := newEnv(t)
+	hasLive := func(userID, taxpayerID string) bool {
+		t.Helper()
+		var got bool
+		require.NoError(t, e.txm.ReadOnly(t.Context(), userID, func(ctx context.Context) error {
+			var err error
+			got, err = infra.NewLedgerReader().HasLive(ctx, taxpayerID)
+			return err
+		}))
+		return got
+	}
+
+	assert.False(t, hasLive(userA, taxpayerA), "no expense yet")
+	seedLedger(t, e, with(card("2026-01-10", 1_00), func(f *ledgerFixture) { f.deleted = true }))
+	assert.False(t, hasLive(userA, taxpayerA), "a deleted expense is not live")
+	seedLedger(t, e, card("2026-02-10", 1_00))
+	assert.True(t, hasLive(userA, taxpayerA))
+	assert.False(t, hasLive(userB, taxpayerA), "RLS: another user's taxpayer has nothing")
+	assert.False(t, hasLive(userA, taxpayerR), "the same user's other taxpayer")
+}
+
 func TestLedgerReader_WithholdingsMadeToSuppliers(t *testing.T) {
 	e := newEnv(t)
 	fees := ledgerFixture{

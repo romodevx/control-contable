@@ -295,6 +295,31 @@ func TestLedgerReader_RangeSpansTwoFiscalYears(t *testing.T) {
 	}, got, "ordered by regime, year, month; nothing before January 2026 or after February 2027")
 }
 
+// M6-02 is_empty: any live income of the taxpayer, in any period; a soft-deleted one and
+// another user's do not count.
+func TestLedgerReader_HasLive(t *testing.T) {
+	e := newEnv(t)
+	seedLedgerTaxpayers(t, e)
+	hasLive := func(userID, taxpayerID string) bool {
+		t.Helper()
+		var got bool
+		require.NoError(t, e.txm.ReadOnly(t.Context(), userID, func(ctx context.Context) error {
+			var err error
+			got, err = infra.NewLedgerReader().HasLive(ctx, taxpayerID)
+			return err
+		}))
+		return got
+	}
+
+	assert.False(t, hasLive(userA, ledgerFisica), "no income yet")
+	seedIncomes(t, e, withIncome(sale("2026-01-10", 1_00), func(f *incomeFixture) { f.deleted = true }))
+	assert.False(t, hasLive(userA, ledgerFisica), "a deleted income is not live")
+	seedIncomes(t, e, sale("2026-02-10", 1_00))
+	assert.True(t, hasLive(userA, ledgerFisica))
+	assert.False(t, hasLive(userB, ledgerFisica), "RLS: another user's taxpayer has nothing")
+	assert.False(t, hasLive(userA, ledgerRESICO), "the same user's other taxpayer")
+}
+
 func TestLedgerReader_OtherUsersRowsAreInvisible(t *testing.T) {
 	e := newEnv(t)
 	seedLedgerTaxpayers(t, e)
