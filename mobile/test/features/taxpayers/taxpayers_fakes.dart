@@ -27,6 +27,7 @@ Regime regime(
   List<RegimeOptionDef> optionDefs = const [],
   List<TaxInputDef> requiredInputs = const [],
   List<RegimeIncompatibility> incompatibleWith = const [],
+  List<RegimeIncompatibility> reviewPendingWith = const [],
 }) => Regime(
   code: code,
   name: name ?? 'Régimen $code',
@@ -36,7 +37,12 @@ Regime regime(
   optionDefs: optionDefs,
   requiredInputs: requiredInputs,
   incompatibleWith: incompatibleWith,
+  reviewPendingWith: reviewPendingWith,
 );
+
+/// The seed's reason for a pair under CPA review (M2-02).
+const String cpaPendingReason =
+    'Combinación permitida, pendiente de confirmar con un contador.';
 
 /// An option definition for tests.
 RegimeOptionDef optionDef(
@@ -140,6 +146,11 @@ final List<Regime> fisicaCatalog = [
     name: 'Incorporación Fiscal',
     treatment: Treatment.partial,
     explanation: 'Régimen en extinción.',
+    // Declared on this side only, as the client must read either side.
+    reviewPendingWith: [
+      const RegimeIncompatibility(code: '606', reason: cpaPendingReason),
+      const RegimeIncompatibility(code: '612', reason: cpaPendingReason),
+    ],
     optionDefs: [
       optionDef(
         'rif_year',
