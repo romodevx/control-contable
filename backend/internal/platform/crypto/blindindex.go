@@ -16,6 +16,8 @@ const (
 	MinPepperSize = sha256.Size
 	// HashSize is the length in bytes of a blind index hash.
 	HashSize = sha256.Size
+	// ScopeSize is the length in bytes of a HashScoped scope: a UUID.
+	ScopeSize = 16
 )
 
 // BlindIndex computes HMAC-SHA256(pepper, normalize(value)): a deterministic,
@@ -52,12 +54,29 @@ func newBlindIndex(pepper []byte, normalize func(string) (string, error)) (*Blin
 // Hash returns the HashSize-byte blind index of value. A value that is empty
 // after normalization is ErrEmptyInput, so no two blank inputs ever collide.
 func (b *BlindIndex) Hash(value string) ([]byte, error) {
+	return b.hash(nil, value)
+}
+
+// HashScoped returns HMAC-SHA256(pepper, scope || normalize(value)): the
+// blind index of value within one scope, e.g. rfc_hash keyed by the owning
+// user's id (MODULE-taxpayers S-2), so equal values of two scopes cannot be
+// linked. scope must be exactly ScopeSize bytes (the 16 bytes of a UUID):
+// a fixed width keeps scope || value unambiguous. Otherwise ErrInvalidScope.
+func (b *BlindIndex) HashScoped(scope []byte, value string) ([]byte, error) {
+	if len(scope) != ScopeSize {
+		return nil, fmt.Errorf("%w: %d bytes, want %d", ErrInvalidScope, len(scope), ScopeSize)
+	}
+	return b.hash(scope, value)
+}
+
+func (b *BlindIndex) hash(scope []byte, value string) ([]byte, error) {
 	normalized, err := b.normalize(value)
 	if err != nil {
 		return nil, err
 	}
 	mac := hmac.New(sha256.New, b.pepper)
-	mac.Write([]byte(normalized)) // hash.Hash.Write never returns an error
+	mac.Write(scope) // hash.Hash.Write never returns an error
+	mac.Write([]byte(normalized))
 	return mac.Sum(nil), nil
 }
 

@@ -40,6 +40,13 @@ const (
 	// ErrInvalidOptionDef reports an inconsistent catalog definition: a
 	// server fault, never the client's (internal_error).
 	ErrInvalidOptionDef Error = "taxpayers: invalid option definition"
+	// ErrInvalidPeriod reports a period that is not "YYYY-MM"
+	// (validation_failed).
+	ErrInvalidPeriod Error = "taxpayers: invalid period"
+	// ErrInvalidDisplayName reports a display name that is empty after
+	// trimming, longer than 80 characters or not printable text
+	// (validation_failed).
+	ErrInvalidDisplayName Error = "taxpayers: invalid display name"
 )
 
 // OptionError ties an option error to the key it concerns, so the adapter
