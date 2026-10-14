@@ -127,6 +127,8 @@ can run in parallel with M5/M6.
 - **Endpoints**: `POST /v1/devices`, `DELETE /v1/devices/{deviceId}`,
   `GET|PUT /v1/reminder-settings`, `GET /v1/tax-calendar?year=`.
 - **Tables**: `devices` (RLS), `reminder_settings` (RLS), `notification_log` (RLS), `holidays` (global).
+- **Also (from M1-10, ADR-0005)**: the worker purges full `rate_limit_buckets` rows
+  (`tat` in the past) on a schedule; cc_worker needs a narrow grant for it.
 
 ## Mapping to the original brief
 

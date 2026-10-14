@@ -179,8 +179,9 @@ change. The owner confirmed **Riverpod** (O5 closed, OB4 resolved).
   (Postgres-backed, no Redis) in a new ADR.
 
 ### O9. Redis
-- **Not adopted.** Rate-limit counters live in process (token bucket per IP and account). If
-  we scale beyond one instance, move them to Postgres or Redis through a new ADR.
+- **Not adopted.** The edge flood limiter lives in process (token bucket per IP). The auth
+  limits (per operation, email, family, account) moved to PostgreSQL in
+  [ADR-0005](0005-rate-limits-in-postgres.md) (M1-10).
 
 ## Decisions that need the owner (OWNER)
 
