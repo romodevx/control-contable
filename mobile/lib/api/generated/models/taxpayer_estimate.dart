@@ -6,6 +6,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'disclaimer.dart';
 import 'estimate_totals.dart';
+import 'figures_fingerprint.dart';
 import 'legend.dart';
 import 'parameter_set_ref.dart';
 import 'period.dart';
@@ -31,6 +32,10 @@ abstract class TaxpayerEstimate with _$TaxpayerEstimate {
     @JsonKey(name: 'records_fingerprint')
     required RecordsFingerprint recordsFingerprint,
     @JsonKey(name: 'engine_version') required String engineVersion,
+
+    /// Hash of the figures shown (M8-01, additive). Optional only until M8-03 ships the M5 domain function that computes it: M8-03 **will make it required** (a response narrowing, non-breaking; tracked in PLAN M8-03). The app posts it, with `records_fingerprint`, `engine_version` and `parameter_set`, to `markHistoryViewed`; until then a client that receives no value skips marking the month viewed.
+    @JsonKey(includeIfNull: false, name: 'figures_fingerprint')
+    FiguresFingerprint? figuresFingerprint,
   }) = _TaxpayerEstimate;
 
   factory TaxpayerEstimate.fromJson(Map<String, Object?> json) =>

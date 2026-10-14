@@ -23,7 +23,7 @@ catalog migration `backend/migrations/20261013180000_regimes_catalog.sql` (CAT).
 - [ ] 625 definitive IVA: under LIVA 18-L/18-M, with the definitive option the 50 % platform withholding is final and directly collected IVA is paid at 8 %. R §A.2.6, R PF-625-01, ADR §1, CAT `regimes` 625
 - [ ] 625 direct collections at 8 % (LIVA 18-M ¶2, text DOF 09-12-2019, unchanged in the 12-11-2021 compilation): the app applies 8 % to the consideration before IVA (half of the 16 % IVA charged), infers the direct share as the month's 16 % IVA minus 2× (with RFC) or 1× (without RFC) the platform withholding, leaves border-8 % direct IVA as is, and also applies it when the platform had no RFC. Confirm the base and those three choices. MODULE-tax-engine §2.4 row 625, PR #94
 - [ ] RMF 2026 rule numbers for RESICO (Title 3.13) and platform facilities (3.11.x): the RMF text was not retrieved. R Part D, CAT `regimes` 625
-- [ ] Rental IVA withholding: RLIVA art. 3 fr. I c) 2/3 used; a secondary source claims RMF rule 4.1.4 sets 100 %. R Part D
+- [ ] Rental IVA withholding: RLIVA art. 3 fr. I c) 2/3 used; a secondary source claims RMF rule 4.1.4 sets 100 %. R Part D — Withholdings matrix §2.2 read RMF 4.1.4: it concerns quarterly 606 lessors withholding under LIVA 1-A fr. III (foreign residents), not the 2/3 fraction; the app keeps 2/3. Confirm.
 - [ ] Due-date move to the next business day under CFF art. 12. ADR §4
 - [ ] Day-17 grace by 6th RFC digit (+1 to +5 business days, DOF 26-12-2013 art. 5.1): not re-verified, not applied. R §A.4, ADR §4
 - [ ] 2026 employment subsidy decree: not verified. R Part C
@@ -35,7 +35,7 @@ catalog migration `backend/migrations/20261013180000_regimes_catalog.sql` (CAT).
   - Single rounding (halve the unrounded caused ISR, round once): 4,767.306856 × 50 % = 2,383.653428 → **2,383.65**.
   - The golden keeps the research's 2,383.66 and stays skipped until this item and the RIF reduction % above are ticked. R §A.5 PF-621-01, golden `backend/internal/taxengine/testdata/golden/621-pf/PF-621-01.yaml`, ADR §4
 - [ ] RIF (621) IVA paid by bimester like its ISR (old LIVA 5-E), not monthly; research A.3 lists 621 under the monthly rule. MODULE-tax-engine OQ-T7
-- [ ] IVA a PM withheld **from its suppliers** (recorded on the expense) becomes creditable for that PM when paid (LIVA 5 fr. IV): v1 sends it to withholdings to remit only and does not credit it. Confirm timing and whether to credit. Distinct from IVA withheld **from** the taxpayer and recorded on the income, which v1 subtracts from the monthly IVA (LIVA 1-A, 5-D). MODULE-tax-engine OQ-T6
+- [ ] IVA a PM withheld **from its suppliers** (recorded on the expense): **rule now read verbatim** (LIVA 5 fr. IV, withholdings matrix §2.2): creditable in the monthly return after the one in which it was remitted; the app will credit month n − 1's withheld IVA in month n (PLAN WH-09). Confirm only the assumption that the user remitted on time, and that the all-or-nothing creditable share of the expense applies to both the paid and the withheld part. Distinct from IVA withheld **from** the taxpayer and recorded on the income, which v1 subtracts from the monthly IVA (LIVA 1-A, 5-D). MODULE-tax-engine OQ-T6, MODULE-withholdings §4.2, OQ-W4, OQ-W5
 
 ## Regime catalog (`regimes`, needs_cpa_review = true)
 
@@ -81,3 +81,31 @@ every (category, regime) rule waits for this review; the legal basis is article 
 ## Income basis (`regimes.income_basis`, M3-02)
 
 - [ ] 620, 622 and 624 are seeded `accrual` with 601, but under LISR they look cash basis: 620 cooperativas que difieren (arts. 194-199, income deferred until distributed), 622 AGAPES (art. 74, flujo de efectivo) and 624 coordinados (arts. 72-73, flujo de efectivo). Confirm per regime; a change re-derives `incomes.booked_on` in the same migration. MODULE-incomes §2.2, `20261013200000_incomes.sql`
+
+## Withholdings derivation ([MODULE-withholdings](../project-specs/MODULE-withholdings.md), [withholdings matrix](../research/withholdings-matrix-2026.md) = WM)
+
+Withholdings are derived automatically, with no manual override (owner, 2026-10-15), so each item
+below is a figure the user cannot correct. Records matching a ⚠️ rule carry
+`withholding_cpa_unverified`; ticking an item bumps the derivation `table_version` and re-derives
+(MODULE-withholdings §5.3).
+
+- [ ] A1: the Federación, estados and municipios withhold ISR like a persona moral (10 % fees and rent, 1.25 % RESICO). LISR 86 vs 106/116/113-J. WM §6 A1
+- [ ] A2: IVA fraction the Federación withholds from a PF: 2/3 (RLIVA 3) on professional services; on any other operation only above $2,000 (RMF 4.1.3). The literal LIVA 3 ¶3 reading is 100 %. WM §6 A2, WH-12
+- [ ] A3: RESICO PF renting real estate to a PM is withheld 1.25 % (113-J), not 10 % (116). WM §6 A3
+- [ ] A4: RESICO PF month where the 1.25 % withheld exceeds the monthly ISR: shown as 0 to pay, excess "a favor en la anual" (no monthly refund or carry). WM §6 A4
+- [ ] A5: 2/3 computed as IVA × 2 / 3 rounded half away from zero to the centavo (not `0.106667 × price`). WM §6 A5
+- [ ] A6: a 625 PF billing a PM directly (outside the platform): no PM withholding. WM §6 A6
+- [ ] A7: PF commission agent: no ISR withholding (only IVA 2/3). WM §6 A7
+- [ ] A8: under the 8 % border rate, the 2/3 IVA withholding is 2/3 of the IVA charged (5.3333 % of the price); freight stays 4 % of the price. WM §6 A8
+- [ ] A9: "Servicios profesionales" vs "otros servicios de tu negocio" is the user's answer (professional fees → 10 % ISR + 2/3 IVA for 612; business services → nothing). Check the es-MX wording of both options in MODULE-withholdings §2.1 Q2. WM §6 A9
+- [ ] A10: PF renting movable goods to a PM: no ISR withholding, IVA 2/3. WM §6 A10
+- [ ] A11: donativos have no withholding (no operation kind offered). WM §6 A11
+- [ ] A12: SAT Anexo 7 RMF 2026 criterios normativos not retrieved; re-check before release. WM §6 A12
+- [ ] A13: payments to and from foreign residents are not derived (zero + warning `foreign_counterparty_not_supported`). WM §6 A13
+- [ ] Deduction conditioned on remittance (LISR 27 fr. V, 147 fr. VII, 210): v1 keeps the category's deductibility, assumes timely remittance, and warns `deduction_requires_remittance`. MODULE-withholdings §4.2
+- [ ] "No sé" on the supplier's regime derives as 612 (10 % ISR on fees) with a warning. MODULE-withholdings §2.2 E2
+- [ ] Category → operation kind defaults for expenses (servicios profesionales → honorarios, renta → inmueble, fletes → autotransporte, others → servicios empresariales). MODULE-withholdings §2.2
+
+## Annual estimate (`module_annual`, MODULE-annual)
+
+- [ ] **RESICO PF income in the 15 % personal-deductions cap** (topic `deduction_cap_resico_income`, MODULE-annual §2.7 and OQ-A4). LISR art. 151 last ¶ caps the capped personal deductions at min(5 UMA anuales; 15 % "del total de los ingresos del contribuyente, incluyendo aquellos por los que no se pague el impuesto"). Read on its own, that wording could include RESICO PF income. Three things point the other way: (1) RESICO PF income is taxed by itself under arts. 113-E/113-F, with no deductions of any kind, and rule 3.13.7 RMF 2026 makes its monthly payments definitive; (2) rule 3.13.8 says a RESICO taxpayer with salary or interest files the annual for those chapters **separately**, so the art. 152 return the deductions reduce holds only that other income; (3) art. 152 ¶1 lists the chapters it accumulates and Cap. II Sección IV is not one of them. **Default applied: RESICO income excluded** from "total income". This is the conservative choice: it gives a lower cap and never overstates a refund. Confirm, or say whether the cap base should include RESICO income collected (AR Part E CPA #10).

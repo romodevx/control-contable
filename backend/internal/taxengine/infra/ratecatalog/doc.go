@@ -17,4 +17,20 @@
 // (Rate, Amount) report every such failure as "no value in force"; the
 // error-returning methods (RateOn, AmountOn, AllowedIVARates,
 // CashPaymentLimit, UMA) tell the cases apart and carry the flag.
+//
+// Withholding rates (WH-05, for fiscal.DeriveWithholdings of WH-04): one
+// accessor per dated rate, each (money.Rate, error) on the booking date so a
+// kernel consumer interface can declare them with kernel types only:
+//
+//	ISRWithholdingFees     isr.withholding.fees_pm     10 %   of the subtotal  LISR 106
+//	ISRWithholdingRent     isr.withholding.rent_pm     10 %   of the subtotal  LISR 116
+//	ISRWithholdingRESICO   isr.withholding.resico_pf   1.25 % of the subtotal  LISR 113-J
+//	IVAWithholdingFreight  iva.withholding.freight_pm  4 %    of the subtotal  LIVA 1-A II c; RLIVA 3 II
+//	IVAWithholdingScrap    iva.withholding.scrap_pm    100 %  of the IVA       LIVA 1-A II b
+//
+// New refuses a served set lacking any of them (ErrMissingWithholdingRate).
+// The 2/3 IVA share (RLIVA 3 fr. I) and the platform 50 %/100 % IVA shares
+// (LIVA 18-J) stay in code as fiscal.ShareTwoThirds / ShareHalf /
+// ShareWhole; the platform ISR rates are read with Rate and the existing
+// isr.platform.* keys.
 package ratecatalog

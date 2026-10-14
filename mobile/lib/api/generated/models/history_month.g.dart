@@ -9,36 +9,58 @@ part of 'history_month.dart';
 _HistoryMonth _$HistoryMonthFromJson(Map<String, dynamic> json) =>
     _HistoryMonth(
       period: json['period'] as String,
-      status: HistoryMonthStatus.fromJson(json['status'] as String),
-      totalPayableRoundedCents: (json['total_payable_rounded_cents'] as num)
-          .toInt(),
+      status: TaxpayerEstimateStatus.fromJson(json['status'] as String),
+      hasRecords: json['has_records'] as bool,
+      tax: json['tax'] == null
+          ? null
+          : HistoryTax.fromJson(json['tax'] as Map<String, dynamic>),
+      dueDate: json['due_date'] as String,
+      cpaReviewPending: json['cpa_review_pending'] as bool,
+      isCurrent: json['is_current'] as bool,
+      recordsFingerprint: json['records_fingerprint'] as String,
+      figuresFingerprint: json['figures_fingerprint'] as String,
+      engineVersion: json['engine_version'] as String,
+      parameterSet: ParameterSetRef.fromJson(
+        json['parameter_set'] as Map<String, dynamic>,
+      ),
+      viewedAt: json['viewed_at'] == null
+          ? null
+          : DateTime.parse(json['viewed_at'] as String),
       changedSinceViewed: json['changed_since_viewed'] as bool,
-      iva: json['iva'] == null
+      changeReason: json['change_reason'] == null
           ? null
-          : TaxResult.fromJson(json['iva'] as Map<String, dynamic>),
-      isr: json['isr'] == null
-          ? null
-          : TaxResult.fromJson(json['isr'] as Map<String, dynamic>),
-      lastViewedAt: json['last_viewed_at'] == null
-          ? null
-          : DateTime.parse(json['last_viewed_at'] as String),
+          : HistoryChangeReason.fromJson(json['change_reason'] as String),
     );
 
 Map<String, dynamic> _$HistoryMonthToJson(_HistoryMonth instance) =>
     <String, dynamic>{
       'period': instance.period,
-      'status': _$HistoryMonthStatusEnumMap[instance.status]!,
-      'total_payable_rounded_cents': instance.totalPayableRoundedCents,
+      'status': _$TaxpayerEstimateStatusEnumMap[instance.status]!,
+      'has_records': instance.hasRecords,
+      'tax': instance.tax,
+      'due_date': instance.dueDate,
+      'cpa_review_pending': instance.cpaReviewPending,
+      'is_current': instance.isCurrent,
+      'records_fingerprint': instance.recordsFingerprint,
+      'figures_fingerprint': instance.figuresFingerprint,
+      'engine_version': instance.engineVersion,
+      'parameter_set': instance.parameterSet,
+      'viewed_at': instance.viewedAt?.toIso8601String(),
       'changed_since_viewed': instance.changedSinceViewed,
-      'iva': ?instance.iva,
-      'isr': ?instance.isr,
-      'last_viewed_at': ?instance.lastViewedAt?.toIso8601String(),
+      'change_reason': _$HistoryChangeReasonEnumMap[instance.changeReason],
     };
 
-const _$HistoryMonthStatusEnumMap = {
-  HistoryMonthStatus.complete: 'complete',
-  HistoryMonthStatus.incomplete: 'incomplete',
-  HistoryMonthStatus.informational: 'informational',
-  HistoryMonthStatus.noRecords: 'no_records',
-  HistoryMonthStatus.$unknown: r'$unknown',
+const _$TaxpayerEstimateStatusEnumMap = {
+  TaxpayerEstimateStatus.complete: 'complete',
+  TaxpayerEstimateStatus.incomplete: 'incomplete',
+  TaxpayerEstimateStatus.partial: 'partial',
+  TaxpayerEstimateStatus.informational: 'informational',
+  TaxpayerEstimateStatus.none: 'none',
+  TaxpayerEstimateStatus.$unknown: r'$unknown',
+};
+
+const _$HistoryChangeReasonEnumMap = {
+  HistoryChangeReason.records: 'records',
+  HistoryChangeReason.engine: 'engine',
+  HistoryChangeReason.$unknown: r'$unknown',
 };
