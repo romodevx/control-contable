@@ -7,10 +7,16 @@
 #   2. the research halves the ROUNDED 4,767.31 (2,383.655 -> 2,383.66); a
 #      single final rounding (ADR-0002 §4) of 4,767.306856 x 50 % gives
 #      2,383.65. The CPA decides which one the law means.
+# M5-17 registered the strategy, which rounds once (ADR-0002 §4) and so
+# returns 2,383.65 today (domain test
+# TestStrategy621PFComputesPF62101WithOneFinalRounding). When the CPA signs
+# off (M5-33), set isr.rif_reduction and isr.payable to the figure the CPA
+# confirms (and change the engine if it is 2,383.66), then lift the skip.
+# The IVA is bimonthly too (OQ-T7 ⚠️), so the topics include
+# rif_bimonthly_iva.
 id: PF-621-01
 source: research:PF-621-01
 skip_reason: "⚠️ RIF reduction % by year not re-verified (research §A.5 PF-621-01; CPA-REVIEW RIF reduction by year), and research rounds before halving (2,383.66) where one final rounding gives 2,383.65"
-pending_strategy: true # M5-17 removes this when the partial 621 PF strategy is registered
 input:
   regime: "621"
   person_type: fisica
@@ -33,5 +39,6 @@ expected:
     - {tax: isr, code: isr.caused, op: result, amount: "4767.31"}
     - {tax: isr, code: isr.rif_reduction, op: multiply, amount: "2383.66"}
     - {tax: isr, code: isr.payable, op: result, amount: "2383.66"}
-  cpa_topics: [rif_reduction]
+  cpa_topics: [rif_reduction, rif_bimonthly_iva]
+  explanation: "regime_explanation:621/fisica"
   disclaimers: [deductibility_claimed]

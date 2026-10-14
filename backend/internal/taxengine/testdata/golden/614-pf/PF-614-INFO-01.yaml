@@ -1,0 +1,20 @@
+# golden: hand-authored from docs/project-specs/MODULE-tax-engine.md §2.4 (explanation-only regimes). Never generated or rewritten by a tool.
+# 614 Intereses: explanation only (the bank withholds, LISR arts. 54 and
+# 135). Records in an informational regime never change the numbers.
+id: PF-614-INFO-01
+source: spec:module-tax-engine-2.4
+input:
+  regime: "614"
+  person_type: fisica
+  period: "2026-06"
+  months:
+    - {month: 6, income: {cash: "8000.00", isr_withheld: {by_moral: "750.00"}}}
+expected:
+  status: informational
+  taxes: [isr, iva, withholding]
+  withheld_to_remit: "0.00"
+  lines: []
+  missing_inputs: []
+  cpa_topics: []
+  disclaimers: []
+  explanation: "regime_explanation:614/fisica"
