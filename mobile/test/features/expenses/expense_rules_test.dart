@@ -18,25 +18,57 @@ ExpenseCategory _software({bool defaultDeductible = true}) => ExpenseCategory(
   legalBasis: null,
 );
 
+ExpenseCategory _category(
+  String code, {
+  Deductibility deductibility = Deductibility.deductible,
+}) => ExpenseCategory(
+  code: code,
+  name: code,
+  deductibility: deductibility,
+  defaultDeductible: deductibility == Deductibility.deductible,
+  note: null,
+  legalBasis: null,
+);
+
 void main() {
   group('cashRiskOf: MODULE-expenses §2.5, on the total with IVA', () {
-    const cases = <(PaymentMethod, String?, int, int?), CashRisk?>{
-      (PaymentMethod.cash, 'papeleria', 200000, _limit): null,
-      (PaymentMethod.cash, 'papeleria', 200001, _limit): CashRisk.overLimit,
-      (PaymentMethod.cardDebit, 'papeleria', 900000, _limit): null,
-      (PaymentMethod.cash, 'combustible', 30000, _limit): CashRisk.fuel,
-      (PaymentMethod.transfer, 'combustible', 30000, _limit): null,
+    final papeleria = _category('papeleria');
+    final fuel = _category('combustible');
+    // A rule that never deducts has cash rule `not_applicable` (DB CHECK
+    // category_regime_rules_cash_rule_follows_hint): fuel paid in cash then
+    // breaks only what any other cash payment breaks (QA M3/M4 D-2, 606).
+    final fuelNotDeductible = _category(
+      'combustible',
+      deductibility: Deductibility.notDeductible,
+    );
+    final fuelNoIsr = _category(
+      'combustible',
+      deductibility: Deductibility.isrNotApplicable,
+    );
+    final cases = <(PaymentMethod, ExpenseCategory?, int, int?), CashRisk?>{
+      (PaymentMethod.cash, papeleria, 200000, _limit): null,
+      (PaymentMethod.cash, papeleria, 200001, _limit): CashRisk.overLimit,
+      (PaymentMethod.cardDebit, papeleria, 900000, _limit): null,
+      (PaymentMethod.cash, fuel, 30000, _limit): CashRisk.fuel,
+      (PaymentMethod.transfer, fuel, 30000, _limit): null,
+      (PaymentMethod.cash, fuelNotDeductible, 30000, _limit): null,
+      (PaymentMethod.cash, fuelNoIsr, 30000, _limit): null,
+      (PaymentMethod.cash, fuelNotDeductible, 200001, _limit):
+          CashRisk.overLimit,
+      (PaymentMethod.cash, null, 200001, _limit): CashRisk.overLimit,
       // Without the catalog's limit there is nothing to compare with.
-      (PaymentMethod.cash, 'papeleria', 900000, null): null,
+      (PaymentMethod.cash, papeleria, 900000, null): null,
     };
     cases.forEach((input, expected) {
-      test('$input → $expected', () {
+      final (method, category, total, limit) = input;
+      test('$method ${category?.code}/${category?.deductibility} $total '
+          '$limit → $expected', () {
         expect(
           cashRiskOf(
-            method: input.$1,
-            categoryCode: input.$2,
-            totalCents: input.$3,
-            limitCents: input.$4,
+            method: method,
+            category: category,
+            totalCents: total,
+            limitCents: limit,
           ),
           expected,
         );
