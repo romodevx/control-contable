@@ -3,7 +3,6 @@
 # amount (non-marginal) = 250.00.
 id: PF-626-ISR-02-A
 source: research:PF-626-ISR-02
-pending_strategy: true # M5-13
 input:
   regime: "626"
   person_type: fisica
