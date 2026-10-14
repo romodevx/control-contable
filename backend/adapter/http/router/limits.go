@@ -11,6 +11,7 @@ import (
 
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
 	"github.com/romodevx/control-contable/backend/internal/platform/httperr"
+	"github.com/romodevx/control-contable/backend/internal/platform/principal"
 	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit"
 )
 
@@ -45,20 +46,34 @@ func limit(limiter Limiter, clientKey func(*http.Request) string, logger *slog.L
 	})
 }
 
+// principalKey keys a per-user limit by the authenticated user. The router
+// places it behind authentication, so the principal is always there; an
+// empty key would still be one shared bucket, never an unlimited request.
+func principalKey(r *http.Request) string {
+	userID, _ := principal.UserID(r.Context())
+	return userID
+}
+
 // checkLimits fails on limits the router could not apply: an operation the
-// contract does not declare (a typo would leave it unlimited), or limits
-// with no way to key the client.
-func checkLimits(opts Options, declared map[string]bool) error {
-	if len(opts.OperationLimits) == 0 {
-		return nil
-	}
+// contract does not declare (a typo would leave it unlimited), client
+// limits with no way to key the client, or a user limit on a public
+// operation (no user to key it by).
+func checkLimits(opts Options, declared, public map[string]bool) error {
 	var errs []error
-	if opts.ClientKey == nil {
+	if len(opts.OperationLimits) > 0 && opts.ClientKey == nil {
 		errs = append(errs, errors.New("OperationLimits need a ClientKey"))
 	}
 	for id := range opts.OperationLimits {
 		if !declared[id] {
 			errs = append(errs, fmt.Errorf("limited operation %q is not in the contract", id))
+		}
+	}
+	for id := range opts.UserLimits {
+		switch {
+		case !declared[id]:
+			errs = append(errs, fmt.Errorf("user-limited operation %q is not in the contract", id))
+		case public[id]:
+			errs = append(errs, fmt.Errorf("user-limited operation %q is public: it has no user to key by", id))
 		}
 	}
 	return errors.Join(errs...)

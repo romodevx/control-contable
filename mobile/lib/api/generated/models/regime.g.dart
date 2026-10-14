@@ -21,6 +21,9 @@ _Regime _$RegimeFromJson(Map<String, dynamic> json) => _Regime(
   incompatibleWith: (json['incompatible_with'] as List<dynamic>)
       .map((e) => RegimeIncompatibility.fromJson(e as Map<String, dynamic>))
       .toList(),
+  reviewPendingWith: (json['review_pending_with'] as List<dynamic>?)
+      ?.map((e) => RegimeIncompatibility.fromJson(e as Map<String, dynamic>))
+      .toList(),
 );
 
 Map<String, dynamic> _$RegimeToJson(_Regime instance) => <String, dynamic>{
@@ -32,6 +35,7 @@ Map<String, dynamic> _$RegimeToJson(_Regime instance) => <String, dynamic>{
   'option_defs': instance.optionDefs,
   'required_inputs': instance.requiredInputs,
   'incompatible_with': instance.incompatibleWith,
+  'review_pending_with': ?instance.reviewPendingWith,
 };
 
 const _$PersonTypeEnumMap = {
