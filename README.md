@@ -112,7 +112,8 @@ Enabling a flag in a shared environment requires the module's tech-lead and secu
 | Module | Flag | Status | Docs |
 |---|---|---|---|
 | M1 Auth & Account | `module_auth` | Built; gates M1-16 and M1-17 passed. **OFF in shared environments** until the [enable checklist](docs/runbooks/auth.md#6-enable-module_auth-in-a-shared-environment) holds (email provider M1-06 pending) | [module](docs/modules/auth.md), [runbook](docs/runbooks/auth.md) |
-| M2–M9 | `module_*` | Not built | [MODULES](docs/project-specs/MODULES.md) |
+| M2 Taxpayers & Onboarding | `module_taxpayers` | Built; gates M2-13 and M2-14 passed. **OFF in shared environments** until the [enable checklist](docs/runbooks/taxpayers.md#5-enable-module_taxpayers-in-a-shared-environment) holds (needs `module_auth` enabled first) | [module](docs/modules/taxpayers.md), [runbook](docs/runbooks/taxpayers.md) |
+| M3–M9 | `module_*` | In progress or not built | [MODULES](docs/project-specs/MODULES.md), [PLAN](docs/project-specs/PLAN-control-contable.md) |
 
 ## API reference
 
