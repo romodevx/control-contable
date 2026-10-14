@@ -458,3 +458,57 @@ func TestContract_taxpayersWriteBudget(t *testing.T) {
 		env.send(http.MethodPost, "/v1/taxpayers", createJSON("", "fisica", rfcAna, "Bea", regimeJSON("612")), bea))
 	assert.Equal(t, http.StatusCreated, rec.Code, "another user's budget is untouched")
 }
+
+// US-T5 (security gate, PR #60): every operation with a {taxpayerId} answers
+// another user's taxpayer exactly as one that does not exist: same status,
+// code, message and details, so no path parameter is an existence oracle.
+// The regime ops are probed with a regime the victim really holds.
+func TestContract_taxpayersForeignIsIndistinguishableFromMissing(t *testing.T) {
+	c := contracttest.Load(t)
+	env := newContractEnv(t, pingOK{})
+	env.apply(t, []string{"module_auth", "module_taxpayers"}, flagtest.Static{"module_auth": true, "module_taxpayers": true})
+	ana := env.signUp(t, signUpEmail, acceptableSample).Tokens.AccessToken
+	bea := env.signUp(t, beaEmail, otherSample).Tokens.AccessToken
+
+	rec := env.do(env.send(http.MethodPost, "/v1/taxpayers",
+		createJSON("", "fisica", rfcAna, "Ana", regimeJSON("612")), ana))
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	victim := decodeTaxpayer(t, rec).Id.String()
+
+	ops := []struct {
+		name                 string
+		op                   contracttest.Operation
+		method, suffix, body string
+	}{
+		{"getTaxpayer", contracttest.Op("getTaxpayer"), http.MethodGet, "", ""},
+		{"updateTaxpayer", contracttest.Op("updateTaxpayer"), http.MethodPatch, "", `{"display_name":"Robo","rfc":"` + rfcOther + `"}`},
+		{"deleteTaxpayer", contracttest.Op("deleteTaxpayer"), http.MethodDelete, "?confirm=true", ""},
+		{"archiveTaxpayer", contracttest.Op("archiveTaxpayer"), http.MethodPost, "/archive", ""},
+		{"unarchiveTaxpayer", contracttest.Op("unarchiveTaxpayer"), http.MethodPost, "/unarchive", ""},
+		{"addTaxpayerRegime", contracttest.Op("addTaxpayerRegime"), http.MethodPost, "/regimes", `{"regime_code":"606"}`},
+		{"updateTaxpayerRegime", contracttest.Op("updateTaxpayerRegime"), http.MethodPatch, "/regimes/612", `{"options":{}}`},
+		{"archiveTaxpayerRegime", contracttest.Op("archiveTaxpayerRegime"), http.MethodDelete, "/regimes/612?end_period=2026-10", ""},
+	}
+	for _, o := range ops {
+		t.Run(o.name, func(t *testing.T) {
+			foreign := c.ServeOp(t, o.op, env.handler,
+				env.send(o.method, "/v1/taxpayers/"+victim+o.suffix, o.body, bea))
+			missing := c.ServeOp(t, o.op, env.handler,
+				env.send(o.method, "/v1/taxpayers/"+unknownTaxpayer+o.suffix, o.body, bea))
+
+			require.Equal(t, http.StatusNotFound, foreign.Code, foreign.Body.String())
+			require.Equal(t, http.StatusNotFound, missing.Code, missing.Body.String())
+			fe, me := decodeError(t, foreign), decodeError(t, missing)
+			fe.Error.RequestId, me.Error.RequestId = "", ""
+			assert.Equal(t, me, fe, "a foreign taxpayer reads exactly like a missing one")
+		})
+	}
+
+	rec = env.do(env.send(http.MethodGet, "/v1/taxpayers/"+victim, "", ana))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	got := decodeTaxpayer(t, rec)
+	assert.Equal(t, "Ana", got.DisplayName, "nothing the other user sent was written")
+	assert.Nil(t, got.ArchivedAt)
+	require.Len(t, got.Regimes, 1)
+	assert.Nil(t, got.Regimes[0].EndPeriod)
+}
