@@ -24,15 +24,21 @@ class ActiveTaxpayerSwitcher extends ConsumerWidget {
     if (!ref.useFlag(AppModule.taxpayers)) return fallback;
     final active = ref.watch(activeTaxpayerProvider).value;
     if (active == null) return fallback;
+    void open() => unawaited(showTaxpayerSwitcher(context));
+    // excludeSemantics drops the InkWell's tap action, so the merged node
+    // declares it again (TalkBack/VoiceOver activate through it).
     return Semantics(
       button: true,
       label: AppLocalizations.of(context).switcherLabel(active.displayName),
+      onTap: open,
       excludeSemantics: true,
       child: InkWell(
         borderRadius: BorderRadius.circular(AppSpacing.xs),
-        onTap: () => unawaited(showTaxpayerSwitcher(context)),
+        onTap: open,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: AppSizes.minTarget),
+          constraints: const BoxConstraints(
+            minHeight: kMinInteractiveDimension,
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

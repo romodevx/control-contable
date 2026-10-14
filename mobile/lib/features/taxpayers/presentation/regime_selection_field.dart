@@ -34,7 +34,7 @@ class RegimeSelectionField extends AppFormFieldModel {
   final FieldError conflictError;
 
   final List<Regime> _held;
-  final List<Regime> _initial;
+  List<Regime> _initial;
   final List<Regime> _selected;
 
   /// The chosen regimes, in selection order.
@@ -61,6 +61,9 @@ class RegimeSelectionField extends AppFormFieldModel {
 
   @override
   bool get isDirty => !listEquals(_selected, _initial);
+
+  @override
+  void markPristine() => _initial = List.unmodifiable(_selected);
 
   @override
   void reset() {

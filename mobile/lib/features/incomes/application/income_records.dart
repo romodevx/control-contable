@@ -4,6 +4,7 @@ import 'package:control_contable/api/generated/models/income_create.dart';
 import 'package:control_contable/core/access/read_only_access.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/records/stacked_undo.dart';
+import 'package:control_contable/core/session/session_scoped.dart';
 import 'package:control_contable/features/incomes/application/income_list.dart';
 import 'package:control_contable/features/incomes/data/incomes_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -78,17 +79,17 @@ class IncomeRecords {
     }
   }
 
-  /// Restores [incomes] in order; stops at the first refusal and throws
-  /// it. Allowed while read-only (contract 0.6.1), so no answer here marks
-  /// the session.
-  Future<void> restore(List<Income> incomes) async {
+  /// Restores every one of [incomes], going on past a refusal. Allowed
+  /// while read-only (contract 0.6.1), so no answer here marks the session.
+  Future<RestoreReport<ApiFailure>> restore(List<Income> incomes) async {
     try {
-      for (final income in incomes) {
-        await _repository.restore(
+      return await restoreEach<Income, ApiFailure>(
+        incomes,
+        (income) => _repository.restore(
           taxpayerId: income.taxpayerId,
           incomeId: income.id,
-        );
-      }
+        ),
+      );
     } finally {
       _ref.invalidate(incomeListProvider);
     }
@@ -102,10 +103,14 @@ final incomeRecordsProvider = Provider<IncomeRecords>(
 );
 
 /// Who paid the last income recorded in this session: the next form starts
-/// there (US-I1; persona física the first time). Memory only.
+/// there (US-I1; persona física the first time). Memory only, forgotten on
+/// sign-out.
 class LastCounterpartyNotifier extends Notifier<CounterpartyType> {
   @override
-  CounterpartyType build() => CounterpartyType.personaFisica;
+  CounterpartyType build() {
+    forgetOnSignOut(ref);
+    return CounterpartyType.personaFisica;
+  }
 
   /// [income] was just recorded: its payer starts the next form.
   void rememberPayerOf(IncomeCreate income) => state = income.counterpartyType;
@@ -120,7 +125,7 @@ lastCounterpartyProvider =
     );
 
 /// The incomes the Undo toast would restore (it outlives the list screen).
-final incomesUndoProvider = Provider<StackedUndo<Income>>(
-  (ref) => StackedUndo<Income>(),
-  name: 'incomesUndoProvider',
-);
+final incomesUndoProvider = Provider<StackedUndo<Income>>((ref) {
+  forgetOnSignOut(ref);
+  return StackedUndo<Income>();
+}, name: 'incomesUndoProvider');

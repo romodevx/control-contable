@@ -941,6 +941,18 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String incomesRestoredSome(int restored, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      restored,
+      locale: localeName,
+      other: 'Se restauraron $restored de $total ingresos.',
+      one: 'Se restauró 1 de $total ingresos.',
+      zero: 'No se restauró ninguno de los $total ingresos.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get incomesDeleteFailed => 'No se pudo eliminar el ingreso.';
 
   @override
@@ -993,7 +1005,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get incomeUpdated => 'Ingreso actualizado';
 
   @override
-  String get incomeUpdatedWithWarnings => 'Ingreso actualizado, con un aviso:';
+  String incomeUpdatedWithWarnings(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ingreso actualizado, con $count avisos:',
+      one: 'Ingreso actualizado, con un aviso:',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get incomeFieldCollectedOn => 'Fecha de cobro';
@@ -1114,7 +1134,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get incomeSaved => 'Ingreso guardado';
 
   @override
-  String get incomeSavedWithWarnings => 'Ingreso guardado, con un aviso:';
+  String incomeSavedWithWarnings(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ingreso guardado, con $count avisos:',
+      one: 'Ingreso guardado, con un aviso:',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get incomeWarningDuplicateCfdi =>
@@ -1581,13 +1609,29 @@ class AppLocalizationsEs extends AppLocalizations {
   String get expenseSaved => 'Gasto guardado';
 
   @override
-  String get expenseSavedWithWarnings => 'Gasto guardado, con un aviso:';
+  String expenseSavedWithWarnings(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Gasto guardado, con $count avisos:',
+      one: 'Gasto guardado, con un aviso:',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get expenseUpdated => 'Gasto actualizado';
 
   @override
-  String get expenseUpdatedWithWarnings => 'Gasto actualizado, con un aviso:';
+  String expenseUpdatedWithWarnings(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Gasto actualizado, con $count avisos:',
+      one: 'Gasto actualizado, con un aviso:',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get expenseSaveUnreachable =>

@@ -53,9 +53,14 @@ class StackedUndo<T> {
   /// a pending Undo (it must not disappear on its own): while one is up,
   /// the toast waits in the queue behind it. Otherwise it replaces the
   /// current toast.
-  void notify(ScaffoldMessengerState messenger, String message) {
+  void notify(ScaffoldMessengerState messenger, String message) =>
+      show(messenger, SnackBar(content: Text(message)));
+
+  /// Shows [toast] (a save confirmation) on [messenger] under the same rule
+  /// as [notify]: behind a pending Undo, else in place of the current toast.
+  void show(ScaffoldMessengerState messenger, SnackBar toast) {
     if (_pending.isEmpty) messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(SnackBar(content: Text(message)));
+    messenger.showSnackBar(toast);
   }
 
   void _forget(int generation) {

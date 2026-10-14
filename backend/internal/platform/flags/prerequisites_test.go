@@ -15,6 +15,16 @@ func TestPrerequisites_declaresTheTaxEngineOnTaxpayers(t *testing.T) {
 	assert.Equal(t, []string{"module_taxpayers"}, flags.Prerequisites()["module_tax_engine"])
 }
 
+// MODULE-incomes §6 and MODULE-expenses §6 (M3-10, M4-11): both record
+// modules live under /v1/taxpayers/{taxpayerId}, so each is implied OFF when
+// module_taxpayers is OFF. Neither requires the other.
+func TestPrerequisites_declaresTheRecordModulesOnTaxpayers(t *testing.T) {
+	graph := flags.Prerequisites()
+	for _, module := range []string{"module_incomes", "module_expenses"} {
+		assert.Equal(t, []string{"module_taxpayers"}, graph[module], module)
+	}
+}
+
 func TestPrerequisites_isAWellFormedAcyclicGraph(t *testing.T) {
 	require.NoError(t, flags.CheckPrerequisites(flags.Prerequisites()))
 }

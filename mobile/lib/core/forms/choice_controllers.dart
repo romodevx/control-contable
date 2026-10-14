@@ -21,7 +21,7 @@ class ChoiceFieldController extends AppFormFieldModel {
   }) : _initialValue = initialValue,
        _value = initialValue;
 
-  final String? _initialValue;
+  String? _initialValue;
   String? _value;
 
   /// The chosen option's value, or `null` while none is chosen.
@@ -36,6 +36,9 @@ class ChoiceFieldController extends AppFormFieldModel {
 
   @override
   bool get isDirty => _value != _initialValue;
+
+  @override
+  void markPristine() => _initialValue = _value;
 
   @override
   void reset() {
@@ -63,7 +66,7 @@ class MultiChoiceFieldController extends AppFormFieldModel {
   }) : _initialValues = Set.unmodifiable(initialValues),
        _values = {...initialValues};
 
-  final Set<String> _initialValues;
+  Set<String> _initialValues;
   final Set<String> _values;
 
   /// The chosen values.
@@ -78,6 +81,9 @@ class MultiChoiceFieldController extends AppFormFieldModel {
 
   @override
   bool get isDirty => !setEquals(_values, _initialValues);
+
+  @override
+  void markPristine() => _initialValues = Set.unmodifiable(_values);
 
   @override
   void reset() {

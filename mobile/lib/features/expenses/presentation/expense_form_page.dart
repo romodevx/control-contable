@@ -127,13 +127,15 @@ class _ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
     });
   }
 
-  void _toast(Expense expense, {bool updated = false}) => showExpenseSavedToast(
-    ScaffoldMessenger.of(context),
-    _l10n,
-    expense.warnings,
-    undo: ref.read(expensesUndoProvider),
-    updated: updated,
-  );
+  void _toast(Expense expense, {bool updated = false, bool overForm = false}) =>
+      showExpenseSavedToast(
+        ScaffoldMessenger.of(context),
+        _l10n,
+        expense.warnings,
+        undo: ref.read(expensesUndoProvider),
+        updated: updated,
+        overForm: overForm,
+      );
 
   Future<void> _save() async {
     final expense = await _persist();
@@ -149,7 +151,7 @@ class _ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
     if (expense == null || !mounted) return false;
     _model.startNextSession();
     setState(() => _withholdingsOpen = null);
-    _toast(expense);
+    _toast(expense, overForm: true);
     return true;
   }
 

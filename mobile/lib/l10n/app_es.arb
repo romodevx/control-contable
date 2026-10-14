@@ -1238,6 +1238,18 @@
       }
     }
   },
+  "incomesRestoredSome": "{restored, plural, =0{No se restauró ninguno de los {total} ingresos.} =1{Se restauró 1 de {total} ingresos.} other{Se restauraron {restored} de {total} ingresos.}}",
+  "@incomesRestoredSome": {
+    "description": "Toast after a stacked Undo where some incomes could not be restored; the reason follows.",
+    "placeholders": {
+      "restored": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "incomesDeleteFailed": "No se pudo eliminar el ingreso.",
   "@incomesDeleteFailed": {
     "description": "Toast when a delete failed; the row is back."
@@ -1306,9 +1318,14 @@
   "@incomeUpdated": {
     "description": "Toast after an edit was saved."
   },
-  "incomeUpdatedWithWarnings": "Ingreso actualizado, con un aviso:",
+  "incomeUpdatedWithWarnings": "{count, plural, =1{Ingreso actualizado, con un aviso:} other{Ingreso actualizado, con {count} avisos:}}",
   "@incomeUpdatedWithWarnings": {
-    "description": "Start of the toast after an edit saved with non-blocking warnings."
+    "description": "Start of the toast after an edit saved with non-blocking warnings; count is how many.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "incomeFieldCollectedOn": "Fecha de cobro",
   "@incomeFieldCollectedOn": {
@@ -1458,9 +1475,14 @@
   "@incomeSaved": {
     "description": "Toast after saving an income."
   },
-  "incomeSavedWithWarnings": "Ingreso guardado, con un aviso:",
+  "incomeSavedWithWarnings": "{count, plural, =1{Ingreso guardado, con un aviso:} other{Ingreso guardado, con {count} avisos:}}",
   "@incomeSavedWithWarnings": {
-    "description": "Heading before the non-blocking warnings of a saved income."
+    "description": "Heading before the non-blocking warnings of a saved income; count is how many.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "incomeWarningDuplicateCfdi": "Ya hay otro ingreso con este folio fiscal. Si es un pago parcial del mismo CFDI, está bien.",
   "@incomeWarningDuplicateCfdi": {
@@ -2045,17 +2067,27 @@
   "@expenseSaved": {
     "description": "Toast after saving an expense."
   },
-  "expenseSavedWithWarnings": "Gasto guardado, con un aviso:",
+  "expenseSavedWithWarnings": "{count, plural, =1{Gasto guardado, con un aviso:} other{Gasto guardado, con {count} avisos:}}",
   "@expenseSavedWithWarnings": {
-    "description": "Toast after saving an expense with warnings; the notes follow."
+    "description": "Toast after saving an expense with warnings; the notes follow; count is how many.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "expenseUpdated": "Gasto actualizado",
   "@expenseUpdated": {
     "description": "Toast after editing an expense."
   },
-  "expenseUpdatedWithWarnings": "Gasto actualizado, con un aviso:",
+  "expenseUpdatedWithWarnings": "{count, plural, =1{Gasto actualizado, con un aviso:} other{Gasto actualizado, con {count} avisos:}}",
   "@expenseUpdatedWithWarnings": {
-    "description": "Toast after editing an expense with warnings; the notes follow."
+    "description": "Toast after editing an expense with warnings; the notes follow; count is how many.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "expenseSaveUnreachable": "No se pudo guardar por falta de conexión. Vuelve a tocar Guardar: no se duplicará.",
   "@expenseSaveUnreachable": {

@@ -306,7 +306,7 @@ class ExpenseFormModel extends ChangeNotifier {
   /// The cash rule this payment breaks, if any (MODULE-expenses §2.5).
   CashRisk? get cashRisk => cashRiskOf(
     method: method,
-    categoryCode: category.value,
+    category: chosenCategory,
     totalCents: totalCents,
     limitCents: _catalog?.cashPaymentLimitCents,
   );

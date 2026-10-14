@@ -10,6 +10,7 @@ import 'package:control_contable/api/generated/models/treatment.dart';
 import 'package:control_contable/api/generated/models/warning.dart';
 import 'package:control_contable/api/generated/models/warning_code.dart';
 import 'package:control_contable/core/access/read_only_access.dart';
+import 'package:control_contable/core/forms/form_footer.dart';
 import 'package:control_contable/core/forms/money.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/router/app_router.dart';
@@ -375,6 +376,36 @@ void main() {
     });
   });
 
+  // QA M3/M4 D2: after *Guardar y crear otro* the warning toast stays until
+  // closed, on the form itself; it must not cover the footer's actions.
+  testWidgets('a persistent warning toast leaves the form footer clear', (
+    tester,
+  ) async {
+    harness.incomes.warnNext = const [
+      Warning(
+        code: WarningCode.duplicateCfdiUuid,
+        field: 'cfdi_uuid',
+        message: 'Duplicate CFDI UUID.',
+      ),
+    ];
+    await pumpForm(tester);
+    await typeInto(tester, _amount, '1000');
+
+    await _saveAndAnother(tester);
+
+    // The visible surface: a floating SnackBar's own box includes its margin.
+    final toast = tester.getRect(
+      find
+          .descendant(
+            of: find.byType(SnackBar),
+            matching: find.byType(Material),
+          )
+          .first,
+    );
+    final footer = tester.getRect(find.byType(FormFooter));
+    expect(toast.bottom, lessThanOrEqualTo(footer.top));
+  });
+
   group('M3-09 edge cases', () {
     testWidgets('defaults that fail to load leave the form usable', (
       tester,
@@ -537,6 +568,26 @@ void main() {
 
       await tapText(tester, 'Cancelar');
       await tapText(tester, 'Descartar');
+      expect(harness.location, isNot(IncomesRoutes.create));
+    });
+
+    // QA M3/M4 D-8: the kept context fields of the next record are not
+    // unsaved changes; what is typed after them is.
+    testWidgets('after "Guardar y crear otro", Cancelar on the untouched '
+        'next record leaves at once; a typed value still asks', (tester) async {
+      await pumpForm(tester);
+      await typeInto(tester, _collectedOn, '05102026');
+      await fillUsI1(tester);
+      await _saveAndAnother(tester);
+
+      await typeInto(tester, _amount, '1000');
+      await tapText(tester, 'Cancelar');
+      expect(find.text('¿Descartar este ingreso?'), findsOneWidget);
+      await tapText(tester, 'Seguir editando');
+
+      await typeInto(tester, _amount, '');
+      await tapText(tester, 'Cancelar');
+      expect(find.text('¿Descartar este ingreso?'), findsNothing);
       expect(harness.location, isNot(IncomesRoutes.create));
     });
   });

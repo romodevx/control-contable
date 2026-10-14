@@ -5,6 +5,7 @@ import 'package:control_contable/api/generated/models/payment_method.dart';
 import 'package:control_contable/api/generated/models/taxpayer.dart';
 import 'package:control_contable/api/generated/models/warning.dart';
 import 'package:control_contable/api/generated/models/warning_code.dart';
+import 'package:control_contable/core/forms/form_footer.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/router/app_router.dart';
 import 'package:control_contable/features/expenses/expenses_routes.dart';
@@ -100,6 +101,25 @@ void main() {
   }
 
   group('M4-10 layout and defaults', () {
+    // QA M3/M4 D1: the picker is a button for assistive technology too.
+    // TalkBack and VoiceOver activate a node through its tap action; the
+    // category's merged node had the button role but no action, so the
+    // picker could not be opened without touch.
+    testWidgets('the category picker opens from its semantics tap action', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpForm(tester);
+
+      final category = find.semantics.byLabel(RegExp('^Categoría: '));
+      expect(category, findsOne);
+      tester.semantics.tap(category);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Elige la categoría del gasto'), findsOneWidget);
+      handle.dispose();
+    });
+
     testWidgets('a page with the category first, the legend under it, then '
         'amount, IVA, date, payment and CFDI; defaults prefilled; the rest '
         'collapsed', (tester) async {
@@ -442,6 +462,66 @@ void main() {
         findsOneWidget,
       );
       expect(tester.widget<SnackBar>(find.byType(SnackBar)).persist, isTrue);
+    });
+
+    // QA M3/M4 D3: the focused first field is shown, not left above the
+    // fold where the previous record was finished (WCAG 2.2 · 2.4.11).
+    testWidgets('Guardar y crear otro brings the focused category into view', (
+      tester,
+    ) async {
+      await pumpForm(tester);
+      await fillSoftware(tester);
+      await tester.drag(
+        find.byType(SingleChildScrollView).first,
+        const Offset(0, -2000),
+      );
+      await tester.pumpAndSettle();
+      final opener = find.descendant(
+        of: find.byType(ExpenseCategoryField),
+        matching: find.byType(OutlinedButton),
+      );
+      final viewport = tester.getRect(find.byType(SingleChildScrollView).first);
+      expect(
+        tester.getRect(opener).top,
+        lessThan(viewport.top),
+        reason: 'scrolled away first',
+      );
+
+      await tapText(tester, 'Guardar y crear otro');
+
+      final shown = tester.getRect(opener);
+      expect(shown.top, greaterThanOrEqualTo(viewport.top));
+      expect(shown.bottom, lessThanOrEqualTo(viewport.bottom));
+      expect(
+        tester.widget<OutlinedButton>(opener).focusNode?.hasPrimaryFocus,
+        isTrue,
+      );
+    });
+
+    // QA M3/M4 D2: after *Guardar y crear otro* the warning toast stays
+    // until closed, on the form itself; it must not cover the footer.
+    testWidgets('a persistent warning toast leaves the form footer clear', (
+      tester,
+    ) async {
+      harness.expenses.warnNext = const [
+        Warning(code: WarningCode.noCfdi, field: 'has_cfdi', message: 'x'),
+      ];
+      await pumpForm(tester);
+      await fillSoftware(tester);
+
+      await tapText(tester, 'Guardar y crear otro');
+
+      // The visible surface: a floating SnackBar's own box includes its margin.
+      final toast = tester.getRect(
+        find
+            .descendant(
+              of: find.byType(SnackBar),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      final footer = tester.getRect(find.byType(FormFooter));
+      expect(toast.bottom, lessThanOrEqualTo(footer.top));
     });
 
     testWidgets('an unknown category lands on the category field', (

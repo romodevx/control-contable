@@ -35,18 +35,32 @@ enum CashRisk {
 }
 
 /// The cash rule a payment of [totalCents] (with IVA) by [method] for
-/// [categoryCode] breaks, if any; `null` without the catalog's
-/// [limitCents] (the rule is dated parameter data, never hard-coded).
+/// [category] breaks, if any; `null` without the catalog's [limitCents]
+/// (the rule is dated parameter data, never hard-coded).
 CashRisk? cashRiskOf({
   required PaymentMethod method,
-  required String? categoryCode,
+  required ExpenseCategory? category,
   required int totalCents,
   required int? limitCents,
 }) {
   if (method != PaymentMethod.cash || limitCents == null) return null;
-  if (categoryCode == fuelCategory) return CashRisk.fuel;
+  if (category != null && _paidElectronicallyOnly(category)) {
+    return CashRisk.fuel;
+  }
   return totalCents > limitCents ? CashRisk.overLimit : null;
 }
+
+/// Fuel must be paid electronically only where it can lower ISR: a rule
+/// that never deducts has cash rule `not_applicable` (DB CHECK
+/// `category_regime_rules_cash_rule_follows_hint`), as in 606.
+bool _paidElectronicallyOnly(ExpenseCategory category) =>
+    category.code == fuelCategory &&
+    switch (category.deductibility) {
+      Deductibility.deductible || Deductibility.partiallyDeductible => true,
+      Deductibility.notDeductible ||
+      Deductibility.isrNotApplicable ||
+      Deductibility.$unknown => false,
+    };
 
 /// The deductibility the server gives without an override (§2.4): the
 /// category's default, with a CFDI, not paid in cash against the rule.

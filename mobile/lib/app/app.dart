@@ -1,4 +1,6 @@
 import 'package:control_contable/core/router/app_router.dart';
+import 'package:control_contable/core/session/forget_toasts_on_sign_out.dart';
+import 'package:control_contable/core/session/session.dart';
 import 'package:control_contable/core/theme/app_theme.dart';
 import 'package:control_contable/core/theme/design_direction.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
@@ -18,7 +20,12 @@ class ControlContableApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
     final direction = ref.watch(designDirectionProvider);
+    final session = ref.watch(sessionProvider);
     return MaterialApp.router(
+      builder: (context, child) => ForgetToastsOnSignOut(
+        session: session,
+        child: child ?? const SizedBox.shrink(),
+      ),
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(direction.light, Brightness.light),

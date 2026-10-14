@@ -19,6 +19,9 @@ var ErrInvalidPrerequisites = errors.New("flags: invalid module prerequisites")
 var prerequisites = map[string][]string{
 	// MODULE-tax-engine §7: implied OFF when module_taxpayers is OFF.
 	"module_tax_engine": {"module_taxpayers"},
+	// MODULE-incomes §6, MODULE-expenses §6: records live under a taxpayer.
+	"module_incomes":  {"module_taxpayers"},
+	"module_expenses": {"module_taxpayers"},
 }
 
 // Prerequisites returns a copy of the declared module prerequisites.

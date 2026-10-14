@@ -57,6 +57,21 @@ void main() {
     expect(harness.store.id, _ana.id);
   });
 
+  // QA M3/M4 D1: assistive technology opens the switcher through the
+  // merged node's tap action (excludeSemantics had dropped it).
+  testWidgets('the switcher opens from its semantics tap action', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await pumpHome(tester);
+
+    tester.semantics.tap(find.semantics.byLabel(_switcherLabel));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Taller SA'), findsOneWidget);
+    handle.dispose();
+  });
+
   testWidgets('module_taxpayers off: no switcher, nothing loaded, no '
       'onboarding', (tester) async {
     await pumpHome(tester, enabled: false, taxpayers: const []);

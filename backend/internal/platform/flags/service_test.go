@@ -74,7 +74,7 @@ func TestEnabled(t *testing.T) {
 		module string
 		want   bool
 	}{
-		{"enabled module", []string{"module_auth", "module_incomes"}, "module_incomes", true},
+		{"enabled module", []string{"module_auth", "module_taxpayers", "module_incomes"}, "module_incomes", true},
 		{"disabled module", []string{"module_auth"}, "module_incomes", false},
 		{"no module enabled", nil, "module_auth", false},
 		{"platform is not a flag", []string{"module_auth"}, "platform", false},
@@ -148,7 +148,7 @@ func TestInvalidateForcesAReload(t *testing.T) {
 	svc, _ := newService(t, reader)
 
 	require.True(t, svc.Enabled(t.Context(), "module_auth"))
-	reader.set([]string{"module_auth", "module_incomes"}, nil)
+	reader.set([]string{"module_auth", "module_taxpayers", "module_incomes"}, nil)
 	svc.Invalidate()
 
 	assert.True(t, svc.Enabled(t.Context(), "module_incomes"))

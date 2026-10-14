@@ -60,9 +60,13 @@ class ExpenseCategoryField extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.xxs),
+          // excludeSemantics drops the button's own tap action, so the
+          // merged node declares it again (TalkBack/VoiceOver activate
+          // through it).
           Semantics(
             button: true,
             label: '${field.label}: $shown',
+            onTap: () => unawaited(_pick(context)),
             excludeSemantics: true,
             child: OutlinedButton(
               focusNode: field.focusNode,

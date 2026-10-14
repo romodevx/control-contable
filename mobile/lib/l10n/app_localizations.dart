@@ -1608,6 +1608,12 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{Ingreso restaurado} other{{count} ingresos restaurados}}'**
   String incomesRestored(int count);
 
+  /// Toast after a stacked Undo where some incomes could not be restored; the reason follows.
+  ///
+  /// In es, this message translates to:
+  /// **'{restored, plural, =0{No se restauró ninguno de los {total} ingresos.} =1{Se restauró 1 de {total} ingresos.} other{Se restauraron {restored} de {total} ingresos.}}'**
+  String incomesRestoredSome(int restored, int total);
+
   /// Toast when a delete failed; the row is back.
   ///
   /// In es, this message translates to:
@@ -1710,11 +1716,11 @@ abstract class AppLocalizations {
   /// **'Ingreso actualizado'**
   String get incomeUpdated;
 
-  /// Start of the toast after an edit saved with non-blocking warnings.
+  /// Start of the toast after an edit saved with non-blocking warnings; count is how many.
   ///
   /// In es, this message translates to:
-  /// **'Ingreso actualizado, con un aviso:'**
-  String get incomeUpdatedWithWarnings;
+  /// **'{count, plural, =1{Ingreso actualizado, con un aviso:} other{Ingreso actualizado, con {count} avisos:}}'**
+  String incomeUpdatedWithWarnings(int count);
 
   /// Date the income was collected.
   ///
@@ -1914,11 +1920,11 @@ abstract class AppLocalizations {
   /// **'Ingreso guardado'**
   String get incomeSaved;
 
-  /// Heading before the non-blocking warnings of a saved income.
+  /// Heading before the non-blocking warnings of a saved income; count is how many.
   ///
   /// In es, this message translates to:
-  /// **'Ingreso guardado, con un aviso:'**
-  String get incomeSavedWithWarnings;
+  /// **'{count, plural, =1{Ingreso guardado, con un aviso:} other{Ingreso guardado, con {count} avisos:}}'**
+  String incomeSavedWithWarnings(int count);
 
   /// Warning duplicate_cfdi_uuid (non-blocking).
   ///
@@ -2664,11 +2670,11 @@ abstract class AppLocalizations {
   /// **'Gasto guardado'**
   String get expenseSaved;
 
-  /// Toast after saving an expense with warnings; the notes follow.
+  /// Toast after saving an expense with warnings; the notes follow; count is how many.
   ///
   /// In es, this message translates to:
-  /// **'Gasto guardado, con un aviso:'**
-  String get expenseSavedWithWarnings;
+  /// **'{count, plural, =1{Gasto guardado, con un aviso:} other{Gasto guardado, con {count} avisos:}}'**
+  String expenseSavedWithWarnings(int count);
 
   /// Toast after editing an expense.
   ///
@@ -2676,11 +2682,11 @@ abstract class AppLocalizations {
   /// **'Gasto actualizado'**
   String get expenseUpdated;
 
-  /// Toast after editing an expense with warnings; the notes follow.
+  /// Toast after editing an expense with warnings; the notes follow; count is how many.
   ///
   /// In es, this message translates to:
-  /// **'Gasto actualizado, con un aviso:'**
-  String get expenseUpdatedWithWarnings;
+  /// **'{count, plural, =1{Gasto actualizado, con un aviso:} other{Gasto actualizado, con {count} avisos:}}'**
+  String expenseUpdatedWithWarnings(int count);
 
   /// Form notice: offline; the retry is idempotent.
   ///

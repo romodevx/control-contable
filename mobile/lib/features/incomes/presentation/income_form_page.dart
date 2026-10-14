@@ -134,6 +134,7 @@ class _IncomeFormPageState extends ConsumerState<IncomeFormPage> {
         ScaffoldMessenger.of(context),
         _l10n,
         income.warnings,
+        undo: ref.read(incomesUndoProvider),
         updated: _model.isEditing,
       );
     }
@@ -144,7 +145,13 @@ class _IncomeFormPageState extends ConsumerState<IncomeFormPage> {
     final income = await _persist();
     if (income == null || !mounted) return false;
     _model.startNextSession();
-    showIncomeSavedToast(ScaffoldMessenger.of(context), _l10n, income.warnings);
+    showIncomeSavedToast(
+      ScaffoldMessenger.of(context),
+      _l10n,
+      income.warnings,
+      undo: ref.read(incomesUndoProvider),
+      overForm: true,
+    );
     return true;
   }
 

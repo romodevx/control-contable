@@ -7,6 +7,15 @@ import 'package:flutter/widgets.dart';
 /// footer never covers it (WCAG 2.2 · 2.4.11).
 const double formFooterClearance = AppSizes.control * 2 + AppSpacing.md * 3;
 
+/// Margin of a floating toast shown over a form that stays open (*Guardar y
+/// crear otro*): it sits above the sticky footer, never over its actions.
+const EdgeInsets toastClearOfFormFooter = EdgeInsets.fromLTRB(
+  AppSpacing.gutter,
+  0,
+  AppSpacing.gutter,
+  formFooterClearance + AppSpacing.xs,
+);
+
 /// Gives a form's fields its controller and its submit action (Enter from a
 /// single-line field, Ctrl/Cmd+Enter from any field). Put in place by
 /// `AppForm`.
