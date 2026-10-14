@@ -22,6 +22,13 @@ linters:
     - revive
     - unconvert
   settings:
+    misspell:
+      # es-MX product text (expense category names and notes, M4-02) is not English.
+      ignore-rules:
+        - anual
+        - informativo
+        - materias
+        - restaurantes
     depguard:
       rules:
         # Dependency Rule (ADR-0001): the domain knows nothing of frameworks.

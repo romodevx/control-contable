@@ -78,6 +78,8 @@ var unforcedTables = map[string]string{
 	"legal_documents":             "global legal document versions (M1-03)",
 	"regimes":                     "global SAT regime catalog (M2-02)",
 	"regime_compatibility":        "global regime compatibility matrix (M2-02)",
+	"expense_categories":          "global expense category catalog (M4-02)",
+	"category_regime_rules":       "global category deductibility rules (M4-02)",
 }
 
 // rlsGapsQuery lists every table in public that lacks ENABLE, or lacks FORCE without
