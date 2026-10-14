@@ -2428,7 +2428,7 @@ paths:
     get:
       tags: [TaxEngine]
       operationId: getEstimateBreakdown
-      x-frozen: sha256:962cbaf0bb631a75186692f79542018e52e33699e25651ecc7bbc7a32fe7afe6
+      x-frozen: sha256:b7a8d9fe8d1b11d3bd2cb55149662d26fa47715b316c2dbe20a7bd619ef74beb
       summary: Step-by-step computation of one regime's estimate, with legal basis
       description: >-
         The computation trace of `regime` in `period` (ADR-0002 §1: strategies compute only
@@ -2460,12 +2460,63 @@ paths:
           schema: { $ref: '#/components/schemas/RegimeCode' }
       responses:
         '200':
-          description: Breakdown.
+          description: Breakdown (always carries the mandatory legend and its disclaimers).
           headers:
             Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Breakdown' }
+              examples:
+                crossRegimeIva612:
+                  summary: 612 of TX-NET-01 (612 + 606 PF, March 2026), IVA netted across regimes, pending CPA
+                  value:
+                    taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                    period: '2026-03'
+                    regime:
+                      regime_code: '612'
+                      regime_name: Actividades Empresariales y Profesionales
+                      treatment: full
+                      status: complete
+                      missing_inputs: []
+                      explanation: null
+                      isr: { amount_cents: 15096, payable_rounded_cents: 15096, outcome: payable }
+                      iva_components:
+                        charged_collected_cents: 480000
+                        creditable_paid_cents: 160000
+                        withheld_from_taxpayer_cents: 106667
+                        definitive_excluded_cents: 0
+                      withheld_to_remit_cents: 0
+                      cpa_review_pending: true
+                      cpa_topics: [cross_regime_iva_netting]
+                      parameter_set: { fiscal_year: 2026, version: 1 }
+                    lines:
+                      - { seq: 1, tax: isr, concept: Ingresos cobrados acumulados ene–mar, operation: input, amount_cents: 9000000, rate: null, legal_basis: [{ law: LISR, article: '102', note: null }], source: records, needs_cpa_review: false }
+                      - { seq: 2, tax: isr, concept: Deducciones pagadas acumuladas ene–mar, operation: subtract, amount_cents: 3000000, rate: null, legal_basis: [{ law: LISR, article: '103', note: null }, { law: LISR, article: '105', note: null }], source: records, needs_cpa_review: false }
+                      - { seq: 3, tax: isr, concept: Base gravable, operation: result, amount_cents: 6000000, rate: null, legal_basis: [{ law: LISR, article: '106', note: párrafo primero }], source: computed, needs_cpa_review: false }
+                      - { seq: 4, tax: isr, concept: 'Cuota fija (tarifa acumulada de marzo, renglón 6)', operation: lookup, amount_cents: 557052, rate: null, legal_basis: [{ law: Anexo 8 RMF 2026, article: B.VI, note: null }], source: params:isr.art106.accumulated, needs_cpa_review: false }
+                      - { seq: 5, tax: isr, concept: Excedente del límite inferior por la tasa, operation: multiply, amount_cents: 158044, rate: '0.2136', legal_basis: [{ law: Anexo 8 RMF 2026, article: B.VI, note: null }], source: params:isr.art106.accumulated, needs_cpa_review: false }
+                      - { seq: 6, tax: isr, concept: ISR causado acumulado, operation: result, amount_cents: 715096, rate: null, legal_basis: [{ law: LISR, article: '106', note: párrafo primero }], source: computed, needs_cpa_review: false }
+                      - { seq: 7, tax: isr, concept: Pagos provisionales anteriores (ene–feb), operation: subtract, amount_cents: 400000, rate: null, legal_basis: [{ law: LISR, article: '106', note: párrafo cuarto }], source: 'tax_input:prior_provisional_payments', needs_cpa_review: false }
+                      - { seq: 8, tax: isr, concept: Retenciones de ISR (10 %) acumuladas, operation: subtract, amount_cents: 300000, rate: null, legal_basis: [{ law: LISR, article: '106', note: párrafo quinto }], source: records, needs_cpa_review: false }
+                      - { seq: 9, tax: isr, concept: ISR a pagar, operation: result, amount_cents: 15096, rate: null, legal_basis: [{ law: LISR, article: '106', note: null }], source: computed, needs_cpa_review: false }
+                      - { seq: 10, tax: iva, concept: IVA trasladado cobrado, operation: input, amount_cents: 480000, rate: null, legal_basis: [{ law: LIVA, article: '1', note: null }, { law: LIVA, article: 1-B, note: null }], source: records, needs_cpa_review: false }
+                      - { seq: 11, tax: iva, concept: IVA acreditable pagado, operation: subtract, amount_cents: 160000, rate: null, legal_basis: [{ law: LIVA, article: '5', note: fracciones I a V }], source: records, needs_cpa_review: false }
+                      - { seq: 12, tax: iva, concept: IVA que te retuvieron personas morales, operation: subtract, amount_cents: 106667, rate: null, legal_basis: [{ law: LIVA, article: 1-A, note: null }, { law: RLIVA, article: '3', note: null }], source: records, needs_cpa_review: false }
+                      - { seq: 13, tax: iva, concept: IVA de este régimen, operation: result, amount_cents: 213333, rate: null, legal_basis: [{ law: LIVA, article: 5-D, note: null }], source: computed, needs_cpa_review: false }
+                      - { seq: 14, tax: iva, concept: IVA de tus otros regímenes (606), operation: subtract, amount_cents: 193333, rate: null, legal_basis: [{ law: LIVA, article: 5-D, note: null }], source: computed, needs_cpa_review: true }
+                      - { seq: 15, tax: iva, concept: IVA a cargo del mes (todos tus regímenes), operation: result, amount_cents: 20000, rate: null, legal_basis: [{ law: LIVA, article: 5-D, note: null }], source: computed, needs_cpa_review: true }
+                    legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
+                    disclaimers:
+                      - code: not_tax_advice
+                        severity: info
+                        text: Estimación informativa. No sustituye la declaración ante el SAT ni la asesoría de un contador. Cálculo basado en LISR, LIVA, LIF 2026 y Anexo 8 RMF 2026.
+                      - code: cpa_review_pending
+                        severity: strong
+                        text: 'Este cálculo usa reglas que un contador aún no valida: compensación del IVA entre regímenes. Tómalo con mayor reserva.'
+                      - code: deductibility_claimed
+                        severity: info
+                        text: Tomamos como deducibles los gastos que marcaste así; el SAT puede no aceptarlos todos.
+                    engine_version: 1.0.0
         '400': { $ref: '#/components/responses/TaxEngineBadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/TaxEngineNotFound' }
@@ -3978,24 +4029,47 @@ components:
       examples:
         - options: { deduction_mode: actual }
     Warning:
-      x-frozen: sha256:332c36045dc41d4d2bbd41e9d7633f0a204e758e6f4f64369de1a8fe21a6d27d
+      x-frozen: sha256:7f1bc9ef5e10d1986627372185f800f1f0c7af27dfc92a26c3e540339a0cd1f6
       type: object
       required: [code, field, message]
       description: >-
         A non-blocking notice: the write succeeded, the client should ask the user to
-        double-check `field`. `code` is append-only (unknown codes: show `message`). Today:
-        `rfc_check_digit_mismatch` on `rfc` (D-RFC); `regime_combination_needs_cpa_review` on
-        `regimes.N.regime_code` (create) or `regime_code` (add regime): the pair overlaps in
-        time and its compatibility is not yet verified by a CPA (`regime_compatibility.needs_cpa_review`),
-        so it is allowed and `message` carries the pair's `reason`.
+        double-check `field`. `code` is a `WarningCode`, the one list of every warning code
+        and the field it names (append-only; unknown codes: show `message`).
       properties:
-        code: { type: string, pattern: '^[a-z][a-z0-9_]{0,63}$', examples: [rfc_check_digit_mismatch] }
+        code: { $ref: '#/components/schemas/WarningCode' }
         field: { type: string, description: Same dotted naming as `FieldError.field`. }
         message: { type: string, description: Safe to show (es-MX); never contains the RFC. }
       examples:
         - code: rfc_check_digit_mismatch
           field: rfc
           message: Revisa tu RFC; la homoclave no coincide con el dígito verificador.
+    WarningCode:
+      type: string
+      description: >-
+        Append-only (like `ErrorCode`, not frozen): the single list of `Warning.code` values.
+        Clients show the `message` of a code they do not know. Taxpayers (M2):
+        `rfc_check_digit_mismatch` on `rfc` (D-RFC); `regime_combination_needs_cpa_review` on
+        `regimes.N.regime_code` (create) or `regime_code` (add regime), the pair overlaps in
+        time and its compatibility is not yet verified by a CPA, `message` carries the pair's
+        `reason`. Incomes (M3): `duplicate_cfdi_uuid` on `cfdi_uuid` (another live record of
+        the taxpayer has the same folio fiscal); `withholding_differs_from_rate` on
+        `isr_withheld_cents` / `iva_withheld_cents` (the CFDI wins). Expenses (M4):
+        `cash_over_threshold` on `payment_method`; `no_cfdi` on `has_cfdi`;
+        `not_isr_deductible_in_regime` and `category_not_deductible` on `deductible`;
+        `duplicate_cfdi_uuid` on `cfdi_uuid`; `iva_not_creditable_cash_payment` on
+        `payment_method` (a cash payment over the limit claimed as deductible: the claim
+        stands for ISR, its IVA is not creditable, LIVA 5 fr. II ⚠️; 0.6.0).
+      enum:
+        - rfc_check_digit_mismatch
+        - regime_combination_needs_cpa_review
+        - duplicate_cfdi_uuid
+        - withholding_differs_from_rate
+        - cash_over_threshold
+        - no_cfdi
+        - not_isr_deductible_in_regime
+        - category_not_deductible
+        - iva_not_creditable_cash_payment
     RfcInput:
       x-frozen: sha256:fd37fdbdaecba3f8606df31b502d5391862219c4ff10dd2a013a199cf66b6c4c
       type: string
@@ -5048,12 +5122,23 @@ components:
           source: computed
           needs_cpa_review: false
     Breakdown:
-      x-frozen: sha256:d0c1423015e7913852a79eb206e82c57904295f0cf2ad69b78a919a47a8c387d
+      x-frozen: sha256:66299039ca7293acc943ac9e4500af1bc30ad72c659fbbd351bfa9f30462ee2e
       type: object
       required: [taxpayer_id, period, regime, lines, legend, disclaimers, engine_version]
       description: >-
         Header: `regime.parameter_set` ("Parámetros 2026 v1") and `engine_version`
-        ("Motor 1.0.0"). `disclaimers` are those that apply to this regime.
+        ("Motor 1.0.0"). `legend` and `disclaimers` travel with every breakdown, so the
+        warnings are visible wherever the figures are (MODULE-tax-engine §2.3, §2.9).
+        `disclaimers` are the estimate's disclaimers that bear on these lines, in the same
+        order (`not_tax_advice` first, then `strong`, `warning`, `info`, then code): those
+        raised by this regime, plus those raised by any regime's contribution to the
+        consolidated IVA lines shown here. In particular `cpa_review_pending` (severity
+        `strong`, the banner above the lines) is present whenever `regime.cpa_review_pending`
+        is `true` or a line has `needs_cpa_review`, including the consolidated IVA line when
+        two or more regimes contribute IVA (`cross_regime_iva_netting`, OQ-T2), and
+        `iva_mixed_activity` is present whenever the consolidated IVA took any regime's
+        creditable IVA in full. `incomplete_inputs` is present when `regime.status` is
+        `incomplete`.
       properties:
         taxpayer_id: { $ref: '#/components/schemas/Uuid' }
         period: { $ref: '#/components/schemas/Period' }

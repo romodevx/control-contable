@@ -512,6 +512,10 @@ Amendment 1. Precisions made while freezing (no rule changed):
 - `TaxResult.payable_rounded_cents` is `>= 0` (the positive part of `amount_cents`); the per-regime
   favor balance stays in `amount_cents` with `outcome: in_favor`.
 - `DisclaimerCode` and `CpaTopic` are append-only enums (not frozen, like `ErrorCode`).
+- `Breakdown.disclaimers` carries the estimate's disclaimers that bear on its lines (same order):
+  `cpa_review_pending` (strong) whenever the regime or any line needs CPA review, including the
+  consolidated IVA line (`cross_regime_iva_netting`), and `iva_mixed_activity` whenever the
+  consolidated IVA took creditable IVA in full, so §2.3/§2.9 warnings travel with every figure.
 - `TaxInputDef.kind` serves `money_monthly` / `boolean` only after the catalog forward migration
   (M5-20/M5-21); the onboarding tax-inputs step (M2-09) skips kinds it does not edit, the M5-27 form
   owns them.
