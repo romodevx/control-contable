@@ -5463,13 +5463,14 @@ components:
         warns `supplier_regime_unknown` (612 fees withhold 10 % ISR, RESICO 1.25 %).
       examples: ['612']
     WithholdingRuleId:
-      x-frozen: sha256:2e65b9011c9a4ff5f45607cc9381051c462f4cc6fc8b42ec79fcf93d1ce165f8
+      x-frozen: sha256:2173a30721280f9d106aed92979b97e8f37259c60bf4f2e0c9e95a2ef1b76089
       type: string
-      pattern: '^(ISR|IVA)-[0-9]{1,2}$'
+      pattern: '^(ISR-[0-9]{1,2}|IVA-([0-9]{1,2}|NONE))$'
       description: >-
         A rule of the withholdings decision table (docs/research/withholdings-matrix-2026.md
-        §4.2), `ISR-n` or `IVA-n`. An identifier only: clients show
-        `Withholding.explanations`, never a rule table of their own.
+        §4.2), `ISR-n` or `IVA-n`, or `IVA-NONE`: the table's preamble, the operation charges
+        no IVA to withhold (`rate_0`, `exempt` or residential rent). An identifier only:
+        clients show `Withholding.explanations`, never a rule table of their own.
       examples: [ISR-4]
     WithholdingBasis:
       x-frozen: sha256:be533ec58dc224efad7abde47db2fd54041fd90a053a7a94d7122af5a14cad80
