@@ -1,6 +1,10 @@
+import 'package:control_contable/api/generated/models/token_pair.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:json_annotation/json_annotation.dart';
+
+import '../../helpers/recording_adapter.dart';
 
 final _now = DateTime.utc(2026, 10, 13, 12);
 final _request = RequestOptions(path: '/v1/auth/register');
@@ -31,6 +35,19 @@ Map<String, Object?> _envelope(String code, [List<Object?>? details]) => {
 
 ApiFailure _failureOf(DioException exception) =>
     apiFailureFrom(exception, now: () => _now);
+
+Map<String, Object?> _tokens(String access) => {
+  'access_token': access,
+  'access_expires_in': 900,
+  'refresh_token': 'refresh-1',
+  'refresh_expires_in': 2592000,
+  'token_type': 'Bearer',
+};
+
+Map<String, Object?>? _noBody() => null;
+
+Future<Object?> _guarded(Future<Object?> Function() call) =>
+    failureOf(() => guardApi(call));
 
 void main() {
   group('apiFailureFrom', () {
@@ -185,6 +202,58 @@ void main() {
       await expectLater(
         guardApi<void>(() => Future.error(const FormatException('bad json'))),
         throwsA(isA<ApiUnexpected>()),
+      );
+    });
+
+    // M1-16 FU1: a generated decoder that casts a null or wrongly typed
+    // field throws a TypeError, an Error that `on Exception` let through.
+    group('a payload that breaks the generated decoder is unexpected', () {
+      const leakedToken = 'secret-access-token';
+      final payloads = <String, Map<String, Object?>>{
+        'a null required field': {
+          ..._tokens(leakedToken),
+          'refresh_token': null,
+        },
+        'a wrongly typed field': {
+          ..._tokens(leakedToken),
+          'access_expires_in': 'soon',
+        },
+        'a missing field': {'access_token': leakedToken},
+      };
+      for (final MapEntry(key: name, value: payload) in payloads.entries) {
+        test(name, () async {
+          final thrown = await _guarded(
+            () async => TokenPair.fromJson(payload),
+          );
+
+          expect(thrown, isA<ApiUnexpected>());
+          expect('$thrown', isNot(contains(leakedToken)));
+        });
+      }
+
+      test('a null body where an object was expected', () async {
+        expect(
+          await _guarded(() async => TokenPair.fromJson(_noBody()!)),
+          isA<ApiUnexpected>(),
+        );
+      });
+
+      test('a CheckedFromJsonException', () async {
+        expect(
+          await _guarded(
+            () => Future.error(
+              CheckedFromJsonException({}, 'access_token', 'TokenPair', null),
+            ),
+          ),
+          isA<ApiUnexpected>(),
+        );
+      });
+    });
+
+    test('a programming error is not disguised as an API failure', () async {
+      await expectLater(
+        guardApi<void>(() => Future.error(StateError('bug'))),
+        throwsA(isA<StateError>()),
       );
     });
   });

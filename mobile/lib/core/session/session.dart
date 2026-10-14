@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:control_contable/api/generated/clients/auth_client.dart';
 import 'package:control_contable/api/generated/models/refresh_request.dart';
 import 'package:control_contable/api/generated/models/token_pair.dart';
+import 'package:control_contable/core/diagnostics/error_reporter.dart';
 import 'package:control_contable/core/network/api_dio.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/session/refresh_token_store.dart';
@@ -57,15 +58,18 @@ const List<Duration> defaultStorageRetryDelays = [
 ///   wipe the whole store; when even that fails, [tokenLeftOnDevice] says so.
 class Session extends ChangeNotifier {
   /// A session kept in `store`, rotated through `rotate`. A failed store
-  /// call is retried after each of `storageRetryDelays`.
+  /// call is retried after each of `storageRetryDelays`; a store failure the
+  /// session absorbs is told to `reporter`.
   new({
     required this._store,
     required this._rotate,
     this._restoreTimeout = sessionRestoreTimeout,
     this._storageRetryDelays = defaultStorageRetryDelays,
+    this._reporter = const LogErrorReporter(),
   });
 
   final RefreshTokenStore _store;
+  final ErrorReporter _reporter;
   final TokenRotation _rotate;
   final Duration _restoreTimeout;
   final List<Duration> _storageRetryDelays;
@@ -150,9 +154,18 @@ class Session extends ChangeNotifier {
   }
 
   /// The refresh token (for `logout`): the unsaved one when the store
-  /// lags, else the stored one, or `null`.
-  Future<String?> readRefreshToken() async =>
-      _unsavedRefreshToken ?? await _store.read();
+  /// lags, else the stored one, or `null` when there is none or the store
+  /// cannot be read. Never throws: the store's error may echo the token,
+  /// so only its type is reported.
+  Future<String?> readRefreshToken() async {
+    if (_unsavedRefreshToken case final unsaved?) return unsaved;
+    try {
+      return await _store.read();
+    } on Exception catch (error) {
+      _reporter.report('session.readRefreshToken', error);
+      return null;
+    }
+  }
 
   /// A new access token, rotating the refresh token once for every caller
   /// waiting at the same time. `null` when there is none: the server
@@ -271,6 +284,7 @@ final sessionProvider = Provider<Session>((ref) {
   final session = Session(
     store: ref.watch(refreshTokenStoreProvider),
     rotate: ref.watch(tokenRotationProvider),
+    reporter: ref.watch(errorReporterProvider),
   );
   ref.onDispose(session.dispose);
   unawaited(session.restore());

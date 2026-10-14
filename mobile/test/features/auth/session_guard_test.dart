@@ -9,6 +9,7 @@ import 'package:control_contable/features/auth/auth_routes.dart';
 import 'package:control_contable/features/auth/presentation/login_screen.dart';
 import 'package:control_contable/features/home/presentation/home_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -161,6 +162,26 @@ void main() {
         expect(find.byType(LoginScreen), findsOneWidget);
       });
     }
+
+    // M1-16 FU2: the store's exception escaped the unawaited tap.
+    testWidgets('an unreadable secure store still shows login, no error', (
+      tester,
+    ) async {
+      await harness.pump(tester, signedIn: true);
+      harness.tokens.readError = PlatformException(
+        code: 'read',
+        message: storedRefreshToken,
+      );
+
+      await tester.tap(signOut());
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(harness.tokens.token, isNull);
+      expect(harness.session.status, SessionStatus.signedOut);
+      expect(find.byType(LoginScreen), findsOneWidget);
+      expect(find.textContaining(storedRefreshToken), findsNothing);
+    });
 
     testWidgets('still wipes locally when the refresh cannot happen', (
       tester,

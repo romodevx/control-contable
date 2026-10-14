@@ -1,4 +1,4 @@
-import 'package:control_contable/core/network/api_failure.dart';
+import 'package:control_contable/core/diagnostics/error_reporter.dart';
 import 'package:control_contable/core/session/session.dart';
 import 'package:control_contable/features/auth/data/auth_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,14 +9,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// best effort (offline, an expired bearer), and a stolen-device scenario is
 /// covered by the 30-day sliding expiry and family revocation on reuse.
 class SignOut {
-  /// Signs [_session] out through [_repository].
-  new(this._repository, this._session);
+  /// Signs [_session] out through [_repository]; a failed revocation is
+  /// told to [_reporter].
+  new(this._repository, this._session, this._reporter);
 
   final AuthRepository _repository;
   final Session _session;
+  final ErrorReporter _reporter;
 
-  /// Revokes, then wipes. Never throws an [ApiFailure]: the user ends up
-  /// signed out either way, and the router shows the login form.
+  /// Revokes, then wipes. Never throws: the user ends up signed out either
+  /// way, and the router shows the login form. A token the wipe could not
+  /// remove is reported by `Session.tokenLeftOnDevice`, never by an error.
   Future<void> call() async {
     try {
       // `logout` needs a bearer; after a cold start there is none in memory
@@ -25,8 +28,11 @@ class SignOut {
       if (_session.accessToken == null) await _session.refresh();
       final refreshToken = await _session.readRefreshToken();
       if (refreshToken != null) await _repository.logout(refreshToken);
-    } on ApiFailure {
-      // Best effort by design (see the class doc): the wipe below still runs.
+    } on Exception catch (error) {
+      // Best effort by design (see the class doc): an `ApiFailure`, or a
+      // platform error that may echo the token, is reported by type only;
+      // the wipe below still runs (M1-16 FU2).
+      _reporter.report('signOut.revoke', error);
     } finally {
       await _session.end();
     }
@@ -35,7 +41,10 @@ class SignOut {
 
 /// The sign-out use case.
 final signOutProvider = Provider<SignOut>(
-  (ref) =>
-      SignOut(ref.watch(authRepositoryProvider), ref.watch(sessionProvider)),
+  (ref) => SignOut(
+    ref.watch(authRepositoryProvider),
+    ref.watch(sessionProvider),
+    ref.watch(errorReporterProvider),
+  ),
   name: 'signOutProvider',
 );

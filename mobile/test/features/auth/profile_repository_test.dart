@@ -94,4 +94,33 @@ void main() {
       body: envelope('rate_limited'),
     ), isA<ApiRateLimited>());
   });
+  // M1-16 FU1: a profile that does not match the contract is the generic
+  // ApiUnexpected, never a raw TypeError carrying the payload.
+  group('a malformed profile is unexpected', () {
+    const leaked = 'leaked@example.mx';
+    for (final (name, body) in <(String, Object?)>[
+      ('a null required field', {..._user, 'email': null}),
+      ('a wrongly typed field', {..._user, 'id': 7, 'email': leaked}),
+      ('an unreadable date', {..._user, 'created_at': leaked}),
+      ('no body at all', null),
+    ]) {
+      test('getMe: $name', () async {
+        adapter.reply('/v1/me', (status: 200, body: body));
+
+        final thrown = await failureOf(repository.getMe);
+
+        expect(thrown, isA<ApiUnexpected>());
+        expect('$thrown', isNot(contains(leaked)));
+      });
+
+      test('updateName: $name', () async {
+        adapter.reply('/v1/me', (status: 200, body: body));
+
+        final thrown = await failureOf(() => repository.updateName('Ana'));
+
+        expect(thrown, isA<ApiUnexpected>());
+        expect('$thrown', isNot(contains(leaked)));
+      });
+    }
+  });
 }

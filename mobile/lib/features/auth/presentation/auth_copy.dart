@@ -75,10 +75,15 @@ String describeAuthFailure(ApiFailure failure, AppLocalizations l10n) =>
       ApiUnauthorized() || ApiUnexpected() => l10n.authErrorUnexpected,
     };
 
-/// A countdown as `m:ss` (`1:00`, `0:45`, `12:05`).
+/// A countdown as `m:ss` (`1:00`, `0:45`, `12:05`). A part second rounds
+/// up (as the server rounds `Retry-After`), so a wait still running never
+/// reads `0:00`.
 String formatCountdown(Duration remaining) {
-  final seconds = remaining.inSeconds % _secondsPerMinute;
-  return '${remaining.inMinutes}:${seconds.toString().padLeft(2, '0')}';
+  final totalSeconds =
+      (remaining.inMicroseconds / Duration.microsecondsPerSecond).ceil();
+  final minutes = totalSeconds ~/ _secondsPerMinute;
+  final seconds = totalSeconds % _secondsPerMinute;
+  return '$minutes:${seconds.toString().padLeft(2, '0')}';
 }
 
 int _minutesRoundedUp(Duration wait) =>
