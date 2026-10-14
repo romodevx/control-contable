@@ -95,7 +95,7 @@ var (
 		{Law: "LISR", Article: "113-B", Note: "opción de retención definitiva"},
 	}
 	platformBasisNotCredited = []Citation{
-		{Law: "LIVA", Article: "18-L"}, {Law: "LIVA", Article: "18-M", Note: "opción de retención definitiva"},
+		{Law: "LIVA", Article: "18-L"}, {Law: "LIVA", Article: "18-M", Note: "fracción II, sin acreditamiento"},
 	}
 )
 
@@ -111,11 +111,9 @@ var (
 // The withholding is definitive: income collected directly through no
 // platform is self-paid at the same rate (113-A last ¶), and a withholding
 // above the rate leaves no balance in favor. The IVA left after the
-// platform's 50 % withholding is settled by it (18-M ⚠️, the M5-09 hook),
-// and no creditable IVA reduces it (PR #79 follow-up); the IVA charged on
-// direct collections stays under the general rules (conservative: the
-// 18-M 8 % on direct collections needs a platform/direct split the sums
-// do not carry).
+// platform's 50 % withholding is settled by it, direct collections pay
+// 8 % (LIVA 18-M ¶1-2 ⚠️, the M5-09 hook), and no creditable IVA reduces
+// either (18-M fr. II; PR #79 follow-up).
 //
 // Without the option or over the cap, the estimate is partial: the
 // withholdings are provisional credits of a 612 or RESICO computation, so
@@ -284,30 +282,44 @@ func platformIVA(l *Ledger, month MonthSums, o Options, definitive bool) (IVARes
 	return result, nil
 }
 
-// platformDefinitiveIVA is the 625 DefinitiveIVARule (LIVA 18-M ⚠️): with
-// the RFC the platform withholds half the IVA of its sales (LIVA 18-J fr.
-// II a)), so the other half, equal to the withholding, is settled by it.
-// Without the RFC the platform withholds all of it and nothing is left to
-// exclude. A withholding above half the IVA charged cannot be a 50 % one
-// (the platform's IVA is at most the month's), so it is treated as the
-// no-RFC 100 %: excluding it would erase the direct collections' IVA.
+// platformDefinitiveIVA is the 625 DefinitiveIVARule (LIVA 18-M ⚠️).
+//
+// Platform sales: with the RFC the platform withholds half their IVA
+// (LIVA 18-J fr. II a)), so the other half, equal to the withholding, is
+// settled by it; without the RFC it withholds all of it.
+//
+// Direct collections pay 8 % instead (18-M second paragraph), so half of
+// their 16 % IVA is excluded; IVA already at the border 8 % is left as is.
+// The sums carry no platform/direct split, so the direct 16 % IVA is what
+// the month's 16 % IVA leaves after the platform's; the halving rounds
+// toward paying.
+//
+// A withholding whose implied platform IVA exceeds the month's IVA cannot
+// be the 50 % one: nothing is excluded, so direct IVA is never erased.
 func platformDefinitiveIVA(rfcGiven bool) DefinitiveIVARule {
 	return func(income IncomeSums) (money.Cents, error) {
-		if !rfcGiven {
-			return 0, nil
-		}
-		charged, err := income.ByRate.Rate16.IVA.Add(income.ByRate.Rate8.IVA)
-		if err != nil {
-			return 0, err
-		}
 		withheld := income.IVAWithheld.ByPlatform
-		rest, err := charged.Sub(withheld)
-		if err != nil {
-			return 0, err
-		}
-		if withheld <= 0 || withheld > rest {
+		if withheld < 0 {
 			return 0, nil
 		}
-		return withheld, nil
+		var s summer
+		charged := s.add(income.ByRate.Rate16.IVA, income.ByRate.Rate8.IVA)
+		var settledByPlatform money.Cents // the unwithheld half, RFC only
+		if rfcGiven {
+			settledByPlatform = withheld
+		}
+		platformIVA := s.add(withheld, settledByPlatform)
+		if s.err != nil {
+			return 0, s.err
+		}
+		if platformIVA > charged {
+			return 0, nil
+		}
+		direct16 := max(income.ByRate.Rate16.IVA-platformIVA, 0)
+		excluded := s.add(settledByPlatform, direct16/directIVAToEightPercent)
+		return excluded, s.err
 	}
 }
+
+// directIVAToEightPercent takes direct 16 % IVA to the 18-M 8 %.
+const directIVAToEightPercent = 2
