@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
-/// Routes every way out of the form (system back, the app bar's back)
+/// Routes every way out of a form page (system back, the app bar's back)
 /// through [onLeave], which asks first when there are unsaved changes.
-class IncomeLeaveGuard extends StatelessWidget {
+class FormLeaveGuard extends StatelessWidget {
   /// Guards [child].
   const new({required this.onLeave, required this.child, super.key});
 
@@ -25,22 +25,26 @@ class IncomeLeaveGuard extends StatelessWidget {
   );
 }
 
-/// Asks whether to drop what was typed; `true` to leave.
-Future<bool> confirmDiscardIncome(BuildContext context) async {
+/// Asks whether to drop what was typed in the record named by [title]
+/// ("¿Descartar este gasto?"); `true` to leave.
+Future<bool> confirmDiscardRecord(
+  BuildContext context, {
+  required String title,
+}) async {
   final l10n = AppLocalizations.of(context);
   final discard = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: Text(l10n.incomeDiscardTitle),
-      content: Text(l10n.incomeDiscardBody),
+      title: Text(title),
+      content: Text(l10n.recordDiscardBody),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: Text(l10n.incomeDiscardKeep),
+          child: Text(l10n.recordDiscardKeep),
         ),
         FilledButton(
           onPressed: () => Navigator.of(dialogContext).pop(true),
-          child: Text(l10n.incomeDiscardConfirm),
+          child: Text(l10n.recordDiscardConfirm),
         ),
       ],
     ),

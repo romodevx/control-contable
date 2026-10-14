@@ -1,10 +1,10 @@
 import 'package:control_contable/api/generated/models/decimal_rate.dart';
 import 'package:control_contable/api/generated/models/income_defaults.dart';
 import 'package:control_contable/api/generated/models/iva_rate.dart';
+import 'package:control_contable/core/fiscal/iva_math.dart';
 import 'package:control_contable/core/forms/choice_controllers.dart';
-import 'package:control_contable/core/forms/money.dart';
+import 'package:control_contable/core/forms/money_suggestions.dart';
 import 'package:control_contable/core/forms/typed_field_controllers.dart';
-import 'package:control_contable/features/incomes/domain/income_math.dart';
 
 /// Prefills the derived amounts of an income (IVA from the rate, the
 /// withholdings from the defaults' rates) while the user has not written
@@ -31,7 +31,7 @@ class IncomeSuggestions {
   /// IVA withheld.
   final MoneyFieldController ivaWithheld;
 
-  final Map<MoneyFieldController, String> _suggested = {};
+  final MoneySuggestions _suggested = MoneySuggestions();
   String? _suggestedRate = IvaRate.rate16.json;
   bool _isApplying = false;
 
@@ -67,21 +67,15 @@ class IncomeSuggestions {
   /// ([ivaFollowsAmount]): it then keeps following the amount.
   void adoptStored({required bool ivaFollowsAmount}) {
     _suggestedRate = null;
-    if (ivaFollowsAmount) _suggested[ivaAmount] = ivaAmount.text.text;
+    if (ivaFollowsAmount) _suggested.adopt(ivaAmount);
   }
 
   /// A new form session: whatever is in the fields now is not the user's.
-  void forget() => _suggested.clear();
+  void forget() => _suggested.forget();
 
   int? _withheld(int? base, DecimalRate? rate) =>
       base == null || rate == null ? null : withheldCents(base, rate);
 
-  void _suggest(MoneyFieldController field, int? cents) {
-    final suggestion = cents == null ? '' : formatCentavos(cents);
-    final current = field.text.text;
-    final isUsers = current.isNotEmpty && current != (_suggested[field] ?? '');
-    if (isUsers) return;
-    _suggested[field] = suggestion;
-    if (current != suggestion) field.text.text = suggestion;
-  }
+  void _suggest(MoneyFieldController field, int? cents) =>
+      _suggested.suggest(field, cents);
 }

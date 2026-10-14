@@ -1,6 +1,7 @@
 import 'package:control_contable/api/generated/models/income.dart';
 import 'package:control_contable/api/generated/models/taxpayer.dart';
 import 'package:control_contable/api/generated/models/taxpayer_regime.dart';
+import 'package:control_contable/core/fiscal/regimes_held.dart';
 import 'package:control_contable/core/records/record_month.dart';
 import 'package:control_contable/core/theme/app_spacing.dart';
 import 'package:control_contable/core/time/clock.dart';
@@ -10,7 +11,6 @@ import 'package:control_contable/features/incomes/application/income_records.dar
 import 'package:control_contable/features/incomes/data/incomes_repository.dart';
 import 'package:control_contable/features/incomes/presentation/income_form_copy.dart';
 import 'package:control_contable/features/incomes/presentation/income_form_page.dart';
-import 'package:control_contable/features/incomes/presentation/income_form_screen.dart';
 import 'package:control_contable/features/incomes/presentation/income_labels.dart';
 import 'package:control_contable/features/taxpayers/application/active_taxpayer.dart';
 import 'package:control_contable/features/taxpayers/application/client_id.dart';

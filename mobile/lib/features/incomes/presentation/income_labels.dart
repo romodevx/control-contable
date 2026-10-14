@@ -1,6 +1,5 @@
 import 'package:control_contable/api/generated/models/counterparty_type.dart';
 import 'package:control_contable/api/generated/models/income.dart';
-import 'package:control_contable/api/generated/models/iva_rate.dart';
 import 'package:control_contable/api/generated/models/platform_activity.dart';
 import 'package:control_contable/core/records/record_month.dart';
 import 'package:control_contable/features/incomes/domain/income_basis.dart';
@@ -15,15 +14,6 @@ String counterpartyLabel(CounterpartyType type, AppLocalizations l10n) =>
       CounterpartyType.plataforma => l10n.counterpartyPlataforma,
       CounterpartyType.$unknown => l10n.incomeErrorInvalid,
     };
-
-/// An IVA rate, as the user reads it.
-String ivaRateLabel(IvaRate rate, AppLocalizations l10n) => switch (rate) {
-  IvaRate.rate16 => l10n.ivaRate16,
-  IvaRate.rate8 => l10n.ivaRate8,
-  IvaRate.rate0 => l10n.ivaRate0,
-  IvaRate.exempt => l10n.ivaRateExempt,
-  IvaRate.$unknown => l10n.incomeErrorInvalid,
-};
 
 /// A 625 platform activity, as the user reads it.
 String activityLabel(PlatformActivity activity, AppLocalizations l10n) =>

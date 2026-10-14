@@ -1,5 +1,6 @@
 import 'package:control_contable/api/generated/models/counterparty_type.dart';
 import 'package:control_contable/api/generated/models/treatment.dart';
+import 'package:control_contable/core/fiscal/iva_labels.dart';
 import 'package:control_contable/core/forms/app_choice_fields.dart';
 import 'package:control_contable/core/forms/app_text_field.dart';
 import 'package:control_contable/core/forms/form_disclosure.dart';
