@@ -167,7 +167,7 @@ func (uc *Inputs) activeRegime(ctx context.Context, key InputsKey, lock Lock) (H
 	case !regime.ActiveIn(key.FiscalYear):
 		return HeldRegime{}, regimeNotActiveError()
 	case key.FiscalYear < firstParamsYear:
-		return HeldRegime{}, parametersUnavailableError()
+		return HeldRegime{}, parametersUnavailableError(fieldFiscalYear)
 	}
 	return regime, nil
 }

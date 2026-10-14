@@ -105,7 +105,10 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err != nil {
 		return err
 	}
-	taxEngine, err := newTaxEngineModule(taxEngineWiring{pool: pool, limits: auth.limits, logger: logger})
+	taxEngine, err := newTaxEngineModule(taxEngineWiring{
+		pool: pool, limits: auth.limits, logger: logger,
+		tx: records.taxpayers.tx, taxpayers: records.taxpayers.queries,
+	})
 	if err != nil {
 		return err
 	}

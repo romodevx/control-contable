@@ -29,6 +29,8 @@ var (
 	// ErrFutureFiscalYear: a fiscal year after the current one (400
 	// out_of_range).
 	ErrFutureFiscalYear = errors.New("taxengine: future fiscal year")
+	// ErrFuturePeriod: a period after the current month (400 out_of_range).
+	ErrFuturePeriod = errors.New("taxengine: future period")
 )
 
 // FieldError.code values of the tax engine (MODULE-tax-engine §5).
@@ -42,6 +44,7 @@ const (
 	fieldTaxpayerID             = "taxpayerId"
 	fieldRegimeCode             = "regimeCode"
 	fieldFiscalYear             = "fiscal_year"
+	fieldPeriod                 = "period"
 	fieldValues                 = "values"
 )
 
@@ -51,6 +54,8 @@ const (
 	msgInvalidInput          = "One or more fields are invalid." // the router's wording for every validation_failed
 	msgNotFound              = "Not found."
 	msgFutureYear            = "Ese ejercicio todavía no empieza."
+	msgFuturePeriod          = "Ese mes todavía no empieza."
+	msgInvalidPeriod         = "Usa un mes con el formato AAAA-MM."
 	msgArchived              = "This taxpayer is archived. Unarchive it to make changes."
 	msgArchivedField         = "Desarchiva el contribuyente primero."
 	msgRegimeNotActive       = "The taxpayer does not hold this regime in that fiscal year."
@@ -80,8 +85,22 @@ func regimeNotActiveError() error {
 	return businessRule(ErrRegimeNotActive, msgRegimeNotActive, fieldRegimeCode, DetailRegimeNotActive, msgRegimeNotActiveField)
 }
 
-func parametersUnavailableError() error {
-	return businessRule(ErrParametersUnavailable, msgParametersUnavailable, fieldFiscalYear, DetailParametersUnavailable, msgParametersField)
+// parametersUnavailableError is the 422 of a fiscal year or period before
+// the first published parameters, naming field.
+func parametersUnavailableError(field string) error {
+	return businessRule(ErrParametersUnavailable, msgParametersUnavailable, field, DetailParametersUnavailable, msgParametersField)
+}
+
+// invalidPeriodError is the 400 of a period that is not "YYYY-MM".
+func invalidPeriodError(cause error) error {
+	return apperr.Wrap(cause, apperr.CodeValidationFailed, msgInvalidInput).
+		WithFields(apperr.FieldError{Field: fieldPeriod, Code: DetailInvalid, Message: msgInvalidPeriod})
+}
+
+// futurePeriodError is the 400 of a month after the current one (§2.10).
+func futurePeriodError() error {
+	return apperr.Wrap(ErrFuturePeriod, apperr.CodeValidationFailed, msgInvalidInput).
+		WithFields(apperr.FieldError{Field: fieldPeriod, Code: DetailOutOfRange, Message: msgFuturePeriod})
 }
 
 func futureYearError() error {
