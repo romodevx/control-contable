@@ -313,14 +313,26 @@ func TestIncomes_BookedOnFollowsTheRegimeBasis(t *testing.T) {
 		_, err := execAsUser(t, app, userA, "UPDATE incomes SET booked_on = '2022-01-01' WHERE id = $1", incomeA)
 		requireSQLState(t, err, sqlstateInsufficientPrivilege)
 	})
-	t.Run("a role that may write it is overridden", func(t *testing.T) {
-		owner := db.Connect(t, pgtest.RoleOwner)
-		_, err := owner.ExecContext(t.Context(), "ALTER TABLE incomes NO FORCE ROW LEVEL SECURITY")
-		require.NoError(t, err)
-		_, err = owner.ExecContext(t.Context(), "UPDATE incomes SET booked_on = '2022-01-01' WHERE id = $1", incomeA)
-		require.NoError(t, err)
-		assert.Equal(t, "2026-08-31", bookedOn(t, incomeA))
-	})
+	// A writer that cannot see the income's taxpayer regime (any role outside cc_app's
+	// policies, e.g. the owner running a future re-derivation migration) must be refused,
+	// never handed a guessed date: a guess books an accrual income on collected_on.
+	const pendingAccrual = "00000000-0000-7000-8000-00000000c0a4"
+	r := validIncome(userA, incomeMoralTaxpayer, pendingAccrual)
+	r.regime, r.isrWithheld, r.invoicedOn, r.collectedOn = "601", 0, "2022-06-15", "2022-08-01"
+	require.NoError(t, insertIncome(t, app, userA, r))
+	owner := db.Connect(t, pgtest.RoleOwner)
+	_, err := owner.ExecContext(t.Context(), "ALTER TABLE incomes NO FORCE ROW LEVEL SECURITY")
+	require.NoError(t, err)
+	for _, stmt := range []string{
+		"UPDATE incomes SET booked_on = '2022-01-01' WHERE id = $1",
+		"UPDATE incomes SET collected_on = '2022-09-01' WHERE id = $1",
+	} {
+		t.Run("a writer blind to the regime is refused: "+stmt, func(t *testing.T) {
+			_, err := owner.ExecContext(t.Context(), stmt, pendingAccrual)
+			requireSQLState(t, err, sqlstateInsufficientPrivilege)
+			assert.Equal(t, "2022-06-15", bookedOn(t, pendingAccrual))
+		})
+	}
 }
 
 // §2.2: accrual = PM Título II (601, 620, 622, 623, 624); every other regime is cash.

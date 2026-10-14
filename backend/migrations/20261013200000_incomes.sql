@@ -149,10 +149,12 @@ CREATE INDEX incomes_deleted_at_idx ON incomes (deleted_at) WHERE deleted_at IS 
 -- incomes_derive_booked_on(): BEFORE INSERT / UPDATE OF the inputs. Sets booked_on from the
 -- basis of the income's regime: the regime is read through the taxpayer_regimes row the
 -- composite FK will check (it carries the person type that keys the catalog). SECURITY
--- INVOKER: it reads the caller's rows under the caller's RLS. When that row is not visible
--- the statement is already doomed (RLS WITH CHECK runs first for another user's row; the
--- FK fails after for a forged triple), so it keeps a placeholder date and lets those
--- report the real error. No EXECUTE grant: checked at CREATE TRIGGER time.
+-- INVOKER: it reads the caller's rows under the caller's RLS. It never guesses a date
+-- (a guess would book an accrual income on collected_on): when that row is not visible
+-- it refuses the write. 42501 for a row of another user or a writer outside the app
+-- context (the same answer RLS WITH CHECK gives, which runs after BEFORE triggers);
+-- 23503 for the caller's own forged triple (the answer the composite FK gives). No
+-- EXECUTE grant: checked at CREATE TRIGGER time.
 -- +goose StatementBegin
 CREATE FUNCTION incomes_derive_booked_on() RETURNS trigger
   LANGUAGE plpgsql
@@ -166,11 +168,16 @@ BEGIN
   JOIN public.regimes r ON r.code = tr.regime_code AND r.person_type = tr.person_type
   WHERE tr.user_id = NEW.user_id AND tr.taxpayer_id = NEW.taxpayer_id AND tr.regime_code = NEW.regime_code;
 
-  NEW.booked_on := CASE basis
-    WHEN 'accrual' THEN NEW.invoiced_on
-    WHEN 'cash' THEN NEW.collected_on
-    ELSE coalesce(NEW.collected_on, NEW.invoiced_on)
-  END;
+  IF basis IS NULL AND NEW.user_id IS DISTINCT FROM public.app_user_id() THEN
+    RAISE EXCEPTION 'new row violates row-level security policy for table "incomes"'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  IF basis IS NULL THEN
+    RAISE EXCEPTION 'income references a regime its taxpayer does not hold'
+      USING ERRCODE = 'foreign_key_violation';
+  END IF;
+
+  NEW.booked_on := CASE basis WHEN 'accrual' THEN NEW.invoiced_on ELSE NEW.collected_on END;
   RETURN NEW;
 END
 $$;
