@@ -40,7 +40,12 @@ input:
           rate_0_base: "15000.00"
           exempt_base: "5000.00"
         iva_withheld: {by_moral: "1066.67"}
-      expenses: {deductible_paid: "20000.00", creditable_iva_paid: "1600.00"}
+      expenses:
+        deductible_paid: "20000.00"
+        non_deductible_paid: "700.00"
+        cash_over_limit_paid: "2500.00"
+        iva_paid: {rate_16: {base: "10000.00", iva: "1600.00"}, rate_8: {base: "500.00", iva: "40.00"}, rate_0_base: "300.00", exempt_base: "12400.00"}
+        creditable_iva_paid: "1600.00"
   tax_inputs:
     - {key: prior_provisional_payments, kind: money_monthly, month: 1, money: "2000.00"}
     - {key: coeficiente_utilidad, kind: rate, rate: "0.15"}
@@ -111,6 +116,14 @@ func TestDecodeReadsEveryField(t *testing.T) {
 	}, mar.Income.ByRate)
 	assert.Equal(t, cents(t, "1066.67"), mar.Income.IVAWithheld.ByMoral)
 	assert.Equal(t, cents(t, "1600.00"), mar.Expenses.CreditableIVAPaid)
+	assert.Equal(t, cents(t, "700.00"), mar.Expenses.NonDeductiblePaid)
+	assert.Equal(t, cents(t, "2500.00"), mar.Expenses.CashOverLimitPaid)
+	assert.Equal(t, domain.IVAByRate{
+		Rate16:     domain.RateSums{Base: cents(t, "10000.00"), IVA: cents(t, "1600.00")},
+		Rate8:      domain.RateSums{Base: cents(t, "500.00"), IVA: cents(t, "40.00")},
+		Rate0Base:  cents(t, "300.00"),
+		ExemptBase: cents(t, "12400.00"),
+	}, mar.Expenses.IVAPaid)
 
 	prior, ok := in.Inputs.MonthlyMoney(domain.InputPriorProvisionalPayments, time.January)
 	assert.True(t, ok)
