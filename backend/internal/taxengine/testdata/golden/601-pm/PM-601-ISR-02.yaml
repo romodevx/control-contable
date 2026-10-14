@@ -1,0 +1,23 @@
+# golden: hand-authored from docs/research/tax-regimes-mx-2026.md §B.5 PM-601-ISR-02. Never generated or rewritten by a tool.
+# 601, first fiscal year: no coeficiente de utilidad, so no provisional
+# payment: ISR 0.00 with no_coefficient_first_year (MODULE-tax-engine US-X1c).
+# The company started in June 2026 (active_months), so no prior month exists.
+id: PM-601-ISR-02
+source: research:PM-601-ISR-02
+pending_strategy: true # M5-15
+input:
+  regime: "601"
+  person_type: moral
+  period: "2026-06"
+  active_months: [6]
+  months:
+    - {month: 6, income: {accrual: "500000.00"}}
+  tax_inputs:
+    - {key: first_fiscal_year, kind: boolean, bool: true}
+expected:
+  status: complete
+  taxes: [isr]
+  isr: "0.00"
+  lines:
+    - {tax: isr, code: isr.first_fiscal_year, amount: "0.00"}
+  disclaimers: [no_coefficient_first_year]

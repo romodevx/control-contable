@@ -1,0 +1,29 @@
+# golden: hand-authored from docs/research/tax-regimes-mx-2026.md §A.5 PF-606-IVA-01. Never generated or rewritten by a tool.
+# Residential rent (March 2026): exempt (LIVA 20 fr. II), so the records
+# carry no IVA and the regime's IVA is 0.
+id: PF-606-IVA-01-B
+source: research:PF-606-IVA-01
+pending_strategy: true # M5-12
+input:
+  regime: "606"
+  person_type: fisica
+  period: "2026-03"
+  options:
+    deduction_mode: blind_35
+    iva_fully_taxable: true
+  months:
+    - {month: 3, income: {cash: "20000.00"}}
+expected:
+  status: complete
+  taxes: [iva]
+  iva:
+    charged_collected: "0.00"
+    creditable_paid: "0.00"
+    withheld_from_taxpayer: "0.00"
+    definitive_excluded: "0.00"
+    net: "0.00"
+  lines:
+    - {tax: iva, code: iva.charged_collected, amount: "0.00"}
+    - {tax: iva, code: iva.creditable_paid, amount: "0.00"}
+    - {tax: iva, code: iva.withheld_from_taxpayer, amount: "0.00"}
+    - {tax: iva, code: iva.net, amount: "0.00"}

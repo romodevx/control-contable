@@ -24,10 +24,10 @@ import (
 )
 
 const (
-	goldenRoot   = "golden"            // under testdata/
+	goldenRoot   = "golden" // under testdata/
 	paramsFile   = "params/data/2026/v1.yaml"
 	researchFile = "../../../docs/research/tax-regimes-mx-2026.md"
-	moduleRoot   = "../.."             // backend/
+	moduleRoot   = "../.." // backend/
 	writeScope   = "internal/taxengine/"
 )
 

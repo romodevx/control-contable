@@ -1,0 +1,39 @@
+# golden: hand-authored from docs/research/tax-regimes-mx-2026.md §A.5 PF-612-ISR-01. Never generated or rewritten by a tool.
+# March 2026, YTD Jan-Mar: income 90,000, deductions 30,000, prior payments
+# (Jan+Feb) 4,000, 10 % withholding 3,000 on 30,000 of fees billed to a PM.
+# Base 60,000 -> March row 6: 5,570.52 + (60,000 - 52,600.93) x 21.36 % = 7,150.96.
+id: PF-612-ISR-01
+source: research:PF-612-ISR-01
+pending_strategy: true # M5-11 removes this when the 612 PF strategy is registered
+input:
+  regime: "612"
+  person_type: fisica
+  period: "2026-03"
+  months:
+    - month: 1
+      income: {cash: "30000.00", isr_withheld: {by_moral: "1000.00"}}
+      expenses: {deductible_paid: "10000.00"}
+    - month: 2
+      income: {cash: "30000.00", isr_withheld: {by_moral: "1000.00"}}
+      expenses: {deductible_paid: "10000.00"}
+    - month: 3
+      income: {cash: "30000.00", isr_withheld: {by_moral: "1000.00"}}
+      expenses: {deductible_paid: "10000.00"}
+  tax_inputs:
+    - {key: prior_provisional_payments, kind: money_monthly, month: 1, money: "2000.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 2, money: "2000.00"}
+expected:
+  status: complete
+  taxes: [isr]
+  isr: "150.96"
+  lines:
+    - {tax: isr, code: isr.income_ytd, amount: "90000.00"}
+    - {tax: isr, code: isr.deductions_ytd, amount: "30000.00"}
+    - {tax: isr, code: isr.base, amount: "60000.00"}
+    - {tax: isr, code: isr.tariff_row, amount: "5570.52"}
+    - {tax: isr, code: isr.tariff_excess, amount: "1580.44"}
+    - {tax: isr, code: isr.caused, amount: "7150.96"}
+    - {tax: isr, code: isr.prior_payments, amount: "4000.00"}
+    - {tax: isr, code: isr.withheld_by_moral, amount: "3000.00"}
+    - {tax: isr, code: isr.payable, amount: "150.96"}
+  disclaimers: [deductibility_claimed]

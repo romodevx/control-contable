@@ -1,0 +1,20 @@
+# golden: hand-authored from docs/research/tax-regimes-mx-2026.md §A.5 PF-626-ISR-02. Never generated or rewritten by a tool.
+# RESICO boundary, second half: collected 25,000.01 -> 1.1 % on the whole
+# amount (non-marginal) = 275.00011 -> 275.00.
+id: PF-626-ISR-02-B
+source: research:PF-626-ISR-02
+pending_strategy: true # M5-13
+input:
+  regime: "626"
+  person_type: fisica
+  period: "2026-03"
+  months:
+    - {month: 3, income: {cash: "25000.01"}}
+expected:
+  status: complete
+  taxes: [isr]
+  isr: "275.00"
+  lines:
+    - {tax: isr, code: isr.income_month, amount: "25000.01"}
+    - {tax: isr, code: isr.resico_rate, amount: "275.00"}
+    - {tax: isr, code: isr.payable, amount: "275.00"}

@@ -1,0 +1,37 @@
+# golden: hand-authored from docs/research/tax-regimes-mx-2026.md §A.5 PF-625-01. Never generated or rewritten by a tool.
+# Platform goods, definitive option, prior-year income 250,000 (<= 300,000):
+# sales 30,000 excluding IVA, all through the app (March 2026). ISR withheld
+# 2.5 % = 750.00 (LIF 2026 art. 25 fr. VI) is definitive: additional ISR 0.
+# The IVA side is PF-625-01-IVA (skipped ⚠️); its topic is regime-level, so
+# it shows here too (MODULE-tax-engine §2.9).
+id: PF-625-01-ISR
+source: research:PF-625-01
+pending_strategy: true # M5-14 removes this when the 625 PF strategy is registered
+input:
+  regime: "625"
+  person_type: fisica
+  period: "2026-03"
+  options:
+    definitive_option: true
+    activities: [goods_services]
+    rfc_given_to_platform: true
+    iva_fully_taxable: true
+  months:
+    - month: 3
+      income:
+        cash: "30000.00"
+        iva_collected: "4800.00"
+        iva_withheld: {by_platform: "2400.00"}
+        isr_withheld: {by_platform: "750.00"}
+  tax_inputs:
+    - {key: prior_year_income, kind: money, money: "250000.00"}
+expected:
+  status: complete
+  taxes: [isr]
+  isr: "0.00"
+  lines:
+    - {tax: isr, code: isr.platform_income, amount: "30000.00"}
+    - {tax: isr, code: isr.platform_rate, amount: "750.00"}
+    - {tax: isr, code: isr.withheld_by_platform, amount: "750.00"}
+    - {tax: isr, code: isr.payable, amount: "0.00"}
+  cpa_topics: [platform_definitive_iva]

@@ -1,0 +1,34 @@
+# golden: hand-authored from docs/research/tax-regimes-mx-2026.md §A.5 PF-606-IVA-01. Never generated or rewritten by a tool.
+# Commercial rent to a PM (March 2026): IVA 3,200 on 20,000; the PM
+# withholds 2/3 = 2,133.33; creditable 0. IVA = 3,200 - 2,133.33 = 1,066.67.
+id: PF-606-IVA-01-A
+source: research:PF-606-IVA-01
+pending_strategy: true # M5-12
+input:
+  regime: "606"
+  person_type: fisica
+  period: "2026-03"
+  options:
+    deduction_mode: blind_35
+    iva_fully_taxable: true
+  months:
+    - month: 3
+      income:
+        cash: "20000.00"
+        iva_collected: "3200.00"
+        iva_withheld: {by_moral: "2133.33"}
+        isr_withheld: {by_moral: "2000.00"}
+expected:
+  status: complete
+  taxes: [iva]
+  iva:
+    charged_collected: "3200.00"
+    creditable_paid: "0.00"
+    withheld_from_taxpayer: "2133.33"
+    definitive_excluded: "0.00"
+    net: "1066.67"
+  lines:
+    - {tax: iva, code: iva.charged_collected, amount: "3200.00"}
+    - {tax: iva, code: iva.creditable_paid, amount: "0.00"}
+    - {tax: iva, code: iva.withheld_from_taxpayer, amount: "2133.33"}
+    - {tax: iva, code: iva.net, amount: "1066.67"}

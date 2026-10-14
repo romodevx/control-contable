@@ -1,0 +1,43 @@
+# golden: hand-authored from docs/research/tax-regimes-mx-2026.md §B.5 PM-601-ISR-01. Never generated or rewritten by a tool.
+# 601, June 2026: CU 0.1500 (2025 profit 1,200,000 / income 8,000,000);
+# YTD nominal (accrued) income 5,000,000; PTU paid in May 120,000
+# (/ 8 = 15,000 a month, 2 parts May-June = 30,000); losses 0; prior
+# payments 180,000 (Jan-May 36,000 each).
+# 0.15 x 5,000,000 = 750,000 - 30,000 = 720,000 x 30 % = 216,000 - 180,000 = 36,000.00.
+id: PM-601-ISR-01
+source: research:PM-601-ISR-01
+pending_strategy: true # M5-15 removes this when the 601 PM strategy is registered
+input:
+  regime: "601"
+  person_type: moral
+  period: "2026-06"
+  months:
+    - {month: 1, income: {accrual: "800000.00"}}
+    - {month: 2, income: {accrual: "800000.00"}}
+    - {month: 3, income: {accrual: "800000.00"}}
+    - {month: 4, income: {accrual: "800000.00"}}
+    - {month: 5, income: {accrual: "900000.00"}}
+    - {month: 6, income: {accrual: "900000.00"}}
+  tax_inputs:
+    - {key: coeficiente_utilidad, kind: rate, rate: "0.1500"}
+    - {key: ptu_paid, kind: money, money: "120000.00"}
+    - {key: prior_year_losses, kind: money, money: "0.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 1, money: "36000.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 2, money: "36000.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 3, money: "36000.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 4, money: "36000.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 5, money: "36000.00"}
+expected:
+  status: complete
+  taxes: [isr]
+  isr: "36000.00"
+  lines:
+    - {tax: isr, code: isr.income_ytd, amount: "5000000.00"}
+    - {tax: isr, code: isr.coeficiente, amount: "750000.00"}
+    - {tax: isr, code: isr.ptu, amount: "30000.00"}
+    - {tax: isr, code: isr.prior_year_losses, amount: "0.00"}
+    - {tax: isr, code: isr.base, amount: "720000.00"}
+    - {tax: isr, code: isr.rate, amount: "216000.00"}
+    - {tax: isr, code: isr.prior_payments, amount: "180000.00"}
+    - {tax: isr, code: isr.interest_withholding, amount: "0.00"}
+    - {tax: isr, code: isr.payable, amount: "36000.00"}

@@ -1,0 +1,46 @@
+# golden: hand-authored from docs/research/tax-regimes-mx-2026.md §A.5 PF-612-ISR-02. Never generated or rewritten by a tool.
+# October 2026: YTD base 250,000 (income, no deductions), prior payments
+# 30,000 (Jan-Jun 3,000, Jul-Sep 4,000), withholding 0.
+# October row 6: 18,568.40 + (250,000 - 175,336.41) x 21.36 % = 34,516.54.
+id: PF-612-ISR-02
+source: research:PF-612-ISR-02
+pending_strategy: true # M5-11
+input:
+  regime: "612"
+  person_type: fisica
+  period: "2026-10"
+  months:
+    - {month: 1, income: {cash: "25000.00"}}
+    - {month: 2, income: {cash: "25000.00"}}
+    - {month: 3, income: {cash: "25000.00"}}
+    - {month: 4, income: {cash: "25000.00"}}
+    - {month: 5, income: {cash: "25000.00"}}
+    - {month: 6, income: {cash: "25000.00"}}
+    - {month: 7, income: {cash: "25000.00"}}
+    - {month: 8, income: {cash: "25000.00"}}
+    - {month: 9, income: {cash: "25000.00"}}
+    - {month: 10, income: {cash: "25000.00"}}
+  tax_inputs:
+    - {key: prior_provisional_payments, kind: money_monthly, month: 1, money: "3000.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 2, money: "3000.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 3, money: "3000.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 4, money: "3000.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 5, money: "3000.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 6, money: "3000.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 7, money: "4000.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 8, money: "4000.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 9, money: "4000.00"}
+expected:
+  status: complete
+  taxes: [isr]
+  isr: "4516.54"
+  lines:
+    - {tax: isr, code: isr.income_ytd, amount: "250000.00"}
+    - {tax: isr, code: isr.deductions_ytd, amount: "0.00"}
+    - {tax: isr, code: isr.base, amount: "250000.00"}
+    - {tax: isr, code: isr.tariff_row, amount: "18568.40"}
+    - {tax: isr, code: isr.tariff_excess, amount: "15948.14"}
+    - {tax: isr, code: isr.caused, amount: "34516.54"}
+    - {tax: isr, code: isr.prior_payments, amount: "30000.00"}
+    - {tax: isr, code: isr.withheld_by_moral, amount: "0.00"}
+    - {tax: isr, code: isr.payable, amount: "4516.54"}
