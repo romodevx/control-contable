@@ -91,3 +91,21 @@ func TestRegimeExplanations_DownClearsThemAndUpRestoresThem(t *testing.T) {
 	require.NoError(t, migrations.Up(t.Context(), owner))
 	assert.Equal(t, written, explanations(t, owner))
 }
+
+// A regime the engine does not fully estimate always has its text: the engine
+// returns the label key and the adapter renders this column, so a NULL would
+// leave the user an empty card. The constraint also binds regimes added later.
+func TestRegimeExplanations_NotFullyEstimatedRegimeCannotLoseItsText(t *testing.T) {
+	owner := pgtest.NewDatabase(t).Connect(t, pgtest.RoleOwner)
+
+	var unexplained int
+	require.NoError(t, owner.QueryRowContext(t.Context(),
+		`SELECT count(*) FROM regimes WHERE treatment <> 'full' AND explanation IS NULL`).Scan(&unexplained))
+	assert.Zero(t, unexplained, "every partial or informational regime is explained")
+
+	for _, key := range []struct{ code, personType string }{{"605", "fisica"}, {"621", "fisica"}} {
+		_, err := owner.ExecContext(t.Context(),
+			`UPDATE regimes SET explanation = NULL WHERE code = $1 AND person_type = $2`, key.code, key.personType)
+		requireSQLState(t, err, sqlstateCheckViolation)
+	}
+}
