@@ -144,7 +144,8 @@ IDs map to modules in MODULES.md. "Mandatory legend" means the exact text
 - **US-T1** During onboarding I choose **persona física or persona moral first**, then
   enter the RFC and a display name, then pick one or more regimes.
   - AC: the regime list is filtered by person type. The RFC format is checked against the
-    type (13 characters for física, 12 for moral) and against the check digit. At least one
+    type (13 characters for física, 12 for moral); a check digit mismatch is a warning, not a
+    rejection (ADR-0006: ~1.5% of SAT-issued RFCs fail the published algorithm). At least one
     regime is required. An invalid combination is rejected with an explanation. Each regime
     asks for its options: 625 platform type(s) and withholding option, 606 deduction mode,
     601 coeficiente de utilidad.
@@ -300,7 +301,7 @@ IDs map to modules in MODULES.md. "Mandatory legend" means the exact text
 | Q6 | Which regimes get a **full estimate at launch** vs. later? | Must: 612, 626 PF, 601, 626 PM. Should: 625, 606. Rest: informational at launch (after research) |
 | Q7 | For 606, 625 and 601, are the taxpayer's options (blind vs. actual deduction, definitive withholding, coeficiente) a per-regime setting? | Yes, per taxpayer + regime, defaulting to the most common option |
 | Q8 | Do users enter prior months / prior-year inputs at onboarding (needed for cumulative ISR and the coeficiente)? | Optional at onboarding; an estimate missing them is flagged "incomplete" |
-| Q9 | Is the RFC **required** for every taxpayer, or optional? (We never verify it against SAT) | Required, format + check digit validated (it drives type and uniqueness) |
+| Q9 | Is the RFC **required** for every taxpayer, or optional? (We never verify it against SAT) | Required, format and date validated; check digit computed and reported as a warning, never a rejection (ADR-0006) (it drives type and uniqueness) |
 | Q10 | Legal role when a user enters someone else's data (responsable vs. encargado), and who reviews the terms and the aviso? | The owner hires a lawyer before public launch |
 | Q11 | Who validates the golden test cases? | An external CPA, once per fiscal year |
 | Q12 | Push provider: FCM for both platforms (APNs via FCM)? | Yes (Architect to confirm in an ADR) |

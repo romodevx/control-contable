@@ -76,6 +76,8 @@ var unforcedTables = map[string]string{
 	"trial_registry":              "service-only; reached by cc_auth_definer through its own policy",
 	"email_verification_failures": "service-only; reached by cc_auth_definer through its own policy",
 	"legal_documents":             "global legal document versions (M1-03)",
+	"regimes":                     "global SAT regime catalog (M2-02)",
+	"regime_compatibility":        "global regime compatibility matrix (M2-02)",
 }
 
 // rlsGapsQuery lists every table in public that lacks ENABLE, or lacks FORCE without
