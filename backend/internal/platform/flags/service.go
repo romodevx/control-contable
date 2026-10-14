@@ -86,7 +86,8 @@ type loadFailure struct {
 	err error
 }
 
-// snapshot is an immutable view of the enabled flags.
+// snapshot is an immutable view of the effectively enabled modules: the ON
+// flags whose prerequisites are ON too.
 type snapshot struct {
 	enabled map[string]struct{}
 	sorted  []string
@@ -117,7 +118,8 @@ func NewService(reader Reader, opts ...Option) *Service {
 	return s
 }
 
-// Enabled reports whether module's flag is ON. It fails closed: when the
+// Enabled reports whether module is effectively ON: its flag and every
+// prerequisite's (Prerequisites) are ON. It fails closed: when the
 // flags cannot be read (database error, canceled context) it returns false.
 func (s *Service) Enabled(ctx context.Context, module string) bool {
 	snap, err := s.current(ctx)
@@ -130,7 +132,8 @@ func (s *Service) Enabled(ctx context.Context, module string) bool {
 	return on
 }
 
-// EnabledModules returns the keys of the enabled flags, sorted. It never
+// EnabledModules returns the keys of the effectively enabled modules (see
+// Enabled), sorted. It never
 // returns nil on success, so the JSON is an array even when nothing is ON.
 func (s *Service) EnabledModules(ctx context.Context) ([]string, error) {
 	snap, err := s.current(ctx)
@@ -182,7 +185,7 @@ func (s *Service) reload(ctx context.Context) (*snapshot, error) {
 		s.failed.Store(&loadFailure{seq: seq, err: err})
 		return nil, err
 	}
-	snap := newSnapshot(keys, s.clock.Now().Add(s.ttl), gen)
+	snap := newSnapshot(EffectiveModules(prerequisites, keys), s.clock.Now().Add(s.ttl), gen)
 	// An Invalidate during the read leaves gen behind, so fresh rejects this
 	// snapshot on the next call; storing it is harmless.
 	s.snap.Store(snap)

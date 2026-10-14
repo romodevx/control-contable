@@ -2,11 +2,15 @@
 // the /flags skill). It connects as cc_owner, the only role allowed to write
 // feature_flags, through the owner URL in DATABASE_URL_OWNER:
 //
-//	flags list                   every flag, ON/off, with a summary
+//	flags list                   every flag, ON/off/hidden, its prerequisites
+//	                             and a summary
 //	flags enable <module_key>    turn one module ON
 //	flags disable <module_key>   turn one module off
 //	flags apply-preset <name>    turn the preset's modules ON and the rest off
 //	flags presets                the presets and their modules
+//
+// A module is effectively ON only when its prerequisites (flags.Prerequisites)
+// are ON too; a flag that is ON while one is OFF shows as "hidden".
 //
 // Running API instances cache flags for flags.DefaultTTL, so a change is
 // visible to every instance within that time. Enabling a module in a shared
@@ -37,6 +41,8 @@ const (
 	envDatabaseURL = "DATABASE_URL_OWNER"
 	driverName     = "pgx"
 	tablePadding   = 2
+	// stateHidden is a flag that is ON while a prerequisite is OFF.
+	stateHidden = "hidden"
 )
 
 type verb string
@@ -155,24 +161,82 @@ func setEnabled(ctx context.Context, admin flags.Admin, key string, enabled bool
 	}
 	fmt.Fprintf(out, "%s: %s -> %s\n", key, state(previous), state(enabled))
 	fmt.Fprintf(out, "running API instances pick this up within %s (flag cache TTL)\n", flags.DefaultTTL)
+	list, err := admin.List(ctx)
+	if err != nil {
+		return err
+	}
+	printHidden(out, effectiveStates(list))
 	return nil
 }
 
-func printFlags(out io.Writer, list []flags.Flag) error {
-	tw := tabwriter.NewWriter(out, 0, 0, tablePadding, ' ', 0)
-	fmt.Fprintln(tw, "KEY\tSTATE\tDESCRIPTION")
-	on := 0
+// flagState is one flag with its effective state: a flag that is ON while a
+// prerequisite (flags.Prerequisites) is OFF is hidden by the API (404 and
+// absent from GET /v1/flags).
+type flagState struct {
+	flags.Flag
+	requires []string
+	missing  []string
+}
+
+func (f flagState) state() string {
+	if f.Enabled && len(f.missing) > 0 {
+		return stateHidden
+	}
+	return state(f.Enabled)
+}
+
+func effectiveStates(list []flags.Flag) []flagState {
+	graph := flags.Prerequisites()
+	on := make(map[string]bool, len(list))
 	for _, f := range list {
-		if f.Enabled {
+		on[f.Key] = f.Enabled
+	}
+	isOn := func(k string) bool { return on[k] }
+	out := make([]flagState, 0, len(list))
+	for _, f := range list {
+		out = append(out, flagState{Flag: f, requires: graph[f.Key], missing: flags.MissingPrerequisites(graph, f.Key, isOn)})
+	}
+	return out
+}
+
+func printFlags(out io.Writer, list []flags.Flag) error {
+	states := effectiveStates(list)
+	tw := tabwriter.NewWriter(out, 0, 0, tablePadding, ' ', 0)
+	fmt.Fprintln(tw, "KEY\tSTATE\tREQUIRES\tDESCRIPTION")
+	on := 0
+	for _, f := range states {
+		if f.state() == state(true) {
 			on++
 		}
-		fmt.Fprintf(tw, "%s\t%s\t%s\n", f.Key, state(f.Enabled), f.Description)
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", f.Key, f.state(), requiresColumn(f.requires), f.Description)
 	}
 	if err := tw.Flush(); err != nil {
 		return fmt.Errorf("write table: %w", err)
 	}
 	fmt.Fprintf(out, "%d of %d modules ON\n", on, len(list))
+	printHidden(out, states)
 	return nil
+}
+
+// printHidden says, for each hidden flag, which prerequisites to turn ON.
+func printHidden(out io.Writer, states []flagState) {
+	for _, f := range states {
+		if f.state() != stateHidden {
+			continue
+		}
+		verb := "is"
+		if len(f.missing) > 1 {
+			verb = "are"
+		}
+		fmt.Fprintf(out, "%s is hidden until %s %s ON\n", f.Key, strings.Join(f.missing, ", "), verb)
+	}
+}
+
+func requiresColumn(requires []string) string {
+	if len(requires) == 0 {
+		return "-"
+	}
+	return strings.Join(requires, ",")
 }
 
 func printPresets(out io.Writer, presets []flags.Preset) {

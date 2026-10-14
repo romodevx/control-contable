@@ -68,8 +68,10 @@ func newContractEnv(t *testing.T, db health.Pinger) contractEnv {
 		env: config.EnvDev, keys: testTaxpayerKeys(), pool: app, limits: auth.limits, logger: logger,
 	})
 	require.NoError(t, err)
+	taxEngine, err := newTaxEngineModule(taxEngineWiring{pool: app, limits: auth.limits, logger: logger})
+	require.NoError(t, err)
 	return contractEnv{
-		handler: newHandlerWithModules(t, contractConfig(), db, svc, auth, taxpayers, logger),
+		handler: newHandlerWithAll(t, contractConfig(), db, svc, auth, taxpayers, taxEngine, logger),
 		store:   flagsgorm.NewStore(owner),
 		flags:   svc,
 		logs:    logs,
@@ -119,10 +121,11 @@ func TestContract_platformOperations(t *testing.T) {
 
 			rec = c.ServeOp(t, contracttest.Op("listEnabledFlags"), env.handler, env.request(http.MethodGet, "/v1/flags"))
 			require.Equal(t, http.StatusOK, rec.Code)
-			assert.Equal(t, enabledKeys(f), decodeEnabled(t, rec), "GET /v1/flags lists exactly the ON modules")
+			assert.ElementsMatch(t, flags.EffectiveModules(flags.Prerequisites(), enabledKeys(f)), decodeEnabled(t, rec),
+				"GET /v1/flags lists exactly the effectively ON modules")
 
 			for _, op := range ops {
-				assertGate(t, c, env, op, f[op.module])
+				assertGate(t, c, env, op, effectiveOn(f, op.module))
 			}
 		})
 	}
@@ -145,6 +148,13 @@ func assertGate(t *testing.T, c *contracttest.Contract, env contractEnv, op gate
 	if !flagtest.CheckHidden(t, rec) {
 		t.Errorf("%s %s (%s, %s on=%v) is not hidden", op.method, op.path, op.id, op.module, on)
 	}
+}
+
+// effectiveOn is whether module's routes are served under f: its flag and
+// every prerequisite's are ON (flags.Prerequisites, MODULE-tax-engine §7).
+func effectiveOn(f flagtest.Static, module string) bool {
+	isOn := func(m string) bool { return f[m] }
+	return f[module] && len(flags.MissingPrerequisites(flags.Prerequisites(), module, isOn)) == 0
 }
 
 // An unreachable database degrades /healthz without breaking its contract,
