@@ -32,7 +32,14 @@ input:
       income: {cash: "30000.00", isr_withheld: {by_moral: "1000.00"}}
       expenses: {deductible_paid: "10000.00"}
     - month: 3
-      income: {cash: "60000.00", iva_collected: "4800.00", iva_withheld: {by_moral: "1066.67"}}
+      income:
+        cash: "60000.00"
+        by_rate:
+          rate_16: {base: "30000.00", iva: "4800.00"}
+          rate_8: {base: "10000.00", iva: "800.00"}
+          rate_0_base: "15000.00"
+          exempt_base: "5000.00"
+        iva_withheld: {by_moral: "1066.67"}
       expenses: {deductible_paid: "20000.00", creditable_iva_paid: "1600.00"}
   tax_inputs:
     - {key: prior_provisional_payments, kind: money_monthly, month: 1, money: "2000.00"}
@@ -96,7 +103,12 @@ func TestDecodeReadsEveryField(t *testing.T) {
 	assert.Equal(t, cents(t, "1000.00"), jan.Income.ISRWithheld.ByMoral)
 	assert.Equal(t, cents(t, "10000.00"), jan.Expenses.DeductiblePaid)
 	assert.Equal(t, domain.MonthSums{}, in.Sums.Month(time.February))
-	assert.Equal(t, cents(t, "4800.00"), mar.Income.IVACollected)
+	assert.Equal(t, domain.IVAByRate{
+		Rate16:     domain.RateSums{Base: cents(t, "30000.00"), IVA: cents(t, "4800.00")},
+		Rate8:      domain.RateSums{Base: cents(t, "10000.00"), IVA: cents(t, "800.00")},
+		Rate0Base:  cents(t, "15000.00"),
+		ExemptBase: cents(t, "5000.00"),
+	}, mar.Income.ByRate)
 	assert.Equal(t, cents(t, "1066.67"), mar.Income.IVAWithheld.ByMoral)
 	assert.Equal(t, cents(t, "1600.00"), mar.Expenses.CreditableIVAPaid)
 
@@ -173,6 +185,7 @@ func TestDecodeRejectsWhatAHandAuthorCouldGetWrong(t *testing.T) {
 	}{
 		{"no provenance header", "# golden: hand-authored", "# generated", golden.ErrNotHandAuthored},
 		{"unknown field", "pending_strategy: true", "pending_strategy: true\nupdate: true", golden.ErrSyntax},
+		{"retired iva_collected (M5-09 splits IVA by rate)", `cash: "60000.00"`, "cash: \"60000.00\"\n        iva_collected: \"4800.00\"", golden.ErrSyntax},
 		{"unquoted amount", `isr: "150.96"`, `isr: 150.96`, golden.ErrInexactAmount},
 		{"one decimal", `isr: "150.96"`, `isr: "150.9"`, golden.ErrInexactAmount},
 		{"three decimals", `isr: "150.96"`, `isr: "150.960"`, golden.ErrInexactAmount},
