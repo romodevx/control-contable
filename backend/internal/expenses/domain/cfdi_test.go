@@ -33,6 +33,11 @@ func TestParseCFDIUUID(t *testing.T) {
 			}
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got.String())
+			assert.False(t, got.IsZero())
 		})
 	}
+}
+
+func TestCFDIUUIDZero(t *testing.T) {
+	assert.True(t, domain.CFDIUUID{}.IsZero())
 }

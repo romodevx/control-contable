@@ -127,8 +127,8 @@ func TestAssessDeductible(t *testing.T) {
 			wantSource: domain.SourceCategoryDefault, wantWarnings: []domain.Warning{noCFDI},
 		},
 		{
-			name: "US-E1: switch on for restaurants", payer: pf612, rule: restaurantesBusiness,
-			edit:           func(d *domain.Draft) { d.Category, d.Deductible = "restaurantes", domain.ClaimDeductible },
+			name: "US-E1: switch on for restaurants", payer: pf612, rule: diningBusiness,
+			edit:           func(d *domain.Draft) { d.Category, d.Deductible = diningCategory, domain.ClaimDeductible },
 			wantDeductible: true, wantSource: domain.SourceUser, wantCreditable: 80_00,
 		},
 		{

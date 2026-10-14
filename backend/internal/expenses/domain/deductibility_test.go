@@ -8,6 +8,9 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/expenses/domain"
 )
 
+// diningCategory is the Spanish catalog code of MODULE-expenses §2.2 row 11.
+const diningCategory domain.CategoryCode = "restaurantes" //nolint:misspell // a Spanish catalog code, not English prose
+
 // Category rule rows of MODULE-expenses §2.2, as category_regime_rules
 // serves them for one (category, regime, person type).
 func rule(category domain.CategoryCode, d domain.Deductibility, defaultDeductible bool) domain.CategoryRule {
@@ -15,19 +18,17 @@ func rule(category domain.CategoryCode, d domain.Deductibility, defaultDeductibl
 }
 
 var (
-	softwareBusiness     = rule("software", domain.Deductible, true)
-	restaurantesBusiness = rule("restaurantes", domain.PartiallyDeductible, false)
-	personalBusiness     = rule("gastos_personales", domain.NotDeductible, false)
-	mantenimiento606     = rule("mantenimiento", domain.Deductible, true)
-	predial606           = rule(domain.CategoryPredial, domain.Deductible, true)
-	softwareRESICOPF     = rule("software", domain.ISRNotApplicable, false)
-	papeleriaBusiness    = rule("papeleria", domain.Deductible, true)
-	fuelBusiness         = domain.CategoryRule{
+	softwareBusiness  = rule("software", domain.Deductible, true)
+	diningBusiness    = rule(diningCategory, domain.PartiallyDeductible, false)
+	personalBusiness  = rule("gastos_personales", domain.NotDeductible, false)
+	mantenimiento606  = rule("mantenimiento", domain.Deductible, true)
+	predial606        = rule(domain.CategoryPredial, domain.Deductible, true)
+	softwareRESICOPF  = rule("software", domain.ISRNotApplicable, false)
+	papeleriaBusiness = rule("papeleria", domain.Deductible, true)
+	fuelBusiness      = domain.CategoryRule{
 		Category: "combustible", Deductibility: domain.Deductible, DefaultDeductible: true, ElectronicPaymentOnly: true,
 	}
-	feesBusiness   = rule(domain.CategoryProfessionalFees, domain.Deductible, true)
-	rentBusiness   = rule(domain.CategoryRent, domain.Deductible, true)
-	freightBusiness = rule(domain.CategoryFreight, domain.Deductible, true)
+	feesBusiness = rule(domain.CategoryProfessionalFees, domain.Deductible, true)
 )
 
 func payer(person domain.PersonType, regime domain.RegimeCode, opts domain.Options) domain.Payer {
@@ -56,7 +57,7 @@ func TestResolveDeductibility(t *testing.T) {
 		want  domain.Hint
 	}{
 		{"612 software: the catalog row", softwareBusiness, pf612, domain.Hint{Deductibility: domain.Deductible, DefaultDeductible: true}},
-		{"612 restaurants: partial, conservative default", restaurantesBusiness, pf612, domain.Hint{Deductibility: domain.PartiallyDeductible}},
+		{"612 restaurants: partial, conservative default", diningBusiness, pf612, domain.Hint{Deductibility: domain.PartiallyDeductible}},
 		{"US-E1: RESICO PF, any category", softwareRESICOPF, pf626, notApplicable},
 		{"RESICO PF even if a row said deductible", softwareBusiness, pf626, notApplicable},
 		{"US-E1b: RESICO PM keeps the business row", softwareBusiness, pm626, domain.Hint{Deductibility: domain.Deductible, DefaultDeductible: true}},
