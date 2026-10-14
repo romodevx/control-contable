@@ -13,8 +13,11 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/taxparams"
 )
 
-// Synthetic tariffs only: the real 2026 tables arrive with M5-04 and are
-// checked row by row by the golden suite (M5-07), never here.
+// Synthetic tariffs only. The real 2026 tables are checked against their
+// publication in params (embedded_2026_test.go) and for continuity in
+// params/tariff_continuity_2026_test.go: their fees are NOT chained to the
+// centavo, so the exact-edge properties below hold for synthetic tables
+// only, built with the chained-fee rule.
 
 // marginalTable is a three-row marginal tariff shaped like art. 96: each
 // fixed fee is the previous fee plus (upper - lower) × rate, rounded.
@@ -286,8 +289,9 @@ func TestBracketIsTotalOverPositiveAmounts(t *testing.T) {
 
 // TestTaxIsMonotonic: more income never means less tax. On the centavo grid
 // the tariffs are published on, the rounded tax never decreases, even across
-// a row edge (the fee rule makes the edge exact to the centavo); inside one
-// row the exact tax never decreases either.
+// a row edge (the chained-fee rule of randomTable makes the edge exact to the
+// centavo; published tariffs drift by a few centavos, see the package
+// comment above); inside one row the exact tax never decreases either.
 func TestTaxIsMonotonic(t *testing.T) {
 	rng := newRand()
 	for range propertyTables {

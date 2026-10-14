@@ -54,6 +54,13 @@ func exceeds(amount money.Exact, limit money.Cents) bool {
 // plus its rate over the excess of the lower bound for a marginal tariff
 // (LISR 96, 106), or the bracket's rate over the whole amount for a flat one
 // (RESICO PF, LISR 113-E). Unrounded: the caller rounds once, at the end.
+//
+// The published fixed fee is applied literally. Real tariffs are continuous
+// only up to a few centavos: SAT does not chain the published fees to the
+// centavo, so crossing some row edges the tax goes down by up to n centavos
+// on the n-th accumulated table of LISR 106 (Anexo 8 2026, November edge
+// 5->6: 0.10). That is DOF data; the engine neither corrects nor smooths it
+// (params/tariff_continuity_2026_test.go pins and bounds it).
 func (t Table) Tax(amount money.Exact) (money.Exact, error) {
 	b, err := t.Bracket(amount)
 	if err != nil {
