@@ -330,6 +330,16 @@ void main() {
     });
   });
 
+  // M1-16 FU2: the store's exception (which may echo the token) must not
+  // escape to the sign-out that asked.
+  test('readRefreshToken is null when the store cannot be read', () async {
+    store
+      ..token = 'refresh-1'
+      ..readError = PlatformException(code: 'read', message: 'refresh-1');
+
+    expect(await session.readRefreshToken(), isNull);
+  });
+
   group('a failed delete at sign-out (PR #42 follow-up c)', () {
     setUp(
       () => session.start(tokenPair(access: 'access-1', refresh: 'refresh-1')),
