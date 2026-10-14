@@ -194,6 +194,29 @@ void main() {
       expect(sent.invoicedOn, '2026-10-13');
       expect(sent.collectedOn, isNull);
     });
+
+    // M5-30 (M5-29 QA, PM-601-IVA-01): a 601 income counts for IVA only
+    // once collected (LIVA 1-B); its collection date lives in "Más
+    // detalles" and must reach the request.
+    testWidgets('an accrual regime (601) sends the collection date given '
+        'under "Más detalles"', (tester) async {
+      await pumpForm(
+        tester,
+        taxpayer: taxpayer(
+          personType: PersonType.moral,
+          regimes: [heldRegime('601')],
+        ),
+      );
+      await typeInto(tester, _invoicedOn, '05102026');
+      await typeInto(tester, _amount, '1000');
+      await tapText(tester, 'Más detalles');
+      await typeInto(tester, '$_collectedOn (opcional)', '12102026');
+      await _save(tester);
+
+      final sent = harness.incomes.creates.single;
+      expect(sent.invoicedOn, '2026-10-05');
+      expect(sent.collectedOn, '2026-10-12');
+    });
   });
 
   group('M3-09 save', () {

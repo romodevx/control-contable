@@ -352,12 +352,22 @@ Task groups:
 | M5-25 | Flutter estimate screen: per-regime + totals, legend, disclaimers, `incomplete` CTA | frontend-sr | M5-01, M2-10 | 4.5 | — | `feature/tax-engine-mobile-estimate` | — | [ ] |
 | M5-26 | Flutter breakdown screen: lines, legal basis citations, rounding adjustment | frontend-sr | M5-25 | 4 | — | `feature/tax-engine-mobile-breakdown` | — | [ ] |
 | M5-27 | Flutter tax-inputs form per regime (target of the `incomplete` CTA) | frontend-sr | M5-25 | 4 | — | `feature/tax-engine-mobile-inputs` | — | [ ] |
-| M5-28 | Register flag `module_tax_engine` | backend-sr | M5-23, M5-24, M5-26, M5-27 | 0.5 | — | `feature/tax-engine-flag` | — | [ ] |
-| M5-29 | QA M5: UI figures equal golden figures for each full regime, informational regimes, incomplete flow, flag OFF | qa-sr | M5-28 | 4 | — | `feature/tax-engine-qa-fixes` | OB6 | [ ] |
-| M5-30 | Tech-lead gate M5 (OCP, purity, no floats, determinism) | tech-lead | M5-29 | 3 | — | (PR review) | — | [ ] |
+| M5-28 | Register flag `module_tax_engine` | backend-sr | M5-23, M5-24, M5-26, M5-27 | 0.5 | — | `feature/tax-engine-flag` | — | [x] |
+| M5-29 | QA M5: UI figures equal golden figures for each full regime, informational regimes, incomplete flow, flag OFF | qa-sr | M5-28 | 4 | — | `feature/tax-engine-qa-fixes` | OB6 | [x] |
+| M5-30 | Tech-lead gate M5 (OCP, purity, no floats, determinism) | tech-lead | M5-29 | 3 | — | (PR review) | — | [[x] |
 | M5-31 | Security gate M5 | security | M5-29 | 2 | — | (PR review) | — | [ ] |
 | M5-32 | Docs M5: engine guide, add-a-regime guide, Dec–Jan parameter update runbook | doc-writer | M5-30, M5-31 | 2.5 | — | `feature/tax-engine-docs` | — | [ ] |
 | M5-33 | CPA sign-off of golden suite; un-skip ⚠️ cases or record decisions | qa-sr | M5-29 | 2 | — | `feature/tax-engine-cpa-signoff` | OB5 | [ ] |
+
+#### M5 follow-ups
+
+Deferred by the M5 gates; none blocks M5's merge. Source: [M5-30 tech-lead gate](../reviews/M5-30-tech-lead-gate.md#follow-ups).
+
+| ID | Item | Owner | Target |
+|---|---|---|---|
+| FU1 | Accrual regimes (601): show *Fecha de cobro* outside the collapsed *Más detalles* (it decides the IVA), with M5-29 D6's hint for invoiced-but-uncollected income | pm + frontend-sr | M3 hardening |
+| FU2 | CPA-REVIEW: PM-601-IVA-01's withheld-to-remit is IVA only; the app adds the LISR 106 ISR withheld from PF fees | qa-sr | M5-33 |
+| FU3 | Add-a-regime guide lists every touch point, including both `EngineVersion` pins | doc-writer | M5-32 |
 
 ### M6 — Dashboard (`module_dashboard`)
 

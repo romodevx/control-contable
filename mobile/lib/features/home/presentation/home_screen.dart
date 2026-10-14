@@ -38,14 +38,21 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              l10n.homePlaceholder,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            const FlagGate(
+            // The placeholder talks about the estimate, so it is part of
+            // the tax engine slice: hidden with it (MODULE-tax-engine §7).
+            FlagGate(
               module: AppModule.taxEngine,
-              child: OpenEstimateButton(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    l10n.homePlaceholder,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  const OpenEstimateButton(),
+                ],
+              ),
             ),
             const FlagGate(
               module: AppModule.taxpayers,
