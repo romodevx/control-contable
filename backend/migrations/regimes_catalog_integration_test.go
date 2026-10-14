@@ -145,7 +145,7 @@ func TestRegimes_OptionDefsFollowADR0002(t *testing.T) {
 	assert.Equal(t, map[string][]string{
 		"601/moral":  {"iva_fully_taxable", "iva_border_region"},
 		"603/moral":  {"iva_fully_taxable", "iva_border_region"},
-		"606/fisica": {"deduction_mode", "iva_border_region"},
+		"606/fisica": {"deduction_mode", "iva_border_region", "pays_quarterly"},
 		"612/fisica": {"iva_fully_taxable", "iva_border_region"},
 		"621/fisica": {"rif_year", "iva_border_region"},
 		"622/moral":  {"iva_fully_taxable", "iva_border_region"},
@@ -157,6 +157,9 @@ func TestRegimes_OptionDefsFollowADR0002(t *testing.T) {
 	defs := map[string]string{
 		"606/fisica deduction_mode": `{"key": "deduction_mode", "label": "Tipo de deducción", "type": "enum",
 			"allowed_values": ["blind_35", "actual"], "default": "blind_35", "required": true}`,
+		"606/fisica pays_quarterly": `{"key": "pays_quarterly",
+			"label": "Hago pagos provisionales trimestrales (art. 116 LISR)", "type": "boolean",
+			"default": false, "required": false}`,
 		"625/fisica activities": `{"key": "activities", "label": "Actividades a través de plataformas",
 			"type": "multi_enum", "allowed_values": ["transport_delivery", "lodging", "goods_services"],
 			"default": null, "required": true}`,
@@ -592,4 +595,25 @@ func TestRegimeCompatibilityReconcile_DownRestoresTheSeedAndUpRefusesAgain(t *te
 	for _, pair := range reconciledRefusals {
 		assert.Equal(t, "denied", rules[pair], "up: %s", pair)
 	}
+}
+
+// rent606QuarterlyVersion is the goose version of
+// 20261014160000_regime_606_pays_quarterly.sql (M5-12).
+const rent606QuarterlyVersion = 20261014160000
+
+// Down removes the 606 quarterly option and leaves the rest of the row; up adds it
+// back once, so a stored 606 regime keeps validating against the catalog.
+func TestRegime606PaysQuarterly_DownRemovesItAndUpAddsItOnce(t *testing.T) {
+	owner := pgtest.NewDatabase(t).Connect(t, pgtest.RoleOwner)
+	p, err := migrations.NewProvider(owner)
+	require.NoError(t, err)
+	keys606 := func() []string { return jsonKeys(t, owner, "option_defs")["606/fisica"] }
+
+	_, err = p.DownTo(t.Context(), rent606QuarterlyVersion-1)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"deduction_mode", "iva_border_region"}, keys606())
+
+	require.NoError(t, migrations.Up(t.Context(), owner))
+	require.NoError(t, migrations.Up(t.Context(), owner), "a second up is a no-op")
+	assert.Equal(t, []string{"deduction_mode", "iva_border_region", "pays_quarterly"}, keys606())
 }

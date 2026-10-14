@@ -3,7 +3,6 @@
 # 1,076.00 - 2,000 = -924.00: pay 0.00, credit balance (saldo a favor) 924.00.
 id: PF-606-ISR-02
 source: research:PF-606-ISR-02
-pending_strategy: true # M5-12
 input:
   regime: "606"
   person_type: fisica
