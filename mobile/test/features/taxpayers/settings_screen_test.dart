@@ -291,6 +291,22 @@ void main() {
       expect(find.text(_archivedBanner), findsNothing);
     });
 
+    // Gate M2-13: the archive succeeded; a failed list reload afterwards
+    // must not turn it into an error (a retry would then answer 4xx).
+    testWidgets('a failed reload after the archive still reports success', (
+      tester,
+    ) async {
+      await pumpSettings(tester);
+      harness.repository.failNext['list'] = const ApiUnreachable();
+
+      await tapText(tester, 'Archivar');
+
+      expect(harness.repository.calls, contains('archive:$_id'));
+      expect(find.text('Archivaste a «Ana».'), findsOneWidget);
+      expect(find.textContaining('No hay conexión'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('Undo still works after leaving the settings', (tester) async {
       await pumpSettings(tester);
       await tapText(tester, 'Archivar');
