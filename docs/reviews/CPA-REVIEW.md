@@ -30,7 +30,7 @@ catalog migration `backend/migrations/20261013180000_regimes_catalog.sql` (CAT).
 - [ ] Monthly IVA netting across regimes for a PF holding 612 + 606 (one consolidated IVA result). ADR §1
 - [ ] 626 PM credits the art. 54 interest withholding like 601 (input `interest_withholding` added to 626 PM). R §B.2.2 step 4, CAT `regimes` 626 PM
 - [ ] RIF (621) IVA paid by bimester like its ISR (old LIVA 5-E), not monthly; research A.3 lists 621 under the monthly rule. MODULE-tax-engine OQ-T7
-- [ ] IVA a PM withheld from suppliers becomes creditable when paid (LIVA 5 fr. IV): the engine does not credit it automatically. MODULE-tax-engine OQ-T6
+- [ ] IVA a PM withheld **from its suppliers** (recorded on the expense) becomes creditable for that PM when paid (LIVA 5 fr. IV): v1 sends it to withholdings to remit only and does not credit it. Confirm timing and whether to credit. Distinct from IVA withheld **from** the taxpayer and recorded on the income, which v1 subtracts from the monthly IVA (LIVA 1-A, 5-D). MODULE-tax-engine OQ-T6
 
 ## Regime catalog (`regimes`, needs_cpa_review = true)
 

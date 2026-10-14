@@ -132,7 +132,7 @@ Strategies are keyed by `(regime_code, person_type)` (ADR-0002 §1). Coverage at
 | **625 PF** | full with `definitive_option` and `prior_year_income ≤ $300,000`; else **partial** | Definitive: platform withholding is the ISR (no further ISR); directly collected income self-paid at the activity rate (2.1 / 4 / 2.5 %, 20 % without RFC). Partial: withholdings shown as provisional credits; ISR not estimated (explained: "calcula tu pago en 612 o RESICO y acredita estas retenciones") | definitive: platform-withheld IVA excluded as definitive; directly collected IVA at 8 % of collections ⚠️ (18-M); partial: general rules | A.2.6, A.3 |
 | **601 PM** | full | **YTD accrual**: `coeficiente_utilidad` × Σ income by `invoiced_on` Jan..n − PTU (`ptu_paid` ÷ 8 × (n − 4) for n ≥ 5, capped at the profit) − `prior_year_losses` → × 30 % − Σ prior provisional payments − `interest_withholding`. First fiscal year: ISR 0, status `complete` | monthly (cash, LIVA 1-B) | B.2.1, B.3 |
 | **626 PM** | full | **YTD cash**: Σ cash income − Σ deductible expenses paid (+ `ytd_before_app_*`) − `ptu_paid` − `prior_year_losses` → × 30 % − Σ prior provisional payments − `interest_withholding` ⚠️ | monthly | B.2.2 |
-| **621 PF** | partial ⚠️ | **Bimonthly** (only on the bimester's second month): income − deductions for the bimester → bimonthly table (= February accumulated table) → − reduction for `rif_year` ⚠️. Odd month: no figure, explanation "El RIF se paga por bimestre; consulta {mes par}" | bimonthly ⚠️ (default, OQ-T7) | A.2.7 |
+| **621 PF** | partial ⚠️ | **Bimonthly** (only on the bimester's second month): income − deductions for the bimester → bimonthly table (= February accumulated table) → − reduction for `rif_year` ⚠️. Odd month: no figure, explanation "El RIF se paga por bimestre; consulta {mes par}" | bimonthly ⚠️ (OQ-T7, DECIDED) | A.2.7 |
 | **622 PM** | partial | Not estimated (AGAPES exemption and reduction deferred); explanation | monthly | B.1 |
 | **603 PM** | partial | Not estimated (no provisional ISR; explanation) | monthly | B.1 |
 | 605, 607, 608, 610 (PF/PM), 611, 614, 615, 616, 620, 623, 624 | informational | Explanation only (text from M5-19) | — | A.1, B.1, Part C |
@@ -203,8 +203,14 @@ The breakdown header shows the parameter set (fiscal year, version) and the engi
   OQ-T5). The breakdown says so in an `info` line when the previous month was `in_favor`.
 - `iva_fully_taxable = false`: creditable IVA is taken in full (no proportion, LIVA 5 fr. V / 5-B
   deferred) and `iva_mixed_activity` is added.
-- IVA the taxpayer withheld from suppliers is **not** credited automatically (conservative default,
-  OQ-T6); it goes to `withholdings_to_remit` only.
+- Two different withholdings, never confused (OQ-T6, DECIDED):
+  - **IVA withheld *from* the taxpayer** by a persona moral or platform, as **recorded on the income**
+    (`iva_withheld_cents`), **reduces** the taxpayer's monthly IVA (`withheld_from_taxpayer`; IVA a
+    cargo = trasladado cobrado − acreditable − retenido; LIVA 1-A, 5-D; research PF-612-IVA-01). It is
+    never inferred from a rate or a counterparty type: only the recorded amount counts.
+  - **IVA the taxpayer (a PM) withheld *from its suppliers*** (recorded on the expense) goes to
+    `withholdings_to_remit` only. It is **not** also credited as acreditable IVA (LIVA 5 fr. IV) in v1
+    (conservative, matches PM-601-IVA-01; CPA item).
 
 ### 2.7 Money and rounding
 
@@ -270,7 +276,7 @@ Runtime topics (append-only enum, each mapped to a CPA-REVIEW line):
 | `cross_regime_iva_netting` | ≥ 2 regimes contribute IVA (§2.6) | Monthly IVA netting across regimes |
 | `resico_pm_interest_withholding` | 626 PM with `interest_withholding > 0` | 626 PM credits art. 54 withholding |
 
-Not escalated to the strong warning (to avoid warning fatigue; default, OQ-T8): expense-category
+Not escalated to the strong warning (to avoid warning fatigue; OQ-T8, DECIDED): expense-category
 deductibility (covered by `deductibility_claimed`), the CFF 12 due-date move (a note under the date),
 the coeficiente's decimals (used as given).
 
@@ -504,17 +510,17 @@ ADR-0002 is amended in the same PR for items 2 and 6 (status `partial`, monthly 
 - Fiscal years before 2026 (no transcribed params); foreign currency.
 - A combined "all my taxpayers" estimate (PRD Q14).
 
-## 11. Open questions (defaults in force until answered)
+## 11. Decisions (coordinator, 2026-10-13) — all DECIDED
 
-| # | Question | Default |
+| # | Question | Decision |
 |---|---|---|
-| OQ-T1 | Prior provisional payments: one YTD value per fiscal year (ADR-0002 as written) or one value per month? A single value is only right for one period | **Per month** (`money_monthly`); the app's own monthly estimate is offered as prefill, never assumed |
-| OQ-T2 | Cross-regime IVA netting for one taxpayer (612 + 606, etc.) (CPA) | **Consolidate per taxpayer**, strong ⚠️ when ≥ 2 regimes contribute |
-| OQ-T3 | Whole-peso rounding (CFF 20) (CPA) | **Off**; `payable_rounded_cents = amount_cents` |
-| OQ-T4 | p95 target for estimate/breakdown | **< 300 ms** at 3 regimes × 10,000 records/year |
-| OQ-T5 | Carry the previous month's IVA saldo a favor forward? | **No** in v1; an `info` line mentions it |
-| OQ-T6 | Credit IVA the PM withheld from suppliers (LIVA 5 fr. IV) automatically? (CPA) | **No** (conservative, matches PM-601-IVA-01) |
-| OQ-T7 | 621 IVA bimonthly like its ISR? (CPA) | **Bimonthly**, ⚠️ `rif_bimonthly_iva` |
-| OQ-T8 | Which ⚠️ items raise the strong banner | Only §2.9 topics; deductibility, due-date move and coeficiente decimals stay info |
-| OQ-T9 | Periods before 2026 | **422 `parameters_unavailable`**; transcribe 2025 only if users ask |
-| OQ-T10 | Totals ISR: offset one regime's favor against another's payable? | **No**; favor balances stay per regime |
+| OQ-T1 | Prior provisional payments: one YTD value per fiscal year (ADR-0002 as written) or one value per month? A single value is only right for one period | **DECIDED:** **Per month** (`money_monthly`); the app's own monthly estimate is offered as prefill, never assumed |
+| OQ-T2 | Cross-regime IVA netting for one taxpayer (612 + 606, etc.) (CPA) | **DECIDED:** **Consolidate per taxpayer**, strong ⚠️ when ≥ 2 regimes contribute |
+| OQ-T3 | Whole-peso rounding (CFF 20) (CPA) | **DECIDED:** **Off**; `payable_rounded_cents = amount_cents` |
+| OQ-T4 | p95 target for estimate/breakdown | **DECIDED:** **< 300 ms** at 3 regimes × 10,000 records/year |
+| OQ-T5 | Carry the previous month's IVA saldo a favor forward? | **DECIDED:** **No** in v1; an `info` line mentions it |
+| OQ-T6 | (a) Does IVA withheld **from** the taxpayer, recorded on the income, reduce its monthly IVA? (b) Does IVA a PM withheld **from its suppliers** also become creditable for that PM (LIVA 5 fr. IV)? | **DECIDED: (a) Yes**, only the recorded `iva_withheld_cents`, never inferred. **(b) No** in v1: to-remit only (CPA item) |
+| OQ-T7 | 621 IVA bimonthly like its ISR? (CPA) | **DECIDED:** **Bimonthly**, ⚠️ `rif_bimonthly_iva` |
+| OQ-T8 | Which ⚠️ items raise the strong banner | **DECIDED:** Only §2.9 topics; deductibility, due-date move and coeficiente decimals stay info |
+| OQ-T9 | Periods before 2026 | **DECIDED:** **422 `parameters_unavailable`**; transcribe 2025 only if users ask |
+| OQ-T10 | Totals ISR: offset one regime's favor against another's payable? | **DECIDED:** **No**; favor balances stay per regime |
