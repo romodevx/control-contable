@@ -76,6 +76,18 @@ func Load(t testing.TB) *Contract {
 	return loaded
 }
 
+// openMapPaths are the body paths of the contract's open maps, whose keys
+// are data, not contract: strict mode reports every key of an
+// additionalProperties schema as undeclared, so their keys are exempt. Base
+// validation still checks each value against the map's schema.
+//
+//   - RegimeOptions (TaxpayerRegime.options): keys are the catalog's
+//     regimes.option_defs keys.
+var openMapPaths = []string{
+	"$.body.options.*",
+	"$.body.**.options.*",
+}
+
 func load() (*Contract, error) {
 	path, err := findSpec()
 	if err != nil {
@@ -96,6 +108,7 @@ func load() (*Contract, error) {
 	opts := []config.Option{
 		config.WithFormatAssertions(),
 		config.WithStrictMode(), // headers: see transportHeaders
+		config.WithStrictIgnorePaths(openMapPaths...),
 	}
 	v, errs := validator.NewValidator(doc, opts...)
 	if len(errs) > 0 {

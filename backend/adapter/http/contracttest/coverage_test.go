@@ -17,18 +17,6 @@ import (
 // operation to the contract means adding it here (with its task) or covering
 // it in the same PR.
 var pendingOperations = map[string]string{
-	// M2 module_taxpayers
-	"listRegimes":           "M2-07",
-	"listTaxpayers":         "M2-07",
-	"createTaxpayer":        "M2-07",
-	"getTaxpayer":           "M2-07",
-	"updateTaxpayer":        "M2-07",
-	"deleteTaxpayer":        "M2-07",
-	"archiveTaxpayer":       "M2-07",
-	"unarchiveTaxpayer":     "M2-07",
-	"addTaxpayerRegime":     "M2-07",
-	"updateTaxpayerRegime":  "M2-07",
-	"archiveTaxpayerRegime": "M2-07",
 	// M3 module_incomes
 	"listIncomes":   "M3-06",
 	"createIncome":  "M3-06",
