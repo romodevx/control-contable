@@ -188,5 +188,5 @@ func tooManyRequests(ctx context.Context, wait time.Duration) gen.TooManyRequest
 	body.Error.Message = msgTooManyAttempts
 	body.Error.RequestId = requestid.From(ctx)
 	seconds := max(int((wait+time.Second-1)/time.Second), 1)
-	return gen.TooManyRequestsJSONResponse{Body: body, Headers: gen.TooManyRequestsResponseHeaders{RetryAfter: &seconds}}
+	return gen.TooManyRequestsJSONResponse{Body: body, Headers: gen.TooManyRequestsResponseHeaders{RetryAfter: seconds}}
 }
