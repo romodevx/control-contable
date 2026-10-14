@@ -26,11 +26,14 @@ type latestIncomes interface {
 // later of both records' periods.
 //
 // It runs on the taxpayers unit of work in ctx, as its user, after the
-// regime end path locked the taxpayer_regimes row FOR NO KEY UPDATE. Every
-// record write path checks its window through CheckRegime in its own unit
-// of work, which takes FOR SHARE on that row: a write that checked first
-// commits before the lookup runs (READ COMMITTED: the lookup's statement
-// sees it), and one that checks later waits and reads the ended window.
+// regime end path locked the taxpayers row and then the taxpayer_regimes
+// row FOR NO KEY UPDATE. Every record write path checks its window through
+// CheckRegime in its own unit of work, which takes FOR SHARE on the same
+// two rows in the same order, so the taxpayers row is the lock a racing
+// write meets first (the regime row is a second barrier; PR #97 review
+// FU-1): a write that checked first commits before the lookup runs (READ
+// COMMITTED: the lookup's statement sees it), and one that checks later
+// waits and reads the ended window.
 type regimeRecords struct {
 	expenses latestExpenses
 	incomes  latestIncomes
