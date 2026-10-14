@@ -1,6 +1,6 @@
 // Package middleware holds the process-wide HTTP middlewares that run before
-// routing (docs/architecture/c4.md): request id → recover → rate limit →
-// client network (into the context) → request deadline.
+// routing (docs/architecture/c4.md): request id → no-store → recover → rate
+// limit → client network (into the context) → request deadline.
 // Per-operation concerns (flag gate, authentication, contract validation) run
 // after routing, in adapter/http/router, because they depend on the matched
 // operation.

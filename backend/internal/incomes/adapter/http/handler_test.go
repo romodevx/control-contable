@@ -28,7 +28,6 @@ const (
 	taxpayerID = "0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80"
 	incomeID   = "0199d4a3-1a2b-7d3c-8e4f-5a6b7c8d9e01"
 	folio      = "6F3B2C1D-8A4E-4B7F-9C2D-1E5A7B9C3D4F"
-	noStore    = "no-store"
 )
 
 var stamp = time.Date(2026, time.September, 10, 17, 0, 0, 0, time.UTC)
@@ -168,7 +167,6 @@ func TestCreateIncome_mapsTheRequestAndAnswers201(t *testing.T) {
 	}, fake.create, "raw text: the use case normalizes the folio and the description")
 	created, ok := resp.(gen.CreateIncome201JSONResponse)
 	require.True(t, ok, "%T", resp)
-	assert.Equal(t, noStore, created.Headers.CacheControl)
 	body := encode(t, created.Body)
 	assert.Equal(t, map[string]any{
 		"id": incomeID, "taxpayer_id": taxpayerID, "regime_code": "612", "counterparty_type": "persona_moral",
@@ -203,7 +201,6 @@ func TestCreateIncome_idempotentRetryAnswers200AndOptionalsAbsent(t *testing.T) 
 	}}, fake.create, "no id: the server generates one; absent fields are zero")
 	retried, ok := resp.(gen.CreateIncome200JSONResponse)
 	require.True(t, ok, "%T", resp)
-	assert.Equal(t, noStore, retried.Headers.CacheControl)
 	body := encode(t, retried.Body)
 	assert.Nil(t, body["invoiced_on"])
 	assert.Nil(t, body["cfdi_uuid"])
@@ -321,9 +318,8 @@ func TestUpdateIncome_mergePatch(t *testing.T) {
 	assert.Equal(t, domain.ActivityLodging, *p.PlatformActivity)
 	assert.Equal(t, "", *p.CFDIUUID, "null clears the folio")
 	assert.Equal(t, "Nuevo", *p.Description)
-	updated, ok := resp.(gen.UpdateIncome200JSONResponse)
+	_, ok := resp.(gen.UpdateIncome200JSONResponse)
 	require.True(t, ok, "%T", resp)
-	assert.Equal(t, noStore, updated.Headers.CacheControl)
 }
 
 // Absent keys stay unchanged; JSON null decodes to a clear.
@@ -351,7 +347,6 @@ func TestGetIncome_readsTheCallersIncome(t *testing.T) {
 	assert.Equal(t, []string{callerID, taxpayerID, incomeID}, []string{fake.userID, fake.taxpayerID, fake.incomeID})
 	got, ok := resp.(gen.GetIncome200JSONResponse)
 	require.True(t, ok, "%T", resp)
-	assert.Equal(t, noStore, got.Headers.CacheControl)
 	assert.Equal(t, []any{}, encode(t, got.Body)["warnings"], "reads carry no warnings")
 }
 
@@ -371,7 +366,6 @@ func TestDeleteAndRestoreIncome(t *testing.T) {
 	require.NoError(t, err)
 	ok200, ok := restored.(gen.RestoreIncome200JSONResponse)
 	require.True(t, ok, "%T", restored)
-	assert.Equal(t, noStore, ok200.Headers.CacheControl)
 	require.Len(t, ok200.Body.Warnings, 1)
 	assert.Equal(t, gen.WarningCodeProvisionalParameters, ok200.Body.Warnings[0].Code)
 	assert.Equal(t, "collected_on", ok200.Body.Warnings[0].Field)
@@ -395,7 +389,6 @@ func TestListIncomes_mapsTheQueryAndThePage(t *testing.T) {
 	assert.Equal(t, usecase.ListQuery{TaxpayerID: taxpayerID, Period: "2026-09", Regime: "612", Cursor: "abc", Limit: 20}, fake.list)
 	page, ok := resp.(gen.ListIncomes200JSONResponse)
 	require.True(t, ok, "%T", resp)
-	assert.Equal(t, noStore, page.Headers.CacheControl)
 	require.Len(t, page.Body.Items, 1)
 	require.NotNil(t, page.Body.NextCursor)
 	assert.Equal(t, "next", *page.Body.NextCursor)
@@ -438,7 +431,6 @@ func TestGetIncomeDefaults(t *testing.T) {
 	}, fake.defaults)
 	got, ok := resp.(gen.GetIncomeDefaults200JSONResponse)
 	require.True(t, ok, "%T", resp)
-	assert.Equal(t, noStore, got.Headers.CacheControl)
 	assert.Equal(t, map[string]any{
 		"iva_rates_allowed": []any{"rate_16", "rate_0", "exempt"}, "suggested_iva_rate": "rate_16",
 		"isr_withholding_allowed": true, "isr_withholding_rate": "0.04",

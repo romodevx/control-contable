@@ -44,8 +44,7 @@ func (h *SessionHandler) RefreshSession(ctx context.Context, req gen.RefreshSess
 		return nil, toAppError(err)
 	}
 	return gen.RefreshSession200JSONResponse{
-		Body:    toTokenPair(tokens),
-		Headers: gen.RefreshSession200ResponseHeaders{CacheControl: noStore},
+		Body: toTokenPair(tokens),
 	}, nil
 }
 

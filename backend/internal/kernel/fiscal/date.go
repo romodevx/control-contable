@@ -19,8 +19,11 @@ type Date struct {
 	day   int
 }
 
-// MinRecordDate is the earliest business date of a record (MODULE-incomes
-// §2.2): the catalog of parameters starts in 2022.
+// MinRecordDate is the structural lower bound of a record date (MODULE-incomes
+// §2.2), the same 2022-01-01 the database CHECKs hold as a backstop. It is
+// not the served floor: a record date also needs a tax parameter set, and the
+// first one is 2026, so the use cases answer out_of_range before 2026-01-01
+// (contract 0.7.0, PR #97 FU-2).
 var MinRecordDate = Date{year: 2022, month: time.January, day: 1}
 
 // ParseDate parses "YYYY-MM-DD" exactly into a real calendar day (year

@@ -81,7 +81,7 @@ func (h *AccountHandler) GetMe(ctx context.Context, _ gen.GetMeRequestObject) (g
 	if err != nil {
 		return nil, toAppError(err)
 	}
-	return gen.GetMe200JSONResponse{Body: toUser(account), Headers: gen.GetMe200ResponseHeaders{CacheControl: noStore}}, nil
+	return gen.GetMe200JSONResponse{Body: toUser(account)}, nil
 }
 
 // UpdateMe implements gen.StrictServerInterface (PATCH /v1/me). The contract
@@ -103,7 +103,7 @@ func (h *AccountHandler) UpdateMe(ctx context.Context, req gen.UpdateMeRequestOb
 	if err != nil {
 		return nil, toAppError(err)
 	}
-	return gen.UpdateMe200JSONResponse{Body: toUser(account), Headers: gen.UpdateMe200ResponseHeaders{CacheControl: noStore}}, nil
+	return gen.UpdateMe200JSONResponse{Body: toUser(account)}, nil
 }
 
 // DeleteMe implements gen.StrictServerInterface (DELETE /v1/me): 204 once the

@@ -10,10 +10,6 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/taxengine/usecase"
 )
 
-// noStore is the Cache-Control of every M5 response (S-4,
-// components.headers.NoStore).
-const noStore = "no-store"
-
 // taxInputValueJSON is contract TaxInputValue as responses send it: every
 // field, null when not set. The generated gen.TaxInputValue omits nil
 // fields (omitempty), which the contract allows on requests only.
@@ -44,34 +40,33 @@ func (r taxInputsResponse) VisitGetTaxInputsResponse(w http.ResponseWriter) erro
 // VisitPutTaxInputsResponse implements gen.PutTaxInputsResponseObject.
 func (r taxInputsResponse) VisitPutTaxInputsResponse(w http.ResponseWriter) error { return r.write(w) }
 
-func (r taxInputsResponse) write(w http.ResponseWriter) error { return writeNoStore(w, r.body) }
+func (r taxInputsResponse) write(w http.ResponseWriter) error { return writeOK(w, r.body) }
 
-// noStoreResponse is a 200 JSON body with Cache-Control: no-store (S-4):
-// the estimate and the breakdown.
-type noStoreResponse struct {
+// okResponse is the 200 JSON body of the estimate and the breakdown. Its
+// Cache-Control: no-store (S-4) is written by middleware.NoStore, as on
+// every response.
+type okResponse struct {
 	body any
 }
 
 // VisitGetTaxpayerEstimateResponse implements gen.GetTaxpayerEstimateResponseObject.
-func (r noStoreResponse) VisitGetTaxpayerEstimateResponse(w http.ResponseWriter) error {
-	return writeNoStore(w, r.body)
+func (r okResponse) VisitGetTaxpayerEstimateResponse(w http.ResponseWriter) error {
+	return writeOK(w, r.body)
 }
 
 // VisitGetEstimateBreakdownResponse implements gen.GetEstimateBreakdownResponseObject.
-func (r noStoreResponse) VisitGetEstimateBreakdownResponse(w http.ResponseWriter) error {
-	return writeNoStore(w, r.body)
+func (r okResponse) VisitGetEstimateBreakdownResponse(w http.ResponseWriter) error {
+	return writeOK(w, r.body)
 }
 
-// writeNoStore mirrors the generated 200 writers: encode first, so a
-// failure leaves the response unwritten for the strict handler's error
-// path.
-func writeNoStore(w http.ResponseWriter, body any) error {
+// writeOK mirrors the generated 200 writers: encode first, so a failure
+// leaves the response unwritten for the strict handler's error path.
+func writeOK(w http.ResponseWriter, body any) error {
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(body); err != nil {
 		return err
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", noStore)
 	w.WriteHeader(http.StatusOK)
 	_, err := buf.WriteTo(w)
 	return err

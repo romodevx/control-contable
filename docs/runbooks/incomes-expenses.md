@@ -37,7 +37,7 @@ user has several, and, if possible, the `request_id` of the failed call.
 
    | API answer | Meaning | Next step |
    |---|---|---|
-   | `400`, `out_of_range` on a date | The date is in the future or **before 2026-01-01** (no tax parameters earlier; the message still says 2022, see the [PLAN follow-ups](../project-specs/PLAN-control-contable.md#m3m4-follow-ups)) | The app cannot record that year. Not a bug |
+   | `400`, `out_of_range` on a date | The date is in the future or **before 2026-01-01** (no tax parameters earlier) | The app cannot record that year. Not a bug |
    | `400`, `required` on `collected_on` / `invoiced_on` | The regime's basis needs that date (cash: collected, accrual: invoiced) | Step 4 shows the basis |
    | `400`, `unknown_category` / `has_cfdi_mismatch` | Expense category not in the catalog; a folio with "sin factura" | The user fixes the form |
    | `402 entitlement_required`, `incomes_remaining` / `expenses_remaining` | Trial cap spent (5 + 5 per user, all taxpayers). Deleting does not free a slot | Step 4 shows the counters. Expected; M7 subscriptions |
@@ -243,14 +243,6 @@ verified by whoever flips the flag and recorded in the deploy PR. Source:
       booking dates, category catalog, cash rule, creditable IVA) before the estimate built on
       these records is shown as anything but provisional. A product precondition, not a
       security one.
-
-Known and accepted while enabled (deferred, see the
-[PLAN M3/M4 follow-ups](../project-specs/PLAN-control-contable.md#m3m4-follow-ups)):
-
-- Error responses have no `Cache-Control: no-store` yet (G-1). Error bodies carry codes and
-  fixed messages only.
-- The contract and the date message say 2022; the server refuses dates before 2026-01-01
-  (#97 FU-2).
 
 Then flip both with the environment's flag tooling (`cmd/flags` as `cc_owner`, credentials from
 Secret Manager): `enable module_incomes`, `enable module_expenses`. Check that `GET /v1/flags`

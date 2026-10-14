@@ -86,6 +86,10 @@ const (
 	rateLimitBody = `{"error":{"code":"rate_limited","message":"Too many requests. Try again later.","request_id":"req_1"}}`
 )
 
+// noStore is the Cache-Control every response of the contract declares
+// (components.headers.NoStore).
+var noStore = []string{"Cache-Control", "no-store"}
+
 func getHealth() *http.Request { return httptest.NewRequest(http.MethodGet, "/healthz", nil) }
 
 func TestLoad_readsTheRepositoryContract(t *testing.T) {
@@ -101,7 +105,7 @@ func TestServe_conformingResponsePasses(t *testing.T) {
 	c := contracttest.Load(t)
 
 	spy := run(t, func(tb testing.TB) {
-		rec := c.ServeOp(tb, contracttest.Op("getHealth"), respond(http.StatusOK, jsonType, healthOK), getHealth())
+		rec := c.ServeOp(tb, contracttest.Op("getHealth"), respond(http.StatusOK, jsonType, healthOK, noStore...), getHealth())
 		assert.Equal(t, http.StatusOK, rec.Code, "the recorder is handed back for the test's own assertions")
 		assert.JSONEq(t, healthOK, rec.Body.String())
 	})
@@ -180,7 +184,7 @@ func TestServe_reportsEveryKindOfViolation(t *testing.T) {
 func TestServe_edgeHeadersAreNotOperationContract(t *testing.T) {
 	c := contracttest.Load(t)
 	h := respond(http.StatusTooManyRequests, jsonType, rateLimitBody,
-		"Retry-After", "1", "X-Content-Type-Options", "nosniff", "X-Request-Id", "req_1")
+		"Retry-After", "1", "X-Content-Type-Options", "nosniff", "X-Request-Id", "req_1", "Cache-Control", "no-store")
 
 	spy := run(t, func(tb testing.TB) { c.Serve(tb, h, getHealth()) })
 
@@ -205,7 +209,6 @@ func TestServe_undeclaredSemanticHeadersFail(t *testing.T) {
 		name, header, value string
 	}{
 		{name: "custom header on a response declaring none", header: "X-Debug-Trace", value: "on"},
-		{name: "caching", header: "Cache-Control", value: "max-age=3600"},
 		{name: "validator", header: "Etag", value: `"v1"`},
 		{name: "cache key", header: "Vary", value: "Cookie"},
 		{name: "freshness", header: "Last-Modified", value: "Mon, 12 Oct 2026 00:00:00 GMT"},
@@ -214,12 +217,35 @@ func TestServe_undeclaredSemanticHeadersFail(t *testing.T) {
 	c := contracttest.Load(t)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := respond(http.StatusOK, jsonType, healthOK, tt.header, tt.value)
+			h := respond(http.StatusOK, jsonType, healthOK, append([]string{tt.header, tt.value}, noStore...)...)
 
 			spy := run(t, func(tb testing.TB) { c.Serve(tb, h, getHealth()) })
 
 			require.NotEmptyf(t, spy.errors, "an undeclared %s must fail", tt.header)
 			assert.Contains(t, spy.report(), tt.header)
+		})
+	}
+}
+
+// Every response declares Cache-Control: no-store (components.headers.NoStore),
+// so a cacheable value, or none, fails.
+func TestServe_cacheableResponseFails(t *testing.T) {
+	tests := []struct {
+		name    string
+		headers []string
+		want    string
+	}{
+		{name: "cacheable", headers: []string{"Cache-Control", "max-age=3600"}, want: "value must be 'no-store'"},
+		{name: "missing", want: "Required header 'Cache-Control' is missing"},
+	}
+	c := contracttest.Load(t)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := respond(http.StatusOK, jsonType, healthOK, tt.headers...)
+
+			spy := run(t, func(tb testing.TB) { c.Serve(tb, h, getHealth()) })
+
+			assert.Contains(t, spy.report(), tt.want)
 		})
 	}
 }
@@ -262,7 +288,9 @@ func TestServe_hiddenModuleEnvelopeConforms(t *testing.T) {
 	c := contracttest.Load(t)
 	req := httptest.NewRequest(http.MethodGet, "/v1/me", nil)
 
-	spy := run(t, func(tb testing.TB) { c.Serve(tb, respond(http.StatusNotFound, jsonType, notFoundBody), req) })
+	spy := run(t, func(tb testing.TB) {
+		c.Serve(tb, respond(http.StatusNotFound, jsonType, notFoundBody, noStore...), req)
+	})
 
 	assert.Empty(t, spy.report())
 }

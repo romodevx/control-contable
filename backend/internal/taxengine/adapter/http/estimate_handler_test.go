@@ -149,7 +149,6 @@ func TestGetTaxpayerEstimate_isTheContractExample(t *testing.T) {
 	rec := httptest.NewRecorder()
 	require.NoError(t, resp.VisitGetTaxpayerEstimateResponse(rec))
 	assert.Equal(t, 200, rec.Code)
-	assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
 	assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
 	assert.JSONEq(t, contractExample(t, "getTaxpayerEstimate", "crossRegimeIva"), rec.Body.String())
 	assert.Equal(t, []string{"estimate|" + callerID + "|" + taxpayerID + "|2026-03"}, uc.calls)
@@ -298,7 +297,6 @@ func TestGetEstimateBreakdown_isTheContractExample(t *testing.T) {
 	rec := httptest.NewRecorder()
 	require.NoError(t, resp.VisitGetEstimateBreakdownResponse(rec))
 	assert.Equal(t, 200, rec.Code)
-	assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
 	var got, want map[string]json.RawMessage
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
 	require.NoError(t, json.Unmarshal([]byte(contractExample(t, "getEstimateBreakdown", "crossRegimeIva612")), &want))

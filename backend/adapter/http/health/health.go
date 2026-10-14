@@ -59,15 +59,15 @@ func (h *Handler) GetHealth(ctx context.Context, _ gen.GetHealthRequestObject) (
 	defer cancel()
 	if err := h.db.Ping(ctx); err != nil {
 		h.logger.WarnContext(ctx, "readiness: database ping failed", slog.Any("error", err))
-		return gen.GetHealth200JSONResponse{
+		return gen.GetHealth200JSONResponse{Body: gen.HealthStatus{
 			Status:   gen.HealthStatusStatusDegraded,
 			Database: gen.HealthStatusDatabaseUnreachable,
 			Version:  h.version,
-		}, nil
+		}}, nil
 	}
-	return gen.GetHealth200JSONResponse{
+	return gen.GetHealth200JSONResponse{Body: gen.HealthStatus{
 		Status:   gen.HealthStatusStatusOk,
 		Database: gen.HealthStatusDatabaseOk,
 		Version:  h.version,
-	}, nil
+	}}, nil
 }

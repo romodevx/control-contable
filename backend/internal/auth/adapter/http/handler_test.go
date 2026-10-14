@@ -77,7 +77,7 @@ func loginBody() *gen.LoginJSONRequestBody {
 	return &gen.LoginJSONRequestBody{Email: "Ana.Gomez@example.mx", Password: "made-up sample phrase"}
 }
 
-func TestLogin_answers200WithANoStoreSession(t *testing.T) {
+func TestLogin_answers200WithASession(t *testing.T) {
 	userID, err := domain.ParseUserID(userIDText)
 	require.NoError(t, err)
 	email, err := domain.NewEmail("ana.gomez@example.mx")
@@ -99,7 +99,6 @@ func TestLogin_answers200WithANoStoreSession(t *testing.T) {
 		login.got, "normalization is the use case's job; the client network keys its failure budget")
 	got, ok := resp.(gen.Login200JSONResponse)
 	require.True(t, ok)
-	assert.Equal(t, "no-store", got.Headers.CacheControl)
 	assert.Equal(t, userIDText, got.Body.User.Id.String())
 	assert.Equal(t, openapi_types.Email("ana.gomez@example.mx"), got.Body.User.Email)
 	assert.Nil(t, got.Body.User.Name)
@@ -145,7 +144,7 @@ func TestRegister_answersTheGeneric202(t *testing.T) {
 	resp, err := newHandler(reg, &fakeVerify{}, &fakeResend{}).Register(t.Context(), gen.RegisterRequestObject{Body: registerBody()})
 
 	require.NoError(t, err)
-	assert.Equal(t, gen.Register202JSONResponse{Status: gen.VerificationSentStatusVerificationSent}, resp)
+	assert.Equal(t, gen.Register202JSONResponse{Body: gen.VerificationSent{Status: gen.VerificationSentStatusVerificationSent}}, resp)
 	assert.Equal(t, "ana.gomez@example.mx", reg.got.Email)
 	assert.Equal(t, []domain.DocumentVersion{
 		{Kind: domain.DocumentPrivacyIntegral, Version: "v1"},
@@ -203,7 +202,7 @@ func TestResendVerification(t *testing.T) {
 	})
 
 	require.NoError(t, err)
-	assert.Equal(t, gen.ResendVerification202JSONResponse{Status: gen.VerificationSentStatusVerificationSent}, resp)
+	assert.Equal(t, gen.ResendVerification202JSONResponse{Body: gen.VerificationSent{Status: gen.VerificationSentStatusVerificationSent}}, resp)
 	assert.Equal(t, "ana.gomez@example.mx", resend.email)
 }
 
@@ -246,7 +245,6 @@ func TestVerifyEmail_answers201WithTheSession(t *testing.T) {
 	assert.Equal(t, "Ana Gómez", *verify.got.Name)
 	got, ok := resp.(gen.VerifyEmail201JSONResponse)
 	require.True(t, ok)
-	assert.Equal(t, "no-store", got.Headers.CacheControl)
 	assert.Equal(t, userIDText, got.Body.User.Id.String())
 	assert.Equal(t, openapi_types.Email("ana.gomez@example.mx"), got.Body.User.Email)
 	require.NotNil(t, got.Body.User.Name)
