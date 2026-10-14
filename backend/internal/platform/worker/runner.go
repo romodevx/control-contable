@@ -137,8 +137,12 @@ func (r *Runner) campaign(ctx context.Context) error {
 	}
 }
 
+// elect runs one election. Shutdown does not cancel it, only electionTimeout
+// bounds it: a lock check aborted mid-query would cost the elector its session,
+// so Run's Resign would find nothing to unlock and the lock would outlive Run
+// until PostgreSQL noticed the closed session, delaying the standby's takeover.
 func (r *Runner) elect(ctx context.Context) {
-	tryCtx, cancel := context.WithTimeout(ctx, r.electionTimeout)
+	tryCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), r.electionTimeout)
 	defer cancel()
 	leading, err := r.elector.TryLead(tryCtx)
 	if err != nil {
