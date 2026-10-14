@@ -125,6 +125,10 @@ func (notBuilt) CreateIncome(context.Context, gen.CreateIncomeRequestObject) (ge
 	return nil, errNotBuilt
 }
 
+func (notBuilt) GetIncomeDefaults(context.Context, gen.GetIncomeDefaultsRequestObject) (gen.GetIncomeDefaultsResponseObject, error) {
+	return nil, errNotBuilt
+}
+
 func (notBuilt) DeleteIncome(context.Context, gen.DeleteIncomeRequestObject) (gen.DeleteIncomeResponseObject, error) {
 	return nil, errNotBuilt
 }

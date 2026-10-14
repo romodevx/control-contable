@@ -10,14 +10,26 @@ _ExpenseCategory _$ExpenseCategoryFromJson(Map<String, dynamic> json) =>
     _ExpenseCategory(
       code: json['code'] as String,
       name: json['name'] as String,
-      hints: (json['hints'] as List<dynamic>)
-          .map((e) => DeductibilityHint.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      deductibility: Deductibility.fromJson(json['deductibility'] as String),
+      defaultDeductible: json['default_deductible'] as bool,
+      note: json['note'] as String?,
+      legalBasis: json['legal_basis'] as String?,
     );
 
 Map<String, dynamic> _$ExpenseCategoryToJson(_ExpenseCategory instance) =>
     <String, dynamic>{
       'code': instance.code,
       'name': instance.name,
-      'hints': instance.hints,
+      'deductibility': _$DeductibilityEnumMap[instance.deductibility]!,
+      'default_deductible': instance.defaultDeductible,
+      'note': instance.note,
+      'legal_basis': instance.legalBasis,
     };
+
+const _$DeductibilityEnumMap = {
+  Deductibility.deductible: 'deductible',
+  Deductibility.partiallyDeductible: 'partially_deductible',
+  Deductibility.notDeductible: 'not_deductible',
+  Deductibility.isrNotApplicable: 'isr_not_applicable',
+  Deductibility.$unknown: r'$unknown',
+};

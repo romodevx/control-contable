@@ -9,7 +9,6 @@ part of 'income_update.dart';
 _IncomeUpdate _$IncomeUpdateFromJson(Map<String, dynamic> json) =>
     _IncomeUpdate(
       regimeCode: json['regime_code'] as String?,
-      description: json['description'] as String?,
       counterpartyType: json['counterparty_type'] == null
           ? null
           : CounterpartyType.fromJson(json['counterparty_type'] as String),
@@ -26,13 +25,17 @@ _IncomeUpdate _$IncomeUpdateFromJson(Map<String, dynamic> json) =>
       collectedOn: json['collected_on'] == null
           ? null
           : DateTime.parse(json['collected_on'] as String),
+      platformActivity: json['platform_activity'] == null
+          ? null
+          : PlatformActivity.fromJson(json['platform_activity'] as String),
+      cfdiUuid: json['cfdi_uuid'] as String?,
+      description: json['description'] as String?,
     );
 
 Map<String, dynamic> _$IncomeUpdateToJson(
   _IncomeUpdate instance,
 ) => <String, dynamic>{
   'regime_code': ?instance.regimeCode,
-  'description': ?instance.description,
   'counterparty_type': ?_$CounterpartyTypeEnumMap[instance.counterpartyType],
   'amount_cents': ?instance.amountCents,
   'iva_rate': ?_$IvaRateEnumMap[instance.ivaRate],
@@ -41,6 +44,9 @@ Map<String, dynamic> _$IncomeUpdateToJson(
   'iva_withheld_cents': ?instance.ivaWithheldCents,
   'invoiced_on': ?instance.invoicedOn?.toIso8601String(),
   'collected_on': ?instance.collectedOn?.toIso8601String(),
+  'platform_activity': ?_$PlatformActivityEnumMap[instance.platformActivity],
+  'cfdi_uuid': ?instance.cfdiUuid,
+  'description': ?instance.description,
 };
 
 const _$CounterpartyTypeEnumMap = {
@@ -57,4 +63,11 @@ const _$IvaRateEnumMap = {
   IvaRate.rate0: 'rate_0',
   IvaRate.exempt: 'exempt',
   IvaRate.$unknown: r'$unknown',
+};
+
+const _$PlatformActivityEnumMap = {
+  PlatformActivity.transportDelivery: 'transport_delivery',
+  PlatformActivity.lodging: 'lodging',
+  PlatformActivity.goodsServices: 'goods_services',
+  PlatformActivity.$unknown: r'$unknown',
 };

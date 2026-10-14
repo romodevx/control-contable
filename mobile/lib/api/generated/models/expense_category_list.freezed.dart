@@ -16,7 +16,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ExpenseCategoryList {
 
- List<ExpenseCategory> get items; Legend get legend;
+ List<ExpenseCategory> get items;@JsonKey(name: 'iva_rates_allowed') List<IvaRate> get ivaRatesAllowed;/// A cash payment above this total (with IVA) is not deductible (LISR 27-III; dated parameter data, ⚠️ CPA).
+@JsonKey(name: 'cash_payment_limit_cents') NonNegativeCents get cashPaymentLimitCents; Legend get legend;
 /// Create a copy of ExpenseCategoryList
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +31,20 @@ $ExpenseCategoryListCopyWith<ExpenseCategoryList> get copyWith => _$ExpenseCateg
 @override
 bool operator ==(Object other) {
   final _this = this as ExpenseCategoryList;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ExpenseCategoryList&&const DeepCollectionEquality().equals(other.items, _this.items)&&(identical(other.legend, _this.legend) || other.legend == _this.legend));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ExpenseCategoryList&&const DeepCollectionEquality().equals(other.items, _this.items)&&const DeepCollectionEquality().equals(other.ivaRatesAllowed, _this.ivaRatesAllowed)&&(identical(other.cashPaymentLimitCents, _this.cashPaymentLimitCents) || other.cashPaymentLimitCents == _this.cashPaymentLimitCents)&&(identical(other.legend, _this.legend) || other.legend == _this.legend));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as ExpenseCategoryList;
-  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.items),_this.legend);
+  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.items),const DeepCollectionEquality().hash(_this.ivaRatesAllowed),_this.cashPaymentLimitCents,_this.legend);
 }
 
 @override
 String toString() {
   final _this = this as ExpenseCategoryList;
-  return 'ExpenseCategoryList(items: ${_this.items}, legend: ${_this.legend})';
+  return 'ExpenseCategoryList(items: ${_this.items}, ivaRatesAllowed: ${_this.ivaRatesAllowed}, cashPaymentLimitCents: ${_this.cashPaymentLimitCents}, legend: ${_this.legend})';
 }
 
 
@@ -54,7 +55,7 @@ abstract mixin class $ExpenseCategoryListCopyWith<$Res>  {
   factory $ExpenseCategoryListCopyWith(ExpenseCategoryList value, $Res Function(ExpenseCategoryList) _then) = _$ExpenseCategoryListCopyWithImpl;
 @useResult
 $Res call({
- List<ExpenseCategory> items, Legend legend
+ List<ExpenseCategory> items,@JsonKey(name: 'iva_rates_allowed') List<IvaRate> ivaRatesAllowed,@JsonKey(name: 'cash_payment_limit_cents') NonNegativeCents cashPaymentLimitCents, Legend legend
 });
 
 
@@ -71,10 +72,12 @@ class _$ExpenseCategoryListCopyWithImpl<$Res>
 
 /// Create a copy of ExpenseCategoryList
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? items = null,Object? legend = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? items = null,Object? ivaRatesAllowed = null,Object? cashPaymentLimitCents = null,Object? legend = null,}) {
   return _then(ExpenseCategoryList(
 items: null == items ? _self.items : items // ignore: cast_nullable_to_non_nullable
-as List<ExpenseCategory>,legend: null == legend ? _self.legend : legend // ignore: cast_nullable_to_non_nullable
+as List<ExpenseCategory>,ivaRatesAllowed: null == ivaRatesAllowed ? _self.ivaRatesAllowed : ivaRatesAllowed // ignore: cast_nullable_to_non_nullable
+as List<IvaRate>,cashPaymentLimitCents: null == cashPaymentLimitCents ? _self.cashPaymentLimitCents : cashPaymentLimitCents // ignore: cast_nullable_to_non_nullable
+as NonNegativeCents,legend: null == legend ? _self.legend : legend // ignore: cast_nullable_to_non_nullable
 as Legend,
   ));
 }
@@ -160,10 +163,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<ExpenseCategory> items,  Legend legend)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<ExpenseCategory> items, @JsonKey(name: 'iva_rates_allowed')  List<IvaRate> ivaRatesAllowed, @JsonKey(name: 'cash_payment_limit_cents')  NonNegativeCents cashPaymentLimitCents,  Legend legend)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ExpenseCategoryList() when $default != null:
-return $default(_that.items,_that.legend);case _:
+return $default(_that.items,_that.ivaRatesAllowed,_that.cashPaymentLimitCents,_that.legend);case _:
   return orElse();
 
 }
@@ -181,10 +184,10 @@ return $default(_that.items,_that.legend);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<ExpenseCategory> items,  Legend legend)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<ExpenseCategory> items, @JsonKey(name: 'iva_rates_allowed')  List<IvaRate> ivaRatesAllowed, @JsonKey(name: 'cash_payment_limit_cents')  NonNegativeCents cashPaymentLimitCents,  Legend legend)  $default,) {final _that = this;
 switch (_that) {
 case _ExpenseCategoryList():
-return $default(_that.items,_that.legend);case _:
+return $default(_that.items,_that.ivaRatesAllowed,_that.cashPaymentLimitCents,_that.legend);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -201,10 +204,10 @@ return $default(_that.items,_that.legend);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<ExpenseCategory> items,  Legend legend)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<ExpenseCategory> items, @JsonKey(name: 'iva_rates_allowed')  List<IvaRate> ivaRatesAllowed, @JsonKey(name: 'cash_payment_limit_cents')  NonNegativeCents cashPaymentLimitCents,  Legend legend)?  $default,) {final _that = this;
 switch (_that) {
 case _ExpenseCategoryList() when $default != null:
-return $default(_that.items,_that.legend);case _:
+return $default(_that.items,_that.ivaRatesAllowed,_that.cashPaymentLimitCents,_that.legend);case _:
   return null;
 
 }
@@ -216,7 +219,7 @@ return $default(_that.items,_that.legend);case _:
 @JsonSerializable()
 
 class _ExpenseCategoryList implements ExpenseCategoryList {
-  const _ExpenseCategoryList({required  List<ExpenseCategory> items, required this.legend}): _items = items;
+  const _ExpenseCategoryList({required  List<ExpenseCategory> items, @JsonKey(name: 'iva_rates_allowed') required  List<IvaRate> ivaRatesAllowed, @JsonKey(name: 'cash_payment_limit_cents') required this.cashPaymentLimitCents, required this.legend}): _items = items,_ivaRatesAllowed = ivaRatesAllowed;
   factory _ExpenseCategoryList.fromJson(Map<String, dynamic> json) => _$ExpenseCategoryListFromJson(json);
 
  final  List<ExpenseCategory> _items;
@@ -226,6 +229,15 @@ class _ExpenseCategoryList implements ExpenseCategoryList {
   return EqualUnmodifiableListView(_items);
 }
 
+ final  List<IvaRate> _ivaRatesAllowed;
+@override@JsonKey(name: 'iva_rates_allowed') List<IvaRate> get ivaRatesAllowed {
+  if (_ivaRatesAllowed is EqualUnmodifiableListView) return _ivaRatesAllowed;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_ivaRatesAllowed);
+}
+
+/// A cash payment above this total (with IVA) is not deductible (LISR 27-III; dated parameter data, ⚠️ CPA).
+@override@JsonKey(name: 'cash_payment_limit_cents') final  NonNegativeCents cashPaymentLimitCents;
 @override final  Legend legend;
 
 /// Create a copy of ExpenseCategoryList
@@ -241,18 +253,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _ExpenseCategoryList&&const DeepCollectionEquality().equals(other.items, _items)&&(identical(other.legend, legend) || other.legend == legend));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _ExpenseCategoryList&&const DeepCollectionEquality().equals(other.items, _items)&&const DeepCollectionEquality().equals(other.ivaRatesAllowed, _ivaRatesAllowed)&&(identical(other.cashPaymentLimitCents, cashPaymentLimitCents) || other.cashPaymentLimitCents == cashPaymentLimitCents)&&(identical(other.legend, legend) || other.legend == legend));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_items),legend);
+    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_items),const DeepCollectionEquality().hash(_ivaRatesAllowed),cashPaymentLimitCents,legend);
 }
 
 @override
 String toString() {
-    return 'ExpenseCategoryList(items: $items, legend: $legend)';
+    return 'ExpenseCategoryList(items: $items, ivaRatesAllowed: $ivaRatesAllowed, cashPaymentLimitCents: $cashPaymentLimitCents, legend: $legend)';
 }
 
 
@@ -263,7 +275,7 @@ abstract mixin class _$ExpenseCategoryListCopyWith<$Res> implements $ExpenseCate
   factory _$ExpenseCategoryListCopyWith(_ExpenseCategoryList value, $Res Function(_ExpenseCategoryList) _then) = __$ExpenseCategoryListCopyWithImpl;
 @override @useResult
 $Res call({
- List<ExpenseCategory> items, Legend legend
+ List<ExpenseCategory> items,@JsonKey(name: 'iva_rates_allowed') List<IvaRate> ivaRatesAllowed,@JsonKey(name: 'cash_payment_limit_cents') NonNegativeCents cashPaymentLimitCents, Legend legend
 });
 
 
@@ -280,10 +292,12 @@ class __$ExpenseCategoryListCopyWithImpl<$Res>
 
 /// Create a copy of ExpenseCategoryList
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? items = null,Object? legend = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? items = null,Object? ivaRatesAllowed = null,Object? cashPaymentLimitCents = null,Object? legend = null,}) {
   return _then(_ExpenseCategoryList(
 items: null == items ? _self._items : items // ignore: cast_nullable_to_non_nullable
-as List<ExpenseCategory>,legend: null == legend ? _self.legend : legend // ignore: cast_nullable_to_non_nullable
+as List<ExpenseCategory>,ivaRatesAllowed: null == ivaRatesAllowed ? _self._ivaRatesAllowed : ivaRatesAllowed // ignore: cast_nullable_to_non_nullable
+as List<IvaRate>,cashPaymentLimitCents: null == cashPaymentLimitCents ? _self.cashPaymentLimitCents : cashPaymentLimitCents // ignore: cast_nullable_to_non_nullable
+as NonNegativeCents,legend: null == legend ? _self.legend : legend // ignore: cast_nullable_to_non_nullable
 as Legend,
   ));
 }

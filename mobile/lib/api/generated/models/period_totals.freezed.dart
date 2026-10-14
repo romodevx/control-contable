@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$PeriodTotals {
 
- int get count;@JsonKey(name: 'amount_cents') NonNegativeCents get amountCents;@JsonKey(name: 'iva_cents') NonNegativeCents get ivaCents;@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') NonNegativeCents? get isrWithheldCents;@JsonKey(includeIfNull: false, name: 'iva_withheld_cents') NonNegativeCents? get ivaWithheldCents;
+ int get count;@JsonKey(name: 'amount_cents') NonNegativeCents get amountCents;@JsonKey(name: 'iva_cents') NonNegativeCents get ivaCents;@JsonKey(name: 'isr_withheld_cents') NonNegativeCents get isrWithheldCents;@JsonKey(name: 'iva_withheld_cents') NonNegativeCents get ivaWithheldCents;
 /// Create a copy of PeriodTotals
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -54,7 +54,7 @@ abstract mixin class $PeriodTotalsCopyWith<$Res>  {
   factory $PeriodTotalsCopyWith(PeriodTotals value, $Res Function(PeriodTotals) _then) = _$PeriodTotalsCopyWithImpl;
 @useResult
 $Res call({
- int count,@JsonKey(name: 'amount_cents') NonNegativeCents amountCents,@JsonKey(name: 'iva_cents') NonNegativeCents ivaCents,@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') NonNegativeCents? isrWithheldCents,@JsonKey(includeIfNull: false, name: 'iva_withheld_cents') NonNegativeCents? ivaWithheldCents
+ int count,@JsonKey(name: 'amount_cents') NonNegativeCents amountCents,@JsonKey(name: 'iva_cents') NonNegativeCents ivaCents,@JsonKey(name: 'isr_withheld_cents') NonNegativeCents isrWithheldCents,@JsonKey(name: 'iva_withheld_cents') NonNegativeCents ivaWithheldCents
 });
 
 
@@ -71,14 +71,14 @@ class _$PeriodTotalsCopyWithImpl<$Res>
 
 /// Create a copy of PeriodTotals
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? count = null,Object? amountCents = null,Object? ivaCents = null,Object? isrWithheldCents = freezed,Object? ivaWithheldCents = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? count = null,Object? amountCents = null,Object? ivaCents = null,Object? isrWithheldCents = null,Object? ivaWithheldCents = null,}) {
   return _then(PeriodTotals(
 count: null == count ? _self.count : count // ignore: cast_nullable_to_non_nullable
 as int,amountCents: null == amountCents ? _self.amountCents : amountCents // ignore: cast_nullable_to_non_nullable
 as NonNegativeCents,ivaCents: null == ivaCents ? _self.ivaCents : ivaCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents,isrWithheldCents: freezed == isrWithheldCents ? _self.isrWithheldCents : isrWithheldCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents?,ivaWithheldCents: freezed == ivaWithheldCents ? _self.ivaWithheldCents : ivaWithheldCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents?,
+as NonNegativeCents,isrWithheldCents: null == isrWithheldCents ? _self.isrWithheldCents : isrWithheldCents // ignore: cast_nullable_to_non_nullable
+as NonNegativeCents,ivaWithheldCents: null == ivaWithheldCents ? _self.ivaWithheldCents : ivaWithheldCents // ignore: cast_nullable_to_non_nullable
+as NonNegativeCents,
   ));
 }
 
@@ -163,7 +163,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int count, @JsonKey(name: 'amount_cents')  NonNegativeCents amountCents, @JsonKey(name: 'iva_cents')  NonNegativeCents ivaCents, @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')  NonNegativeCents? isrWithheldCents, @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')  NonNegativeCents? ivaWithheldCents)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int count, @JsonKey(name: 'amount_cents')  NonNegativeCents amountCents, @JsonKey(name: 'iva_cents')  NonNegativeCents ivaCents, @JsonKey(name: 'isr_withheld_cents')  NonNegativeCents isrWithheldCents, @JsonKey(name: 'iva_withheld_cents')  NonNegativeCents ivaWithheldCents)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PeriodTotals() when $default != null:
 return $default(_that.count,_that.amountCents,_that.ivaCents,_that.isrWithheldCents,_that.ivaWithheldCents);case _:
@@ -184,7 +184,7 @@ return $default(_that.count,_that.amountCents,_that.ivaCents,_that.isrWithheldCe
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int count, @JsonKey(name: 'amount_cents')  NonNegativeCents amountCents, @JsonKey(name: 'iva_cents')  NonNegativeCents ivaCents, @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')  NonNegativeCents? isrWithheldCents, @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')  NonNegativeCents? ivaWithheldCents)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int count, @JsonKey(name: 'amount_cents')  NonNegativeCents amountCents, @JsonKey(name: 'iva_cents')  NonNegativeCents ivaCents, @JsonKey(name: 'isr_withheld_cents')  NonNegativeCents isrWithheldCents, @JsonKey(name: 'iva_withheld_cents')  NonNegativeCents ivaWithheldCents)  $default,) {final _that = this;
 switch (_that) {
 case _PeriodTotals():
 return $default(_that.count,_that.amountCents,_that.ivaCents,_that.isrWithheldCents,_that.ivaWithheldCents);case _:
@@ -204,7 +204,7 @@ return $default(_that.count,_that.amountCents,_that.ivaCents,_that.isrWithheldCe
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int count, @JsonKey(name: 'amount_cents')  NonNegativeCents amountCents, @JsonKey(name: 'iva_cents')  NonNegativeCents ivaCents, @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')  NonNegativeCents? isrWithheldCents, @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')  NonNegativeCents? ivaWithheldCents)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int count, @JsonKey(name: 'amount_cents')  NonNegativeCents amountCents, @JsonKey(name: 'iva_cents')  NonNegativeCents ivaCents, @JsonKey(name: 'isr_withheld_cents')  NonNegativeCents isrWithheldCents, @JsonKey(name: 'iva_withheld_cents')  NonNegativeCents ivaWithheldCents)?  $default,) {final _that = this;
 switch (_that) {
 case _PeriodTotals() when $default != null:
 return $default(_that.count,_that.amountCents,_that.ivaCents,_that.isrWithheldCents,_that.ivaWithheldCents);case _:
@@ -219,14 +219,14 @@ return $default(_that.count,_that.amountCents,_that.ivaCents,_that.isrWithheldCe
 @JsonSerializable()
 
 class _PeriodTotals implements PeriodTotals {
-  const _PeriodTotals({required this.count, @JsonKey(name: 'amount_cents') required this.amountCents, @JsonKey(name: 'iva_cents') required this.ivaCents, @JsonKey(includeIfNull: false, name: 'isr_withheld_cents') this.isrWithheldCents, @JsonKey(includeIfNull: false, name: 'iva_withheld_cents') this.ivaWithheldCents});
+  const _PeriodTotals({required this.count, @JsonKey(name: 'amount_cents') required this.amountCents, @JsonKey(name: 'iva_cents') required this.ivaCents, @JsonKey(name: 'isr_withheld_cents') required this.isrWithheldCents, @JsonKey(name: 'iva_withheld_cents') required this.ivaWithheldCents});
   factory _PeriodTotals.fromJson(Map<String, dynamic> json) => _$PeriodTotalsFromJson(json);
 
 @override final  int count;
 @override@JsonKey(name: 'amount_cents') final  NonNegativeCents amountCents;
 @override@JsonKey(name: 'iva_cents') final  NonNegativeCents ivaCents;
-@override@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') final  NonNegativeCents? isrWithheldCents;
-@override@JsonKey(includeIfNull: false, name: 'iva_withheld_cents') final  NonNegativeCents? ivaWithheldCents;
+@override@JsonKey(name: 'isr_withheld_cents') final  NonNegativeCents isrWithheldCents;
+@override@JsonKey(name: 'iva_withheld_cents') final  NonNegativeCents ivaWithheldCents;
 
 /// Create a copy of PeriodTotals
 /// with the given fields replaced by the non-null parameter values.
@@ -263,7 +263,7 @@ abstract mixin class _$PeriodTotalsCopyWith<$Res> implements $PeriodTotalsCopyWi
   factory _$PeriodTotalsCopyWith(_PeriodTotals value, $Res Function(_PeriodTotals) _then) = __$PeriodTotalsCopyWithImpl;
 @override @useResult
 $Res call({
- int count,@JsonKey(name: 'amount_cents') NonNegativeCents amountCents,@JsonKey(name: 'iva_cents') NonNegativeCents ivaCents,@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') NonNegativeCents? isrWithheldCents,@JsonKey(includeIfNull: false, name: 'iva_withheld_cents') NonNegativeCents? ivaWithheldCents
+ int count,@JsonKey(name: 'amount_cents') NonNegativeCents amountCents,@JsonKey(name: 'iva_cents') NonNegativeCents ivaCents,@JsonKey(name: 'isr_withheld_cents') NonNegativeCents isrWithheldCents,@JsonKey(name: 'iva_withheld_cents') NonNegativeCents ivaWithheldCents
 });
 
 
@@ -280,14 +280,14 @@ class __$PeriodTotalsCopyWithImpl<$Res>
 
 /// Create a copy of PeriodTotals
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? count = null,Object? amountCents = null,Object? ivaCents = null,Object? isrWithheldCents = freezed,Object? ivaWithheldCents = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? count = null,Object? amountCents = null,Object? ivaCents = null,Object? isrWithheldCents = null,Object? ivaWithheldCents = null,}) {
   return _then(_PeriodTotals(
 count: null == count ? _self.count : count // ignore: cast_nullable_to_non_nullable
 as int,amountCents: null == amountCents ? _self.amountCents : amountCents // ignore: cast_nullable_to_non_nullable
 as NonNegativeCents,ivaCents: null == ivaCents ? _self.ivaCents : ivaCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents,isrWithheldCents: freezed == isrWithheldCents ? _self.isrWithheldCents : isrWithheldCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents?,ivaWithheldCents: freezed == ivaWithheldCents ? _self.ivaWithheldCents : ivaWithheldCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents?,
+as NonNegativeCents,isrWithheldCents: null == isrWithheldCents ? _self.isrWithheldCents : isrWithheldCents // ignore: cast_nullable_to_non_nullable
+as NonNegativeCents,ivaWithheldCents: null == ivaWithheldCents ? _self.ivaWithheldCents : ivaWithheldCents // ignore: cast_nullable_to_non_nullable
+as NonNegativeCents,
   ));
 }
 

@@ -8,40 +8,38 @@ part of 'expense_create.dart';
 
 _ExpenseCreate _$ExpenseCreateFromJson(Map<String, dynamic> json) =>
     _ExpenseCreate(
-      regimeCode: json['regime_code'] as String?,
-      categoryCode: json['category_code'] as String?,
-      description: json['description'] as String?,
-      amountCents: (json['amount_cents'] as num?)?.toInt(),
-      ivaRate: json['iva_rate'] == null
-          ? null
-          : IvaRate.fromJson(json['iva_rate'] as String),
-      ivaCents: (json['iva_cents'] as num?)?.toInt(),
-      paymentMethod: json['payment_method'] == null
-          ? null
-          : PaymentMethod.fromJson(json['payment_method'] as String),
-      hasCfdi: json['has_cfdi'] as bool?,
-      paidOn: json['paid_on'] == null
-          ? null
-          : DateTime.parse(json['paid_on'] as String),
+      regimeCode: json['regime_code'] as String,
+      categoryCode: json['category_code'] as String,
+      amountCents: (json['amount_cents'] as num).toInt(),
+      ivaRate: IvaRate.fromJson(json['iva_rate'] as String),
+      ivaCents: (json['iva_cents'] as num).toInt(),
+      paymentMethod: PaymentMethod.fromJson(json['payment_method'] as String),
+      paidOn: DateTime.parse(json['paid_on'] as String),
+      hasCfdi: json['has_cfdi'] as bool,
+      id: json['id'] as String?,
+      cfdiUuid: json['cfdi_uuid'] as String?,
+      deductible: json['deductible'] as bool?,
       isrWithheldCents: (json['isr_withheld_cents'] as num?)?.toInt(),
       ivaWithheldCents: (json['iva_withheld_cents'] as num?)?.toInt(),
-      id: json['id'] as String?,
+      description: json['description'] as String?,
     );
 
 Map<String, dynamic> _$ExpenseCreateToJson(_ExpenseCreate instance) =>
     <String, dynamic>{
-      'regime_code': ?instance.regimeCode,
-      'category_code': ?instance.categoryCode,
-      'description': ?instance.description,
-      'amount_cents': ?instance.amountCents,
-      'iva_rate': ?_$IvaRateEnumMap[instance.ivaRate],
-      'iva_cents': ?instance.ivaCents,
-      'payment_method': ?_$PaymentMethodEnumMap[instance.paymentMethod],
-      'has_cfdi': ?instance.hasCfdi,
-      'paid_on': ?instance.paidOn?.toIso8601String(),
+      'regime_code': instance.regimeCode,
+      'category_code': instance.categoryCode,
+      'amount_cents': instance.amountCents,
+      'iva_rate': _$IvaRateEnumMap[instance.ivaRate]!,
+      'iva_cents': instance.ivaCents,
+      'payment_method': _$PaymentMethodEnumMap[instance.paymentMethod]!,
+      'paid_on': instance.paidOn.toIso8601String(),
+      'has_cfdi': instance.hasCfdi,
+      'id': ?instance.id,
+      'cfdi_uuid': ?instance.cfdiUuid,
+      'deductible': ?instance.deductible,
       'isr_withheld_cents': ?instance.isrWithheldCents,
       'iva_withheld_cents': ?instance.ivaWithheldCents,
-      'id': ?instance.id,
+      'description': ?instance.description,
     };
 
 const _$IvaRateEnumMap = {
