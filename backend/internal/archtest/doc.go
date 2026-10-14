@@ -2,12 +2,13 @@
 // backend's own packages, complementing the depguard rules in .golangci.yml
 // (which guard third-party imports but cannot express "another module").
 //
-// Layout: internal/<module>/{domain,usecase,adapter,infra} and internal/platform.
+// Layout: internal/<module>/{domain,usecase,adapter,infra}, internal/platform
+// and the shared kernel internal/kernel (ADR-0007).
 // Rules, for non-test files:
 //
 //   - domain-imports: a domain imports only the standard library (never
 //     net/http or database/sql), its own module's domain tree and the pure
-//     platform packages in domainPlatformAllowlist.
+//     platform packages in domainPlatformAllowlist, and the shared kernel.
 //   - usecase-frameworks: a usecase never imports net/http, database/sql,
 //     GORM or pgx.
 //   - usecase-outer-layer: within its module a usecase imports only domain and
@@ -17,7 +18,11 @@
 //     internal/platform/tx instead.
 //   - cross-module: no module package imports another module. Modules talk
 //     through ports owned by the consumer, wired in cmd/.
-//   - platform-modules: platform never imports a module.
+//   - platform-modules: platform never imports a module or the shared kernel.
+//   - kernel-imports: a shared-kernel package (internal/kernel/..., ADR-0007)
+//     imports only the standard library minus frameworks, the pure platform
+//     packages and other kernel packages. Every module's domain imports it,
+//     so it is never a path from a domain to a framework or another module.
 //   - pure-platform-imports: a package in domainPlatformAllowlist obeys the
 //     domain rule (standard library minus frameworks, other pure platform
 //     packages), so the domain cannot reach a framework through it.

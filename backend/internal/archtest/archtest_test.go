@@ -61,6 +61,22 @@ func TestCheckImport(t *testing.T) {
 		{"pure platform may not import gorm", "internal/platform/money", "gorm.io/gorm", RulePurePlatformImports},
 		{"pure platform may not import net/http", "internal/platform/money", "net/http", RulePurePlatformImports},
 		{"pure platform may not import impure platform", "internal/platform/money", "internal/platform/tx", RulePurePlatformImports},
+		// ADR-0007: internal/kernel holds the shared fiscal kernel. Every
+		// module may import it; it is held to the domain's own rule.
+		{"domain may import the shared kernel", "internal/ledger/domain", "internal/kernel/fiscal", ""},
+		{"usecase may import the shared kernel", "internal/ledger/usecase", "internal/kernel/fiscal", ""},
+		{"infra may import the shared kernel", "internal/ledger/infra", "internal/kernel/fiscal", ""},
+		{"kernel may import stdlib", "internal/kernel/fiscal", "time", ""},
+		{"kernel may import pure platform", "internal/kernel/fiscal", "internal/platform/money", ""},
+		{"kernel may import another kernel package", "internal/kernel/fiscal", "internal/kernel/calendar", ""},
+		{"kernel subpackage is held to the kernel rule", "internal/kernel/fiscal/vo", "gorm.io/gorm", RuleKernelImports},
+		{"kernel may not import a module", "internal/kernel/fiscal", "internal/ledger/domain", RuleKernelImports},
+		{"kernel may not import impure platform", "internal/kernel/fiscal", "internal/platform/tx", RuleKernelImports},
+		{"kernel may not import net/http", "internal/kernel/fiscal", "net/http", RuleKernelImports},
+		{"kernel may not import third-party", "internal/kernel/fiscal", "github.com/google/uuid", RuleKernelImports},
+		{"kernel may not import unicode/norm", "internal/kernel/fiscal", "golang.org/x/text/unicode/norm", RuleKernelImports},
+		{"platform may not import the kernel", "internal/platform/tx", "internal/kernel/fiscal", RulePlatformModules},
+		{"pure platform may not import the kernel", "internal/platform/money", "internal/kernel/fiscal", RulePlatformModules},
 		{"composition root may import anything", "cmd/api", "internal/ledger/infra", ""},
 		// PR #12 follow-up 3: the RLS harness logs in as superuser with fixed
 		// passwords; it must never be linked into a production binary.
@@ -99,6 +115,8 @@ func TestCheckFixtureReportsEveryViolation(t *testing.T) {
 	require.NoError(t, err)
 
 	want := []Violation{
+		{File: "internal/kernel/fiscal/iva.go", Imported: "example.com/fx/internal/ledger/domain", Rule: RuleKernelImports},
+		{File: "internal/kernel/fiscal/iva.go", Imported: "gorm.io/gorm", Rule: RuleKernelImports},
 		{File: "internal/ledger/domain/entry.go", Imported: "example.com/fx/internal/ledger/infra", Rule: RuleDomainImports},
 		{File: "internal/ledger/domain/entry.go", Imported: "gorm.io/gorm", Rule: RuleDomainImports},
 		{File: "internal/ledger/infra/repo.go", Imported: "example.com/fx/internal/billing/usecase", Rule: RuleCrossModule},

@@ -46,7 +46,10 @@ Ports M5 consumes (declared consumer-side in `internal/taxengine/usecase`):
 
 Ports M5 provides:
 - `RateCatalog` (M5-08): allowed IVA rates and suggested withholding rates on a date, plus dated
-  parameters such as `deduction.cash_payment_limit`, for M3/M4.
+  parameters such as `deduction.cash_payment_limit`, for M3/M4. It implements
+  `fiscal.RateCatalog` (`internal/kernel/fiscal`, ADR-0007) and the expenses module's port that
+  embeds it. M5 reuses the kernel's `Date`, `IVARate`, IVA rule and withholding shares rather than
+  keeping a third copy.
 - `Estimator` (M5-22): `EstimateMonth(ctx, user, taxpayer, period)` for M6 (dashboard), M8 (history,
   with the records fingerprint) and M9 (reminder amounts).
 
