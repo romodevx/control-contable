@@ -4,14 +4,16 @@
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'warning_code.dart';
+
 part 'warning.freezed.dart';
 part 'warning.g.dart';
 
-/// A non-blocking notice: the write succeeded, the client should ask the user to double-check `field`. `code` is append-only (unknown codes: show `message`). Today: `rfc_check_digit_mismatch` on `rfc` (D-RFC); `regime_combination_needs_cpa_review` on `regimes.N.regime_code` (create) or `regime_code` (add regime): the pair overlaps in time and its compatibility is not yet verified by a CPA (`regime_compatibility.needs_cpa_review`), so it is allowed and `message` carries the pair's `reason`.
+/// A non-blocking notice: the write succeeded, the client should ask the user to double-check `field`. `code` is a `WarningCode`, the one list of every warning code and the field it names (append-only; unknown codes: show `message`).
 @Freezed()
 abstract class Warning with _$Warning {
   const factory Warning({
-    required String code,
+    required WarningCode code,
 
     /// Same dotted naming as `FieldError.field`.
     required String field,

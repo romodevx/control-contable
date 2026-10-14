@@ -1,6 +1,7 @@
 import 'package:control_contable/api/generated/models/error_code.dart';
 import 'package:control_contable/api/generated/models/taxpayer.dart';
 import 'package:control_contable/api/generated/models/warning.dart';
+import 'package:control_contable/api/generated/models/warning_code.dart';
 import 'package:control_contable/core/access/read_only_access.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/router/app_router.dart';
@@ -153,7 +154,7 @@ void main() {
         taxpayer(
           warnings: const [
             Warning(
-              code: 'rfc_check_digit_mismatch',
+              code: WarningCode.rfcCheckDigitMismatch,
               field: 'rfc',
               message: 'x',
             ),

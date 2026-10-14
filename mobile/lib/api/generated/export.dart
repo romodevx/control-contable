@@ -58,6 +58,7 @@ export 'models/taxpayer_regime.dart';
 export 'models/taxpayer_regime_create.dart';
 export 'models/taxpayer_regime_update.dart';
 export 'models/warning.dart';
+export 'models/warning_code.dart';
 export 'models/rfc_input.dart';
 export 'models/taxpayer.dart';
 export 'models/taxpayer_create.dart';

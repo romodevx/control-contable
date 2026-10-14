@@ -2,6 +2,7 @@ import 'package:control_contable/api/generated/models/error_code.dart';
 import 'package:control_contable/api/generated/models/field_error.dart' as api;
 import 'package:control_contable/api/generated/models/taxpayer.dart';
 import 'package:control_contable/api/generated/models/warning.dart';
+import 'package:control_contable/api/generated/models/warning_code.dart';
 import 'package:control_contable/core/access/read_only_access.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/features/taxpayers/taxpayers_routes.dart';
@@ -232,7 +233,7 @@ void main() {
     ) async {
       harness.repository.warnNext['addRegime'] = const [
         Warning(
-          code: 'regime_combination_needs_cpa_review',
+          code: WarningCode.regimeCombinationNeedsCpaReview,
           field: 'regime_code',
           message: 'Pendiente de revisión.',
         ),

@@ -5,6 +5,8 @@ import 'package:control_contable/api/generated/models/person_type.dart';
 import 'package:control_contable/api/generated/models/tax_input_value.dart';
 import 'package:control_contable/api/generated/models/taxpayer_create.dart';
 import 'package:control_contable/api/generated/models/taxpayer_regime_create.dart';
+import 'package:control_contable/api/generated/models/warning.dart';
+import 'package:control_contable/api/generated/models/warning_code.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/features/taxpayers/data/taxpayers_repository.dart';
 import 'package:dio/dio.dart';
@@ -121,7 +123,19 @@ void main() {
       ],
     });
     expect(created.rfcMasked, 'GOMA******AB6');
-    expect(created.warnings?.single.code, 'rfc_check_digit_mismatch');
+    expect(created.warnings?.single.code, WarningCode.rfcCheckDigitMismatch);
+  });
+
+  test('a warning code this client does not know keeps its message', () {
+    // Append-only WarningCode: a newer server may send a code this build lacks.
+    final warning = Warning.fromJson(const {
+      'code': 'some_future_warning',
+      'field': 'amount_cents',
+      'message': 'Revisa el monto.',
+    });
+
+    expect(warning.code, WarningCode.$unknown);
+    expect(warning.message, 'Revisa el monto.');
   });
 
   test('correctRfc patches only the RFC', () async {

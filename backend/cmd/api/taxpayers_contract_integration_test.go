@@ -94,7 +94,7 @@ func warningCodes(w *[]gen.Warning) []string {
 	}
 	var out []string
 	for _, x := range *w {
-		out = append(out, x.Code+"@"+x.Field)
+		out = append(out, string(x.Code)+"@"+x.Field)
 	}
 	return out
 }

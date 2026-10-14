@@ -14,7 +14,7 @@ import 'uuid.dart';
 part 'breakdown.freezed.dart';
 part 'breakdown.g.dart';
 
-/// Header: `regime.parameter_set` ("Parámetros 2026 v1") and `engine_version` ("Motor 1.0.0"). `disclaimers` are those that apply to this regime.
+/// Header: `regime.parameter_set` ("Parámetros 2026 v1") and `engine_version` ("Motor 1.0.0"). `legend` and `disclaimers` travel with every breakdown, so the warnings are visible wherever the figures are (MODULE-tax-engine §2.3, §2.9). `disclaimers` are the estimate's disclaimers that bear on these lines, in the same order (`not_tax_advice` first, then `strong`, `warning`, `info`, then code): those raised by this regime, plus those raised by any regime's contribution to the consolidated IVA lines shown here. In particular `cpa_review_pending` (severity `strong`, the banner above the lines) is present whenever `regime.cpa_review_pending` is `true` or a line has `needs_cpa_review`, including the consolidated IVA line when two or more regimes contribute IVA (`cross_regime_iva_netting`, OQ-T2), and `iva_mixed_activity` is present whenever the consolidated IVA took any regime's creditable IVA in full. `incomplete_inputs` is present when `regime.status` is `incomplete`.
 @Freezed()
 abstract class Breakdown with _$Breakdown {
   const factory Breakdown({
