@@ -16,7 +16,11 @@ import (
 func sums(v money.Cents) domain.MonthSums {
 	return domain.MonthSums{
 		Income: domain.IncomeSums{
-			Cash: v, Accrual: v, IVACollected: v,
+			Cash: v, Accrual: v,
+			ByRate: domain.IVAByRate{
+				Rate16: domain.RateSums{Base: v, IVA: v}, Rate8: domain.RateSums{Base: v, IVA: v},
+				Rate0Base: v, ExemptBase: v,
+			},
 			IVAWithheld: domain.Withheld{ByMoral: v, ByPlatform: v},
 			ISRWithheld: domain.Withheld{ByMoral: v, ByPlatform: v},
 		},
@@ -76,6 +80,8 @@ func TestMonthSumsAddOverflows(t *testing.T) {
 	for _, field := range []func(*domain.MonthSums){
 		func(s *domain.MonthSums) { s.Income.Cash = math.MaxInt64 },
 		func(s *domain.MonthSums) { s.Income.ISRWithheld.ByPlatform = math.MaxInt64 },
+		func(s *domain.MonthSums) { s.Income.ByRate.Rate8.IVA = math.MaxInt64 },
+		func(s *domain.MonthSums) { s.Income.ByRate.ExemptBase = math.MaxInt64 },
 		func(s *domain.MonthSums) { s.Expenses.IVAWithheldToRemit = math.MaxInt64 },
 	} {
 		big := domain.MonthSums{}

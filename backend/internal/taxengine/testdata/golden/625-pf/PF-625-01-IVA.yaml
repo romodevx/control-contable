@@ -1,0 +1,42 @@
+# golden: hand-authored from docs/research/tax-regimes-mx-2026.md §A.5 PF-625-01. Never generated or rewritten by a tool.
+# IVA side of PF-625-01: IVA 4,800, 50 % withheld by the platform = 2,400.00.
+# Research: under LIVA 18-M the 50 % withholding is definitive, additional
+# IVA 0 — marked ⚠️ "confirm 18-M effect". Skipped until the CPA signs off
+# (M5-33, ADR-0002 §5); the expected values below are the research's.
+id: PF-625-01-IVA
+source: research:PF-625-01
+skip_reason: "⚠️ LIVA 18-M: definitive effect of the platform's 50 % IVA withholding not confirmed (research §A.5 PF-625-01; CPA-REVIEW 625 definitive IVA, topic platform_definitive_iva)"
+pending_strategy: true # M5-14
+input:
+  regime: "625"
+  person_type: fisica
+  period: "2026-03"
+  options:
+    definitive_option: true
+    activities: [goods_services]
+    rfc_given_to_platform: true
+    iva_fully_taxable: true
+  months:
+    - month: 3
+      income:
+        cash: "30000.00"
+        by_rate: {rate_16: {base: "30000.00", iva: "4800.00"}}
+        iva_withheld: {by_platform: "2400.00"}
+        isr_withheld: {by_platform: "750.00"}
+  tax_inputs:
+    - {key: prior_year_income, kind: money, money: "250000.00"}
+expected:
+  status: complete
+  taxes: [iva]
+  iva:
+    charged_collected: "4800.00"
+    creditable_paid: "0.00"
+    withheld_from_taxpayer: "2400.00"
+    definitive_excluded: "2400.00"
+    net: "0.00"
+  lines:
+    - {tax: iva, code: iva.charged_collected, op: input, amount: "4800.00"}
+    - {tax: iva, code: iva.definitive_excluded, op: subtract, amount: "2400.00"}
+    - {tax: iva, code: iva.withheld_from_taxpayer, op: subtract, amount: "2400.00"}
+    - {tax: iva, code: iva.net, op: result, amount: "0.00"}
+  cpa_topics: [platform_definitive_iva]

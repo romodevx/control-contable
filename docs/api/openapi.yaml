@@ -3476,7 +3476,8 @@ components:
         yet; `informational_regime` / `partial_regime` when a regime has that status;
         `deductibility_claimed` when a deductible expense entered the ISR base;
         `no_coefficient_first_year` for a 601 in its first fiscal year; `iva_mixed_activity`
-        when `iva_fully_taxable = false` and creditable IVA was taken in full;
+        when a regime's creditable IVA was taken in full although it has exempt acts
+        (`iva_fully_taxable = false`, or exempt collections in the month; LIVA 5 fr. V);
         `cpa_review_pending` when a line applies a rule a CPA has not validated
         (MODULE-tax-engine §2.3, §2.9).
       enum:
@@ -4059,7 +4060,9 @@ components:
         `not_isr_deductible_in_regime` and `category_not_deductible` on `deductible`;
         `duplicate_cfdi_uuid` on `cfdi_uuid`; `iva_not_creditable_cash_payment` on
         `payment_method` (a cash payment over the limit claimed as deductible: the claim
-        stands for ISR, its IVA is not creditable, LIVA 5 fr. II ⚠️; 0.6.0).
+        stands for ISR, its IVA is not creditable, LIVA 5 fr. II ⚠️; 0.6.0);
+        `provisional_parameters` on `paid_on` (the payment date's fiscal year has no published
+        tax parameters yet, so the IVA and cash rules used the previous year's; M4-05).
       enum:
         - rfc_check_digit_mismatch
         - regime_combination_needs_cpa_review
@@ -4070,6 +4073,7 @@ components:
         - not_isr_deductible_in_regime
         - category_not_deductible
         - iva_not_creditable_cash_payment
+        - provisional_parameters
     RfcInput:
       x-frozen: sha256:fd37fdbdaecba3f8606df31b502d5391862219c4ff10dd2a013a199cf66b6c4c
       type: string

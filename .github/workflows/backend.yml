@@ -104,6 +104,10 @@ jobs:
           cache-dependency-path: backend/go.sum
       - name: Unit tests
         run: make test
+      # PLAN M5-07: the golden gate already ran (and gated) in `make test`; this prints its
+      # summary, every ⚠️ skip reason and pending_strategy count, so no skip is silent.
+      - name: Golden suite summary
+        run: make golden
 
   integration:
     name: Integration tests (testcontainers) + coverage gate
