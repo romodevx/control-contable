@@ -1843,7 +1843,7 @@ paths:
     post:
       tags: [Expenses]
       operationId: createExpense
-      x-frozen: sha256:32aebb34497600cd41396779054fb80c171230b51a914d91b05107c76027f6d6
+      x-frozen: sha256:0e35ade67f513490201fc9bee6374d85b762b04b189f1c0da65c37fbca6092ad
       summary: Record an expense (idempotent client id; trial cap enforced)
       description: >-
         Records an expense of the active taxpayer. Idempotency, order of checks, regime
@@ -1873,7 +1873,10 @@ paths:
         Success bodies carry non-blocking `warnings`: `cash_over_threshold` on
         `payment_method`, `no_cfdi` on `has_cfdi`, `not_isr_deductible_in_regime` and
         `category_not_deductible` on `deductible` (an override to `true` against the hint),
-        `duplicate_cfdi_uuid` on `cfdi_uuid`.
+        `duplicate_cfdi_uuid` on `cfdi_uuid`, `iva_not_creditable_cash_payment` on
+        `payment_method` (a cash payment over the limit claimed as deductible: the claim
+        stands for ISR, its IVA is not creditable, LIVA 5 fr. II ⚠️; added in 0.6.0,
+        append-only).
       x-module: module_expenses
       security:
         - bearerAuth: []
@@ -4538,7 +4541,7 @@ components:
       examples:
         - deductible: true
     Expense:
-      x-frozen: sha256:59c98071ea048a7cc0e74c2408c47b323eb67e409b6bed78a208db7d8a809087
+      x-frozen: sha256:283327ec5ff4bb4aad8f57d69e551591ed5c0873e6d590b7f043dd799112d3f6
       type: object
       required:
         - id
@@ -4589,7 +4592,8 @@ components:
             Non-blocking notices computed on writes (create, update, restore), never stored;
             `[]` on reads. Codes (append-only): `cash_over_threshold` (`payment_method`),
             `no_cfdi` (`has_cfdi`), `not_isr_deductible_in_regime` and
-            `category_not_deductible` (`deductible`), `duplicate_cfdi_uuid` (`cfdi_uuid`).
+            `category_not_deductible` (`deductible`), `duplicate_cfdi_uuid` (`cfdi_uuid`),
+            `iva_not_creditable_cash_payment` (`payment_method`).
           items: { $ref: '#/components/schemas/Warning' }
         legend: { $ref: '#/components/schemas/Legend' }
         created_at: { type: string, format: date-time }
