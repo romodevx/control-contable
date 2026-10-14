@@ -530,7 +530,7 @@ Amendment 1. Precisions made while freezing (no rule changed):
 - Carry-forward of IVA saldo a favor between months; offsets and refunds (LIVA 6).
 - Proportional creditable IVA for mixed activity (flagged only).
 - Depreciation of investments; annual inflation adjustment; AGAPES exemptions (612/622).
-- 606 quarterly option; 625 non-definitive ISR computation under 612/RESICO (shown as partial).
+- 606 quarterly computation (the `pays_quarterly` option exists and is answered informational); 625 non-definitive ISR computation under 612/RESICO (shown as partial).
 - Whole-peso payment rounding (off until CPA); RFC-digit grace days; employment subsidy.
 - Fiscal years before 2026 (no transcribed params); foreign currency.
 - A combined "all my taxpayers" estimate (PRD Q14).

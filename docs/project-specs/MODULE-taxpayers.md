@@ -95,6 +95,7 @@ Informational/partial regimes show their plain-language `explanation` at selecti
 | Regime | Option key | Type | Allowed | Default | Required |
 |---|---|---|---|---|---|
 | 606 PF | `deduction_mode` | enum | `blind_35`, `actual` | `blind_35` | yes |
+| 606 PF | `pays_quarterly` | boolean | | `false` | no |
 | 612 PF | `iva_fully_taxable` | boolean | | `true` | yes |
 | 625 PF | `activities` | multi_enum (≥ 1) | `transport_delivery`, `lodging`, `goods_services` | — | **yes, no default** |
 | 625 PF | `definitive_option` | boolean | | `false` | yes |
@@ -112,7 +113,9 @@ Informational/partial regimes show their plain-language `explanation` at selecti
 - **Not options**: 601 *coeficiente de utilidad*, YTD totals, PTU, losses, prior payments and 625
   `prior_year_income` are **tax inputs per fiscal year** (ADR-0002 §2; `taxpayer_tax_inputs`,
   M5-20/M5-21). See OQ-3 for how onboarding offers them.
-- 606 quarterly option: not supported (research A.2.4 step 5, table not transcribed).
+- 606 `pays_quarterly` (LISR 116 ¶3, added by migration `20261014150000`): the user declares it;
+  the quarterly table is not transcribed, so the engine answers informational (research A.2.4
+  step 5). The ≤ 10 UMA eligibility is not checked (CPA-REVIEW).
 
 ### 2.5 Compatibility (data, not code)
 - Two regimes conflict only if their **period windows overlap** (`[start_period, end_period]`,
@@ -392,7 +395,7 @@ An overlapping regime pair still under CPA review is not an error either: `Taxpa
   Fiscal import; CURP.
 - Combined "all my taxpayers" dashboard (Q14, Could).
 - Sharing a taxpayer between users, accountant roles (NG7).
-- Raising the cap per user (OQ-4); tax inputs UI (M5-21); 606 quarterly option; AGAPES
+- Raising the cap per user (OQ-4); tax inputs UI (M5-21); 606 quarterly computation; AGAPES
   treatment; RESICO expulsion/eligibility automation (prompted annually, later).
 - Versioned (time-ranged) regime options (OQ-7).
 

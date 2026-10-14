@@ -14,10 +14,10 @@ const (
 	// rent plus the predial, LISR 115 ¶2; the catalog default) or "actual"
 	// (the deductible expenses, LISR 115 fr. I–VI).
 	OptionRentDeductionMode OptionKey = "deduction_mode"
-	// OptionRentQuarterlyPayment is the quarterly option of LISR 116 ¶3. Its
-	// table is not transcribed, so a quarterly payer is informational
-	// (ADR-0002 §2); the catalog does not offer the option yet.
-	OptionRentQuarterlyPayment OptionKey = "quarterly_payments"
+	// OptionRentQuarterlyPayment is the quarterly option of LISR 116 ¶3
+	// (catalog migration 20261014150000). Its table is not transcribed, so a
+	// quarterly payer is informational (ADR-0002 §2).
+	OptionRentQuarterlyPayment OptionKey = "pays_quarterly"
 )
 
 // ErrRentDeductionMode reports a 606 deduction_mode outside the catalog's
