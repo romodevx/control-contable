@@ -12,6 +12,7 @@ import 'package:control_contable/core/time/clock.dart';
 import 'package:control_contable/features/taxpayers/application/onboarding_failures.dart';
 import 'package:control_contable/features/taxpayers/application/regime_wizard.dart';
 import 'package:control_contable/features/taxpayers/data/taxpayers_repository.dart';
+import 'package:control_contable/features/taxpayers/domain/regime_compatibility.dart';
 import 'package:control_contable/features/taxpayers/domain/rfc.dart';
 import 'package:flutter/foundation.dart';
 
@@ -23,6 +24,15 @@ const String rfcCheckDigitWarning = 'rfc_check_digit_mismatch';
 
 /// `Warning.code` of a regime pair still under CPA review (§2.5).
 const String cpaReviewWarning = 'regime_combination_needs_cpa_review';
+
+/// A regime pair the server allowed under CPA review (§2.5): the regimes
+/// sent, in request order (empty when the warning names none), and the
+/// server's reason.
+typedef CpaReview = ({List<Regime> regimes, String reason});
+
+/// `Warning.field` of a CPA-review warning on create: the index of the
+/// later regime of the pair in the request.
+final RegExp _sentRegimeField = RegExp(r'^regimes\.(\d+)\.regime_code$');
 
 /// Mexico City's offset from UTC (no daylight saving time since 2022).
 const Duration _mexicoCityOffset = Duration(hours: -6);
@@ -192,11 +202,24 @@ class OnboardingFlow extends ChangeNotifier implements RegimeWizard {
   /// Whether the server warned that the RFC check digit does not match.
   bool get rfcWarning => _warnings.any((w) => w.code == rfcCheckDigitWarning);
 
-  /// The server's reasons for every regime pair under CPA review.
-  List<String> get cpaReviewReasons => [
+  /// Every regime pair under CPA review the server warned about. The
+  /// warning names the later regime sent; its partners are the earlier ones
+  /// the catalog pairs it with (`review_pending_with`).
+  List<CpaReview> get cpaReviews => [
     for (final warning in _warnings)
-      if (warning.code == cpaReviewWarning) warning.message,
+      if (warning.code == cpaReviewWarning)
+        (regimes: _pairNamedBy(warning.field), reason: warning.message),
   ];
+
+  List<Regime> _pairNamedBy(String field) {
+    final index = int.tryParse(
+      _sentRegimeField.firstMatch(field)?.group(1) ?? '',
+    );
+    if (index == null || index >= _regimes.length) return const [];
+    final later = _regimes[index];
+    final partners = reviewPendingPartners(later, _regimes.take(index));
+    return partners.isEmpty ? const [] : [...partners, later];
+  }
 
   /// The fiscal year the tax inputs belong to (America/Mexico_City).
   int get fiscalYear => _clock().toUtc().add(_mexicoCityOffset).year;

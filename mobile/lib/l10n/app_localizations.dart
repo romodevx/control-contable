@@ -1074,6 +1074,12 @@ abstract class AppLocalizations {
   /// **'Ya tienes {cap} contribuyentes, el máximo por cuenta; los archivados también cuentan. Para registrar otro, elimina uno que ya no uses.'**
   String onboardingLimitBody(int cap);
 
+  /// Joins the last item of a list: '606, 612 y 621'.
+  ///
+  /// In es, this message translates to:
+  /// **'{head} y {last}'**
+  String listAnd(String head, String last);
+
   /// Read-only user (402): leaves onboarding.
   ///
   /// In es, this message translates to:
@@ -1091,6 +1097,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Registramos a «{name}», RFC {rfc}.'**
   String onboardingReviewCreated(String name, String rfc);
+
+  /// Non-blocking warning: regime_combination_needs_cpa_review naming the pair (each «code · name», joined with listAnd); the server reason follows.
+  ///
+  /// In es, this message translates to:
+  /// **'Registraste juntos {regimes}. {reason}'**
+  String onboardingCpaWarningBody(String regimes, String reason);
 
   /// Non-blocking warning: regime_combination_needs_cpa_review; the server reason follows.
   ///
@@ -1439,6 +1451,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Agregamos el régimen {code}. Un contador debe confirmar la combinación: {reason}'**
   String addRegimeCpaReview(String code, String reason);
+
+  /// Regime added with a CPA-review warning, naming the held regimes it pairs with (e.g. '606 y 612').
+  ///
+  /// In es, this message translates to:
+  /// **'Agregamos el régimen {code}. Un contador debe confirmar su combinación con {partners}: {reason}'**
+  String addRegimeCpaReviewWith(String code, String partners, String reason);
 
   /// OQ-7 warning on the options page.
   ///

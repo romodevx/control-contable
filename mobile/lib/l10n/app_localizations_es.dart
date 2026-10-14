@@ -591,6 +591,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String listAnd(String head, String last) {
+    return '$head y $last';
+  }
+
+  @override
   String get onboardingPaywallAction => 'Volver al inicio';
 
   @override
@@ -599,6 +604,11 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String onboardingReviewCreated(String name, String rfc) {
     return 'Registramos a «$name», RFC $rfc.';
+  }
+
+  @override
+  String onboardingCpaWarningBody(String regimes, String reason) {
+    return 'Registraste juntos $regimes. $reason';
   }
 
   @override
@@ -815,6 +825,11 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String addRegimeCpaReview(String code, String reason) {
     return 'Agregamos el régimen $code. Un contador debe confirmar la combinación: $reason';
+  }
+
+  @override
+  String addRegimeCpaReviewWith(String code, String partners, String reason) {
+    return 'Agregamos el régimen $code. Un contador debe confirmar su combinación con $partners: $reason';
   }
 
   @override

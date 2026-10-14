@@ -738,6 +738,18 @@
       }
     }
   },
+  "listAnd": "{head} y {last}",
+  "@listAnd": {
+    "description": "Joins the last item of a list: '606, 612 y 621'.",
+    "placeholders": {
+      "head": {
+        "type": "String"
+      },
+      "last": {
+        "type": "String"
+      }
+    }
+  },
   "onboardingPaywallAction": "Volver al inicio",
   "@onboardingPaywallAction": {
     "description": "Read-only user (402): leaves onboarding."
@@ -754,6 +766,18 @@
         "type": "String"
       },
       "rfc": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingCpaWarningBody": "Registraste juntos {regimes}. {reason}",
+  "@onboardingCpaWarningBody": {
+    "description": "Non-blocking warning: regime_combination_needs_cpa_review naming the pair (each «code · name», joined with listAnd); the server reason follows.",
+    "placeholders": {
+      "regimes": {
+        "type": "String"
+      },
+      "reason": {
         "type": "String"
       }
     }
@@ -1058,6 +1082,21 @@
     }
   },
   "addRegimeCpaReview": "Agregamos el régimen {code}. Un contador debe confirmar la combinación: {reason}",
+  "addRegimeCpaReviewWith": "Agregamos el régimen {code}. Un contador debe confirmar su combinación con {partners}: {reason}",
+  "@addRegimeCpaReviewWith": {
+    "description": "Regime added with a CPA-review warning, naming the held regimes it pairs with (e.g. '606 y 612').",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      },
+      "partners": {
+        "type": "String"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "@addRegimeCpaReview": {
     "description": "Regime added with a CPA-review warning.",
     "placeholders": {
