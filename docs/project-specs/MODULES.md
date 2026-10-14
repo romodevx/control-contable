@@ -114,6 +114,12 @@ can run in parallel with M5/M6.
   `POST /v1/webhooks/revenuecat` (no user JWT; bearer secret; dedicated DB role).
 - **Tables**: `subscriptions` (RLS), `revenuecat_events` (service-only; unique `event_id`, raw payload, processed_at).
 - **When OFF**: the trial rules in P0 still apply and nobody can buy. Demos use comp entitlements.
+- **Contract follow-up from M2 (PR #58)**: the app cannot know a user is read-only before a
+  write: `GET /v1/me` (frozen) carries no access and `GET /v1/subscription` is gated by this
+  flag, while the trial rules apply with it OFF. M7 must expose `AccessSummary` to the app
+  regardless of `module_subscriptions` (an additive field on `GET /v1/me`, or an always-on
+  read; ADR for the frozen-schema change). Until then the onboarding shows the paywall up
+  front only after a `402` in the same session (`readOnlyAccessProvider`, mobile).
 
 ### M8 — History (`module_history`)
 - **Scope**: monthly summaries for a fiscal year; open any month's breakdown (reuses M5); a "changed since last viewed" marker.

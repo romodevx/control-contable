@@ -17,12 +17,14 @@ class AppFieldController extends AppFormFieldModel {
   /// A field labeled [label]; [validator] checks non-empty values. With
   /// [keepForNext], "Guardar y crear otro" keeps its value (a context field).
   /// A [verbatim] field (a password) is never trimmed nor rewritten.
+  /// `canonicalize` rewrites a valid value on blur (an RFC upper-cased).
   new({
     required super.label,
     super.isRequired,
     super.keepForNext,
     this.validator,
     this.verbatim = false,
+    this._canonicalize,
     String initialText = '',
   }) : _initialText = initialText,
        _lastChecked = initialText,
@@ -40,6 +42,7 @@ class AppFieldController extends AppFormFieldModel {
   /// The text being edited.
   final TextEditingController text;
 
+  final String Function(String value)? _canonicalize;
   final String _initialText;
   String _lastChecked;
 
@@ -64,9 +67,10 @@ class AppFieldController extends AppFormFieldModel {
     text.clear();
   }
 
-  /// The canonical text of a valid value; the value itself by default.
+  /// The canonical text of a valid value: the field's `canonicalize`, or
+  /// the value itself by default.
   @protected
-  String canonical(String value) => value;
+  String canonical(String value) => _canonicalize?.call(value) ?? value;
 
   @override
   @protected

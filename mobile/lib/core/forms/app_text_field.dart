@@ -37,6 +37,8 @@ class AppTextField extends StatelessWidget {
     this.obscureText = false,
     this.suffixIcon,
     this.onChanged,
+    this.textCapitalization = TextCapitalization.none,
+    this.autocorrect = true,
     super.key,
   });
 
@@ -77,6 +79,14 @@ class AppTextField extends StatelessWidget {
   /// Called with the raw text on every change (e.g. submit a complete code).
   final ValueChanged<String>? onChanged;
 
+  /// Which letters the keyboard capitalizes (`characters` for a code such
+  /// as an RFC).
+  final TextCapitalization textCapitalization;
+
+  /// Whether the keyboard may correct and suggest; `false` for codes and
+  /// identifiers, which no dictionary knows.
+  final bool autocorrect;
+
   @override
   Widget build(BuildContext context) {
     final scope = AppFormScope.of(context);
@@ -111,8 +121,9 @@ class AppTextField extends StatelessWidget {
                 maxLines: maxLines,
                 inputFormatters: inputFormatters,
                 obscureText: obscureText,
-                enableSuggestions: !obscureText,
-                autocorrect: !obscureText,
+                textCapitalization: textCapitalization,
+                enableSuggestions: autocorrect && !obscureText,
+                autocorrect: autocorrect && !obscureText,
                 onChanged: onChanged,
                 style: theme.textTheme.bodyLarge,
                 scrollPadding: const EdgeInsets.fromLTRB(

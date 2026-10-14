@@ -290,6 +290,10 @@ Informational/partial regimes show their plain-language `explanation` at selecti
   and nothing changes.
 - **Given** the same, **when** I list, open, archive a taxpayer or regime, or delete a
   taxpayer (with `confirm=true`), **then** it succeeds as for a paying user.
+- **App (M2-08)**: once a write has answered `402` in this session, opening the onboarding
+  shows the paywall before step 1 instead of four steps that cannot be saved. Knowing it
+  before the first write needs an access read the frozen contract lacks: M7 follow-up in
+  MODULES.md.
 
 ### US-T5 Cross-user isolation
 - **Given** user B's taxpayer id, **when** user A calls any M2 endpoint with it, **then** `404

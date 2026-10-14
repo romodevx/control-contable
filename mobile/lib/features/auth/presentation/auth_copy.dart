@@ -72,7 +72,10 @@ String describeAuthFailure(ApiFailure failure, AppLocalizations l10n) =>
       ApiNotFound() => l10n.authErrorUnavailable,
       ApiValidationFailure() => l10n.authFormRejected,
       ApiInvalidPassword() => l10n.accountDeleteWrongPassword,
-      ApiUnauthorized() || ApiUnexpected() => l10n.authErrorUnexpected,
+      ApiUnauthorized() ||
+      ApiEntitlementRequired() ||
+      ApiRejected() ||
+      ApiUnexpected() => l10n.authErrorUnexpected,
     };
 
 /// A countdown as `m:ss` (`1:00`, `0:45`, `12:05`). A part second rounds

@@ -44,6 +44,10 @@
   "@bootLoading": {
     "description": "Splash shown while a deep link waits for the module flags."
   },
+  "loadRetry": "Reintentar",
+  "@loadRetry": {
+    "description": "Button next to a failed load (a list, a catalog, a document) that loads it again."
+  },
   "formMarkOptional": "(opcional)",
   "@formMarkOptional": {
     "description": "Text mark after the label of an optional field (forms mark the fewer kind)."
@@ -233,10 +237,6 @@
   "@authDocumentOpenFailed": {
     "description": "Snack bar: a legal document link could not be opened."
   },
-  "authRetry": "Reintentar",
-  "@authRetry": {
-    "description": "Button that retries loading something that failed."
-  },
   "authErrorRateLimited": "{minutes, plural, =1{Demasiados intentos. Espera 1 min y vuelve a intentarlo.} other{Demasiados intentos. Espera {minutes} min y vuelve a intentarlo.}}",
   "@authErrorRateLimited": {
     "description": "Form-level message for 429 with a Retry-After, rounded up to minutes.",
@@ -413,5 +413,353 @@
   "sessionTokenLeftOnDevice": "No pudimos borrar la sesión guardada en este teléfono. Cierra la app y vuelve a abrirla; si el aviso sigue, borra los datos de la app desde los ajustes del teléfono.",
   "@sessionTokenLeftOnDevice": {
     "description": "Sign-out could not remove the stored session token, even by wiping the secure store."
+  },
+  "formErrorChoose": "Elige una opción.",
+  "@formErrorChoose": {
+    "description": "Inline error: a required choice (radio or checkbox group) was left empty. Shown only after submit."
+  },
+  "homeAddTaxpayer": "Registrar contribuyente",
+  "@homeAddTaxpayer": {
+    "description": "Home button that starts the taxpayer onboarding (module_taxpayers)."
+  },
+  "onboardingTitle": "Nuevo contribuyente",
+  "@onboardingTitle": {
+    "description": "App bar title of every onboarding step."
+  },
+  "onboardingProgress": "Paso {step} de {total}",
+  "@onboardingProgress": {
+    "description": "Onboarding progress, read before the step title.",
+    "placeholders": {
+      "step": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "onboardingNext": "Siguiente",
+  "@onboardingNext": {
+    "description": "Primary button that moves to the next onboarding step."
+  },
+  "onboardingCreate": "Crear contribuyente",
+  "@onboardingCreate": {
+    "description": "Primary button of the last onboarding step before the taxpayer is created."
+  },
+  "onboardingContinue": "Continuar",
+  "@onboardingContinue": {
+    "description": "Primary button after the taxpayer was created."
+  },
+  "onboardingPersonTypeTitle": "¿Persona física o persona moral?",
+  "@onboardingPersonTypeTitle": {
+    "description": "Step 1 title: the person type is chosen before anything else (OD-3)."
+  },
+  "onboardingPersonTypeIntro": "Elige cómo está dado de alta el contribuyente ante el SAT. No se puede cambiar después.",
+  "@onboardingPersonTypeIntro": {
+    "description": "Step 1 explanation."
+  },
+  "onboardingFisicaTitle": "Persona física",
+  "@onboardingFisicaTitle": {
+    "description": "Step 1 choice card title."
+  },
+  "onboardingFisicaBody": "Una persona que trabaja por su cuenta: honorarios, rentas, ventas por plataformas digitales o un negocio propio. Su RFC tiene 13 caracteres.",
+  "@onboardingFisicaBody": {
+    "description": "Step 1 plain-language explanation of persona física."
+  },
+  "onboardingMoralTitle": "Persona moral",
+  "@onboardingMoralTitle": {
+    "description": "Step 1 choice card title."
+  },
+  "onboardingMoralBody": "Una empresa o sociedad (S.A., S. de R.L., A.C. y otras). Su RFC tiene 12 caracteres.",
+  "@onboardingMoralBody": {
+    "description": "Step 1 plain-language explanation of persona moral."
+  },
+  "onboardingIdentityTitle": "RFC y nombre",
+  "@onboardingIdentityTitle": {
+    "description": "Step 2 title."
+  },
+  "onboardingDisplayNameLabel": "Nombre para identificarlo",
+  "@onboardingDisplayNameLabel": {
+    "description": "Step 2 field: the taxpayer display name."
+  },
+  "onboardingDisplayNameHelp": "Así aparecerá en la app; por ejemplo, tu nombre o «Mi negocio».",
+  "@onboardingDisplayNameHelp": {
+    "description": "Help under the display name field."
+  },
+  "onboardingDisplayNameTooLong": "Escribe un nombre de hasta 80 caracteres.",
+  "@onboardingDisplayNameTooLong": {
+    "description": "Display name over 80 characters."
+  },
+  "onboardingRfcLabel": "RFC",
+  "@onboardingRfcLabel": {
+    "description": "Step 2 field: the RFC."
+  },
+  "onboardingRfcHelpFisica": "13 caracteres, como en la constancia de situación fiscal. Puede llevar espacios o guiones.",
+  "@onboardingRfcHelpFisica": {
+    "description": "Help under the RFC field for a persona física."
+  },
+  "onboardingRfcHelpMoral": "12 caracteres, como en la constancia de situación fiscal. Puede llevar espacios o guiones.",
+  "@onboardingRfcHelpMoral": {
+    "description": "Help under the RFC field for a persona moral."
+  },
+  "onboardingRfcLengthFisica": "El RFC de una persona física tiene 13 caracteres.",
+  "@onboardingRfcLengthFisica": {
+    "description": "RFC error: wrong length for a persona física."
+  },
+  "onboardingRfcLengthMoral": "El RFC de una persona moral tiene 12 caracteres.",
+  "@onboardingRfcLengthMoral": {
+    "description": "RFC error: wrong length for a persona moral."
+  },
+  "onboardingRfcFormat": "Revisa el RFC: primero las letras, luego los 6 números de la fecha y al final la homoclave.",
+  "@onboardingRfcFormat": {
+    "description": "RFC error: characters outside the RFC shape."
+  },
+  "onboardingRfcDate": "Los 6 números del RFC no forman una fecha válida (año, mes y día).",
+  "@onboardingRfcDate": {
+    "description": "RFC error: the date part is not a real date."
+  },
+  "onboardingRfcGeneric": "Ese es un RFC genérico del SAT. Escribe el RFC propio del contribuyente.",
+  "@onboardingRfcGeneric": {
+    "description": "RFC error: XAXX010101000 or XEXX010101000."
+  },
+  "onboardingRfcDuplicate": "Ya registraste un contribuyente con este RFC. Si lo archivaste, puedes reactivarlo en Ajustes.",
+  "@onboardingRfcDuplicate": {
+    "description": "RFC error: 409 rfc_already_registered."
+  },
+  "onboardingRfcCheckWarning": "Revisa que tu RFC esté bien escrito",
+  "@onboardingRfcCheckWarning": {
+    "description": "Non-blocking warning: the RFC check digit does not match (D-RFC)."
+  },
+  "onboardingRfcCheckBody": "El último carácter no coincide con el que calcula el SAT. Algunos RFC reales no coinciden: si el tuyo es igual al de tu constancia, continúa. Si no, corrígelo aquí.",
+  "@onboardingRfcCheckBody": {
+    "description": "Explanation under the check-digit warning."
+  },
+  "onboardingRegimesTitle": "Regímenes fiscales",
+  "@onboardingRegimesTitle": {
+    "description": "Step 3 title."
+  },
+  "onboardingRegimesIntroFisica": "Elige todos los regímenes en los que está dado de alta. Aparecen en la constancia de situación fiscal.",
+  "@onboardingRegimesIntroFisica": {
+    "description": "Step 3 explanation for a persona física (multi-select)."
+  },
+  "onboardingRegimesIntroMoral": "Elige el régimen de la empresa. Una persona moral tiene un solo régimen a la vez.",
+  "@onboardingRegimesIntroMoral": {
+    "description": "Step 3 explanation for a persona moral (single-select)."
+  },
+  "onboardingRegimesLabel": "Regímenes",
+  "@onboardingRegimesLabel": {
+    "description": "Name of the regime selection in the error summary."
+  },
+  "onboardingRegimesRequired": "Elige al menos un régimen.",
+  "@onboardingRegimesRequired": {
+    "description": "Step 3 error: nothing selected."
+  },
+  "onboardingRegimesConflict": "Hay regímenes que no se pueden combinar.",
+  "@onboardingRegimesConflict": {
+    "description": "Step 3 error summary item: an incompatible pair is selected."
+  },
+  "onboardingRegimeConflict": "No se puede combinar con el {code}: {reason}",
+  "@onboardingRegimeConflict": {
+    "description": "Inline error under a regime incompatible with another selected one.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingRegimesLoading": "Cargando regímenes…",
+  "@onboardingRegimesLoading": {
+    "description": "Status while the regime catalog loads."
+  },
+  "onboardingRegimesLoadFailed": "No se pudieron cargar los regímenes.",
+  "@onboardingRegimesLoadFailed": {
+    "description": "The regime catalog failed to load."
+  },
+  "onboardingRegimesEmpty": "No hay regímenes disponibles para este tipo de persona.",
+  "@onboardingRegimesEmpty": {
+    "description": "The regime catalog came back empty."
+  },
+  "onboardingRegimeCombinationRejected": "Esta combinación de regímenes no se puede registrar. Revisa tu selección.",
+  "@onboardingRegimeCombinationRejected": {
+    "description": "Server answered 422 invalid_regime_combination."
+  },
+  "onboardingRegimeRejected": "Uno de los regímenes elegidos no se aceptó. Revisa tu selección.",
+  "@onboardingRegimeRejected": {
+    "description": "Server rejected a regime code (400 on regimes.N.regime_code)."
+  },
+  "onboardingSupportFullTitle": "Cálculo completo",
+  "@onboardingSupportFullTitle": {
+    "description": "Regime group: the app estimates ISR and IVA."
+  },
+  "onboardingSupportFullBody": "La app estima cada mes el ISR y el IVA a pagar con los ingresos y gastos que registres.",
+  "@onboardingSupportFullBody": {
+    "description": "Plain explanation of the full support level."
+  },
+  "onboardingSupportPartialTitle": "Cálculo parcial",
+  "@onboardingSupportPartialTitle": {
+    "description": "Regime group: the app estimates part of the taxes."
+  },
+  "onboardingSupportPartialBody": "La app estima solo una parte de los impuestos (por ejemplo, solo el IVA). Lo demás conviene revisarlo con un contador.",
+  "@onboardingSupportPartialBody": {
+    "description": "Plain explanation of the partial support level."
+  },
+  "onboardingSupportInfoTitle": "Solo explicación",
+  "@onboardingSupportInfoTitle": {
+    "description": "Regime group: no estimate, explanation only."
+  },
+  "onboardingSupportInfoBody": "La app no calcula impuestos para estos regímenes: explica en palabras sencillas qué obligaciones tienen.",
+  "@onboardingSupportInfoBody": {
+    "description": "Plain explanation of the informational support level."
+  },
+  "onboardingOptionsTitle": "Opciones del régimen",
+  "@onboardingOptionsTitle": {
+    "description": "Step 4 title."
+  },
+  "onboardingOptionsRegime": "Régimen {current} de {total}: {code} · {name}",
+  "@onboardingOptionsRegime": {
+    "description": "Step 4 heading: which selected regime these options belong to.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "code": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingOptionRejected": "Revisa esta opción.",
+  "@onboardingOptionRejected": {
+    "description": "Server rejected an option value (regimes.N.options.key)."
+  },
+  "onboardingRateHelp": "Un número entre {min} y {max}, con punto decimal.",
+  "@onboardingRateHelp": {
+    "description": "Help under a rate field with bounds.",
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingRateInvalid": "Escribe un número con punto decimal, por ejemplo 0.25.",
+  "@onboardingRateInvalid": {
+    "description": "Rate error: not a decimal number."
+  },
+  "onboardingRateOutOfRange": "Escribe un número entre {min} y {max}.",
+  "@onboardingRateOutOfRange": {
+    "description": "Rate error: outside the option bounds.",
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "optionValueBlind35": "Deducción ciega: 35 % de los ingresos",
+  "@optionValueBlind35": {
+    "description": "Option value blind_35 (606 deduction mode)."
+  },
+  "optionValueActual": "Gastos reales con factura",
+  "@optionValueActual": {
+    "description": "Option value actual (606 deduction mode)."
+  },
+  "optionValueTransportDelivery": "Transporte de pasajeros o entrega de bienes",
+  "@optionValueTransportDelivery": {
+    "description": "Option value transport_delivery (625 activities)."
+  },
+  "optionValueLodging": "Hospedaje",
+  "@optionValueLodging": {
+    "description": "Option value lodging (625 activities)."
+  },
+  "optionValueGoodsServices": "Venta de bienes y prestación de servicios",
+  "@optionValueGoodsServices": {
+    "description": "Option value goods_services (625 activities)."
+  },
+  "optionValueRifYear": "Año {year}",
+  "@optionValueRifYear": {
+    "description": "Option value of rif_year (621).",
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingErrorUnreachable": "No hay conexión. Revisa tu internet e inténtalo de nuevo.",
+  "@onboardingErrorUnreachable": {
+    "description": "Form notice: the server could not be reached."
+  },
+  "onboardingErrorRateLimited": "Hubo demasiados cambios seguidos. Espera unos minutos e inténtalo de nuevo.",
+  "@onboardingErrorRateLimited": {
+    "description": "Form notice: 429."
+  },
+  "onboardingErrorLimit": "Ya tienes 10 contribuyentes, el máximo por cuenta. Elimina uno que ya no uses para registrar otro.",
+  "@onboardingErrorLimit": {
+    "description": "Form notice: 422 taxpayer_limit_reached."
+  },
+  "onboardingErrorUnexpected": "Algo salió mal. Inténtalo de nuevo.",
+  "@onboardingErrorUnexpected": {
+    "description": "Form notice: any other failure."
+  },
+  "onboardingPaywallTitle": "Tu cuenta es de solo consulta",
+  "@onboardingPaywallTitle": {
+    "description": "Read-only user (402): title."
+  },
+  "onboardingPaywallBody": "Tu periodo de prueba terminó y no hay un plan activo. Puedes consultar, archivar y eliminar tu información, pero registrar un contribuyente requiere un plan.",
+  "@onboardingPaywallBody": {
+    "description": "Read-only user (402): explanation."
+  },
+  "onboardingPaywallAction": "Volver al inicio",
+  "@onboardingPaywallAction": {
+    "description": "Read-only user (402): leaves onboarding."
+  },
+  "onboardingReviewTitle": "Revisa antes de continuar",
+  "@onboardingReviewTitle": {
+    "description": "Title after the taxpayer was created with warnings."
+  },
+  "onboardingReviewCreated": "Registramos a «{name}», RFC {rfc}.",
+  "@onboardingReviewCreated": {
+    "description": "Confirmation after create; rfc is the masked RFC.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "rfc": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingCpaWarningTitle": "Combinación pendiente de revisión por un contador",
+  "@onboardingCpaWarningTitle": {
+    "description": "Non-blocking warning: regime_combination_needs_cpa_review; the server reason follows."
+  },
+  "onboardingInputsTitle": "Datos para el cálculo",
+  "@onboardingInputsTitle": {
+    "description": "Optional step 5 title (module_tax_engine on)."
+  },
+  "onboardingInputsIntro": "Opcional. Con estos datos de {year} el estimado es más preciso; puedes agregarlos después.",
+  "@onboardingInputsIntro": {
+    "description": "Optional step 5 explanation.",
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingInputsSkip": "Omitir",
+  "@onboardingInputsSkip": {
+    "description": "Skips the optional tax inputs of one regime."
   }
 }

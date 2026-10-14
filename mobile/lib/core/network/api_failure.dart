@@ -38,6 +38,27 @@ final class ApiInvalidPassword extends ApiFailure {
   const new();
 }
 
+/// `402 entitlement_required`: the user is read-only (no running trial, no
+/// plan). Reads, archive and delete still work; this write does not.
+final class ApiEntitlementRequired extends ApiFailure {
+  /// The failure.
+  const new();
+}
+
+/// `409` or `422`: the server understood the request and refused it by a
+/// rule ([code]: `rfc_already_registered`, `invalid_regime_combination`,
+/// `taxpayer_limit_reached`, …). [details] name the fields involved, if any.
+final class ApiRejected extends ApiFailure {
+  /// The refusal with its [code] (`null` when the body was unreadable).
+  const new({required this.code, this.details = const []});
+
+  /// The envelope's `error.code`.
+  final ErrorCode? code;
+
+  /// The envelope's `error.details`.
+  final List<FieldError> details;
+}
+
 /// `404`: not found, or the module is off (indistinguishable by design).
 final class ApiNotFound extends ApiFailure {
   /// The failure.
@@ -112,6 +133,11 @@ ApiFailure apiFailureFrom(
   return switch (response?.statusCode) {
     HttpStatus.badRequest => ApiValidationFailure(_details(response!.data)),
     HttpStatus.unauthorized => const ApiUnauthorized(),
+    HttpStatus.paymentRequired => const ApiEntitlementRequired(),
+    HttpStatus.conflict || HttpStatus.unprocessableEntity => ApiRejected(
+      code: _codeOf(response!.data),
+      details: _details(response.data),
+    ),
     HttpStatus.notFound => const ApiNotFound(),
     HttpStatus.tooManyRequests => ApiRateLimited(
       parseRetryAfter(

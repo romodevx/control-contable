@@ -163,6 +163,12 @@ abstract class AppLocalizations {
   /// **'Cargando…'**
   String get bootLoading;
 
+  /// Button next to a failed load (a list, a catalog, a document) that loads it again.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar'**
+  String get loadRetry;
+
   /// Text mark after the label of an optional field (forms mark the fewer kind).
   ///
   /// In es, this message translates to:
@@ -427,12 +433,6 @@ abstract class AppLocalizations {
   /// **'No se pudo abrir el documento. Intenta de nuevo.'**
   String get authDocumentOpenFailed;
 
-  /// Button that retries loading something that failed.
-  ///
-  /// In es, this message translates to:
-  /// **'Reintentar'**
-  String get authRetry;
-
   /// Form-level message for 429 with a Retry-After, rounded up to minutes.
   ///
   /// In es, this message translates to:
@@ -666,6 +666,437 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No pudimos borrar la sesión guardada en este teléfono. Cierra la app y vuelve a abrirla; si el aviso sigue, borra los datos de la app desde los ajustes del teléfono.'**
   String get sessionTokenLeftOnDevice;
+
+  /// Inline error: a required choice (radio or checkbox group) was left empty. Shown only after submit.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige una opción.'**
+  String get formErrorChoose;
+
+  /// Home button that starts the taxpayer onboarding (module_taxpayers).
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar contribuyente'**
+  String get homeAddTaxpayer;
+
+  /// App bar title of every onboarding step.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevo contribuyente'**
+  String get onboardingTitle;
+
+  /// Onboarding progress, read before the step title.
+  ///
+  /// In es, this message translates to:
+  /// **'Paso {step} de {total}'**
+  String onboardingProgress(int step, int total);
+
+  /// Primary button that moves to the next onboarding step.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiente'**
+  String get onboardingNext;
+
+  /// Primary button of the last onboarding step before the taxpayer is created.
+  ///
+  /// In es, this message translates to:
+  /// **'Crear contribuyente'**
+  String get onboardingCreate;
+
+  /// Primary button after the taxpayer was created.
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar'**
+  String get onboardingContinue;
+
+  /// Step 1 title: the person type is chosen before anything else (OD-3).
+  ///
+  /// In es, this message translates to:
+  /// **'¿Persona física o persona moral?'**
+  String get onboardingPersonTypeTitle;
+
+  /// Step 1 explanation.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige cómo está dado de alta el contribuyente ante el SAT. No se puede cambiar después.'**
+  String get onboardingPersonTypeIntro;
+
+  /// Step 1 choice card title.
+  ///
+  /// In es, this message translates to:
+  /// **'Persona física'**
+  String get onboardingFisicaTitle;
+
+  /// Step 1 plain-language explanation of persona física.
+  ///
+  /// In es, this message translates to:
+  /// **'Una persona que trabaja por su cuenta: honorarios, rentas, ventas por plataformas digitales o un negocio propio. Su RFC tiene 13 caracteres.'**
+  String get onboardingFisicaBody;
+
+  /// Step 1 choice card title.
+  ///
+  /// In es, this message translates to:
+  /// **'Persona moral'**
+  String get onboardingMoralTitle;
+
+  /// Step 1 plain-language explanation of persona moral.
+  ///
+  /// In es, this message translates to:
+  /// **'Una empresa o sociedad (S.A., S. de R.L., A.C. y otras). Su RFC tiene 12 caracteres.'**
+  String get onboardingMoralBody;
+
+  /// Step 2 title.
+  ///
+  /// In es, this message translates to:
+  /// **'RFC y nombre'**
+  String get onboardingIdentityTitle;
+
+  /// Step 2 field: the taxpayer display name.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre para identificarlo'**
+  String get onboardingDisplayNameLabel;
+
+  /// Help under the display name field.
+  ///
+  /// In es, this message translates to:
+  /// **'Así aparecerá en la app; por ejemplo, tu nombre o «Mi negocio».'**
+  String get onboardingDisplayNameHelp;
+
+  /// Display name over 80 characters.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe un nombre de hasta 80 caracteres.'**
+  String get onboardingDisplayNameTooLong;
+
+  /// Step 2 field: the RFC.
+  ///
+  /// In es, this message translates to:
+  /// **'RFC'**
+  String get onboardingRfcLabel;
+
+  /// Help under the RFC field for a persona física.
+  ///
+  /// In es, this message translates to:
+  /// **'13 caracteres, como en la constancia de situación fiscal. Puede llevar espacios o guiones.'**
+  String get onboardingRfcHelpFisica;
+
+  /// Help under the RFC field for a persona moral.
+  ///
+  /// In es, this message translates to:
+  /// **'12 caracteres, como en la constancia de situación fiscal. Puede llevar espacios o guiones.'**
+  String get onboardingRfcHelpMoral;
+
+  /// RFC error: wrong length for a persona física.
+  ///
+  /// In es, this message translates to:
+  /// **'El RFC de una persona física tiene 13 caracteres.'**
+  String get onboardingRfcLengthFisica;
+
+  /// RFC error: wrong length for a persona moral.
+  ///
+  /// In es, this message translates to:
+  /// **'El RFC de una persona moral tiene 12 caracteres.'**
+  String get onboardingRfcLengthMoral;
+
+  /// RFC error: characters outside the RFC shape.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa el RFC: primero las letras, luego los 6 números de la fecha y al final la homoclave.'**
+  String get onboardingRfcFormat;
+
+  /// RFC error: the date part is not a real date.
+  ///
+  /// In es, this message translates to:
+  /// **'Los 6 números del RFC no forman una fecha válida (año, mes y día).'**
+  String get onboardingRfcDate;
+
+  /// RFC error: XAXX010101000 or XEXX010101000.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese es un RFC genérico del SAT. Escribe el RFC propio del contribuyente.'**
+  String get onboardingRfcGeneric;
+
+  /// RFC error: 409 rfc_already_registered.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya registraste un contribuyente con este RFC. Si lo archivaste, puedes reactivarlo en Ajustes.'**
+  String get onboardingRfcDuplicate;
+
+  /// Non-blocking warning: the RFC check digit does not match (D-RFC).
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa que tu RFC esté bien escrito'**
+  String get onboardingRfcCheckWarning;
+
+  /// Explanation under the check-digit warning.
+  ///
+  /// In es, this message translates to:
+  /// **'El último carácter no coincide con el que calcula el SAT. Algunos RFC reales no coinciden: si el tuyo es igual al de tu constancia, continúa. Si no, corrígelo aquí.'**
+  String get onboardingRfcCheckBody;
+
+  /// Step 3 title.
+  ///
+  /// In es, this message translates to:
+  /// **'Regímenes fiscales'**
+  String get onboardingRegimesTitle;
+
+  /// Step 3 explanation for a persona física (multi-select).
+  ///
+  /// In es, this message translates to:
+  /// **'Elige todos los regímenes en los que está dado de alta. Aparecen en la constancia de situación fiscal.'**
+  String get onboardingRegimesIntroFisica;
+
+  /// Step 3 explanation for a persona moral (single-select).
+  ///
+  /// In es, this message translates to:
+  /// **'Elige el régimen de la empresa. Una persona moral tiene un solo régimen a la vez.'**
+  String get onboardingRegimesIntroMoral;
+
+  /// Name of the regime selection in the error summary.
+  ///
+  /// In es, this message translates to:
+  /// **'Regímenes'**
+  String get onboardingRegimesLabel;
+
+  /// Step 3 error: nothing selected.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige al menos un régimen.'**
+  String get onboardingRegimesRequired;
+
+  /// Step 3 error summary item: an incompatible pair is selected.
+  ///
+  /// In es, this message translates to:
+  /// **'Hay regímenes que no se pueden combinar.'**
+  String get onboardingRegimesConflict;
+
+  /// Inline error under a regime incompatible with another selected one.
+  ///
+  /// In es, this message translates to:
+  /// **'No se puede combinar con el {code}: {reason}'**
+  String onboardingRegimeConflict(String code, String reason);
+
+  /// Status while the regime catalog loads.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando regímenes…'**
+  String get onboardingRegimesLoading;
+
+  /// The regime catalog failed to load.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar los regímenes.'**
+  String get onboardingRegimesLoadFailed;
+
+  /// The regime catalog came back empty.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay regímenes disponibles para este tipo de persona.'**
+  String get onboardingRegimesEmpty;
+
+  /// Server answered 422 invalid_regime_combination.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta combinación de regímenes no se puede registrar. Revisa tu selección.'**
+  String get onboardingRegimeCombinationRejected;
+
+  /// Server rejected a regime code (400 on regimes.N.regime_code).
+  ///
+  /// In es, this message translates to:
+  /// **'Uno de los regímenes elegidos no se aceptó. Revisa tu selección.'**
+  String get onboardingRegimeRejected;
+
+  /// Regime group: the app estimates ISR and IVA.
+  ///
+  /// In es, this message translates to:
+  /// **'Cálculo completo'**
+  String get onboardingSupportFullTitle;
+
+  /// Plain explanation of the full support level.
+  ///
+  /// In es, this message translates to:
+  /// **'La app estima cada mes el ISR y el IVA a pagar con los ingresos y gastos que registres.'**
+  String get onboardingSupportFullBody;
+
+  /// Regime group: the app estimates part of the taxes.
+  ///
+  /// In es, this message translates to:
+  /// **'Cálculo parcial'**
+  String get onboardingSupportPartialTitle;
+
+  /// Plain explanation of the partial support level.
+  ///
+  /// In es, this message translates to:
+  /// **'La app estima solo una parte de los impuestos (por ejemplo, solo el IVA). Lo demás conviene revisarlo con un contador.'**
+  String get onboardingSupportPartialBody;
+
+  /// Regime group: no estimate, explanation only.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo explicación'**
+  String get onboardingSupportInfoTitle;
+
+  /// Plain explanation of the informational support level.
+  ///
+  /// In es, this message translates to:
+  /// **'La app no calcula impuestos para estos regímenes: explica en palabras sencillas qué obligaciones tienen.'**
+  String get onboardingSupportInfoBody;
+
+  /// Step 4 title.
+  ///
+  /// In es, this message translates to:
+  /// **'Opciones del régimen'**
+  String get onboardingOptionsTitle;
+
+  /// Step 4 heading: which selected regime these options belong to.
+  ///
+  /// In es, this message translates to:
+  /// **'Régimen {current} de {total}: {code} · {name}'**
+  String onboardingOptionsRegime(
+    int current,
+    int total,
+    String code,
+    String name,
+  );
+
+  /// Server rejected an option value (regimes.N.options.key).
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa esta opción.'**
+  String get onboardingOptionRejected;
+
+  /// Help under a rate field with bounds.
+  ///
+  /// In es, this message translates to:
+  /// **'Un número entre {min} y {max}, con punto decimal.'**
+  String onboardingRateHelp(String min, String max);
+
+  /// Rate error: not a decimal number.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe un número con punto decimal, por ejemplo 0.25.'**
+  String get onboardingRateInvalid;
+
+  /// Rate error: outside the option bounds.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe un número entre {min} y {max}.'**
+  String onboardingRateOutOfRange(String min, String max);
+
+  /// Option value blind_35 (606 deduction mode).
+  ///
+  /// In es, this message translates to:
+  /// **'Deducción ciega: 35 % de los ingresos'**
+  String get optionValueBlind35;
+
+  /// Option value actual (606 deduction mode).
+  ///
+  /// In es, this message translates to:
+  /// **'Gastos reales con factura'**
+  String get optionValueActual;
+
+  /// Option value transport_delivery (625 activities).
+  ///
+  /// In es, this message translates to:
+  /// **'Transporte de pasajeros o entrega de bienes'**
+  String get optionValueTransportDelivery;
+
+  /// Option value lodging (625 activities).
+  ///
+  /// In es, this message translates to:
+  /// **'Hospedaje'**
+  String get optionValueLodging;
+
+  /// Option value goods_services (625 activities).
+  ///
+  /// In es, this message translates to:
+  /// **'Venta de bienes y prestación de servicios'**
+  String get optionValueGoodsServices;
+
+  /// Option value of rif_year (621).
+  ///
+  /// In es, this message translates to:
+  /// **'Año {year}'**
+  String optionValueRifYear(String year);
+
+  /// Form notice: the server could not be reached.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay conexión. Revisa tu internet e inténtalo de nuevo.'**
+  String get onboardingErrorUnreachable;
+
+  /// Form notice: 429.
+  ///
+  /// In es, this message translates to:
+  /// **'Hubo demasiados cambios seguidos. Espera unos minutos e inténtalo de nuevo.'**
+  String get onboardingErrorRateLimited;
+
+  /// Form notice: 422 taxpayer_limit_reached.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya tienes 10 contribuyentes, el máximo por cuenta. Elimina uno que ya no uses para registrar otro.'**
+  String get onboardingErrorLimit;
+
+  /// Form notice: any other failure.
+  ///
+  /// In es, this message translates to:
+  /// **'Algo salió mal. Inténtalo de nuevo.'**
+  String get onboardingErrorUnexpected;
+
+  /// Read-only user (402): title.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu cuenta es de solo consulta'**
+  String get onboardingPaywallTitle;
+
+  /// Read-only user (402): explanation.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu periodo de prueba terminó y no hay un plan activo. Puedes consultar, archivar y eliminar tu información, pero registrar un contribuyente requiere un plan.'**
+  String get onboardingPaywallBody;
+
+  /// Read-only user (402): leaves onboarding.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver al inicio'**
+  String get onboardingPaywallAction;
+
+  /// Title after the taxpayer was created with warnings.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa antes de continuar'**
+  String get onboardingReviewTitle;
+
+  /// Confirmation after create; rfc is the masked RFC.
+  ///
+  /// In es, this message translates to:
+  /// **'Registramos a «{name}», RFC {rfc}.'**
+  String onboardingReviewCreated(String name, String rfc);
+
+  /// Non-blocking warning: regime_combination_needs_cpa_review; the server reason follows.
+  ///
+  /// In es, this message translates to:
+  /// **'Combinación pendiente de revisión por un contador'**
+  String get onboardingCpaWarningTitle;
+
+  /// Optional step 5 title (module_tax_engine on).
+  ///
+  /// In es, this message translates to:
+  /// **'Datos para el cálculo'**
+  String get onboardingInputsTitle;
+
+  /// Optional step 5 explanation.
+  ///
+  /// In es, this message translates to:
+  /// **'Opcional. Con estos datos de {year} el estimado es más preciso; puedes agregarlos después.'**
+  String onboardingInputsIntro(String year);
+
+  /// Skips the optional tax inputs of one regime.
+  ///
+  /// In es, this message translates to:
+  /// **'Omitir'**
+  String get onboardingInputsSkip;
 }
 
 class _AppLocalizationsDelegate

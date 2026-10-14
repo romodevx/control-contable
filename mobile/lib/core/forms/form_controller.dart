@@ -57,14 +57,16 @@ class AppFormController extends ChangeNotifier {
     bool keepForNext = false,
     FieldValidator? validator,
     bool verbatim = false,
+    String Function(String value)? canonicalize,
     String initialText = '',
-  }) => _add(
+  }) => add(
     AppFieldController(
       label: label,
       isRequired: isRequired,
       keepForNext: keepForNext,
       validator: validator,
       verbatim: verbatim,
+      canonicalize: canonicalize,
       initialText: initialText,
     ),
   );
@@ -75,7 +77,7 @@ class AppFormController extends ChangeNotifier {
     bool isRequired = true,
     bool keepForNext = false,
     String initialText = '',
-  }) => _add(
+  }) => add(
     MoneyFieldController(
       label: label,
       isRequired: isRequired,
@@ -90,7 +92,7 @@ class AppFormController extends ChangeNotifier {
     bool isRequired = true,
     bool keepForNext = false,
     String initialText = '',
-  }) => _add(
+  }) => add(
     DateFieldController(
       label: label,
       isRequired: isRequired,
@@ -104,7 +106,7 @@ class AppFormController extends ChangeNotifier {
     required String label,
     bool isRequired = true,
     bool keepForNext = false,
-  }) => _add(
+  }) => add(
     AppCheckboxController(
       label: label,
       isRequired: isRequired,
@@ -163,7 +165,9 @@ class AppFormController extends ChangeNotifier {
     if (cleared.isNotEmpty) cleared.first.focusNode.requestFocus();
   }
 
-  T _add<T extends AppFormFieldModel>(T field) {
+  /// Adds [field], of any kind (a choice, a set of choices), under the
+  /// form's policy; the form then owns and disposes it.
+  T add<T extends AppFormFieldModel>(T field) {
     _fields.add(field);
     field.addListener(notifyListeners);
     return field;
