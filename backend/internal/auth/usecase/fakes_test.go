@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"slices"
 	"sync"
 	"time"
 
@@ -210,6 +211,53 @@ func (f *fakeSender) SendSignUpAttemptNotice(_ context.Context, to domain.Email)
 	defer f.mu.Unlock()
 	f.sent = append(f.sent, sent{kind: "notice", to: to.String()})
 	return f.err
+}
+
+// fakeLimiter admits limit events per key (a shared Postgres bucket in
+// production), then refuses with a one-minute wait. It records every key
+// taken and reset; err makes every call fail.
+type fakeLimiter struct {
+	mu     sync.Mutex
+	limit  int
+	err    error
+	keys   []string
+	resets []string
+}
+
+func (f *fakeLimiter) Take(_ context.Context, key string) (bool, time.Duration, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.err != nil {
+		return false, 0, f.err
+	}
+	f.keys = append(f.keys, key)
+	spent := 0
+	for _, k := range f.keys {
+		if k == key {
+			spent++
+		}
+	}
+	if spent > f.limit {
+		return false, time.Minute, nil
+	}
+	return true, 0, nil
+}
+
+func (f *fakeLimiter) Reset(_ context.Context, key string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.err != nil {
+		return f.err
+	}
+	f.resets = append(f.resets, key)
+	f.keys = slices.DeleteFunc(f.keys, func(k string) bool { return k == key })
+	return nil
+}
+
+func (f *fakeLimiter) taken() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return slices.Clone(f.keys)
 }
 
 // onceThrottle allows each key once.

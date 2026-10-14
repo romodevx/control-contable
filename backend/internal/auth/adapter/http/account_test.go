@@ -251,15 +251,14 @@ func TestDeleteMe_bearerFailuresAreTheGeneric401WithTheChallenge(t *testing.T) {
 
 func TestDeleteMe_outOfAttemptsIsA429WithRetryAfter(t *testing.T) {
 	f := newAccountFixture(t)
-	f.deleter.err = fmt.Errorf("delete: %w", &usecase.TooManyAttemptsError{RetryAfter: 90*time.Second + time.Millisecond})
+	f.deleter.err = fmt.Errorf("delete: %w", &usecase.RateLimitedError{RetryAfter: 90*time.Second + time.Millisecond})
 
 	resp, err := f.handler.DeleteMe(signedIn(t), gen.DeleteMeRequestObject{Body: &gen.DeleteMeJSONRequestBody{Password: "x"}})
 
 	require.NoError(t, err)
 	got, ok := resp.(gen.DeleteMe429JSONResponse)
 	require.True(t, ok, "%T", resp)
-	require.NotNil(t, got.Headers.RetryAfter)
-	assert.Equal(t, 91, *got.Headers.RetryAfter, "whole seconds, rounded up")
+	assert.Equal(t, 91, got.Headers.RetryAfter, "whole seconds, rounded up")
 	assert.Equal(t, gen.ErrorCodeRateLimited, got.Body.Error.Code)
 	assert.Equal(t, "req_test", got.Body.Error.RequestId)
 }

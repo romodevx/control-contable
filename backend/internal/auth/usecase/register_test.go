@@ -18,6 +18,7 @@ type registerEnv struct {
 	sender   *fakeSender
 	index    *sha256Index
 	throttle *onceThrottle
+	emails   *fakeLimiter
 	logs     interface{ String() string }
 }
 
@@ -25,7 +26,7 @@ func newRegisterEnv(signUps *fakeSignUps, legal fakeLegal) *registerEnv {
 	logger, logs := capturedLogs()
 	e := &registerEnv{
 		system: &fakeSystem{}, signUps: signUps, sender: &fakeSender{},
-		index: &sha256Index{}, throttle: &onceThrottle{}, logs: logs,
+		index: &sha256Index{}, throttle: &onceThrottle{}, emails: &fakeLimiter{limit: 100}, logs: logs,
 	}
 	e.uc = usecase.NewRegister(usecase.RegisterDeps{
 		System:  e.system,
@@ -37,6 +38,7 @@ func newRegisterEnv(signUps *fakeSignUps, legal fakeLegal) *registerEnv {
 		SignUps: signUps,
 		Email:   e.sender,
 		Notices: e.throttle,
+		Emails:  e.emails,
 		Logger:  logger,
 	})
 	return e

@@ -182,35 +182,14 @@ func TestProfile_rename(t *testing.T) {
 }
 
 func newDeleteAccount(units tx.Manager, accounts *fakeProfiles, passwords *fakePasswords) (*usecase.DeleteAccount, func() string) {
-	return newThrottledDeleteAccount(units, accounts, passwords, &countingThrottle{limit: 100})
+	return newThrottledDeleteAccount(units, accounts, passwords, &fakeLimiter{limit: 100})
 }
 
-func newThrottledDeleteAccount(units tx.Manager, accounts *fakeProfiles, passwords *fakePasswords, attempts usecase.Throttle) (*usecase.DeleteAccount, func() string) {
+func newThrottledDeleteAccount(units tx.Manager, accounts *fakeProfiles, passwords *fakePasswords, attempts usecase.RateLimiter) (*usecase.DeleteAccount, func() string) {
 	logger, logs := capturedLogs()
 	return usecase.NewDeleteAccount(usecase.DeleteAccountDeps{
 		Tx: units, Passwords: passwords, Accounts: accounts, Attempts: attempts, Logger: logger,
 	}), logs.String
-}
-
-// countingThrottle admits limit events per key, then refuses with a
-// one-minute wait; keys records every key asked for.
-type countingThrottle struct {
-	limit int
-	keys  []string
-}
-
-func (c *countingThrottle) Allow(key string) (bool, time.Duration) {
-	c.keys = append(c.keys, key)
-	n := 0
-	for _, k := range c.keys {
-		if k == key {
-			n++
-		}
-	}
-	if n > c.limit {
-		return false, time.Minute
-	}
-	return true, 0
 }
 
 func TestDeleteAccount(t *testing.T) {
@@ -294,23 +273,23 @@ func TestDeleteAccount(t *testing.T) {
 
 	t.Run("every attempt spends one of the account's password attempts", func(t *testing.T) {
 		accounts, passwords := newFakeProfiles(t), &fakePasswords{params: "p1"}
-		attempts := &countingThrottle{limit: 2}
+		attempts := &fakeLimiter{limit: 2}
 		uc, _ := newThrottledDeleteAccount(&uow{}, accounts, passwords, attempts)
 
 		for range 2 {
 			assert.ErrorIs(t, uc.Execute(t.Context(), accounts.account.ID, "otra frase equivocada"), usecase.ErrWrongPassword)
 		}
 
-		assert.Equal(t, []string{newUserID, newUserID}, attempts.keys, "keyed by the account, never by the request")
+		assert.Equal(t, []string{newUserID, newUserID}, attempts.taken(), "keyed by the account, never by the request")
 	})
 
 	t.Run("an account out of attempts is refused before reading the hash or running argon2id", func(t *testing.T) {
 		accounts, units, passwords := newFakeProfiles(t), &uow{}, &fakePasswords{params: "p1"}
-		uc, logs := newThrottledDeleteAccount(units, accounts, passwords, &countingThrottle{limit: 0})
+		uc, logs := newThrottledDeleteAccount(units, accounts, passwords, &fakeLimiter{limit: 0})
 
 		err := uc.Execute(t.Context(), accounts.account.ID, acceptedSample)
 
-		var tooMany *usecase.TooManyAttemptsError
+		var tooMany *usecase.RateLimitedError
 		require.ErrorAs(t, err, &tooMany)
 		assert.Equal(t, time.Minute, tooMany.RetryAfter)
 		assert.NotErrorIs(t, err, usecase.ErrWrongPassword)
@@ -318,6 +297,18 @@ func TestDeleteAccount(t *testing.T) {
 		assert.Empty(t, units.units)
 		assert.Empty(t, passwords.verified)
 		assert.Contains(t, logs(), `"event":"delete_attempts_exhausted"`)
+	})
+
+	t.Run("a limiter that cannot decide fails closed: nothing read, verified or deleted", func(t *testing.T) {
+		accounts, units, passwords := newFakeProfiles(t), &uow{}, &fakePasswords{params: "p1"}
+		uc, _ := newThrottledDeleteAccount(units, accounts, passwords, &fakeLimiter{err: errDB})
+
+		err := uc.Execute(t.Context(), accounts.account.ID, acceptedSample)
+
+		require.ErrorIs(t, err, errDB)
+		assert.True(t, accounts.exists)
+		assert.Empty(t, units.units)
+		assert.Empty(t, passwords.verified)
 	})
 
 	t.Run("an infrastructure failure is wrapped and deletes nothing", func(t *testing.T) {
@@ -345,7 +336,7 @@ func (r *racingUOW) ReadWrite(ctx context.Context, userID string, work tx.Work) 
 }
 
 func TestNewDeleteAccount_refusesToRunWithoutAnAttemptLimit(t *testing.T) {
-	assert.PanicsWithValue(t, "auth: NewDeleteAccount needs an attempt Throttle", func() {
+	assert.PanicsWithValue(t, "auth: NewDeleteAccount needs an attempt RateLimiter", func() {
 		usecase.NewDeleteAccount(usecase.DeleteAccountDeps{Tx: &uow{}, Passwords: &fakePasswords{}, Accounts: newFakeProfiles(t)})
 	})
 }

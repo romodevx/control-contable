@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/romodevx/control-contable/backend/adapter/http/router"
 	authhttp "github.com/romodevx/control-contable/backend/internal/auth/adapter/http"
 	"github.com/romodevx/control-contable/backend/internal/auth/domain"
 	"github.com/romodevx/control-contable/backend/internal/auth/infra"
@@ -19,6 +20,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/crypto"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
 	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit"
+	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit/ratelimitpg"
 )
 
 // signUpNoticeInterval is D3's "at most once per hour" per email for the
@@ -45,6 +47,9 @@ type authModule struct {
 	account  *authhttp.AccountHandler
 	sessions *authhttp.SessionHandler
 	authn    *authhttp.Authenticator
+	// clientLimits are the per-client limits of the auth operations
+	// (MODULE-auth §5), by operationId, for the router.
+	clientLimits map[string]router.Limiter
 }
 
 // newAuthModule wires the auth use cases (M1-05, M1-07) over the cc_app pool
@@ -60,16 +65,23 @@ func newAuthModule(w authWiring) (authModule, error) {
 	}
 	clk := clock.NewSystem()
 	signUps := infra.NewSignUpStore()
+	// Rate-limit buckets shared by every instance (ADR-0005), keyed by HMACs
+	// under a key derived from the email pepper.
+	limits, err := ratelimitpg.NewStore(w.pool, w.keys.EmailPepper.RevealBytes(), w.now)
+	if err != nil {
+		return authModule{}, fmt.Errorf("auth: rate limits: %w", err)
+	}
+	signUpEmails := limits.Bucket(usecase.SignUpEmailPolicy)
 	sender := infra.NewLogSender(w.logger, w.env) // M1-06 replaces it with the provider adapter
 
 	register := usecase.NewRegister(usecase.RegisterDeps{
 		System: txm, Clock: clk, Entropy: rand.Reader, Index: keys.index,
 		Codes: keys.codes, Legal: infra.NewLegalDocumentStore(), SignUps: signUps, Email: sender,
-		Notices: ratelimit.NewEvery(signUpNoticeInterval, 1, w.now), Logger: w.logger,
+		Notices: ratelimit.NewEvery(signUpNoticeInterval, 1, w.now), Emails: signUpEmails, Logger: w.logger,
 	})
 	resend := usecase.NewResendVerification(usecase.ResendDeps{
 		System: txm, Clock: clk, Entropy: rand.Reader, Index: keys.index, Codes: keys.codes,
-		SignUps: signUps, Email: sender, Logger: w.logger,
+		SignUps: signUps, Email: sender, Emails: signUpEmails, Logger: w.logger,
 	})
 	verify := usecase.NewVerifyEmail(usecase.VerifyDeps{
 		Tx: txm, Clock: clk, Entropy: rand.Reader, NewUserID: newUserID, Index: keys.index,
@@ -80,7 +92,8 @@ func newAuthModule(w authWiring) (authModule, error) {
 	login, err := usecase.NewLogin(usecase.LoginDeps{
 		System: txm, Tx: txm, Clock: clk, Entropy: rand.Reader, Index: keys.index, Passwords: keys.passwords,
 		Credentials: infra.NewCredentialStore(), Accounts: infra.NewAccountStore(keys.emails),
-		Refresh: infra.NewRefreshTokenStore(), Access: keys.access, Logger: w.logger,
+		Refresh: infra.NewRefreshTokenStore(), Access: keys.access,
+		Failures: limits.Bucket(usecase.LoginFailuresPolicy), Ceiling: limits.Bucket(usecase.LoginCeilingPolicy), Logger: w.logger,
 	})
 	if err != nil {
 		return authModule{}, err
@@ -90,16 +103,32 @@ func newAuthModule(w authWiring) (authModule, error) {
 		return authModule{}, err
 	}
 	handler := authhttp.NewHandler(authhttp.UseCases{Register: register, Verify: verify, Resend: resend, Login: login})
-	return authModule{handler: handler, account: newAccountHandler(txm, keys, w.now, w.logger),
-		sessions: newSessionHandler(txm, keys, w.logger), authn: authn}, nil
+	return authModule{
+		handler:      handler,
+		account:      newAccountHandler(txm, keys, limits, w.logger),
+		sessions:     newSessionHandler(txm, keys, limits, w.logger),
+		authn:        authn,
+		clientLimits: clientLimits(limits),
+	}, nil
+}
+
+// clientLimits builds the router's per-client limits from the auth
+// adapter's policies.
+func clientLimits(limits *ratelimitpg.Store) map[string]router.Limiter {
+	out := make(map[string]router.Limiter, len(authhttp.ClientLimits))
+	for op, policy := range authhttp.ClientLimits {
+		out[op] = limits.Bucket(policy)
+	}
+	return out
 }
 
 // newSessionHandler wires refreshSession and logout (M1-08).
-func newSessionHandler(txm *pgdb.TxManager, keys authCrypto, logger *slog.Logger) *authhttp.SessionHandler {
+func newSessionHandler(txm *pgdb.TxManager, keys authCrypto, limits *ratelimitpg.Store, logger *slog.Logger) *authhttp.SessionHandler {
 	tokens := infra.NewRefreshTokenStore()
 	refresh := usecase.NewRefreshSession(usecase.RefreshDeps{
 		Tx: txm, Clock: clock.NewSystem(), Entropy: rand.Reader, Tokens: tokens,
-		Accounts: infra.NewAccountStore(keys.emails), Access: keys.access, Logger: logger,
+		Accounts: infra.NewAccountStore(keys.emails), Access: keys.access,
+		Rotations: limits.Bucket(usecase.RefreshFamilyPolicy), Logger: logger,
 	})
 	logout := usecase.NewLogout(usecase.LogoutDeps{Tx: txm, Tokens: tokens, Logger: logger})
 	return authhttp.NewSessionHandler(refresh, logout)

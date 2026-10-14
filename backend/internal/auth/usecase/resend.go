@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log/slog"
@@ -20,7 +21,10 @@ type ResendDeps struct {
 	Codes   CodeHasher
 	SignUps CodeResender
 	Email   EmailSender
-	Logger  *slog.Logger
+	// Emails is register's per-email budget (D7: one budget for both).
+	// Required. Out of budget, resend stays silent like its cooldown.
+	Emails RateLimiter
+	Logger *slog.Logger
 }
 
 // ResendVerification emails a new code for a live pending sign-up (US-A1c,
@@ -31,8 +35,11 @@ type ResendVerification struct {
 	mailer mailer
 }
 
-// NewResendVerification builds the use case.
+// NewResendVerification builds the use case. It panics without deps.Emails.
 func NewResendVerification(deps ResendDeps) *ResendVerification {
+	if deps.Emails == nil {
+		panic("auth: NewResendVerification needs an Emails RateLimiter")
+	}
 	return &ResendVerification{deps: deps, mailer: mailer{sender: deps.Email, logger: deps.Logger}}
 }
 
@@ -46,6 +53,13 @@ func (uc *ResendVerification) Execute(ctx context.Context, rawEmail string) erro
 	emailHash, err := hashEmail(uc.deps.Index, email)
 	if err != nil {
 		return err
+	}
+	allowed, _, err := uc.deps.Emails.Take(ctx, hex.EncodeToString(emailHash))
+	if err != nil {
+		return fmt.Errorf("auth: sign-up budget: %w", err)
+	}
+	if !allowed {
+		return nil // silent, like the cooldown: not an oracle (US-A1c)
 	}
 	issued, err := issueCode(uc.deps.Entropy, uc.deps.Codes, emailHash)
 	if err != nil {

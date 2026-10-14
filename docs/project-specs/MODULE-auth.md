@@ -153,20 +153,27 @@ response on duplicate email**; **trial starts at successful verification** (serv
 Domain sentinels (`ErrInvalidCredentials`, `ErrCodeInvalid`, `ErrTokenReused`, …) map through
 one `apperr.Mapper` in the auth adapter. `apperr.Error.Message` never carries email, code or token.
 
-## 5. Rate limits (in-process token buckets, ADR-0001 O9)
+## 5. Rate limits (shared PostgreSQL GCRA buckets, ADR-0005, M1-10)
 
-| Op | Per IP | Per account key (`email_hash` / user) |
+| Op | Per client (IP, IPv6 /64) | Per account key (`email_hash` / family / user) |
 |---|---|---|
-| register | 10 / h | 5 / h |
-| verify-email | 20 / 15 min | 5 wrong tries per code (hard) |
-| resend | 10 / h | 1 / 60 s, 5 / h (silent) |
-| login | 20 / 15 min | 5 failures / 15 min → 429 |
-| refresh | 60 / min | — |
+| register | 10 / h | 5 / h per email, shared with resend (D7) → 429 |
+| verify-email | 20 / 15 min | 5 wrong tries per code (hard, in `email_verifications`) |
+| resend | 10 / h | 1 / 60 s cooldown, 5 / h per email shared with register (silent 202) |
+| login | 20 / 15 min | 5 failures / 15 min per (email, client network: IPv4 /24, IPv6 /64) and 50 failures / h per email across networks → 429; a success refills both |
+| refresh | 60 / min | 20 rotations / h per token family → 429 (token stays live) |
 | deleteMe | — | 5 attempts, then 1 / 3 min per user id (D10, M1-09) → 429 |
 | legal/documents | 60 / min | — |
 
-Numbers are starting values; security gate (M1-17) may tune them. Limits sit after the
-flag check (OFF answers 404 first).
+A budget of N per window W admits N at once and refills one every W/N (that is the backoff:
+after 5 login failures from one network, one more try every 3 minutes there). Every 429 is `rate_limited` with a
+required `Retry-After` (whole seconds). Per-email keys are the blind index of any address,
+known or unknown, so a limit never enumerates accounts. Per-client limits run in the router
+right after the flag check (OFF answers 404 first and spends nothing) and before
+authentication and validation; per-account limits run in the use cases before any lookup or
+argon2id. A limiter error fails closed. Counters are shared by every API instance; the
+worker purges full buckets in M9. Numbers are starting values; security gate (M1-17) may
+tune them. Code: `usecase.*Policy` (per account) and `authhttp.ClientLimits` (per client).
 
 ## 6. Security requirements
 
@@ -221,6 +228,7 @@ email provider (M1-06, blocked on OB2), legal text content (OB10).
 | D7 | Register for an email with a **live pending sign-up never overwrites** its password hash or accepted documents (account-takeover found in the PR #34 security review): it behaves like `resendVerification` (generic 202, shared cooldown and rate limits). A new register replaces the pending sign-up only after it expires. Responses stay generic (no enumeration). M1-05 implements and tests it. Superseded in part by D8: a pending sign-up no longer holds a password. |
 | D8 | **The password is set at verification, by whoever proves inbox ownership** (DECIDED 2026-10-13, coordinator; PR #40 security gate). D7 alone left a pre-registration takeover: an attacker registers the victim's email with the attacker's password, the victim's own register is only a resend, the victim verifies with the code from their inbox, and the account is created with the attacker's password. Contract change (authorized pre-release change of the M1-01 frozen nodes, `info.version` 0.1.0 → 0.2.0): `RegisterRequest` drops `password` and `name` (email + `accepted_documents` only); `VerifyEmailRequest` gains required `password` (12-128, policy checked server-side before the code, a policy failure spends no try) and optional `name`. Pending sign-ups store no password hash and no name; `email_verification_start` refuses a payload with `password_hash`. Regression: `TestAuth_preRegistrationTakeover`. Mobile (PR #39) adapts its sign-up flow: the password field moves to the code screen. |
 | D9 | **Refresh reuse is strict: no grace window** (DECIDED 2026-10-13, PR #44 security gate). Any second presentation of a rotated token revokes the whole family, however soon it comes. Rejected alternative: a short grace (e.g. 30 s) answering `401` without revoking. It never re-issues tokens, but it is exactly the window a thief uses: a stolen token replayed right after the victim's rotation (or the victim's retry right after the thief's) would end nobody's session, and the replay-after-theft case is the one reuse detection exists for. Cost accepted for MVP: a refresh whose response is lost after the server committed (flaky mobile network) makes the client's retry look like reuse, so the user is signed out and must log in again. Mitigations: mobile serialises refresh in a `QueuedInterceptor`, treats any refresh `401` as logout (wipes tokens, routes to login), and never retries a refresh blindly; the event is audited as `token_reuse` so the rate of false positives is measurable. Revisit only with data, and then with a design that keeps detection (e.g. a client-generated idempotency key bound to the family), never a time-only grace. Family revocation also catches a successor committed while it waited (`TestRefresh_reuseRevokesASuccessorCommittedWhileItWaited`). |
+| D11 | **Auth rate limits live in PostgreSQL, not in process** (M1-10, ADR-0005; follows the PR #43 gate note that in-process limits give N instances N× the attempts). GCRA buckets decided by one atomic `UPDATE`, keys stored as HMACs, fail closed. Login counts failures only (a success refills). Refresh is limited per family once the token is proven live (a per-prefix key would let anyone lock a user out with forged tokens). `Retry-After` is now required on every 429 (`components.responses.TooManyRequests` frozen, `info.version` 0.3.1). M1-17 gate: the login failure budget is per (email, client network) under a 50 / h per-email ceiling, so a stranger locks out only their own network; residual risk (a distributed attacker over ≥ 10 networks can hold the ceiling) accepted in ADR-0005. |
 | D10 | **A wrong re-entered password on `deleteMe` is `403 invalid_password`, not `401`** (DECIDED 2026-10-13, PR #43 security gate; authorized pre-release change of the M1-01 frozen nodes, `info.version` 0.2.0 → 0.3.0). A `401` means the bearer: RFC 9110 requires the `WWW-Authenticate` challenge on it and RFC 6750 ties that challenge to the token, and the mobile interceptor refreshes and retries on a `401`, which would submit the same wrong password twice. The token was valid and the server refuses the action for a bad credential in the body, which is RFC 9110's `403`. `deleteMe`'s `401` becomes the shared `Unauthorized` (challenge included) and only means a missing, invalid or expired bearer, or a deleted account. `ErrorCode` gains `invalid_password` (append-only). Attempts are limited per user id (5, then one every 3 minutes, `429`) so a stolen access token is no password oracle; a body without `password` spends none. Same change: `listLegalDocuments` answers `Cache-Control: public, max-age=300` (public, identical for everyone; a new version reaches clients within 5 minutes). Mobile (PR #45) maps the `403` to "wrong password" and can drop its pre-flight `GET /v1/me` and the interceptor's `DELETE /v1/me` exemption. |
 
 No open questions remain for stage 1.

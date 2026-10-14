@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Control Contable API
-  version: 0.3.0
+  version: 0.3.1
   summary: Monthly IVA and provisional ISR estimates for Mexican taxpayers.
   description: |
     Spec-first contract (single source of truth). Server stubs (oapi-codegen),
@@ -1439,10 +1439,14 @@ components:
                   code: incompatible
                   message: 626 is incompatible with 612.
     TooManyRequests:
+      x-frozen: sha256:f8089f8519a6c89a82d5c1be41732117e53e4f6e7042c713d6d6ac127fea5b3e
       description: Rate limit exceeded.
       headers:
         Retry-After:
-          description: Seconds to wait.
+          description: >-
+            Whole seconds until the next attempt can be admitted (RFC 9110 §10.2.3, delay-seconds
+            form), rounded up, at least 1. Sent on every 429 (M1-10).
+          required: true
           schema: { type: integer, minimum: 1 }
       content:
         application/json:

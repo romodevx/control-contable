@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
 	"github.com/romodevx/control-contable/backend/internal/auth/domain"
@@ -17,8 +16,6 @@ import (
 const (
 	// msgWrongPassword answers a wrong current password on account deletion.
 	msgWrongPassword = "The password is incorrect."
-	// msgTooManyAttempts answers an account out of deletion attempts.
-	msgTooManyAttempts = "Too many requests. Try again later."
 	// legalDocumentsCacheControl lets shared caches keep the public legal
 	// document list briefly: a new version takes effect within 5 minutes.
 	legalDocumentsCacheControl = "public, max-age=300"
@@ -123,14 +120,14 @@ func (h *AccountHandler) DeleteMe(ctx context.Context, req gen.DeleteMeRequestOb
 		password = req.Body.Password
 	}
 	err = h.remove.Execute(ctx, userID, password)
-	var tooMany *usecase.TooManyAttemptsError
+	if limited, ok := tooManyRequests(ctx, err); ok {
+		return gen.DeleteMe429JSONResponse{TooManyRequestsJSONResponse: limited}, nil
+	}
 	switch {
 	case err == nil:
 		return gen.DeleteMe204Response{}, nil
 	case errors.Is(err, usecase.ErrAccountNotFound):
 		return gen.DeleteMe401JSONResponse{UnauthorizedJSONResponse: unauthorized(ctx)}, nil
-	case errors.As(err, &tooMany):
-		return gen.DeleteMe429JSONResponse{TooManyRequestsJSONResponse: tooManyRequests(ctx, tooMany.RetryAfter)}, nil
 	case errors.Is(err, usecase.ErrWrongPassword):
 		return nil, apperr.Wrap(err, apperr.CodeInvalidPassword, msgWrongPassword)
 	default:
@@ -178,15 +175,4 @@ func unauthorized(ctx context.Context) gen.UnauthorizedJSONResponse {
 	body.Error.Message = msgAuthenticationRequired
 	body.Error.RequestId = requestid.From(ctx)
 	return gen.UnauthorizedJSONResponse{Body: body, Headers: gen.UnauthorizedResponseHeaders{WWWAuthenticate: bearerChallenge}}
-}
-
-// tooManyRequests is the contract's TooManyRequests response; Retry-After
-// is wait in whole seconds, rounded up, at least 1.
-func tooManyRequests(ctx context.Context, wait time.Duration) gen.TooManyRequestsJSONResponse {
-	var body gen.ErrorResponse
-	body.Error.Code = gen.ErrorCodeRateLimited
-	body.Error.Message = msgTooManyAttempts
-	body.Error.RequestId = requestid.From(ctx)
-	seconds := max(int((wait+time.Second-1)/time.Second), 1)
-	return gen.TooManyRequestsJSONResponse{Body: body, Headers: gen.TooManyRequestsResponseHeaders{RetryAfter: &seconds}}
 }

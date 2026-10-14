@@ -31,7 +31,11 @@ type RegisterDeps struct {
 	Email   EmailSender
 	// Notices throttles the "someone tried to sign up" notice per email (D3).
 	Notices Throttle
-	Logger  *slog.Logger
+	// Emails limits the sign-up attempts of each email (MODULE-auth §5),
+	// keyed by its blind index; resendVerification spends from the same
+	// budget (D7). Required.
+	Emails RateLimiter
+	Logger *slog.Logger
 }
 
 // Register starts a sign-up (US-A1a). Its only observable results are a
@@ -43,8 +47,12 @@ type Register struct {
 	mailer mailer
 }
 
-// NewRegister builds the use case.
+// NewRegister builds the use case. It panics without deps.Emails: sign-up
+// with no per-email limit is a wiring error, never a default.
 func NewRegister(deps RegisterDeps) *Register {
+	if deps.Emails == nil {
+		panic("auth: NewRegister needs an Emails RateLimiter")
+	}
 	return &Register{deps: deps, mailer: mailer{sender: deps.Email, logger: deps.Logger}}
 }
 
@@ -69,6 +77,13 @@ func (uc *Register) Execute(ctx context.Context, in RegisterInput) error {
 	emailHash, err := hashEmail(uc.deps.Index, req.email)
 	if err != nil {
 		return err
+	}
+	allowed, wait, err := uc.deps.Emails.Take(ctx, hex.EncodeToString(emailHash))
+	if err != nil {
+		return fmt.Errorf("auth: sign-up budget: %w", err)
+	}
+	if !allowed {
+		return &RateLimitedError{RetryAfter: wait}
 	}
 	issued, err := issueCode(uc.deps.Entropy, uc.deps.Codes, emailHash)
 	if err != nil {

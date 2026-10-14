@@ -104,6 +104,8 @@ type loginEnv struct {
 	credentials *fakeCredentials
 	accounts    *fakeLoginAccounts
 	refresh     *fakeRefresh
+	failures    *fakeLimiter
+	ceiling     *fakeLimiter
 	logs        interface{ String() string }
 }
 
@@ -125,6 +127,8 @@ func newLoginEnv(t *testing.T, params string, active bool) *loginEnv {
 		}},
 		accounts: &fakeLoginAccounts{account: usecase.Account{Email: email, CreatedAt: now}},
 		refresh:  &fakeRefresh{},
+		failures: &fakeLimiter{limit: 100},
+		ceiling:  &fakeLimiter{limit: 100},
 		logs:     logs,
 	}
 	e.uc, err = usecase.NewLogin(usecase.LoginDeps{
@@ -138,6 +142,8 @@ func newLoginEnv(t *testing.T, params string, active bool) *loginEnv {
 		Accounts:    e.accounts,
 		Refresh:     e.refresh,
 		Access:      fakeAccess{},
+		Failures:    e.failures,
+		Ceiling:     e.ceiling,
 		Logger:      logger,
 	})
 	require.NoError(t, err)
@@ -145,8 +151,11 @@ func newLoginEnv(t *testing.T, params string, active bool) *loginEnv {
 	return e
 }
 
+// testClient is the client network every login() comes from.
+const testClient = "203.0.113.0/24"
+
 func login(email, password string) usecase.LoginInput {
-	return usecase.LoginInput{Email: email, Password: password}
+	return usecase.LoginInput{Email: email, Password: password, Client: testClient}
 }
 
 func TestLogin_rightCredentialsStartANewTokenFamily(t *testing.T) {

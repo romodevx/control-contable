@@ -96,7 +96,7 @@ func (f *fakeRotation) Lock(_ context.Context, hash domain.TokenHash) (usecase.S
 		stored[0] ^= 0xff
 	}
 	return usecase.StoredRefreshToken{
-		ID: row.id, Hash: stored, Rotated: row.rotated, Revoked: row.revoked, Expired: row.expired,
+		ID: row.id, Family: row.family, Hash: stored, Rotated: row.rotated, Revoked: row.revoked, Expired: row.expired,
 	}, true, nil
 }
 
@@ -157,6 +157,8 @@ type refreshEnv struct {
 	userID domain.UserID
 	logs   interface{ String() string }
 	seed   byte
+	// rotations limits the rotations of each family (MODULE-auth §5).
+	rotations *fakeLimiter
 }
 
 // nextSeed makes each issued fixture token's secret different.
@@ -171,15 +173,16 @@ func newRefreshEnv(t *testing.T) *refreshEnv {
 	require.NoError(t, err)
 	logger, logs := capturedLogs()
 	e := &refreshEnv{
-		tx:     &fakeTx{},
-		store:  newFakeRotation(),
-		status: &fakeStatus{active: map[domain.UserID]bool{userID: true}},
-		userID: userID,
-		logs:   logs,
+		tx:        &fakeTx{},
+		store:     newFakeRotation(),
+		status:    &fakeStatus{active: map[domain.UserID]bool{userID: true}},
+		userID:    userID,
+		logs:      logs,
+		rotations: &fakeLimiter{limit: 100},
 	}
 	e.uc = usecase.NewRefreshSession(usecase.RefreshDeps{
 		Tx: e.tx, Clock: fixedClock, Entropy: &seqReader{next: 100}, Tokens: e.store,
-		Accounts: e.status, Access: fakeAccess{}, Logger: logger,
+		Accounts: e.status, Access: fakeAccess{}, Rotations: e.rotations, Logger: logger,
 	})
 	return e
 }

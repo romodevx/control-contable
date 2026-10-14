@@ -36,6 +36,9 @@ func NewSessionHandler(refresh Refresher, logout SignOut) *SessionHandler {
 // Every refusal is the one generic 401 (US-A2b).
 func (h *SessionHandler) RefreshSession(ctx context.Context, req gen.RefreshSessionRequestObject) (gen.RefreshSessionResponseObject, error) {
 	tokens, err := h.refresh.Execute(ctx, req.Body.RefreshToken)
+	if limited, ok := tooManyRequests(ctx, err); ok {
+		return gen.RefreshSession429JSONResponse{TooManyRequestsJSONResponse: limited}, nil
+	}
 	if err != nil {
 		return nil, toAppError(err)
 	}

@@ -59,6 +59,7 @@ target), so every schema a frozen operation exposes is frozen on its own.
 | `components.schemas.RegisterRequest`, `DocumentAcceptance`, `VerificationSent`, `VerifyEmailRequest`, `ResendVerificationRequest`, `LoginRequest`, `RefreshRequest`, `TokenPair`, `AuthSession`, `User`, `UserUpdate`, `DeleteAccountRequest`, `LegalDocumentKind`, `LegalDocument`, `LegalDocumentList` | M1-01 | Bodies of the M1 operations |
 | `components.headers.NoStore` | M1-01 | `Cache-Control: no-store` on every response that carries tokens or account data |
 | `components.responses.Unauthorized`, `components.headers.WWWAuthenticate` | M1-07 (security gate, pre-release addition) | The 401 of every secured operation, with the fixed `WWW-Authenticate: Bearer realm="control-contable"` challenge RFC 9110 §15.5.2 requires; the bearer authenticator writes it |
+| `components.responses.TooManyRequests` | M1-10 (pre-release change, 0.3.1; noted in the PR #9 tech-lead review) | The 429 of every operation. `Retry-After` (whole seconds, at least 1) is **required**: both the edge limiter and the per-operation and per-account limits send it, and the harness now fails a 429 without it |
 
 **`FieldError.field` naming (one convention).** A dotted path relative to the request body
 (`password`, `accepted_documents.1.kind`), `body` for the body root, and the bare parameter

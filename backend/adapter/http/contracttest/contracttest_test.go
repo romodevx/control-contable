@@ -148,6 +148,13 @@ func TestServe_reportsEveryKindOfViolation(t *testing.T) {
 			want:    []string{"getHealth", "429", "Retry-After"},
 		},
 		{
+			// M1-10: the contract requires Retry-After on every 429, so a
+			// client always knows when to try again.
+			name:    "required header missing",
+			handler: respond(http.StatusTooManyRequests, jsonType, rateLimitBody),
+			want:    []string{"getHealth", "429", "Retry-After"},
+		},
+		{
 			name:    "body is not JSON",
 			handler: respond(http.StatusOK, jsonType, `{"status":`),
 			want:    []string{"getHealth", `{"status":`},
