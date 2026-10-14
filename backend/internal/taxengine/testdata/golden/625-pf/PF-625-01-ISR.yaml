@@ -6,7 +6,6 @@
 # it shows here too (MODULE-tax-engine §2.9).
 id: PF-625-01-ISR
 source: research:PF-625-01
-pending_strategy: true # M5-14 removes this when the 625 PF strategy is registered
 input:
   regime: "625"
   person_type: fisica
