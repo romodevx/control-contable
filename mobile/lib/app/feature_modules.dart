@@ -1,5 +1,6 @@
 import 'package:control_contable/core/router/feature_module.dart';
 import 'package:control_contable/features/auth/auth_routes.dart';
+import 'package:control_contable/features/expenses/expenses_routes.dart';
 import 'package:control_contable/features/incomes/incomes_routes.dart';
 import 'package:control_contable/features/tax_engine/tax_engine_routes.dart';
 import 'package:control_contable/features/taxpayers/taxpayers_routes.dart';
@@ -11,5 +12,6 @@ final List<FeatureModule> appFeatureModules = [
   authFeature,
   taxpayersFeature,
   incomesFeature,
+  expensesFeature,
   taxEngineFeature,
 ];
