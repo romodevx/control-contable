@@ -57,10 +57,10 @@ func matching(t *testing.T) annualgolden.Result {
 				Payments: cents(t, "38000.00"), Withholdings: cents(t, "15000.00"), SalaryISR: cents(t, "54235.91"),
 				Balance: annualgolden.Balance{Kind: annual.BalanceACargo, Amount: cents(t, "199.87")},
 			},
-			Lines: []annualgolden.Line{
-				{Code: "isr.accumulable_income", Op: domain.OpInput, Amount: cents(t, "760000.00")},
-				{Code: "deductions.cap_applied", Op: domain.OpInfo, Amount: cents(t, "12900.00")},
-				{Code: "isr.balance", Op: domain.OpResult, Amount: cents(t, "199.87")},
+			Lines: []annualgolden.ResultLine{
+				{Line: annualgolden.Line{Code: "isr.accumulable_income", Op: domain.OpInput, Amount: cents(t, "760000.00")}, Cited: true},
+				{Line: annualgolden.Line{Code: "deductions.cap_applied", Op: domain.OpInfo, Amount: cents(t, "12900.00")}},
+				{Line: annualgolden.Line{Code: "isr.balance", Op: domain.OpResult, Amount: cents(t, "199.87")}, Cited: true},
 			},
 		}},
 	}
@@ -94,6 +94,14 @@ func TestEvaluateReportsEveryMismatch(t *testing.T) {
 		{"no tax", func(r *annualgolden.Result) { r.Sections[0].Tax = nil }, "pf_art152 tax"},
 		{"line amount", func(r *annualgolden.Result) { r.Sections[0].Lines[1].Amount = 1 }, "pf_art152 lines"},
 		{"line missing", func(r *annualgolden.Result) { r.Sections[0].Lines = r.Sections[0].Lines[:1] }, "pf_art152 lines"},
+		// A "Tope aplicado" the golden does not list is a wrong cap, even
+		// when the other lines are in order (deductions notes are exact).
+		{"phantom cap note", func(r *annualgolden.Result) {
+			phantom := annualgolden.ResultLine{Line: annualgolden.Line{Code: "deductions.cap_applied", Op: domain.OpInfo, Amount: 1}}
+			r.Sections[0].Lines = slices.Insert(r.Sections[0].Lines, 1, phantom)
+		}, "pf_art152 deductions notes"},
+		// As in the monthly harness, a computed line must cite its legal basis.
+		{"uncited line", func(r *annualgolden.Result) { r.Sections[0].Lines[2].Cited = false }, "pf_art152 line 3 isr.balance: no legal basis"},
 		{"disclaimers", func(r *annualgolden.Result) { r.Disclaimers = nil }, "disclaimers"},
 		{"informative income", func(r *annualgolden.Result) { r.InformativeIncomeOver500k = false }, "informative_income_over_500k"},
 		{"sections", func(r *annualgolden.Result) {
