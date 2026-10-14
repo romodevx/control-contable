@@ -95,5 +95,5 @@ var cashBasis = map[Category][]domain.Citation{
 	CategoryMedical:           {{Law: lawLISR, Article: articleTop, Note: "fracción I, pago con medios electrónicos"}},
 	CategoryMedicalDisability: {{Law: lawLISR, Article: articleTop, Note: "fracción I, pago con medios electrónicos"}},
 	CategorySchoolTransport:   {{Law: lawLISR, Article: articleTop, Note: "fracción VII, pago con medios electrónicos"}},
-	CategoryTuition:           {{Law: lawDecree, Article: "1.9", Note: "pago con cheque nominativo, transferencia o tarjeta"}},
+	CategoryTuition:           {{Law: lawDecree, Article: "1.9", Note: "pago con cheque, transferencia o tarjeta"}},
 }
