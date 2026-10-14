@@ -28,7 +28,8 @@ API_DOCS_OUT ?= build/api-docs/index.html
 API_BUNDLE := build/openapi/bundle.json
 ERROR_TABLE_PAGES := module_auth=docs/modules/auth.md module_taxpayers=docs/modules/taxpayers.md \
 	module_incomes=docs/modules/incomes.md module_expenses=docs/modules/expenses.md \
-	module_tax_engine=docs/modules/tax-engine.md module_dashboard=docs/modules/dashboard.md
+	module_tax_engine=docs/modules/tax-engine.md module_dashboard=docs/modules/dashboard.md \
+	module_history=docs/modules/history.md
 ERROR_TABLE := node $(CONTRACT_TOOLS)/error-table.js $(API_BUNDLE)
 
 .PHONY: contract-tools contract-lint contract-lint-test mock api-docs api-bundle \

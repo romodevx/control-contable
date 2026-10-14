@@ -338,6 +338,19 @@ spend `estimate_reads`. Spent → `429 rate_limited` + `Retry-After`.
 
 ## 9. Contract changes for M8-01 (architect)
 
+**Applied and frozen in contract 0.9.0 (M8-01).** Item 1: `tax` is the new `HistoryTax`
+(the `TrendTax` figures plus `iva_in_favor_cents`, without `status`, which lives on the month);
+`change_reason` is the named enum `HistoryChangeReason`; `engine_version` is the named
+`EngineVersion` (≤ 32 chars, `^[0-9A-Za-z./-]+$`). Item 2: `year_totals` is `HistoryYearTotals`.
+Item 3: `parameter_set` travels as the estimate's `ParameterSetRef` object
+(`{fiscal_year, version}`, closed for input as `HistoryViewedParameterSet`), copied verbatim
+from the rendered `TaxpayerEstimate`; the `"2026/v1"` text of §2.3 is the storage form only.
+Item 5: `TaxpayerEstimate.figures_fingerprint` (`FiguresFingerprint`) is additive and
+**optional** until M8-03 computes it (an M5 handler that does not send a required field would
+fail its contract tests); M8-03 may make it required (a response narrowing, non-breaking for
+clients). `engine_version` was already required at taxpayer level. The `400`, `404` and `422`
+are inline on each operation; `500` reuses `RecordInternalError`.
+
 1. `HistoryMonth`: replace the scaffold (`status` enum with `no_records`, `iva`/`isr` as `TaxResult`)
    with §2.2: `status: TaxpayerEstimateStatus` (frozen enum, reused), `has_records`, `tax: HistoryTax |
    null` (shape aligned with M6 `TrendTax` plus `iva_in_favor_cents`; reuse if the architect prefers),
