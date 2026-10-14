@@ -1,6 +1,8 @@
+import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/features/auth/auth_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import 'pump_auth.dart';
 
@@ -13,18 +15,34 @@ void main() {
 
   Finder createAccount() => find.widgetWithText(TextButton, 'Crear cuenta');
 
-  for (final location in [
-    AuthRoutes.login,
-    AuthRoutes.register,
-    AuthRoutes.verifyEmail,
-  ]) {
-    testWidgets('off: $location is not found', (tester) async {
-      await harness.pump(tester, location: location, enabled: false);
+  // M1-14: the router gates the whole slice by `module_auth`, so every auth
+  // location (guest or signed-in) is not found while the flag is off.
+  testWidgets('off: every auth route is not found', (tester) async {
+    final paths = [
+      for (final route in authFeature.allRoutes) (route as GoRoute).path,
+    ];
+    expect(authFeature.module, AppModule.auth);
+    expect(
+      paths,
+      unorderedEquals([
+        AuthRoutes.login,
+        AuthRoutes.register,
+        AuthRoutes.verifyEmail,
+        AuthRoutes.profile,
+        AuthRoutes.goodbye,
+      ]),
+    );
 
-      expect(find.text('Página no encontrada'), findsOneWidget);
-      expect(harness.repository.documentCalls, 0);
-    });
-  }
+    await harness.pump(tester, enabled: false, signedIn: true);
+    for (final path in paths) {
+      harness.router.go(path);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Página no encontrada'), findsOneWidget, reason: path);
+    }
+    expect(harness.repository.documentCalls, 0);
+    expect(harness.profile.calls, isEmpty);
+  });
 
   testWidgets('off: the app opens on home, with no way to sign in', (
     tester,
