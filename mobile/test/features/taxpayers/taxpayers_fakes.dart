@@ -296,6 +296,10 @@ class FakeTaxpayersRepository implements TaxpayersRepository {
   /// Warnings of the next answer of the named operation.
   final Map<String, List<Warning>> warnNext = {};
 
+  /// The `start_period` of every `addRegime`, in order (`null`: the
+  /// server default, the current month).
+  final List<String?> addedStarts = [];
+
   /// Every settings call, as `operation:argument`.
   final List<String> calls = [];
 
@@ -386,12 +390,14 @@ class FakeTaxpayersRepository implements TaxpayersRepository {
     required String taxpayerId,
     required String regimeCode,
     Map<String, Object>? options,
+    String? startPeriod,
   }) async {
     _call('addRegime', regimeCode);
+    addedStarts.add(startPeriod);
     final added = heldRegime(
       regimeCode,
       options: options ?? const {},
-      startPeriod: '2026-10',
+      startPeriod: startPeriod ?? '2026-10',
     );
     _replace(
       taxpayerId,

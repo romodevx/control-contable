@@ -2,6 +2,7 @@ import 'package:control_contable/api/generated/models/regime_incompatibility.dar
 import 'package:control_contable/api/generated/models/taxpayer.dart';
 import 'package:control_contable/api/generated/models/warning.dart';
 import 'package:control_contable/core/theme/app_spacing.dart';
+import 'package:control_contable/core/time/clock.dart';
 import 'package:control_contable/core/widgets/load_status.dart';
 import 'package:control_contable/features/taxpayers/application/add_regime_flow.dart';
 import 'package:control_contable/features/taxpayers/application/onboarding_flow.dart';
@@ -61,6 +62,7 @@ class _AddRegime extends ConsumerStatefulWidget {
 class _AddRegimeState extends ConsumerState<_AddRegime> {
   late final AddRegimeFlow _flow = AddRegimeFlow(
     settings: ref.read(taxpayerSettingsProvider),
+    clock: ref.read(clockProvider),
     taxpayerId: widget.taxpayer.id,
     personType: widget.taxpayer.personType,
     heldCodes: {

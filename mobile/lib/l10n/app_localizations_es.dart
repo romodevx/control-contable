@@ -454,6 +454,22 @@ class AppLocalizationsEs extends AppLocalizations {
       'Elige el régimen de la empresa. Una persona moral tiene un solo régimen a la vez.';
 
   @override
+  String get onboardingStartPeriodLabelSingle =>
+      '¿Desde qué mes tributas en este régimen?';
+
+  @override
+  String get onboardingStartPeriodLabelMany =>
+      '¿Desde qué mes tributas en estos regímenes?';
+
+  @override
+  String get onboardingStartPeriodHint =>
+      'Solo podrás registrar ingresos y gastos desde el mes que elijas. Si ya tributabas antes de este mes, elige el mes en que empezaste (desde enero de 2026) para registrar y estimar los meses anteriores.';
+
+  @override
+  String get onboardingStartPeriodRejected =>
+      'Ese mes no se puede elegir. Elige un mes entre enero de 2026 y el mes actual.';
+
+  @override
   String get onboardingRegimesLabel => 'Regímenes';
 
   @override
@@ -811,7 +827,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get addRegimeIntro =>
-      'Elige el régimen que vas a agregar. Cuenta a partir de este mes.';
+      'Elige el régimen que vas a agregar y el mes desde el que tributas en él.';
 
   @override
   String get addRegimeNoneLeft =>

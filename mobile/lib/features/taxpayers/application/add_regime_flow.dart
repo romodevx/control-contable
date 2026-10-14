@@ -4,11 +4,17 @@ import 'package:control_contable/api/generated/models/person_type.dart';
 import 'package:control_contable/api/generated/models/regime.dart';
 import 'package:control_contable/api/generated/models/taxpayer_regime.dart';
 import 'package:control_contable/core/network/api_failure.dart';
+import 'package:control_contable/core/time/clock.dart';
 import 'package:control_contable/features/taxpayers/application/onboarding_failures.dart';
 import 'package:control_contable/features/taxpayers/application/onboarding_flow.dart';
 import 'package:control_contable/features/taxpayers/application/regime_wizard.dart';
 import 'package:control_contable/features/taxpayers/application/taxpayer_settings.dart';
+import 'package:control_contable/features/taxpayers/domain/periods.dart'
+    as periods;
 import 'package:flutter/foundation.dart';
+
+/// `details[].field` of a refused start month.
+const String _startPeriodField = 'start_period';
 
 /// Where adding a regime is.
 enum AddRegimeStep {
@@ -28,19 +34,24 @@ enum AddRegimeStep {
 /// Adds one regime to an existing taxpayer from settings (US-T3), reusing
 /// the onboarding's regimes and options steps: regimes already held are
 /// not offered, a pick that conflicts with a held one is flagged at once,
-/// and one `POST …/regimes` writes it starting this month. Re-adding an
-/// ended regime reopens it (OQ-5).
+/// and one `POST …/regimes` writes it from the month the user picks (this
+/// month by default). Re-adding an ended regime reopens it with its original
+/// start (OQ-5).
 class AddRegimeFlow extends ChangeNotifier implements RegimeWizard {
   /// The flow adding to [taxpayerId] (of [personType], holding
-  /// [heldCodes] open) through [_settings]. [knownReadOnly] starts at the
-  /// paywall.
+  /// [heldCodes] open) through [_settings]; [clock] dates the current
+  /// month. [knownReadOnly] starts at the paywall.
   new({
     required this._settings,
+    required Clock clock,
     required this.taxpayerId,
     required this.personType,
     required this.heldCodes,
     bool knownReadOnly = false,
-  }) : _step = knownReadOnly ? AddRegimeStep.readOnly : AddRegimeStep.regimes;
+  }) : _step = knownReadOnly ? AddRegimeStep.readOnly : AddRegimeStep.regimes,
+       _currentPeriod = periods.currentPeriod(clock()) {
+    _startPeriod = _currentPeriod;
+  }
 
   final TaxpayerSettings _settings;
 
@@ -54,6 +65,8 @@ class AddRegimeFlow extends ChangeNotifier implements RegimeWizard {
   final Set<String> heldCodes;
 
   AddRegimeStep _step;
+  final String _currentPeriod;
+  late String _startPeriod;
   List<Regime> _regimes = const [];
   final Map<String, Map<String, Object>> _options = {};
   Map<String, Set<String>> _optionRejections = const {};
@@ -101,6 +114,16 @@ class AddRegimeFlow extends ChangeNotifier implements RegimeWizard {
   int get totalSteps => 2;
 
   @override
+  String get startPeriod => _startPeriod;
+
+  @override
+  List<String> get startPeriodChoices =>
+      periods.startPeriodChoices(_currentPeriod);
+
+  @override
+  void chooseStartPeriod(String period) => _startPeriod = period;
+
+  @override
   void rememberRegimes(List<Regime> chosen) =>
       _regimes = List.unmodifiable(chosen);
 
@@ -145,6 +168,10 @@ class AddRegimeFlow extends ChangeNotifier implements RegimeWizard {
           taxpayerId: taxpayerId,
           regimeCode: regime.code,
           options: regime.optionDefs.isEmpty ? null : optionsFor(regime),
+          startPeriod: periods.startPeriodToSend(
+            chosen: _startPeriod,
+            current: _currentPeriod,
+          ),
         ),
       );
       _go(AddRegimeStep.done);
@@ -160,6 +187,10 @@ class AddRegimeFlow extends ChangeNotifier implements RegimeWizard {
       case ApiRejected(code: ErrorCode.invalidRegimeCombination):
         _go(AddRegimeStep.regimes);
         _notice = OnboardingNotice.combinationRejected;
+      case ApiValidationFailure(:final details)
+          when details.any((d) => d.field == _startPeriodField):
+        _go(AddRegimeStep.regimes);
+        _notice = OnboardingNotice.startPeriodRejected;
       case ApiValidationFailure(:final details)
           when _rejectedOptions(details).isNotEmpty:
         _optionRejections = {code: _rejectedOptions(details)};

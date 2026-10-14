@@ -13,6 +13,8 @@ import 'package:control_contable/core/time/clock.dart';
 import 'package:control_contable/features/taxpayers/application/onboarding_failures.dart';
 import 'package:control_contable/features/taxpayers/application/regime_wizard.dart';
 import 'package:control_contable/features/taxpayers/data/taxpayers_repository.dart';
+import 'package:control_contable/features/taxpayers/domain/periods.dart'
+    as periods;
 import 'package:control_contable/features/taxpayers/domain/regime_compatibility.dart';
 import 'package:control_contable/features/taxpayers/domain/rfc.dart';
 import 'package:flutter/foundation.dart';
@@ -113,6 +115,8 @@ class OnboardingFlow extends ChangeNotifier implements RegimeWizard {
   String _displayName = '';
   String _rfc = '';
   List<Regime> _regimes = const [];
+  late final String _currentPeriod = periods.currentPeriod(_clock());
+  late String _startPeriod = _currentPeriod;
   final Map<String, Map<String, Object>> _options = {};
   Taxpayer? _created;
   List<Warning> _warnings = const [];
@@ -251,6 +255,16 @@ class OnboardingFlow extends ChangeNotifier implements RegimeWizard {
     _go(OnboardingStep.regimes);
   }
 
+  @override
+  String get startPeriod => _startPeriod;
+
+  @override
+  List<String> get startPeriodChoices =>
+      periods.startPeriodChoices(_currentPeriod);
+
+  @override
+  void chooseStartPeriod(String period) => _startPeriod = period;
+
   /// Keeps the step 3 choice as picked (no rebuild): going back keeps it.
   @override
   void rememberRegimes(List<Regime> chosen) =>
@@ -373,6 +387,10 @@ class OnboardingFlow extends ChangeNotifier implements RegimeWizard {
         TaxpayerRegimeCreate(
           regimeCode: regime.code,
           options: regime.optionDefs.isEmpty ? null : optionsFor(regime),
+          startPeriod: periods.startPeriodToSend(
+            chosen: _startPeriod,
+            current: _currentPeriod,
+          ),
         ),
     ],
   );
@@ -408,9 +426,11 @@ class OnboardingFlow extends ChangeNotifier implements RegimeWizard {
     if (verdict.rfc != null || verdict.displayName) {
       return _go(OnboardingStep.identity);
     }
-    if (verdict.regime) {
+    if (verdict.regime || verdict.startPeriod) {
       _go(OnboardingStep.regimes);
-      _notice = OnboardingNotice.regimeRejected;
+      _notice = verdict.regime
+          ? OnboardingNotice.regimeRejected
+          : OnboardingNotice.startPeriodRejected;
       return;
     }
     final firstRejected = optionRegimes.indexWhere(

@@ -53,6 +53,8 @@ String describeNotice(OnboardingNotice notice, AppLocalizations l10n) =>
       OnboardingNotice.combinationRejected =>
         l10n.onboardingRegimeCombinationRejected,
       OnboardingNotice.regimeRejected => l10n.onboardingRegimeRejected,
+      OnboardingNotice.startPeriodRejected =>
+        l10n.onboardingStartPeriodRejected,
       OnboardingNotice.unexpected => l10n.onboardingErrorUnexpected,
     };
 

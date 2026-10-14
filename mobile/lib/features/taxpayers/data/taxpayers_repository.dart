@@ -54,11 +54,13 @@ abstract interface class TaxpayersRepository {
   Future<void> delete(String taxpayerId);
 
   /// Adds a regime, or reopens an ended one (`POST …/regimes`), starting
-  /// in the current month.
+  /// in [startPeriod] (`YYYY-MM`; `null` is the current month). A
+  /// reopened regime keeps its original start.
   Future<TaxpayerRegime> addRegime({
     required String taxpayerId,
     required String regimeCode,
     Map<String, Object>? options,
+    String? startPeriod,
   });
 
   /// Replaces the options sent (`PATCH …/regimes/{code}`); the change
@@ -156,10 +158,15 @@ class ApiTaxpayersRepository implements TaxpayersRepository {
     required String taxpayerId,
     required String regimeCode,
     Map<String, Object>? options,
+    String? startPeriod,
   }) => guardApi(
     () => _taxpayers.addTaxpayerRegime(
       taxpayerId: taxpayerId,
-      body: TaxpayerRegimeCreate(regimeCode: regimeCode, options: options),
+      body: TaxpayerRegimeCreate(
+        regimeCode: regimeCode,
+        options: options,
+        startPeriod: startPeriod,
+      ),
     ),
   );
 

@@ -41,6 +41,10 @@ enum OnboardingNotice {
   /// A `400` on a regime code.
   regimeRejected,
 
+  /// A `400` on a regime's start month (before 2026-01, or after the
+  /// server's current month).
+  startPeriodRejected,
+
   /// Anything else.
   unexpected,
 }
@@ -50,6 +54,7 @@ typedef OnboardingVerdict = ({
   RfcRejection? rfc,
   bool displayName,
   bool regime,
+  bool startPeriod,
   Map<String, Set<String>> options,
 });
 
@@ -69,6 +74,7 @@ OnboardingVerdict sortDetails(
   RfcRejection? rfc;
   var displayName = false;
   var regime = false;
+  var startPeriod = false;
   final options = <String, Set<String>>{};
   for (final detail in details) {
     final path = detail.field.split(_pathSeparator);
@@ -84,11 +90,19 @@ OnboardingVerdict sortDetails(
         } else {
           (options[code] ??= {}).add(key);
         }
+      case ['regimes', _, 'start_period'] || ['start_period']:
+        startPeriod = true;
       case ['regimes', ...]:
         regime = true;
     }
   }
-  return (rfc: rfc, displayName: displayName, regime: regime, options: options);
+  return (
+    rfc: rfc,
+    displayName: displayName,
+    regime: regime,
+    startPeriod: startPeriod,
+    options: options,
+  );
 }
 
 /// The RFC verdict of a failed RFC write, or `null` when [failure] is not

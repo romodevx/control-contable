@@ -35,6 +35,22 @@ List<String> endPeriodChoices({
   }
 }
 
+/// The earliest month a regime may start in: January of the first fiscal
+/// year with tax parameters (the server answers `out_of_range` before it).
+const String firstStartPeriod = '2026-01';
+
+/// The months a new regime can start in, newest first: from [current] back
+/// to [firstStartPeriod]. A user who starts using the app mid-year picks an
+/// earlier month to record and estimate the months before.
+List<String> startPeriodChoices(String current) =>
+    endPeriodChoices(start: firstStartPeriod, current: current);
+
+/// The `start_period` a request sends for [chosen]: `null` when it is
+/// [current], the server's default, so a client clock a few minutes ahead
+/// of the server at a month boundary cannot ask for a future month.
+String? startPeriodToSend({required String chosen, required String current}) =>
+    chosen == current ? null : chosen;
+
 /// The `YYYY-MM` period of [month] (1-12) in [year].
 String periodOf(int year, int month) => _format(year, month);
 

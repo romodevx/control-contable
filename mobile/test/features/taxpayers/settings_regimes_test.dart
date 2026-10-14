@@ -212,6 +212,36 @@ void main() {
       expect(find.text('605 · Régimen 605'), findsOneWidget);
     });
 
+    testWidgets('asks from which month the regime counts; this month by '
+        'default, an earlier one when picked (M5-29 QA D2)', (tester) async {
+      await pumpSettings(tester);
+      await tapText(tester, 'Agregar régimen');
+
+      expect(
+        find.text('¿Desde qué mes tributas en este régimen?'),
+        findsOneWidget,
+      );
+      await _pick(tester, '605');
+      await tapText(tester, 'octubre de 2026');
+      await tapText(tester, 'marzo de 2026');
+      await tapText(tester, 'Agregar régimen');
+
+      expect(harness.repository.addedStarts, ['2026-03']);
+      expect(
+        harness.repository.taxpayers.single.regimes.last.startPeriod,
+        '2026-03',
+      );
+    });
+
+    testWidgets('this month is left to the server', (tester) async {
+      await pumpSettings(tester);
+      await tapText(tester, 'Agregar régimen');
+      await _pick(tester, '605');
+      await tapText(tester, 'Agregar régimen');
+
+      expect(harness.repository.addedStarts, [null]);
+    });
+
     testWidgets('a regime with options goes through its options page', (
       tester,
     ) async {
