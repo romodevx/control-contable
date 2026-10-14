@@ -19,6 +19,10 @@
 //   - RegimeEstimate: lines, ISR TaxResult, IVA components, withholdings to
 //     remit, missing inputs, CPA topics and disclaimers; Status applies the
 //     precedence informational > incomplete > partial > complete.
+//   - Registry: the immutable StrategyKey -> Strategy map built at the
+//     composition root (duplicates fail at startup), falling back to the
+//     InformationalStrategy; its Estimate checks the period's RequiredInputs
+//     against the TaxInputs first, so a missing input makes it incomplete.
 //
 // The package is pure: no I/O, no clock, no randomness, no floats (money is
 // platform/money's Cents, Exact and Rate), no map-order dependence. It reads
