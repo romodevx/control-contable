@@ -73,6 +73,7 @@ List<Widget> expenseFormFields(
     ),
     if (chosen != null && hint != null)
       CategoryHint(
+        key: const ValueKey('category-hint'),
         lines: hintLines(hint, l10n),
         note: chosen.note,
         basis: chosen.legalBasis,
@@ -101,6 +102,7 @@ List<Widget> expenseFormFields(
     ),
     AppDateField(field: model.paidOn, textInputAction: TextInputAction.next),
     InlineWarnings(
+      key: const ValueKey('payment-warnings'),
       field: AppChoiceField(
         field: model.paymentMethod,
         options: [
@@ -116,6 +118,7 @@ List<Widget> expenseFormFields(
       ],
     ),
     InlineWarnings(
+      key: const ValueKey('cfdi-warnings'),
       field: AppChoiceField(
         field: model.hasCfdi,
         options: [

@@ -1,12 +1,42 @@
+import 'dart:async';
+
 import 'package:control_contable/core/theme/app_spacing.dart';
 import 'package:control_contable/core/theme/app_tokens.dart';
 import 'package:control_contable/features/expenses/application/expense_form_model.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
+
+/// Politely announces each of [messages] not in [before], after the frame
+/// that shows them: a live region alone is silent on VoiceOver, and these
+/// texts appear without moving focus.
+void _announceNew(
+  State state,
+  List<String> messages, {
+  List<String> before = const [],
+}) {
+  final fresh = messages.where((m) => !before.contains(m)).toList();
+  if (fresh.isEmpty) return;
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (!state.mounted) return;
+    final context = state.context;
+    for (final message in fresh) {
+      unawaited(
+        SemanticsService.sendAnnouncement(
+          View.of(context),
+          message,
+          Directionality.of(context),
+        ),
+      );
+    }
+  });
+}
 
 /// The plain-language hint of the chosen category: [lines], then its
-/// [note] and legal [basis] when the catalog has them.
-class CategoryHint extends StatelessWidget {
+/// [note] and legal [basis] when the catalog has them. The [lines] are
+/// announced whenever they change.
+class CategoryHint extends StatefulWidget {
   /// The hint reading [lines].
   const new({required this.lines, this.note, this.basis, super.key});
 
@@ -20,10 +50,29 @@ class CategoryHint extends StatelessWidget {
   final String? basis;
 
   @override
+  State<CategoryHint> createState() => _CategoryHintState();
+}
+
+class _CategoryHintState extends State<CategoryHint> {
+  @override
+  void initState() {
+    super.initState();
+    _announceNew(this, widget.lines);
+  }
+
+  @override
+  void didUpdateWidget(CategoryHint oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!listEquals(widget.lines, oldWidget.lines)) {
+      _announceNew(this, widget.lines);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final basis = this.basis;
+    final CategoryHint(:lines, :note, :basis) = widget;
     return Semantics(
       container: true,
       liveRegion: true,
@@ -54,7 +103,7 @@ class CategoryHint extends StatelessWidget {
 /// A field followed by its non-blocking [warnings] (never errors: the save
 /// goes through). Each is announced as it appears, with an icon and words,
 /// never color alone.
-class InlineWarnings extends StatelessWidget {
+class InlineWarnings extends StatefulWidget {
   /// [field] with [warnings] under it.
   const new({required this.field, required this.warnings, super.key});
 
@@ -65,13 +114,30 @@ class InlineWarnings extends StatelessWidget {
   final List<String> warnings;
 
   @override
+  State<InlineWarnings> createState() => _InlineWarningsState();
+}
+
+class _InlineWarningsState extends State<InlineWarnings> {
+  @override
+  void initState() {
+    super.initState();
+    _announceNew(this, widget.warnings);
+  }
+
+  @override
+  void didUpdateWidget(InlineWarnings oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _announceNew(this, widget.warnings, before: oldWidget.warnings);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final style = Theme.of(context).textTheme.bodyMedium;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        field,
-        for (final warning in warnings)
+        widget.field,
+        for (final warning in widget.warnings)
           Semantics(
             liveRegion: true,
             container: true,
