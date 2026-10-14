@@ -1135,13 +1135,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get incomeDiscardTitle => '¿Descartar este ingreso?';
 
   @override
-  String get incomeDiscardBody => 'Lo que escribiste se perderá.';
+  String get recordDiscardBody => 'Lo que escribiste se perderá.';
 
   @override
-  String get incomeDiscardKeep => 'Seguir editando';
+  String get recordDiscardKeep => 'Seguir editando';
 
   @override
-  String get incomeDiscardConfirm => 'Descartar';
+  String get recordDiscardConfirm => 'Descartar';
 
   @override
   String get homeOpenEstimate => 'Ver estimado del mes';
@@ -1314,6 +1314,342 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get taxInputsTitle => 'Datos fiscales';
+
+  @override
+  String get recordErrorInvalid => 'Revisa este dato.';
+
+  @override
+  String get expensesNoTaxpayer =>
+      'Registra un contribuyente para llevar sus gastos.';
+
+  @override
+  String expensesEmptyTitle(String month) {
+    return 'Sin gastos en $month';
+  }
+
+  @override
+  String get expensesEmptyBody =>
+      'Registra tus gastos y te mostramos cuáles podrían bajar tus impuestos.';
+
+  @override
+  String get expensesRecord => 'Registrar gasto';
+
+  @override
+  String get expensesLoadFailed => 'No se pudieron cargar los gastos.';
+
+  @override
+  String get expensesLoading => 'Cargando gastos…';
+
+  @override
+  String expensesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count gastos',
+      one: '1 gasto',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get expensesTotalTitle => 'Total del mes con IVA';
+
+  @override
+  String get expensesTotalSubtotal => 'Sin IVA';
+
+  @override
+  String get expensesTotalIva => 'IVA pagado';
+
+  @override
+  String get expensesTotalWithheld => 'Retenciones a enterar';
+
+  @override
+  String get expensesNotDeductible => 'No deducible';
+
+  @override
+  String expensesDeleteTooltip(String title) {
+    return 'Eliminar gasto: $title';
+  }
+
+  @override
+  String expensesEditLabel(String title) {
+    return 'Editar gasto: $title';
+  }
+
+  @override
+  String expensesDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count gastos eliminados',
+      one: 'Gasto eliminado',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String expensesRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count gastos restaurados',
+      one: 'Gasto restaurado',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String expensesRestoredSome(int restored, int total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      restored,
+      locale: localeName,
+      other: 'Se restauraron $restored de $total gastos.',
+      one: 'Se restauró 1 de $total gastos.',
+      zero: 'No se restauró ninguno de los $total gastos.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get expensesDeleteFailed => 'No se pudo eliminar el gasto.';
+
+  @override
+  String get expensesRestoreFailed => 'No se pudo restaurar el gasto.';
+
+  @override
+  String get expensesRestoreRegimeEnded =>
+      'No se pudo restaurar: el régimen ya no cubre la fecha del gasto.';
+
+  @override
+  String get expenseFormTitle => 'Nuevo gasto';
+
+  @override
+  String get expenseEditTitle => 'Editar gasto';
+
+  @override
+  String get expenseFieldCategory => 'Categoría';
+
+  @override
+  String get expenseCategoryNone => 'Elige una categoría';
+
+  @override
+  String get expenseCategoryPickerTitle => 'Elige la categoría del gasto';
+
+  @override
+  String get expenseCategorySearch => 'Buscar categoría';
+
+  @override
+  String get expenseCategoryNoMatch =>
+      'Ninguna categoría coincide con la búsqueda.';
+
+  @override
+  String get expenseCategoriesLoading => 'Cargando categorías…';
+
+  @override
+  String get expenseCategoriesLoadFailed =>
+      'No se pudieron cargar las categorías.';
+
+  @override
+  String get expenseFieldAmount => 'Monto sin IVA';
+
+  @override
+  String get expenseFieldIvaRate => 'Tasa de IVA';
+
+  @override
+  String get expenseFieldPaidOn => 'Fecha de pago';
+
+  @override
+  String get expenseFieldPaymentMethod => 'Forma de pago';
+
+  @override
+  String get expenseFieldHasCfdi => '¿Tienes factura?';
+
+  @override
+  String get expenseHasCfdiYes => 'Sí';
+
+  @override
+  String get expenseHasCfdiNo => 'No';
+
+  @override
+  String get expenseFieldRegime => 'Régimen';
+
+  @override
+  String get expenseFieldIvaAmount => 'IVA pagado';
+
+  @override
+  String get expenseFieldDeductible => '¿Es deducible?';
+
+  @override
+  String get expenseDeductibleSuggested =>
+      'Valor sugerido para esta categoría y forma de pago';
+
+  @override
+  String get expenseDeductibleUser => 'Lo elegiste tú';
+
+  @override
+  String get expenseDeductibleReset => 'Usar el valor sugerido';
+
+  @override
+  String get expenseFieldCfdiUuid => 'Folio fiscal (UUID)';
+
+  @override
+  String get expenseFieldDescription => 'Descripción';
+
+  @override
+  String get expenseFieldIsrWithheld => 'ISR retenido';
+
+  @override
+  String get expenseFieldIvaWithheld => 'IVA retenido';
+
+  @override
+  String get expenseSectionMore => 'Más detalles';
+
+  @override
+  String get expenseSectionWithholdings => 'Retenciones a tu proveedor';
+
+  @override
+  String get expenseWithholdingsHelp =>
+      'Lo que le retuviste al proveedor, como dice el CFDI. Lo tienes que enterar al SAT.';
+
+  @override
+  String expenseSummaryTotal(String total) {
+    return 'Total con IVA $total';
+  }
+
+  @override
+  String get expenseHintDeductible => 'Normalmente deducible para tu régimen.';
+
+  @override
+  String get expenseHintPartial => 'Deducible sólo en parte para tu régimen.';
+
+  @override
+  String get expenseHintNotDeductible =>
+      'Normalmente no es deducible para tu régimen.';
+
+  @override
+  String get expenseHintNotIsr => 'No reduce tu ISR en este régimen.';
+
+  @override
+  String get expenseHintResico => 'No reduce tu ISR en RESICO.';
+
+  @override
+  String get expenseHintResicoIva =>
+      'En RESICO tus gastos no reducen tu ISR, pero el IVA que pagaste sí puede acreditarse.';
+
+  @override
+  String get expenseHintBlind35 =>
+      'Con la deducción ciega del 35 % este gasto no cuenta.';
+
+  @override
+  String expenseHintBasis(String basis) {
+    return 'Fundamento: $basis';
+  }
+
+  @override
+  String expenseCashOverLimit(String limit) {
+    return 'Los pagos en efectivo de más de $limit no son deducibles.';
+  }
+
+  @override
+  String get expenseCashFuel =>
+      'El combustible pagado en efectivo no es deducible.';
+
+  @override
+  String get expenseCashIva =>
+      'El IVA de este pago en efectivo no es acreditable.';
+
+  @override
+  String get expenseNoCfdi => 'Sin factura, el gasto no es deducible.';
+
+  @override
+  String get expenseWarningNotIsrInRegime =>
+      'En tu régimen este gasto no reduce el ISR, aunque lo marcaste como deducible.';
+
+  @override
+  String get expenseWarningCategoryNotDeductible =>
+      'Esta categoría normalmente no es deducible; se guardó como la marcaste.';
+
+  @override
+  String get expenseWarningDuplicateCfdi =>
+      'Ya hay otro gasto con este folio fiscal.';
+
+  @override
+  String get expenseWarningProvisional =>
+      'Se usaron los parámetros fiscales del año anterior: los de este año aún no se publican.';
+
+  @override
+  String get expenseSaved => 'Gasto guardado';
+
+  @override
+  String get expenseSavedWithWarnings => 'Gasto guardado, con un aviso:';
+
+  @override
+  String get expenseUpdated => 'Gasto actualizado';
+
+  @override
+  String get expenseUpdatedWithWarnings => 'Gasto actualizado, con un aviso:';
+
+  @override
+  String get expenseSaveUnreachable =>
+      'No se pudo guardar por falta de conexión. Vuelve a tocar Guardar: no se duplicará.';
+
+  @override
+  String get expenseSaveIdReused =>
+      'Este gasto ya se había guardado con otros datos. Revisa la lista de gastos.';
+
+  @override
+  String get expenseSaveGone =>
+      'Este gasto ya no existe: se eliminó en otro lugar.';
+
+  @override
+  String get expenseSaveFailed =>
+      'No se pudo guardar el gasto. Intenta de nuevo.';
+
+  @override
+  String get expenseTrialCapTitle => 'Llegaste al límite de gastos de prueba';
+
+  @override
+  String get expenseTrialCapBody =>
+      'La prueba incluye 5 gastos y ya los registraste. Para registrar más gastos se necesita un plan. Lo que capturaste sigue en el formulario.';
+
+  @override
+  String get expenseDiscardTitle => '¿Descartar este gasto?';
+
+  @override
+  String get expenseErrorUnknownCategory => 'Elige una categoría de la lista.';
+
+  @override
+  String get expenseErrorHasCfdiMismatch =>
+      'Si capturas el folio fiscal, indica que tienes factura.';
+
+  @override
+  String get expenseErrorRateNotValid =>
+      'Esta tasa no está vigente en la fecha del gasto.';
+
+  @override
+  String get expenseErrorWithholdingNotApplicable =>
+      'Sólo una persona moral retiene a sus proveedores.';
+
+  @override
+  String get paymentCash => 'Efectivo';
+
+  @override
+  String get paymentTransfer => 'Transferencia';
+
+  @override
+  String get paymentCardDebit => 'Tarjeta de débito';
+
+  @override
+  String get paymentCardCredit => 'Tarjeta de crédito';
+
+  @override
+  String get paymentCheck => 'Cheque';
+
+  @override
+  String get paymentEWallet => 'Monedero electrónico';
+
+  @override
+  String get paymentOther => 'Otro';
 
   @override
   String get breakdownLoading => 'Cargando el desglose…';

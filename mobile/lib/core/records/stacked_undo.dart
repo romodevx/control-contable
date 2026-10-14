@@ -49,7 +49,39 @@ class StackedUndo<T> {
     unawaited(toast.closed.then((_) => _forget(generation)));
   }
 
+  /// Shows a plain toast reading [message] on [messenger] without closing
+  /// a pending Undo (it must not disappear on its own): while one is up,
+  /// the toast waits in the queue behind it. Otherwise it replaces the
+  /// current toast.
+  void notify(ScaffoldMessengerState messenger, String message) {
+    if (_pending.isEmpty) messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(SnackBar(content: Text(message)));
+  }
+
   void _forget(int generation) {
     if (generation == _generation) _pending.clear();
   }
+}
+
+/// What an Undo of several records brought back: how many were restored,
+/// and every refusal ([E]) of the others.
+typedef RestoreReport<E> = ({int restored, List<E> refusals});
+
+/// Restores every one of [items] through [restore], going on past a
+/// refusal of type [E] so one record cannot strand the rest.
+Future<RestoreReport<E>> restoreEach<T, E extends Object>(
+  List<T> items,
+  Future<void> Function(T item) restore,
+) async {
+  var restored = 0;
+  final refusals = <E>[];
+  for (final item in items) {
+    try {
+      await restore(item);
+      restored++;
+    } on E catch (refusal) {
+      refusals.add(refusal);
+    }
+  }
+  return (restored: restored, refusals: refusals);
 }
