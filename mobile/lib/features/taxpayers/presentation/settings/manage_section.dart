@@ -25,34 +25,49 @@ class ManageSection extends ConsumerWidget {
   final Taxpayer taxpayer;
 
   Future<void> _archive(BuildContext context, WidgetRef ref) async {
-    final l10n = AppLocalizations.of(context);
-    // Undo may be tapped after this screen is gone: it keeps what it needs.
+    // Undo may be tapped after this screen is gone: it keeps what it needs
+    // and never reads [context] before checking it is still mounted.
+    final feedback = _Feedback.of(context);
     final settings = ref.read(taxpayerSettingsProvider);
-    final messenger = ScaffoldMessenger.of(context);
-    if (!await _run(context, settings, WriteAccess.always, _archiveCall)) {
+    if (!await _run(
+      context,
+      feedback,
+      settings,
+      WriteAccess.always,
+      _archiveCall,
+    )) {
       return;
     }
-    if (!context.mounted) return;
-    showSettingsToast(
-      messenger,
-      l10n.settingsArchived(taxpayer.displayName),
+    feedback.toast(
+      feedback.l10n.settingsArchived(taxpayer.displayName),
       action: SnackBarAction(
-        label: l10n.settingsUndo,
-        onPressed: () => unawaited(
-          _run(context, settings, WriteAccess.needsPlan, _unarchiveCall),
-        ),
+        label: feedback.l10n.settingsUndo,
+        onPressed: () => unawaited(_unarchiveWith(context, feedback, settings)),
       ),
     );
   }
 
-  Future<void> _unarchive(BuildContext context, WidgetRef ref) async {
-    final l10n = AppLocalizations.of(context);
-    final settings = ref.read(taxpayerSettingsProvider);
-    final messenger = ScaffoldMessenger.of(context);
-    if (!await _run(context, settings, WriteAccess.needsPlan, _unarchiveCall)) {
-      return;
-    }
-    showSettingsToast(messenger, l10n.settingsUnarchived(taxpayer.displayName));
+  Future<void> _unarchive(BuildContext context, WidgetRef ref) =>
+      _unarchiveWith(
+        context,
+        _Feedback.of(context),
+        ref.read(taxpayerSettingsProvider),
+      );
+
+  Future<void> _unarchiveWith(
+    BuildContext context,
+    _Feedback feedback,
+    TaxpayerSettings settings,
+  ) async {
+    final done = await _run(
+      context,
+      feedback,
+      settings,
+      WriteAccess.needsPlan,
+      _unarchiveCall,
+    );
+    if (done)
+      feedback.toast(feedback.l10n.settingsUnarchived(taxpayer.displayName));
   }
 
   Future<void> _delete(BuildContext context) async {
@@ -75,15 +90,14 @@ class ManageSection extends ConsumerWidget {
       r.unarchive(taxpayer.id);
 
   /// Runs one write; `false` when it failed (the paywall or a toast says
-  /// why).
+  /// why). The paywall opens over [context] only while it is mounted.
   Future<bool> _run(
     BuildContext context,
+    _Feedback feedback,
     TaxpayerSettings settings,
     WriteAccess access,
     Future<Taxpayer> Function(TaxpayersRepository) write,
   ) async {
-    final l10n = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
     try {
       await settings.run(access, write);
       return true;
@@ -91,10 +105,10 @@ class ManageSection extends ConsumerWidget {
       if (context.mounted) {
         unawaited(showPaywall(context));
       } else {
-        showSettingsToast(messenger, l10n.paywallWriteBody);
+        feedback.toast(feedback.l10n.paywallWriteBody);
       }
     } on ApiFailure catch (failure) {
-      showSettingsToast(messenger, settingsFailureMessage(failure, l10n));
+      feedback.toast(settingsFailureMessage(failure, feedback.l10n));
     }
     return false;
   }
@@ -131,4 +145,18 @@ class ManageSection extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// What a write's follow-up needs, read while the screen is mounted: the
+/// toast outlives the screen.
+final class _Feedback {
+  _Feedback.of(BuildContext context)
+    : messenger = ScaffoldMessenger.of(context),
+      l10n = AppLocalizations.of(context);
+
+  final ScaffoldMessengerState messenger;
+  final AppLocalizations l10n;
+
+  void toast(String message, {SnackBarAction? action}) =>
+      showSettingsToast(messenger, message, action: action);
 }

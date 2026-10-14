@@ -258,6 +258,37 @@ void main() {
       expect(find.text(_archivedBanner), findsNothing);
     });
 
+    testWidgets('Undo still works after leaving the settings', (tester) async {
+      await pumpSettings(tester);
+      await tapText(tester, 'Archivar');
+
+      harness.container.read(appRouterProvider).go(AppRoutes.home);
+      await tester.pumpAndSettle();
+      await tapText(tester, 'Deshacer');
+
+      expect(tester.takeException(), isNull);
+      expect(harness.repository.calls, contains('unarchive:$_id'));
+      expect(find.text('«Ana» volvió a tu lista.'), findsOneWidget);
+    });
+
+    testWidgets('Undo needing a plan after leaving the settings says why', (
+      tester,
+    ) async {
+      harness.repository.failNext['unarchive'] = const ApiEntitlementRequired();
+      await pumpSettings(tester);
+      await tapText(tester, 'Archivar');
+
+      harness.container.read(appRouterProvider).go(AppRoutes.home);
+      await tester.pumpAndSettle();
+      await tapText(tester, 'Deshacer');
+
+      expect(tester.takeException(), isNull);
+      expect(
+        find.textContaining('hacer cambios requiere un plan'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('an archived taxpayer can be unarchived', (tester) async {
       await pumpSettings(
         tester,
