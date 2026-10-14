@@ -21,6 +21,7 @@ catalog migration `backend/migrations/20261013180000_regimes_catalog.sql` (CAT).
 ## Rules and procedures
 
 - [ ] 625 definitive IVA: under LIVA 18-L/18-M, with the definitive option the 50 % platform withholding is final and directly collected IVA is paid at 8 %. R §A.2.6, R PF-625-01, ADR §1, CAT `regimes` 625
+- [ ] 625 direct collections at 8 % (LIVA 18-M ¶2, text DOF 09-12-2019, unchanged in the 12-11-2021 compilation): the app applies 8 % to the consideration before IVA (half of the 16 % IVA charged), infers the direct share as the month's 16 % IVA minus 2× (with RFC) or 1× (without RFC) the platform withholding, leaves border-8 % direct IVA as is, and also applies it when the platform had no RFC. Confirm the base and those three choices. MODULE-tax-engine §2.4 row 625, PR #94
 - [ ] RMF 2026 rule numbers for RESICO (Title 3.13) and platform facilities (3.11.x): the RMF text was not retrieved. R Part D, CAT `regimes` 625
 - [ ] Rental IVA withholding: RLIVA art. 3 fr. I c) 2/3 used; a secondary source claims RMF rule 4.1.4 sets 100 %. R Part D
 - [ ] Due-date move to the next business day under CFF art. 12. ADR §4

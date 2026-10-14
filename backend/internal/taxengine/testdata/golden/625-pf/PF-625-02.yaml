@@ -4,7 +4,6 @@
 # The research states no IVA for this example; the records carry none.
 id: PF-625-02
 source: research:PF-625-02
-pending_strategy: true # M5-14
 input:
   regime: "625"
   person_type: fisica

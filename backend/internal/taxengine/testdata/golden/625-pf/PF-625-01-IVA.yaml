@@ -6,7 +6,6 @@
 id: PF-625-01-IVA
 source: research:PF-625-01
 skip_reason: "⚠️ LIVA 18-M: definitive effect of the platform's 50 % IVA withholding not confirmed (research §A.5 PF-625-01; CPA-REVIEW 625 definitive IVA, topic platform_definitive_iva)"
-pending_strategy: true # M5-14
 input:
   regime: "625"
   person_type: fisica
@@ -34,9 +33,12 @@ expected:
     withheld_from_taxpayer: "2400.00"
     definitive_excluded: "2400.00"
     net: "0.00"
-  lines:
-    - {tax: iva, code: iva.charged_collected, op: input, amount: "4800.00"}
+  lines: # codes as the 625 strategy emits them (M5-14); the totals are the research's
+    - {tax: iva, code: iva.charged.rate_16, op: input, amount: "4800.00"}
+    - {tax: iva, code: iva.charged, op: result, amount: "4800.00"}
     - {tax: iva, code: iva.definitive_excluded, op: subtract, amount: "2400.00"}
-    - {tax: iva, code: iva.withheld_from_taxpayer, op: subtract, amount: "2400.00"}
-    - {tax: iva, code: iva.net, op: result, amount: "0.00"}
+    - {tax: iva, code: iva.creditable, op: subtract, amount: "0.00"}
+    - {tax: iva, code: iva.withheld.moral, op: subtract, amount: "0.00"}
+    - {tax: iva, code: iva.withheld.platform, op: subtract, amount: "2400.00"}
+    - {tax: iva, code: iva.regime_net, op: result, amount: "0.00"}
   cpa_topics: [platform_definitive_iva]
