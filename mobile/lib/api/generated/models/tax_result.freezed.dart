@@ -17,8 +17,8 @@ T _$identity<T>(T value) => value;
 mixin _$TaxResult {
 
 /// Exact result; negative = saldo a favor.
-@JsonKey(name: 'amount_cents') MoneyCents get amountCents;/// Payment amount. Equals amount_cents (centavo precision) until the CPA confirms CFF art. 20 whole-peso rounding (ADR-0002 §4).
-@JsonKey(name: 'payable_rounded_cents') MoneyCents get payableRoundedCents; TaxResultOutcome get outcome;
+@JsonKey(name: 'amount_cents') MoneyCents get amountCents;/// Amount to pay: the positive part of `amount_cents` (0 when `in_favor` or `zero`). Centavo precision until the CPA confirms CFF art. 20 whole-peso rounding (`rounding.payment_whole_pesos`, off, OQ-T3).
+@JsonKey(name: 'payable_rounded_cents') NonNegativeCents get payableRoundedCents; TaxResultOutcome get outcome;
 /// Create a copy of TaxResult
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -56,7 +56,7 @@ abstract mixin class $TaxResultCopyWith<$Res>  {
   factory $TaxResultCopyWith(TaxResult value, $Res Function(TaxResult) _then) = _$TaxResultCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'amount_cents') MoneyCents amountCents,@JsonKey(name: 'payable_rounded_cents') MoneyCents payableRoundedCents, TaxResultOutcome outcome
+@JsonKey(name: 'amount_cents') MoneyCents amountCents,@JsonKey(name: 'payable_rounded_cents') NonNegativeCents payableRoundedCents, TaxResultOutcome outcome
 });
 
 
@@ -77,7 +77,7 @@ class _$TaxResultCopyWithImpl<$Res>
   return _then(TaxResult(
 amountCents: null == amountCents ? _self.amountCents : amountCents // ignore: cast_nullable_to_non_nullable
 as MoneyCents,payableRoundedCents: null == payableRoundedCents ? _self.payableRoundedCents : payableRoundedCents // ignore: cast_nullable_to_non_nullable
-as MoneyCents,outcome: null == outcome ? _self.outcome : outcome // ignore: cast_nullable_to_non_nullable
+as NonNegativeCents,outcome: null == outcome ? _self.outcome : outcome // ignore: cast_nullable_to_non_nullable
 as TaxResultOutcome,
   ));
 }
@@ -163,7 +163,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'amount_cents')  MoneyCents amountCents, @JsonKey(name: 'payable_rounded_cents')  MoneyCents payableRoundedCents,  TaxResultOutcome outcome)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'amount_cents')  MoneyCents amountCents, @JsonKey(name: 'payable_rounded_cents')  NonNegativeCents payableRoundedCents,  TaxResultOutcome outcome)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TaxResult() when $default != null:
 return $default(_that.amountCents,_that.payableRoundedCents,_that.outcome);case _:
@@ -184,7 +184,7 @@ return $default(_that.amountCents,_that.payableRoundedCents,_that.outcome);case 
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'amount_cents')  MoneyCents amountCents, @JsonKey(name: 'payable_rounded_cents')  MoneyCents payableRoundedCents,  TaxResultOutcome outcome)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'amount_cents')  MoneyCents amountCents, @JsonKey(name: 'payable_rounded_cents')  NonNegativeCents payableRoundedCents,  TaxResultOutcome outcome)  $default,) {final _that = this;
 switch (_that) {
 case _TaxResult():
 return $default(_that.amountCents,_that.payableRoundedCents,_that.outcome);case _:
@@ -204,7 +204,7 @@ return $default(_that.amountCents,_that.payableRoundedCents,_that.outcome);case 
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'amount_cents')  MoneyCents amountCents, @JsonKey(name: 'payable_rounded_cents')  MoneyCents payableRoundedCents,  TaxResultOutcome outcome)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'amount_cents')  MoneyCents amountCents, @JsonKey(name: 'payable_rounded_cents')  NonNegativeCents payableRoundedCents,  TaxResultOutcome outcome)?  $default,) {final _that = this;
 switch (_that) {
 case _TaxResult() when $default != null:
 return $default(_that.amountCents,_that.payableRoundedCents,_that.outcome);case _:
@@ -224,8 +224,8 @@ class _TaxResult implements TaxResult {
 
 /// Exact result; negative = saldo a favor.
 @override@JsonKey(name: 'amount_cents') final  MoneyCents amountCents;
-/// Payment amount. Equals amount_cents (centavo precision) until the CPA confirms CFF art. 20 whole-peso rounding (ADR-0002 §4).
-@override@JsonKey(name: 'payable_rounded_cents') final  MoneyCents payableRoundedCents;
+/// Amount to pay: the positive part of `amount_cents` (0 when `in_favor` or `zero`). Centavo precision until the CPA confirms CFF art. 20 whole-peso rounding (`rounding.payment_whole_pesos`, off, OQ-T3).
+@override@JsonKey(name: 'payable_rounded_cents') final  NonNegativeCents payableRoundedCents;
 @override final  TaxResultOutcome outcome;
 
 /// Create a copy of TaxResult
@@ -263,7 +263,7 @@ abstract mixin class _$TaxResultCopyWith<$Res> implements $TaxResultCopyWith<$Re
   factory _$TaxResultCopyWith(_TaxResult value, $Res Function(_TaxResult) _then) = __$TaxResultCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'amount_cents') MoneyCents amountCents,@JsonKey(name: 'payable_rounded_cents') MoneyCents payableRoundedCents, TaxResultOutcome outcome
+@JsonKey(name: 'amount_cents') MoneyCents amountCents,@JsonKey(name: 'payable_rounded_cents') NonNegativeCents payableRoundedCents, TaxResultOutcome outcome
 });
 
 
@@ -284,7 +284,7 @@ class __$TaxResultCopyWithImpl<$Res>
   return _then(_TaxResult(
 amountCents: null == amountCents ? _self.amountCents : amountCents // ignore: cast_nullable_to_non_nullable
 as MoneyCents,payableRoundedCents: null == payableRoundedCents ? _self.payableRoundedCents : payableRoundedCents // ignore: cast_nullable_to_non_nullable
-as MoneyCents,outcome: null == outcome ? _self.outcome : outcome // ignore: cast_nullable_to_non_nullable
+as NonNegativeCents,outcome: null == outcome ? _self.outcome : outcome // ignore: cast_nullable_to_non_nullable
 as TaxResultOutcome,
   ));
 }

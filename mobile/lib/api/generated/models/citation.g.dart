@@ -15,5 +15,5 @@ _Citation _$CitationFromJson(Map<String, dynamic> json) => _Citation(
 Map<String, dynamic> _$CitationToJson(_Citation instance) => <String, dynamic>{
   'law': instance.law,
   'article': instance.article,
-  'note': ?instance.note,
+  'note': instance.note,
 };

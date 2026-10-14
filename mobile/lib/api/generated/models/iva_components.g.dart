@@ -12,8 +12,8 @@ _IvaComponents _$IvaComponentsFromJson(Map<String, dynamic> json) =>
       creditablePaidCents: (json['creditable_paid_cents'] as num).toInt(),
       withheldFromTaxpayerCents: (json['withheld_from_taxpayer_cents'] as num)
           .toInt(),
-      definitiveExcludedCents: (json['definitive_excluded_cents'] as num?)
-          ?.toInt(),
+      definitiveExcludedCents: (json['definitive_excluded_cents'] as num)
+          .toInt(),
     );
 
 Map<String, dynamic> _$IvaComponentsToJson(_IvaComponents instance) =>
@@ -21,5 +21,5 @@ Map<String, dynamic> _$IvaComponentsToJson(_IvaComponents instance) =>
       'charged_collected_cents': instance.chargedCollectedCents,
       'creditable_paid_cents': instance.creditablePaidCents,
       'withheld_from_taxpayer_cents': instance.withheldFromTaxpayerCents,
-      'definitive_excluded_cents': ?instance.definitiveExcludedCents,
+      'definitive_excluded_cents': instance.definitiveExcludedCents,
     };

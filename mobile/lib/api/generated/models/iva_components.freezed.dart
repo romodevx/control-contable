@@ -16,8 +16,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$IvaComponents {
 
-@JsonKey(name: 'charged_collected_cents') NonNegativeCents get chargedCollectedCents;@JsonKey(name: 'creditable_paid_cents') NonNegativeCents get creditablePaidCents;@JsonKey(name: 'withheld_from_taxpayer_cents') NonNegativeCents get withheldFromTaxpayerCents;/// IVA already definitive via withholding (e.g. 625 under LIVA 18-M).
-@JsonKey(includeIfNull: false, name: 'definitive_excluded_cents') NonNegativeCents? get definitiveExcludedCents;
+@JsonKey(name: 'charged_collected_cents') NonNegativeCents get chargedCollectedCents;@JsonKey(name: 'creditable_paid_cents') NonNegativeCents get creditablePaidCents;@JsonKey(name: 'withheld_from_taxpayer_cents') NonNegativeCents get withheldFromTaxpayerCents;/// IVA already definitive via withholding (625 under LIVA 18-M ⚠️); 0 otherwise.
+@JsonKey(name: 'definitive_excluded_cents') NonNegativeCents get definitiveExcludedCents;
 /// Create a copy of IvaComponents
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -55,7 +55,7 @@ abstract mixin class $IvaComponentsCopyWith<$Res>  {
   factory $IvaComponentsCopyWith(IvaComponents value, $Res Function(IvaComponents) _then) = _$IvaComponentsCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'charged_collected_cents') NonNegativeCents chargedCollectedCents,@JsonKey(name: 'creditable_paid_cents') NonNegativeCents creditablePaidCents,@JsonKey(name: 'withheld_from_taxpayer_cents') NonNegativeCents withheldFromTaxpayerCents,@JsonKey(includeIfNull: false, name: 'definitive_excluded_cents') NonNegativeCents? definitiveExcludedCents
+@JsonKey(name: 'charged_collected_cents') NonNegativeCents chargedCollectedCents,@JsonKey(name: 'creditable_paid_cents') NonNegativeCents creditablePaidCents,@JsonKey(name: 'withheld_from_taxpayer_cents') NonNegativeCents withheldFromTaxpayerCents,@JsonKey(name: 'definitive_excluded_cents') NonNegativeCents definitiveExcludedCents
 });
 
 
@@ -72,13 +72,13 @@ class _$IvaComponentsCopyWithImpl<$Res>
 
 /// Create a copy of IvaComponents
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? chargedCollectedCents = null,Object? creditablePaidCents = null,Object? withheldFromTaxpayerCents = null,Object? definitiveExcludedCents = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? chargedCollectedCents = null,Object? creditablePaidCents = null,Object? withheldFromTaxpayerCents = null,Object? definitiveExcludedCents = null,}) {
   return _then(IvaComponents(
 chargedCollectedCents: null == chargedCollectedCents ? _self.chargedCollectedCents : chargedCollectedCents // ignore: cast_nullable_to_non_nullable
 as NonNegativeCents,creditablePaidCents: null == creditablePaidCents ? _self.creditablePaidCents : creditablePaidCents // ignore: cast_nullable_to_non_nullable
 as NonNegativeCents,withheldFromTaxpayerCents: null == withheldFromTaxpayerCents ? _self.withheldFromTaxpayerCents : withheldFromTaxpayerCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents,definitiveExcludedCents: freezed == definitiveExcludedCents ? _self.definitiveExcludedCents : definitiveExcludedCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents?,
+as NonNegativeCents,definitiveExcludedCents: null == definitiveExcludedCents ? _self.definitiveExcludedCents : definitiveExcludedCents // ignore: cast_nullable_to_non_nullable
+as NonNegativeCents,
   ));
 }
 
@@ -163,7 +163,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'charged_collected_cents')  NonNegativeCents chargedCollectedCents, @JsonKey(name: 'creditable_paid_cents')  NonNegativeCents creditablePaidCents, @JsonKey(name: 'withheld_from_taxpayer_cents')  NonNegativeCents withheldFromTaxpayerCents, @JsonKey(includeIfNull: false, name: 'definitive_excluded_cents')  NonNegativeCents? definitiveExcludedCents)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'charged_collected_cents')  NonNegativeCents chargedCollectedCents, @JsonKey(name: 'creditable_paid_cents')  NonNegativeCents creditablePaidCents, @JsonKey(name: 'withheld_from_taxpayer_cents')  NonNegativeCents withheldFromTaxpayerCents, @JsonKey(name: 'definitive_excluded_cents')  NonNegativeCents definitiveExcludedCents)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _IvaComponents() when $default != null:
 return $default(_that.chargedCollectedCents,_that.creditablePaidCents,_that.withheldFromTaxpayerCents,_that.definitiveExcludedCents);case _:
@@ -184,7 +184,7 @@ return $default(_that.chargedCollectedCents,_that.creditablePaidCents,_that.with
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'charged_collected_cents')  NonNegativeCents chargedCollectedCents, @JsonKey(name: 'creditable_paid_cents')  NonNegativeCents creditablePaidCents, @JsonKey(name: 'withheld_from_taxpayer_cents')  NonNegativeCents withheldFromTaxpayerCents, @JsonKey(includeIfNull: false, name: 'definitive_excluded_cents')  NonNegativeCents? definitiveExcludedCents)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'charged_collected_cents')  NonNegativeCents chargedCollectedCents, @JsonKey(name: 'creditable_paid_cents')  NonNegativeCents creditablePaidCents, @JsonKey(name: 'withheld_from_taxpayer_cents')  NonNegativeCents withheldFromTaxpayerCents, @JsonKey(name: 'definitive_excluded_cents')  NonNegativeCents definitiveExcludedCents)  $default,) {final _that = this;
 switch (_that) {
 case _IvaComponents():
 return $default(_that.chargedCollectedCents,_that.creditablePaidCents,_that.withheldFromTaxpayerCents,_that.definitiveExcludedCents);case _:
@@ -204,7 +204,7 @@ return $default(_that.chargedCollectedCents,_that.creditablePaidCents,_that.with
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'charged_collected_cents')  NonNegativeCents chargedCollectedCents, @JsonKey(name: 'creditable_paid_cents')  NonNegativeCents creditablePaidCents, @JsonKey(name: 'withheld_from_taxpayer_cents')  NonNegativeCents withheldFromTaxpayerCents, @JsonKey(includeIfNull: false, name: 'definitive_excluded_cents')  NonNegativeCents? definitiveExcludedCents)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'charged_collected_cents')  NonNegativeCents chargedCollectedCents, @JsonKey(name: 'creditable_paid_cents')  NonNegativeCents creditablePaidCents, @JsonKey(name: 'withheld_from_taxpayer_cents')  NonNegativeCents withheldFromTaxpayerCents, @JsonKey(name: 'definitive_excluded_cents')  NonNegativeCents definitiveExcludedCents)?  $default,) {final _that = this;
 switch (_that) {
 case _IvaComponents() when $default != null:
 return $default(_that.chargedCollectedCents,_that.creditablePaidCents,_that.withheldFromTaxpayerCents,_that.definitiveExcludedCents);case _:
@@ -219,14 +219,14 @@ return $default(_that.chargedCollectedCents,_that.creditablePaidCents,_that.with
 @JsonSerializable()
 
 class _IvaComponents implements IvaComponents {
-  const _IvaComponents({@JsonKey(name: 'charged_collected_cents') required this.chargedCollectedCents, @JsonKey(name: 'creditable_paid_cents') required this.creditablePaidCents, @JsonKey(name: 'withheld_from_taxpayer_cents') required this.withheldFromTaxpayerCents, @JsonKey(includeIfNull: false, name: 'definitive_excluded_cents') this.definitiveExcludedCents});
+  const _IvaComponents({@JsonKey(name: 'charged_collected_cents') required this.chargedCollectedCents, @JsonKey(name: 'creditable_paid_cents') required this.creditablePaidCents, @JsonKey(name: 'withheld_from_taxpayer_cents') required this.withheldFromTaxpayerCents, @JsonKey(name: 'definitive_excluded_cents') required this.definitiveExcludedCents});
   factory _IvaComponents.fromJson(Map<String, dynamic> json) => _$IvaComponentsFromJson(json);
 
 @override@JsonKey(name: 'charged_collected_cents') final  NonNegativeCents chargedCollectedCents;
 @override@JsonKey(name: 'creditable_paid_cents') final  NonNegativeCents creditablePaidCents;
 @override@JsonKey(name: 'withheld_from_taxpayer_cents') final  NonNegativeCents withheldFromTaxpayerCents;
-/// IVA already definitive via withholding (e.g. 625 under LIVA 18-M).
-@override@JsonKey(includeIfNull: false, name: 'definitive_excluded_cents') final  NonNegativeCents? definitiveExcludedCents;
+/// IVA already definitive via withholding (625 under LIVA 18-M ⚠️); 0 otherwise.
+@override@JsonKey(name: 'definitive_excluded_cents') final  NonNegativeCents definitiveExcludedCents;
 
 /// Create a copy of IvaComponents
 /// with the given fields replaced by the non-null parameter values.
@@ -263,7 +263,7 @@ abstract mixin class _$IvaComponentsCopyWith<$Res> implements $IvaComponentsCopy
   factory _$IvaComponentsCopyWith(_IvaComponents value, $Res Function(_IvaComponents) _then) = __$IvaComponentsCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'charged_collected_cents') NonNegativeCents chargedCollectedCents,@JsonKey(name: 'creditable_paid_cents') NonNegativeCents creditablePaidCents,@JsonKey(name: 'withheld_from_taxpayer_cents') NonNegativeCents withheldFromTaxpayerCents,@JsonKey(includeIfNull: false, name: 'definitive_excluded_cents') NonNegativeCents? definitiveExcludedCents
+@JsonKey(name: 'charged_collected_cents') NonNegativeCents chargedCollectedCents,@JsonKey(name: 'creditable_paid_cents') NonNegativeCents creditablePaidCents,@JsonKey(name: 'withheld_from_taxpayer_cents') NonNegativeCents withheldFromTaxpayerCents,@JsonKey(name: 'definitive_excluded_cents') NonNegativeCents definitiveExcludedCents
 });
 
 
@@ -280,13 +280,13 @@ class __$IvaComponentsCopyWithImpl<$Res>
 
 /// Create a copy of IvaComponents
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? chargedCollectedCents = null,Object? creditablePaidCents = null,Object? withheldFromTaxpayerCents = null,Object? definitiveExcludedCents = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? chargedCollectedCents = null,Object? creditablePaidCents = null,Object? withheldFromTaxpayerCents = null,Object? definitiveExcludedCents = null,}) {
   return _then(_IvaComponents(
 chargedCollectedCents: null == chargedCollectedCents ? _self.chargedCollectedCents : chargedCollectedCents // ignore: cast_nullable_to_non_nullable
 as NonNegativeCents,creditablePaidCents: null == creditablePaidCents ? _self.creditablePaidCents : creditablePaidCents // ignore: cast_nullable_to_non_nullable
 as NonNegativeCents,withheldFromTaxpayerCents: null == withheldFromTaxpayerCents ? _self.withheldFromTaxpayerCents : withheldFromTaxpayerCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents,definitiveExcludedCents: freezed == definitiveExcludedCents ? _self.definitiveExcludedCents : definitiveExcludedCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents?,
+as NonNegativeCents,definitiveExcludedCents: null == definitiveExcludedCents ? _self.definitiveExcludedCents : definitiveExcludedCents // ignore: cast_nullable_to_non_nullable
+as NonNegativeCents,
   ));
 }
 

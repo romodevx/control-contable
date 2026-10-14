@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Disclaimer {
 
- DisclaimerCode get code; String get text;
+ DisclaimerCode get code; DisclaimerSeverity get severity; String get text;
 /// Create a copy of Disclaimer
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +30,20 @@ $DisclaimerCopyWith<Disclaimer> get copyWith => _$DisclaimerCopyWithImpl<Disclai
 @override
 bool operator ==(Object other) {
   final _this = this as Disclaimer;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Disclaimer&&(identical(other.code, _this.code) || other.code == _this.code)&&(identical(other.text, _this.text) || other.text == _this.text));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Disclaimer&&(identical(other.code, _this.code) || other.code == _this.code)&&(identical(other.severity, _this.severity) || other.severity == _this.severity)&&(identical(other.text, _this.text) || other.text == _this.text));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Disclaimer;
-  return Object.hash(runtimeType,_this.code,_this.text);
+  return Object.hash(runtimeType,_this.code,_this.severity,_this.text);
 }
 
 @override
 String toString() {
   final _this = this as Disclaimer;
-  return 'Disclaimer(code: ${_this.code}, text: ${_this.text})';
+  return 'Disclaimer(code: ${_this.code}, severity: ${_this.severity}, text: ${_this.text})';
 }
 
 
@@ -54,7 +54,7 @@ abstract mixin class $DisclaimerCopyWith<$Res>  {
   factory $DisclaimerCopyWith(Disclaimer value, $Res Function(Disclaimer) _then) = _$DisclaimerCopyWithImpl;
 @useResult
 $Res call({
- DisclaimerCode code, String text
+ DisclaimerCode code, DisclaimerSeverity severity, String text
 });
 
 
@@ -71,10 +71,11 @@ class _$DisclaimerCopyWithImpl<$Res>
 
 /// Create a copy of Disclaimer
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? code = null,Object? text = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? code = null,Object? severity = null,Object? text = null,}) {
   return _then(Disclaimer(
 code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
-as DisclaimerCode,text: null == text ? _self.text : text // ignore: cast_nullable_to_non_nullable
+as DisclaimerCode,severity: null == severity ? _self.severity : severity // ignore: cast_nullable_to_non_nullable
+as DisclaimerSeverity,text: null == text ? _self.text : text // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
@@ -160,10 +161,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( DisclaimerCode code,  String text)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( DisclaimerCode code,  DisclaimerSeverity severity,  String text)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Disclaimer() when $default != null:
-return $default(_that.code,_that.text);case _:
+return $default(_that.code,_that.severity,_that.text);case _:
   return orElse();
 
 }
@@ -181,10 +182,10 @@ return $default(_that.code,_that.text);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( DisclaimerCode code,  String text)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( DisclaimerCode code,  DisclaimerSeverity severity,  String text)  $default,) {final _that = this;
 switch (_that) {
 case _Disclaimer():
-return $default(_that.code,_that.text);case _:
+return $default(_that.code,_that.severity,_that.text);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -201,10 +202,10 @@ return $default(_that.code,_that.text);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( DisclaimerCode code,  String text)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( DisclaimerCode code,  DisclaimerSeverity severity,  String text)?  $default,) {final _that = this;
 switch (_that) {
 case _Disclaimer() when $default != null:
-return $default(_that.code,_that.text);case _:
+return $default(_that.code,_that.severity,_that.text);case _:
   return null;
 
 }
@@ -216,10 +217,11 @@ return $default(_that.code,_that.text);case _:
 @JsonSerializable()
 
 class _Disclaimer implements Disclaimer {
-  const _Disclaimer({required this.code, required this.text});
+  const _Disclaimer({required this.code, required this.severity, required this.text});
   factory _Disclaimer.fromJson(Map<String, dynamic> json) => _$DisclaimerFromJson(json);
 
 @override final  DisclaimerCode code;
+@override final  DisclaimerSeverity severity;
 @override final  String text;
 
 /// Create a copy of Disclaimer
@@ -235,18 +237,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Disclaimer&&(identical(other.code, code) || other.code == code)&&(identical(other.text, text) || other.text == text));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Disclaimer&&(identical(other.code, code) || other.code == code)&&(identical(other.severity, severity) || other.severity == severity)&&(identical(other.text, text) || other.text == text));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,code,text);
+    return Object.hash(runtimeType,code,severity,text);
 }
 
 @override
 String toString() {
-    return 'Disclaimer(code: $code, text: $text)';
+    return 'Disclaimer(code: $code, severity: $severity, text: $text)';
 }
 
 
@@ -257,7 +259,7 @@ abstract mixin class _$DisclaimerCopyWith<$Res> implements $DisclaimerCopyWith<$
   factory _$DisclaimerCopyWith(_Disclaimer value, $Res Function(_Disclaimer) _then) = __$DisclaimerCopyWithImpl;
 @override @useResult
 $Res call({
- DisclaimerCode code, String text
+ DisclaimerCode code, DisclaimerSeverity severity, String text
 });
 
 
@@ -274,10 +276,11 @@ class __$DisclaimerCopyWithImpl<$Res>
 
 /// Create a copy of Disclaimer
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? code = null,Object? text = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? code = null,Object? severity = null,Object? text = null,}) {
   return _then(_Disclaimer(
 code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
-as DisclaimerCode,text: null == text ? _self.text : text // ignore: cast_nullable_to_non_nullable
+as DisclaimerCode,severity: null == severity ? _self.severity : severity // ignore: cast_nullable_to_non_nullable
+as DisclaimerSeverity,text: null == text ? _self.text : text // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }

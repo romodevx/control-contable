@@ -9,10 +9,13 @@ import 'tax_input_def_kind.dart';
 part 'tax_input_def.freezed.dart';
 part 'tax_input_def.g.dart';
 
+/// One per-fiscal-year tax input of a regime (`regimes.required_inputs`, catalog data). `kind`: `money` (one amount for the year, centavos `>= 0`), `money_monthly` (one amount per month 1-12, e.g. the prior provisional payments, OQ-T1), `rate` (decimal string in `[0, 1]`) or `boolean`. `required`: the key can be required in some period of the year; whether it is missing for a period is `RegimeEstimate.missing_inputs`.
 @Freezed()
 abstract class TaxInputDef with _$TaxInputDef {
   const factory TaxInputDef({
     required String key,
+
+    /// Spanish label shown in the tax-inputs form.
     required String label,
     required TaxInputDefKind kind,
 

@@ -648,6 +648,41 @@ void main() {
       expect(find.text('Otro dato'), findsNothing);
       expect(find.text('Ingresos del año'), findsOneWidget);
     });
+
+    testWidgets('monthly and yes/no inputs are left to the tax-inputs form '
+        '(M5-27)', (tester) async {
+      harness.repository.catalogs[PersonType.moral] = [
+        regime(
+          '601',
+          personType: PersonType.moral,
+          requiredInputs: [
+            inputDef(
+              'prior_provisional_payments',
+              label: 'Pagos provisionales anteriores',
+              kind: TaxInputDefKind.moneyMonthly,
+            ),
+            inputDef(
+              'first_fiscal_year',
+              label: 'Primer ejercicio fiscal',
+              kind: TaxInputDefKind.boolean,
+            ),
+            inputDef('ytd', label: 'Ingresos del año'),
+          ],
+        ),
+      ];
+      await openRegimes(
+        tester,
+        card: 'Persona moral',
+        rfc: 'ABC680524P76',
+        alsoEnabled: {AppModule.taxEngine},
+      );
+      await _pick(tester, '601');
+      await tapText(tester, _create);
+
+      expect(find.text('Pagos provisionales anteriores'), findsNothing);
+      expect(find.text('Primer ejercicio fiscal'), findsNothing);
+      expect(find.text('Ingresos del año'), findsOneWidget);
+    });
   });
 
   for (final brightness in Brightness.values) {

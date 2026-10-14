@@ -14,6 +14,7 @@ import 'uuid.dart';
 part 'breakdown.freezed.dart';
 part 'breakdown.g.dart';
 
+/// Header: `regime.parameter_set` ("Parámetros 2026 v1") and `engine_version` ("Motor 1.0.0"). `disclaimers` are those that apply to this regime.
 @Freezed()
 abstract class Breakdown with _$Breakdown {
   const factory Breakdown({

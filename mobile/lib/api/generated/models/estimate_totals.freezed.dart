@@ -17,8 +17,8 @@ T _$identity<T>(T value) => value;
 mixin _$EstimateTotals {
 
 /// Monthly IVA consolidated across the taxpayer's regimes.
- TaxResult get iva;/// Sum of per-regime provisional ISR (payable parts only; favor balances per regime).
- TaxResult get isr;/// Withheld ISR/IVA to remit in full (not netted against IVA, LIVA 1-A).
+ TaxResult get iva;/// Sum of the payable per-regime provisional ISR; favor balances stay per regime (OQ-T10).
+ TaxResult get isr;/// Withheld ISR/IVA to remit in full, shown on its own line (never netted against IVA, LIVA 1-A).
 @JsonKey(name: 'withholdings_to_remit_cents') NonNegativeCents get withholdingsToRemitCents;@JsonKey(name: 'total_payable_rounded_cents') NonNegativeCents get totalPayableRoundedCents;
 /// Create a copy of EstimateTotals
 /// with the given fields replaced by the non-null parameter values.
@@ -244,9 +244,9 @@ class _EstimateTotals implements EstimateTotals {
 
 /// Monthly IVA consolidated across the taxpayer's regimes.
 @override final  TaxResult iva;
-/// Sum of per-regime provisional ISR (payable parts only; favor balances per regime).
+/// Sum of the payable per-regime provisional ISR; favor balances stay per regime (OQ-T10).
 @override final  TaxResult isr;
-/// Withheld ISR/IVA to remit in full (not netted against IVA, LIVA 1-A).
+/// Withheld ISR/IVA to remit in full, shown on its own line (never netted against IVA, LIVA 1-A).
 @override@JsonKey(name: 'withholdings_to_remit_cents') final  NonNegativeCents withholdingsToRemitCents;
 @override@JsonKey(name: 'total_payable_rounded_cents') final  NonNegativeCents totalPayableRoundedCents;
 
