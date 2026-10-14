@@ -7,7 +7,9 @@ invariants callers may rely on. The authoritative detail is each package's Go do
 code wins and this page has a bug.
 
 Rule (P0-29 FU4): **no new business logic goes into `platform/`**. `access` is the one exception
-and is pending an architect decision.
+and is pending an architect decision. Business concepts that several bounded contexts must agree
+on (dates, IVA treatment, CFDI UUID, withholding shares, the domain error model) go in the fiscal
+shared kernel, `backend/internal/kernel/fiscal` ([ADR-0007](../adr/0007-fiscal-shared-kernel.md)).
 
 ## Map
 
