@@ -101,6 +101,10 @@ func (notBuilt) ArchiveTaxpayer(context.Context, gen.ArchiveTaxpayerRequestObjec
 	return nil, errNotBuilt
 }
 
+func (notBuilt) UnarchiveTaxpayer(context.Context, gen.UnarchiveTaxpayerRequestObject) (gen.UnarchiveTaxpayerResponseObject, error) {
+	return nil, errNotBuilt
+}
+
 func (notBuilt) GetDashboard(context.Context, gen.GetDashboardRequestObject) (gen.GetDashboardResponseObject, error) {
 	return nil, errNotBuilt
 }
