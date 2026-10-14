@@ -94,7 +94,7 @@ below is a figure the user cannot correct. Records matching a ⚠️ rule carry
 - [ ] A3: RESICO PF renting real estate to a PM is withheld 1.25 % (113-J), not 10 % (116). WM §6 A3
 - [ ] A4: RESICO PF month where the 1.25 % withheld exceeds the monthly ISR: shown as 0 to pay, excess "a favor en la anual" (no monthly refund or carry). WM §6 A4
 - [ ] A5: 2/3 computed as IVA × 2 / 3 rounded half away from zero to the centavo (not `0.106667 × price`). WM §6 A5
-- [ ] A6: a 625 PF billing a PM directly (outside the platform): no PM withholding. WM §6 A6
+- [ ] A6: a 625 PF billing a PM directly (outside the platform): the PM withholds no **ISR** (LISR 113-A last ¶ vs 106/113-J). The IVA is not in question: as from any PF, the PM withholds 2/3 of the IVA on professional services, rent and commissions (LIVA 1-A fr. II a, d; RLIVA 3 fr. I; WM F2, IVA-6 ✅) and nothing on goods or business services (IVA-8). WM §6 A6, MODULE-withholdings §3.2
 - [ ] A7: PF commission agent: no ISR withholding (only IVA 2/3). WM §6 A7
 - [ ] A8: under the 8 % border rate, the 2/3 IVA withholding is 2/3 of the IVA charged (5.3333 % of the price); freight stays 4 % of the price. WM §6 A8
 - [ ] A9: "Servicios profesionales" vs "otros servicios de tu negocio" is the user's answer (professional fees → 10 % ISR + 2/3 IVA for 612; business services → nothing). Check the es-MX wording of both options in MODULE-withholdings §2.1 Q2. WM §6 A9
