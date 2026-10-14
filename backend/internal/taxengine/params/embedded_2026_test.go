@@ -92,7 +92,8 @@ func TestEmbedded2026DefinesEveryKeyTheModulesRead(t *testing.T) {
 		"isr.rent.blind_deduction",
 	}
 	amounts := []taxparams.Key{
-		"deduction.cash_payment_limit", // expenses/domain/catalog.go
+		"deduction.cash_payment_limit",      // expenses/domain/catalog.go
+		"iva.withholding.federal_threshold", // kernel/fiscal DeriveWithholdings, IVA-7 (RMF 4.1.3)
 		"uma.daily", "uma.monthly", "uma.annual",
 		"regime.resico_pf.income_cap", "regime.resico_pm.income_cap", "regime.platform.definitive_option_cap",
 	}
@@ -295,6 +296,18 @@ func TestEmbedded2026RatesThatLapseAtYearEnd(t *testing.T) {
 	}
 }
 
+// An RMF rule lives one year: the RMF 2026 threshold of rule 4.1.3 is not in
+// force in 2027 until the RMF 2027 is transcribed.
+func TestEmbedded2026AmountsThatLapseAtYearEnd(t *testing.T) {
+	p := embedded2026(t)
+	for _, key := range []taxparams.Key{"iva.withholding.federal_threshold"} {
+		_, err := p.Money(key, date(t, "2026-12-31"))
+		require.NoError(t, err, key)
+		_, err = p.Money(key, date(t, "2027-01-01"))
+		require.ErrorIs(t, err, taxparams.ErrNotInForce, key)
+	}
+}
+
 func TestEmbedded2026UMA(t *testing.T) {
 	p := embedded2026(t)
 	tests := []struct {
@@ -330,6 +343,7 @@ func TestEmbedded2026Thresholds(t *testing.T) {
 		{"regime.resico_pm.income_cap", "35000000.00"},         // LISR 206
 		{"regime.platform.definitive_option_cap", "300000.00"}, // LISR 113-B fr. I
 		{"deduction.cash_payment_limit", "2000.00"},            // LISR 27 fr. III
+		{"iva.withholding.federal_threshold", "2000.00"},       // RMF 2026 4.1.3
 	}
 	for _, tt := range tests {
 		t.Run(string(tt.key), func(t *testing.T) {

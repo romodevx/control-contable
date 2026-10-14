@@ -58,7 +58,7 @@ func withholdingCatalog2026(t *testing.T) fakeWithholdingCatalog {
 			fiscal.KeyISRPlatformPersonaMoralNoRFC: lif2026("0.20"),
 		},
 		amounts: map[fiscal.AmountKey][]datedAmount{
-			fiscal.KeyIVAFederalWithholdingThreshold: {{from: date(t, "2026-01-01"), cents: 2_000_00}},
+			fiscal.KeyIVAFederalWithholdingThreshold: {{from: date(t, "2026-01-01"), to: date(t, "2026-12-31"), cents: 2_000_00}},
 		},
 	}
 }
@@ -404,6 +404,16 @@ func TestDeriveWithholdingsDecisionTable(t *testing.T) {
 			},
 		},
 		{
+			name: "625 selling goods to a PM directly: nothing, A6",
+			input: func(v *fiscal.WithholdingInput) {
+				v.EmisorRegime, v.Operation = fiscal.RegimePlatforms, fiscal.OperationSaleOfGoods
+			},
+			want: want{
+				basis: fiscal.IVABasisNone, withholder: fiscal.WithholderNone,
+				rules: ids(fiscal.RuleISR7, fiscal.RuleIVA8), ambiguities: []fiscal.Ambiguity{fiscal.AmbiguityPlatformDirect}, warnings: cpa,
+			},
+		},
+		{
 			name:  "PM emisor, scrap to a PM: 100 % of the IVA",
 			input: func(v *fiscal.WithholdingInput) { pm(v); v.Operation = fiscal.OperationScrap },
 			want: want{
@@ -740,6 +750,10 @@ func TestDeriveWithholdingsNeedsRatesInForce(t *testing.T) {
 			v.Operation, v.Receptor = fiscal.OperationSaleOfGoods, fiscal.ReceptorGovFederal
 			v.On = date(t, "2025-12-31")
 		}},
+		{"federal threshold after the RMF 2026 lapses", func(v *fiscal.WithholdingInput) {
+			v.Operation, v.Receptor = fiscal.OperationSaleOfGoods, fiscal.ReceptorGovFederal
+			v.On = date(t, "2027-01-04")
+		}},
 	}
 	catalog := withholdingCatalog2026(t)
 	for _, tt := range tests {
@@ -747,6 +761,34 @@ func TestDeriveWithholdingsNeedsRatesInForce(t *testing.T) {
 			_, err := fiscal.DeriveWithholdings(in(t, tt.input), catalog)
 			require.ErrorIs(t, err, fiscal.ErrRateNotValidOnDate)
 		})
+	}
+}
+
+// TestDeriveWithholdingsReadsTheFederalThreshold: IVA-7's $2,000 is the
+// catalog's dated value (RMF 4.1.3), never a constant in code.
+func TestDeriveWithholdingsReadsTheFederalThreshold(t *testing.T) {
+	goodsToFederation := func(subtotal money.Cents) fiscal.WithholdingInput {
+		return in(t, func(v *fiscal.WithholdingInput) {
+			v.Operation, v.Receptor = fiscal.OperationSaleOfGoods, fiscal.ReceptorGovFederal
+			v.Subtotal, v.IVA = subtotal, subtotal*16/100
+		})
+	}
+	catalog := withholdingCatalog2026(t)
+	catalog.amounts = map[fiscal.AmountKey][]datedAmount{
+		fiscal.KeyIVAFederalWithholdingThreshold: {{from: date(t, "2026-01-01"), cents: 3_000_00}},
+	}
+	tests := []struct {
+		subtotal money.Cents
+		want     fiscal.RuleID
+	}{
+		{2_500_00, fiscal.RuleIVA8}, // above $2,000, not above this catalog's $3,000
+		{3_000_00, fiscal.RuleIVA8},
+		{3_000_01, fiscal.RuleIVA7},
+	}
+	for _, tt := range tests {
+		got, err := fiscal.DeriveWithholdings(goodsToFederation(tt.subtotal), catalog)
+		require.NoError(t, err)
+		assert.Equal(t, tt.want, got.RuleIDs[1], "subtotal %d", tt.subtotal)
 	}
 }
 
