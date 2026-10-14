@@ -1259,6 +1259,16 @@
       }
     }
   },
+  "estimateIncompleteAmount": "{label} (incompleto)",
+  "@estimateIncompleteAmount": {
+    "description": "Label of an amount that depends on missing inputs: shown and read with the amount, so no figure looks final.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Total a pagar"
+      }
+    }
+  },
   "estimateIncompleteFigures": "Cifras con datos faltantes: se usaron ceros.",
   "@estimateIncompleteFigures": {
     "description": "Regime card marker: the figures depend on missing inputs."

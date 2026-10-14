@@ -1650,6 +1650,12 @@ abstract class AppLocalizations {
   /// **'Régimen {code}'**
   String estimateRegimeCode(String code);
 
+  /// Label of an amount that depends on missing inputs: shown and read with the amount, so no figure looks final.
+  ///
+  /// In es, this message translates to:
+  /// **'{label} (incompleto)'**
+  String estimateIncompleteAmount(String label);
+
   /// Regime card marker: the figures depend on missing inputs.
   ///
   /// In es, this message translates to:

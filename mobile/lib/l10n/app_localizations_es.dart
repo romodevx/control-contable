@@ -949,6 +949,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String estimateIncompleteAmount(String label) {
+    return '$label (incompleto)';
+  }
+
+  @override
   String get estimateIncompleteFigures =>
       'Cifras con datos faltantes: se usaron ceros.';
 

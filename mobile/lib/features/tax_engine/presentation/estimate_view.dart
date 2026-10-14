@@ -39,31 +39,42 @@ class EstimateView extends StatelessWidget {
           d.severity == DisclaimerSeverity.info ||
           d.severity == DisclaimerSeverity.$unknown,
     );
+    // Each block is its own screen-reader stop; without containers the
+    // whole estimate merges into one node read as a single blob.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: AppSpacing.md,
       children: [
-        for (final disclaimer in strong)
-          CpaReviewBanner(key: _keyOf(disclaimer), disclaimer: disclaimer),
-        EstimateTotalsCard(
-          key: const ValueKey('estimate-totals'),
-          estimate: estimate,
-        ),
-        EstimateLegend(text: estimate.legend),
-        for (final disclaimer in warnings)
-          DisclaimerWarning(key: _keyOf(disclaimer), disclaimer: disclaimer),
-        for (final regime in estimate.regimes)
-          RegimeEstimateCard(
-            key: ValueKey('regime-${regime.regimeCode}'),
-            regime: regime,
-            taxpayerId: estimate.taxpayerId,
-            period: estimate.period,
-          ),
-        for (final disclaimer in notes)
-          DisclaimerNote(key: _keyOf(disclaimer), disclaimer: disclaimer),
+        for (final block in _blocks(strong, warnings, notes))
+          Semantics(container: true, child: block),
       ],
     );
   }
+
+  List<Widget> _blocks(
+    Iterable<Disclaimer> strong,
+    Iterable<Disclaimer> warnings,
+    Iterable<Disclaimer> notes,
+  ) => [
+    for (final disclaimer in strong)
+      CpaReviewBanner(key: _keyOf(disclaimer), disclaimer: disclaimer),
+    EstimateTotalsCard(
+      key: const ValueKey('estimate-totals'),
+      estimate: estimate,
+    ),
+    EstimateLegend(text: estimate.legend),
+    for (final disclaimer in warnings)
+      DisclaimerWarning(key: _keyOf(disclaimer), disclaimer: disclaimer),
+    for (final regime in estimate.regimes)
+      RegimeEstimateCard(
+        key: ValueKey('regime-${regime.regimeCode}'),
+        regime: regime,
+        taxpayerId: estimate.taxpayerId,
+        period: estimate.period,
+      ),
+    for (final disclaimer in notes)
+      DisclaimerNote(key: _keyOf(disclaimer), disclaimer: disclaimer),
+  ];
 
   /// Codes are unique per estimate; an unknown one keys by its text.
   static Key _keyOf(Disclaimer disclaimer) =>

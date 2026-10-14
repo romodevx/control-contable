@@ -22,7 +22,7 @@ class EstimateLegend extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final colors = tokens.colors;
-    return DecoratedBox(
+    final legend = DecoratedBox(
       decoration: BoxDecoration(
         color: colors.legendBg,
         borderRadius: BorderRadius.circular(tokens.radii.control),
@@ -36,5 +36,7 @@ class EstimateLegend extends StatelessWidget {
         ),
       ),
     );
+    // Its own screen-reader stop: never merged into the figures around it.
+    return Semantics(container: true, child: legend);
   }
 }

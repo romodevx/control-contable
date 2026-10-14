@@ -1,5 +1,6 @@
 import 'package:control_contable/api/generated/models/iva_components.dart';
 import 'package:control_contable/api/generated/models/regime_estimate.dart';
+import 'package:control_contable/api/generated/models/regime_estimate_status.dart';
 import 'package:control_contable/api/generated/models/tax_result_outcome.dart';
 import 'package:control_contable/core/theme/app_tokens.dart';
 import 'package:control_contable/features/tax_engine/domain/iva.dart';
@@ -23,6 +24,7 @@ class RegimeAmounts extends StatelessWidget {
     final isr = regime.isr;
     final iva = regime.ivaComponents;
     final isrInFavor = isr?.outcome == TaxResultOutcome.inFavor;
+    final isIncomplete = regime.status == RegimeEstimateStatus.incomplete;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -35,13 +37,15 @@ class RegimeAmounts extends StatelessWidget {
                 ? isr.amountCents.abs()
                 : isr.payableRoundedCents,
             color: isrInFavor ? context.tokens.colors.favor : null,
+            isIncomplete: isIncomplete,
           ),
         if (iva != null && contributesIva(iva))
-          _IvaComponentRows(components: iva),
+          _IvaComponentRows(components: iva, isIncomplete: isIncomplete),
         if (regime.withheldToRemitCents > 0)
           MoneyRow(
             label: l10n.estimateWithholdingsToRemit,
             centavos: regime.withheldToRemitCents,
+            isIncomplete: isIncomplete,
           ),
       ],
     );
@@ -49,9 +53,10 @@ class RegimeAmounts extends StatelessWidget {
 }
 
 class _IvaComponentRows extends StatelessWidget {
-  const new({required this.components});
+  const new({required this.components, required this.isIncomplete});
 
   final IvaComponents components;
+  final bool isIncomplete;
 
   @override
   Widget build(BuildContext context) {
@@ -74,6 +79,7 @@ class _IvaComponentRows extends StatelessWidget {
               centavos: cents,
               labelStyle: text.bodyMedium,
               amountStyle: text.bodyMedium,
+              isIncomplete: isIncomplete,
             ),
         Text(
           l10n.estimateIvaContributes,

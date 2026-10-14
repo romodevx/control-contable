@@ -60,11 +60,13 @@ class EstimateTotalsCard extends StatelessWidget {
               totals.isr,
               l10n.estimateIsrPayable,
               l10n.estimateIsrInFavor,
+              isIncomplete: isIncomplete,
             ),
             _taxRow(
               totals.iva,
               l10n.estimateIvaPayable,
               l10n.estimateIvaInFavor,
+              isIncomplete: isIncomplete,
             ),
             if (ivaContributors > 1)
               Text(l10n.estimateIvaConsolidated(ivaContributors), style: muted),
@@ -73,12 +75,14 @@ class EstimateTotalsCard extends StatelessWidget {
                 label: l10n.estimateWithholdingsToRemit,
                 centavos: totals.withholdingsToRemitCents,
                 color: colors.heroText,
+                isIncomplete: isIncomplete,
               ),
             Divider(color: colors.heroMuted, height: AppSpacing.xl),
             HeroAmount(
               label: l10n.estimateTotalPayable,
               centavos: totals.totalPayableRoundedCents,
               color: colors.heroText,
+              isIncomplete: isIncomplete,
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
@@ -95,7 +99,12 @@ class EstimateTotalsCard extends StatelessWidget {
 
   /// A total as "a pagar" or, for a negative result, "saldo a favor"
   /// (never counted as a payment, PRD US-X1).
-  Widget _taxRow(TaxResult result, String payable, String inFavor) => Builder(
+  Widget _taxRow(
+    TaxResult result,
+    String payable,
+    String inFavor, {
+    required bool isIncomplete,
+  }) => Builder(
     builder: (context) {
       final isInFavor = result.outcome == TaxResultOutcome.inFavor;
       return MoneyRow(
@@ -104,6 +113,7 @@ class EstimateTotalsCard extends StatelessWidget {
             ? result.amountCents.abs()
             : result.payableRoundedCents,
         color: context.tokens.colors.heroText,
+        isIncomplete: isIncomplete,
       );
     },
   );
