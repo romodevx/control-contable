@@ -24,7 +24,7 @@
   point at another user's parent, even with a bug in the app.
 - **Deletion**:
   - `ON DELETE CASCADE` from `users` for account deletion (US-A4).
-  - Soft delete (`deleted_at`) on incomes and expenses supports Undo. The worker purges
+  - Soft delete (`deleted_at`) on incomes, expenses and personal_deductions supports Undo. The worker purges
     soft-deleted rows after 30 days *(owner: retention policy, PRD §8)*.
 
 ## ERD
@@ -41,6 +41,10 @@ erDiagram
     regimes ||--o{ taxpayer_regimes : catalog
     regimes ||--o{ regime_compatibility : "a/b"
     taxpayer_regimes ||--o{ taxpayer_tax_inputs : "per fiscal year"
+    taxpayers ||--o{ personal_deductions : "PF only, per fiscal year"
+    taxpayers ||--o{ salary_statements : "PF only, per fiscal year"
+    taxpayer_regimes ||--o{ annual_filed_payments : "per fiscal year + month"
+    taxpayers ||--o{ annual_inputs : "per fiscal year"
     taxpayer_regimes ||--o{ incomes : records
     taxpayer_regimes ||--o{ expenses : records
     expense_categories ||--o{ expenses : classifies
@@ -192,6 +196,52 @@ erDiagram
         boolean value_bool
         timestamptz updated_at
     }
+    personal_deductions {
+        uuid id PK
+        uuid user_id FK
+        uuid taxpayer_id FK "composite FK with person_type = fisica"
+        smallint fiscal_year "generated: year of paid_on"
+        text category "10 categories, AR B.2"
+        bigint amount_cents "1..max"
+        date paid_on "2026-01-01..2100-12-31"
+        text payment_method "electronic|cash"
+        text beneficiary "self|spouse|ascendant|descendant"
+        text donee_type "donation only"
+        text student_label "tuition only"
+        text tuition_level "tuition only"
+        bigint scholarship_cents "tuition only"
+        text cfdi_uuid "optional, upper case"
+        timestamptz deleted_at "soft delete"
+    }
+    salary_statements {
+        uuid id PK
+        uuid user_id FK
+        uuid taxpayer_id FK "composite FK with person_type = fisica"
+        smallint fiscal_year "2026..2100"
+        text employer_label "optional alias, no RFC"
+        bigint accumulable_cents
+        bigint exempt_cents
+        bigint isr_withheld_cents
+        boolean simultaneous
+        boolean left_before_year_end
+        boolean payer_not_withholding
+    }
+    annual_filed_payments {
+        uuid user_id PK "PK (user, taxpayer, regime, year, month)"
+        uuid taxpayer_id FK
+        text regime_code FK
+        smallint fiscal_year "2026..2100"
+        smallint month "1-12"
+        bigint amount_cents
+    }
+    annual_inputs {
+        uuid user_id PK "PK (user, taxpayer, year)"
+        uuid taxpayer_id FK
+        smallint fiscal_year "2026..2100"
+        bigint prior_year_accumulable_income_cents "NULL = unknown"
+        bigint other_exempt_income_cents
+        boolean told_employer_will_file
+    }
     incomes {
         uuid id PK
         uuid user_id FK
@@ -327,6 +377,10 @@ in MODULES.md M5 are dropped (MODULES.md updated to match).
 | taxpayer_regimes | FK `(taxpayer_id, user_id, person_type) → taxpayers(id, user_id, person_type)`; FK `(regime_code, person_type) → regimes` | Ownership integrity. A moral can never hold a física-only regime, and 626 resolves to RESICO PF or PM |
 | incomes / expenses | FK `(taxpayer_id, regime_code, user_id) → taxpayer_regimes`; taxpayer_tax_inputs: same FK | A record must belong to a regime its taxpayer holds |
 | taxpayer_tax_inputs | `UNIQUE NULLS NOT DISTINCT (user_id, taxpayer_id, regime_code, fiscal_year, input_key, month)` (its btree is the only index: RLS, estimate read path, upsert, both cascades); `kind` derived by trigger `taxpayer_tax_inputs_derive_kind` from `regimes.required_inputs` (unknown key → 23514); `CHECK` exactly the value column of the kind, `month` only for `money_monthly`; money in `[0, NonNegativeCents.maximum]`; rate in `[0, 1]`, scale ≤ 6 | MODULE-tax-engine §2.8, S-1, OQ-T1 (M5-20). No PK: `month` is NULL for annual inputs |
+| personal_deductions | FK `(user_id, taxpayer_id, person_type) → taxpayers` with `person_type` pinned to `'fisica'` (default + CHECK, no grant); `fiscal_year` GENERATED from `paid_on`; CHECKs: category enum, `amount_cents ≥ 1`, `paid_on` in 2026..2100, `donee_type` iff donation, tuition fields iff tuition, labels trimmed/NFC/≤ 40, `cfdi_uuid` upper-case format; `INDEX (user_id, taxpayer_id, fiscal_year, category, paid_on, id) WHERE deleted_at IS NULL` + full `(user_id, taxpayer_id)` for cascades + partial `deleted_at` | MODULE-annual §2.6, §5 (ANN-03). A row for a persona moral is a 23503 (backstop of 422 `person_type_not_allowed`) |
+| salary_statements | Same PF-only composite FK; amounts in `[0, NonNegativeCents.maximum]`; `employer_label` ≤ 60, no employer RFC column; `INDEX (user_id, taxpayer_id, fiscal_year, id)` | MODULE-annual §2.6, §9 data minimization |
+| annual_filed_payments | PK `(user_id, taxpayer_id, regime_code, fiscal_year, month)` (only index); FK `(user_id, taxpayer_id, regime_code) → taxpayer_regimes`; month 1-12; amount ≥ 0 | MODULE-annual §2.5 source 1; PUT replaces the year's set per regime |
+| annual_inputs | PK `(user_id, taxpayer_id, fiscal_year)` (only index); FK `(user_id, taxpayer_id) → taxpayers`; `prior_year_accumulable_income_cents` NULL = unknown (OQ-A5) | MODULE-annual §2.6 |
 | incomes / expenses | `CHECK amount_cents >= 0`, `iva_cents >= 0`, withholdings ≥ 0 | Whether an `iva_rate` is valid on the record date (e.g. `rate_8` until 2026-12-31) is checked in the use case through the engine's `RateCatalog` port, because validity is date-ranged parameter data (ADR-0002 §3), not a DB constraint |
 | incomes | `CHECK collected_on IS NOT NULL OR invoiced_on IS NOT NULL`; `amount_cents >= 1`; withholdings bounded by their base; zero-IVA rates carry no IVA; no withholding by `persona_fisica` / `publico_general` | Per-regime requirement (cash vs. accrual) enforced in the use case |
 | incomes | `booked_on NOT NULL`, derived by trigger `incomes_derive_booked_on` from `regimes.income_basis` (`invoiced_on` accrual, `collected_on` cash); no grant to write it | MODULE-incomes §2.2: the list period and ISR date; a cash income without `collected_on` fails NOT NULL |
@@ -428,6 +482,10 @@ Every table below has `ENABLE` + `FORCE ROW LEVEL SECURITY` in its first migrati
 | taxpayers | owner | owner | owner | owner | |
 | taxpayer_regimes | owner | owner | owner | — | DELETE archives (end_period); rows leave only by cascade |
 | taxpayer_tax_inputs | owner | owner | owner (value columns only) | owner | DELETE is the replace of PUT; cc_worker/cc_webhook get nothing |
+| personal_deductions | owner | owner | owner | — | Soft delete and restore = UPDATE of `deleted_at`; rows leave by cascade or the purge job |
+| salary_statements | owner | owner | owner | owner | Hard delete |
+| annual_filed_payments | owner | owner | owner (`amount_cents` only) | owner | DELETE is the replace of PUT |
+| annual_inputs | owner | owner | owner (value columns only) | — | PUT is an upsert |
 | incomes | owner | owner | owner | — | Soft delete and restore = UPDATE of `deleted_at`; rows leave by cascade or the purge definer (M9-08) |
 | expenses | owner | owner | owner | owner | |
 | subscriptions | owner | owner (cc_webhook) | owner (cc_webhook) | — | cc_app: SELECT only. The webhook sets `app.current_user_id` to the event's `app_user_id` (our user id) before touching `subscriptions` / `entitlements` |

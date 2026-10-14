@@ -641,6 +641,32 @@ void main() {
       expect(harness.repository.calls, hasLength(2));
     });
 
+    // MODULE-dashboard §5: offline is the error state, no cached figures in
+    // v1. A failed refresh must not leave the previous figures on screen as
+    // if they were fresh (M6-07).
+    testWidgets('a failed pull to refresh shows the error, not the old '
+        'figures', (tester) async {
+      await harness.pump(tester);
+      harness.repository.replies.add(const ApiUnreachable());
+
+      await tester.fling(
+        find.text('Total a pagar'),
+        const Offset(0, 400),
+        1000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(harness.repository.calls, hasLength(2));
+      expect(find.byKey(const ValueKey('dashboard-hero')), findsNothing);
+      expect(
+        find.text('No hay conexión. Revisa tu internet e inténtalo de nuevo.'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Reintentar'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('dashboard-hero')), findsOneWidget);
+    });
+
     testWidgets('switching taxpayer reloads for the new one', (tester) async {
       const other = '0192f0c4-0000-7000-8000-000000000002';
       _tall(tester);
