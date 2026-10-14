@@ -26,6 +26,8 @@ var baselineObjects = []string{
 	"to_regclass('public.user_usage')",
 	"to_regclass('public.entitlements')",
 	"to_regclass('public.email_verifications')",
+	"to_regclass('public.regimes')",
+	"to_regclass('public.regime_compatibility')",
 }
 
 func remainingObjects(t *testing.T, db *sql.DB) []string {
