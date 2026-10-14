@@ -1,0 +1,32 @@
+# golden: hand-authored from research AN-01 (docs/research/annual-return-2026.md Part D). Never generated or rewritten by a tool.
+id: AN-01
+source: research:AN-01
+pending_strategy: true # ANN-08 registers pf_art152
+input:
+  fiscal_year: 2026
+  person_type: fisica
+  regimes:
+    - regime: "612"
+      income: "900000.00" # collected
+      deductions: "400000.00" # paid -> utilidad 500,000
+      isr_withheld: "30000.00" # 10 % withheld by PM on 300,000
+  payments:
+    - {regime: "612", amount: "55773.86", source: filed} # the research gives the year's total
+  personal_deductions:
+    - {category: medical, amount: "40000.00", payment_method: electronic, beneficiary: self}
+expected:
+  informative_income_over_500k: true
+  sections:
+    - kind: pf_art152
+      regimes: ["612"]
+      status: complete
+      obligation: obligated
+      missing_inputs: []
+      cpa_topics: []
+      tax:
+        accumulable_income: "500000.00"
+        personal_deductions: "40000.00" # under min(213,973.20; 15 % x 900,000 = 135,000)
+        base: "460000.00"
+        isr: "76365.86" # row 7: 67,981.92 + (460,000 - 424,353.98) x 23.52 %
+        credits: {payments: "55773.86", withholdings: "30000.00", salary_isr: "0.00"}
+        balance: {kind: a_favor, amount: "9408.00"} # = 40,000 x 23.52 %
