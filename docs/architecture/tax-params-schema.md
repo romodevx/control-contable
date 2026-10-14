@@ -119,10 +119,12 @@ its path (`values[3] uma.monthly: ...`, `tables[5] isr.art106.accumulated rows[2
 | A key is all monthly or all plain | `ErrMonthlyMixed` |
 | **Exactly twelve**: each validity window of a monthly key holds months 1-12 once | `ErrMonthlyIncomplete` (a repeated month is also `ErrOverlap`) |
 
-Regime strategies also declare what they read, for example
-`taxparams.RequireMonthlyTables("isr.art106.accumulated")` or `RequireRate("iva.rate.general_16")`.
-The composition root checks them with `Params.Require` at boot, so a missing or mistyped key
-(`ErrUnknownKey`, `ErrKindMismatch`) fails the boot as well.
+`Params.Require` checks that keys exist with the right shape, for example
+`taxparams.RequireMonthlyTables("isr.art106.accumulated")` or `RequireRate("iva.rate.general_16")`;
+a missing or mistyped key is `ErrUnknownKey` or `ErrKindMismatch`. At boot only the rate
+catalog uses it (the IVA rates of every set). The keys the strategies and the record modules
+read are checked per year by `params/embedded_<year>_test.go`
+(`TestEmbedded<year>DefinesEveryKeyTheModulesRead`), not at boot (M5-31 G-5, PLAN M5 FU6).
 
 ## Resolution by date
 
@@ -157,9 +159,13 @@ The composition root checks them with `Params.Require` at boot, so a missing or 
 
 ## Adding a year or a correction
 
+Follow the [yearly parameter update runbook](../runbooks/tax-params-update.md): official
+sources, verbatim transcription with `sources[]`, independent double-entry verification, the
+per-year tests, `EngineVersion` and the release checklist. In short:
+
 1. Create `data/<year>/v1.yaml` (or `v<N+1>.yaml` for a correction). Copy the values verbatim
    and cite a source for each.
 2. Leave `valid_to` empty when the law sets no end. Set it when the law does, as with a
    decree's sunset.
-3. Run `make check`. The loader test and the golden suite (M5-07) gate the PR, and the CPA
-   reviews the goldens.
+3. Run `make -C backend check`. The loader test, the per-year embedded test and the golden
+   suite (M5-07) gate the PR, and the CPA reviews the goldens.

@@ -325,53 +325,77 @@ Task groups:
 
 | ID | Task | Owner | Deps | Est (h) | Par | Branch | Blocked by | Done |
 |---|---|---|---|---|---|---|---|---|
-| M5-01 | Contract freeze: estimates, breakdown, tax-inputs, Disclaimer codes, `legend` const, lint | architect | P0-05 | 2 | — | `feature/tax-engine-contract` | — | [ ] |
-| M5-02 | Engine domain: Strategy port, StrategyKey (regime, person type), Input/MonthSums, RegimeEstimate, Line, Ledger trace helper, Citation; consumer ports LedgerReader/TaxInputReader (TDD) | backend-sr | P0-13 | 4 | — | `feature/tax-engine-domain` | — | [ ] |
-| M5-03 | Params loader: YAML schema, go:embed, `Params.At(key, date)`, overlap rejection, typed fail-fast validation (contiguity, 12 tables, rates in [0,1]), version selection + provisional fallback (TDD) | backend-sr | M5-02 | 5 | — | `feature/tax-engine-params` | — | [ ] |
-| M5-04 | Transcribe `params/2026/v1.yaml` verbatim: art. 96, twelve art. 106 tables, RESICO PF brackets, platform rates, UMA Jan vs Feb, IVA 16/8 (valid to 2026-12-31), sources[] | backend-sr | M5-03 | 6 | — | `feature/tax-engine-params-2026` | — | [ ] |
-| M5-05 | Tariff lookup (sort.Search) + property tests (total over (0, ∞)) | backend-sr | M5-03 | 2 | — | `feature/tax-engine-params` | — | [ ] |
-| M5-06 | Independent double-entry verification of `v1.yaml` against Anexo 8 / LIF / DOF (review on the M5-04 PR) | qa-sr | M5-04 | 3 | — | `feature/tax-engine-params-2026` | — | [ ] |
-| M5-07 | Golden harness: case YAML format, table-driven runner, skip-with-reason for ⚠️, no update flag, CI hard gate, boundary-case generator (tariff rows, validity dates) | qa-sr | M5-02, M5-05 | 4 | — | `feature/tax-engine-golden-harness` | — | [ ] |
-| M5-08 | RateCatalog port implementation (allowed IVA rates on a date) for M3/M4 | backend-sr | M5-04 | 2 | PG-M5-F | `feature/tax-engine-rate-catalog` | — | [ ] |
-| M5-09 | Shared IVA components calculator (charged, creditable, withheld from taxpayer, withheld to remit, 8% by record date, 625 definitive exclusion hook) | backend-sr | M5-02, M5-03 | 3.5 | PG-M5-F | `feature/tax-engine-iva` | — | [ ] |
-| M5-10 | Strategy registry + InformationalStrategy fallback + RequiredInputs → `incomplete` status | backend-sr | M5-02 | 2.5 | PG-M5-F | `feature/tax-engine-registry` | — | [ ] |
-| M5-11 | Strategy 612 PF (YTD cash, deductions, PTU, losses, accumulated tariff month n, prior payments, 10% PM withholding) + IVA; goldens PF-612-ISR-01..03, PF-612-IVA-01 + 12-month boundary rows | backend-sr | M5-04, M5-05, M5-06, M5-07, M5-09 | 6 | PG-M5-S | `feature/tax-engine-612-pf` | — | [ ] |
-| M5-12 | Strategy 606 PF (blind 35% vs actual, predial, art. 96, PM 10% withholding → saldo a favor; residential exempt; quarterly → informational); goldens PF-606-ISR-01..02, PF-606-IVA-01 | backend-sr | M5-04, M5-05, M5-06, M5-07, M5-09 | 4.5 | PG-M5-S | `feature/tax-engine-606-pf` | — | [ ] |
-| M5-13 | Strategy 626 PF (non-marginal bracket, 1.25% withholding); goldens PF-626-ISR-01..02, PF-626-IVA-01; property: rate non-decreasing | backend-sr | M5-04, M5-05, M5-06, M5-07, M5-09 | 3.5 | PG-M5-S | `feature/tax-engine-626-pf` | — | [ ] |
-| M5-14 | Strategy 625 PF (activities 2.1/4/2.5%, 20% without RFC, definitive option, prior-year ≤ $300k → full vs partial); goldens PF-625-01 (IVA part skipped ⚠️), PF-625-02 | backend-sr | M5-04, M5-05, M5-06, M5-07, M5-09 | 4.5 | PG-M5-S | `feature/tax-engine-625-pf` | — | [ ] |
-| M5-15 | Strategy 601 PM (coeficiente × YTD accrual, PTU May–Dec, losses, interest withholding, first fiscal year) + IVA + withholdings_to_remit; goldens PM-601-ISR-01..02, PM-601-IVA-01 | backend-sr | M5-04, M5-05, M5-06, M5-07, M5-09 | 6 | PG-M5-S | `feature/tax-engine-601-pm` | — | [ ] |
-| M5-16 | Strategy 626 PM (YTD cash profit × 30%); golden PM-626-ISR-01 + boundaries | backend-sr | M5-04, M5-05, M5-06, M5-07, M5-09 | 3.5 | PG-M5-S | `feature/tax-engine-626-pm` | — | [ ] |
-| M5-17 | Partial 621 PF (bimonthly, February accumulated table, rif_year reduction ⚠️); golden PF-621-01 skipped until CPA | backend-sr | M5-04, M5-05, M5-06, M5-07, M5-09 | 3 | PG-M5-S | `feature/tax-engine-partial` | — | [ ] |
-| M5-18 | Partial 622 PM (IVA + explanation, AGAPES deferred) and 603 PM (IVA only, ISR explained) | backend-sr | M5-04, M5-05, M5-06, M5-07, M5-09, M5-15 | 2.5 | — | `feature/tax-engine-partial` | — | [ ] |
-| M5-19 | Explanation-only catalog: plain-language text for 605, 607, 608, 610 (PF/PM), 611, 614, 615, 616, 620, 623, 624 (forward migration on `regimes.explanation`) + informational goldens | backend-sr | M2-02, M5-10, M5-07 | 3 | PG-M5-S | `feature/tax-engine-informational` | — | [ ] |
-| M5-20 | Migration `taxpayer_tax_inputs` with RLS + isolation tests | db-sr | M2-03 | 2.5 | — | `feature/tax-engine-inputs` | — | [ ] |
-| M5-21 | Tax inputs GET/PUT use case validated against `regimes.required_inputs` | backend-sr | M5-20, M5-01, M2-06 | 3 | — | `feature/tax-engine-inputs` | — | [ ] |
-| M5-22 | EstimateMonth use case: readers, register all strategies at the composition root, IVA netting per taxpayer, withholdings_to_remit, final rounding + `Ajuste por redondeo`, fingerprint, disclaimers + legend | backend-sr | M5-08, M5-10, M5-11, M5-12, M5-13, M5-14, M5-15, M5-16, M5-17, M5-18, M5-19, M5-21, M3-07, M4-08 | 5 | — | `feature/tax-engine-estimate` | — | [ ] |
-| M5-23 | Estimates + breakdown handlers, contract tests, flag ON/OFF (M6/M8 implied OFF), EXPLAIN ANALYZE, p95 check | backend-sr | M5-22, M2-07 | 3.5 | — | `feature/tax-engine-http` | — | [ ] |
-| M5-24 | Engine property suite, fixed seed (lines + adjustment = result, monotonic in income, byte-identical JSON) | qa-sr | M5-22 | 3 | — | `feature/tax-engine-property-tests` | — | [ ] |
-| M5-25 | Flutter estimate screen: per-regime + totals, legend, disclaimers, `incomplete` CTA | frontend-sr | M5-01, M2-10 | 4.5 | — | `feature/tax-engine-mobile-estimate` | — | [ ] |
-| M5-26 | Flutter breakdown screen: lines, legal basis citations, rounding adjustment | frontend-sr | M5-25 | 4 | — | `feature/tax-engine-mobile-breakdown` | — | [ ] |
-| M5-27 | Flutter tax-inputs form per regime (target of the `incomplete` CTA) | frontend-sr | M5-25 | 4 | — | `feature/tax-engine-mobile-inputs` | — | [ ] |
+| M5-01 | Contract freeze: estimates, breakdown, tax-inputs, Disclaimer codes, `legend` const, lint | architect | P0-05 | 2 | — | `feature/tax-engine-contract` | — | [x] |
+| M5-02 | Engine domain: Strategy port, StrategyKey (regime, person type), Input/MonthSums, RegimeEstimate, Line, Ledger trace helper, Citation; consumer ports LedgerReader/TaxInputReader (TDD) | backend-sr | P0-13 | 4 | — | `feature/tax-engine-domain` | — | [x] |
+| M5-03 | Params loader: YAML schema, go:embed, `Params.At(key, date)`, overlap rejection, typed fail-fast validation (contiguity, 12 tables, rates in [0,1]), version selection + provisional fallback (TDD) | backend-sr | M5-02 | 5 | — | `feature/tax-engine-params` | — | [x] |
+| M5-04 | Transcribe `params/2026/v1.yaml` verbatim: art. 96, twelve art. 106 tables, RESICO PF brackets, platform rates, UMA Jan vs Feb, IVA 16/8 (valid to 2026-12-31), sources[] | backend-sr | M5-03 | 6 | — | `feature/tax-engine-params-2026` | — | [x] |
+| M5-05 | Tariff lookup (sort.Search) + property tests (total over (0, ∞)) | backend-sr | M5-03 | 2 | — | `feature/tax-engine-params` | — | [x] |
+| M5-06 | Independent double-entry verification of `v1.yaml` against Anexo 8 / LIF / DOF (review on the M5-04 PR) | qa-sr | M5-04 | 3 | — | `feature/tax-engine-params-2026` | — | [x] |
+| M5-07 | Golden harness: case YAML format, table-driven runner, skip-with-reason for ⚠️, no update flag, CI hard gate, boundary-case generator (tariff rows, validity dates) | qa-sr | M5-02, M5-05 | 4 | — | `feature/tax-engine-golden-harness` | — | [x] |
+| M5-08 | RateCatalog port implementation (allowed IVA rates on a date) for M3/M4 | backend-sr | M5-04 | 2 | PG-M5-F | `feature/tax-engine-rate-catalog` | — | [x] |
+| M5-09 | Shared IVA components calculator (charged, creditable, withheld from taxpayer, withheld to remit, 8% by record date, 625 definitive exclusion hook) | backend-sr | M5-02, M5-03 | 3.5 | PG-M5-F | `feature/tax-engine-iva` | — | [x] |
+| M5-10 | Strategy registry + InformationalStrategy fallback + RequiredInputs → `incomplete` status | backend-sr | M5-02 | 2.5 | PG-M5-F | `feature/tax-engine-registry` | — | [x] |
+| M5-11 | Strategy 612 PF (YTD cash, deductions, PTU, losses, accumulated tariff month n, prior payments, 10% PM withholding) + IVA; goldens PF-612-ISR-01..03, PF-612-IVA-01 + 12-month boundary rows | backend-sr | M5-04, M5-05, M5-06, M5-07, M5-09 | 6 | PG-M5-S | `feature/tax-engine-612-pf` | — | [x] |
+| M5-12 | Strategy 606 PF (blind 35% vs actual, predial, art. 96, PM 10% withholding → saldo a favor; residential exempt; quarterly → informational); goldens PF-606-ISR-01..02, PF-606-IVA-01 | backend-sr | M5-04, M5-05, M5-06, M5-07, M5-09 | 4.5 | PG-M5-S | `feature/tax-engine-606-pf` | — | [x] |
+| M5-13 | Strategy 626 PF (non-marginal bracket, 1.25% withholding); goldens PF-626-ISR-01..02, PF-626-IVA-01; property: rate non-decreasing | backend-sr | M5-04, M5-05, M5-06, M5-07, M5-09 | 3.5 | PG-M5-S | `feature/tax-engine-626-pf` | — | [x] |
+| M5-14 | Strategy 625 PF (activities 2.1/4/2.5%, 20% without RFC, definitive option, prior-year ≤ $300k → full vs partial); goldens PF-625-01 (IVA part skipped ⚠️), PF-625-02 | backend-sr | M5-04, M5-05, M5-06, M5-07, M5-09 | 4.5 | PG-M5-S | `feature/tax-engine-625-pf` | — | [x] |
+| M5-15 | Strategy 601 PM (coeficiente × YTD accrual, PTU May–Dec, losses, interest withholding, first fiscal year) + IVA + withholdings_to_remit; goldens PM-601-ISR-01..02, PM-601-IVA-01 | backend-sr | M5-04, M5-05, M5-06, M5-07, M5-09 | 6 | PG-M5-S | `feature/tax-engine-601-pm` | — | [x] |
+| M5-16 | Strategy 626 PM (YTD cash profit × 30%); golden PM-626-ISR-01 + boundaries | backend-sr | M5-04, M5-05, M5-06, M5-07, M5-09 | 3.5 | PG-M5-S | `feature/tax-engine-626-pm` | — | [x] |
+| M5-17 | Partial 621 PF (bimonthly, February accumulated table, rif_year reduction ⚠️); golden PF-621-01 skipped until CPA | backend-sr | M5-04, M5-05, M5-06, M5-07, M5-09 | 3 | PG-M5-S | `feature/tax-engine-partial` | — | [x] |
+| M5-18 | Partial 622 PM (IVA + explanation, AGAPES deferred) and 603 PM (IVA only, ISR explained) | backend-sr | M5-04, M5-05, M5-06, M5-07, M5-09, M5-15 | 2.5 | — | `feature/tax-engine-partial` | — | [x] |
+| M5-19 | Explanation-only catalog: plain-language text for 605, 607, 608, 610 (PF/PM), 611, 614, 615, 616, 620, 623, 624 (forward migration on `regimes.explanation`) + informational goldens | backend-sr | M2-02, M5-10, M5-07 | 3 | PG-M5-S | `feature/tax-engine-informational` | — | [x] |
+| M5-20 | Migration `taxpayer_tax_inputs` with RLS + isolation tests | db-sr | M2-03 | 2.5 | — | `feature/tax-engine-inputs` | — | [x] |
+| M5-21 | Tax inputs GET/PUT use case validated against `regimes.required_inputs` | backend-sr | M5-20, M5-01, M2-06 | 3 | — | `feature/tax-engine-inputs` | — | [x] |
+| M5-22 | EstimateMonth use case: readers, register all strategies at the composition root, IVA netting per taxpayer, withholdings_to_remit, final rounding + `Ajuste por redondeo`, fingerprint, disclaimers + legend | backend-sr | M5-08, M5-10, M5-11, M5-12, M5-13, M5-14, M5-15, M5-16, M5-17, M5-18, M5-19, M5-21, M3-07, M4-08 | 5 | — | `feature/tax-engine-estimate` | — | [x] |
+| M5-23 | Estimates + breakdown handlers, contract tests, flag ON/OFF (M6/M8 implied OFF), EXPLAIN ANALYZE, p95 check | backend-sr | M5-22, M2-07 | 3.5 | — | `feature/tax-engine-http` | — | [x] |
+| M5-24 | Engine property suite, fixed seed (lines + adjustment = result, monotonic in income, byte-identical JSON) | qa-sr | M5-22 | 3 | — | `feature/tax-engine-property-tests` | — | [x] |
+| M5-25 | Flutter estimate screen: per-regime + totals, legend, disclaimers, `incomplete` CTA | frontend-sr | M5-01, M2-10 | 4.5 | — | `feature/tax-engine-mobile-estimate` | — | [x] |
+| M5-26 | Flutter breakdown screen: lines, legal basis citations, rounding adjustment | frontend-sr | M5-25 | 4 | — | `feature/tax-engine-mobile-breakdown` | — | [x] |
+| M5-27 | Flutter tax-inputs form per regime (target of the `incomplete` CTA) | frontend-sr | M5-25 | 4 | — | `feature/tax-engine-mobile-inputs` | — | [x] |
 | M5-28 | Register flag `module_tax_engine` | backend-sr | M5-23, M5-24, M5-26, M5-27 | 0.5 | — | `feature/tax-engine-flag` | — | [x] |
 | M5-29 | QA M5: UI figures equal golden figures for each full regime, informational regimes, incomplete flow, flag OFF | qa-sr | M5-28 | 4 | — | `feature/tax-engine-qa-fixes` | OB6 | [x] |
-| M5-30 | Tech-lead gate M5 (OCP, purity, no floats, determinism) | tech-lead | M5-29 | 3 | — | (PR review) | — | [[x] |
+| M5-30 | Tech-lead gate M5 (OCP, purity, no floats, determinism) | tech-lead | M5-29 | 3 | — | (PR review) | — | [x] |
 | M5-31 | Security gate M5 | security | M5-29 | 2 | — | `feature/tax-engine-security-gate` | — | [x] |
-| M5-32 | Docs M5: engine guide, add-a-regime guide, Dec–Jan parameter update runbook | doc-writer | M5-30, M5-31 | 2.5 | — | `feature/tax-engine-docs` | — | [ ] |
+| M5-32 | Docs M5: engine guide, add-a-regime guide, Dec–Jan parameter update runbook | doc-writer | M5-30, M5-31 | 2.5 | — | `feature/tax-engine-docs` | — | [x] |
 | M5-33 | CPA sign-off of golden suite; un-skip ⚠️ cases or record decisions | qa-sr | M5-29 | 2 | — | `feature/tax-engine-cpa-signoff` | OB5 | [ ] |
 
 #### M5 follow-ups
 
-Deferred by the M5 gates; none blocks M5's merge. Sources: [M5-30 tech-lead gate](../reviews/M5-30-tech-lead-gate.md#follow-ups),
-[M5-31 security gate](../reviews/M5-31-security-gate.md#4-carried-m5-follow-ups) (FU4–FU6; flag preconditions in its §5).
+Deferred by the M5 gates and QA; none blocks M5's merge. Each lands with the task or module in
+its target column. Sources: [M5-30 tech-lead gate](../reviews/M5-30-tech-lead-gate.md#follow-ups),
+[M5-31 security gate](../reviews/M5-31-security-gate.md#4-carried-m5-follow-ups) (G-*, PR numbers;
+flag preconditions in its §5), [M5-29 QA](../reviews/M5-29-qa.md#5-issues) (D*),
+[M5-06](../reviews/M5-06-params-verification.md#recommendations-non-blocking) and M5-32 (this
+docs task: FU7–FU9). The module itself stays **OFF in shared environments** until
+[M5-31 §5](../reviews/M5-31-security-gate.md#5-preconditions-to-enable-module_tax_engine-in-staging-or-production)
+holds, first the CPA sign-off (M5-33).
 
 | ID | Item | Owner | Target |
 |---|---|---|---|
-| FU1 | Accrual regimes (601): show *Fecha de cobro* outside the collapsed *Más detalles* (it decides the IVA), with M5-29 D6's hint for invoiced-but-uncollected income | pm + frontend-sr | M3 hardening |
+| FU1, D6 | **Surface the collection date.** Accrual regimes (601): show *Fecha de cobro* outside the collapsed *Más detalles* (it decides the IVA; or ask "¿Ya te pagaron?" with the date), plus a hint on the 601 estimate card when income is invoiced but not collected (IVA is 0 until then) | pm + frontend-sr | M3 hardening, before `module_incomes` for PM users |
 | FU2 | CPA-REVIEW: PM-601-IVA-01's withheld-to-remit is IVA only; the app adds the LISR 106 ISR withheld from PF fees | qa-sr | M5-33 |
-| FU3 | Add-a-regime guide lists every touch point, including both `EngineVersion` pins | doc-writer | M5-32 |
+| FU3 | ~~Add-a-regime guide lists every touch point, including both `EngineVersion` pins~~ **Done** ([add-a-regime guide](../guides/add-a-regime.md)) | doc-writer | M5-32 |
 | FU4 | M5-31 G-2: validate `EstimateDeps` in `NewEstimator` so a missing port fails the boot | backend-sr | Before M6 wires a second caller |
 | FU5 | M5-31 G-4: the prior-payment suggestion spends up to 6 estimate reads per half; count it in the `estimate_reads` budget or batch it | backend-sr + frontend-sr | M5 hardening / M6 |
-| FU6 | M5-31 G-5: check that every embedded parameter set defines every key the modules read (not only 2026) | backend-sr | M5-32 runbook, before any 2027 file |
+| FU6 | M5-31 G-5: check that every embedded parameter set defines every key the modules read (not only 2026), at boot or in CI. Until then the [parameter runbook §5](../runbooks/tax-params-update.md#5-tests-for-the-new-year) requires a per-year `TestEmbedded<year>DefinesEveryKeyTheModulesRead` | backend-sr | Before the 2027 parameter file |
+| FU7 | Whole-peso payment rounding (CFF 20) is planned as the parameter `rounding.payment_whole_pesos` (ADR-0002 §4), but no file defines it and no code reads it: wire it (default off) so the CPA's answer is a data change | backend-sr | M5-33 (if the CPA confirms rounding) |
+| FU8 | Year-bearing texts are code: the `not_tax_advice` text ("LIF 2026 y Anexo 8 RMF 2026", `texts.go` + contract examples) and the strategies' citations ("Anexo 8 RMF 2026", "LIF 2026", the border decree's end). Derive them from the selected parameter set's `sources[]` | backend-sr (+ architect for the examples) | Before the 2027 parameter file |
+| FU9 | The generated golden edges (tariff rows, validity dates) and the figures digest read `params/data/2026/v1.yaml` only: iterate over every embedded set | qa-sr | With the 2027 parameter file |
+| D3 | *Datos fiscales*: the suggestion row disappears on the first keystroke and the fields below jump ~260 px, so a second tap lands on the wrong month. Keep the row's space, or hide the suggestion on save | frontend-sr | M5 UX polish |
+| D4 | Breakdown: result lines use a smaller label than input lines (inverted hierarchy); every line repeats a source chip and a *Fundamento* disclosure, so 612 takes ~7 screens. Also: the totals card shows no *Completo* chip when everything is complete | frontend-sr + design | M5 UX polish |
+| D5 | RESICO expense hint repeats the same sentence twice | frontend-sr | M3/M4 UX polish |
+| D7 | MODULE-tax-engine §7 "M5 OFF implies M6 and M8 OFF" is declared by the M6/M8 flag tasks | backend-sr | M6-xx / M8-xx flag tasks |
+| G-3 | `infra/taxinputs` and the profile reader read taxpayers by id under RLS alone: add an owner check in the query if shared access (accountant, delegated users) is ever designed | architect | ADR for any delegated-access feature |
+| #77 should-fix 2 | `provisional_parameters` notice on the records forms (categories/defaults responses) | architect | Next contract re-freeze |
+| #98 FU1 | Fingerprint hashes informational sums and multi-enum order (false "changed" marks in M8) | backend-sr | M8 |
+| #98 FU2 | Replace the weekends-only due-date calendar with the `holidays` table | backend-sr | M9-03/M9-04 (blocker beyond 2028 parameters) |
+| #90 FU | RESICO PF months after the cap still use RESICO rates (warning only) | owner + CPA | M5-33 |
+| #101 FU 1–3 | A half with an error stays open next to the opened one (up to 12 fields); `paymentMonths` offers months of a future fiscal year; `CitationDisclosure` could reuse `FormDisclosure` | frontend-sr | M5 UX polish |
+| #101 FU 4 | ~~MODULE §8 still says "inline editable 12-row table"~~ **Done** (§8 describes the shipped halves of ≤ 6 and the suggestion) | doc-writer | M5-32 |
+| #102 nit | Contract examples show `engine_version: 1.0.0` (current 1.0.1) | architect | Next contract re-freeze |
+| #102 note | ~45 ms per request is spent outside the measured SQL (likely pgx generic plans); profile it when M6 reads 12 months | backend-sr | M6-03 |
+| M5-06 rec. 1–3 | Cite the DOF edition of Anexo 8 (nota 5777219) as the primary source; keep a SHA-256 of each fetched source in the verification report (now in the runbook §2/§4); confirm the scope of LIF 2026 art. 25 fr. IX a) (platform IVA withholding on personas morales) | backend-sr (1), qa-sr (2), pm + CPA (3) | With the 2027 parameter file; M5-33 |
+| D2, PR #108 | ~~A regime always starts in the current month~~ **Done** (#108: onboarding and *Agregar régimen* ask the start month, from 2026-01) | — | — |
 
 ### M6 — Dashboard (`module_dashboard`)
 

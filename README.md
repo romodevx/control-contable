@@ -36,6 +36,7 @@ tools/     pinned contract tooling (Redocly CLI, Prism), mobile release-artifact
 | [Platform packages](docs/architecture/platform.md) | what each `backend/internal/platform` package guarantees |
 | [ADR-0001](docs/adr/0001-stack.md) | stack and pinned versions |
 | [ADR-0002](docs/adr/0002-tax-engine.md) | tax engine design |
+| [Tax parameter schema](docs/architecture/tax-params-schema.md) | the yearly parameter files, their validation and selection |
 | [ADR-0003](docs/adr/0003-dart-client-generation.md) | Dart client generation |
 | [Contract policy](docs/api/CONTRACT.md) | OpenAPI lint rules |
 | [backend/README.md](backend/README.md) | every backend target, configuration variables, worker, migrations |
@@ -123,7 +124,8 @@ Enabling a flag in a shared environment requires the module's tech-lead and secu
 | M2 Taxpayers & Onboarding | `module_taxpayers` | Built; gates M2-13 and M2-14 passed. **OFF in shared environments** until the [enable checklist](docs/runbooks/taxpayers.md#5-enable-module_taxpayers-in-a-shared-environment) holds (needs `module_auth` enabled first) | [module](docs/modules/taxpayers.md), [runbook](docs/runbooks/taxpayers.md) |
 | M3 Incomes | `module_incomes` | Built; gates M3-12 and M3-13 passed. **OFF in shared environments** until the [enable checklist](docs/runbooks/incomes-expenses.md#5-enable-module_incomes-and-module_expenses-in-a-shared-environment) holds (needs `module_taxpayers`) | [module](docs/modules/incomes.md), [runbook](docs/runbooks/incomes-expenses.md) |
 | M4 Expenses | `module_expenses` | Built; gates M4-13 and M4-14 passed. **OFF in shared environments** until the same [enable checklist](docs/runbooks/incomes-expenses.md#5-enable-module_incomes-and-module_expenses-in-a-shared-environment) holds (needs `module_taxpayers`) | [module](docs/modules/expenses.md), [runbook](docs/runbooks/incomes-expenses.md) |
-| M5–M9 | `module_*` | In progress or not built | [MODULES](docs/project-specs/MODULES.md), [PLAN](docs/project-specs/PLAN-control-contable.md) |
+| M5 Tax Engine | `module_tax_engine` | Built; gates M5-30 and M5-31 passed. **OFF in shared environments** until the [security gate preconditions](docs/reviews/M5-31-security-gate.md#5-preconditions-to-enable-module_tax_engine-in-staging-or-production) hold, first the CPA sign-off (M5-33, pending), and a reviewed parameter set for the year in force (needs `module_taxpayers`) | [module](docs/modules/tax-engine.md), [add a regime](docs/guides/add-a-regime.md), [yearly parameter update](docs/runbooks/tax-params-update.md) |
+| M6–M9 | `module_*` | Not built | [MODULES](docs/project-specs/MODULES.md), [PLAN](docs/project-specs/PLAN-control-contable.md) |
 
 ## API reference
 
@@ -144,6 +146,7 @@ rewrites it, and CI (`make api-error-tables-check`) fails when it is stale.
 | Suite | Command | Needs |
 |---|---|---|
 | Backend unit (`-race`, incl. the Dependency Rule check) | `make -C backend test` | Go |
+| Tax engine golden gate, verbose (every case, skip reason, pending count) | `make -C backend golden` | Go |
 | Backend lint + format + unit | `make -C backend check` | Go, golangci-lint |
 | Backend integration (real PostgreSQL, RLS isolation) | `make -C backend test-integration` | Docker |
 | Contract tests (responses vs `openapi.yaml`) | `make -C backend test-contract` | Docker |

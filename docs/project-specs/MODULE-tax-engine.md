@@ -492,9 +492,12 @@ No new `ErrorCode` values; detail codes go into the contract descriptions (M5-01
 - **Breakdown screen**: lines in `seq` order, amount right-aligned, citation under each concept,
   `source` as a small tag, ⚠️ on `needs_cpa_review` lines, "Ajuste por redondeo" styled as a muted line.
 - **Tax-inputs form**: page per regime + fiscal year (field count varies; > 6 for 612/601 → page, per
-  `rules/ui-forms-and-modals.md`); monthly prior payments as an inline editable 12-row table (1–4
-  fields per row rule), prefilled suggestion = the app's estimate for that month; labels in Spanish
-  from `TaxInputDef.label`.
+  `rules/ui-forms-and-modals.md`); monthly prior payments as inline month fields, one per month
+  already due, never more than six on screen (a full year opens one half at a time; a half holding
+  an error stays open). An empty month offers the app's own estimate for it ("Estimado por la
+  app: $X — confírmalo" + **Usar este monto**), read from that month's estimate and offered only
+  when that estimate is `complete` or `partial`; nothing is filled or saved until the user taps it
+  (OQ-T1). Labels in Spanish from `TaxInputDef.label`.
 - Amounts are formatted only (es-MX, `$1,234.56`); the client never rounds or recomputes.
 
 ## 9. Contract changes for M5-01 (architect)
@@ -509,8 +512,9 @@ No new `ErrorCode` values; detail codes go into the contract descriptions (M5-01
 4. `BreakdownLine`: add `source` and `needs_cpa_review`; `tax` adds `withholding`.
 5. `TaxpayerEstimate`: add `records_fingerprint` and `parameter_set` (taxpayer level, for M8).
 6. `TaxInputDef.kind`: add `money_monthly` and `boolean`; `TaxInputValue`: add `month` (1..12, for
-   `money_monthly`) and `value_bool`. Catalog forward migration (M5-20/M5-21): 612/626 PM/601
-   `prior_provisional_payments` → `money_monthly`; 601 gets `first_fiscal_year` (boolean, optional).
+   `money_monthly`) and `value_bool`. Catalog forward migration (M5-20/M5-21): 612 PF, 626 PM,
+   601 PM and 622 PM `prior_provisional_payments` → `money_monthly` (622 keeps the 601
+   definitions, §2.8); 601 gets `first_fiscal_year` (boolean, optional).
 7. Error detail codes of §5 in the descriptions; `Cache-Control: no-store` on M5 responses.
 
 ADR-0002 is amended in the same PR for items 2 and 6 (status `partial`, monthly prior payments).
