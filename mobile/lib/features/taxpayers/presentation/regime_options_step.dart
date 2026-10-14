@@ -3,7 +3,7 @@ import 'package:control_contable/core/forms/app_form.dart';
 import 'package:control_contable/core/forms/field_error.dart';
 import 'package:control_contable/core/forms/form_controller.dart';
 import 'package:control_contable/core/forms/form_notice.dart';
-import 'package:control_contable/features/taxpayers/application/onboarding_flow.dart';
+import 'package:control_contable/features/taxpayers/application/regime_wizard.dart';
 import 'package:control_contable/features/taxpayers/presentation/onboarding_copy.dart';
 import 'package:control_contable/features/taxpayers/presentation/option_fields.dart';
 import 'package:control_contable/features/taxpayers/presentation/step_header.dart';
@@ -13,13 +13,13 @@ import 'package:flutter/material.dart';
 /// Step 4: the options of one chosen regime per page, rendered from its
 /// `option_defs` (boolean → switch, enum → radio group, multi_enum →
 /// checkboxes, rate → es-MX decimal field), prefilled with the catalog
-/// defaults. The last page creates the taxpayer.
+/// defaults. The last page creates the taxpayer (or adds the regime).
 class RegimeOptionsStep extends StatefulWidget {
   /// The step of [flow].
   const new({required this.flow, super.key});
 
-  /// The onboarding.
-  final OnboardingFlow flow;
+  /// The wizard (onboarding, or adding a regime).
+  final RegimeWizard flow;
 
   @override
   State<RegimeOptionsStep> createState() => _RegimeOptionsStepState();
@@ -36,7 +36,7 @@ class _RegimeOptionsStepState extends State<RegimeOptionsStep> {
   late final List<Regime> _regimes = _flow.optionRegimes;
   late final Regime _regime = _regimes[_page];
 
-  OnboardingFlow get _flow => widget.flow;
+  RegimeWizard get _flow => widget.flow;
   List<OptionField> get _fields => _optionFields!;
 
   @override
@@ -93,7 +93,9 @@ class _RegimeOptionsStepState extends State<RegimeOptionsStep> {
         return AppForm(
           controller: _form,
           onSave: () => _flow.submitOptions(_regime.code, _values()),
-          primaryLabel: isLast ? l10n.onboardingCreate : l10n.onboardingNext,
+          primaryLabel: isLast
+              ? finishLabel(_flow.purpose, l10n)
+              : l10n.onboardingNext,
           children: [
             StepHeader(
               flow: _flow,

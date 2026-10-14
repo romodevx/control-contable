@@ -62,7 +62,7 @@ class FormFooter extends StatelessWidget {
               builder: (context, _) => FilledButton(
                 onPressed: onPrimary,
                 child: controller.isSaving
-                    ? _Busy(label: label, announcement: l10n.formSaving)
+                    ? BusyLabel(label: label, announcement: l10n.formSaving)
                     : Text(label),
               ),
             ),
@@ -94,10 +94,16 @@ class FormFooter extends StatelessWidget {
   }
 }
 
-class _Busy extends StatelessWidget {
-  const new({required this.label, required this.announcement});
+/// A primary button's busy content: a spinner beside [label], read as
+/// [announcement].
+class BusyLabel extends StatelessWidget {
+  /// The busy state of a button labeled [label].
+  const new({required this.label, required this.announcement, super.key});
 
+  /// The button's label.
   final String label;
+
+  /// What a screen reader says while busy.
   final String announcement;
 
   @override
