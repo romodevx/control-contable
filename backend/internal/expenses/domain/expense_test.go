@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/romodevx/control-contable/backend/internal/expenses/domain"
+	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/money"
 )
 
@@ -21,7 +22,7 @@ func softwareDraft(t *testing.T) domain.Draft {
 	return domain.Draft{
 		Category:      "software",
 		Amount:        500_00,
-		IVARate:       domain.IVARate16,
+		IVARate:       fiscal.IVARate16,
 		IVA:           80_00,
 		PaymentMethod: domain.PaymentCardDebit,
 		PaidOn:        date(t, "2026-09-12"),
@@ -44,7 +45,7 @@ func TestAssessUS1Software(t *testing.T) {
 	assert.False(t, got.CashOverLimit)
 	assert.Equal(t, money.Cents(80_00), got.CreditableIVA)
 	assert.Nil(t, got.Warnings)
-	assert.Equal(t, domain.Suggested{}, got.Suggested)
+	assert.Equal(t, fiscal.Suggested{}, got.Suggested)
 	assert.Equal(t, domain.Totals{Subtotal: 500_00, IVA: 80_00, Total: 580_00, Net: 580_00}, got.Totals)
 	assert.Equal(t, "2026-09-12", got.BookedOn.String())
 }
@@ -81,7 +82,7 @@ func TestAssessDeductible(t *testing.T) {
 		},
 		{
 			name: "US-E1: 606 blind 35 %, predial", payer: pf606Blind, rule: predial606,
-			edit:           func(d *domain.Draft) { d.Category = domain.CategoryPredial; d.IVARate, d.IVA = domain.IVAExempt, 0 },
+			edit:           func(d *domain.Draft) { d.Category = domain.CategoryPredial; d.IVARate, d.IVA = fiscal.IVAExempt, 0 },
 			wantDeductible: true, wantSource: domain.SourceCategoryDefault,
 		},
 		{
@@ -187,24 +188,24 @@ func TestAssessWithholdingsMade(t *testing.T) {
 	tests := []struct {
 		name         string
 		amount, iva  money.Cents
-		withheld     domain.Withholdings
+		withheld     fiscal.Withholdings
 		wantTotals   domain.Totals
-		wantSuggests domain.Suggested
+		wantSuggests fiscal.Suggested
 	}{
 		{
 			name: "US-E1: fees 10,000 + 1,600", amount: 10_000_00, iva: 1_600_00,
-			withheld:   domain.Withholdings{ISR: 1_000_00, IVA: 1_066_67},
+			withheld:   fiscal.Withholdings{ISR: 1_000_00, IVA: 1_066_67},
 			wantTotals: domain.Totals{Subtotal: 10_000_00, IVA: 1_600_00, Total: 11_600_00, Withheld: 2_066_67, Net: 9_533_33},
-			wantSuggests: domain.Suggested{
-				ISR: domain.Suggestion{Cents: 1_000_00, Known: true}, IVA: domain.Suggestion{Cents: 1_066_67, Known: true},
+			wantSuggests: fiscal.Suggested{
+				ISR: fiscal.Suggestion{Cents: 1_000_00, Known: true}, IVA: fiscal.Suggestion{Cents: 1_066_67, Known: true},
 			},
 		},
 		{
 			name: "PM-601-IVA-01: fees 50,000 + 8,000", amount: 50_000_00, iva: 8_000_00,
-			withheld:   domain.Withholdings{ISR: 5_000_00, IVA: 5_333_33},
+			withheld:   fiscal.Withholdings{ISR: 5_000_00, IVA: 5_333_33},
 			wantTotals: domain.Totals{Subtotal: 50_000_00, IVA: 8_000_00, Total: 58_000_00, Withheld: 10_333_33, Net: 47_666_67},
-			wantSuggests: domain.Suggested{
-				ISR: domain.Suggestion{Cents: 5_000_00, Known: true}, IVA: domain.Suggestion{Cents: 5_333_33, Known: true},
+			wantSuggests: fiscal.Suggested{
+				ISR: fiscal.Suggestion{Cents: 5_000_00, Known: true}, IVA: fiscal.Suggestion{Cents: 5_333_33, Known: true},
 			},
 		},
 	}
@@ -222,78 +223,78 @@ func TestAssessWithholdingsMade(t *testing.T) {
 }
 
 func TestAssessRejects(t *testing.T) {
-	someUUID, err := domain.ParseCFDIUUID("6F1C2A3B-4D5E-4F60-8A9B-0C1D2E3F4A5B")
+	someUUID, err := fiscal.ParseCFDIUUID("6F1C2A3B-4D5E-4F60-8A9B-0C1D2E3F4A5B")
 	require.NoError(t, err)
 	tests := []struct {
 		name      string
 		payer     domain.Payer
 		rule      domain.CategoryRule
 		edit      func(*domain.Draft)
-		wantClass domain.Class
-		want      domain.Violations
+		wantClass fiscal.Class
+		want      fiscal.Violations
 	}{
-		{"amount 0", pf612, softwareBusiness, func(d *domain.Draft) { d.Amount = 0 }, domain.ClassValidation,
-			violations(domain.FieldAmountCents, domain.ErrMustBePositive)},
-		{"amount above the maximum", pf612, softwareBusiness, func(d *domain.Draft) { d.Amount = domain.MaxCents + 1 }, domain.ClassValidation,
-			violations(domain.FieldAmountCents, domain.ErrOutOfRange)},
-		{"negative IVA", pf612, softwareBusiness, func(d *domain.Draft) { d.IVA = -1 }, domain.ClassValidation,
-			violations(domain.FieldIVACents, domain.ErrOutOfRange)},
-		{"negative ISR withheld", pm601, softwareBusiness, func(d *domain.Draft) { d.Withheld.ISR = -1 }, domain.ClassValidation,
-			violations(domain.FieldISRWithheldCents, domain.ErrOutOfRange)},
-		{"IVA withheld above the maximum", pm601, softwareBusiness, func(d *domain.Draft) { d.Withheld.IVA = math.MaxInt64 }, domain.ClassValidation,
-			violations(domain.FieldIVAWithheldCents, domain.ErrOutOfRange)},
-		{"missing category", pf612, rule("", domain.Deductible, true), func(d *domain.Draft) { d.Category = "" }, domain.ClassValidation,
-			violations(domain.FieldCategoryCode, domain.ErrRequired)},
-		{"missing IVA rate", pf612, softwareBusiness, func(d *domain.Draft) { d.IVARate = "" }, domain.ClassValidation,
-			violations(domain.FieldIVARate, domain.ErrRequired)},
-		{"unknown IVA rate", pf612, softwareBusiness, func(d *domain.Draft) { d.IVARate = "rate_20" }, domain.ClassValidation,
-			violations(domain.FieldIVARate, domain.ErrInvalid)},
-		{"missing payment method", pf612, softwareBusiness, func(d *domain.Draft) { d.PaymentMethod = "" }, domain.ClassValidation,
-			violations(domain.FieldPaymentMethod, domain.ErrRequired)},
-		{"unknown payment method", pf612, softwareBusiness, func(d *domain.Draft) { d.PaymentMethod = "crypto" }, domain.ClassValidation,
-			violations(domain.FieldPaymentMethod, domain.ErrInvalid)},
-		{"missing paid_on", pf612, softwareBusiness, func(d *domain.Draft) { d.PaidOn = domain.Date{} }, domain.ClassValidation,
-			violations(domain.FieldPaidOn, domain.ErrRequired)},
-		{"paid tomorrow", pf612, softwareBusiness, func(d *domain.Draft) { d.PaidOn = date(t, "2026-10-14") }, domain.ClassValidation,
-			violations(domain.FieldPaidOn, domain.ErrOutOfRange)},
-		{"paid before 2022", pf612, softwareBusiness, func(d *domain.Draft) { d.PaidOn = date(t, "2021-12-31") }, domain.ClassValidation,
-			violations(domain.FieldPaidOn, domain.ErrOutOfRange)},
+		{"amount 0", pf612, softwareBusiness, func(d *domain.Draft) { d.Amount = 0 }, fiscal.ClassValidation,
+			violations(domain.FieldAmountCents, fiscal.ErrMustBePositive)},
+		{"amount above the maximum", pf612, softwareBusiness, func(d *domain.Draft) { d.Amount = fiscal.MaxCents + 1 }, fiscal.ClassValidation,
+			violations(domain.FieldAmountCents, fiscal.ErrOutOfRange)},
+		{"negative IVA", pf612, softwareBusiness, func(d *domain.Draft) { d.IVA = -1 }, fiscal.ClassValidation,
+			violations(domain.FieldIVACents, fiscal.ErrOutOfRange)},
+		{"negative ISR withheld", pm601, softwareBusiness, func(d *domain.Draft) { d.Withheld.ISR = -1 }, fiscal.ClassValidation,
+			violations(domain.FieldISRWithheldCents, fiscal.ErrOutOfRange)},
+		{"IVA withheld above the maximum", pm601, softwareBusiness, func(d *domain.Draft) { d.Withheld.IVA = math.MaxInt64 }, fiscal.ClassValidation,
+			violations(domain.FieldIVAWithheldCents, fiscal.ErrOutOfRange)},
+		{"missing category", pf612, rule("", domain.Deductible, true), func(d *domain.Draft) { d.Category = "" }, fiscal.ClassValidation,
+			violations(domain.FieldCategoryCode, fiscal.ErrRequired)},
+		{"missing IVA rate", pf612, softwareBusiness, func(d *domain.Draft) { d.IVARate = "" }, fiscal.ClassValidation,
+			violations(domain.FieldIVARate, fiscal.ErrRequired)},
+		{"unknown IVA rate", pf612, softwareBusiness, func(d *domain.Draft) { d.IVARate = "rate_20" }, fiscal.ClassValidation,
+			violations(domain.FieldIVARate, fiscal.ErrInvalid)},
+		{"missing payment method", pf612, softwareBusiness, func(d *domain.Draft) { d.PaymentMethod = "" }, fiscal.ClassValidation,
+			violations(domain.FieldPaymentMethod, fiscal.ErrRequired)},
+		{"unknown payment method", pf612, softwareBusiness, func(d *domain.Draft) { d.PaymentMethod = "crypto" }, fiscal.ClassValidation,
+			violations(domain.FieldPaymentMethod, fiscal.ErrInvalid)},
+		{"missing paid_on", pf612, softwareBusiness, func(d *domain.Draft) { d.PaidOn = fiscal.Date{} }, fiscal.ClassValidation,
+			violations(domain.FieldPaidOn, fiscal.ErrRequired)},
+		{"paid tomorrow", pf612, softwareBusiness, func(d *domain.Draft) { d.PaidOn = date(t, "2026-10-14") }, fiscal.ClassValidation,
+			violations(domain.FieldPaidOn, fiscal.ErrOutOfRange)},
+		{"paid before 2022", pf612, softwareBusiness, func(d *domain.Draft) { d.PaidOn = date(t, "2021-12-31") }, fiscal.ClassValidation,
+			violations(domain.FieldPaidOn, fiscal.ErrOutOfRange)},
 		{"US-E1: cfdi_uuid without a CFDI", pf612, softwareBusiness, func(d *domain.Draft) {
 			d.HasCFDI, d.CFDIUUID = false, someUUID
-		}, domain.ClassValidation, violations(domain.FieldCFDIUUID, domain.ErrHasCFDIMismatch)},
-		{"unknown override", pf612, softwareBusiness, func(d *domain.Draft) { d.Deductible = domain.Override(7) }, domain.ClassValidation,
-			violations(domain.FieldDeductible, domain.ErrInvalid)},
+		}, fiscal.ClassValidation, violations(domain.FieldCFDIUUID, domain.ErrHasCFDIMismatch)},
+		{"unknown override", pf612, softwareBusiness, func(d *domain.Draft) { d.Deductible = domain.Override(7) }, fiscal.ClassValidation,
+			violations(domain.FieldDeductible, fiscal.ErrInvalid)},
 		{"every validation error is reported", pf612, softwareBusiness, func(d *domain.Draft) {
-			d.Amount, d.PaidOn = 0, domain.Date{}
+			d.Amount, d.PaidOn = 0, fiscal.Date{}
 			d.Withheld.ISR = 1_00
-		}, domain.ClassValidation, domain.Violations{
-			{Field: domain.FieldAmountCents, Err: domain.ErrMustBePositive},
-			{Field: domain.FieldPaidOn, Err: domain.ErrRequired},
+		}, fiscal.ClassValidation, fiscal.Violations{
+			{Field: domain.FieldAmountCents, Err: fiscal.ErrMustBePositive},
+			{Field: domain.FieldPaidOn, Err: fiscal.ErrRequired},
 		}},
 		{"US-E1: a física withholds ISR", pf612, feesBusiness, func(d *domain.Draft) {
 			d.Category, d.Amount, d.IVA = domain.CategoryProfessionalFees, 10_000_00, 1_600_00
-			d.Withheld = domain.Withholdings{ISR: 1_000_00}
-		}, domain.ClassBusinessRule, violations(domain.FieldISRWithheldCents, domain.ErrWithholdingNotApplicable)},
+			d.Withheld = fiscal.Withholdings{ISR: 1_000_00}
+		}, fiscal.ClassBusinessRule, violations(domain.FieldISRWithheldCents, fiscal.ErrWithholdingNotApplicable)},
 		{"a física withholds IVA", pf612, feesBusiness, func(d *domain.Draft) {
 			d.Category, d.Amount, d.IVA = domain.CategoryProfessionalFees, 10_000_00, 1_600_00
-			d.Withheld = domain.Withholdings{IVA: 1_066_67}
-		}, domain.ClassBusinessRule, violations(domain.FieldIVAWithheldCents, domain.ErrWithholdingNotApplicable)},
+			d.Withheld = fiscal.Withholdings{IVA: 1_066_67}
+		}, fiscal.ClassBusinessRule, violations(domain.FieldIVAWithheldCents, fiscal.ErrWithholdingNotApplicable)},
 		{"ISR withheld above the amount", pm601, feesBusiness, func(d *domain.Draft) {
 			d.Category = domain.CategoryProfessionalFees
-			d.Withheld = domain.Withholdings{ISR: 500_01, IVA: 80_01}
-		}, domain.ClassBusinessRule, domain.Violations{
-			{Field: domain.FieldISRWithheldCents, Err: domain.ErrWithholdingExceedsBase},
-			{Field: domain.FieldIVAWithheldCents, Err: domain.ErrWithholdingExceedsBase},
+			d.Withheld = fiscal.Withholdings{ISR: 500_01, IVA: 80_01}
+		}, fiscal.ClassBusinessRule, fiscal.Violations{
+			{Field: domain.FieldISRWithheldCents, Err: fiscal.ErrWithholdingExceedsBase},
+			{Field: domain.FieldIVAWithheldCents, Err: fiscal.ErrWithholdingExceedsBase},
 		}},
-		{"IVA amount mismatch", pf612, softwareBusiness, func(d *domain.Draft) { d.IVA = 60_00 }, domain.ClassBusinessRule,
-			violations(domain.FieldIVACents, domain.ErrIVAAmountMismatch)},
+		{"IVA amount mismatch", pf612, softwareBusiness, func(d *domain.Draft) { d.IVA = 60_00 }, fiscal.ClassBusinessRule,
+			violations(domain.FieldIVACents, fiscal.ErrIVAAmountMismatch)},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d := softwareDraft(t)
 			tt.edit(&d)
 			_, err := assess(t, d, tt.payer, tt.rule)
-			got, ok := errors.AsType[domain.Violations](err)
+			got, ok := errors.AsType[fiscal.Violations](err)
 			require.True(t, ok, "want Violations, got %v", err)
 			assert.Equal(t, tt.want, got)
 			assert.Equal(t, tt.wantClass, got.Class())
@@ -303,15 +304,15 @@ func TestAssessRejects(t *testing.T) {
 
 func TestAssessRateNotValidOnDate(t *testing.T) {
 	d := softwareDraft(t)
-	d.IVARate, d.IVA, d.PaidOn = domain.IVARate8, 40_00, date(t, "2027-01-05")
+	d.IVARate, d.IVA, d.PaidOn = fiscal.IVARate8, 40_00, date(t, "2027-01-05")
 	_, err := domain.Assess(d, pf612, softwareBusiness, date(t, "2027-02-01"), catalog2026(t))
-	got, ok := errors.AsType[domain.Violations](err)
+	got, ok := errors.AsType[fiscal.Violations](err)
 	require.True(t, ok)
-	assert.Equal(t, violations(domain.FieldIVARate, domain.ErrRateNotValidOnDate), got)
+	assert.Equal(t, violations(domain.FieldIVARate, fiscal.ErrRateNotValidOnDate), got)
 }
 
 func TestAssessServerFaults(t *testing.T) {
-	absurd := func(key domain.RateKey) fakeCatalog {
+	absurd := func(key fiscal.RateKey) fakeCatalog {
 		c := catalog2026(t)
 		c.rates[key] = []dated[money.Rate]{{from: date(t, "2022-01-01"), value: math.MaxInt64}}
 		return c
@@ -337,25 +338,25 @@ func TestAssessServerFaults(t *testing.T) {
 		{"no today from the clock", pf612, softwareBusiness, none, "", catalog2026(t)},
 		{"no catalog", pf612, softwareBusiness, none, today, nil},
 		{"no cash-payment limit in force", pf612, softwareBusiness, cash, today, noCashLimit},
-		{"catalog IVA rate overflows", pf612, softwareBusiness, none, today, absurd(domain.KeyIVAGeneral)},
-		{"catalog ISR withholding rate overflows", pm601, feesBusiness, fees, today, absurd(domain.KeyISRWithholdingFees)},
+		{"catalog IVA rate overflows", pf612, softwareBusiness, none, today, absurd(fiscal.KeyIVAGeneral)},
+		{"catalog ISR withholding rate overflows", pm601, feesBusiness, fees, today, absurd(fiscal.KeyISRWithholdingFees)},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d := softwareDraft(t)
 			tt.edit(&d)
-			var now domain.Date
+			var now fiscal.Date
 			if tt.today != "" {
 				now = date(t, tt.today)
 			}
 			_, err := domain.Assess(d, tt.payer, tt.rule, now, tt.catalog)
-			require.ErrorIs(t, err, domain.ErrInvalidParameter)
-			_, isViolation := errors.AsType[domain.Violations](err)
+			require.ErrorIs(t, err, fiscal.ErrInvalidParameter)
+			_, isViolation := errors.AsType[fiscal.Violations](err)
 			assert.False(t, isViolation)
 		})
 	}
 }
 
-func violations(field string, err domain.Error) domain.Violations {
-	return domain.Violations{{Field: field, Err: err}}
+func violations(field string, err fiscal.Error) fiscal.Violations {
+	return fiscal.Violations{{Field: field, Err: err}}
 }

@@ -1,37 +1,25 @@
 package domain
 
-import "github.com/romodevx/control-contable/backend/internal/platform/money"
+import (
+	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
+	"github.com/romodevx/control-contable/backend/internal/platform/money"
+)
 
-// RateCatalog is the consumer-side port for the tax engine's dated
-// parameters (ADR-0002 §3); M5-08 implements it over the versioned params.
-// Values are resolved by the expense's paid_on, never by fiscal year alone.
+// RateCatalog is the expenses module's consumer-side port for the tax
+// engine's dated parameters (ADR-0002 §3): the kernel's rates plus the money
+// parameters only expenses reads. M5-08 implements it. Values are resolved
+// by the expense's paid_on, never by fiscal year alone.
 type RateCatalog interface {
-	// Rate returns the rate key holds on day on, and false when no value
-	// is in force that day.
-	Rate(key RateKey, on Date) (money.Rate, bool)
+	fiscal.RateCatalog
 	// Amount returns the money parameter key holds on day on, and false
 	// when no value is in force that day.
-	Amount(key AmountKey, on Date) (money.Cents, bool)
+	Amount(key AmountKey, on fiscal.Date) (money.Cents, bool)
 }
 
-// RateKey names a dated rate parameter, spelled as the engine's params
-// files spell it (ADR-0002 §3).
-type RateKey string
-
-// IVA rates (LIVA 1, 2-A; border decrees).
-const (
-	KeyIVAGeneral RateKey = "iva.rate.general_16"
-	KeyIVABorder  RateKey = "iva.rate.border_8"
-	KeyIVAZero    RateKey = "iva.rate.zero"
-)
-
-// Withholding rates a persona moral applies to its suppliers (research
-// B.2.3).
-const (
-	KeyISRWithholdingFees    RateKey = "isr.withholding.fees_pm"    // 10 %, LISR 106
-	KeyISRWithholdingRent    RateKey = "isr.withholding.rent_pm"    // 10 %, LISR 116
-	KeyIVAWithholdingFreight RateKey = "iva.withholding.freight_pm" // 4 % of the price, RLIVA 3 fr. II
-)
+// KeyIVAWithholdingFreight is the IVA a persona moral withholds on freight:
+// 4 % of the price, RLIVA 3 fr. II (research B.2.3). The fees and rent rates
+// are the kernel's.
+const KeyIVAWithholdingFreight fiscal.RateKey = "iva.withholding.freight_pm"
 
 // AmountKey names a dated money parameter.
 type AmountKey string

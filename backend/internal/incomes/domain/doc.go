@@ -7,23 +7,23 @@
 //   - IncomeBasis.DateFor: which date each tax uses. ISR follows the
 //     regime's basis (accrual → invoiced_on, cash → collected_on); IVA is
 //     always cash (LIVA 1-B).
-//   - ExpectedIVA and CheckIVA: the IVA treatment (16 %, border 8 % within its
-//     validity, 0 %, exempt) and the ±IVATolerance consistency check.
 //   - PolicyFor and WithholdingPolicy.Suggest: which withholdings a
 //     counterparty may make for a regime and person type, and the suggested
 //     amounts (ISR at a dated catalog rate, IVA as a legal share of the IVA).
 //
-// Every rate comes from the RateCatalog port (ADR-0002 §3), implemented by
-// the tax engine (M5-08); only the IVA shares (2/3, 1/2, 1/1), which a Rate
-// cannot hold exactly, are legal fractions in code (ADR-0002 §4). Money is
-// money.Cents and every product rounds once, half away from zero. There is no
-// float and no clock: "today" is a parameter.
+// The concepts incomes shares with expenses and the tax engine (Date, the
+// CFDI UUID, the IVA treatment and its ±IVATolerance check, the withholding
+// shares, RateCatalog, the error model) come from the fiscal shared kernel,
+// internal/kernel/fiscal (ADR-0007). Every rate comes from
+// fiscal.RateCatalog (ADR-0002 §3), implemented by the tax engine (M5-08).
+// There is no float and no clock: "today" is a parameter.
 //
-// Errors: a client mistake is a Violations list of (field, Error) whose Error
-// value is the contract details[].code; Class tells the adapter which
-// ErrorCode it maps to (validation_failed or business_rule_violation). A
-// parameter fault (ErrInvalidParameter) is a server error, never a Violation.
-// No error or warning carries an amount, a description or a CFDI UUID.
+// Errors: a client mistake is a fiscal.Violations list whose codes are the
+// contract details[].code; this package adds its own codes (ErrNotForRegime,
+// ErrActivityNotHeld). A parameter fault (fiscal.ErrInvalidParameter) is a
+// server error, never a Violation. No error or warning carries an amount, a
+// description or a CFDI UUID.
 //
-// The package imports the standard library and internal/platform/money only.
+// The package imports the standard library, internal/kernel/fiscal and
+// internal/platform/money only.
 package domain

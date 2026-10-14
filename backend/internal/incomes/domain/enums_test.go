@@ -7,10 +7,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/romodevx/control-contable/backend/internal/incomes/domain"
+	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 )
 
 // parseCase checks one enum parser: every contract value round-trips and
-// near misses (case, spaces, empty) are ErrInvalid.
+// near misses (case, spaces, empty) are fiscal.ErrInvalid.
 func parseCase[T ~string](t *testing.T, parse func(string) (T, error), valid []string) {
 	t.Helper()
 	for _, raw := range valid {
@@ -20,14 +21,13 @@ func parseCase[T ~string](t *testing.T, parse func(string) (T, error), valid []s
 	}
 	for _, raw := range []string{"", " " + valid[0], "UNKNOWN", "Rate_16"} {
 		_, err := parse(raw)
-		require.ErrorIs(t, err, domain.ErrInvalid, raw)
+		require.ErrorIs(t, err, fiscal.ErrInvalid, raw)
 	}
 }
 
+// TestParseEnums covers the incomes module's own enums; the shared ones
+// (IvaRate, PersonType) are the fiscal kernel's.
 func TestParseEnums(t *testing.T) {
-	t.Run("iva rate", func(t *testing.T) {
-		parseCase(t, domain.ParseIVARate, []string{"rate_16", "rate_8", "rate_0", "exempt"})
-	})
 	t.Run("counterparty", func(t *testing.T) {
 		parseCase(t, domain.ParseCounterparty,
 			[]string{"persona_fisica", "persona_moral", "publico_general", "plataforma"})
@@ -38,14 +38,4 @@ func TestParseEnums(t *testing.T) {
 	t.Run("income basis", func(t *testing.T) {
 		parseCase(t, domain.ParseIncomeBasis, []string{"cash", "accrual"})
 	})
-	t.Run("person type", func(t *testing.T) {
-		parseCase(t, domain.ParsePersonType, []string{"fisica", "moral"})
-	})
-}
-
-func TestIVARateTaxable(t *testing.T) {
-	assert.True(t, domain.IVARate16.Taxable())
-	assert.True(t, domain.IVARate8.Taxable())
-	assert.False(t, domain.IVARate0.Taxable())
-	assert.False(t, domain.IVAExempt.Taxable())
 }

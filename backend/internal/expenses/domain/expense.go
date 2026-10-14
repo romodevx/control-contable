@@ -3,8 +3,8 @@ package domain
 import (
 	"errors"
 	"fmt"
-	"slices"
 
+	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/money"
 )
 
@@ -49,14 +49,14 @@ type Warning struct {
 type Draft struct {
 	Category      CategoryCode
 	Amount        money.Cents // subtotal before IVA, MXN
-	IVARate       IVARate
+	IVARate       fiscal.IVARate
 	IVA           money.Cents
 	PaymentMethod PaymentMethod
-	PaidOn        Date // the booking date: every regime deducts on a paid basis
+	PaidOn        fiscal.Date // the booking date: every regime deducts on a paid basis
 	HasCFDI       bool
-	CFDIUUID      CFDIUUID
+	CFDIUUID      fiscal.CFDIUUID
 	Deductible    Override
-	Withheld      Withholdings
+	Withheld      fiscal.Withholdings
 }
 
 // Totals are the live summary of an expense.
@@ -72,7 +72,7 @@ type Totals struct {
 // deductible and its source, the hint the form shows, the creditable-IVA
 // candidate M4-08 aggregates, the client's prefills, totals and warnings.
 type Assessment struct {
-	BookedOn      Date
+	BookedOn      fiscal.Date
 	Hint          Hint
 	Deductible    bool
 	Source        DeductibleSource
@@ -82,7 +82,7 @@ type Assessment struct {
 	// do not exist, deductible but for the regime (not a cash payment over
 	// the limit). M5 applies the final rule.
 	CreditableIVA money.Cents
-	Suggested     Suggested
+	Suggested     fiscal.Suggested
 	Totals        Totals
 	Warnings      []Warning
 }
@@ -94,10 +94,10 @@ type Assessment struct {
 //
 // Validation (validation_failed) runs first and reports every field; only a
 // draft that passes it meets the business rules (business_rule_violation).
-// Both come back as Violations. A parameter fault is ErrInvalidParameter.
-// The regime window, the category's existence, the idempotency key and the
-// trial cap belong to the use case.
-func Assess(d Draft, p Payer, rule CategoryRule, today Date, catalog RateCatalog) (Assessment, error) {
+// Both come back as fiscal.Violations. A parameter fault is
+// fiscal.ErrInvalidParameter. The regime window, the category's existence,
+// the idempotency key and the trial cap belong to the use case.
+func Assess(d Draft, p Payer, rule CategoryRule, today fiscal.Date, catalog RateCatalog) (Assessment, error) {
 	if err := checkContext(d, p, rule, today, catalog); err != nil {
 		return Assessment{}, err
 	}
@@ -108,72 +108,72 @@ func Assess(d Draft, p Payer, rule CategoryRule, today Date, catalog RateCatalog
 }
 
 // checkContext rejects server-side inputs the rules cannot use.
-func checkContext(d Draft, p Payer, rule CategoryRule, today Date, catalog RateCatalog) error {
+func checkContext(d Draft, p Payer, rule CategoryRule, today fiscal.Date, catalog RateCatalog) error {
 	switch {
-	case !slices.Contains(personTypes, p.PersonType):
-		return fmt.Errorf("person type %q: %w", p.PersonType, ErrInvalidParameter)
-	case !slices.Contains(deductibilities, rule.Deductibility):
-		return fmt.Errorf("category rule deductibility %q: %w", rule.Deductibility, ErrInvalidParameter)
+	case !p.PersonType.Valid():
+		return fmt.Errorf("person type %q: %w", p.PersonType, fiscal.ErrInvalidParameter)
+	case !rule.Deductibility.Valid():
+		return fmt.Errorf("category rule deductibility %q: %w", rule.Deductibility, fiscal.ErrInvalidParameter)
 	case rule.Category != d.Category:
-		return fmt.Errorf("rule of category %q for %q: %w", rule.Category, d.Category, ErrInvalidParameter)
+		return fmt.Errorf("rule of category %q for %q: %w", rule.Category, d.Category, fiscal.ErrInvalidParameter)
 	case today.IsZero():
-		return fmt.Errorf("no current date: %w", ErrInvalidParameter)
+		return fmt.Errorf("no current date: %w", fiscal.ErrInvalidParameter)
 	case catalog == nil:
-		return fmt.Errorf("no rate catalog: %w", ErrInvalidParameter)
+		return fmt.Errorf("no rate catalog: %w", fiscal.ErrInvalidParameter)
 	}
 	return nil
 }
 
 // validate is the schema-level pass.
-func validate(d Draft, today Date) Violations {
-	var vs Violations
+func validate(d Draft, today fiscal.Date) fiscal.Violations {
+	var vs fiscal.Violations
 	if d.Category == "" {
-		vs.add(FieldCategoryCode, ErrRequired)
+		vs.Add(FieldCategoryCode, fiscal.ErrRequired)
 	}
 	checkAmount(&vs, d.Amount)
-	checkEnum(&vs, FieldIVARate, d.IVARate, ivaRates)
+	fiscal.CheckEnum(&vs, FieldIVARate, d.IVARate)
 	checkBounds(&vs, FieldIVACents, d.IVA)
-	checkEnum(&vs, FieldPaymentMethod, d.PaymentMethod, paymentMethods)
+	fiscal.CheckEnum(&vs, FieldPaymentMethod, d.PaymentMethod)
 	checkPaidOn(&vs, d.PaidOn, today)
 	if !d.CFDIUUID.IsZero() && !d.HasCFDI {
-		vs.add(FieldCFDIUUID, ErrHasCFDIMismatch)
+		vs.Add(FieldCFDIUUID, ErrHasCFDIMismatch)
 	}
-	if !slices.Contains(overrides, d.Deductible) {
-		vs.add(FieldDeductible, ErrInvalid)
+	if !d.Deductible.Valid() {
+		vs.Add(FieldDeductible, fiscal.ErrInvalid)
 	}
 	checkBounds(&vs, FieldISRWithheldCents, d.Withheld.ISR)
 	checkBounds(&vs, FieldIVAWithheldCents, d.Withheld.IVA)
 	return vs
 }
 
-func checkAmount(vs *Violations, amount money.Cents) {
+func checkAmount(vs *fiscal.Violations, amount money.Cents) {
 	switch {
 	case amount < 1:
-		vs.add(FieldAmountCents, ErrMustBePositive)
-	case amount > MaxCents:
-		vs.add(FieldAmountCents, ErrOutOfRange)
+		vs.Add(FieldAmountCents, fiscal.ErrMustBePositive)
+	case amount > fiscal.MaxCents:
+		vs.Add(FieldAmountCents, fiscal.ErrOutOfRange)
 	}
 }
 
-func checkBounds(vs *Violations, field string, c money.Cents) {
-	if c < 0 || c > MaxCents {
-		vs.add(field, ErrOutOfRange)
+func checkBounds(vs *fiscal.Violations, field string, c money.Cents) {
+	if c < 0 || c > fiscal.MaxCents {
+		vs.Add(field, fiscal.ErrOutOfRange)
 	}
 }
 
-// checkPaidOn requires paid_on within [MinRecordDate, today].
-func checkPaidOn(vs *Violations, on, today Date) {
+// checkPaidOn requires paid_on within [fiscal.MinRecordDate, today].
+func checkPaidOn(vs *fiscal.Violations, on, today fiscal.Date) {
 	switch {
 	case on.IsZero():
-		vs.add(FieldPaidOn, ErrRequired)
-	case on.Before(MinRecordDate) || on.After(today):
-		vs.add(FieldPaidOn, ErrOutOfRange)
+		vs.Add(FieldPaidOn, fiscal.ErrRequired)
+	case on.Before(fiscal.MinRecordDate) || on.After(today):
+		vs.Add(FieldPaidOn, fiscal.ErrOutOfRange)
 	}
 }
 
 // applyRules is the business pass over a validated draft.
 func applyRules(d Draft, p Payer, rule CategoryRule, catalog RateCatalog) (Assessment, error) {
-	var vs Violations
+	var vs fiscal.Violations
 	if err := checkIVAInto(&vs, d, catalog); err != nil {
 		return Assessment{}, err
 	}
@@ -208,13 +208,13 @@ func applyRules(d Draft, p Payer, rule CategoryRule, catalog RateCatalog) (Asses
 
 // checkIVAInto records the IVA rule's violation on its field (on paid_on);
 // a parameter fault is returned instead.
-func checkIVAInto(vs *Violations, d Draft, catalog RateCatalog) error {
-	err := CheckIVA(d.Amount, d.IVARate, d.IVA, d.PaidOn, catalog)
+func checkIVAInto(vs *fiscal.Violations, d Draft, catalog RateCatalog) error {
+	err := fiscal.CheckIVA(d.Amount, d.IVARate, d.IVA, d.PaidOn, catalog)
 	switch {
-	case errors.Is(err, ErrRateNotValidOnDate):
-		vs.add(FieldIVARate, ErrRateNotValidOnDate)
-	case errors.Is(err, ErrIVAAmountMismatch):
-		vs.add(FieldIVACents, ErrIVAAmountMismatch)
+	case errors.Is(err, fiscal.ErrRateNotValidOnDate):
+		vs.Add(FieldIVARate, fiscal.ErrRateNotValidOnDate)
+	case errors.Is(err, fiscal.ErrIVAAmountMismatch):
+		vs.Add(FieldIVACents, fiscal.ErrIVAAmountMismatch)
 	case err != nil:
 		return err
 	}
@@ -223,12 +223,12 @@ func checkIVAInto(vs *Violations, d Draft, catalog RateCatalog) error {
 
 // checkWithheld: a física withholds nothing (LIVA 1-A); a moral never above
 // the base.
-func checkWithheld(vs *Violations, field string, withheld, base money.Cents, allowed bool) {
+func checkWithheld(vs *fiscal.Violations, field string, withheld, base money.Cents, allowed bool) {
 	switch {
 	case withheld > 0 && !allowed:
-		vs.add(field, ErrWithholdingNotApplicable)
+		vs.Add(field, fiscal.ErrWithholdingNotApplicable)
 	case withheld > base:
-		vs.add(field, ErrWithholdingExceedsBase)
+		vs.Add(field, fiscal.ErrWithholdingExceedsBase)
 	}
 }
 
@@ -244,7 +244,7 @@ func cashOverLimit(d Draft, rule CategoryRule, catalog RateCatalog) (bool, error
 	}
 	limit, ok := catalog.Amount(KeyCashPaymentLimit, d.PaidOn)
 	if !ok {
-		return false, fmt.Errorf("%s on %s: %w", KeyCashPaymentLimit, d.PaidOn, ErrInvalidParameter)
+		return false, fmt.Errorf("%s on %s: %w", KeyCashPaymentLimit, d.PaidOn, fiscal.ErrInvalidParameter)
 	}
 	return d.Amount+d.IVA > limit, nil
 }
@@ -264,7 +264,7 @@ func effectiveDeductible(hint Hint, d Draft, cashOver bool) (bool, DeductibleSou
 
 // creditableIVA is the IVA candidate for crediting (see Assessment).
 func creditableIVA(d Draft, p Payer, deductible, cashOver bool) money.Cents {
-	resicoPF := p.Regime == RegimeRESICO && p.PersonType == PersonFisica
+	resicoPF := p.Regime == fiscal.RegimeRESICO && p.PersonType == fiscal.PersonFisica
 	if d.HasCFDI && (deductible || (resicoPF && !cashOver)) {
 		return d.IVA
 	}
@@ -291,7 +291,7 @@ func warningsOf(hint Hint, d Draft, cashOver bool) []Warning {
 	return warnings
 }
 
-// totalsOf sums a validated draft: every amount is within [0, MaxCents] and
+// totalsOf sums a validated draft: every amount is within [0, fiscal.MaxCents] and
 // the withholdings within their bases, so plain int64 arithmetic is exact.
 func totalsOf(d Draft) Totals {
 	total := d.Amount + d.IVA

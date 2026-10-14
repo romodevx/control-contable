@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/romodevx/control-contable/backend/internal/expenses/domain"
+	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 )
 
 func parseCase[T ~string](t *testing.T, parse func(string) (T, error), valid []string) {
@@ -18,14 +19,13 @@ func parseCase[T ~string](t *testing.T, parse func(string) (T, error), valid []s
 	}
 	for _, raw := range []string{"", " " + valid[0], "UNKNOWN"} {
 		_, err := parse(raw)
-		require.ErrorIs(t, err, domain.ErrInvalid, raw)
+		require.ErrorIs(t, err, fiscal.ErrInvalid, raw)
 	}
 }
 
+// TestParseEnums covers the expenses module's own enums; the shared ones
+// (IvaRate, PersonType) are the fiscal kernel's.
 func TestParseEnums(t *testing.T) {
-	t.Run("iva rate", func(t *testing.T) {
-		parseCase(t, domain.ParseIVARate, []string{"rate_16", "rate_8", "rate_0", "exempt"})
-	})
 	t.Run("payment method", func(t *testing.T) {
 		parseCase(t, domain.ParsePaymentMethod,
 			[]string{"cash", "transfer", "card_debit", "card_credit", "check", "e_wallet", "other"})
@@ -34,19 +34,17 @@ func TestParseEnums(t *testing.T) {
 		parseCase(t, domain.ParseDeductibility,
 			[]string{"deductible", "partially_deductible", "not_deductible", "isr_not_applicable"})
 	})
-	t.Run("person type", func(t *testing.T) {
-		parseCase(t, domain.ParsePersonType, []string{"fisica", "moral"})
-	})
 	t.Run("deduction mode", func(t *testing.T) {
 		parseCase(t, domain.ParseDeductionMode, []string{"actual", "blind_35"})
 	})
 }
 
-func TestIVARateTaxable(t *testing.T) {
-	assert.True(t, domain.IVARate16.Taxable())
-	assert.True(t, domain.IVARate8.Taxable())
-	assert.False(t, domain.IVARate0.Taxable())
-	assert.False(t, domain.IVAExempt.Taxable())
+func TestOverrideValid(t *testing.T) {
+	for _, o := range []domain.Override{domain.UseDefault, domain.ClaimDeductible, domain.ClaimNotDeductible} {
+		assert.True(t, o.Valid())
+	}
+	assert.False(t, domain.Override(-1).Valid())
+	assert.False(t, domain.Override(3).Valid())
 }
 
 func TestLegend(t *testing.T) {

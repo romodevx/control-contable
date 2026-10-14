@@ -1,64 +1,30 @@
 package domain_test
 
 import (
-	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/romodevx/control-contable/backend/internal/expenses/domain"
+	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 )
 
-func TestErrorClassAndDetail(t *testing.T) {
+// TestModuleErrorCodes: the expenses module's own details[].code values and
+// their ErrorCode family (MODULE-expenses §4). The shared codes are the
+// fiscal kernel's.
+func TestModuleErrorCodes(t *testing.T) {
 	tests := []struct {
-		err    domain.Error
-		class  domain.Class
+		err    fiscal.Error
+		class  fiscal.Class
 		detail string
 	}{
-		{domain.ErrRequired, domain.ClassValidation, "required"},
-		{domain.ErrInvalid, domain.ClassValidation, "invalid"},
-		{domain.ErrMustBePositive, domain.ClassValidation, "must_be_positive"},
-		{domain.ErrOutOfRange, domain.ClassValidation, "out_of_range"},
-		{domain.ErrUnknownCategory, domain.ClassValidation, "unknown_category"},
-		{domain.ErrHasCFDIMismatch, domain.ClassValidation, "has_cfdi_mismatch"},
-		{domain.ErrRateNotValidOnDate, domain.ClassBusinessRule, "rate_not_valid_on_date"},
-		{domain.ErrIVAAmountMismatch, domain.ClassBusinessRule, "iva_amount_mismatch"},
-		{domain.ErrWithholdingNotApplicable, domain.ClassBusinessRule, "withholding_not_applicable"},
-		{domain.ErrWithholdingExceedsBase, domain.ClassBusinessRule, "withholding_exceeds_base"},
-		{domain.ErrInvalidParameter, domain.ClassInternal, "invalid_parameter"},
+		{domain.ErrUnknownCategory, fiscal.ClassValidation, "unknown_category"},
+		{domain.ErrHasCFDIMismatch, fiscal.ClassValidation, "has_cfdi_mismatch"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.detail, func(t *testing.T) {
 			assert.Equal(t, tt.class, tt.err.Class())
 			assert.Equal(t, tt.detail, tt.err.Detail())
-			assert.Equal(t, "expenses: "+tt.detail, tt.err.Error())
 		})
 	}
-}
-
-func TestViolations(t *testing.T) {
-	v := domain.Violations{
-		{Field: domain.FieldIVACents, Err: domain.ErrIVAAmountMismatch},
-		{Field: domain.FieldISRWithheldCents, Err: domain.ErrWithholdingNotApplicable},
-	}
-	wrapped := fmt.Errorf("create expense: %w", v)
-
-	assert.ErrorIs(t, wrapped, domain.ErrIVAAmountMismatch)
-	assert.ErrorIs(t, wrapped, domain.ErrWithholdingNotApplicable)
-	assert.NotErrorIs(t, wrapped, domain.ErrRequired)
-	assert.Equal(t, domain.ClassBusinessRule, v.Class())
-	assert.Equal(t,
-		"expenses: iva_cents: iva_amount_mismatch; isr_withheld_cents: withholding_not_applicable",
-		v.Error())
-
-	got, ok := errors.AsType[domain.Violations](wrapped)
-	require.True(t, ok)
-	assert.Len(t, got, 2)
-
-	var violation *domain.Violation
-	require.ErrorAs(t, wrapped, &violation)
-	assert.Equal(t, "expenses: iva_cents: iva_amount_mismatch", violation.Error())
-	assert.Equal(t, domain.ClassInternal, domain.Violations{}.Class())
 }

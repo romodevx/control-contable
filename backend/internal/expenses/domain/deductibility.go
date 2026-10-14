@@ -1,5 +1,7 @@
 package domain
 
+import "github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
+
 // CategoryCode is an expense category code (expense_categories.code).
 // Whether it exists is the use case's check (ErrUnknownCategory).
 type CategoryCode string
@@ -31,8 +33,8 @@ type Options struct {
 
 // Payer is the taxpayer who paid the expense.
 type Payer struct {
-	PersonType PersonType
-	Regime     RegimeCode
+	PersonType fiscal.PersonType
+	Regime     fiscal.RegimeCode
 	Options    Options
 }
 
@@ -65,11 +67,11 @@ func ResolveDeductibility(rule CategoryRule, p Payer) Hint {
 
 func isrNotApplicable(category CategoryCode, p Payer) bool {
 	switch {
-	case p.Regime == RegimeRESICO && p.PersonType == PersonFisica:
+	case p.Regime == fiscal.RegimeRESICO && p.PersonType == fiscal.PersonFisica:
 		return true
-	case p.Regime == RegimePlatforms && p.Options.DefinitiveOption:
+	case p.Regime == fiscal.RegimePlatforms && p.Options.DefinitiveOption:
 		return true
-	case p.Regime == RegimeRent && p.Options.DeductionMode == DeductionBlind35:
+	case p.Regime == fiscal.RegimeRent && p.Options.DeductionMode == DeductionBlind35:
 		return category != CategoryPredial
 	}
 	return false

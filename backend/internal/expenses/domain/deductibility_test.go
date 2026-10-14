@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/romodevx/control-contable/backend/internal/expenses/domain"
+	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 )
 
 // diningCategory is the Spanish catalog code of MODULE-expenses §2.2 row 11.
@@ -31,19 +32,19 @@ var (
 	feesBusiness = rule(domain.CategoryProfessionalFees, domain.Deductible, true)
 )
 
-func payer(person domain.PersonType, regime domain.RegimeCode, opts domain.Options) domain.Payer {
+func payer(person fiscal.PersonType, regime fiscal.RegimeCode, opts domain.Options) domain.Payer {
 	return domain.Payer{PersonType: person, Regime: regime, Options: opts}
 }
 
 var (
-	pf612      = payer(domain.PersonFisica, "612", domain.Options{})
-	pf626      = payer(domain.PersonFisica, "626", domain.Options{})
-	pm626      = payer(domain.PersonMoral, "626", domain.Options{})
-	pm601      = payer(domain.PersonMoral, "601", domain.Options{})
-	pf606Blind = payer(domain.PersonFisica, "606", domain.Options{DeductionMode: domain.DeductionBlind35})
-	pf606Real  = payer(domain.PersonFisica, "606", domain.Options{DeductionMode: domain.DeductionActual})
-	pf625Def   = payer(domain.PersonFisica, "625", domain.Options{DefinitiveOption: true})
-	pf625      = payer(domain.PersonFisica, "625", domain.Options{})
+	pf612      = payer(fiscal.PersonFisica, "612", domain.Options{})
+	pf626      = payer(fiscal.PersonFisica, "626", domain.Options{})
+	pm626      = payer(fiscal.PersonMoral, "626", domain.Options{})
+	pm601      = payer(fiscal.PersonMoral, "601", domain.Options{})
+	pf606Blind = payer(fiscal.PersonFisica, "606", domain.Options{DeductionMode: domain.DeductionBlind35})
+	pf606Real  = payer(fiscal.PersonFisica, "606", domain.Options{DeductionMode: domain.DeductionActual})
+	pf625Def   = payer(fiscal.PersonFisica, "625", domain.Options{DefinitiveOption: true})
+	pf625      = payer(fiscal.PersonFisica, "625", domain.Options{})
 )
 
 // TestResolveDeductibility is MODULE-expenses §2.3: the regime options
@@ -66,7 +67,7 @@ func TestResolveDeductibility(t *testing.T) {
 		{"606 actual deductions keep the row", mantenimiento606, pf606Real, domain.Hint{Deductibility: domain.Deductible, DefaultDeductible: true}},
 		{"625 definitive option (113-B)", softwareBusiness, pf625Def, notApplicable},
 		{"625 without the definitive option", softwareBusiness, pf625, domain.Hint{Deductibility: domain.Deductible, DefaultDeductible: true}},
-		{"601 ignores the 606 option key", softwareBusiness, payer(domain.PersonMoral, "601", domain.Options{DeductionMode: domain.DeductionBlind35}),
+		{"601 ignores the 606 option key", softwareBusiness, payer(fiscal.PersonMoral, "601", domain.Options{DeductionMode: domain.DeductionBlind35}),
 			domain.Hint{Deductibility: domain.Deductible, DefaultDeductible: true}},
 		{"a not-deductible row never defaults to true", rule("gastos_personales", domain.NotDeductible, true), pf612,
 			domain.Hint{Deductibility: domain.NotDeductible}},

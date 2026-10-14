@@ -1,5 +1,7 @@
 package domain
 
+import "github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
+
 // Tax names a tax whose income date depends on the regime.
 type Tax string
 
@@ -11,8 +13,8 @@ const (
 
 // Dates are an income's two business dates; a zero Date is a null field.
 type Dates struct {
-	InvoicedOn  Date
-	CollectedOn Date
+	InvoicedOn  fiscal.Date
+	CollectedOn fiscal.Date
 }
 
 // DateFor returns the date on which the income counts for tax, and false
@@ -24,8 +26,8 @@ type Dates struct {
 //
 // An accrual income with no collected_on counts for ISR in its invoice month
 // and for IVA only once collected.
-func (b IncomeBasis) DateFor(tax Tax, d Dates) (Date, bool) {
-	var on Date
+func (b IncomeBasis) DateFor(tax Tax, d Dates) (fiscal.Date, bool) {
+	var on fiscal.Date
 	switch {
 	case tax == TaxIVA:
 		on = d.CollectedOn
@@ -39,7 +41,7 @@ func (b IncomeBasis) DateFor(tax Tax, d Dates) (Date, bool) {
 
 // BookingDate is the ISR date: it decides the list period and is stored as
 // booked_on. It is the zero Date when the required date is missing.
-func (b IncomeBasis) BookingDate(d Dates) Date {
+func (b IncomeBasis) BookingDate(d Dates) fiscal.Date {
 	on, _ := b.DateFor(TaxISR, d)
 	return on
 }
@@ -60,7 +62,7 @@ func (b IncomeBasis) RequiredDateField() string {
 
 // RateDate is the day the IVA rate must be valid on (§2.5): collected_on, or
 // invoiced_on for an income still pending collection.
-func (d Dates) RateDate() Date {
+func (d Dates) RateDate() fiscal.Date {
 	if d.CollectedOn.IsZero() {
 		return d.InvoicedOn
 	}

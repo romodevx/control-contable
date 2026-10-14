@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/money"
 )
 
@@ -45,10 +46,10 @@ type Warning struct {
 // PlatformActivity lets a single 625 activity be the default.
 type Draft struct {
 	Amount           money.Cents // subtotal before IVA, MXN
-	IVARate          IVARate
+	IVARate          fiscal.IVARate
 	IVA              money.Cents
 	Counterparty     Counterparty
-	Withheld         Withholdings
+	Withheld         fiscal.Withholdings
 	Dates            Dates
 	PlatformActivity PlatformActivity
 }
@@ -66,10 +67,10 @@ type Totals struct {
 // besides the draft (booked_on, the resolved 625 activity), what the
 // response shows (pending_collection, warnings) and the client's prefills.
 type Assessment struct {
-	BookedOn          Date
+	BookedOn          fiscal.Date
 	PendingCollection bool
 	PlatformActivity  PlatformActivity
-	Suggested         Suggested
+	Suggested         fiscal.Suggested
 	Totals            Totals
 	Warnings          []Warning
 }
@@ -79,10 +80,11 @@ type Assessment struct {
 //
 // Validation (validation_failed) runs first and reports every field; only a
 // draft that passes it meets the business rules (business_rule_violation),
-// which are also all reported. Both come back as Violations. A parameter
-// fault is ErrInvalidParameter. The regime window (CheckRegime), the
-// idempotency key and the trial cap belong to the use case.
-func Assess(d Draft, p Payee, today Date, catalog RateCatalog) (Assessment, error) {
+// which are also all reported. Both come back as fiscal.Violations. A
+// parameter fault is fiscal.ErrInvalidParameter. The regime window
+// (CheckRegime), the idempotency key and the trial cap belong to the use
+// case.
+func Assess(d Draft, p Payee, today fiscal.Date, catalog fiscal.RateCatalog) (Assessment, error) {
 	if err := checkContext(p, today, catalog); err != nil {
 		return Assessment{}, err
 	}
@@ -94,27 +96,27 @@ func Assess(d Draft, p Payee, today Date, catalog RateCatalog) (Assessment, erro
 }
 
 // checkContext rejects server-side inputs the rules cannot use.
-func checkContext(p Payee, today Date, catalog RateCatalog) error {
+func checkContext(p Payee, today fiscal.Date, catalog fiscal.RateCatalog) error {
 	switch {
-	case !slices.Contains(bases, p.Basis):
-		return fmt.Errorf("income basis %q: %w", p.Basis, ErrInvalidParameter)
-	case !slices.Contains(personTypes, p.PersonType):
-		return fmt.Errorf("person type %q: %w", p.PersonType, ErrInvalidParameter)
+	case !p.Basis.Valid():
+		return fmt.Errorf("income basis %q: %w", p.Basis, fiscal.ErrInvalidParameter)
+	case !p.PersonType.Valid():
+		return fmt.Errorf("person type %q: %w", p.PersonType, fiscal.ErrInvalidParameter)
 	case today.IsZero():
-		return fmt.Errorf("no current date: %w", ErrInvalidParameter)
+		return fmt.Errorf("no current date: %w", fiscal.ErrInvalidParameter)
 	case catalog == nil:
-		return fmt.Errorf("no rate catalog: %w", ErrInvalidParameter)
+		return fmt.Errorf("no rate catalog: %w", fiscal.ErrInvalidParameter)
 	}
 	return nil
 }
 
 // validate is the schema-level pass. It returns the effective 625 activity.
-func validate(d Draft, p Payee, today Date) (PlatformActivity, Violations) {
-	var vs Violations
+func validate(d Draft, p Payee, today fiscal.Date) (PlatformActivity, fiscal.Violations) {
+	var vs fiscal.Violations
 	checkAmount(&vs, d.Amount)
-	checkEnum(&vs, FieldIVARate, d.IVARate, ivaRates)
+	fiscal.CheckEnum(&vs, FieldIVARate, d.IVARate)
 	checkBounds(&vs, FieldIVACents, d.IVA)
-	checkEnum(&vs, FieldCounterpartyType, d.Counterparty, counterparties)
+	fiscal.CheckEnum(&vs, FieldCounterpartyType, d.Counterparty)
 	checkBounds(&vs, FieldISRWithheldCents, d.Withheld.ISR)
 	checkBounds(&vs, FieldIVAWithheldCents, d.Withheld.IVA)
 	checkDate(&vs, FieldInvoicedOn, d.Dates.InvoicedOn, p.Basis, today)
@@ -123,57 +125,57 @@ func validate(d Draft, p Payee, today Date) (PlatformActivity, Violations) {
 	return activity, vs
 }
 
-func checkAmount(vs *Violations, amount money.Cents) {
+func checkAmount(vs *fiscal.Violations, amount money.Cents) {
 	switch {
 	case amount < 1:
-		vs.add(FieldAmountCents, ErrMustBePositive)
-	case amount > MaxCents:
-		vs.add(FieldAmountCents, ErrOutOfRange)
+		vs.Add(FieldAmountCents, fiscal.ErrMustBePositive)
+	case amount > fiscal.MaxCents:
+		vs.Add(FieldAmountCents, fiscal.ErrOutOfRange)
 	}
 }
 
-func checkBounds(vs *Violations, field string, c money.Cents) {
-	if c < 0 || c > MaxCents {
-		vs.add(field, ErrOutOfRange)
+func checkBounds(vs *fiscal.Violations, field string, c money.Cents) {
+	if c < 0 || c > fiscal.MaxCents {
+		vs.Add(field, fiscal.ErrOutOfRange)
 	}
 }
 
 // checkDate requires the basis's date and keeps every date within
-// [MinRecordDate, today]: future dates are refused.
-func checkDate(vs *Violations, field string, on Date, basis IncomeBasis, today Date) {
+// [fiscal.MinRecordDate, today]: future dates are refused.
+func checkDate(vs *fiscal.Violations, field string, on fiscal.Date, basis IncomeBasis, today fiscal.Date) {
 	switch {
 	case on.IsZero() && field == basis.RequiredDateField():
-		vs.add(field, ErrRequired)
+		vs.Add(field, fiscal.ErrRequired)
 	case on.IsZero():
-	case on.Before(MinRecordDate) || on.After(today):
-		vs.add(field, ErrOutOfRange)
+	case on.Before(fiscal.MinRecordDate) || on.After(today):
+		vs.Add(field, fiscal.ErrOutOfRange)
 	}
 }
 
 // resolveActivity: platform_activity belongs to 625 only, defaults to the
 // taxpayer's activity when they hold exactly one, else is required.
-func resolveActivity(vs *Violations, activity PlatformActivity, p Payee) PlatformActivity {
-	if p.Regime != RegimePlatforms {
+func resolveActivity(vs *fiscal.Violations, activity PlatformActivity, p Payee) PlatformActivity {
+	if p.Regime != fiscal.RegimePlatforms {
 		if activity != "" {
-			vs.add(FieldPlatformActivity, ErrNotForRegime)
+			vs.Add(FieldPlatformActivity, ErrNotForRegime)
 		}
 		return ""
 	}
 	if activity == "" && len(p.PlatformActivities) == 1 {
 		return p.PlatformActivities[0]
 	}
-	checkEnum(vs, FieldPlatformActivity, activity, activities)
+	fiscal.CheckEnum(vs, FieldPlatformActivity, activity)
 	return activity
 }
 
 // applyRules is the business pass over a validated draft.
-func applyRules(d Draft, p Payee, activity PlatformActivity, catalog RateCatalog) (Assessment, error) {
-	var vs Violations
+func applyRules(d Draft, p Payee, activity PlatformActivity, catalog fiscal.RateCatalog) (Assessment, error) {
+	var vs fiscal.Violations
 	if err := checkIVAInto(&vs, d, catalog); err != nil {
 		return Assessment{}, err
 	}
 	if activity != "" && !slices.Contains(p.PlatformActivities, activity) {
-		vs.add(FieldPlatformActivity, ErrActivityNotHeld)
+		vs.Add(FieldPlatformActivity, ErrActivityNotHeld)
 	}
 	policy := PolicyFor(p, d.Counterparty, activity)
 	checkWithheld(&vs, FieldISRWithheldCents, d.Withheld.ISR, d.Amount, policy.ISR.Allowed)
@@ -198,13 +200,13 @@ func applyRules(d Draft, p Payee, activity PlatformActivity, catalog RateCatalog
 
 // checkIVAInto records the IVA rule's violation on its field; a parameter
 // fault is returned instead.
-func checkIVAInto(vs *Violations, d Draft, catalog RateCatalog) error {
-	err := CheckIVA(d.Amount, d.IVARate, d.IVA, d.Dates.RateDate(), catalog)
+func checkIVAInto(vs *fiscal.Violations, d Draft, catalog fiscal.RateCatalog) error {
+	err := fiscal.CheckIVA(d.Amount, d.IVARate, d.IVA, d.Dates.RateDate(), catalog)
 	switch {
-	case errors.Is(err, ErrRateNotValidOnDate):
-		vs.add(FieldIVARate, ErrRateNotValidOnDate)
-	case errors.Is(err, ErrIVAAmountMismatch):
-		vs.add(FieldIVACents, ErrIVAAmountMismatch)
+	case errors.Is(err, fiscal.ErrRateNotValidOnDate):
+		vs.Add(FieldIVARate, fiscal.ErrRateNotValidOnDate)
+	case errors.Is(err, fiscal.ErrIVAAmountMismatch):
+		vs.Add(FieldIVACents, fiscal.ErrIVAAmountMismatch)
 	case err != nil:
 		return err
 	}
@@ -213,27 +215,27 @@ func checkIVAInto(vs *Violations, d Draft, catalog RateCatalog) error {
 
 // checkWithheld: a withholding the policy does not allow must be zero, and
 // one it allows never exceeds its base.
-func checkWithheld(vs *Violations, field string, withheld, base money.Cents, allowed bool) {
+func checkWithheld(vs *fiscal.Violations, field string, withheld, base money.Cents, allowed bool) {
 	switch {
 	case withheld > 0 && !allowed:
-		vs.add(field, ErrWithholdingNotApplicable)
+		vs.Add(field, fiscal.ErrWithholdingNotApplicable)
 	case withheld > base:
-		vs.add(field, ErrWithholdingExceedsBase)
+		vs.Add(field, fiscal.ErrWithholdingExceedsBase)
 	}
 }
 
-func withholdingWarnings(s Suggested, w Withholdings) []Warning {
+func withholdingWarnings(s fiscal.Suggested, w fiscal.Withholdings) []Warning {
 	var warnings []Warning
-	if s.ISR.differs(w.ISR) {
+	if s.ISR.Differs(w.ISR) {
 		warnings = append(warnings, Warning{Code: WarningWithholdingDiffersFromRate, Field: FieldISRWithheldCents})
 	}
-	if s.IVA.differs(w.IVA) {
+	if s.IVA.Differs(w.IVA) {
 		warnings = append(warnings, Warning{Code: WarningWithholdingDiffersFromRate, Field: FieldIVAWithheldCents})
 	}
 	return warnings
 }
 
-// totalsOf sums a validated draft: every amount is within [0, MaxCents] and
+// totalsOf sums a validated draft: every amount is within [0, fiscal.MaxCents] and
 // the withholdings within their bases, so plain int64 arithmetic is exact.
 func totalsOf(d Draft) Totals {
 	total := d.Amount + d.IVA
