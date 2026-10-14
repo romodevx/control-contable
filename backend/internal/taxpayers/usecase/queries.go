@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"errors"
 
 	"github.com/romodevx/control-contable/backend/internal/taxpayers/domain"
 )
@@ -101,7 +102,7 @@ func (q *Queries) checkRegime(ctx context.Context, id, code string, p domain.Per
 	if err == nil && held.Window.Contains(p) {
 		return nil
 	}
-	if err != nil && err != ErrRegimeNotHeld { //nolint:errorlint // stores return the sentinel itself
+	if err != nil && !errors.Is(err, ErrRegimeNotHeld) {
 		return err
 	}
 	return businessRule(ErrRegimeNotActive, msgNotActive, fieldRegimeCode, DetailRegimeNotActive, msgNotActive)

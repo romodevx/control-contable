@@ -65,8 +65,11 @@ func (uc *Regimes) add(ctx context.Context, userID, id string, in RegimeInput) (
 	}
 	fields := &fieldErrors{}
 	regime, ok, err := uc.validateRegime(ctx, t.PersonType, in, "", fields)
-	if err != nil || !ok {
-		return TaxpayerRegime{}, errors.Join(err, fields.err())
+	if err != nil {
+		return TaxpayerRegime{}, err
+	}
+	if !ok {
+		return TaxpayerRegime{}, fields.err()
 	}
 	regime.TaxpayerID, regime.UserID = id, userID
 	stored, err := uc.deps.Regimes.FindRegime(ctx, id, in.Code, LockUpdate)
