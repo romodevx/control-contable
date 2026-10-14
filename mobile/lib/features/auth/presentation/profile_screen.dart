@@ -1,6 +1,6 @@
 import 'package:control_contable/core/theme/app_spacing.dart';
+import 'package:control_contable/core/widgets/load_status.dart';
 import 'package:control_contable/features/auth/application/profile.dart';
-import 'package:control_contable/features/auth/presentation/load_status.dart';
 import 'package:control_contable/features/auth/presentation/profile_form.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';

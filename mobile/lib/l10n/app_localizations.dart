@@ -163,6 +163,12 @@ abstract class AppLocalizations {
   /// **'Cargando…'**
   String get bootLoading;
 
+  /// Button next to a failed load (a list, a catalog, a document) that loads it again.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar'**
+  String get loadRetry;
+
   /// Text mark after the label of an optional field (forms mark the fewer kind).
   ///
   /// In es, this message translates to:
@@ -426,12 +432,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No se pudo abrir el documento. Intenta de nuevo.'**
   String get authDocumentOpenFailed;
-
-  /// Button that retries loading something that failed.
-  ///
-  /// In es, this message translates to:
-  /// **'Reintentar'**
-  String get authRetry;
 
   /// Form-level message for 429 with a Retry-After, rounded up to minutes.
   ///
@@ -708,12 +708,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Continuar'**
   String get onboardingContinue;
-
-  /// Button that loads the regime catalog again.
-  ///
-  /// In es, this message translates to:
-  /// **'Reintentar'**
-  String get onboardingRetry;
 
   /// Step 1 title: the person type is chosen before anything else (OD-3).
   ///

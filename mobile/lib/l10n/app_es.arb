@@ -44,6 +44,10 @@
   "@bootLoading": {
     "description": "Splash shown while a deep link waits for the module flags."
   },
+  "loadRetry": "Reintentar",
+  "@loadRetry": {
+    "description": "Button next to a failed load (a list, a catalog, a document) that loads it again."
+  },
   "formMarkOptional": "(opcional)",
   "@formMarkOptional": {
     "description": "Text mark after the label of an optional field (forms mark the fewer kind)."
@@ -232,10 +236,6 @@
   "authDocumentOpenFailed": "No se pudo abrir el documento. Intenta de nuevo.",
   "@authDocumentOpenFailed": {
     "description": "Snack bar: a legal document link could not be opened."
-  },
-  "authRetry": "Reintentar",
-  "@authRetry": {
-    "description": "Button that retries loading something that failed."
   },
   "authErrorRateLimited": "{minutes, plural, =1{Demasiados intentos. Espera 1 min y vuelve a intentarlo.} other{Demasiados intentos. Espera {minutes} min y vuelve a intentarlo.}}",
   "@authErrorRateLimited": {
@@ -449,10 +449,6 @@
   "onboardingContinue": "Continuar",
   "@onboardingContinue": {
     "description": "Primary button after the taxpayer was created."
-  },
-  "onboardingRetry": "Reintentar",
-  "@onboardingRetry": {
-    "description": "Button that loads the regime catalog again."
   },
   "onboardingPersonTypeTitle": "¿Persona física o persona moral?",
   "@onboardingPersonTypeTitle": {

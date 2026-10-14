@@ -56,7 +56,7 @@ class LoadFailed extends StatelessWidget {
       Expanded(child: LoadStatus(message: message)),
       TextButton(
         onPressed: onRetry,
-        child: Text(AppLocalizations.of(context).authRetry),
+        child: Text(AppLocalizations.of(context).loadRetry),
       ),
     ],
   );

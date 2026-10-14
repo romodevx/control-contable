@@ -1,7 +1,7 @@
 import 'package:control_contable/core/theme/app_spacing.dart';
+import 'package:control_contable/core/widgets/load_status.dart';
 import 'package:control_contable/features/auth/application/legal_documents.dart';
 import 'package:control_contable/features/auth/presentation/legal_document_link.dart';
-import 'package:control_contable/features/auth/presentation/load_status.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

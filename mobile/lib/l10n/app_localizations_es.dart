@@ -44,6 +44,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get bootLoading => 'Cargando…';
 
   @override
+  String get loadRetry => 'Reintentar';
+
+  @override
   String get formMarkOptional => '(opcional)';
 
   @override
@@ -191,9 +194,6 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get authDocumentOpenFailed =>
       'No se pudo abrir el documento. Intenta de nuevo.';
-
-  @override
-  String get authRetry => 'Reintentar';
 
   @override
   String authErrorRateLimited(int minutes) {
@@ -361,9 +361,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get onboardingContinue => 'Continuar';
-
-  @override
-  String get onboardingRetry => 'Reintentar';
 
   @override
   String get onboardingPersonTypeTitle => '¿Persona física o persona moral?';
