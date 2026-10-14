@@ -73,6 +73,59 @@ void main() {
       expect(session.status, SessionStatus.signedOut);
     });
 
+    // M1-15 QA D1: the first cold start of a debug build showed the login
+    // screen although the refresh token was still on disk. The Keystore
+    // read took longer than the restore timeout, and restore() took the
+    // timeout for "no session" for good. The splash stays bounded, but the
+    // read's late answer must still restore the session.
+    testWidgets('a read slower than the timeout still restores the session '
+        'once it answers', (tester) async {
+      store
+        ..token = 'refresh-1'
+        ..readGate = Completer<void>();
+
+      unawaited(session.restore());
+      await tester.pump(sessionRestoreTimeout);
+      expect(session.status, SessionStatus.signedOut, reason: 'splash bounded');
+
+      store.readGate!.complete();
+      await tester.pump();
+      expect(session.status, SessionStatus.signedIn);
+    });
+
+    testWidgets('a late answer never revives a session signed in and out '
+        'meanwhile', (tester) async {
+      store
+        ..token = 'refresh-old'
+        ..readGate = Completer<void>();
+
+      unawaited(session.restore());
+      await tester.pump(sessionRestoreTimeout);
+      await session.start(tokenPair(access: 'access-new', refresh: 'new'));
+      await session.end();
+      store.readGate!.complete();
+      await tester.pump();
+
+      expect(session.status, SessionStatus.signedOut);
+      expect(store.token, isNull);
+    });
+
+    testWidgets('a late empty answer stays signed out, told once', (
+      tester,
+    ) async {
+      store.readGate = Completer<void>();
+      var notified = 0;
+      session.addListener(() => notified++);
+
+      unawaited(session.restore());
+      await tester.pump(sessionRestoreTimeout);
+      store.readGate!.complete();
+      await tester.pump();
+
+      expect(session.status, SessionStatus.signedOut);
+      expect(notified, 1);
+    });
+
     test('notifies its listeners', () async {
       var notified = 0;
       session.addListener(() => notified++);

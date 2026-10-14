@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:control_contable/api/generated/models/token_pair.dart';
 import 'package:control_contable/core/session/refresh_token_store.dart';
 import 'package:flutter/services.dart';
@@ -13,7 +15,8 @@ TokenPair tokenPair({required String access, required String refresh}) =>
     );
 
 /// A [RefreshTokenStore] held in memory, so tests can read what the app
-/// kept. A [readError] makes every read fail with it; [failingWrites] and
+/// kept. A [readGate] holds every read open (a slow Keystore on a cold
+/// start); a [readError] makes every read fail with it; [failingWrites] and
 /// [failingDeletes] make that many of the next calls fail (a locked
 /// Keychain, a Keystore hiccup); a [wipeError] makes [wipeAll] fail.
 class InMemoryRefreshTokenStore implements RefreshTokenStore {
@@ -25,6 +28,9 @@ class InMemoryRefreshTokenStore implements RefreshTokenStore {
 
   /// Every token written, in order (failed attempts included).
   final List<String> written = [];
+
+  /// Holds [read] open until completed, when set.
+  Completer<void>? readGate;
 
   /// Thrown by [read] when set.
   Exception? readError;
@@ -43,8 +49,10 @@ class InMemoryRefreshTokenStore implements RefreshTokenStore {
 
   @override
   Future<String?> read() async {
+    final kept = token; // What the platform read, however late it answers.
+    await readGate?.future;
     if (readError case final error?) throw error;
-    return token;
+    return kept;
   }
 
   @override

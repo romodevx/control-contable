@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/router/app_router.dart';
@@ -60,6 +62,21 @@ void main() {
       tester,
     ) async {
       await harness.pump(tester, signedIn: true);
+
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(signOut(), findsOneWidget);
+    });
+
+    // M1-15 QA D1: a cold start whose Keystore read outlasts the restore
+    // timeout showed login although the token was on disk.
+    testWidgets('a slow secure-store read shows login, then home once the '
+        'stored session arrives', (tester) async {
+      harness.tokens.readGate = Completer<void>();
+      await harness.pump(tester, signedIn: true);
+      expect(find.byType(LoginScreen), findsOneWidget, reason: 'bounded');
+
+      harness.tokens.readGate!.complete();
+      await tester.pumpAndSettle();
 
       expect(find.byType(HomeScreen), findsOneWidget);
       expect(signOut(), findsOneWidget);
