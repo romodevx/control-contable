@@ -2022,6 +2022,85 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get dashboardPlansBody =>
       'La contratación de planes estará disponible próximamente.';
+
+  @override
+  String get historyTitle => 'Historial';
+
+  @override
+  String get historyYearLabel => 'Ejercicio fiscal';
+
+  @override
+  String get historyLoading => 'Cargando el historial…';
+
+  @override
+  String get historyLoadFailed => 'No se pudo cargar el historial.';
+
+  @override
+  String get historyNoTaxpayer =>
+      'Registre un contribuyente para ver su historial.';
+
+  @override
+  String get historyEmpty =>
+      'Aún no hay registros. El historial se llena con su primer ingreso o gasto.';
+
+  @override
+  String get historyRegisterIncome => 'Registrar ingreso';
+
+  @override
+  String get historyCurrentMonth => 'Mes en curso';
+
+  @override
+  String get historyNoRegime => 'Sin régimen en este mes';
+
+  @override
+  String get historyNoRecords => 'Sin registros en este mes';
+
+  @override
+  String get historyChangedRecords =>
+      'Cambió desde que lo viste: agregaste o cambiaste registros o datos fiscales.';
+
+  @override
+  String get historyChangedEngine =>
+      'Cambió desde que lo viste: se corrigió el cálculo.';
+
+  @override
+  String historyViewedOn(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.MMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'Visto el $dateString';
+  }
+
+  @override
+  String historyTaxLine(String isr, String iva) {
+    return 'ISR $isr · IVA $iva';
+  }
+
+  @override
+  String historyTaxLineInFavor(String isr, String iva) {
+    return 'ISR $isr · IVA: saldo a favor $iva';
+  }
+
+  @override
+  String historyWithholdings(String amount) {
+    return 'Retenciones a enterar $amount';
+  }
+
+  @override
+  String get historyYearTotalsTitle => 'Suma de estimados mensuales';
+
+  @override
+  String get historyYearTotalsNote => 'No es la declaración anual.';
+
+  @override
+  String historyMonthOfYear(String month, String year) {
+    return '$month de $year';
+  }
+
+  @override
+  String historyMonthCurrentSpoken(String month) {
+    return '$month, mes en curso';
+  }
 }
 
 /// The translations for Spanish Castilian, as used in Mexico (`es_MX`).

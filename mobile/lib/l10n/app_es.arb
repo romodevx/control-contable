@@ -2622,5 +2622,125 @@
   "dashboardPlansBody": "La contratación de planes estará disponible próximamente.",
   "@dashboardPlansBody": {
     "description": "Plans sheet body (placeholder until M7)."
+  },
+  "historyTitle": "Historial",
+  "@historyTitle": {
+    "description": "History (M8) screen title and the Home entry's tooltip."
+  },
+  "historyYearLabel": "Ejercicio fiscal",
+  "@historyYearLabel": {
+    "description": "Label of the fiscal-year picker."
+  },
+  "historyLoading": "Cargando el historial…",
+  "@historyLoading": {
+    "description": "Status while the fiscal year loads."
+  },
+  "historyLoadFailed": "No se pudo cargar el historial.",
+  "@historyLoadFailed": {
+    "description": "The fiscal year failed to load (a retry follows)."
+  },
+  "historyNoTaxpayer": "Registre un contribuyente para ver su historial.",
+  "@historyNoTaxpayer": {
+    "description": "No active taxpayer."
+  },
+  "historyEmpty": "Aún no hay registros. El historial se llena con su primer ingreso o gasto.",
+  "@historyEmpty": {
+    "description": "No record in any month of the year (MODULE-history §7)."
+  },
+  "historyRegisterIncome": "Registrar ingreso",
+  "@historyRegisterIncome": {
+    "description": "Empty History: opens the new-income form (module_incomes on)."
+  },
+  "historyCurrentMonth": "Mes en curso",
+  "@historyCurrentMonth": {
+    "description": "Tag of the still-open month; it is live and never marked (OQ-H3)."
+  },
+  "historyNoRegime": "Sin régimen en este mes",
+  "@historyNoRegime": {
+    "description": "A month in which the taxpayer held no regime (status none)."
+  },
+  "historyNoRecords": "Sin registros en este mes",
+  "@historyNoRecords": {
+    "description": "A month with no record whose figure comes from the cumulative engine."
+  },
+  "historyChangedRecords": "Cambió desde que lo viste: agregaste o cambiaste registros o datos fiscales.",
+  "@historyChangedRecords": {
+    "description": "Changed marker, reason records (MODULE-history §2.4)."
+  },
+  "historyChangedEngine": "Cambió desde que lo viste: se corrigió el cálculo.",
+  "@historyChangedEngine": {
+    "description": "Changed marker, reason engine (MODULE-history §2.4)."
+  },
+  "historyViewedOn": "Visto el {date}",
+  "@historyViewedOn": {
+    "description": "When an unchanged month was last seen.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "MMMd"
+      }
+    }
+  },
+  "historyTaxLine": "ISR {isr} · IVA {iva}",
+  "@historyTaxLine": {
+    "description": "Second line of a month: ISR and IVA payable (formatted amounts).",
+    "placeholders": {
+      "isr": {
+        "type": "String"
+      },
+      "iva": {
+        "type": "String"
+      }
+    }
+  },
+  "historyTaxLineInFavor": "ISR {isr} · IVA: saldo a favor {iva}",
+  "@historyTaxLineInFavor": {
+    "description": "Second line of a month whose IVA is in favor (never a payment).",
+    "placeholders": {
+      "isr": {
+        "type": "String"
+      },
+      "iva": {
+        "type": "String"
+      }
+    }
+  },
+  "historyWithholdings": "Retenciones a enterar {amount}",
+  "@historyWithholdings": {
+    "description": "Withholdings to remit of a month, shown only when non-zero.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "historyYearTotalsTitle": "Suma de estimados mensuales",
+  "@historyYearTotalsTitle": {
+    "description": "Heading of the year totals (a sum of monthly estimates)."
+  },
+  "historyYearTotalsNote": "No es la declaración anual.",
+  "@historyYearTotalsNote": {
+    "description": "Note under the year totals: not the annual return (MODULE-history §10)."
+  },
+  "historyMonthOfYear": "{month} de {year}",
+  "@historyMonthOfYear": {
+    "description": "A month row as a screen reader reads it, e.g. Febrero de 2026.",
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "historyMonthCurrentSpoken": "{month}, mes en curso",
+  "@historyMonthCurrentSpoken": {
+    "description": "The current month as a screen reader reads it.",
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
   }
 }

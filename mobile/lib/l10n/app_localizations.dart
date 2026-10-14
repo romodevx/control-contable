@@ -3297,6 +3297,126 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'La contratación de planes estará disponible próximamente.'**
   String get dashboardPlansBody;
+
+  /// History (M8) screen title and the Home entry's tooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Historial'**
+  String get historyTitle;
+
+  /// Label of the fiscal-year picker.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejercicio fiscal'**
+  String get historyYearLabel;
+
+  /// Status while the fiscal year loads.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando el historial…'**
+  String get historyLoading;
+
+  /// The fiscal year failed to load (a retry follows).
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo cargar el historial.'**
+  String get historyLoadFailed;
+
+  /// No active taxpayer.
+  ///
+  /// In es, this message translates to:
+  /// **'Registre un contribuyente para ver su historial.'**
+  String get historyNoTaxpayer;
+
+  /// No record in any month of the year (MODULE-history §7).
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay registros. El historial se llena con su primer ingreso o gasto.'**
+  String get historyEmpty;
+
+  /// Empty History: opens the new-income form (module_incomes on).
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar ingreso'**
+  String get historyRegisterIncome;
+
+  /// Tag of the still-open month; it is live and never marked (OQ-H3).
+  ///
+  /// In es, this message translates to:
+  /// **'Mes en curso'**
+  String get historyCurrentMonth;
+
+  /// A month in which the taxpayer held no regime (status none).
+  ///
+  /// In es, this message translates to:
+  /// **'Sin régimen en este mes'**
+  String get historyNoRegime;
+
+  /// A month with no record whose figure comes from the cumulative engine.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin registros en este mes'**
+  String get historyNoRecords;
+
+  /// Changed marker, reason records (MODULE-history §2.4).
+  ///
+  /// In es, this message translates to:
+  /// **'Cambió desde que lo viste: agregaste o cambiaste registros o datos fiscales.'**
+  String get historyChangedRecords;
+
+  /// Changed marker, reason engine (MODULE-history §2.4).
+  ///
+  /// In es, this message translates to:
+  /// **'Cambió desde que lo viste: se corrigió el cálculo.'**
+  String get historyChangedEngine;
+
+  /// When an unchanged month was last seen.
+  ///
+  /// In es, this message translates to:
+  /// **'Visto el {date}'**
+  String historyViewedOn(DateTime date);
+
+  /// Second line of a month: ISR and IVA payable (formatted amounts).
+  ///
+  /// In es, this message translates to:
+  /// **'ISR {isr} · IVA {iva}'**
+  String historyTaxLine(String isr, String iva);
+
+  /// Second line of a month whose IVA is in favor (never a payment).
+  ///
+  /// In es, this message translates to:
+  /// **'ISR {isr} · IVA: saldo a favor {iva}'**
+  String historyTaxLineInFavor(String isr, String iva);
+
+  /// Withholdings to remit of a month, shown only when non-zero.
+  ///
+  /// In es, this message translates to:
+  /// **'Retenciones a enterar {amount}'**
+  String historyWithholdings(String amount);
+
+  /// Heading of the year totals (a sum of monthly estimates).
+  ///
+  /// In es, this message translates to:
+  /// **'Suma de estimados mensuales'**
+  String get historyYearTotalsTitle;
+
+  /// Note under the year totals: not the annual return (MODULE-history §10).
+  ///
+  /// In es, this message translates to:
+  /// **'No es la declaración anual.'**
+  String get historyYearTotalsNote;
+
+  /// A month row as a screen reader reads it, e.g. Febrero de 2026.
+  ///
+  /// In es, this message translates to:
+  /// **'{month} de {year}'**
+  String historyMonthOfYear(String month, String year);
+
+  /// The current month as a screen reader reads it.
+  ///
+  /// In es, this message translates to:
+  /// **'{month}, mes en curso'**
+  String historyMonthCurrentSpoken(String month);
 }
 
 class _AppLocalizationsDelegate

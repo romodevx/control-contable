@@ -10,12 +10,22 @@ const String _period = 'period';
 const String _regimeCode = 'regimeCode';
 const String _fiscalYear = 'ejercicio';
 const String _field = 'campo';
+const String _estimatePeriod = 'periodo';
+
+/// A `YYYY-MM` month; anything else in the location is ignored.
+final RegExp _periodPattern = RegExp(r'^\d{4}-(0[1-9]|1[0-2])$');
 
 /// Locations owned by `module_tax_engine`. Ids, periods and regime codes
 /// travel in the location; never an amount or the RFC.
 abstract final class TaxEngineRoutes {
   /// The active taxpayer's monthly estimate (M5-25).
   static const estimate = '/estimado';
+
+  /// The estimate opened on [period] (`YYYY-MM`; History, M8-05).
+  static String estimateOf(String period) => Uri(
+    path: estimate,
+    queryParameters: {_estimatePeriod: period},
+  ).toString();
 
   /// One regime's breakdown for [period] (M5-26).
   static String breakdown(String taxpayerId, String period, String regime) =>
@@ -41,7 +51,9 @@ final FeatureModule taxEngineFeature = FeatureModule(
   routes: [
     GoRoute(
       path: TaxEngineRoutes.estimate,
-      builder: (context, state) => const EstimateScreen(),
+      builder: (context, state) => EstimateScreen(
+        initialPeriod: _periodIn(state.uri.queryParameters[_estimatePeriod]),
+      ),
     ),
     GoRoute(
       path: TaxEngineRoutes.breakdown(
@@ -66,3 +78,7 @@ final FeatureModule taxEngineFeature = FeatureModule(
     ),
   ],
 );
+
+/// [value] when it is a `YYYY-MM` month, else `null` (the current month).
+String? _periodIn(String? value) =>
+    value != null && _periodPattern.hasMatch(value) ? value : null;
