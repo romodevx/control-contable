@@ -39,6 +39,7 @@ const (
 // at the composition root and the gate can take that list.
 func gateStrategies() []domain.Strategy {
 	return []domain.Strategy{
+		domain.NewStrategy612PF(),  // M5-11
 		domain.NewRentPFStrategy(), // M5-12
 	}
 }
