@@ -82,3 +82,27 @@ func TestExecute_RefusesARuntimeRole(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, out, "0 of 9 modules ON", "nothing changed")
 }
+
+// A preset shows exactly its modules: none of them is hidden by a
+// prerequisite the preset leaves OFF (flags.Prerequisites).
+func TestEverySeededPresetIncludesItsPrerequisites(t *testing.T) {
+	db := pgtest.NewDatabase(t)
+	g, err := flagsgorm.Open(db.Connect(t, pgtest.RoleOwner))
+	require.NoError(t, err)
+	presets, err := flags.NewAdmin(flagsgorm.NewStore(g)).Presets(t.Context())
+	require.NoError(t, err)
+	require.NotEmpty(t, presets)
+	graph := flags.Prerequisites()
+
+	for _, p := range presets {
+		on := make(map[string]bool, len(p.Flags))
+		for _, k := range p.Flags {
+			on[k] = true
+		}
+		isOn := func(m string) bool { return on[m] }
+		for _, k := range p.Flags {
+			assert.Emptyf(t, flags.MissingPrerequisites(graph, k, isOn),
+				"preset %s turns %s ON without its prerequisites", p.Name, k)
+		}
+	}
+}

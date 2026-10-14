@@ -103,6 +103,13 @@ make -C backend flags ARGS="apply-preset demo_core"
 | `demo_monetization` | `demo_core` + subscriptions |
 | `demo_full` | every module, M1 to M9 |
 
+Some modules read another module's data and declare it as a **prerequisite**
+(`flags.Prerequisites` in `backend/internal/platform/flags/prerequisites.go`): such a module is
+effectively ON only while its own flag and every prerequisite's are ON. Otherwise its routes
+answer `404` and `GET /v1/flags` omits it; `flags list` shows it as `hidden` with a `REQUIRES`
+column and says which flag to turn ON. Today: `module_tax_engine` requires `module_taxpayers`.
+Every seeded preset includes the prerequisites of its modules (integration-tested).
+
 A running API sees a change within 5 s (the flag cache TTL). A flag turned ON for a module that
 is not built yet changes nothing: its routes keep answering `404`.
 Enabling a flag in a shared environment requires the module's tech-lead and security gates.
