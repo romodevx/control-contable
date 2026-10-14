@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:control_contable/api/generated/models/person_type.dart';
 import 'package:control_contable/api/generated/models/taxpayer.dart';
+import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/router/app_router.dart';
 import 'package:control_contable/features/taxpayers/taxpayers_routes.dart';
 
@@ -174,5 +175,94 @@ void main() {
       find.bySemanticsLabel('Contribuyente activo: Nueva. Cambiar'),
       findsOneWidget,
     );
+  });
+  group('the active taxpayer changed elsewhere (another device, the web)', () {
+    Future<void> resume(WidgetTester tester) async {
+      tester.binding
+        ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+        ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('deleted: on resume the next taxpayer becomes active', (
+      tester,
+    ) async {
+      await pumpHome(tester);
+      harness.repository.taxpayers.removeWhere((t) => t.id == _ana.id);
+
+      await resume(tester);
+
+      expect(
+        find.bySemanticsLabel('Contribuyente activo: Taller SA. Cambiar'),
+        findsOneWidget,
+      );
+      expect(harness.store.id, _taller.id);
+    });
+
+    testWidgets('archived: on resume the next taxpayer becomes active', (
+      tester,
+    ) async {
+      await pumpHome(tester);
+      harness.repository.taxpayers[0] = _ana.copyWith(
+        archivedAt: DateTime.utc(2026, 10, 13),
+      );
+
+      await resume(tester);
+
+      expect(harness.store.id, _taller.id);
+    });
+
+    testWidgets('a failed reload on resume keeps the last list', (
+      tester,
+    ) async {
+      await pumpHome(tester);
+      harness.repository.failNext['list'] = const ApiUnreachable();
+
+      await resume(tester);
+
+      expect(find.bySemanticsLabel(_switcherLabel), findsOneWidget);
+    });
+  });
+
+  group('an active taxpayer with no regime in effect', () {
+    const prompt = 'Agrega un régimen para ver tu estimado.';
+    final ended = _ana.copyWith(
+      regimes: [heldRegime('626', endPeriod: '2026-09')],
+    );
+
+    testWidgets('home stays and links to adding a regime, no onboarding', (
+      tester,
+    ) async {
+      await pumpHome(tester, taxpayers: [ended]);
+
+      expect(harness.location, AppRoutes.home);
+      expect(find.text(prompt), findsOneWidget);
+
+      await tapText(tester, 'Agregar régimen');
+
+      expect(harness.location, TaxpayersRoutes.addRegime(_ana.id));
+    });
+
+    testWidgets('a regime ending this month still counts', (tester) async {
+      await pumpHome(
+        tester,
+        taxpayers: [
+          _ana.copyWith(regimes: [heldRegime('626', endPeriod: '2026-10')]),
+        ],
+      );
+
+      expect(find.text(prompt), findsNothing);
+    });
+
+    testWidgets('an open regime: no prompt', (tester) async {
+      await pumpHome(
+        tester,
+        taxpayers: [
+          _ana.copyWith(regimes: [heldRegime('626')]),
+        ],
+      );
+
+      expect(find.text(prompt), findsNothing);
+    });
   });
 }

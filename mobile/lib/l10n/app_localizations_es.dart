@@ -343,6 +343,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get formErrorChoose => 'Elige una opción.';
 
   @override
+  String get homeNoRegime => 'Agrega un régimen para ver tu estimado.';
+
+  @override
   String get homeAddTaxpayer => 'Registrar contribuyente';
 
   @override

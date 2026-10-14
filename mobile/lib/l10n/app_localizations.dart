@@ -673,6 +673,12 @@ abstract class AppLocalizations {
   /// **'Elige una opción.'**
   String get formErrorChoose;
 
+  /// Home, when the active taxpayer has no regime in effect this month; followed by the add-regime button.
+  ///
+  /// In es, this message translates to:
+  /// **'Agrega un régimen para ver tu estimado.'**
+  String get homeNoRegime;
+
   /// Home button that starts the taxpayer onboarding (module_taxpayers).
   ///
   /// In es, this message translates to:

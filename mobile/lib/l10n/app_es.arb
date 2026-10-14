@@ -418,6 +418,10 @@
   "@formErrorChoose": {
     "description": "Inline error: a required choice (radio or checkbox group) was left empty. Shown only after submit."
   },
+  "homeNoRegime": "Agrega un régimen para ver tu estimado.",
+  "@homeNoRegime": {
+    "description": "Home, when the active taxpayer has no regime in effect this month; followed by the add-regime button."
+  },
   "homeAddTaxpayer": "Registrar contribuyente",
   "@homeAddTaxpayer": {
     "description": "Home button that starts the taxpayer onboarding (module_taxpayers)."
