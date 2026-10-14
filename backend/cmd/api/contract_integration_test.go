@@ -59,6 +59,12 @@ func withExpensesDay(day time.Time) contractOption {
 	return func(w *recordWiring) { w.expensesClock = clock.NewFixed(day) }
 }
 
+// withIncomesDay pins the income rules' clock to day (the auth, trial and
+// taxpayer clocks stay the system's).
+func withIncomesDay(day time.Time) contractOption {
+	return func(w *recordWiring) { w.incomesClock = clock.NewFixed(day) }
+}
+
 func newContractEnv(t *testing.T, db health.Pinger, options ...contractOption) contractEnv {
 	t.Helper()
 	pg := pgtest.NewDatabase(t)
@@ -86,7 +92,7 @@ func newContractEnv(t *testing.T, db health.Pinger, options ...contractOption) c
 	})
 	require.NoError(t, err)
 	return contractEnv{
-		handler: newHandlerWithAll(t, contractConfig(), db, svc, auth, records.taxpayers, records.expenses, taxEngine, logger),
+		handler: newHandlerWithAll(t, contractConfig(), db, svc, auth, records, taxEngine, logger),
 		store:   flagsgorm.NewStore(owner),
 		flags:   svc,
 		logs:    logs,
