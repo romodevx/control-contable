@@ -187,6 +187,91 @@ void main() {
     });
   });
 
+  group("the app's own estimate as a suggestion (MODULE §8, OQ-T1)", () {
+    const suggestion = r'Estimado por la app: $150.96 — confírmalo';
+
+    testWidgets('an empty month offers its estimate, labelled, and saves '
+        'nothing until it is used', (tester) async {
+      await _open(harness, tester);
+
+      expect(
+        harness.repository.calls,
+        contains((taxpayerId: fixtureTaxpayerId, period: '2026-02')),
+      );
+      expect(
+        harness.repository.calls,
+        isNot(contains((taxpayerId: fixtureTaxpayerId, period: '2026-01'))),
+        reason: 'January holds what the user entered',
+      );
+      expect(find.text(suggestion), findsOneWidget);
+      expect(_textOf(tester, 'Pago de febrero'), isEmpty);
+
+      await _tapSave(tester);
+      await tester.pumpAndSettle();
+
+      expect(harness.repository.saves.single.values, const [
+        TaxInputValue(key: _priorPayments, month: 1, valueCents: 200000),
+      ]);
+    });
+
+    testWidgets('using it fills the month, which then saves', (tester) async {
+      await _open(harness, tester);
+
+      await tester.ensureVisible(find.text('Usar este monto'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Usar este monto'));
+      await tester.pumpAndSettle();
+
+      expect(_textOf(tester, 'Pago de febrero'), '150.96');
+      expect(find.text(suggestion), findsNothing);
+      await _tapSave(tester);
+      await tester.pumpAndSettle();
+      expect(harness.repository.saves.single.values, const [
+        TaxInputValue(key: _priorPayments, month: 1, valueCents: 200000),
+        TaxInputValue(key: _priorPayments, month: 2, valueCents: 15096),
+      ]);
+    });
+
+    testWidgets('a month whose own estimate is incomplete offers nothing', (
+      tester,
+    ) async {
+      await harness.pump(tester);
+      harness.repository.fallback = estimateFrom(
+        estimateJson(
+          regimes: [regimeJson('612', status: 'incomplete', isrCents: 415096)],
+        ),
+      );
+      await harness.push(tester, _inputs('612'));
+
+      expect(find.textContaining('Estimado por la app'), findsNothing);
+      expect(_field('Pago de febrero'), findsOneWidget);
+    });
+
+    testWidgets('a failed estimate offers nothing; the form still works', (
+      tester,
+    ) async {
+      await harness.pump(tester);
+      harness.repository.fallback = const ApiUnreachable();
+      await harness.push(tester, _inputs('612'));
+
+      expect(find.textContaining('Estimado por la app'), findsNothing);
+      await _type(tester, 'Pago de febrero', '100');
+      await _tapSave(tester);
+      await tester.pumpAndSettle();
+      expect(harness.repository.saves, hasLength(1));
+    });
+
+    testWidgets('meets contrast and target guidelines', (tester) async {
+      await _open(harness, tester);
+      await tester.ensureVisible(find.text('Usar este monto'));
+      await tester.pumpAndSettle();
+
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    });
+  });
+
   testWidgets('opens at a one-amount field when the estimate asks for it', (
     tester,
   ) async {

@@ -394,6 +394,22 @@ void main() {
         ),
       );
     });
+
+    testWidgets('after saving the inputs, comes back to this breakdown, '
+        'read again', (tester) async {
+      await _open(harness, tester, reply: _incomplete());
+      await tester.tap(find.text('Completa tus datos'));
+      await tester.pumpAndSettle();
+      final reads = harness.repository.breakdownCalls.length;
+      harness.repository.breakdownFallback = breakdownFrom(breakdownJson());
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
+      await tester.pumpAndSettle();
+
+      expect(harness.location, _breakdown612);
+      expect(harness.repository.breakdownCalls.length, greaterThan(reads));
+      expect(find.text('Falta:'), findsNothing);
+    });
   });
 
   testWidgets('an informational regime explains why it has no lines', (
