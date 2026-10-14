@@ -18,9 +18,8 @@ func Strategies() []domain.Strategy {
 		domain.NewStrategy612PF(),     // 612 PF (M5-11)
 		domain.NewStrategy621PF(),     // 621 PF, partial: bimonthly RIF (M5-17)
 		domain.NewStrategy622PM(),     // 622 PM, partial: IVA only (M5-18)
-		// 625 PF (M5-14, PR #94) registers here when it lands; until then
-		// 625 is answered by the informational fallback.
-		domain.NewRESICOPFStrategy(), // 626 PF (M5-13)
-		domain.NewRESICOPMStrategy(), // 626 PM (M5-16)
+		domain.NewStrategy625PF(),     // 625 PF (M5-14)
+		domain.NewRESICOPFStrategy(),  // 626 PF (M5-13)
+		domain.NewRESICOPMStrategy(),  // 626 PM (M5-16)
 	}
 }

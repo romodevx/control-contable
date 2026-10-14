@@ -36,8 +36,7 @@ type EstimateDeps struct {
 // strategy's figures, the catalog treatment and the derived status.
 type RegimeResult struct {
 	domain.RegimeEstimate
-	// Treatment is the catalog's support level (contract treatment); 625
-	// is full in the catalog while its strategy is not registered yet.
+	// Treatment is the catalog's support level (contract treatment).
 	Treatment domain.Treatment
 	Status    domain.Status
 }
