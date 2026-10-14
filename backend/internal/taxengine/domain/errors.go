@@ -20,6 +20,13 @@ const (
 	// ErrDuplicateTaxInput reports one key (and month) given twice, or one
 	// key given with two kinds.
 	ErrDuplicateTaxInput Error = "taxengine: duplicate tax input"
+	// ErrUnknownInput reports a submitted tax input whose key the regime's
+	// definitions (regimes.required_inputs) do not name (400 unknown_input).
+	ErrUnknownInput Error = "taxengine: tax input not defined for the regime"
+	// ErrInputOutOfRange reports a submitted tax input outside its bounds: a
+	// rate outside [0, 1], money outside [0, fiscal.MaxCents] or a month
+	// outside 1-12 (400 out_of_range).
+	ErrInputOutOfRange Error = "taxengine: tax input out of range"
 	// ErrInvalidStep reports a ledger step without code, label or source,
 	// or with an unknown tax.
 	ErrInvalidStep Error = "taxengine: invalid ledger step"
