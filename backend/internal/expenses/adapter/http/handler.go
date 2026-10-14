@@ -12,9 +12,6 @@ import (
 )
 
 const (
-	// noStore is the Cache-Control of every response carrying expense data
-	// (components.headers.NoStore, MODULE-incomes S-11).
-	noStore = "no-store"
 	// bearerChallenge is the contract's fixed WWW-Authenticate value
 	// (components.headers.WWWAuthenticate).
 	bearerChallenge = `Bearer realm="control-contable"` //nolint:gosec // G101: an auth challenge, not a credential
@@ -67,7 +64,7 @@ func (h *Handler) ListExpenseCategories(ctx context.Context, req gen.ListExpense
 		return nil, err
 	}
 	return gen.ListExpenseCategories200JSONResponse{
-		Body: toCategoryList(list), Headers: gen.ListExpenseCategories200ResponseHeaders{CacheControl: noStore},
+		Body: toCategoryList(list),
 	}, nil
 }
 
@@ -86,7 +83,7 @@ func (h *Handler) ListExpenses(ctx context.Context, req gen.ListExpensesRequestO
 	if err != nil {
 		return nil, err
 	}
-	return gen.ListExpenses200JSONResponse{Body: body, Headers: gen.ListExpenses200ResponseHeaders{CacheControl: noStore}}, nil
+	return gen.ListExpenses200JSONResponse{Body: body}, nil
 }
 
 // CreateExpense implements gen.StrictServerInterface
@@ -110,9 +107,9 @@ func (h *Handler) CreateExpense(ctx context.Context, req gen.CreateExpenseReques
 		return nil, err
 	}
 	if !result.Created {
-		return gen.CreateExpense200JSONResponse{Body: body, Headers: gen.CreateExpense200ResponseHeaders{CacheControl: noStore}}, nil
+		return gen.CreateExpense200JSONResponse{Body: body}, nil
 	}
-	return gen.CreateExpense201JSONResponse{Body: body, Headers: gen.CreateExpense201ResponseHeaders{CacheControl: noStore}}, nil
+	return gen.CreateExpense201JSONResponse{Body: body}, nil
 }
 
 // GetExpense implements gen.StrictServerInterface
@@ -130,7 +127,7 @@ func (h *Handler) GetExpense(ctx context.Context, req gen.GetExpenseRequestObjec
 	if err != nil {
 		return nil, err
 	}
-	return gen.GetExpense200JSONResponse{Body: body, Headers: gen.GetExpense200ResponseHeaders{CacheControl: noStore}}, nil
+	return gen.GetExpense200JSONResponse{Body: body}, nil
 }
 
 // UpdateExpense implements gen.StrictServerInterface
@@ -155,7 +152,7 @@ func (h *Handler) UpdateExpense(ctx context.Context, req gen.UpdateExpenseReques
 	if err != nil {
 		return nil, err
 	}
-	return gen.UpdateExpense200JSONResponse{Body: body, Headers: gen.UpdateExpense200ResponseHeaders{CacheControl: noStore}}, nil
+	return gen.UpdateExpense200JSONResponse{Body: body}, nil
 }
 
 // DeleteExpense implements gen.StrictServerInterface
@@ -188,7 +185,7 @@ func (h *Handler) RestoreExpense(ctx context.Context, req gen.RestoreExpenseRequ
 	if err != nil {
 		return nil, err
 	}
-	return gen.RestoreExpense200JSONResponse{Body: body, Headers: gen.RestoreExpense200ResponseHeaders{CacheControl: noStore}}, nil
+	return gen.RestoreExpense200JSONResponse{Body: body}, nil
 }
 
 // caller returns the authenticated user's id.

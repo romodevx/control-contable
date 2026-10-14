@@ -139,7 +139,8 @@ func TestAuthenticate_rejectsWithTheGeneric401(t *testing.T) {
 // response of every secured operation, WWW-Authenticate header included.
 func TestAuthenticate_refusalConformsToTheContract(t *testing.T) {
 	c := contracttest.Load(t)
-	h := middleware.RequestID(authhttp.NewAuthenticator(&fakeVerifier{}, nil).Authenticate(&recordingNext{}))
+	h := middleware.Chain(authhttp.NewAuthenticator(&fakeVerifier{}, nil).Authenticate(&recordingNext{}),
+		middleware.RequestID, middleware.NoStore)
 	for _, header := range []string{"", "Bearer opaque-value.refused~value"} {
 		req := httptest.NewRequest(http.MethodGet, "/v1/me", nil)
 		if header != "" {

@@ -23,7 +23,6 @@ import (
 const (
 	callerID   = "0199d4a2-0000-7000-8000-00000000000a"
 	taxpayerID = "0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80"
-	noStore    = "no-store"
 )
 
 var created = time.Date(2026, time.October, 13, 16, 5, 0, 0, time.UTC)
@@ -196,7 +195,6 @@ func TestCreateTaxpayer_mapsTheBodyAndAnswers201WithWarnings(t *testing.T) {
 	require.NoError(t, err)
 	got, ok := resp.(gen.CreateTaxpayer201JSONResponse)
 	require.True(t, ok, "%T", resp)
-	assert.Equal(t, noStore, got.Headers.CacheControl)
 	assert.Equal(t, callerID, tp.user, "the user comes from the principal")
 	assert.Equal(t, usecase.CreateInput{
 		ID: taxpayerID, PersonType: "fisica", RFC: "pexj-900215 hk8", DisplayName: "Ana (personal)",
@@ -231,7 +229,6 @@ func TestCreateTaxpayer_idempotentRetryAnswers200WithoutWarnings(t *testing.T) {
 	require.NoError(t, err)
 	got, ok := resp.(gen.CreateTaxpayer200JSONResponse)
 	require.True(t, ok, "%T", resp)
-	assert.Equal(t, noStore, got.Headers.CacheControl)
 	assert.NotContains(t, encode(t, got.Body), "warnings", "present only when non-empty")
 	assert.Empty(t, tp.create.ID, "no client id: the server generates one")
 }
@@ -336,7 +333,6 @@ func TestListTaxpayers_includeArchivedDefaultsToFalse(t *testing.T) {
 	require.NoError(t, err)
 	got := resp.(gen.ListTaxpayers200JSONResponse)
 	assert.False(t, tp.archived)
-	assert.Equal(t, noStore, got.Headers.CacheControl)
 	require.Len(t, got.Body.Items, 1)
 	assert.Nil(t, got.Body.Items[0].Warnings, "never on reads")
 
@@ -367,7 +363,6 @@ func TestArchiveAndUnarchive(t *testing.T) {
 	got := resp.(gen.ArchiveTaxpayer200JSONResponse)
 	require.NotNil(t, got.Body.ArchivedAt)
 	assert.Equal(t, created, *got.Body.ArchivedAt)
-	assert.Equal(t, noStore, got.Headers.CacheControl)
 
 	_, err = h.UnarchiveTaxpayer(signedIn(t), gen.UnarchiveTaxpayerRequestObject{TaxpayerId: id})
 	require.NoError(t, err)
@@ -421,7 +416,6 @@ func TestAddTaxpayerRegime_answers201WithTheRegimeWarnings(t *testing.T) {
 
 	require.NoError(t, err)
 	got := resp.(gen.AddTaxpayerRegime201JSONResponse)
-	assert.Equal(t, noStore, got.Headers.CacheControl)
 	assert.Equal(t, usecase.RegimeInput{Code: "625", Options: map[string]domain.OptionValue{"definitive_option": domain.BoolOption(true)}}, rg.add)
 	assert.Equal(t, taxpayerID, rg.id)
 	body := encode(t, got.Body)
@@ -516,7 +510,7 @@ func TestListRegimes_mapsTheCatalog(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "fisica", rg.pt)
 	assert.Equal(t, callerID, rg.user)
-	body := encode(t, resp.(gen.ListRegimes200JSONResponse))
+	body := encode(t, resp.(gen.ListRegimes200JSONResponse).Body)
 	items := body["items"].([]any)
 	require.Len(t, items, 2)
 	arrendamiento := items[0].(map[string]any)

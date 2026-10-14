@@ -81,7 +81,7 @@ var detailMessages = map[string]string{
 	fiscal.ErrRequired.Detail():                 msgRequired,
 	fiscal.ErrInvalid.Detail():                  msgInvalidField,
 	fiscal.ErrMustBePositive.Detail():           "The amount must be greater than zero.",
-	fiscal.ErrOutOfRange.Detail():               "The date cannot be in the future nor before 2022.",
+	fiscal.ErrOutOfRange.Detail():               "The date cannot be in the future nor before 2026.",
 	ErrTooLong.Detail():                         "This text is too long.",
 	domain.ErrNotForRegime.Detail():             "This field only applies to another regime.",
 	domain.ErrActivityNotHeld.Detail():          "The taxpayer does not hold this activity.",

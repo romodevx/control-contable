@@ -11,9 +11,6 @@ import (
 )
 
 const (
-	// noStore is the Cache-Control of every response carrying taxpayer data
-	// (components.headers.NoStore).
-	noStore = "no-store"
 	// bearerChallenge is the contract's fixed WWW-Authenticate value
 	// (components.headers.WWWAuthenticate).
 	bearerChallenge = `Bearer realm="control-contable"` //nolint:gosec // G101: an auth challenge, not a credential
@@ -79,7 +76,7 @@ func (h *Handler) ListRegimes(ctx context.Context, req gen.ListRegimesRequestObj
 	if err != nil {
 		return nil, toAppError(err)
 	}
-	return gen.ListRegimes200JSONResponse(toRegimeList(entries)), nil
+	return gen.ListRegimes200JSONResponse{Body: toRegimeList(entries)}, nil
 }
 
 // ListTaxpayers implements gen.StrictServerInterface (GET /v1/taxpayers).
@@ -102,7 +99,7 @@ func (h *Handler) ListTaxpayers(ctx context.Context, req gen.ListTaxpayersReques
 		items = append(items, item)
 	}
 	return gen.ListTaxpayers200JSONResponse{
-		Body: gen.TaxpayerList{Items: items}, Headers: gen.ListTaxpayers200ResponseHeaders{CacheControl: noStore},
+		Body: gen.TaxpayerList{Items: items},
 	}, nil
 }
 
@@ -127,9 +124,9 @@ func (h *Handler) CreateTaxpayer(ctx context.Context, req gen.CreateTaxpayerRequ
 		return nil, err
 	}
 	if !result.Created {
-		return gen.CreateTaxpayer200JSONResponse{Body: body, Headers: gen.CreateTaxpayer200ResponseHeaders{CacheControl: noStore}}, nil
+		return gen.CreateTaxpayer200JSONResponse{Body: body}, nil
 	}
-	return gen.CreateTaxpayer201JSONResponse{Body: body, Headers: gen.CreateTaxpayer201ResponseHeaders{CacheControl: noStore}}, nil
+	return gen.CreateTaxpayer201JSONResponse{Body: body}, nil
 }
 
 // GetTaxpayer implements gen.StrictServerInterface
@@ -147,7 +144,7 @@ func (h *Handler) GetTaxpayer(ctx context.Context, req gen.GetTaxpayerRequestObj
 	if err != nil {
 		return nil, err
 	}
-	return gen.GetTaxpayer200JSONResponse{Body: body, Headers: gen.GetTaxpayer200ResponseHeaders{CacheControl: noStore}}, nil
+	return gen.GetTaxpayer200JSONResponse{Body: body}, nil
 }
 
 // UpdateTaxpayer implements gen.StrictServerInterface
@@ -169,7 +166,7 @@ func (h *Handler) UpdateTaxpayer(ctx context.Context, req gen.UpdateTaxpayerRequ
 	if err != nil {
 		return nil, err
 	}
-	return gen.UpdateTaxpayer200JSONResponse{Body: body, Headers: gen.UpdateTaxpayer200ResponseHeaders{CacheControl: noStore}}, nil
+	return gen.UpdateTaxpayer200JSONResponse{Body: body}, nil
 }
 
 // DeleteTaxpayer implements gen.StrictServerInterface
@@ -200,7 +197,7 @@ func (h *Handler) ArchiveTaxpayer(ctx context.Context, req gen.ArchiveTaxpayerRe
 	if err != nil {
 		return nil, err
 	}
-	return gen.ArchiveTaxpayer200JSONResponse{Body: body, Headers: gen.ArchiveTaxpayer200ResponseHeaders{CacheControl: noStore}}, nil
+	return gen.ArchiveTaxpayer200JSONResponse{Body: body}, nil
 }
 
 // UnarchiveTaxpayer implements gen.StrictServerInterface
@@ -218,7 +215,7 @@ func (h *Handler) UnarchiveTaxpayer(ctx context.Context, req gen.UnarchiveTaxpay
 	if err != nil {
 		return nil, err
 	}
-	return gen.UnarchiveTaxpayer200JSONResponse{Body: body, Headers: gen.UnarchiveTaxpayer200ResponseHeaders{CacheControl: noStore}}, nil
+	return gen.UnarchiveTaxpayer200JSONResponse{Body: body}, nil
 }
 
 // AddTaxpayerRegime implements gen.StrictServerInterface
@@ -236,7 +233,7 @@ func (h *Handler) AddTaxpayerRegime(ctx context.Context, req gen.AddTaxpayerRegi
 	if err != nil {
 		return nil, toAppError(err)
 	}
-	return gen.AddTaxpayerRegime201JSONResponse{Body: toTaxpayerRegime(regime), Headers: gen.AddTaxpayerRegime201ResponseHeaders{CacheControl: noStore}}, nil
+	return gen.AddTaxpayerRegime201JSONResponse{Body: toTaxpayerRegime(regime)}, nil
 }
 
 // UpdateTaxpayerRegime implements gen.StrictServerInterface
@@ -257,7 +254,7 @@ func (h *Handler) UpdateTaxpayerRegime(ctx context.Context, req gen.UpdateTaxpay
 	if err != nil {
 		return nil, toAppError(err)
 	}
-	return gen.UpdateTaxpayerRegime200JSONResponse{Body: toTaxpayerRegime(regime), Headers: gen.UpdateTaxpayerRegime200ResponseHeaders{CacheControl: noStore}}, nil
+	return gen.UpdateTaxpayerRegime200JSONResponse{Body: toTaxpayerRegime(regime)}, nil
 }
 
 // ArchiveTaxpayerRegime implements gen.StrictServerInterface
@@ -274,7 +271,7 @@ func (h *Handler) ArchiveTaxpayerRegime(ctx context.Context, req gen.ArchiveTaxp
 	if err != nil {
 		return nil, toAppError(err)
 	}
-	return gen.ArchiveTaxpayerRegime200JSONResponse{Body: toTaxpayerRegime(regime), Headers: gen.ArchiveTaxpayerRegime200ResponseHeaders{CacheControl: noStore}}, nil
+	return gen.ArchiveTaxpayerRegime200JSONResponse{Body: toTaxpayerRegime(regime)}, nil
 }
 
 // caller returns the authenticated user's id.

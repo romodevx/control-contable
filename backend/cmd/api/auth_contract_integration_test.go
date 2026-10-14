@@ -263,7 +263,7 @@ func TestContract_authLogin(t *testing.T) {
 				code, message := errorOf(t, rec)
 				assert.Equal(t, gen.ErrorCodeUnauthorized, code)
 				answers = append(answers, string(code)+" "+message)
-				assert.Empty(t, rec.Header().Get("Cache-Control"))
+				assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"), "an error is never cached (G-1)")
 			})
 		}
 		require.Len(t, answers, 3)

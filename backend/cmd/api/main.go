@@ -308,6 +308,9 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 	limiter := ratelimit.New(cfg.RateLimit.PerSecond, cfg.RateLimit.Burst, d.now)
 	return middleware.Chain(routes,
 		middleware.RequestID,
+		// Cache-Control: no-store on every response, before anything that can
+		// answer (recover, limiter, router), so errors carry it too (S-11).
+		middleware.NoStore,
 		middleware.Recover(d.logger),
 		middleware.RateLimit(limiter, middleware.ClientIP(cfg.TrustedProxyHops)),
 		// The client network keys the per-(email, network) login budget

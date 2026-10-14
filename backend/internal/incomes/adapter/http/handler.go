@@ -12,9 +12,6 @@ import (
 )
 
 const (
-	// noStore is the Cache-Control of every response carrying income data
-	// (components.headers.NoStore, MODULE-incomes S-11).
-	noStore = "no-store"
 	// bearerChallenge is the contract's fixed WWW-Authenticate value
 	// (components.headers.WWWAuthenticate).
 	bearerChallenge = `Bearer realm="control-contable"` //nolint:gosec // G101: an auth challenge, not a credential
@@ -67,7 +64,7 @@ func (h *Handler) ListIncomes(ctx context.Context, req gen.ListIncomesRequestObj
 	if err != nil {
 		return nil, err
 	}
-	return gen.ListIncomes200JSONResponse{Body: body, Headers: gen.ListIncomes200ResponseHeaders{CacheControl: noStore}}, nil
+	return gen.ListIncomes200JSONResponse{Body: body}, nil
 }
 
 // CreateIncome implements gen.StrictServerInterface
@@ -91,9 +88,9 @@ func (h *Handler) CreateIncome(ctx context.Context, req gen.CreateIncomeRequestO
 		return nil, err
 	}
 	if !result.Created {
-		return gen.CreateIncome200JSONResponse{Body: body, Headers: gen.CreateIncome200ResponseHeaders{CacheControl: noStore}}, nil
+		return gen.CreateIncome200JSONResponse{Body: body}, nil
 	}
-	return gen.CreateIncome201JSONResponse{Body: body, Headers: gen.CreateIncome201ResponseHeaders{CacheControl: noStore}}, nil
+	return gen.CreateIncome201JSONResponse{Body: body}, nil
 }
 
 // GetIncomeDefaults implements gen.StrictServerInterface
@@ -108,7 +105,7 @@ func (h *Handler) GetIncomeDefaults(ctx context.Context, req gen.GetIncomeDefaul
 		return nil, err
 	}
 	return gen.GetIncomeDefaults200JSONResponse{
-		Body: toDefaults(defaults), Headers: gen.GetIncomeDefaults200ResponseHeaders{CacheControl: noStore},
+		Body: toDefaults(defaults),
 	}, nil
 }
 
@@ -127,7 +124,7 @@ func (h *Handler) GetIncome(ctx context.Context, req gen.GetIncomeRequestObject)
 	if err != nil {
 		return nil, err
 	}
-	return gen.GetIncome200JSONResponse{Body: body, Headers: gen.GetIncome200ResponseHeaders{CacheControl: noStore}}, nil
+	return gen.GetIncome200JSONResponse{Body: body}, nil
 }
 
 // UpdateIncome implements gen.StrictServerInterface
@@ -150,7 +147,7 @@ func (h *Handler) UpdateIncome(ctx context.Context, req gen.UpdateIncomeRequestO
 	if err != nil {
 		return nil, err
 	}
-	return gen.UpdateIncome200JSONResponse{Body: body, Headers: gen.UpdateIncome200ResponseHeaders{CacheControl: noStore}}, nil
+	return gen.UpdateIncome200JSONResponse{Body: body}, nil
 }
 
 // DeleteIncome implements gen.StrictServerInterface
@@ -183,7 +180,7 @@ func (h *Handler) RestoreIncome(ctx context.Context, req gen.RestoreIncomeReques
 	if err != nil {
 		return nil, err
 	}
-	return gen.RestoreIncome200JSONResponse{Body: body, Headers: gen.RestoreIncome200ResponseHeaders{CacheControl: noStore}}, nil
+	return gen.RestoreIncome200JSONResponse{Body: body}, nil
 }
 
 // caller returns the authenticated user's id.

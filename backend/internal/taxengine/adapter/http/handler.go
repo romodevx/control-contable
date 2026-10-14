@@ -74,7 +74,7 @@ func (h *Handler) GetTaxpayerEstimate(ctx context.Context, req gen.GetTaxpayerEs
 	if err != nil {
 		return nil, err
 	}
-	return noStoreResponse{body: toEstimate(est)}, nil
+	return okResponse{body: toEstimate(est)}, nil
 }
 
 // GetEstimateBreakdown implements gen.StrictServerInterface
@@ -88,7 +88,7 @@ func (h *Handler) GetEstimateBreakdown(ctx context.Context, req gen.GetEstimateB
 	if err != nil {
 		return nil, err
 	}
-	return noStoreResponse{body: toBreakdown(b)}, nil
+	return okResponse{body: toBreakdown(b)}, nil
 }
 
 // GetTaxInputs implements gen.StrictServerInterface

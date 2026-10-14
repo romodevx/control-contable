@@ -98,7 +98,6 @@ func TestGetTaxInputs(t *testing.T) {
 	rec := httptest.NewRecorder()
 	require.NoError(t, resp.VisitGetTaxInputsResponse(rec))
 	assert.Equal(t, 200, rec.Code)
-	assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
 	assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
 	assert.JSONEq(t, wantBody601, rec.Body.String())
 }
@@ -139,7 +138,6 @@ func TestPutTaxInputs(t *testing.T) {
 	rec := httptest.NewRecorder()
 	require.NoError(t, resp.VisitPutTaxInputsResponse(rec))
 	assert.Equal(t, 200, rec.Code)
-	assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
 	assert.JSONEq(t, wantBody601, rec.Body.String())
 }
 
