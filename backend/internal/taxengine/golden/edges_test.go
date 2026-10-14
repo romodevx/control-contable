@@ -57,7 +57,7 @@ func TestReadRawParamsKeepsTheTextAsWritten(t *testing.T) {
 
 	require.Len(t, rp.Values, 3)
 	assert.Equal(t, golden.RawValue{Key: "uma.daily", Money: "113.14", ValidFrom: "2026-01-01", ValidTo: "2026-01-31"}, rp.Values[0])
-	assert.Equal(t, "2026-02-01", rp.Values[1].ValidFrom, "quoted and plain dates read alike")
+	assert.Equal(t, golden.RawDate("2026-02-01"), rp.Values[1].ValidFrom, "quoted and plain dates read alike")
 	assert.Equal(t, "0.16", rp.Values[2].Rate)
 	require.Len(t, rp.Tables, 2)
 	assert.Equal(t, 3, rp.Tables[0].Month)
