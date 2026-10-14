@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:control_contable/api/generated/models/taxpayer.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/session/session.dart';
@@ -6,9 +8,6 @@ import 'package:control_contable/features/taxpayers/application/taxpayer_list.da
 import 'package:control_contable/features/taxpayers/data/active_taxpayer_store.dart';
 import 'package:control_contable/features/taxpayers/data/taxpayers_repository.dart';
 import 'package:control_contable/features/taxpayers/domain/masked_rfc.dart';
-
-import 'dart:async';
-
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
