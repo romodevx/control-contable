@@ -127,6 +127,15 @@ indistinguishable from a reuse by the caller except for the detail: it reveals n
 
 ### 2.6 Withholdings received (retenciones)
 
+> **Superseded (2026-10-15) by [MODULE-withholdings.md](MODULE-withholdings.md).** Withholdings are
+> now **derived by the server** from `counterparty_kind`, `operation_kind`, `residential_rent` and
+> `via_platform` (its §2.1, §3); the user never types them (owner decision, no override).
+> `counterparty_type` is replaced by `counterparty_kind`; `isr_withheld_cents` /
+> `iva_withheld_cents` become read-only outputs; the "Retenciones" inputs (§7), the suggestion
+> table below, the bounds and `withholding_differs_from_rate` are retired with contract 0.9.0
+> (PLAN §9, WH tasks). The text below is kept as the record of the shipped M3 behavior until WH-06
+> merges.
+
 Applicability is decided by the taxpayer's person type, the regime and `counterparty_type`
 (research A.2.3–A.2.6, B.2.3). Outside the table, a withholding > 0 →
 `422 withholding_not_applicable` on that field.
@@ -352,6 +361,8 @@ are es-MX safe text (localized by the client) and never carry amounts, descripti
     pagó? (counterparty) · Descripción. Régimen appears only when the taxpayer holds more than one
     on that date; Actividad only for 625 with more than one activity.
   - "Retenciones": collapsed; opens **prefilled** when the counterparty allows withholdings.
+    **Replaced** by the read-only derived card and questions Q1–Q4 of
+    [MODULE-withholdings §2.1, §2.3](MODULE-withholdings.md#21-income-form-nuevo-ingreso-every-taxpayer).
   - "Más detalles": collapsed: IVA amount (editable), the other date, Folio fiscal (UUID).
 - Single column; label above every field; optional fields marked "(opcional)" (fewer than the
   required ones). Amount: `inputmode="decimal"`, accepts `10000`, `10,000.00`, `$10 000.5`;

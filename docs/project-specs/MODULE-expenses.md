@@ -155,6 +155,16 @@ deductible = override if the user sent a boolean, else default
 
 ### 2.6 Withholdings the taxpayer made (retenciones a proveedores)
 
+> **Superseded (2026-10-15) by [MODULE-withholdings.md](MODULE-withholdings.md).** For persona
+> moral users the server **derives** what they must withhold from `supplier_kind`,
+> `supplier_regime`, `operation_kind` (defaulted from the category) and `residential_rent` (its
+> §2.2, §3); the manual `isr_withheld_cents` / `iva_withheld_cents` inputs are removed (owner
+> decision, no override) and become read-only outputs. A derived withholding adds the warning
+> `deduction_requires_remittance` (LISR 27 fr. V), and the withheld IVA is credited in the month
+> **after** it is remitted (LIVA 5 fr. IV; engine change, MODULE-withholdings §4.2), so
+> `creditable_iva_cents` holds only the paid part. PF users never see the section. The text below
+> is kept as the record of the shipped M4 behavior until WH-07 merges.
+
 - Allowed only for **persona moral** taxpayers (research B.2.3, LIVA 1-A). A física sending a
   value > 0 → `422 withholding_not_applicable`. The form shows the section only for morales,
   collapsed, opening by default on `servicios_profesionales`, `renta_local` and `fletes`.
@@ -272,6 +282,8 @@ tab. Presets `demo_core`, `demo_monetization`, `demo_full` include it.
   - "Más detalles" (collapsed): IVA amount, "¿Es deducible?" switch with "Usar el valor sugerido"
     reset, Folio fiscal (UUID), Descripción.
   - "Retenciones a tu proveedor": morales only, collapsed except for fees, rent and freight.
+    **Replaced** by the section "Tu proveedor" (E1–E4) and the read-only derived card of
+    [MODULE-withholdings §2.2, §2.3](MODULE-withholdings.md#22-expense-form-nuevo-gasto-personas-morales-only).
 - Warnings render inline next to their field after save and on blur for the cash rule ("Los
   pagos en efectivo de más de $2,000 no son deducibles"), never as blocking errors.
 - "Guardar y crear otro" keeps regime, date, payment method and "¿Tienes factura?"; clears

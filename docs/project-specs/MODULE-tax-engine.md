@@ -18,6 +18,7 @@ For the **active taxpayer** and one **period** (`YYYY-MM`), M5 returns an *infor
 - **monthly IVA**, consolidated per taxpayer (one IVA result, not one per regime, §2.6);
 - **provisional ISR per regime** (monthly or year-to-date, as the law says for that regime, §2.4);
 - **withholdings to remit** (ISR/IVA the taxpayer withheld from suppliers; PM only), shown apart;
+  amounts derived per [MODULE-withholdings.md](MODULE-withholdings.md) (cross-cutting spec);
 - per regime: a status (§2.2), the missing inputs and a breakdown whose lines are the computation
   trace, each with its legal basis (§2.5);
 - totals, the due date, the mandatory legend and the disclaimers (§2.3).
@@ -46,7 +47,8 @@ Ports M5 consumes (declared consumer-side in `internal/taxengine/usecase`):
 - `access.Policy` (P0-16) for `putTaxInputs` only (read-only users get `402`; reads stay open).
 
 Ports M5 provides:
-- `RateCatalog` (M5-08): allowed IVA rates and suggested withholding rates on a date, plus dated
+- `RateCatalog` (M5-08): allowed IVA rates and the withholding rates `fiscal.DeriveWithholdings`
+  applies on a date (no longer "suggested" for manual entry: MODULE-withholdings), plus dated
   parameters such as `deduction.cash_payment_limit`, for M3/M4. It implements
   `fiscal.RateCatalog` (`internal/kernel/fiscal`, ADR-0007) and the expenses module's port that
   embeds it. M5 reuses the kernel's `Date`, `IVARate`, IVA rule and withholding shares rather than
@@ -149,7 +151,10 @@ Strategies are keyed by `(regime_code, person_type)` (ADR-0002 §1). Coverage at
 - **Amounts come from the records** as entered (centavos): income `amount_cents` (before IVA),
   `iva_cents`, `isr_withheld_cents`, `iva_withheld_cents`; expense `amount_cents`, `iva_cents`,
   effective `deductible`. The engine never recomputes a record's IVA or withholding from a rate; the
-  8 % border rate is therefore just data in `iva_cents`.
+  8 % border rate is therefore just data in `iva_cents`. **Since MODULE-withholdings (2026-10-15)**
+  the withholding amounts on records are **derived by the server** at write time
+  (`fiscal.DeriveWithholdings`, [MODULE-withholdings §3](MODULE-withholdings.md#3-decision-table-derivation)),
+  never typed by the user; the engine still reads them as recorded facts.
 - **Deductible expenses** = effective `deductible = true` (MODULE-expenses §2.4). Depreciation of
   investments is out of scope (investment categories default non-deductible).
 - **Tariff lookup**: binary search over rows sorted by `lower`, O(log k), k = 11. Tables are the
@@ -217,8 +222,17 @@ The breakdown header shows the parameter set (fiscal year, version) and the engi
     cargo = trasladado cobrado − acreditable − retenido; LIVA 1-A, 5-D; research PF-612-IVA-01). It is
     never inferred from a rate or a counterparty type: only the recorded amount counts.
   - **IVA the taxpayer (a PM) withheld *from its suppliers*** (recorded on the expense) goes to
-    `withholdings_to_remit` only. It is **not** also credited as acreditable IVA (LIVA 5 fr. IV) in v1
-    (conservative, matches PM-601-IVA-01; CPA item).
+    `withholdings_to_remit` ~~only. It is **not** also credited as acreditable IVA (LIVA 5 fr. IV) in v1
+    (conservative, matches PM-601-IVA-01; CPA item).~~
+    **Corrected (2026-10-15, [MODULE-withholdings §4.2](MODULE-withholdings.md#42-user-as-receptor-expenses-of-a-persona-moral-required-engine-change)).**
+    The shipped engine credits the **full** `iva_cents` of a creditable expense in the month paid,
+    withheld part included, i.e. it does credit the withheld IVA, one month early. LIVA 5 fr. IV
+    (read verbatim, research withholdings-matrix §2.2) makes the withheld part creditable in the
+    monthly return **after** the one in which it was remitted. Required engine change (PLAN WH-09):
+    month n credits `IVA − IVA withheld` of expenses paid in n **plus** the IVA withheld in n − 1
+    (line `iva.creditable.withheld_prior_month`, ⚠️ topic `withheld_iva_credit_timing`); January reads
+    the previous December; `EngineVersion` 1.0.1 → **1.1.0**; new goldens WH-01-EST, WH-11-JUN,
+    WH-11-JUL, PM-601-IVA-02.
 
 ### 2.7 Money and rounding
 
@@ -364,6 +378,10 @@ Composite cases defined by this spec (use-case level, M5-22; QA verifies the ari
 | TX-601-REMIT-01 | PM-601-ISR-01 + PM-601-IVA-01; the PM also withheld ISR 10 % = 5,000.00 on the 50,000 fees | to remit **10,333.33**; total **166,333.33** |
 | TX-612-INC-01 | PF-612-ISR-01 without `prior_provisional_payments` for Jan–Feb | status `incomplete`, missing Jan, Feb; ISR **4,150.96** (7,150.96 − 0 − 3,000.00) labelled |
 | TX-ROUND-01 | Any strategy whose displayed lines differ from the rounded result | one `Ajuste por redondeo` line; property test holds |
+| WH-01-EST | 626 PF, July 2026, only income 100,000.00 + IVA 16,000.00 to a PM (derived ISR 1,250.00, IVA 10,666.67) | ISR **750.00**, IVA **5,333.33** (MODULE-withholdings US-W1) |
+| WH-11-JUN | 601 PM, June: expense 40,000.00 + IVA 6,400.00 to a PF 612 consultant (derived ISR 4,000.00, IVA 4,266.67) | creditable from it **2,133.33**; to remit **8,266.67** |
+| WH-11-JUL | Same taxpayer, July, no new records | `iva.creditable.withheld_prior_month` **4,266.67** (LIVA 5 fr. IV) ⚠️ timing |
+| PM-601-IVA-02 | PM-601-IVA-01's taxpayer in July | credits June's withheld **5,333.33** |
 
 ## 4. User stories (Given / When / Then)
 
@@ -566,7 +584,7 @@ Amendment 1. Precisions made while freezing (no rule changed):
 | OQ-T3 | Whole-peso rounding (CFF 20) (CPA) | **DECIDED:** **Off**; `payable_rounded_cents = amount_cents` |
 | OQ-T4 | p95 target for estimate/breakdown | **DECIDED:** **< 300 ms** at 3 regimes × 10,000 records/year |
 | OQ-T5 | Carry the previous month's IVA saldo a favor forward? | **DECIDED:** **No** in v1; an `info` line mentions it |
-| OQ-T6 | (a) Does IVA withheld **from** the taxpayer, recorded on the income, reduce its monthly IVA? (b) Does IVA a PM withheld **from its suppliers** also become creditable for that PM (LIVA 5 fr. IV)? | **DECIDED: (a) Yes**, only the recorded `iva_withheld_cents`, never inferred. **(b) No** in v1: to-remit only (CPA item) |
+| OQ-T6 | (a) Does IVA withheld **from** the taxpayer, recorded on the income, reduce its monthly IVA? (b) Does IVA a PM withheld **from its suppliers** also become creditable for that PM (LIVA 5 fr. IV)? | **DECIDED: (a) Yes**, only the recorded `iva_withheld_cents` (now derived by the server, MODULE-withholdings), never inferred by the engine. **(b) Superseded 2026-10-15: Yes, in the month after its remittance** (LIVA 5 fr. IV verbatim; §2.6, MODULE-withholdings §4.2, PLAN WH-09) |
 | OQ-T7 | 621 IVA bimonthly like its ISR? (CPA) | **DECIDED:** **Bimonthly**, ⚠️ `rif_bimonthly_iva` |
 | OQ-T8 | Which ⚠️ items raise the strong banner | **DECIDED:** Only §2.9 topics; deductibility, due-date move and coeficiente decimals stay info |
 | OQ-T9 | Periods before 2026 | **DECIDED:** **422 `parameters_unavailable`**; transcribe 2025 only if users ask |
