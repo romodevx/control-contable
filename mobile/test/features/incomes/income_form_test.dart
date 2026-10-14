@@ -12,6 +12,7 @@ import 'package:control_contable/api/generated/models/warning_code.dart';
 import 'package:control_contable/core/access/read_only_access.dart';
 import 'package:control_contable/core/forms/money.dart';
 import 'package:control_contable/core/network/api_failure.dart';
+import 'package:control_contable/core/forms/form_footer.dart';
 import 'package:control_contable/core/router/app_router.dart';
 import 'package:control_contable/features/incomes/incomes_routes.dart';
 import 'package:flutter/material.dart';
@@ -373,6 +374,28 @@ void main() {
         findsOneWidget,
       );
     });
+  });
+
+  // QA M3/M4 D2: after *Guardar y crear otro* the warning toast stays until
+  // closed, on the form itself; it must not cover the footer's actions.
+  testWidgets('a persistent warning toast leaves the form footer clear', (
+    tester,
+  ) async {
+    harness.incomes.warnNext = const [
+      Warning(
+        code: WarningCode.duplicateCfdiUuid,
+        field: 'cfdi_uuid',
+        message: 'Duplicate CFDI UUID.',
+      ),
+    ];
+    await pumpForm(tester);
+    await typeInto(tester, _amount, '1000');
+
+    await _saveAndAnother(tester);
+
+    final toast = tester.getRect(find.byType(SnackBar));
+    final footer = tester.getRect(find.byType(FormFooter));
+    expect(toast.bottom, lessThanOrEqualTo(footer.top));
   });
 
   group('M3-09 edge cases', () {
