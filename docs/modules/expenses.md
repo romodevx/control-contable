@@ -56,10 +56,9 @@ list month, the estimate month and the regime window. There is no `booked_on` co
 | Outside the regime's window | `422`, `regime_code` / `regime_not_active` (checked before the parameters) |
 | In a year without published parameters | Accepted, warning `provisional_parameters` on `paid_on` |
 
-> [!NOTE]
-> The contract (0.6.1) says "before 2022-01-01" for `paid_on` and for the categories `on`
-> parameter. The served floor is **2026-01-01**. Contract follow-up for the architect in the
-> [PLAN M3/M4 follow-ups](../project-specs/PLAN-control-contable.md#m3m4-follow-ups) (#97 FU-2).
+Not the estimates' answer: a month before 2026 is `422 parameters_unavailable` there (a
+well-formed period without parameters), while a record date before 2026 is invalid input
+(contract 0.7.0, `BusinessDate`).
 
 ## IVA
 
@@ -266,8 +265,8 @@ make -C backend flags ARGS="disable module_expenses"
 
 Every error uses the single envelope `ErrorResponse`; `details[].code` carries the rule
 (`unknown_category`, `has_cfdi_mismatch`, `withholding_not_applicable`, ...). Amounts,
-descriptions and CFDI folios are never echoed. Record bodies carry `Cache-Control: no-store`;
-error responses do not yet (deferred, as for [incomes](incomes.md#errors)).
+descriptions and CFDI folios are never echoed. Every response, record body or error,
+carries `Cache-Control: no-store` (contract 0.7.0, as for [incomes](incomes.md#errors)).
 
 The table below is **generated from the contract** by `make api-error-tables`; do not edit
 it by hand. CI (`make api-error-tables-check`) fails when it differs from `openapi.yaml`.

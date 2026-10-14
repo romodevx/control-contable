@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Control Contable API
-  version: 0.6.1
+  version: 0.7.0
   summary: Monthly IVA and provisional ISR estimates for Mexican taxpayers.
   description: |
     Spec-first contract (single source of truth). Server stubs (oapi-codegen),
@@ -61,7 +61,7 @@ paths:
     get:
       tags: [Platform]
       operationId: getHealth
-      x-frozen: sha256:b4f83c0a29fd89904250bdcf1ba50bf98e991d986b3c131e3f121d41d504aba9
+      x-frozen: sha256:c52fe40208663e106221cd0556cf7db0fad862ba18eeb38a767eb48e86969484
       summary: Liveness and readiness
       x-module: platform
       x-public: true
@@ -69,6 +69,8 @@ paths:
       responses:
         '200':
           description: Service and database reachable.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/HealthStatus' }
@@ -80,7 +82,7 @@ paths:
     get:
       tags: [Platform]
       operationId: listEnabledFlags
-      x-frozen: sha256:4440fb8f1b6af759162efbdfbd0daf5ddc4ddc9af207f4b2fd8f245c4530bad6
+      x-frozen: sha256:f777b8d30732afeaa05bbcfe381c65e286bc32f9ccf6e11e5e644cd6f1591a7f
       summary: Modules enabled for the client (UX only; server enforces)
       x-module: platform
       x-public: true
@@ -88,6 +90,8 @@ paths:
       responses:
         '200':
           description: Enabled module keys.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/EnabledFlags' }
@@ -101,7 +105,7 @@ paths:
     post:
       tags: [Auth]
       operationId: register
-      x-frozen: sha256:db5c1b18ec847f9a65dbf6ab38503c52cdfd7272926de451d7460e71931b1e77
+      x-frozen: sha256:7189292365fa7c01d44f45e37e0f24df12017815f6b4157deaf0a3c601f3fad6
       summary: Start registration (emails a 6-digit verification code)
       description: >-
         Always answers `202 {status: verification_sent}` with the same body and comparable
@@ -147,11 +151,15 @@ paths:
       responses:
         '202':
           description: Generic acknowledgement; a code was emailed if the address can register.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/VerificationSent' }
         '400':
           description: Input does not match the contract or the current legal document versions.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -174,7 +182,7 @@ paths:
     post:
       tags: [Auth]
       operationId: verifyEmail
-      x-frozen: sha256:e80e17aa2968ea8a6e26c727feb4dc2f8fdc4d86cce7d578ab0f372d3589f4cc
+      x-frozen: sha256:664cf2826de015ee6c601dd3bb2471251419b691ade4281d51f9bd21ff7248da
       summary: Confirm the emailed code and set the password; creates the account, starts the trial, issues tokens
       description: >-
         The password (and the optional name) is chosen here, by whoever holds the emailed
@@ -210,6 +218,8 @@ paths:
               schema: { $ref: '#/components/schemas/AuthSession' }
         '400':
           description: Input does not match the contract or the password policy (checked before the code; not a try).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -227,6 +237,8 @@ paths:
                           message: Use at least 12 characters that are not a common or leaked password.
         '401':
           description: The code is wrong, expired, consumed or unknown (one generic answer).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -239,7 +251,7 @@ paths:
     post:
       tags: [Auth]
       operationId: resendVerification
-      x-frozen: sha256:e83bde2ac5502dc09ef43322bcc0529adc421e3453b06ef86fb181cfb25d9bb1
+      x-frozen: sha256:0dcd40ee679254a559bf076bc760ecadd8ab508850dd7e5b5d1462439bb20387
       summary: Email a new verification code for a pending sign-up
       description: >-
         For a pending sign-up, a new code replaces the old one (attempts reset). Always
@@ -261,6 +273,8 @@ paths:
       responses:
         '202':
           description: Generic acknowledgement; a new code was emailed if a pending sign-up exists and the cooldown allows it.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/VerificationSent' }
@@ -272,7 +286,7 @@ paths:
     post:
       tags: [Auth]
       operationId: login
-      x-frozen: sha256:9dffed2106f2e9bd3dd9ea386fa5ae4f3f074919cd2fbb535f1eab0da4868756
+      x-frozen: sha256:7471ae4366808d69707fe5d7fb244cc1b4399292f76a2932dda3379d7d616d63
       summary: Log in with email and password (starts a new token family)
       description: >-
         A wrong password, an unknown email and a pending (unverified) sign-up all answer the
@@ -297,6 +311,8 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '401':
           description: Wrong credentials, unknown email or unverified sign-up (one generic answer).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -309,7 +325,7 @@ paths:
     post:
       tags: [Auth]
       operationId: refreshSession
-      x-frozen: sha256:db1bfe4ddd6e9309bf123e1e23003c17817f89db9b71e271a258c3b871265264
+      x-frozen: sha256:74d54569e018dd94c95ec58a26c8ac027fe6d614176275eae9fbbfe3fa6d8527
       summary: Rotate the refresh token
       description: >-
         A live refresh token is rotated: the response carries a new pair and the old token
@@ -336,6 +352,8 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '401':
           description: Refresh token expired, revoked, reused, malformed or unknown (one generic answer).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -348,7 +366,7 @@ paths:
     post:
       tags: [Auth]
       operationId: logout
-      x-frozen: sha256:1c20c237be298e266767840370e767bccd09130ff5aeeef322814885b3d9ab3d
+      x-frozen: sha256:301257a867a314c9dab566d583aa7afc1be45ff7fcc8959a1b46f561899a2ecf
       summary: Revoke the refresh token family
       description: >-
         Revokes the family of the given refresh token (US-A2c). Idempotent: a refresh token
@@ -363,7 +381,10 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/RefreshRequest' }
       responses:
-        '204': { description: Logged out (also when the token was already revoked or not the caller's). }
+        '204':
+          description: Logged out (also when the token was already revoked or not the caller's).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -419,7 +440,7 @@ paths:
     delete:
       tags: [Auth]
       operationId: deleteMe
-      x-frozen: sha256:066dd153af80867dc5199982f2c2fe3157125b2c2d54443c7e754b708262b63b
+      x-frozen: sha256:4c78c18fbed0a897c45127cd5555f0eb0e4f4fd03bfcf76966a221d476259676
       summary: Delete the account and all its data (irreversible; requires the current password)
       description: >-
         Re-authenticates with the current password (D4), then in one transaction deletes the
@@ -443,11 +464,16 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/DeleteAccountRequest' }
       responses:
-        '204': { description: Account and all its data deleted. }
+        '204':
+          description: Account and all its data deleted.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403':
           description: Wrong current password; nothing was deleted.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -491,7 +517,7 @@ paths:
     get:
       tags: [Taxpayers]
       operationId: listRegimes
-      x-frozen: sha256:b30f8e0186b7950098de3f8da90920293d786db5cbb7b9d72a242ec27dbffff7
+      x-frozen: sha256:d7712355da7dc80498e5e396989864b238727d228cbc2fed215b556a912d89cf
       summary: Regime catalog for one person type (support level, options, inputs, compatibility)
       description: >-
         Every SAT `c_RegimenFiscal` key selectable for `person_type` (catalog key is
@@ -513,11 +539,15 @@ paths:
       responses:
         '200':
           description: Regimes selectable for the person type, ordered by code.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RegimeList' }
         '400':
           description: '`person_type` is missing or not `fisica`/`moral`.'
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -566,7 +596,7 @@ paths:
     post:
       tags: [Taxpayers]
       operationId: createTaxpayer
-      x-frozen: sha256:cbdea1b229bfdf0165e0af312527f456d5ca051935a4f407d3e3bd81cf69033a
+      x-frozen: sha256:46dbd5f0d21eb4c4805071f4a8174ff8fa1bc521cd62aff5db39a43002a6ae3f
       summary: Create a taxpayer with its regimes and options in one transaction (onboarding)
       description: >-
         Onboarding order (OD-3): person type, then RFC and display name, then regimes, then
@@ -696,6 +726,8 @@ paths:
           description: >-
             Input does not match the contract, or an RFC, regime, option or period rule
             (`details[].code`: see the operation description).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -725,6 +757,8 @@ paths:
           description: >-
             The RFC is already registered in the caller's account (active or archived), or the
             client `id` exists outside the caller's scope (generic, reveals nothing).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -739,6 +773,8 @@ paths:
           description: >-
             Two regimes in the body overlap in time and are incompatible, or the user already
             has 10 taxpayers (archived included).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -783,7 +819,7 @@ paths:
     patch:
       tags: [Taxpayers]
       operationId: updateTaxpayer
-      x-frozen: sha256:50ce91097e7650fdc040acd7e8f91c3472b8f55faaa78a70780afbf46843823e
+      x-frozen: sha256:3973a485b90cebb7257a9891609193455114dc7b909faaeb35fc73ef810a5dc9
       summary: Rename a taxpayer or correct its RFC (person type is immutable)
       description: >-
         `display_name` is trimmed and NFC-normalized (1–80 characters). `rfc` corrects a
@@ -816,6 +852,8 @@ paths:
               schema: { $ref: '#/components/schemas/Taxpayer' }
         '400':
           description: Input does not match the contract, or the corrected RFC is invalid.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -831,6 +869,8 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
           description: The corrected RFC is already registered in the caller's account.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -838,6 +878,8 @@ paths:
                 error: { code: rfc_already_registered, message: This RFC is already registered in your account., request_id: req_01J9Z6Q4X8 }
         '422':
           description: The taxpayer is archived; unarchive it first.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -853,7 +895,7 @@ paths:
     delete:
       tags: [Taxpayers]
       operationId: deleteTaxpayer
-      x-frozen: sha256:4b523d4214dede0eb27a738bdb280847475740d9452f3d1b92a1623de085d657
+      x-frozen: sha256:8daf095e4e91c5fe7e147d291cc1fe85b4720ff58f7ab41e1f5fa78c5f16ae68
       summary: Permanently delete a taxpayer and all its records (irreversible)
       description: >-
         Requires `confirm=true`; without it answers `400 validation_failed` (`confirm` /
@@ -867,9 +909,14 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Confirm'
       responses:
-        '204': { description: Deleted. }
+        '204':
+          description: Deleted.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
         '400':
           description: '`confirm=true` is missing, or the input does not match the contract.'
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -947,7 +994,7 @@ paths:
     post:
       tags: [Taxpayers]
       operationId: addTaxpayerRegime
-      x-frozen: sha256:900e976ca22b0db38039b719dfec9e15255b345e13d6c93a6675c42eb06bee96
+      x-frozen: sha256:7a17a2a0fee24f9b38b47178320343403a9f8bcbb28542589f2601815fe73867
       summary: Add a regime to a taxpayer (or reopen an ended one)
       description: >-
         `start_period` defaults to the current month (America/Mexico_City); allowed
@@ -1004,6 +1051,8 @@ paths:
                         message: Esta combinación de regímenes está pendiente de revisión por un contador; verifícala con tu contador.
         '400':
           description: Input does not match the contract, or a regime, option or period rule.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -1019,6 +1068,8 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
           description: The regime is already active for this taxpayer.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -1026,6 +1077,8 @@ paths:
                 error: { code: conflict, message: This regime is already active., request_id: req_01J9Z6Q4X8 }
         '422':
           description: The regime overlaps an incompatible one, or the taxpayer is archived.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -1055,7 +1108,7 @@ paths:
     patch:
       tags: [Taxpayers]
       operationId: updateTaxpayerRegime
-      x-frozen: sha256:2b0138ebf69af4dc9c104424a5dea233f7499f5d06a27250bcc47e63c5832e63
+      x-frozen: sha256:b22fa81325aa9d8e1d48114cc732f8b1fa97ff9ddd0b8ccc6eab83899fc2d0c9
       summary: Change a regime's options (applies to every period of the regime)
       description: >-
         Merge semantics: each key sent replaces its value, keys not sent keep theirs.
@@ -1082,6 +1135,8 @@ paths:
               schema: { $ref: '#/components/schemas/TaxpayerRegime' }
         '400':
           description: Input does not match the contract, or an option fails its definition.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -1097,6 +1152,8 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422':
           description: The taxpayer is archived; unarchive it first.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -1112,7 +1169,7 @@ paths:
     delete:
       tags: [Taxpayers]
       operationId: archiveTaxpayerRegime
-      x-frozen: sha256:b01928ce49d1c5cef31038c52b90a3405095fed5b39a02b4fc6be1478111000a
+      x-frozen: sha256:3bbcc90fb589f70563e590318fad3c8aeb8a10a84e4378226f44565abd30ff9c
       summary: End a regime at `end_period` (records are kept; never a hard delete)
       description: >-
         Sets `end_period`: `start_period` ≤ `end_period` ≤ the current month
@@ -1142,6 +1199,8 @@ paths:
               schema: { $ref: '#/components/schemas/TaxpayerRegime' }
         '400':
           description: '`end_period` is missing, malformed or out of range.'
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -1158,6 +1217,8 @@ paths:
           description: >-
             The regime has records and `confirm=true` was not sent, or the regime has already
             ended.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -1172,6 +1233,8 @@ paths:
           description: >-
             Records exist after `end_period`, it is the last active regime, or the taxpayer
             is archived.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -1237,7 +1300,7 @@ paths:
     post:
       tags: [Incomes]
       operationId: createIncome
-      x-frozen: sha256:8fa5b3ec62c4ee013f257def7b68c8b7be5254ec714ba3f73a764552ef46e4dc
+      x-frozen: sha256:c1f40de906026d296240969ef21607965114d1d20731b3e56bd9876f16170e8e
       summary: Record an income (idempotent client id; trial cap enforced)
       description: >-
         Records an income of the active taxpayer. Amounts are MXN centavos (`int64`), the
@@ -1268,7 +1331,8 @@ paths:
         `format`, `pattern`, `maxLength`, `additionalProperties`, …):
         `collected_on` / `invoiced_on` → `required` (the date the regime's basis needs:
         `collected_on` for cash regimes, `invoiced_on` for accrual), `out_of_range` (before
-        2022-01-01 or after today, America/Mexico_City);
+        2026-01-01, the first fiscal year with a tax parameter set, or after today,
+        America/Mexico_City; see `BusinessDate`);
         `platform_activity` → `required` (625 with more than one activity), `not_for_regime`
         (sent for a regime other than 625);
         `amount_cents` → `minimum` (0 is refused at the edge; `must_be_positive` is the
@@ -1287,8 +1351,9 @@ paths:
         Success bodies carry non-blocking `warnings` (MODULE-incomes §2.8):
         `duplicate_cfdi_uuid` on `cfdi_uuid` (another live income of the taxpayer has the
         same folio fiscal: legit for partial collections) and `withholding_differs_from_rate`
-        on `isr_withheld_cents` / `iva_withheld_cents` (the CFDI wins). Messages never carry
-        amounts, descriptions or UUIDs.
+        on `isr_withheld_cents` / `iva_withheld_cents` (the CFDI wins); `provisional_parameters`
+        on `collected_on` / `invoiced_on` (the date reads a provisional parameter set, see
+        `WarningCode`). Messages never carry amounts, descriptions or UUIDs.
       x-module: module_incomes
       security:
         - bearerAuth: []
@@ -1402,7 +1467,7 @@ paths:
             Input does not match the contract, or a date, activity or amount rule
             (`details[].code`: see the operation description).
           headers:
-            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -1424,7 +1489,7 @@ paths:
                       message: One or more fields are invalid.
                       request_id: req_01J9Z6Q4X8
                       details:
-                        - { field: collected_on, code: out_of_range, message: La fecha no puede ser futura ni anterior a 2022. }
+                        - { field: collected_on, code: out_of_range, message: La fecha no puede ser futura ni anterior a 2026. }
                 zeroAmount:
                   summary: '`amount_cents: 0`'
                   value:
@@ -1441,7 +1506,7 @@ paths:
             `details[0]` names the cap (`incomes_remaining` / `trial_cap_reached`). Never on
             an idempotent retry.
           headers:
-            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -1466,7 +1531,7 @@ paths:
             deleted income (`details`: `id` / `id_reused`), or it belongs to another user (no
             `details`).
           headers:
-            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -1491,7 +1556,7 @@ paths:
     get:
       tags: [Incomes]
       operationId: getIncomeDefaults
-      x-frozen: sha256:13e400f9f1e5149353f4fb6f7daa675efbec43c858f4f37b23d1a62a173d7f58
+      x-frozen: sha256:42cb1a68528fd38cab949c06d972d422907a9db8c809dc59ddab4c6533bbfbc8
       summary: IVA rates and suggested withholding rates for a new income (prefills the form)
       description: >-
         Resolved from the rate catalog (`RateCatalog`, dated parameter data) for the
@@ -1566,10 +1631,10 @@ paths:
                     platform_activity: null
         '400':
           description: >-
-            Input does not match the contract: `on` out of range (`out_of_range`, 2022-01-01 …
+            Input does not match the contract: `on` out of range (`out_of_range`, 2026-01-01 …
             today), or `platform_activity` for a regime other than 625 (`not_for_regime`).
           headers:
-            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -1585,7 +1650,7 @@ paths:
         '422':
           description: The regime is not held on `on`, or the 625 activity is not among the taxpayer's.
           headers:
-            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -1639,7 +1704,7 @@ paths:
     patch:
       tags: [Incomes]
       operationId: updateIncome
-      x-frozen: sha256:ea1f050de0778177819a86ec8ca28f82a6b9d5e17b81754735052672ae1fedad
+      x-frozen: sha256:677c27bb3d010f06529c210739ca7162c96c8fbd7a20e44fb371821df5d8c3fe
       summary: Edit an income (merge-patch; null clears a nullable field)
       description: >-
         Partial update with merge-patch semantics on top-level fields: an absent field is
@@ -1677,7 +1742,7 @@ paths:
         '400':
           description: Input does not match the contract, or a date, activity or amount rule (see `createIncome`).
           headers:
-            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -1697,7 +1762,7 @@ paths:
     delete:
       tags: [Incomes]
       operationId: deleteIncome
-      x-frozen: sha256:24fb709c16287f5e6ad05fde01afd96f8f92228593f7971e8d7675ec5c141f40
+      x-frozen: sha256:f1b329a092f74a567df946a0b7e80d651b0d149d838a59a6fc58c5f99451872c
       summary: Soft-delete an income (Undo via restore)
       description: >-
         Sets `deleted_at`: the income leaves lists, totals and the estimate at once and can be
@@ -1708,7 +1773,10 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '204': { description: Deleted (restorable). }
+        '204':
+          description: Deleted (restorable).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
         '400': { $ref: '#/components/responses/RecordBadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/RecordNotFound' }
@@ -1758,7 +1826,7 @@ paths:
     get:
       tags: [Expenses]
       operationId: listExpenseCategories
-      x-frozen: sha256:250cabadb86ef2f393099e0d73b35b486926912b5157383fddff115e1057b5ae
+      x-frozen: sha256:e95fbb0074a296114a8ad80f50335110cf159176798a8c5767681d1ef28c6ec5
       summary: Expense categories with deductibility resolved for the taxpayer's regime and options
       description: >-
         Replaces the global `GET /v1/expense-categories` (OQ-E1): the hint depends on the
@@ -1794,7 +1862,7 @@ paths:
         '422':
           description: The taxpayer does not hold `regime` on `on`.
           headers:
-            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -1844,7 +1912,7 @@ paths:
     post:
       tags: [Expenses]
       operationId: createExpense
-      x-frozen: sha256:0e35ade67f513490201fc9bee6374d85b762b04b189f1c0da65c37fbca6092ad
+      x-frozen: sha256:24efbc0179a4d374517ef183a77fd462fef177a81a2805c5cf2a1a3046c459fc
       summary: Record an expense (idempotent client id; trial cap enforced)
       description: >-
         Records an expense of the active taxpayer. Idempotency, order of checks, regime
@@ -1863,7 +1931,8 @@ paths:
 
         `FieldError.code` values beyond JSON Schema keywords: `category_code` →
         `unknown_category`; `cfdi_uuid` → `has_cfdi_mismatch` (a folio fiscal with
-        `has_cfdi: false`); `paid_on` → `out_of_range` (before 2022-01-01 or after today).
+        `has_cfdi: false`); `paid_on` → `out_of_range` (before 2026-01-01, the first fiscal year
+        with a tax parameter set, or after today; see `BusinessDate`).
         `422 business_rule_violation` details: `regime_code` → `regime_not_active`;
         `taxpayerId` → `taxpayer_archived`; `iva_rate` → `rate_not_valid_on_date`;
         `iva_cents` → `iva_amount_mismatch`; `isr_withheld_cents` / `iva_withheld_cents` →
@@ -1997,7 +2066,7 @@ paths:
             Input does not match the contract, an unknown category, a folio fiscal without
             CFDI, or a date out of range (`details[].code`: see the operation description).
           headers:
-            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -2025,7 +2094,7 @@ paths:
             `details[0]` names the cap (`expenses_remaining` / `trial_cap_reached`). Never on
             an idempotent retry.
           headers:
-            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -2050,7 +2119,7 @@ paths:
             deleted expense (`details`: `id` / `id_reused`), or it belongs to another user (no
             `details`).
           headers:
-            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -2100,7 +2169,7 @@ paths:
     patch:
       tags: [Expenses]
       operationId: updateExpense
-      x-frozen: sha256:53026b27499621247d20ac5a96620fa6a7190ec5dc27788f38a69dbe23f00597
+      x-frozen: sha256:51457aca7251f1665bb1ec28335c3d35dd2aa1fdc8d6ae3e2833a85441e791b8
       summary: Edit an expense (merge-patch; null clears a nullable field or the override)
       description: >-
         Merge-patch on top-level fields as `updateIncome`: absent is unchanged, `null` clears
@@ -2138,7 +2207,7 @@ paths:
         '400':
           description: Input does not match the contract, or a category, CFDI or date rule (see `createExpense`).
           headers:
-            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -2158,7 +2227,7 @@ paths:
     delete:
       tags: [Expenses]
       operationId: deleteExpense
-      x-frozen: sha256:b81294d63a26f9446de3480c7680490e9589321f51df8dda5c280dee7c7f50d4
+      x-frozen: sha256:7404aedc82e817a02f91708ca9a7f8a0ed72e4d5566a75eddf5977797ac6c293
       summary: Soft-delete an expense (Undo via restore)
       description: >-
         As `deleteIncome`: sets `deleted_at`, restorable for 30 days, `204` also when already
@@ -2168,7 +2237,10 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '204': { description: Deleted (restorable). }
+        '204':
+          description: Deleted (restorable).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
         '400': { $ref: '#/components/responses/RecordBadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/RecordNotFound' }
@@ -2429,7 +2501,7 @@ paths:
     get:
       tags: [TaxEngine]
       operationId: getEstimateBreakdown
-      x-frozen: sha256:b7a8d9fe8d1b11d3bd2cb55149662d26fa47715b316c2dbe20a7bd619ef74beb
+      x-frozen: sha256:2fe92e57272ded2965b3e951a8115ba218e197804ca3e4b03e96c499f6412772
       summary: Step-by-step computation of one regime's estimate, with legal basis
       description: >-
         The computation trace of `regime` in `period` (ADR-0002 §1: strategies compute only
@@ -2526,7 +2598,7 @@ paths:
             The period is before 2026 (`parameters_unavailable`), or the taxpayer does not hold
             the regime in that period (`regime_not_active`).
           headers:
-            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -2561,7 +2633,7 @@ paths:
     get:
       tags: [TaxEngine]
       operationId: getTaxInputs
-      x-frozen: sha256:fa8fae519dc3973d66fb52af4e39d41d5728b7615bd2325c534568a7f071f14c
+      x-frozen: sha256:288c63ecc9fa4c7c0bdb0ce85d76b7b7b6aa376f609ab1c6a5608529e635699c
       summary: Tax inputs of one regime and fiscal year, with their definitions
       description: >-
         The per-fiscal-year inputs the regime's estimate needs (`definitions`, exactly the
@@ -2626,7 +2698,7 @@ paths:
             The taxpayer does not hold the regime in that fiscal year (`regime_not_active`), or
             the fiscal year is before 2026 (`parameters_unavailable`).
           headers:
-            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -2652,7 +2724,7 @@ paths:
     put:
       tags: [TaxEngine]
       operationId: putTaxInputs
-      x-frozen: sha256:282e3d8cc0eebac6595a39efd6900240b59a015ffac42ae11ae70110b793a556
+      x-frozen: sha256:b7b79832c795962214fe90949c733dcd17db5f25b07ec728922b9c176bcd2ba8
       summary: Replace the tax inputs of one regime and fiscal year
       description: >-
         Replaces **all** values of `(taxpayer, regime, fiscal_year)` with `values` (an empty
@@ -2702,7 +2774,7 @@ paths:
             Input does not match the contract, or a value does not fit its definition
             (`details[].code`: `unknown_input`, `invalid`, `out_of_range`; see the operation).
           headers:
-            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -2732,7 +2804,7 @@ paths:
             fiscal year (`regime_not_active`), or the fiscal year is before 2026
             (`parameters_unavailable`).
           headers:
-            Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -2781,6 +2853,8 @@ paths:
       responses:
         '200':
           description: Dashboard.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Dashboard' }
@@ -2799,6 +2873,8 @@ paths:
       responses:
         '200':
           description: Status.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SubscriptionStatus' }
@@ -2814,6 +2890,8 @@ paths:
       responses:
         '200':
           description: Refreshed status.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SubscriptionStatus' }
@@ -2840,7 +2918,10 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/RevenueCatWebhook' }
       responses:
-        '200': { description: Accepted (processed or duplicate). }
+        '200':
+          description: Accepted (processed or duplicate).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -2864,6 +2945,8 @@ paths:
       responses:
         '200':
           description: Months of the fiscal year.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/HistoryYear' }
@@ -2881,7 +2964,10 @@ paths:
       summary: Mark a month as viewed (stores the current records fingerprint)
       x-module: module_history
       responses:
-        '204': { description: Marked. }
+        '204':
+          description: Marked.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -2902,11 +2988,15 @@ paths:
       responses:
         '201':
           description: Registered.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Device' }
         '200':
           description: Already registered; refreshed.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Device' }
@@ -2926,7 +3016,10 @@ paths:
       summary: Remove a push token (logout / opt-out)
       x-module: module_reminders
       responses:
-        '204': { description: Removed. }
+        '204':
+          description: Removed.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '500': { $ref: '#/components/responses/InternalError' }
@@ -2939,6 +3032,8 @@ paths:
       responses:
         '200':
           description: Settings.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ReminderSettings' }
@@ -2958,6 +3053,8 @@ paths:
       responses:
         '200':
           description: Saved.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ReminderSettings' }
@@ -2979,6 +3076,8 @@ paths:
       responses:
         '200':
           description: Calendar.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/TaxCalendar' }
@@ -3056,13 +3155,22 @@ components:
       name: 'on'
       in: query
       required: false
-      description: Date the dated parameters are read on (America/Mexico_City); defaults to today. `2022-01-01` … today (`out_of_range`).
+      description: >-
+        Date the dated parameters are read on (America/Mexico_City); defaults to today.
+        `2026-01-01` (the first fiscal year with a tax parameter set) … today (`out_of_range`).
       schema: { type: string, format: date }
 
   headers:
     NoStore:
-      x-frozen: sha256:0e38e657527212cb20ce74557d6a041ed2ba91434f6050d1a2e62d8897cf2496
-      description: Responses carrying tokens or account data must not be stored by any cache (RFC 9111; RFC 6749 section 5.1).
+      x-frozen: sha256:54eb73c86a25f912c1a1c22a4e6556ebc433a024e2a0e05d9c262e1ac8247077
+      description: >-
+        Every response of the API, success or error, carries `Cache-Control: no-store` (RFC 9111
+        section 5.2.2.5; RFC 6749 section 5.1): tokens, account data, taxpayer and financial
+        records, estimates and error envelopes are never kept by any cache (S-11; M3/M4
+        security gate G-1). One edge middleware writes it, so it is also on a `404` written
+        before routing (module OFF, unknown route), a `401`, a `429` and a `500`. The only
+        exception is the public `200` of `listLegalDocuments` (`public, max-age=300`); an error
+        is always `no-store`.
       required: true
       schema: { type: string, const: no-store }
     WWWAuthenticate:
@@ -3074,18 +3182,11 @@ components:
       required: true
       schema: { type: string, const: 'Bearer realm="control-contable"' }
 
-    NoStoreOnError:
-      x-frozen: sha256:f93c7edd6e7b3b59a6d2f83259c90c1a7cfd78fc7ae5f30fda8ed95175385822
-      description: >-
-        `Cache-Control: no-store` on the error responses of record operations (M3/M4, S-11;
-        P0-30 D-6). Optional in the contract because a 404 written before the module is reached
-        (flag OFF, unknown route) may omit it; every error the module's handlers write sends it.
-      required: false
-      schema: { type: string, const: no-store }
-
   responses:
     BadRequest:
       description: Input does not match the contract.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -3099,9 +3200,10 @@ components:
                   code: minimum
                   message: Must be greater than or equal to 0.
     Unauthorized:
-      x-frozen: sha256:cecf02689502978ec9e4f2d8fa5e7e31d9a83bb8706fced34b5814fd59f8bb34
+      x-frozen: sha256:050a311e4c04ae350c31f81dc9b5962588bd1d9bbdb20103e4fea5d6a1a0e8d0
       description: Missing, invalid or expired credentials.
       headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
         WWW-Authenticate: { $ref: '#/components/headers/WWWAuthenticate' }
       content:
         application/json:
@@ -3110,6 +3212,8 @@ components:
             error: { code: unauthorized, message: Authentication required., request_id: req_01J9Z6Q4X8 }
     PaymentRequired:
       description: Trial ended or cap reached and no active plan (read-only access).
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -3117,15 +3221,18 @@ components:
             error: { code: entitlement_required, message: Your trial has ended. Subscribe to keep adding records., request_id: req_01J9Z6Q4X8 }
     NotFound:
       description: Resource does not exist, belongs to another user, or its module is disabled.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
           example:
             error: { code: not_found, message: Not found., request_id: req_01J9Z6Q4X8 }
     TooManyRequests:
-      x-frozen: sha256:f8089f8519a6c89a82d5c1be41732117e53e4f6e7042c713d6d6ac127fea5b3e
+      x-frozen: sha256:89eccc2094ae6459e884b30bab0fe97caf134e85f3d8dc00997b2e7e328c46bd
       description: Rate limit exceeded.
       headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
         Retry-After:
           description: >-
             Whole seconds until the next attempt can be admitted (RFC 9110 §10.2.3, delay-seconds
@@ -3139,6 +3246,8 @@ components:
             error: { code: rate_limited, message: Too many requests. Try again later., request_id: req_01J9Z6Q4X8 }
     InternalError:
       description: Unexpected server error.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -3146,19 +3255,21 @@ components:
             error: { code: internal_error, message: Something went wrong., request_id: req_01J9Z6Q4X8 }
     ServiceUnavailable:
       description: Dependency unavailable (database, RevenueCat); retry later.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
           example:
             error: { code: upstream_unavailable, message: Service temporarily unavailable., request_id: req_01J9Z6Q4X8 }
 
-    # M3/M4 record errors (S-11 / P0-30 D-6): they declare `Cache-Control: no-store`. The
-    # shared 401 and 429 above are frozen and written before the module is reached.
+    # M3/M4 record errors (S-11 / P0-30 D-6). Like every response, they declare
+    # `Cache-Control: no-store` (components.headers.NoStore).
     RecordBadRequest:
-      x-frozen: sha256:f12d33b72a30b44330c8b367ec6665d2d3da79e76e27bad201ca92c62fce2b95
+      x-frozen: sha256:db359836813d00d97649cc65e9fbe10f4d16fabdd186a105cb9f4ae5573a8bda
       description: Input does not match the contract (query parameter, path or body).
       headers:
-        Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -3170,32 +3281,32 @@ components:
               details:
                 - { field: period, code: pattern, message: Usa el formato AAAA-MM. }
     RecordReadOnly:
-      x-frozen: sha256:c1299ddf61d9cd0f49039bbff4ce79db094875cbcd3936fa740f2b8672cef28f
+      x-frozen: sha256:d0dca045341a9696eba5958e92221869012696716a1c6ee7a8fabf8a9197e140
       description: Read-only access (trial over, no active plan). Never a trial-cap refusal.
       headers:
-        Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
           example:
             error: { code: entitlement_required, message: Your trial has ended. Subscribe to keep adding records., request_id: req_01J9Z6Q4X8 }
     RecordNotFound:
-      x-frozen: sha256:c6dae32a37504e595548ee4cb265478e4d55db19194c742902dcc08453c9c00f
+      x-frozen: sha256:ee57806752a735c218b89426deda55195c351f8dcba2b954e8ca7b760773f882
       description: >-
         The taxpayer or record does not exist, belongs to another user, is deleted or purged,
         its id is malformed, or the module is disabled (indistinguishable on purpose).
       headers:
-        Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
           example:
             error: { code: not_found, message: Not found., request_id: req_01J9Z6Q4X8 }
     RecordTaxpayerArchived:
-      x-frozen: sha256:b66f9bb35ad2a974e840f92ec2dda4b7e9d777fee6985e3202a153933c2db265
+      x-frozen: sha256:166b5ae2ae464eae66e8a147d3406a6b51b8f6b4bb266dbbc0fe8bc89415819f
       description: The taxpayer is archived; archive freezes its records (OQ-5).
       headers:
-        Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -3207,12 +3318,12 @@ components:
               details:
                 - { field: taxpayerId, code: taxpayer_archived, message: Desarchiva al contribuyente primero. }
     RecordRestoreRefused:
-      x-frozen: sha256:b1873a050742287d1052152f8f21f656e0ebe12dd6e8514b19a1403d712a6aad
+      x-frozen: sha256:23726f1aaed623f5495c6f2f415e28b7f55036754552c0241b65299cdbb1f160
       description: >-
         The regime no longer covers the record's dates (`regime_not_active`), or the
         taxpayer is archived (`taxpayer_archived`).
       headers:
-        Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -3234,12 +3345,12 @@ components:
                   details:
                     - { field: taxpayerId, code: taxpayer_archived, message: Desarchiva al contribuyente primero. }
     IncomeRuleViolation:
-      x-frozen: sha256:f7d8df739837a67a0b6b9667009d3e5ce7a801c4d6468bb1aa941f94a1a25ef3
+      x-frozen: sha256:59b33ab310352b4d3b7d6b0056e97f9a1c1573d54f51a1433a7734b4c01f5e72
       description: >-
         Well-formed but violates an income rule: regime window, archived taxpayer, IVA rate
         or amount, withholdings, 625 activity (`details[].code`: see `createIncome`).
       headers:
-        Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -3293,12 +3404,12 @@ components:
                   details:
                     - { field: taxpayerId, code: taxpayer_archived, message: Desarchiva al contribuyente primero. }
     ExpenseRuleViolation:
-      x-frozen: sha256:c55b311d08f2cf5cf27ae61256cfbaa7c72f56107b51946c68e5540e33b6763f
+      x-frozen: sha256:a39c2c488a6a6649515f9eafcdca38d48cb67a522851e74759959433d97b06b3
       description: >-
         Well-formed but violates an expense rule: regime window, archived taxpayer, IVA rate
         or amount, withholdings (`details[].code`: see `createExpense`).
       headers:
-        Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -3336,25 +3447,25 @@ components:
                   details:
                     - { field: taxpayerId, code: taxpayer_archived, message: Desarchiva al contribuyente primero. }
     RecordInternalError:
-      x-frozen: sha256:5858fcd0e7a448f789705e367a96b2ff9252d1de37af59c6c02dd5b5b687b549
+      x-frozen: sha256:778febb4c49ea1194a778a4332ef5f202d725fde256b69437512616f1f0683b4
       description: Unexpected server error.
       headers:
-        Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
           example:
             error: { code: internal_error, message: Something went wrong., request_id: req_01J9Z6Q4X8 }
 
-    # M5 tax engine errors (MODULE-tax-engine §5, S-4): they declare `Cache-Control: no-store`.
+    # M5 tax engine errors (MODULE-tax-engine §5, S-4); `Cache-Control: no-store` as every response.
     # 402 and 500 reuse RecordReadOnly and RecordInternalError; 401 and 429 are the shared ones.
     TaxEngineBadRequest:
-      x-frozen: sha256:0a734bbaf7c555ca3fabd3110ce7687dc01b32bfaa634abc759ebff32f8666f8
+      x-frozen: sha256:35e6dab7f9ce848a4ff516df11bdf56f623ca1b6fcf07fe6ebfea844944c63e2
       description: >-
         Input does not match the contract (malformed period, fiscal year, regime code or path
         id, unknown query parameter), or a future period or fiscal year (`out_of_range`).
       headers:
-        Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -3376,24 +3487,26 @@ components:
                   details:
                     - { field: period, code: out_of_range, message: Aún no podemos estimar un mes futuro. }
     TaxEngineNotFound:
-      x-frozen: sha256:d1fbf52ca9d5bc802c25151fa16cc3ac8a2a6e10cba12b2acb6604ed82968b5c
+      x-frozen: sha256:20fa0bdca10b8568e470e2b0ba85d60cb646a90a06c632c69b5d4ad87b06d9f2
       description: >-
         The taxpayer does not exist, belongs to another user, its id is malformed, or
         `module_tax_engine` (or `module_taxpayers`) is disabled (indistinguishable on purpose).
       headers:
-        Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
           example:
             error: { code: not_found, message: Not found., request_id: req_01J9Z6Q4X8 }
     TaxEngineParametersUnavailable:
-      x-frozen: sha256:4e9a5e2f7793446085f91f029a39edd1c24336cd91a55f3092b23798f3a271e8
+      x-frozen: sha256:741e0e69776999527dea4aca042b6e6aeaf1a0e072c5a05a713510370fe244c6
       description: >-
         The period is before 2026, the first fiscal year with transcribed tax parameters
-        (`parameters_unavailable`, OQ-T9).
+        (`parameters_unavailable`, OQ-T9). A well-formed request the engine cannot answer,
+        hence `422`; a record date before 2026 is instead invalid input to the record
+        operations (`400 out_of_range`, see `BusinessDate`).
       headers:
-        Cache-Control: { $ref: '#/components/headers/NoStoreOnError' }
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -4227,13 +4340,20 @@ components:
       description: Amount in MXN centavos (>= 1). Same upper bound as `NonNegativeCents`.
       examples: [1000000]
     BusinessDate:
-      x-frozen: sha256:f66638b291feb0b2099fcca88e1cb3e52550a76b6883a388c235441e66ffafb0
+      x-frozen: sha256:1c0f561d9984643950d0d6b56092f089122f0811fd40d38bf979c0835d7b6075
       type: string
       format: date
       description: >-
         A record date on the America/Mexico_City calendar. The server refuses dates before
-        2022-01-01 or after today (`out_of_range`); the bound moves with the clock, so it is
-        not a schema keyword.
+        2026-01-01 or after today with `400 validation_failed`, `out_of_range` on that date:
+        2026 is the first fiscal year with a tax parameter set, so no IVA rate or withholding
+        on an earlier date can be validated, and a record the server cannot validate is invalid
+        input. The bounds move with the clock and the parameter catalog, so they are not schema
+        keywords. A date outside the taxpayer's regime window answers `422 regime_not_active`
+        first (the window is checked before the parameters). Not the same answer as the
+        estimates: a month before 2026 there is a well-formed period the engine has no
+        parameters for, `422 business_rule_violation` / `parameters_unavailable`
+        (`getTaxpayerEstimate`).
       examples: ['2026-09-10']
     CounterpartyType:
       x-frozen: sha256:cc26c1afe13bbd539a2abfec079d0b5f3376a9939475bcc8251de9ab9f2837c3

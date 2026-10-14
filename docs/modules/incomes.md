@@ -93,12 +93,10 @@ clients cannot send it (see the [runbook §3](../runbooks/incomes-expenses.md#3-
 | Outside the regime's `[start_period, end_period]` | `422 business_rule_violation`, `regime_code` / `regime_not_active`. The regime window is checked **before** the parameters, so a 2025 date in a regime that starts in 2026 answers `422`, not `400` |
 | In a year whose parameters are not published yet | Accepted with the warning `provisional_parameters` on that date |
 
-> [!NOTE]
-> The contract (0.6.1) still says "before 2022-01-01" in the `out_of_range` descriptions of
-> `createIncome`, `updateIncome`, `getIncomeDefaults` (`on`) and the expense operations, and
-> the server's message says "anterior a 2022". The served floor is **2026-01-01**; 2022 is only
-> the database CHECK backstop. Contract follow-up for the architect: [PLAN M3/M4 follow-ups](../project-specs/PLAN-control-contable.md#m3m4-follow-ups)
-> (#97 FU-2).
+2022-01-01 is only the database CHECK backstop. The estimates answer a month before 2026
+differently, `422 parameters_unavailable`: there the month is a well-formed period the engine
+has no parameters for, while a record date the server cannot validate is invalid input
+(contract 0.7.0, `BusinessDate`).
 
 ## IVA
 
@@ -301,10 +299,8 @@ branch on; `details[].field` names the body field or parameter and `details[].co
 rule (`regime_not_active`, `iva_amount_mismatch`, `trial_cap_reached`, ...; see each operation
 in the contract). Amounts, descriptions and CFDI folios are never echoed in an error.
 
-Record bodies carry `Cache-Control: no-store`. **Error responses do not yet**: the contract
-declares the header as optional on the M3 errors (`NoStoreOnError`), but the shared error
-writer does not set it. Error bodies carry only codes and fixed messages, so nothing sensitive
-is cached; the fix is deferred (security gate G-1, [PLAN M3/M4 follow-ups](../project-specs/PLAN-control-contable.md#m3m4-follow-ups)).
+Every response, record body or error, carries `Cache-Control: no-store` (contract 0.7.0,
+written once by the API's edge middleware; security gate G-1).
 
 The table below is **generated from the contract** by `make api-error-tables`; do not edit
 it by hand. CI (`make api-error-tables-check`) fails when it differs from `openapi.yaml`.
@@ -325,7 +321,7 @@ it by hand. CI (`make api-error-tables-check`) fails when it differs from `opena
 | `createIncome` | `POST /v1/taxpayers/{taxpayerId}/incomes` | 422 | `business_rule_violation` | Well-formed but violates an income rule: regime window, archived taxpayer, IVA rate or amount, withholdings, 625 activity (`details[].code`: see `createIncome`). |
 | `createIncome` | `POST /v1/taxpayers/{taxpayerId}/incomes` | 429 | `rate_limited` | Rate limit exceeded. |
 | `createIncome` | `POST /v1/taxpayers/{taxpayerId}/incomes` | 500 | `internal_error` | Unexpected server error. |
-| `getIncomeDefaults` | `GET /v1/taxpayers/{taxpayerId}/incomes/defaults` | 400 | `validation_failed` | Input does not match the contract: `on` out of range (`out_of_range`, 2022-01-01 … today), or `platform_activity` for a regime other than 625 (`not_for_regime`). |
+| `getIncomeDefaults` | `GET /v1/taxpayers/{taxpayerId}/incomes/defaults` | 400 | `validation_failed` | Input does not match the contract: `on` out of range (`out_of_range`, 2026-01-01 … today), or `platform_activity` for a regime other than 625 (`not_for_regime`). |
 | `getIncomeDefaults` | `GET /v1/taxpayers/{taxpayerId}/incomes/defaults` | 401 | `unauthorized` | Missing, invalid or expired credentials. |
 | `getIncomeDefaults` | `GET /v1/taxpayers/{taxpayerId}/incomes/defaults` | 404 | `not_found` | The taxpayer or record does not exist, belongs to another user, is deleted or purged, its id is malformed, or the module is disabled (indistinguishable on purpose). |
 | `getIncomeDefaults` | `GET /v1/taxpayers/{taxpayerId}/incomes/defaults` | 422 | `business_rule_violation` | The regime is not held on `on`, or the 625 activity is not among the taxpayer's. |
@@ -389,9 +385,6 @@ the [tech-lead gate follow-ups](../reviews/M3-M4-tech-lead-gate.md#follow-ups-no
 [PLAN M3/M4 follow-ups](../project-specs/PLAN-control-contable.md#m3m4-follow-ups). The ones a user
 or an operator can notice:
 
-- The contract and the server message still name 2022 as the earliest date; the real floor is
-  2026-01-01 (see [Date limits](#date-limits)).
-- Error responses lack `Cache-Control: no-store` (G-1).
 - The income basis of 620, 622 and 624, the booking-date rules and the withholding table are
   pending CPA review ([CPA-REVIEW.md](../reviews/CPA-REVIEW.md)); the estimate built on them is
   provisional until then.
