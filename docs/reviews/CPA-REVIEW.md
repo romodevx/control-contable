@@ -11,7 +11,7 @@ catalog migration `backend/migrations/20261013180000_regimes_catalog.sql` (CAT).
 
 ## Rates, tables and parameters
 
-- [ ] PTU = 10 % of taxable income (Sexta Comisión, DOF 18-09-2020): secondary source only. R §0, R Part D #11
+- [ ] PTU = 10 % of taxable income (Sexta Comisión, DOF 18-09-2020): secondary source only. **Provisional ⚠️, not in params**: ANN-05 could not fetch the resolution from the DOF (finding 4), so no `ptu.rate` key exists; ANN-10 must add it from the official text, and every `pm_601` section carries topic `ptu_rate` (golden AN-06-PTU skipped) until this item is ticked. R §0, R Part D #11
 - [ ] PTU payment due within 60 days after the annual return (May 30, LFT art. 122): not re-fetched. R §B.4
 - [ ] RIF (621) ISR reduction by year in RIF, 100 % to 10 % for years 1-10 (repealed art. 111): not re-fetched. R §A.2.7, ADR §2, CAT `regimes` 621
 - [ ] 606 quarterly option threshold: 10 monthly minimum wages read as UMA ($35,662.20/month) per the desindexation decree; quarterly table not transcribed. R §A.2.4 step 5, ADR §2 (606 row)
@@ -109,3 +109,4 @@ below is a figure the user cannot correct. Records matching a ⚠️ rule carry
 ## Annual estimate (`module_annual`, MODULE-annual)
 
 - [ ] **RESICO PF income in the 15 % personal-deductions cap** (topic `deduction_cap_resico_income`, MODULE-annual §2.7 and OQ-A4). LISR art. 151 last ¶ caps the capped personal deductions at min(5 UMA anuales; 15 % "del total de los ingresos del contribuyente, incluyendo aquellos por los que no se pague el impuesto"). Read on its own, that wording could include RESICO PF income. Three things point the other way: (1) RESICO PF income is taxed by itself under arts. 113-E/113-F, with no deductions of any kind, and rule 3.13.7 RMF 2026 makes its monthly payments definitive; (2) rule 3.13.8 says a RESICO taxpayer with salary or interest files the annual for those chapters **separately**, so the art. 152 return the deductions reduce holds only that other income; (3) art. 152 ¶1 lists the chapters it accumulates and Cap. II Sección IV is not one of them. **Default applied: RESICO income excluded** from "total income". This is the conservative choice: it gives a lower cap and never overstates a refund. Confirm, or say whether the cap base should include RESICO income collected (AR Part E CPA #10).
+- [ ] **PTU rate in the annual estimate** (topic `ptu_rate`, MODULE-annual §2.10). The 10 % of "PTU to distribute" (`pm_601`, AN-06) rests on the Rates item above; the official resolution is not in params (ANN-05 finding 4). Confirm 10 % and its source, then ANN-10 reads `ptu.rate` and AN-06-PTU leaves the golden skip list.

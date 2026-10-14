@@ -16,6 +16,7 @@ import (
 const (
 	tagString    = "!!str"
 	tagTimestamp = "!!timestamp"
+	tagInt       = "!!int"
 )
 
 // Table kinds as written in the files.
@@ -54,6 +55,8 @@ type valueDoc struct {
 	Rate      *decimalText  `yaml:"rate"`
 	Money     *decimalText  `yaml:"money"`
 	Flag      *bool         `yaml:"flag"`
+	Count     *countText    `yaml:"count"`
+	Date      *dateText     `yaml:"date"`
 	ValidFrom dateText      `yaml:"valid_from"`
 	ValidTo   dateText      `yaml:"valid_to"`
 	Basis     []citationDoc `yaml:"basis"`
@@ -86,6 +89,23 @@ func (d *decimalText) UnmarshalYAML(n *yaml.Node) error {
 		return fmt.Errorf("line %d: %s %q: %w", n.Line, n.ShortTag(), n.Value, ErrInexactNumber)
 	}
 	*d = decimalText(n.Value)
+	return nil
+}
+
+// countText is a whole number written as a plain YAML integer: a quoted
+// "5" or a 5.0 is a transcription slip, not a count.
+type countText int64
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (c *countText) UnmarshalYAML(n *yaml.Node) error {
+	if n.Kind != yaml.ScalarNode || n.ShortTag() != tagInt {
+		return fmt.Errorf("line %d: %s %q: %w", n.Line, n.ShortTag(), n.Value, ErrInvalidCount)
+	}
+	var v int64
+	if err := n.Decode(&v); err != nil {
+		return fmt.Errorf("line %d: %q: %w: %w", n.Line, n.Value, ErrInvalidCount, err)
+	}
+	*c = countText(v)
 	return nil
 }
 
@@ -169,6 +189,14 @@ func (c *converter) value(path string, doc valueDoc) taxparams.Value {
 	if doc.Flag != nil {
 		kinds++
 		v.Kind, v.Flag = taxparams.KindFlag, *doc.Flag
+	}
+	if doc.Count != nil {
+		kinds++
+		v.Kind, v.Count = taxparams.KindCount, int64(*doc.Count)
+	}
+	if doc.Date != nil {
+		kinds++
+		v.Kind, v.Date = taxparams.KindDate, doc.Date.Date
 	}
 	if kinds != 1 {
 		c.report(fmt.Errorf("%s: %d kinds: %w", path, kinds, ErrValueKind))

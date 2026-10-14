@@ -31,7 +31,7 @@ sources:
     title: Ley del Impuesto sobre la Renta, texto vigente, última reforma DOF 01-04-2024 (Cámara de Diputados; accessed 2026-10-14)
     url: https://www.diputados.gob.mx/LeyesBiblio/pdf/LISR.pdf
     dof_date: 2024-04-01
-    reference: "Arts. 9, 27 fr. III, 106, 113-A, 113-B, 113-C, 113-E, 113-F, 113-J, 115, 116, 206"
+    reference: "Arts. 9, 27 fr. III, 76 fr. V, 86 fr. III, 98 fr. III, 106, 113-A, 113-B, 113-C, 113-E, 113-F, 113-J, 115, 116, 150, 151, 206"
   - id: lif-2026
     title: Ley de Ingresos de la Federación para el Ejercicio Fiscal de 2026 (Cámara de Diputados; accessed 2026-10-14)
     url: https://www.diputados.gob.mx/LeyesBiblio/pdf/LIF_2026.pdf
@@ -77,6 +77,11 @@ sources:
     url: https://dof.gob.mx/nota_detalle.php?codigo=5778072&fecha=09/01/2026
     dof_date: 2026-01-09
     reference: "Valores diario, mensual y anual de la UMA 2026"
+  - id: dof-beneficios-2013
+    title: Decreto que compila diversos beneficios fiscales y establece medidas de simplificación administrativa (DOF; accessed 2026-10-14)
+    url: https://dof.gob.mx/nota_detalle.php?codigo=5328028&fecha=26/12/2013
+    dof_date: 2013-12-26
+    reference: "Artículos 1.8 a 1.10 (estímulo por colegiaturas, límite anual por nivel educativo)"
 
 values:
   # IVA rates -----------------------------------------------------------------
@@ -242,6 +247,90 @@ values:
     valid_from: 2026-02-01
     valid_to: 2027-01-31
     basis: [{source: dof-uma-2026, article: "Valor anual"}]
+
+  # Annual return (ANN-04) -----------------------------------------------------
+  # Read 2026-10-14 from the LISR text (diputados.gob.mx, última reforma
+  # DOF 01-04-2024) and the DOF 26-12-2013 decree; double-entry check in
+  # docs/reviews/ANN-05-params-verification.md. Art. 151 fr. II and V say
+  # "salario mínimo general ... elevado al año"; its last paragraph says "valor
+  # anual de la Unidad de Medida y Actualización". The multiples are stored as
+  # printed; reading fr. II and V as UMA is CPA topic uma_for_minimum_wage.
+  - key: deduction.personal.global_cap_umas
+    count: 5                # "cinco veces el valor anual de la Unidad de Medida y Actualización"
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 151, último párrafo"}]
+  - key: deduction.personal.global_cap_income_share
+    rate: "0.15"            # "o del 15% del total de los ingresos del contribuyente"
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 151, último párrafo"}]
+  - key: deduction.personal.funeral_cap_umas
+    count: 1                # "no excedan del salario mínimo general ... elevado al año"
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 151, fr. II"}]
+  - key: deduction.personal.donation_share
+    rate: "0.07"            # "no exceda del 7% de los ingresos acumulables ... del ejercicio inmediato anterior"
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 151, fr. III, penúltimo párrafo"}]
+  - key: deduction.personal.government_donation_share
+    rate: "0.04"            # "el monto deducible no podrá exceder del 4% ... sin que ... exceda del 7% citado"
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 151, fr. III, penúltimo párrafo"}]
+  - key: deduction.personal.retirement_income_share
+    rate: "0.10"            # "hasta el 10% de los ingresos acumulables del contribuyente en el ejercicio"
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 151, fr. V, primer párrafo"}]
+  - key: deduction.personal.retirement_cap_umas
+    count: 5                # "cinco salarios mínimos generales ... elevados al año"
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 151, fr. V, primer párrafo"}]
+  # Colegiaturas: art. 1.10 table "Límite anual de deducción", per student and
+  # level; outside the art. 151 global cap (art. 1.10, last paragraph).
+  - key: deduction.tuition_cap.preescolar
+    money: "14200.00"       # "Preescolar $14,200.00"
+    valid_from: 2026-01-01
+    basis: [{source: dof-beneficios-2013, article: "Art. 1.10"}]
+  - key: deduction.tuition_cap.primaria
+    money: "12900.00"       # "Primaria $12,900.00"
+    valid_from: 2026-01-01
+    basis: [{source: dof-beneficios-2013, article: "Art. 1.10"}]
+  - key: deduction.tuition_cap.secundaria
+    money: "19900.00"       # "Secundaria $19,900.00"
+    valid_from: 2026-01-01
+    basis: [{source: dof-beneficios-2013, article: "Art. 1.10"}]
+  - key: deduction.tuition_cap.profesional_tecnico
+    money: "17100.00"       # "Profesional técnico $17,100.00"
+    valid_from: 2026-01-01
+    basis: [{source: dof-beneficios-2013, article: "Art. 1.10"}]
+  - key: deduction.tuition_cap.bachillerato
+    money: "24500.00"       # "Bachillerato o su equivalente $24,500.00"
+    valid_from: 2026-01-01
+    basis: [{source: dof-beneficios-2013, article: "Art. 1.10"}]
+  - key: annual.salary_obligation_threshold
+    money: "400000.00"      # "ingresos anuales ... que excedan de $400,000.00"
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 98, fr. III, inciso e)"}]
+  - key: annual.informative_income_threshold
+    money: "500000.00"      # "ingresos totales ... superiores a $500,000.00"
+    valid_from: 2026-01-01
+    basis: [{source: lisr, article: "Art. 150, tercer párrafo"}]
+  # Deadlines of the fiscal year 2026 returns, read off the statutory wording;
+  # the only step is the last calendar day of the stated period. In force for
+  # the 2026 set only; the M5 calendar moves a non-business day.
+  - key: annual.deadline.pf
+    date: 2027-04-30        # "en el mes de abril del año siguiente"
+    valid_from: 2026-01-01
+    valid_to: 2026-12-31
+    basis: [{source: lisr, article: "Art. 150, primer párrafo"}]
+  - key: annual.deadline.pm
+    date: 2027-03-31        # "dentro de los tres meses siguientes a la fecha en que termine dicho ejercicio"
+    valid_from: 2026-01-01
+    valid_to: 2026-12-31
+    basis: [{source: lisr, article: "Art. 76, fr. V"}]
+  - key: annual.deadline.nonprofit_informative
+    date: 2027-02-15        # "a más tardar el día 15 de febrero de cada año"
+    valid_from: 2026-01-01
+    valid_to: 2026-12-31
+    basis: [{source: lisr, article: "Art. 86, fr. III"}]
 
 tables:
   # LISR 113-E, TABLA MENSUAL: the rate applies to the whole income (flat).

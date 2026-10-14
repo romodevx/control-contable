@@ -21,6 +21,8 @@ const (
 	keyMonthly    = taxparams.Key("isr.art96.monthly")
 	keyBrackets   = taxparams.Key("isr.resico_pf.monthly")
 	keyAccum      = taxparams.Key("isr.art106.accumulated")
+	keyCapUMAs    = taxparams.Key("deduction.cap_umas")
+	keyDeadline   = taxparams.Key("annual.deadline.pf")
 	sourceID      = "dof-synthetic"
 )
 
@@ -72,7 +74,8 @@ func accumulatedTable(t testing.TB, month time.Month) taxparams.Table {
 }
 
 // validSpec is a complete, valid synthetic parameter set: dated values
-// (a sunset rate, a mid-year money change, an open-ended flag), a plain
+// (a sunset rate, a mid-year money change, an open-ended flag, a count and
+// a dated deadline), a plain
 // marginal tariff, non-marginal brackets and twelve monthly tables.
 func validSpec(t testing.TB) taxparams.Spec {
 	t.Helper()
@@ -91,6 +94,8 @@ func validSpec(t testing.TB) taxparams.Spec {
 			{Key: keyUMA, Kind: taxparams.KindMoney, Money: mustCents(t, "110.00"), Basis: basis(),
 				Validity: taxparams.Validity{From: mustDate(t, "2026-02-01"), To: mustDate(t, "2027-01-31")}},
 			{Key: keyRounding, Kind: taxparams.KindFlag, Flag: true, Validity: from2026(t), Basis: basis()},
+			{Key: keyCapUMAs, Kind: taxparams.KindCount, Count: 5, Validity: from2026(t), Basis: basis()},
+			{Key: keyDeadline, Kind: taxparams.KindDate, Date: mustDate(t, "2027-04-30"), Validity: year2026(t), Basis: basis()},
 		},
 		Tables: []taxparams.Table{
 			{
