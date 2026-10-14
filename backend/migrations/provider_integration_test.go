@@ -28,6 +28,11 @@ var baselineObjects = []string{
 	"to_regclass('public.email_verifications')",
 	"to_regclass('public.regimes')",
 	"to_regclass('public.regime_compatibility')",
+	"to_regclass('public.taxpayers')",
+	"to_regclass('public.taxpayer_regimes')",
+	"to_regprocedure('public.taxpayer_count_for_create()')",
+	"to_regprocedure('public.taxpayers_forbid_identity_change()')",
+	"to_regprocedure('public.taxpayer_regimes_check_compatible()')",
 }
 
 func remainingObjects(t *testing.T, db *sql.DB) []string {

@@ -176,6 +176,7 @@ erDiagram
         jsonb options "validated vs regimes.option_defs"
         char7 start_period
         char7 end_period "archived"
+        boolean needs_cpa_review_ack "user acknowledged the CPA-review warning"
     }
     taxpayer_tax_inputs {
         uuid taxpayer_id PK
@@ -296,7 +297,9 @@ in MODULES.md M5 are dropped (MODULES.md updated to match).
 | Table | Constraint / index | Purpose |
 |---|---|---|
 | taxpayers | `UNIQUE (user_id, rfc_hash)`; `UNIQUE (id, user_id)` | US-T2 no duplicate RFC per user; composite-FK target |
-| taxpayers | `CHECK person_type IN ('fisica','moral')`; `UNIQUE (id, user_id, person_type)` | person_type is immutable (no UPDATE grant on the column) |
+| taxpayers | `CHECK person_type IN ('fisica','moral')`; `UNIQUE (user_id, id, person_type)` | person_type is immutable (no UPDATE grant on the column + `taxpayers_forbid_identity_change` trigger) |
+| taxpayers | `taxpayer_count_for_create()`: locks the context user `FOR NO KEY UPDATE`, returns its taxpayer count (archived included); refuses REPEATABLE READ | Atomic cap of 10 (OD-2, S-5): concurrent creates of one user serialize |
+| taxpayer_regimes | PK `(taxpayer_id, regime_code)`; trigger `taxpayer_regimes_check_compatible` raises 23P01 when two regimes with `regime_compatibility.allowed = false` overlap in `[start_period, end_period]` | One row per regime (reopen on re-add); DB backstop of 422 `invalid_regime_combination` |
 | taxpayer_regimes | FK `(taxpayer_id, user_id, person_type) → taxpayers(id, user_id, person_type)`; FK `(regime_code, person_type) → regimes` | Ownership integrity. A moral can never hold a física-only regime, and 626 resolves to RESICO PF or PM |
 | incomes / expenses | FK `(taxpayer_id, regime_code, user_id) → taxpayer_regimes`; taxpayer_tax_inputs: same FK | A record must belong to a regime its taxpayer holds |
 | incomes / expenses | `CHECK amount_cents >= 0`, `iva_cents >= 0`, withholdings ≥ 0 | Whether an `iva_rate` is valid on the record date (e.g. `rate_8` until 2026-12-31) is checked in the use case through the engine's `RateCatalog` port, because validity is date-ranged parameter data (ADR-0002 §3), not a DB constraint |
@@ -392,7 +395,7 @@ Every table below has `ENABLE` + `FORCE ROW LEVEL SECURITY` in its first migrati
 | entitlements | owner | owner + kind | owner + kind | owner + kind | cc_app: SELECT, INSERT `kind = 'trial'` only, `starts_at` within 5 min of `now()`; cc_webhook: SELECT, DML on `kind = 'pro'` only; cc_owner (FORCE applies): ALL on `kind = 'comp'` only (operator grants) |
 | user_usage | owner | owner | owner | — | |
 | taxpayers | owner | owner | owner | owner | |
-| taxpayer_regimes | owner | owner | owner | owner | |
+| taxpayer_regimes | owner | owner | owner | — | DELETE archives (end_period); rows leave only by cascade |
 | taxpayer_tax_inputs | owner | owner | owner | owner | |
 | incomes | owner | owner | owner | owner | Soft delete = UPDATE |
 | expenses | owner | owner | owner | owner | |

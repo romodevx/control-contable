@@ -50,6 +50,8 @@ func TestAccountDeletion_everyForeignKeyToUsersCascades(t *testing.T) {
 	}
 	assert.Subset(t, tables, []string{"user_usage", "entitlements", "consents", "refresh_tokens"},
 		"the M1 user-owned tables reference users")
+	assert.Subset(t, tables, []string{"taxpayers", "taxpayer_regimes"},
+		"the M2 user-owned tables reference users directly, not only through their parent")
 	assert.NotContains(t, tables, "trial_registry", "the trial registry must survive account deletion")
 }
 
@@ -94,4 +96,35 @@ func TestAccountDeletion_everyUserIDColumnHasAForeignKeyToUsers(t *testing.T) {
 	_, err := db.ExecContext(t.Context(), `CREATE TABLE guard_probe (id int PRIMARY KEY, owner_user_id uuid NOT NULL)`)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"guard_probe.owner_user_id"}, userColumnsWithoutForeignKey(t, db))
+}
+
+// userScopedChildForeignKeysSQL lists every foreign key from one table with a user_id
+// column to another such table (a parent/child chain under one user, e.g.
+// taxpayer_regimes -> taxpayers), with its ON DELETE action. Deleting the parent
+// (a taxpayer, MODULE-taxpayers §2.7) or the user must take the children with it.
+// Self-references (refresh_tokens.rotated_from) are not chains: the users cascade
+// deletes every row of the table for that user in the same statement.
+const userScopedChildForeignKeysSQL = `
+SELECT k.conrelid::regclass::text, k.conname, k.confdeltype::text
+FROM pg_constraint k
+WHERE k.contype = 'f' AND k.confrelid <> 'users'::regclass AND k.confrelid <> k.conrelid
+  AND EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = k.conrelid AND a.attname = 'user_id' AND NOT a.attisdropped)
+  AND EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = k.confrelid AND a.attname = 'user_id' AND NOT a.attisdropped)
+ORDER BY 1, 2`
+
+// S-7 (MODULE-taxpayers): the guard covers indirect chains too.
+func TestAccountDeletion_everyUserScopedChainCascades(t *testing.T) {
+	db := pgtest.NewDatabase(t).Connect(t, pgtest.RoleOwner)
+	rows, err := db.QueryContext(t.Context(), userScopedChildForeignKeysSQL)
+	require.NoError(t, err)
+	defer func() { _ = rows.Close() }()
+	var tables []string
+	for rows.Next() {
+		var k usersForeignKey
+		require.NoError(t, rows.Scan(&k.table, &k.name, &k.onDelete))
+		tables = append(tables, k.table)
+		assert.Equalf(t, "c", k.onDelete, "%s.%s must be ON DELETE CASCADE", k.table, k.name)
+	}
+	require.NoError(t, rows.Err())
+	assert.Contains(t, tables, "taxpayer_regimes", "the sweep is not vacuous")
 }
