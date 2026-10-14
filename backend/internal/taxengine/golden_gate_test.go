@@ -32,19 +32,19 @@ const (
 	writeScope   = "internal/taxengine/"
 )
 
-// registry holds the strategies the gate runs. It is the fake registry of
-// M5-07: a strategy PR (M5-11..M5-19) adds its strategy here and removes
-// pending_strategy from its cases, in the same PR; M5-10 replaces this map
-// with the real registry.
-type registry map[domain.StrategyKey]domain.Strategy
+// gateStrategies are the strategies the gate runs, through the real M5-10
+// registry. A strategy PR (M5-11..M5-19) adds its strategy here and removes
+// pending_strategy from its cases in the same PR, until M5-22 wires them all
+// at the composition root and the gate can take that list. Empty: no
+// strategy has landed yet.
+func gateStrategies() []domain.Strategy { return nil }
 
-func (r registry) Strategy(k domain.StrategyKey) (domain.Strategy, bool) {
-	s, ok := r[k]
-	return s, ok
+func registry(t *testing.T) domain.Registry {
+	t.Helper()
+	r, err := domain.NewRegistry(gateStrategies()...)
+	require.NoError(t, err)
+	return r
 }
-
-// strategies is empty until the first strategy lands.
-var strategies = registry{}
 
 func catalog(t *testing.T) *taxparams.Catalog {
 	t.Helper()
@@ -76,7 +76,7 @@ func TestGoldenCases(t *testing.T) {
 	generated := generatedCases(t, rawParams(t))
 	cases := slices.Concat(authored, generated)
 
-	s := golden.Run(t, cases, strategies, catalog(t))
+	s := golden.Run(t, cases, registry(t), catalog(t))
 
 	t.Logf("authored %d, generated %d", len(authored), len(generated))
 	assert.Equal(t, len(cases), s.Total())

@@ -11,10 +11,12 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/taxparams"
 )
 
-// Registry finds the strategy of a key. It is the consumer-side view of the
-// M5-10 registry; until that lands the gate runs a fake one.
+// Registry is the consumer-side view of domain.Registry (M5-10): Lookup
+// tells a registered strategy from the informational fallback, and
+// Estimate derives the missing inputs exactly as the use case does.
 type Registry interface {
-	Strategy(key domain.StrategyKey) (domain.Strategy, bool)
+	Lookup(key domain.StrategyKey) (domain.Strategy, bool)
+	Estimate(in domain.Input, activeMonths []time.Month, p *taxparams.Params) (domain.RegimeEstimate, error)
 }
 
 // ParamsSelector selects the parameter set of a fiscal year;
@@ -44,35 +46,33 @@ type Outcome struct {
 	Mismatches []string
 }
 
-// Evaluate runs c through its registered strategy with the parameters of
-// its fiscal year and compares the estimate to c.Want. The missing inputs
-// come from the strategy's RequiredInputs and c's inputs, as the use case
-// derives them (MODULE-tax-engine §2.8), so Status is the contract's.
+// Evaluate runs c through the registry with the parameters of its fiscal
+// year and compares the estimate to c.Want. A case runs when its strategy
+// is registered, or when it expects an informational regime (the
+// registry's fallback is then the strategy under test); otherwise it is
+// pending if marked so (or generated) and failed if not.
 func Evaluate(c Case, reg Registry, sel ParamsSelector) Outcome {
 	o := Outcome{ID: c.ID, File: c.File, Key: c.Input.Key}
 	if c.SkipReason != "" {
 		return o.with(VerdictSkipped, "skipped: "+c.SkipReason)
 	}
-	strategy, registered := reg.Strategy(c.Input.Key)
+	_, registered := reg.Lookup(c.Input.Key)
+	runnable := registered || c.Want.Status == domain.StatusInformational
 	switch {
-	case !registered && (c.PendingStrategy || c.Generated):
+	case !runnable && (c.PendingStrategy || c.Generated):
 		return o.with(VerdictPending, fmt.Sprintf("pending_strategy: no strategy registered for %s", c.Input.Key))
-	case !registered:
+	case !runnable:
 		return o.with(VerdictFailed, fmt.Sprintf("no strategy registered for %s and the case is not marked pending_strategy", c.Input.Key))
 	case c.PendingStrategy:
-		return o.with(VerdictFailed, fmt.Sprintf("strategy %s is registered: remove pending_strategy from %s", c.Input.Key, c.File))
+		return o.with(VerdictFailed, fmt.Sprintf("strategy %s runs: remove pending_strategy from %s", c.Input.Key, c.File))
 	}
 	selection, err := sel.Select(c.Input.Period.Year())
 	if err != nil {
 		return o.with(VerdictFailed, fmt.Sprintf("parameters for %d: %v", c.Input.Period.Year(), err))
 	}
-	estimate, err := strategy.Estimate(c.Input, selection.Params)
+	estimate, err := reg.Estimate(c.Input, slices.Clone(c.ActiveMonths), selection.Params)
 	if err != nil {
 		return o.with(VerdictFailed, fmt.Sprintf("estimate: %v", err))
-	}
-	if len(estimate.MissingInputs) == 0 {
-		facts := domain.Facts{ActiveMonths: slices.Clone(c.ActiveMonths), Inputs: c.Input.Inputs}
-		estimate.MissingInputs = missingInputs(strategy.RequiredInputs(c.Input.Options, c.Input.Period, facts), c.Input.Inputs)
 	}
 	if o.Mismatches = compare(c.Want, estimate); len(o.Mismatches) > 0 {
 		return o.with(VerdictFailed, "estimate differs from the golden")
@@ -83,42 +83,6 @@ func Evaluate(c Case, reg Registry, sel ParamsSelector) Outcome {
 func (o Outcome) with(v Verdict, reason string) Outcome {
 	o.Verdict, o.Reason = v, reason
 	return o
-}
-
-// missingInputs lists the required inputs (and months) in has not got.
-func missingInputs(required []domain.RequiredInput, in domain.TaxInputs) []domain.MissingInput {
-	var out []domain.MissingInput
-	for _, r := range required {
-		if r.Kind == domain.InputMoneyMonthly {
-			var months []time.Month
-			for _, m := range r.Months {
-				if _, ok := in.MonthlyMoney(r.Key, m); !ok {
-					months = append(months, m)
-				}
-			}
-			if len(months) > 0 {
-				out = append(out, domain.MissingInput{Key: r.Key, Months: months})
-			}
-			continue
-		}
-		if !present(in, r) {
-			out = append(out, domain.MissingInput{Key: r.Key})
-		}
-	}
-	return out
-}
-
-func present(in domain.TaxInputs, r domain.RequiredInput) bool {
-	var ok bool
-	switch r.Kind {
-	case domain.InputRate:
-		_, ok = in.Rate(r.Key)
-	case domain.InputBoolean:
-		_, ok = in.Bool(r.Key)
-	default:
-		_, ok = in.Money(r.Key)
-	}
-	return ok
 }
 
 // Report turns an outcome into the test's result: a skip with its reason,

@@ -53,7 +53,7 @@ Amounts are quoted decimals with exactly two places (the centavo); an unquoted n
 float and is refused. `iva.net` must equal charged − excluded − creditable − withheld
 (MODULE-tax-engine §2.6). Lists are compared as sets; lines in order, by tax, code, op and amount (`op` is the contract operation: a `subtract` line shows a positive amount).
 Every line except `info` and `rounding_adjustment` must cite a legal basis. Missing inputs come
-from the strategy's `RequiredInputs` and the case's `tax_inputs`, as the use case derives them.
+from `domain.Registry.Estimate` (the strategy's `RequiredInputs` against the case's `tax_inputs`).
 
 ## Skips and pending strategies (never silent)
 
@@ -75,8 +75,9 @@ change without a new source.
 
 ## Activating a strategy
 
-1. Add it to `strategies` in `internal/taxengine/golden_gate_test.go` (M5-10 replaces that fake
-   registry with the real one).
+1. Add it to `gateStrategies` in `internal/taxengine/golden_gate_test.go`; the gate runs it through
+   the real `domain.Registry` (M5-10), which also derives the missing inputs as the use case does.
+   Cases expecting `informational` run through the registry's fallback with no strategy at all.
 2. Remove `pending_strategy` from its cases; adjust line codes by hand if needed.
 3. `go test ./internal/taxengine/...` must pass to the centavo, including the generated
    tariff-edge cases of that regime.

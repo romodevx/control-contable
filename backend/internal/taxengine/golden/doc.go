@@ -9,10 +9,11 @@
 //     Decode and testdata/golden/README.md. Every file starts with the
 //     HandAuthoredHeader comment; a tool that re-serializes the file drops
 //     it and the case no longer loads.
-//   - Runner: Load reads every case, Evaluate runs one through a Registry
-//     and the parameter Catalog, Run makes one subtest per case. A case
-//     with skip_reason (an unverified ⚠️ rule) is skipped with its reason;
-//     a case whose strategy is not registered yet is pending_strategy.
+//   - Runner: Load reads every case, Evaluate runs one through the M5-10
+//     domain.Registry and the parameter Catalog, Run makes one subtest per
+//     case. A case with skip_reason (an unverified ⚠️ rule) is skipped with
+//     its reason; a case whose strategy is not registered yet is
+//     pending_strategy; an informational case runs through the fallback.
 //     Both are reported, never silent (Summary).
 //   - No update flag: expected values are never written by a program.
 //     FindRewriters is the meta-check the gate runs over the source tree.
