@@ -566,7 +566,7 @@ paths:
     post:
       tags: [Taxpayers]
       operationId: createTaxpayer
-      x-frozen: sha256:1d229ebdbe593858703605e58aa5d0c3e6524739bc470430a5cd2fde47782e1a
+      x-frozen: sha256:f0a85c0d5280017b07327b2791f765f18df76e485142b14bc9edd2729ca1a346
       summary: Create a taxpayer with its regimes and options in one transaction (onboarding)
       description: >-
         Onboarding order (OD-3): person type, then RFC and display name, then regimes, then
@@ -577,9 +577,12 @@ paths:
 
         The RFC is normalized (trim, upper-case, NFC, inner spaces and `-` removed), then
         validated: length for the person type (13 física, 12 moral), alphabet, real calendar
-        date, SAT módulo 11 check digit; the generic RFCs `XAXX010101000` and `XEXX010101000`
-        are refused. It is never checked against the SAT. The full RFC is never returned or
-        echoed in an error: the response carries only `rfc_masked`.
+        date; the generic RFCs `XAXX010101000` and `XEXX010101000` are refused. The SAT
+        módulo 11 check digit does NOT reject (D-RFC: some SAT-issued RFCs fail the published
+        algorithm): a mismatch is accepted and the response carries the non-blocking warning
+        `{code: rfc_check_digit_mismatch, field: rfc}` so the app asks the user to double-check.
+        It is never checked against the SAT. The full RFC is never returned or echoed in an
+        error: the response carries only `rfc_masked`.
 
 
         Order of checks: schema (400) → access policy (`402 entitlement_required` for a
@@ -592,7 +595,7 @@ paths:
 
 
         `FieldError.code` values beyond JSON Schema keywords: `rfc` → `rfc_length_mismatch`,
-        `rfc_format`, `rfc_date`, `rfc_check_digit`, `rfc_generic`;
+        `rfc_format`, `rfc_date`, `rfc_generic`;
         `regimes.N.regime_code` → `not_for_person_type`, `duplicate` (same code twice in the
         body); `regimes.N.options.<key>` → `unknown_option`, `invalid_option`, `required`;
         `regimes.N.start_period` → `out_of_range` (allowed `2022-01` … the current month,
@@ -631,12 +634,48 @@ paths:
                       options: { iva_fully_taxable: true }
       responses:
         '201':
-          description: Created.
+          description: Created (with `warnings` when the RFC check digit does not match).
           headers:
             Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Taxpayer' }
+              examples:
+                created:
+                  value:
+                    id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                    person_type: moral
+                    display_name: Empresa Ejemplo
+                    rfc_masked: EEJ******QK2
+                    regimes:
+                      - regime_code: '601'
+                        name: General de Ley Personas Morales
+                        treatment: full
+                        options: { iva_fully_taxable: true }
+                        start_period: '2026-10'
+                        end_period: null
+                    archived_at: null
+                    created_at: '2026-10-13T16:20:00Z'
+                checkDigitMismatch:
+                  summary: Accepted; the check digit does not match, so the app asks to double-check (D-RFC)
+                  value:
+                    id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                    person_type: fisica
+                    display_name: Ana (personal)
+                    rfc_masked: GOMA******AB3
+                    regimes:
+                      - regime_code: '612'
+                        name: Actividad Empresarial y Profesional
+                        treatment: full
+                        options: { iva_fully_taxable: true }
+                        start_period: '2026-01'
+                        end_period: null
+                    archived_at: null
+                    created_at: '2026-10-13T16:05:00Z'
+                    warnings:
+                      - code: rfc_check_digit_mismatch
+                        field: rfc
+                        message: Revisa tu RFC; la homoclave no coincide con el dígito verificador.
         '200':
           description: Idempotent retry; the caller already owns a taxpayer with this `id`.
           headers:
@@ -652,15 +691,15 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
               examples:
-                rfcCheckDigit:
-                  summary: The RFC check digit does not match (the RFC is never echoed)
+                rfcDate:
+                  summary: The RFC date is not a real calendar date (the RFC is never echoed)
                   value:
                     error:
                       code: validation_failed
                       message: One or more fields are invalid.
                       request_id: req_01J9Z6Q4X8
                       details:
-                        - { field: rfc, code: rfc_check_digit, message: El RFC no es válido; revisa la homoclave. }
+                        - { field: rfc, code: rfc_date, message: La fecha del RFC no es válida. }
                 missingOption:
                   summary: A required option without default was not sent
                   value:
@@ -735,12 +774,13 @@ paths:
     patch:
       tags: [Taxpayers]
       operationId: updateTaxpayer
-      x-frozen: sha256:ae5512cfc9a7e9a6e03c7a08c912b18992d839ef6fee457374a6180cb1e2fe3a
+      x-frozen: sha256:50ce91097e7650fdc040acd7e8f91c3472b8f55faaa78a70780afbf46843823e
       summary: Rename a taxpayer or correct its RFC (person type is immutable)
       description: >-
         `display_name` is trimmed and NFC-normalized (1–80 characters). `rfc` corrects a
         mistyped RFC of the same person type (OQ-1): it is normalized and validated as in
-        `createTaxpayer` (same `details[].code` values), re-encrypted, re-hashed and checked
+        `createTaxpayer` (same `details[].code` values; a check-digit mismatch is accepted with
+        the `rfc_check_digit_mismatch` warning), re-encrypted, re-hashed and checked
         for uniqueness in the caller's account. `person_type` or any other field answers
         `400` (`additionalProperties`). A read-only user gets `402`; an archived taxpayer
         `422 business_rule_violation` (`taxpayer_archived`).
@@ -2231,22 +2271,33 @@ components:
 
     # ------------------------------------------------------------ taxpayers
     RegimeOptionDef:
-      x-frozen: sha256:707c86b75534edfd5a68541e9a533f6b3bb7f2e5d7e0a10f94ea9de8898250e5
+      x-frozen: sha256:292ada6777634d1983fd825ec081c584a6de839b220ab5a103a1a1f0cd8b9651
       type: object
       required: [key, label, type, required]
       description: >-
         One per-regime option (`regimes.option_defs`, data not code). `enum` takes one of
         `allowed_values`; `multi_enum` takes a non-empty array of distinct `allowed_values`;
-        `boolean` takes `true`/`false`. An omitted option with a `default` is filled
-        server-side; a `required` option with `default: null` must be sent.
+        `boolean` takes `true`/`false`; `rate` takes a decimal string (`DecimalRate`, 0.16 =
+        16%) within `[min, max]`. An omitted option with a `default` is filled server-side; a
+        `required` option with `default: null` must be sent.
       properties:
         key: { type: string, pattern: '^[a-z][a-z0-9_]{0,63}$', examples: [deduction_mode] }
         label: { type: string, description: Spanish label shown in the options form. }
-        type: { type: string, enum: [enum, multi_enum, boolean] }
+        type: { type: string, enum: [enum, multi_enum, boolean, rate] }
         allowed_values:
           type: array
           description: Present for `enum` and `multi_enum`.
           items: { type: string }
+        min:
+          oneOf:
+            - $ref: '#/components/schemas/DecimalRate'
+            - type: 'null'
+          description: Inclusive lower bound for `rate`; `null` or absent otherwise.
+        max:
+          oneOf:
+            - $ref: '#/components/schemas/DecimalRate'
+            - type: 'null'
+          description: Inclusive upper bound for `rate`; `null` or absent otherwise.
         default:
           type: [string, boolean, 'null']
           description: Default value, or `null` when the option has none.
@@ -2432,8 +2483,24 @@ components:
         options: { $ref: '#/components/schemas/RegimeOptions' }
       examples:
         - options: { deduction_mode: actual }
+    Warning:
+      x-frozen: sha256:93c7b8149df0efe186aed25e4f8f8883d9d557ca73c7e514a42fba05990d70b0
+      type: object
+      required: [code, field, message]
+      description: >-
+        A non-blocking notice: the write succeeded, the client should ask the user to
+        double-check `field`. `code` is append-only (unknown codes: show `message`). Today:
+        `rfc_check_digit_mismatch` (D-RFC).
+      properties:
+        code: { type: string, pattern: '^[a-z][a-z0-9_]{0,63}$', examples: [rfc_check_digit_mismatch] }
+        field: { type: string, description: Same dotted naming as `FieldError.field`. }
+        message: { type: string, description: Safe to show; never contains the RFC. }
+      examples:
+        - code: rfc_check_digit_mismatch
+          field: rfc
+          message: Revisa tu RFC; la homoclave no coincide con el dígito verificador.
     RfcInput:
-      x-frozen: sha256:a9c67859115badceac5383898c8b8e6c5bd40760be4a91a2eec25d837567ea7a
+      x-frozen: sha256:fd37fdbdaecba3f8606df31b502d5391862219c4ff10dd2a013a199cf66b6c4c
       type: string
       minLength: 12
       maxLength: 24
@@ -2442,10 +2509,11 @@ components:
         (trim, upper-case, NFC, inner spaces and `-` removed). The edge bounds only the
         length, so every RFC rule is reported on `rfc` with a domain code:
         `rfc_length_mismatch` (13 for física, 12 for moral), `rfc_format`, `rfc_date`,
-        `rfc_check_digit` (SAT módulo 11), `rfc_generic`. Never echoed back.
+        `rfc_generic`. A SAT módulo 11 check-digit mismatch is not an error (D-RFC): it is
+        accepted with the warning `rfc_check_digit_mismatch`. Never echoed back.
       examples: [GOMA800101AB6]
     Taxpayer:
-      x-frozen: sha256:502ed0138f0e03f898d0c96b58474aa0685a5cd504d03e68b69b922815a5c328
+      x-frozen: sha256:ef71939fae1e20fb486d6ef76ff003d7cf8aef997c2ae6959317012f79e6f804
       type: object
       required: [id, person_type, display_name, rfc_masked, regimes, archived_at, created_at]
       properties:
@@ -2464,6 +2532,13 @@ components:
           items: { $ref: '#/components/schemas/TaxpayerRegime' }
         archived_at: { type: [string, 'null'], format: date-time }
         created_at: { type: string, format: date-time }
+        warnings:
+          type: array
+          description: >-
+            Non-blocking notices about the input just written. Present only on
+            `createTaxpayer` (201 and 200) and `updateTaxpayer` responses, and only when
+            non-empty; never stored, never on reads.
+          items: { $ref: '#/components/schemas/Warning' }
       examples:
         - id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
           person_type: fisica

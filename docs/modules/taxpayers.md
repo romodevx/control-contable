@@ -12,7 +12,7 @@
 Every error uses the single envelope `ErrorResponse`. `error.code` is the stable value to
 branch on; `details[].field` is the dotted path inside the body (`regimes.0.options.rif_year`)
 or the bare parameter name (`taxpayerId`, `end_period`), and `details[].code` carries the
-domain rule (`rfc_check_digit`, `taxpayer_archived`, ...; see each operation in the contract).
+domain rule (`rfc_date`, `taxpayer_archived`, ...; see each operation in the contract).
 An RFC is never echoed in an error.
 
 The table below is **generated from the contract** by `make api-error-tables`; do not edit
