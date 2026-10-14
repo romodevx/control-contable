@@ -84,9 +84,12 @@ change without a new source.
 
 ## Activating a strategy
 
-1. Add it to `gateStrategies` in `internal/taxengine/golden_gate_test.go`; the gate runs it through
-   the real `domain.Registry` (M5-10), which also derives the missing inputs as the use case does.
-   Cases expecting `informational` run through the registry's fallback with no strategy at all.
+1. Add it to `taxengine.Strategies()` (`internal/taxengine/strategies.go`). The gate's
+   `gateStrategies` is that same list, so the composition root and the gate cannot disagree; the
+   gate runs it through the real `domain.Registry` (M5-10), which also derives the missing inputs
+   as the use case does. Cases expecting `informational` run through the registry's fallback with
+   no strategy at all. The full checklist (catalog row, texts, `EngineVersion`) is
+   `docs/guides/add-a-regime.md`.
 2. Remove `pending_strategy` from its cases; adjust line codes by hand if needed.
    Lower (or remove) its count in `testdata/golden_baseline.yaml`.
 3. `go test ./internal/taxengine/...` must pass to the centavo, including the generated
