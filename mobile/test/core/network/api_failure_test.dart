@@ -1,3 +1,4 @@
+import 'package:control_contable/api/generated/models/error_code.dart';
 import 'package:control_contable/api/generated/models/token_pair.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:dio/dio.dart';
@@ -107,6 +108,51 @@ void main() {
           'details',
           isEmpty,
         ),
+      );
+    });
+
+    test('402 is entitlement required (a read-only user)', () {
+      expect(
+        _failureOf(_answer(402, body: _envelope('entitlement_required'))),
+        isA<ApiEntitlementRequired>(),
+      );
+    });
+
+    for (final (status, code, expected) in [
+      (409, 'rfc_already_registered', ErrorCode.rfcAlreadyRegistered),
+      (409, 'conflict', ErrorCode.conflict),
+      (422, 'invalid_regime_combination', ErrorCode.invalidRegimeCombination),
+      (422, 'taxpayer_limit_reached', ErrorCode.taxpayerLimitReached),
+    ]) {
+      test('$status $code is a rejection carrying its code and details', () {
+        final failure = _failureOf(
+          _answer(
+            status,
+            body: _envelope(code, [
+              {'field': 'regimes.1.regime_code', 'code': 'x', 'message': 'm'},
+            ]),
+          ),
+        );
+
+        expect(
+          failure,
+          isA<ApiRejected>()
+              .having((f) => f.code, 'code', expected)
+              .having(
+                (f) => f.details.single.field,
+                'field',
+                'regimes.1.regime_code',
+              ),
+        );
+      });
+    }
+
+    test('a 409 without a readable envelope is a rejection of no code', () {
+      expect(
+        _failureOf(_answer(409, body: 'oops')),
+        isA<ApiRejected>()
+            .having((f) => f.code, 'code', isNull)
+            .having((f) => f.details, 'details', isEmpty),
       );
     });
 

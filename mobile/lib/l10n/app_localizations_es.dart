@@ -338,6 +338,275 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get sessionTokenLeftOnDevice =>
       'No pudimos borrar la sesión guardada en este teléfono. Cierra la app y vuelve a abrirla; si el aviso sigue, borra los datos de la app desde los ajustes del teléfono.';
+
+  @override
+  String get formErrorChoose => 'Elige una opción.';
+
+  @override
+  String get homeAddTaxpayer => 'Registrar contribuyente';
+
+  @override
+  String get onboardingTitle => 'Nuevo contribuyente';
+
+  @override
+  String onboardingProgress(int step, int total) {
+    return 'Paso $step de $total';
+  }
+
+  @override
+  String get onboardingNext => 'Siguiente';
+
+  @override
+  String get onboardingCreate => 'Crear contribuyente';
+
+  @override
+  String get onboardingContinue => 'Continuar';
+
+  @override
+  String get onboardingRetry => 'Reintentar';
+
+  @override
+  String get onboardingPersonTypeTitle => '¿Persona física o persona moral?';
+
+  @override
+  String get onboardingPersonTypeIntro =>
+      'Elige cómo está dado de alta el contribuyente ante el SAT. No se puede cambiar después.';
+
+  @override
+  String get onboardingFisicaTitle => 'Persona física';
+
+  @override
+  String get onboardingFisicaBody =>
+      'Una persona que trabaja por su cuenta: honorarios, rentas, ventas por plataformas digitales o un negocio propio. Su RFC tiene 13 caracteres.';
+
+  @override
+  String get onboardingMoralTitle => 'Persona moral';
+
+  @override
+  String get onboardingMoralBody =>
+      'Una empresa o sociedad (S.A., S. de R.L., A.C. y otras). Su RFC tiene 12 caracteres.';
+
+  @override
+  String get onboardingIdentityTitle => 'RFC y nombre';
+
+  @override
+  String get onboardingDisplayNameLabel => 'Nombre para identificarlo';
+
+  @override
+  String get onboardingDisplayNameHelp =>
+      'Así aparecerá en la app; por ejemplo, tu nombre o «Mi negocio».';
+
+  @override
+  String get onboardingDisplayNameTooLong =>
+      'Escribe un nombre de hasta 80 caracteres.';
+
+  @override
+  String get onboardingRfcLabel => 'RFC';
+
+  @override
+  String get onboardingRfcHelpFisica =>
+      '13 caracteres, como en la constancia de situación fiscal. Puede llevar espacios o guiones.';
+
+  @override
+  String get onboardingRfcHelpMoral =>
+      '12 caracteres, como en la constancia de situación fiscal. Puede llevar espacios o guiones.';
+
+  @override
+  String get onboardingRfcLengthFisica =>
+      'El RFC de una persona física tiene 13 caracteres.';
+
+  @override
+  String get onboardingRfcLengthMoral =>
+      'El RFC de una persona moral tiene 12 caracteres.';
+
+  @override
+  String get onboardingRfcFormat =>
+      'Revisa el RFC: primero las letras, luego los 6 números de la fecha y al final la homoclave.';
+
+  @override
+  String get onboardingRfcDate =>
+      'Los 6 números del RFC no forman una fecha válida (año, mes y día).';
+
+  @override
+  String get onboardingRfcGeneric =>
+      'Ese es un RFC genérico del SAT. Escribe el RFC propio del contribuyente.';
+
+  @override
+  String get onboardingRfcDuplicate =>
+      'Ya registraste un contribuyente con este RFC. Si lo archivaste, puedes reactivarlo en Ajustes.';
+
+  @override
+  String get onboardingRfcCheckWarning => 'Revisa que tu RFC esté bien escrito';
+
+  @override
+  String get onboardingRfcCheckBody =>
+      'El último carácter no coincide con el que calcula el SAT. Algunos RFC reales no coinciden: si el tuyo es igual al de tu constancia, continúa. Si no, corrígelo aquí.';
+
+  @override
+  String get onboardingRegimesTitle => 'Regímenes fiscales';
+
+  @override
+  String get onboardingRegimesIntroFisica =>
+      'Elige todos los regímenes en los que está dado de alta. Aparecen en la constancia de situación fiscal.';
+
+  @override
+  String get onboardingRegimesIntroMoral =>
+      'Elige el régimen de la empresa. Una persona moral tiene un solo régimen a la vez.';
+
+  @override
+  String get onboardingRegimesLabel => 'Regímenes';
+
+  @override
+  String get onboardingRegimesRequired => 'Elige al menos un régimen.';
+
+  @override
+  String get onboardingRegimesConflict =>
+      'Hay regímenes que no se pueden combinar.';
+
+  @override
+  String onboardingRegimeConflict(String code, String reason) {
+    return 'No se puede combinar con el $code: $reason';
+  }
+
+  @override
+  String get onboardingRegimesLoading => 'Cargando regímenes…';
+
+  @override
+  String get onboardingRegimesLoadFailed =>
+      'No se pudieron cargar los regímenes.';
+
+  @override
+  String get onboardingRegimesEmpty =>
+      'No hay regímenes disponibles para este tipo de persona.';
+
+  @override
+  String get onboardingRegimeCombinationRejected =>
+      'Esta combinación de regímenes no se puede registrar. Revisa tu selección.';
+
+  @override
+  String get onboardingRegimeRejected =>
+      'Uno de los regímenes elegidos no se aceptó. Revisa tu selección.';
+
+  @override
+  String get onboardingSupportFullTitle => 'Cálculo completo';
+
+  @override
+  String get onboardingSupportFullBody =>
+      'La app estima cada mes el ISR y el IVA a pagar con los ingresos y gastos que registres.';
+
+  @override
+  String get onboardingSupportPartialTitle => 'Cálculo parcial';
+
+  @override
+  String get onboardingSupportPartialBody =>
+      'La app estima solo una parte de los impuestos (por ejemplo, solo el IVA). Lo demás conviene revisarlo con un contador.';
+
+  @override
+  String get onboardingSupportInfoTitle => 'Solo explicación';
+
+  @override
+  String get onboardingSupportInfoBody =>
+      'La app no calcula impuestos para estos regímenes: explica en palabras sencillas qué obligaciones tienen.';
+
+  @override
+  String get onboardingOptionsTitle => 'Opciones del régimen';
+
+  @override
+  String onboardingOptionsRegime(
+    int current,
+    int total,
+    String code,
+    String name,
+  ) {
+    return 'Régimen $current de $total: $code · $name';
+  }
+
+  @override
+  String get onboardingOptionRejected => 'Revisa esta opción.';
+
+  @override
+  String onboardingRateHelp(String min, String max) {
+    return 'Un número entre $min y $max, con punto decimal.';
+  }
+
+  @override
+  String get onboardingRateInvalid =>
+      'Escribe un número con punto decimal, por ejemplo 0.25.';
+
+  @override
+  String onboardingRateOutOfRange(String min, String max) {
+    return 'Escribe un número entre $min y $max.';
+  }
+
+  @override
+  String get optionValueBlind35 => 'Deducción ciega: 35 % de los ingresos';
+
+  @override
+  String get optionValueActual => 'Gastos reales con factura';
+
+  @override
+  String get optionValueTransportDelivery =>
+      'Transporte de pasajeros o entrega de bienes';
+
+  @override
+  String get optionValueLodging => 'Hospedaje';
+
+  @override
+  String get optionValueGoodsServices =>
+      'Venta de bienes y prestación de servicios';
+
+  @override
+  String optionValueRifYear(String year) {
+    return 'Año $year';
+  }
+
+  @override
+  String get onboardingErrorUnreachable =>
+      'No hay conexión. Revisa tu internet e inténtalo de nuevo.';
+
+  @override
+  String get onboardingErrorRateLimited =>
+      'Hubo demasiados cambios seguidos. Espera unos minutos e inténtalo de nuevo.';
+
+  @override
+  String get onboardingErrorLimit =>
+      'Ya tienes 10 contribuyentes, el máximo por cuenta. Elimina uno que ya no uses para registrar otro.';
+
+  @override
+  String get onboardingErrorUnexpected => 'Algo salió mal. Inténtalo de nuevo.';
+
+  @override
+  String get onboardingPaywallTitle => 'Tu cuenta es de solo consulta';
+
+  @override
+  String get onboardingPaywallBody =>
+      'Tu periodo de prueba terminó y no hay un plan activo. Puedes consultar, archivar y eliminar tu información, pero registrar un contribuyente requiere un plan.';
+
+  @override
+  String get onboardingPaywallAction => 'Volver al inicio';
+
+  @override
+  String get onboardingReviewTitle => 'Revisa antes de continuar';
+
+  @override
+  String onboardingReviewCreated(String name, String rfc) {
+    return 'Registramos a «$name», RFC $rfc.';
+  }
+
+  @override
+  String get onboardingCpaWarningTitle =>
+      'Combinación pendiente de revisión por un contador';
+
+  @override
+  String get onboardingInputsTitle => 'Datos para el cálculo';
+
+  @override
+  String onboardingInputsIntro(String year) {
+    return 'Opcional. Con estos datos de $year el estimado es más preciso; puedes agregarlos después.';
+  }
+
+  @override
+  String get onboardingInputsSkip => 'Omitir';
 }
 
 /// The translations for Spanish Castilian, as used in Mexico (`es_MX`).

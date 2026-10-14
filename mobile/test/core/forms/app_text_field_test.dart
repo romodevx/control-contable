@@ -89,6 +89,30 @@ void main() {
     expect(input.keyboardType, TextInputType.emailAddress);
     expect(input.textInputAction, TextInputAction.next);
     expect(input.autofillHints, [AutofillHints.email]);
+    expect(input.textCapitalization, TextCapitalization.none);
+    expect(input.autocorrect, isTrue);
+  });
+
+  testWidgets('a code field capitalizes and never autocorrects', (
+    tester,
+  ) async {
+    final rfc = form.textField(label: 'RFC');
+    await pumpFields(tester, [
+      AppTextField(
+        key: const ValueKey('RFC'),
+        field: rfc,
+        keyboardType: TextInputType.text,
+        textInputAction: TextInputAction.next,
+        autofillHints: const [],
+        textCapitalization: TextCapitalization.characters,
+        autocorrect: false,
+      ),
+    ]);
+
+    final input = textFieldOf(tester, 'RFC');
+    expect(input.textCapitalization, TextCapitalization.characters);
+    expect(input.autocorrect, isFalse);
+    expect(input.enableSuggestions, isFalse);
   });
 
   testWidgets('input text is at least 16 px and the target 44 px', (

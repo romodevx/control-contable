@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:control_contable/core/forms/choice_controllers.dart';
 import 'package:control_contable/core/forms/field_error.dart';
 import 'package:control_contable/core/forms/form_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -133,6 +134,41 @@ void main() {
         expect(await saving, isTrue);
       },
     );
+  });
+
+  group('custom fields', () {
+    test('canonicalize rewrites a valid text field on blur', () {
+      final rfc =
+          form.textField(
+              label: 'RFC',
+              canonicalize: (value) => value.toUpperCase(),
+            )
+            ..text.text = 'goma800101ab6'
+            ..handleBlur();
+
+      expect(rfc.text.text, 'GOMA800101AB6');
+    });
+
+    test('canonicalize never rewrites an invalid value', () {
+      final rfc =
+          form.textField(
+              label: 'RFC',
+              validator: (_) => const CustomFieldError('mal'),
+              canonicalize: (value) => value.toUpperCase(),
+            )
+            ..text.text = 'abc'
+            ..handleBlur();
+
+      expect(rfc.text.text, 'abc');
+    });
+
+    test('add puts a field of any kind under the form policy', () async {
+      final kind = form.add(ChoiceFieldController(label: 'Tipo'));
+
+      expect(form.fields, [kind]);
+      expect(await form.submit(() async {}), isFalse);
+      expect(form.invalidFields, [kind]);
+    });
   });
 
   group('verbatim fields (passwords)', () {
