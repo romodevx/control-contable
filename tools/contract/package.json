@@ -9,5 +9,14 @@
   "devDependencies": {
     "@redocly/cli": "2.62.1",
     "@stoplight/prism-cli": "5.16.0"
+  },
+  "overrides": {
+    "postman-collection": {
+      "lodash": "4.18.1",
+      "uuid": "11.1.1"
+    },
+    "js-yaml": {
+      "argparse": "2.0.1"
+    }
   }
 }
