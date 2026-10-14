@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Where the active taxpayer's id is kept on the device. Only the id: it is
 /// a non-secret preference (MODULE-taxpayers §2.9). Never the RFC, a name
-/// or a token.
+/// or any credential (those live in the secure store only).
 abstract interface class ActiveTaxpayerStore {
   /// The kept id, or `null`.
   Future<String?> read();

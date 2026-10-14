@@ -4,12 +4,15 @@ import 'package:control_contable/core/theme/app_spacing.dart';
 import 'package:control_contable/features/auth/presentation/account_button.dart';
 import 'package:control_contable/features/auth/presentation/sign_out_button.dart';
 import 'package:control_contable/features/taxpayers/presentation/add_taxpayer_button.dart';
+import 'package:control_contable/features/taxpayers/presentation/onboarding_launcher.dart';
+import 'package:control_contable/features/taxpayers/presentation/taxpayer_switcher.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// Placeholder home until the dashboard module (M6) ships. Offers sign-out
 /// while `module_auth` is on (the router only shows home to a signed-in
-/// user then).
+/// user then). With `module_taxpayers` on, its title is the active-taxpayer
+/// switcher and a user with no taxpayer is sent to the onboarding.
 class HomeScreen extends StatelessWidget {
   /// Creates the screen.
   const new({super.key});
@@ -19,7 +22,7 @@ class HomeScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.navHome),
+        title: ActiveTaxpayerSwitcher(fallback: Text(l10n.navHome)),
         actions: const [
           FlagGate(module: AppModule.auth, child: AccountButton()),
           FlagGate(module: AppModule.auth, child: SignOutButton()),
@@ -38,6 +41,10 @@ class HomeScreen extends StatelessWidget {
             const FlagGate(
               module: AppModule.taxpayers,
               child: AddTaxpayerButton(),
+            ),
+            const FlagGate(
+              module: AppModule.taxpayers,
+              child: OnboardingLauncher(),
             ),
           ],
         ),

@@ -439,7 +439,11 @@ class FakeTaxpayersRepository implements TaxpayersRepository {
   Future<Taxpayer> createTaxpayer(TaxpayerCreate request) async {
     creates.add(request);
     await createGate?.future;
-    return _answer(createAnswers, taxpayer);
+    final created = _answer(createAnswers, taxpayer);
+    taxpayers
+      ..removeWhere((t) => t.id == created.id)
+      ..add(created.copyWith(warnings: null));
+    return created;
   }
 
   @override

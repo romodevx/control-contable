@@ -1097,6 +1097,330 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Omitir'**
   String get onboardingInputsSkip;
+
+  /// Screen-reader label of the top-bar active-taxpayer switcher.
+  ///
+  /// In es, this message translates to:
+  /// **'Contribuyente activo: {name}. Cambiar'**
+  String switcherLabel(String name);
+
+  /// Title of the taxpayer switcher sheet.
+  ///
+  /// In es, this message translates to:
+  /// **'Contribuyentes'**
+  String get switcherTitle;
+
+  /// Switch in the taxpayer switcher that lists archived taxpayers too.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar archivados'**
+  String get switcherShowArchived;
+
+  /// Badge on an archived taxpayer in the switcher.
+  ///
+  /// In es, this message translates to:
+  /// **'Archivado'**
+  String get taxpayerArchivedBadge;
+
+  /// Screen-reader reading of a masked RFC (the middle is hidden).
+  ///
+  /// In es, this message translates to:
+  /// **'RFC {start}, oculto, {end}'**
+  String taxpayerRfcSemantics(String start, String end);
+
+  /// Tooltip of the settings button on a switcher row.
+  ///
+  /// In es, this message translates to:
+  /// **'Ajustes de {name}'**
+  String taxpayerSettingsTooltip(String name);
+
+  /// App bar title of the taxpayer settings screen.
+  ///
+  /// In es, this message translates to:
+  /// **'Ajustes del contribuyente'**
+  String get settingsTitle;
+
+  /// Taxpayer list loading.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando contribuyentes…'**
+  String get settingsLoading;
+
+  /// Taxpayer list failed to load.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar tus contribuyentes.'**
+  String get settingsLoadFailed;
+
+  /// Settings of a taxpayer that is gone.
+  ///
+  /// In es, this message translates to:
+  /// **'Este contribuyente ya no existe.'**
+  String get settingsNotFound;
+
+  /// Settings section: name and RFC.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos'**
+  String get settingsDataTitle;
+
+  /// Opens the inline name editor.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar nombre'**
+  String get settingsEditName;
+
+  /// Opens the inline RFC correction.
+  ///
+  /// In es, this message translates to:
+  /// **'Corregir RFC'**
+  String get settingsCorrectRfc;
+
+  /// Helper text of the RFC correction field.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe el RFC completo, como en la constancia. Nunca lo mostramos completo.'**
+  String get settingsRfcHelp;
+
+  /// Confirmation after a rename.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardamos el nombre.'**
+  String get settingsNameSaved;
+
+  /// Confirmation after an RFC correction with no warning.
+  ///
+  /// In es, this message translates to:
+  /// **'Corregimos el RFC.'**
+  String get settingsRfcCorrected;
+
+  /// A write was refused because the taxpayer is archived.
+  ///
+  /// In es, this message translates to:
+  /// **'Este contribuyente está archivado. Desarchívalo para hacer cambios.'**
+  String get settingsArchivedWrite;
+
+  /// Settings section: the regimes.
+  ///
+  /// In es, this message translates to:
+  /// **'Regímenes'**
+  String get settingsRegimesTitle;
+
+  /// Period of an active regime.
+  ///
+  /// In es, this message translates to:
+  /// **'Desde {start}'**
+  String settingsRegimeSince(String start);
+
+  /// Period of an ended regime.
+  ///
+  /// In es, this message translates to:
+  /// **'De {start} a {end}'**
+  String settingsRegimeRange(String start, String end);
+
+  /// Badge of an ended regime.
+  ///
+  /// In es, this message translates to:
+  /// **'Terminado'**
+  String get settingsRegimeEnded;
+
+  /// Opens the add-regime flow; also its primary.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar régimen'**
+  String get settingsAddRegime;
+
+  /// Opens a regime's options.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar opciones'**
+  String get settingsEditOptions;
+
+  /// Opens the inline end-regime panel.
+  ///
+  /// In es, this message translates to:
+  /// **'Terminar régimen'**
+  String get settingsEndRegime;
+
+  /// Month picker of the end-regime panel.
+  ///
+  /// In es, this message translates to:
+  /// **'Último mes en este régimen'**
+  String get settingsEndRegimeLabel;
+
+  /// Primary of the end-regime panel.
+  ///
+  /// In es, this message translates to:
+  /// **'Terminar'**
+  String get settingsEndRegimeConfirm;
+
+  /// 409 regime_has_records: asks to confirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Este régimen tiene ingresos o gastos registrados. Se conservan y siguen contando hasta el mes que elijas.'**
+  String get settingsEndRegimeHasRecords;
+
+  /// Confirms ending a regime that has records.
+  ///
+  /// In es, this message translates to:
+  /// **'Terminar y conservar registros'**
+  String get settingsEndRegimeKeep;
+
+  /// 422 records_after_end_period.
+  ///
+  /// In es, this message translates to:
+  /// **'Hay registros después de ese mes. Elige el mes del último registro o uno posterior.'**
+  String get settingsEndRegimeRecordsAfter;
+
+  /// Why the last active regime cannot be ended.
+  ///
+  /// In es, this message translates to:
+  /// **'Es su único régimen activo. Para dejar de usarlo, archiva al contribuyente.'**
+  String get settingsLastRegime;
+
+  /// Confirmation after ending a regime.
+  ///
+  /// In es, this message translates to:
+  /// **'Terminamos el régimen {code}.'**
+  String settingsRegimeEndedDone(String code);
+
+  /// Settings section: archive and delete.
+  ///
+  /// In es, this message translates to:
+  /// **'Archivar o eliminar'**
+  String get settingsManageTitle;
+
+  /// Archives the taxpayer.
+  ///
+  /// In es, this message translates to:
+  /// **'Archivar'**
+  String get settingsArchive;
+
+  /// What archiving does.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo ocultas de tu lista. Conservas su información y puedes desarchivarlo.'**
+  String get settingsArchiveHelp;
+
+  /// Undo toast after archiving.
+  ///
+  /// In es, this message translates to:
+  /// **'Archivaste a «{name}».'**
+  String settingsArchived(String name);
+
+  /// Undo action of the archive toast.
+  ///
+  /// In es, this message translates to:
+  /// **'Deshacer'**
+  String get settingsUndo;
+
+  /// Unarchives the taxpayer.
+  ///
+  /// In es, this message translates to:
+  /// **'Desarchivar'**
+  String get settingsUnarchive;
+
+  /// Confirmation after unarchiving.
+  ///
+  /// In es, this message translates to:
+  /// **'«{name}» volvió a tu lista.'**
+  String settingsUnarchived(String name);
+
+  /// Banner on an archived taxpayer's settings.
+  ///
+  /// In es, this message translates to:
+  /// **'Este contribuyente está archivado. Puedes consultarlo; para hacer cambios, desarchívalo.'**
+  String get settingsArchivedBanner;
+
+  /// Opens the delete confirmation.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar'**
+  String get settingsDelete;
+
+  /// What deleting does.
+  ///
+  /// In es, this message translates to:
+  /// **'Borra al contribuyente y todos sus registros. No se puede deshacer.'**
+  String get settingsDeleteHelp;
+
+  /// Title of the delete confirmation dialog.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Eliminar a «{name}»?'**
+  String settingsDeleteTitle(String name);
+
+  /// Body of the delete confirmation dialog.
+  ///
+  /// In es, this message translates to:
+  /// **'Se borrarán sus ingresos y gastos, sus datos para el cálculo y su historial. No se puede deshacer. Si solo quieres ocultarlo, archívalo.'**
+  String get settingsDeleteBody;
+
+  /// Destructive primary of the delete dialog.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar definitivamente'**
+  String get settingsDeleteConfirm;
+
+  /// Confirmation after deleting.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminaste a «{name}».'**
+  String settingsDeleted(String name);
+
+  /// Paywall message on a refused settings write (402).
+  ///
+  /// In es, this message translates to:
+  /// **'Tu periodo de prueba terminó y no hay un plan activo. Puedes consultar, archivar y eliminar tu información, pero hacer cambios requiere un plan.'**
+  String get paywallWriteBody;
+
+  /// Closes the paywall message.
+  ///
+  /// In es, this message translates to:
+  /// **'Entendido'**
+  String get paywallClose;
+
+  /// Intro of the add-regime step.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige el régimen que vas a agregar. Cuenta a partir de este mes.'**
+  String get addRegimeIntro;
+
+  /// Nothing left to add.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya tiene todos los regímenes disponibles para su tipo de persona.'**
+  String get addRegimeNoneLeft;
+
+  /// Confirmation after adding a regime.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregamos el régimen {code}.'**
+  String addRegimeAdded(String code);
+
+  /// Regime added with a CPA-review warning.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregamos el régimen {code}. Un contador debe confirmar la combinación: {reason}'**
+  String addRegimeCpaReview(String code, String reason);
+
+  /// OQ-7 warning on the options page.
+  ///
+  /// In es, this message translates to:
+  /// **'El cambio aplica a todos los meses de este régimen, también a los anteriores.'**
+  String get optionsEditWarning;
+
+  /// Confirmation after saving options.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardamos las opciones.'**
+  String get optionsSaved;
+
+  /// App bar title of the add-regime screen.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevo régimen'**
+  String get addRegimeTitle;
 }
 
 class _AppLocalizationsDelegate
