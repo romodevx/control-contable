@@ -1491,7 +1491,7 @@ paths:
     get:
       tags: [Incomes]
       operationId: getIncomeDefaults
-      x-frozen: sha256:b805f4cbdc0c425fb598f8873fabdc51173aa5fccdcb305d917e0b508b73abb9
+      x-frozen: sha256:13e400f9f1e5149353f4fb6f7daa675efbec43c858f4f37b23d1a62a173d7f58
       summary: IVA rates and suggested withholding rates for a new income (prefills the form)
       description: >-
         Resolved from the rate catalog (`RateCatalog`, dated parameter data) for the
@@ -1557,7 +1557,7 @@ paths:
                 publicoGeneral:
                   summary: Sale to the general public (no withholding)
                   value:
-                    iva_rates_allowed: [rate_16, rate_0, exempt]
+                    iva_rates_allowed: [rate_16, rate_8, rate_0, exempt]
                     suggested_iva_rate: rate_16
                     isr_withholding_allowed: false
                     isr_withholding_rate: null
