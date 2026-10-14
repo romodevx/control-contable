@@ -226,7 +226,7 @@ asset register (forward catalog migration on `regimes.required_inputs`).
 3. 606 = rent collected − (blind 35 % + predial, or actual deductions, per the regime option); `max(0, …)`.
 4. Ingresos acumulables = 1 + 2 + 3.
 5. Personal deductions (below). 6. Base = 4 − 5; `≤ 0 → ISR 0`.
-7. ISR = annual tariff (Anexo 8 C.II, `isr.annual_152` in params; identical to the December art. 106
+7. ISR = annual tariff (Anexo 8 C.II, `isr.art152.annual` in params; identical to the December art. 106
    table, asserted by test) — `cuota fija + (base − límite inferior) × %`, binary search (M5 §2.4).
 8. Credits (§2.5). 9. Balance = 7 − 8 → `a_cargo` / `a_favor` / `cero`.
 
@@ -329,7 +329,7 @@ compute < 5 ms (benchmark).
 | AN-08 | `pf_art152` cap binds | Deduction applied **45,000** (not 80,000), ISR **31,807.91** | run |
 
 Plus generated cases: each cap at its boundary (±1 centavo), every tuition level, tariff-row edges of
-`isr.annual_152`, cash exclusion per category, and an AN-01 variant with all payments `estimated_by_app`.
+`isr.art152.annual`, cash exclusion per category, and an AN-01 variant with all payments `estimated_by_app`.
 
 ## 4. User stories (Given / When / Then)
 

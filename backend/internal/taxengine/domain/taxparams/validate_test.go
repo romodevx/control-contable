@@ -25,6 +25,18 @@ func tableIndex(t testing.TB, spec taxparams.Spec, key taxparams.Key, month time
 	return -1
 }
 
+// valueIndex finds the first value of key in spec, so a case can mutate it.
+func valueIndex(t testing.TB, spec taxparams.Spec, key taxparams.Key) int {
+	t.Helper()
+	for i, v := range spec.Values {
+		if v.Key == key {
+			return i
+		}
+	}
+	t.Fatalf("fixture has no value %s", key)
+	return -1
+}
+
 func TestNewParamsAcceptsTheValidFixture(t *testing.T) {
 	p := mustParams(t, validSpec(t))
 	assert.Equal(t, 2026, p.FiscalYear())
@@ -64,6 +76,11 @@ func TestNewParamsRejects(t *testing.T) {
 		{"value key empty segment", func(_ testing.TB, s *taxparams.Spec) { s.Values[0].Key = "iva..rate" }, taxparams.ErrInvalidKey},
 		{"value key trailing dot", func(_ testing.TB, s *taxparams.Spec) { s.Values[0].Key = "iva.rate." }, taxparams.ErrInvalidKey},
 		{"value of unknown kind", func(_ testing.TB, s *taxparams.Spec) { s.Values[0].Kind = 0 }, taxparams.ErrInvalidKind},
+		{"count of zero", func(t testing.TB, s *taxparams.Spec) { s.Values[valueIndex(t, *s, keyCapUMAs)].Count = 0 }, taxparams.ErrCountNotPositive},
+		{"negative count", func(t testing.TB, s *taxparams.Spec) { s.Values[valueIndex(t, *s, keyCapUMAs)].Count = -5 }, taxparams.ErrCountNotPositive},
+		{"date value without a date", func(t testing.TB, s *taxparams.Spec) {
+			s.Values[valueIndex(t, *s, keyDeadline)].Date = fiscal.Date{}
+		}, taxparams.ErrMissingDate},
 		{"rate above one", func(t testing.TB, s *taxparams.Spec) { s.Values[0].Rate = mustRate(t, "1.000001") }, taxparams.ErrRateOutOfRange},
 		{"negative rate", func(t testing.TB, s *taxparams.Spec) { s.Values[0].Rate = mustRate(t, "-0.01") }, taxparams.ErrRateOutOfRange},
 		{"negative money", func(t testing.TB, s *taxparams.Spec) { s.Values[1].Money = mustCents(t, "-0.01") }, taxparams.ErrNegativeMoney},

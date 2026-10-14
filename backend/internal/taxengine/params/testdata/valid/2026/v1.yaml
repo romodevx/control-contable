@@ -34,6 +34,15 @@ values:
     flag: false
     valid_from: 2026-01-01
     basis: [{source: anexo-synthetic, article: "CFF 20"}]
+  - key: deduction.personal.global_cap_umas
+    count: 5
+    valid_from: 2026-01-01
+    basis: [{source: decree-synthetic, article: "Art. 2"}]
+  - key: annual.deadline.pf
+    date: 2027-04-30
+    valid_from: 2026-01-01
+    valid_to: 2026-12-31
+    basis: [{source: decree-synthetic, article: "Art. 3"}]
 tables:
   - key: isr.art96.monthly
     kind: marginal
