@@ -198,7 +198,7 @@ Agricultural, livestock, forestry and fishing (AGAPES) individuals in 612: incom
 | Monthly payment | IVA charged and **actually collected** in the month − creditable IVA **actually paid** in the month − IVA withheld from the taxpayer in the month. **Not year-to-date.** | LIVA arts. 1, 1-B, 5-D |
 | Creditable IVA | Expense deductible for ISR, IVA shown separately on a CFDI, actually paid, and IVA withheld (by the taxpayer as payer) already paid to SAT. For mixed taxed and exempt activity, credit only in proportion. | LIVA art. 5 fr. I–V |
 | Surplus | A balance in favor can be credited in later months, or a refund or offset can be requested. | LIVA art. 6 |
-| Withholding by a PM | 2/3 of the IVA (= 10.6667 % of the price) on PF professional services, commissions and rentals. 4 % of the price on freight transport. | LIVA 1-A fr. II; RLIVA art. 3 fr. I–II |
+| Withholding by a PM | 2/3 of the IVA (= 10.6667 % of the price) on PF professional services, commissions and rentals. 4 % of the price on ground freight of goods (from PF **or** PM). **100 %** of the IVA on desperdicios (no reduction, from anyone). The old 6 % on personnel services (subcontratación, LIVA 1-A fr. IV) was **repealed** (DOF 23-04-2021) and no longer applies. Full matrix: [withholdings-matrix-2026.md](withholdings-matrix-2026.md). | LIVA 1-A fr. II a)–d), fr. IV (derogada); RLIVA art. 3 fr. I–II |
 | Platforms | 50 % withheld (100 % without RFC). Definitive under 18-M if ≤ $300k. | LIVA 18-J, 18-L, 18-M |
 | Quarterly IVA, rental | Follows the quarterly ISR option for rent (art. 116), definitive. | LIVA 5-F |
 | RESICO PF | No special IVA regime: the general rules apply. | |
@@ -286,12 +286,17 @@ The rounding of the coefficient is **not stated in art. 14**. Practice uses 4 de
 | Professional fees (612) | 10 % (106) | 2/3 (RLIVA 3) |
 | Rent (606) | 10 % (116) | 2/3 |
 | RESICO PF supplier (626) | 1.25 % (113-J) | 2/3 if services or rent |
-| Freight transport | — | 4 % (RLIVA 3 fr. II) |
+| Freight transport (ground, of goods; also from a PM) | — | 4 % of the price (RLIVA 3 fr. II) |
+| Commissions (PF) | — ⚠️ | 2/3 (LIVA 1-A II d) |
+| Desperdicios (any supplier) | — | 100 % (LIVA 1-A II b) |
+| Subcontratación / personnel services | — | **— (6 % repealed DOF 23-04-2021)** |
 | PM selling through platforms (2026, new) | **2.5 %** withheld by the platform, creditable (20 % without RFC) | — |
 
 ## B.3 IVA (PM)
 
-The rules are the same as §A.3 (16 %, 8 % border, 0 %, exempt, creditable IVA, day-17 monthly payment, not year-to-date). In addition, IVA that the PM withholds from others must be **paid in full** to SAT by day 17, with no offsets (LIVA 1-A). The withheld IVA becomes creditable for the PM in the month it is paid (art. 5 fr. IV).
+The rules are the same as §A.3 (16 %, 8 % border, 0 %, exempt, creditable IVA, day-17 monthly payment, not year-to-date). In addition, IVA that the PM withholds from others must be **paid in full** to SAT by day 17, with no offsets (LIVA 1-A; RMF 4.1.11). The IVA the PM actually paid to the supplier (IVA − IVA withheld) is creditable in the month of payment (art. 5 fr. III). The **withheld** IVA becomes creditable **in the monthly return following the one in which the withholding was remitted** (art. 5 fr. IV: "podrá ser acreditado en la declaración de pago mensual siguiente a la declaración en la que se haya efectuado el entero de la retención"). Example: withheld in June, remitted with the June return (filed by 17 July) → creditable in the **July** return.
+
+> **Correction (2026-10-15).** This section previously said the withheld IVA "becomes creditable for the PM in the month it is paid". LIVA art. 5 fr. IV, read verbatim in [withholdings-matrix-2026.md](withholdings-matrix-2026.md) §2.2, defers it to the return after the remittance. Spec impact: [MODULE-withholdings §4.2](../project-specs/MODULE-withholdings.md).
 
 ## B.4 Deadlines and limits (PM)
 
