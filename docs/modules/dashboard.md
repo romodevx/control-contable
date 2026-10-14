@@ -41,7 +41,7 @@ it by hand. CI (`make api-error-tables-check`) fails when it differs from `opena
 |---|---|---|---|---|
 | `getDashboard` | `GET /v1/taxpayers/{taxpayerId}/dashboard` | 400 | `validation_failed` | Input does not match the contract (malformed `period` or path id, `months` not an integer in 6..12, unknown query parameter), or a future `period` (`out_of_range`). |
 | `getDashboard` | `GET /v1/taxpayers/{taxpayerId}/dashboard` | 401 | `unauthorized` | Missing, invalid or expired credentials. |
-| `getDashboard` | `GET /v1/taxpayers/{taxpayerId}/dashboard` | 404 | `not_found` | The taxpayer does not exist, belongs to another user, or its id is malformed, or `module_dashboard` (or `module_taxpayers`) is disabled (indistinguishable on purpose). |
+| `getDashboard` | `GET /v1/taxpayers/{taxpayerId}/dashboard` | 404 | `not_found` | The taxpayer does not exist or belongs to another user, or `module_dashboard` (or `module_taxpayers`) is disabled, which answers `404` before any input check, a malformed request included (indistinguishable on purpose). With the module ON a malformed id is `400`. |
 | `getDashboard` | `GET /v1/taxpayers/{taxpayerId}/dashboard` | 422 | `business_rule_violation` | `period` is before 2026-01, the first month any record or estimate can exist (`parameters_unavailable`). A well-formed request with nothing to show, hence `422`, as `getTaxpayerEstimate`. |
 | `getDashboard` | `GET /v1/taxpayers/{taxpayerId}/dashboard` | 429 | `rate_limited` | Rate limit exceeded. |
 | `getDashboard` | `GET /v1/taxpayers/{taxpayerId}/dashboard` | 500 | `internal_error` | Unexpected server error. |

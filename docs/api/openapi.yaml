@@ -2845,7 +2845,7 @@ paths:
     get:
       tags: [Dashboard]
       operationId: getDashboard
-      x-frozen: sha256:6ce8975daf353a07a51613b0bc84b4c834780052ae85ef829727c5cd11a0e092
+      x-frozen: sha256:c6e4c22519dfe074bcb8144c7be95f2f54dfe2c3e110ad57161b0ce227e649de
       summary: Home of one taxpayer - this month's estimate, income vs expense, trend and access
       description: >-
         Read-only Home for the taxpayer, derived on every read (no cache, ADR-0002 §5).
@@ -3090,9 +3090,10 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404':
           description: >-
-            The taxpayer does not exist, belongs to another user, or its id is malformed, or
-            `module_dashboard` (or `module_taxpayers`) is disabled (indistinguishable on
-            purpose).
+            The taxpayer does not exist or belongs to another user, or `module_dashboard` (or
+            `module_taxpayers`) is disabled, which answers `404` before any input check, a
+            malformed request included (indistinguishable on purpose). With the module ON a
+            malformed id is `400`.
           headers:
             Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
