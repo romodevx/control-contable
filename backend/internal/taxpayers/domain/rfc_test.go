@@ -68,7 +68,6 @@ func TestNewRFCAcceptsACheckDigitMismatch(t *testing.T) {
 		{name: "fisica check digit off by one", raw: "PEXJ900215HK9", want: "PEXJ900215HK9", typ: domain.PersonTypeFisica},
 		{name: "fisica check digit A instead of 0", raw: "AAAA010101AAA", want: "AAAA010101AAA", typ: domain.PersonTypeFisica},
 		{name: "moral check digit 0 instead of A", raw: "EJE840315K30", want: "EJE840315K30", typ: domain.PersonTypeMoral},
-		{name: "moral check digit letter outside 0-9A", raw: "A&B020304XYB", want: "A&B020304XYB", typ: domain.PersonTypeMoral},
 		{name: "transposed homoclave", raw: "PEXJ900215KH8", want: "PEXJ900215KH8", typ: domain.PersonTypeFisica},
 		{name: "one name letter changed", raw: "PEXK900215HK8", want: "PEXK900215HK8", typ: domain.PersonTypeFisica},
 		{name: "Ñ replaced by N changes the digit", raw: "NEX991231B22", want: "NEX991231B22", typ: domain.PersonTypeMoral},
@@ -104,6 +103,11 @@ func TestNewRFCRejects(t *testing.T) {
 		{name: "letter in the date", raw: "PEXJ9002I5HK8", wantErr: domain.ErrRFCMalformed},
 		{name: "& in the homoclave", raw: "PEXJ900215H&8", wantErr: domain.ErrRFCMalformed},
 		{name: "Ñ in the homoclave", raw: "PEXJ900215HÑ8", wantErr: domain.ErrRFCMalformed},
+		// §2.2: the check digit is [0-9A], the DB CHECK taxpayers_rfc_masked_format
+		// agrees; a mismatch inside that alphabet is a warning (D-RFC), a letter
+		// outside it is a format error, never a 500 at the insert (gate M2-13 B1).
+		{name: "moral check digit letter outside 0-9A", raw: "A&B020304XYB", wantErr: domain.ErrRFCMalformed},
+		{name: "fisica check digit letter outside 0-9A", raw: "PEXJ900215HKZ", wantErr: domain.ErrRFCMalformed},
 		{name: "accented letter", raw: "PÉXJ900215HK8", wantErr: domain.ErrRFCMalformed},
 		{name: "dotless i would fold to I", raw: "PEXı900215HK8", wantErr: domain.ErrRFCMalformed},
 		{name: "long s would fold to S", raw: "ſEXJ900215HK8", wantErr: domain.ErrRFCMalformed},
