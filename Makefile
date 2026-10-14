@@ -23,7 +23,14 @@ PRISM_MOCK_FLAGS := --host $(MOCK_HOST) --port $(MOCK_PORT) --dynamic=$(MOCK_DYN
 # hand. build/ is git-ignored: publish the file, do not commit it.
 API_DOCS_OUT ?= build/api-docs/index.html
 
-.PHONY: contract-tools contract-lint contract-lint-test mock api-docs
+# Generated error tables (M1-18): each module page's error table is rendered from the
+# contract between BEGIN/END GENERATED markers. Add one <module>=<page> pair per module page.
+API_BUNDLE := build/openapi/bundle.json
+ERROR_TABLE_PAGES := module_auth=docs/modules/auth.md
+ERROR_TABLE := node $(CONTRACT_TOOLS)/error-table.js $(API_BUNDLE)
+
+.PHONY: contract-tools contract-lint contract-lint-test mock api-docs api-bundle \
+	api-error-tables api-error-tables-check
 
 $(CONTRACT_TOOLS_INSTALLED): $(CONTRACT_TOOLS)/package.json $(CONTRACT_TOOLS)/package-lock.json
 	npm ci --prefix $(CONTRACT_TOOLS) --ignore-scripts --no-audit --no-fund
@@ -38,12 +45,25 @@ contract-lint: $(CONTRACT_TOOLS_INSTALLED)
 
 ## contract-lint-test: prove every contract rule rejects what it should
 contract-lint-test: $(CONTRACT_TOOLS_INSTALLED)
-	node --test $(CONTRACT_TOOLS)/test.js
+	node --test $(CONTRACT_TOOLS)/test.js $(CONTRACT_TOOLS)/error-table.test.js
 
 ## api-docs: render docs/api/openapi.yaml to one static HTML page (Redoc) at API_DOCS_OUT
 api-docs: $(CONTRACT_TOOLS_INSTALLED)
 	$(REDOCLY_ENV) $(REDOCLY) build-docs $(OPENAPI_SPEC) --config redocly.yaml \
 		--output $(API_DOCS_OUT) --title "Control Contable API" --disableGoogleFont
+
+## api-bundle: dereferenced JSON bundle of the contract at API_BUNDLE (input of the generators)
+api-bundle: $(CONTRACT_TOOLS_INSTALLED)
+	$(REDOCLY_ENV) $(REDOCLY) bundle $(OPENAPI_SPEC) --config redocly.yaml --dereferenced \
+		--ext json --output $(API_BUNDLE)
+
+## api-error-tables: regenerate the error tables of the module pages (docs/modules/) from the contract
+api-error-tables: api-bundle
+	$(ERROR_TABLE) $(ERROR_TABLE_PAGES)
+
+## api-error-tables-check: fail if a module page's error table differs from the contract (CI)
+api-error-tables-check: api-bundle
+	$(ERROR_TABLE) --check $(ERROR_TABLE_PAGES)
 
 ## mock: serve docs/api/openapi.yaml with Prism on MOCK_HOST:MOCK_PORT (MOCK_DYNAMIC=true for generated bodies)
 mock: $(CONTRACT_TOOLS_INSTALLED)
