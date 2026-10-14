@@ -225,4 +225,77 @@ void main() {
       expect(lastBody(), {'refresh_token': 'refresh-1'});
     });
   });
+  // M1-16 FU1: an answer that does not match the contract must surface as
+  // the generic ApiUnexpected, never as a raw TypeError (which escaped every
+  // `on ApiFailure`) nor with the payload in its text.
+  group('a malformed answer is unexpected', () {
+    const leaked = 'leaked-refresh-token';
+    const malformedSession = <String, Object?>{
+      'user': {'id': 7, 'email': null},
+      'tokens': {'access_token': null, 'refresh_token': leaked},
+    };
+    final calls = <String, (String, CannedReply, Future<Object?> Function())>{
+      'listLegalDocuments': (
+        '/v1/legal/documents',
+        (status: 200, body: {'items': null}),
+        () => repository.listLegalDocuments(),
+      ),
+      'register': (
+        '/v1/auth/register',
+        (status: 202, body: {'status': 42}),
+        () => repository.register(
+          const RegisterRequest(email: 'ana@example.mx', acceptedDocuments: []),
+        ),
+      ),
+      'verifyEmail': (
+        '/v1/auth/verify-email',
+        (status: 201, body: malformedSession),
+        () => repository.verifyEmail(
+          VerifyEmailRequest(
+            email: 'ana@example.mx',
+            code: '482913',
+            password: syntheticPassword(),
+          ),
+        ),
+      ),
+      'resendVerification': (
+        '/v1/auth/verify-email/resend',
+        (status: 202, body: null),
+        () => repository.resendVerification('ana@example.mx'),
+      ),
+      'login': (
+        '/v1/auth/login',
+        (status: 200, body: malformedSession),
+        () => repository.login(
+          email: 'ana@example.mx',
+          password: syntheticPassword(),
+        ),
+      ),
+      'login (a list, not an object)': (
+        '/v1/auth/login',
+        (status: 200, body: <Object?>[leaked]),
+        () => repository.login(
+          email: 'ana@example.mx',
+          password: syntheticPassword(),
+        ),
+      ),
+    };
+    for (final MapEntry(key: name, value: (path, reply, call))
+        in calls.entries) {
+      test(name, () async {
+        adapter.reply(path, reply);
+
+        final thrown = await failureOf(call);
+
+        expect(thrown, isA<ApiUnexpected>());
+        expect('$thrown', isNot(contains(leaked)));
+      });
+    }
+
+    test('logout reads no body, so any 2xx body is accepted', () async {
+      adapter.reply('/v1/auth/logout', (status: 200, body: {'oops': leaked}));
+
+      await repository.logout('refresh-1');
+    });
+  });
 }

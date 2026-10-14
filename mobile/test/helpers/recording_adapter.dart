@@ -45,3 +45,13 @@ class RecordingAdapter implements HttpClientAdapter {
   @override
   void close({bool force = false}) {}
 }
+
+/// What [call] throws, or `null` when it completes.
+Future<Object?> failureOf(Future<Object?> Function() call) async {
+  try {
+    await call();
+  } on Object catch (thrown) {
+    return thrown;
+  }
+  return null;
+}
