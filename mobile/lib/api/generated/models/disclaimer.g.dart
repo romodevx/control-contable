@@ -29,6 +29,7 @@ const _$DisclaimerCodeEnumMap = {
   DisclaimerCode.noCoefficientFirstYear: 'no_coefficient_first_year',
   DisclaimerCode.ivaMixedActivity: 'iva_mixed_activity',
   DisclaimerCode.cpaReviewPending: 'cpa_review_pending',
+  DisclaimerCode.resicoCapExceeded: 'resico_cap_exceeded',
   DisclaimerCode.$unknown: r'$unknown',
 };
 

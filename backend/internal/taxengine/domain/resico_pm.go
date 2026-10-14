@@ -16,11 +16,11 @@ const (
 	paramRESICOPMCap      taxparams.Key = "regime.resico_pm.income_cap"
 )
 
-// The line codes of the RESICO PM ISR, in order. The cap line comes first
-// when it applies; a tax input's line only when its value is not zero; the
-// no-profit line only after a negative base; prior payments from February.
+// The line codes of the RESICO PM ISR, in order. A tax input's line only
+// when its value is not zero; the no-profit line only after a negative base;
+// prior payments from February. The annual cap is a disclaimer
+// (DisclaimerRESICOCapExceeded), never a line: lines carry money.
 const (
-	LineRESICOPMCapExceeded         LineCode = "isr.resico_cap_exceeded"
 	LineRESICOPMIncomeYTD           LineCode = "isr.income_ytd"
 	LineRESICOPMIncomeBeforeApp     LineCode = "isr.income_before_app"
 	LineRESICOPMDeductionsYTD       LineCode = "isr.deductions_ytd"
@@ -38,10 +38,6 @@ const (
 // The legal basis of each RESICO PM step (MODULE-tax-engine §2.5: LISR
 // 207, 208, 211, 9; research B.2.2).
 var (
-	basisRESICOPMCap = []Citation{
-		{Law: "LISR", Article: "206", Note: "párrafo segundo: ingresos del ejercicio mayores a 35,000,000"},
-		{Law: "LISR", Article: "214", Note: "se tributa en el Título II a partir del ejercicio siguiente"},
-	}
 	basisRESICOPMIncome = []Citation{
 		{Law: "LISR", Article: "207", Note: "ingresos efectivamente percibidos"},
 		{Law: "LISR", Article: "211", Note: "ingresos del periodo comprendido desde el inicio del ejercicio"},
@@ -102,8 +98,9 @@ func (RESICOPMStrategy) RequiredInputs(_ Options, p Period, f Facts) []RequiredI
 }
 
 // Estimate computes the month's provisional ISR and IVA components. Past
-// the annual cap (35,000,000 collected, 206) the year is still computed and
-// an info line says the entity leaves RESICO from the next fiscal year.
+// the annual cap (35,000,000 collected, 206 ¶2) the year is still computed
+// and the estimate carries DisclaimerRESICOCapExceeded: the entity leaves
+// RESICO for Título II from the next fiscal year (214).
 func (s RESICOPMStrategy) Estimate(in Input, p *taxparams.Params) (RegimeEstimate, error) {
 	est, err := s.estimate(in, p)
 	if err != nil {
@@ -137,15 +134,15 @@ func (s RESICOPMStrategy) estimate(in Input, p *taxparams.Params) (RegimeEstimat
 	if err != nil {
 		return RegimeEstimate{}, err
 	}
+	est := RegimeEstimate{Key: s.Key(), Coverage: TreatmentFull}
 	if collected > incomeCap {
-		t.info(resicoISRStep(LineRESICOPMCapExceeded, SourceRecords(), basisRESICOPMCap), collected)
+		est.Disclaimers = append(est.Disclaimers, DisclaimerRESICOCapExceeded)
 	}
 	t.resicoPMBase(ytd, before)
 	t.l.Scale(resicoISRStep(LineRESICOPMRate, SourceParams(paramPersonaMoralRate), basisRESICOPMRate), rate)
 	if n > time.January {
 		t.l.Subtract(resicoISRStep(LineRESICOPMPriorPayments, SourceTaxInput(InputPriorProvisionalPayments), basisRESICOPMPrior), t.exact(prior))
 	}
-	est := RegimeEstimate{Key: s.Key(), Coverage: TreatmentFull}
 	if before.interest != 0 {
 		step := resicoISRStep(LineRESICOPMInterestWithholding, SourceTaxInput(InputInterestWithholding), basisRESICOPMInterest)
 		step.NeedsCPAReview = true
@@ -155,7 +152,7 @@ func (s RESICOPMStrategy) estimate(in Input, p *taxparams.Params) (RegimeEstimat
 	isr := NewTaxResult(t.l.Result(resicoISRStep(LineRESICOPMPayable, SourceComputed(), basisRESICOPMPayable)))
 	est.ISR = &isr
 	if ytd.Expenses.DeductiblePaid > 0 || before.deductions > 0 {
-		est.Disclaimers = []DisclaimerCode{DisclaimerDeductibilityClaimed}
+		est.Disclaimers = append(est.Disclaimers, DisclaimerDeductibilityClaimed)
 	}
 	return t.finish(est, IVAInput{Sums: in.Sums.Month(n), Options: in.Options})
 }

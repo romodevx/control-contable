@@ -17,10 +17,10 @@ const (
 	paramRESICOPFCap     taxparams.Key = "regime.resico_pf.income_cap"
 )
 
-// The line codes of the RESICO PF ISR, in order; the cap line comes first
-// when it applies, the withholding line only when something was withheld.
+// The line codes of the RESICO PF ISR, in order; the withholding line only
+// when something was withheld. The annual cap is a disclaimer
+// (DisclaimerRESICOCapExceeded), never a line: lines carry money.
 const (
-	LineRESICOPFCapExceeded     LineCode = "isr.resico_cap_exceeded"
 	LineRESICOPFIncomeMonth     LineCode = "isr.income_month"
 	LineRESICOPFRate            LineCode = "isr.resico_rate"
 	LineRESICOPFWithheldByMoral LineCode = "isr.withheld_by_moral"
@@ -34,10 +34,6 @@ const LabelRESICOPFAboveTable LabelKey = "resico_pf_month_above_table"
 
 // The legal basis of each RESICO PF step (MODULE-tax-engine §2.5).
 var (
-	basisRESICOPFCap = []Citation{{
-		Law: "LISR", Article: "113-E",
-		Note: "límite de 3,500,000 de ingresos en el ejercicio; al excederlo se tributa en el régimen general a partir del mes siguiente",
-	}}
 	basisRESICOPFIncome = []Citation{{
 		Law: "LISR", Article: "113-E", Note: "párrafo quinto: ingresos efectivamente cobrados, sin IVA y sin deducciones",
 	}}
@@ -75,8 +71,9 @@ func (RESICOPFStrategy) Treatment() Treatment { return TreatmentFull }
 func (RESICOPFStrategy) RequiredInputs(Options, Period, Facts) []RequiredInput { return nil }
 
 // Estimate computes the month's ISR and IVA components. Past the annual
-// cap (3,500,000 collected Jan..n, 113-E) the month is still computed and an
-// info line says the taxpayer leaves RESICO from the next month. A month
+// cap (3,500,000 collected Jan..n, 113-E) the month is still computed and
+// the estimate carries DisclaimerRESICOCapExceeded: the taxpayer leaves
+// RESICO from the next month (113-E, 113-I). A month
 // above the table itself has no RESICO rate: the ISR is not estimated and
 // the estimate is partial (LabelRESICOPFAboveTable).
 func (s RESICOPFStrategy) Estimate(in Input, p *taxparams.Params) (RegimeEstimate, error) {
@@ -102,13 +99,12 @@ func (s RESICOPFStrategy) estimate(in Input, p *taxparams.Params) (RegimeEstimat
 		return RegimeEstimate{}, err
 	}
 
-	l := NewLedger()
-	t := &resicoTrace{l: l}
-	if ytd.Income.Cash > incomeCap {
-		t.info(resicoISRStep(LineRESICOPFCapExceeded, SourceRecords(), basisRESICOPFCap), ytd.Income.Cash)
-	}
+	t := &resicoTrace{l: NewLedger()}
 	month := in.Sums.Month(n)
 	est := RegimeEstimate{Key: s.Key(), Coverage: TreatmentFull}
+	if ytd.Income.Cash > incomeCap {
+		est.Disclaimers = []DisclaimerCode{DisclaimerRESICOCapExceeded}
+	}
 	isr, err := t.resicoPFISR(table, month.Income)
 	switch {
 	case errors.Is(err, taxparams.ErrAboveTable):
@@ -161,8 +157,6 @@ func (t *resicoTrace) exact(c money.Cents) money.Exact {
 	t.err = err
 	return e
 }
-
-func (t *resicoTrace) info(s Step, amount money.Cents) { t.l.Info(s, t.exact(amount)) }
 
 // failure is the first conversion or ledger error.
 func (t *resicoTrace) failure() error {
