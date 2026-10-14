@@ -232,6 +232,47 @@ void main() {
     expect(name.focusNode.hasFocus, isTrue);
   });
 
+  testWidgets('"Guardar y crear otro" uses its own save when given, and '
+      'keeps every field when that save did not go through', (tester) async {
+    var saved = false;
+    var nextSaves = 0;
+    await pumpForm(
+      tester,
+      AppForm(
+        controller: form,
+        onSave: () async => saves++,
+        onSaveForNext: () async {
+          nextSaves++;
+          return saved;
+        },
+        allowCreateAnother: true,
+        children: [
+          AppTextField(
+            field: name,
+            keyboardType: TextInputType.text,
+            textInputAction: TextInputAction.done,
+            autofillHints: const [],
+          ),
+        ],
+      ),
+    );
+    date.text.text = '01/02/2026';
+    amount.text.text = '1,234.50';
+    name.text.text = 'Honorarios';
+    final another = find.widgetWithText(OutlinedButton, 'Guardar y crear otro');
+
+    await tester.tap(another);
+    await tester.pumpAndSettle();
+    expect(nextSaves, 1);
+    expect(saves, 0);
+    expect(name.text.text, 'Honorarios');
+
+    saved = true;
+    await tester.tap(another);
+    await tester.pumpAndSettle();
+    expect(name.text.text, isEmpty);
+  });
+
   testWidgets('Cancelar is a text button', (tester) async {
     await pumpIncomeForm(tester);
 

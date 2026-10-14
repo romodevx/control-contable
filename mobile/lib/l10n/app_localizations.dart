@@ -1476,6 +1476,498 @@ abstract class AppLocalizations {
   /// **'Nuevo régimen'**
   String get addRegimeTitle;
 
+  /// Tooltip of the month switcher's back button (incomes, expenses).
+  ///
+  /// In es, this message translates to:
+  /// **'Mes anterior'**
+  String get recordsPreviousMonth;
+
+  /// Tooltip of the month switcher's forward button.
+  ///
+  /// In es, this message translates to:
+  /// **'Mes siguiente'**
+  String get recordsNextMonth;
+
+  /// Filter chip that shows every regime.
+  ///
+  /// In es, this message translates to:
+  /// **'Todos'**
+  String get recordsFilterAll;
+
+  /// Label of the regime filter chips.
+  ///
+  /// In es, this message translates to:
+  /// **'Régimen'**
+  String get recordsFilterLabel;
+
+  /// Action of the persistent toast after deleting records.
+  ///
+  /// In es, this message translates to:
+  /// **'Deshacer'**
+  String get recordsUndo;
+
+  /// Confirm button of a one-way delete (read-only account).
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar'**
+  String get recordsDelete;
+
+  /// Income list when the user has no active taxpayer.
+  ///
+  /// In es, this message translates to:
+  /// **'Registra un contribuyente para llevar sus ingresos.'**
+  String get incomesNoTaxpayer;
+
+  /// Empty income list for a month.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin ingresos en {month}'**
+  String incomesEmptyTitle(String month);
+
+  /// Warm copy under the empty income list.
+  ///
+  /// In es, this message translates to:
+  /// **'Registra tu primer ingreso y te mostramos cuánto podrías pagar.'**
+  String get incomesEmptyBody;
+
+  /// Opens the new-income form (list action and empty state).
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar ingreso'**
+  String get incomesRecord;
+
+  /// Income list failed to load; a retry button follows.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar los ingresos.'**
+  String get incomesLoadFailed;
+
+  /// Income list is loading.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando ingresos…'**
+  String get incomesLoading;
+
+  /// How many incomes the month (filtered) holds.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 ingreso} other{{count} ingresos}}'**
+  String incomesCount(int count);
+
+  /// Heading of the month totals card.
+  ///
+  /// In es, this message translates to:
+  /// **'Total del mes con IVA'**
+  String get incomesTotalTitle;
+
+  /// Totals card line: subtotal before IVA.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin IVA'**
+  String get incomesTotalSubtotal;
+
+  /// Totals card line: IVA charged.
+  ///
+  /// In es, this message translates to:
+  /// **'IVA'**
+  String get incomesTotalIva;
+
+  /// Totals card line: ISR and IVA withheld by payers.
+  ///
+  /// In es, this message translates to:
+  /// **'Retenciones'**
+  String get incomesTotalWithheld;
+
+  /// Badge of an accrual income not yet collected.
+  ///
+  /// In es, this message translates to:
+  /// **'Por cobrar'**
+  String get incomesPendingCollection;
+
+  /// Tooltip and label of a row's delete button.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar ingreso: {title}'**
+  String incomesDeleteTooltip(String title);
+
+  /// Screen-reader label of a row: tapping it edits the income.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar ingreso: {title}'**
+  String incomesEditLabel(String title);
+
+  /// Persistent toast after deleting incomes; deletes stack.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{Ingreso eliminado} other{{count} ingresos eliminados}}'**
+  String incomesDeleted(int count);
+
+  /// Toast after Undo restored the deleted incomes.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{Ingreso restaurado} other{{count} ingresos restaurados}}'**
+  String incomesRestored(int count);
+
+  /// Toast when a delete failed; the row is back.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo eliminar el ingreso.'**
+  String get incomesDeleteFailed;
+
+  /// Toast when Undo failed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo restaurar el ingreso.'**
+  String get incomesRestoreFailed;
+
+  /// Toast when Undo failed with 422 regime_not_active.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo restaurar: el régimen ya no cubre la fecha del ingreso.'**
+  String get incomesRestoreRegimeEnded;
+
+  /// Who paid: an individual.
+  ///
+  /// In es, this message translates to:
+  /// **'Persona física'**
+  String get counterpartyPersonaFisica;
+
+  /// Who paid: a company.
+  ///
+  /// In es, this message translates to:
+  /// **'Persona moral'**
+  String get counterpartyPersonaMoral;
+
+  /// Who paid: the general public (no RFC).
+  ///
+  /// In es, this message translates to:
+  /// **'Público en general'**
+  String get counterpartyPublicoGeneral;
+
+  /// Who paid: a digital platform (Uber, Airbnb, Mercado Libre).
+  ///
+  /// In es, this message translates to:
+  /// **'Plataforma digital'**
+  String get counterpartyPlataforma;
+
+  /// IVA rate option.
+  ///
+  /// In es, this message translates to:
+  /// **'16 %'**
+  String get ivaRate16;
+
+  /// IVA rate option: border region decree.
+  ///
+  /// In es, this message translates to:
+  /// **'8 % (región fronteriza)'**
+  String get ivaRate8;
+
+  /// IVA rate option.
+  ///
+  /// In es, this message translates to:
+  /// **'0 %'**
+  String get ivaRate0;
+
+  /// IVA rate option: exempt.
+  ///
+  /// In es, this message translates to:
+  /// **'Exento'**
+  String get ivaRateExempt;
+
+  /// 625 platform activity.
+  ///
+  /// In es, this message translates to:
+  /// **'Transporte o entrega'**
+  String get activityTransportDelivery;
+
+  /// 625 platform activity.
+  ///
+  /// In es, this message translates to:
+  /// **'Hospedaje'**
+  String get activityLodging;
+
+  /// 625 platform activity.
+  ///
+  /// In es, this message translates to:
+  /// **'Venta de bienes o servicios'**
+  String get activityGoodsServices;
+
+  /// App bar title of the new-income page.
+  ///
+  /// In es, this message translates to:
+  /// **'Nuevo ingreso'**
+  String get incomeFormTitle;
+
+  /// App bar title of the edit-income page (same form, prefilled).
+  ///
+  /// In es, this message translates to:
+  /// **'Editar ingreso'**
+  String get incomeEditTitle;
+
+  /// Toast after an edit was saved.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingreso actualizado'**
+  String get incomeUpdated;
+
+  /// Start of the toast after an edit saved with non-blocking warnings.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingreso actualizado, con un aviso:'**
+  String get incomeUpdatedWithWarnings;
+
+  /// Date the income was collected.
+  ///
+  /// In es, this message translates to:
+  /// **'Fecha de cobro'**
+  String get incomeFieldCollectedOn;
+
+  /// Date the CFDI was issued.
+  ///
+  /// In es, this message translates to:
+  /// **'Fecha de factura'**
+  String get incomeFieldInvoicedOn;
+
+  /// Free text describing the income.
+  ///
+  /// In es, this message translates to:
+  /// **'Descripción'**
+  String get incomeFieldDescription;
+
+  /// Subtotal before IVA.
+  ///
+  /// In es, this message translates to:
+  /// **'Monto sin IVA'**
+  String get incomeFieldAmount;
+
+  /// IVA rate choice.
+  ///
+  /// In es, this message translates to:
+  /// **'Tasa de IVA'**
+  String get incomeFieldIvaRate;
+
+  /// Counterparty type choice.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Quién pagó?'**
+  String get incomeFieldCounterparty;
+
+  /// Regime the income belongs to (only with more than one).
+  ///
+  /// In es, this message translates to:
+  /// **'Régimen'**
+  String get incomeFieldRegime;
+
+  /// 625 activity (only with more than one).
+  ///
+  /// In es, this message translates to:
+  /// **'Actividad en la plataforma'**
+  String get incomeFieldActivity;
+
+  /// IVA amount, prefilled from the rate.
+  ///
+  /// In es, this message translates to:
+  /// **'IVA cobrado'**
+  String get incomeFieldIvaAmount;
+
+  /// ISR the payer withheld.
+  ///
+  /// In es, this message translates to:
+  /// **'ISR retenido'**
+  String get incomeFieldIsrWithheld;
+
+  /// IVA the payer withheld.
+  ///
+  /// In es, this message translates to:
+  /// **'IVA retenido'**
+  String get incomeFieldIvaWithheld;
+
+  /// The CFDI's folio fiscal.
+  ///
+  /// In es, this message translates to:
+  /// **'Folio fiscal (UUID)'**
+  String get incomeFieldCfdiUuid;
+
+  /// Collapsed section with the withholdings.
+  ///
+  /// In es, this message translates to:
+  /// **'Retenciones'**
+  String get incomeSectionWithholdings;
+
+  /// Collapsed section: IVA amount, the other date, folio fiscal.
+  ///
+  /// In es, this message translates to:
+  /// **'Más detalles'**
+  String get incomeSectionMore;
+
+  /// Help under the withholdings section.
+  ///
+  /// In es, this message translates to:
+  /// **'Prellenadas con la tasa sugerida. Corrígelas con lo que diga el CFDI.'**
+  String get incomeWithholdingsHelp;
+
+  /// Live total under the amount.
+  ///
+  /// In es, this message translates to:
+  /// **'Total con IVA {total}'**
+  String incomeSummaryTotal(String total);
+
+  /// Live breakdown under the amount.
+  ///
+  /// In es, this message translates to:
+  /// **'IVA {iva} · Retenciones {withheld} · Neto {net}'**
+  String incomeSummaryNet(String iva, String withheld, String net);
+
+  /// Notice for an income in an informational regime (OQ-4).
+  ///
+  /// In es, this message translates to:
+  /// **'Este régimen es informativo: el ingreso no cambia tu estimación.'**
+  String get incomeInformationalRegime;
+
+  /// Format error of the folio fiscal.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe el folio como aparece en el CFDI: 32 letras y números en grupos de 8-4-4-4-12.'**
+  String get incomeCfdiInvalid;
+
+  /// Defaults endpoint failed; the form still works.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar las tasas sugeridas. Puedes capturar los montos directamente.'**
+  String get incomeDefaultsFailed;
+
+  /// Server detail out_of_range on a date.
+  ///
+  /// In es, this message translates to:
+  /// **'La fecha debe estar entre el 1 de enero de 2022 y hoy.'**
+  String get incomeErrorOutOfRange;
+
+  /// Server detail iva_amount_mismatch.
+  ///
+  /// In es, this message translates to:
+  /// **'El IVA no corresponde a la tasa elegida. Revísalo en el CFDI.'**
+  String get incomeErrorIvaMismatch;
+
+  /// Server detail rate_not_valid_on_date.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta tasa no está vigente en la fecha del ingreso.'**
+  String get incomeErrorRateNotValid;
+
+  /// Server detail withholding_not_applicable.
+  ///
+  /// In es, this message translates to:
+  /// **'Con este tipo de cliente no hay esta retención.'**
+  String get incomeErrorWithholdingNotApplicable;
+
+  /// Server detail withholding_exceeds_base.
+  ///
+  /// In es, this message translates to:
+  /// **'La retención no puede ser mayor que su base.'**
+  String get incomeErrorWithholdingExceedsBase;
+
+  /// Server detail regime_not_active.
+  ///
+  /// In es, this message translates to:
+  /// **'El contribuyente no tenía este régimen en esa fecha.'**
+  String get incomeErrorRegimeNotActive;
+
+  /// Server detail activity_not_held.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta actividad no está registrada en el régimen.'**
+  String get incomeErrorActivityNotHeld;
+
+  /// Any other server verdict on a field.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa este dato.'**
+  String get incomeErrorInvalid;
+
+  /// Save failed offline; the retry is idempotent.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo guardar por falta de conexión. Vuelve a tocar Guardar: no se duplicará.'**
+  String get incomeSaveUnreachable;
+
+  /// 409 id_reused on create.
+  ///
+  /// In es, this message translates to:
+  /// **'Este ingreso ya se había guardado con otros datos. Revisa la lista de ingresos.'**
+  String get incomeSaveIdReused;
+
+  /// 404 on an edit: the income was deleted elsewhere.
+  ///
+  /// In es, this message translates to:
+  /// **'Este ingreso ya no existe: se eliminó en otro lugar.'**
+  String get incomeSaveGone;
+
+  /// Any other save failure.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo guardar el ingreso. Intenta de nuevo.'**
+  String get incomeSaveFailed;
+
+  /// Toast after saving an income.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingreso guardado'**
+  String get incomeSaved;
+
+  /// Heading before the non-blocking warnings of a saved income.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingreso guardado, con un aviso:'**
+  String get incomeSavedWithWarnings;
+
+  /// Warning duplicate_cfdi_uuid (non-blocking).
+  ///
+  /// In es, this message translates to:
+  /// **'Ya hay otro ingreso con este folio fiscal. Si es un pago parcial del mismo CFDI, está bien.'**
+  String get incomeWarningDuplicateCfdi;
+
+  /// Warning withholding_differs_from_rate (non-blocking).
+  ///
+  /// In es, this message translates to:
+  /// **'La retención es distinta de la tasa sugerida. Se guardó lo que escribiste: el CFDI manda.'**
+  String get incomeWarningWithholdingDiffers;
+
+  /// Paywall title on 402 trial_cap_reached for incomes.
+  ///
+  /// In es, this message translates to:
+  /// **'Llegaste al límite de ingresos de prueba'**
+  String get incomeTrialCapTitle;
+
+  /// Paywall body on 402 trial_cap_reached for incomes.
+  ///
+  /// In es, this message translates to:
+  /// **'La prueba incluye 5 ingresos y ya los registraste. Para registrar más ingresos se necesita un plan. Lo que capturaste sigue en el formulario.'**
+  String get incomeTrialCapBody;
+
+  /// Leaving the form with unsaved changes.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Descartar este ingreso?'**
+  String get incomeDiscardTitle;
+
+  /// Body of the discard confirmation.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que escribiste se perderá.'**
+  String get incomeDiscardBody;
+
+  /// Stays on the form.
+  ///
+  /// In es, this message translates to:
+  /// **'Seguir editando'**
+  String get incomeDiscardKeep;
+
+  /// Leaves the form, losing the changes.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar'**
+  String get incomeDiscardConfirm;
+
   /// Home entry to the estimate screen (module_tax_engine).
   ///
   /// In es, this message translates to:

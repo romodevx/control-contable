@@ -1120,6 +1120,380 @@
   "@addRegimeTitle": {
     "description": "App bar title of the add-regime screen."
   },
+  "recordsPreviousMonth": "Mes anterior",
+  "@recordsPreviousMonth": {
+    "description": "Tooltip of the month switcher's back button (incomes, expenses)."
+  },
+  "recordsNextMonth": "Mes siguiente",
+  "@recordsNextMonth": {
+    "description": "Tooltip of the month switcher's forward button."
+  },
+  "recordsFilterAll": "Todos",
+  "@recordsFilterAll": {
+    "description": "Filter chip that shows every regime."
+  },
+  "recordsFilterLabel": "Régimen",
+  "@recordsFilterLabel": {
+    "description": "Label of the regime filter chips."
+  },
+  "recordsUndo": "Deshacer",
+  "@recordsUndo": {
+    "description": "Action of the persistent toast after deleting records."
+  },
+  "recordsDelete": "Eliminar",
+  "@recordsDelete": {
+    "description": "Confirm button of a one-way delete (read-only account)."
+  },
+  "incomesNoTaxpayer": "Registra un contribuyente para llevar sus ingresos.",
+  "@incomesNoTaxpayer": {
+    "description": "Income list when the user has no active taxpayer."
+  },
+  "incomesEmptyTitle": "Sin ingresos en {month}",
+  "@incomesEmptyTitle": {
+    "description": "Empty income list for a month.",
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "incomesEmptyBody": "Registra tu primer ingreso y te mostramos cuánto podrías pagar.",
+  "@incomesEmptyBody": {
+    "description": "Warm copy under the empty income list."
+  },
+  "incomesRecord": "Registrar ingreso",
+  "@incomesRecord": {
+    "description": "Opens the new-income form (list action and empty state)."
+  },
+  "incomesLoadFailed": "No se pudieron cargar los ingresos.",
+  "@incomesLoadFailed": {
+    "description": "Income list failed to load; a retry button follows."
+  },
+  "incomesLoading": "Cargando ingresos…",
+  "@incomesLoading": {
+    "description": "Income list is loading."
+  },
+  "incomesCount": "{count, plural, =1{1 ingreso} other{{count} ingresos}}",
+  "@incomesCount": {
+    "description": "How many incomes the month (filtered) holds.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "incomesTotalTitle": "Total del mes con IVA",
+  "@incomesTotalTitle": {
+    "description": "Heading of the month totals card."
+  },
+  "incomesTotalSubtotal": "Sin IVA",
+  "@incomesTotalSubtotal": {
+    "description": "Totals card line: subtotal before IVA."
+  },
+  "incomesTotalIva": "IVA",
+  "@incomesTotalIva": {
+    "description": "Totals card line: IVA charged."
+  },
+  "incomesTotalWithheld": "Retenciones",
+  "@incomesTotalWithheld": {
+    "description": "Totals card line: ISR and IVA withheld by payers."
+  },
+  "incomesPendingCollection": "Por cobrar",
+  "@incomesPendingCollection": {
+    "description": "Badge of an accrual income not yet collected."
+  },
+  "incomesDeleteTooltip": "Eliminar ingreso: {title}",
+  "@incomesDeleteTooltip": {
+    "description": "Tooltip and label of a row's delete button.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "incomesEditLabel": "Editar ingreso: {title}",
+  "@incomesEditLabel": {
+    "description": "Screen-reader label of a row: tapping it edits the income.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "incomesDeleted": "{count, plural, =1{Ingreso eliminado} other{{count} ingresos eliminados}}",
+  "@incomesDeleted": {
+    "description": "Persistent toast after deleting incomes; deletes stack.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "incomesRestored": "{count, plural, =1{Ingreso restaurado} other{{count} ingresos restaurados}}",
+  "@incomesRestored": {
+    "description": "Toast after Undo restored the deleted incomes.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "incomesDeleteFailed": "No se pudo eliminar el ingreso.",
+  "@incomesDeleteFailed": {
+    "description": "Toast when a delete failed; the row is back."
+  },
+  "incomesRestoreFailed": "No se pudo restaurar el ingreso.",
+  "@incomesRestoreFailed": {
+    "description": "Toast when Undo failed."
+  },
+  "incomesRestoreRegimeEnded": "No se pudo restaurar: el régimen ya no cubre la fecha del ingreso.",
+  "@incomesRestoreRegimeEnded": {
+    "description": "Toast when Undo failed with 422 regime_not_active."
+  },
+  "counterpartyPersonaFisica": "Persona física",
+  "@counterpartyPersonaFisica": {
+    "description": "Who paid: an individual."
+  },
+  "counterpartyPersonaMoral": "Persona moral",
+  "@counterpartyPersonaMoral": {
+    "description": "Who paid: a company."
+  },
+  "counterpartyPublicoGeneral": "Público en general",
+  "@counterpartyPublicoGeneral": {
+    "description": "Who paid: the general public (no RFC)."
+  },
+  "counterpartyPlataforma": "Plataforma digital",
+  "@counterpartyPlataforma": {
+    "description": "Who paid: a digital platform (Uber, Airbnb, Mercado Libre)."
+  },
+  "ivaRate16": "16 %",
+  "@ivaRate16": {
+    "description": "IVA rate option."
+  },
+  "ivaRate8": "8 % (región fronteriza)",
+  "@ivaRate8": {
+    "description": "IVA rate option: border region decree."
+  },
+  "ivaRate0": "0 %",
+  "@ivaRate0": {
+    "description": "IVA rate option."
+  },
+  "ivaRateExempt": "Exento",
+  "@ivaRateExempt": {
+    "description": "IVA rate option: exempt."
+  },
+  "activityTransportDelivery": "Transporte o entrega",
+  "@activityTransportDelivery": {
+    "description": "625 platform activity."
+  },
+  "activityLodging": "Hospedaje",
+  "@activityLodging": {
+    "description": "625 platform activity."
+  },
+  "activityGoodsServices": "Venta de bienes o servicios",
+  "@activityGoodsServices": {
+    "description": "625 platform activity."
+  },
+  "incomeFormTitle": "Nuevo ingreso",
+  "@incomeFormTitle": {
+    "description": "App bar title of the new-income page."
+  },
+  "incomeEditTitle": "Editar ingreso",
+  "@incomeEditTitle": {
+    "description": "App bar title of the edit-income page (same form, prefilled)."
+  },
+  "incomeUpdated": "Ingreso actualizado",
+  "@incomeUpdated": {
+    "description": "Toast after an edit was saved."
+  },
+  "incomeUpdatedWithWarnings": "Ingreso actualizado, con un aviso:",
+  "@incomeUpdatedWithWarnings": {
+    "description": "Start of the toast after an edit saved with non-blocking warnings."
+  },
+  "incomeFieldCollectedOn": "Fecha de cobro",
+  "@incomeFieldCollectedOn": {
+    "description": "Date the income was collected."
+  },
+  "incomeFieldInvoicedOn": "Fecha de factura",
+  "@incomeFieldInvoicedOn": {
+    "description": "Date the CFDI was issued."
+  },
+  "incomeFieldDescription": "Descripción",
+  "@incomeFieldDescription": {
+    "description": "Free text describing the income."
+  },
+  "incomeFieldAmount": "Monto sin IVA",
+  "@incomeFieldAmount": {
+    "description": "Subtotal before IVA."
+  },
+  "incomeFieldIvaRate": "Tasa de IVA",
+  "@incomeFieldIvaRate": {
+    "description": "IVA rate choice."
+  },
+  "incomeFieldCounterparty": "¿Quién pagó?",
+  "@incomeFieldCounterparty": {
+    "description": "Counterparty type choice."
+  },
+  "incomeFieldRegime": "Régimen",
+  "@incomeFieldRegime": {
+    "description": "Regime the income belongs to (only with more than one)."
+  },
+  "incomeFieldActivity": "Actividad en la plataforma",
+  "@incomeFieldActivity": {
+    "description": "625 activity (only with more than one)."
+  },
+  "incomeFieldIvaAmount": "IVA cobrado",
+  "@incomeFieldIvaAmount": {
+    "description": "IVA amount, prefilled from the rate."
+  },
+  "incomeFieldIsrWithheld": "ISR retenido",
+  "@incomeFieldIsrWithheld": {
+    "description": "ISR the payer withheld."
+  },
+  "incomeFieldIvaWithheld": "IVA retenido",
+  "@incomeFieldIvaWithheld": {
+    "description": "IVA the payer withheld."
+  },
+  "incomeFieldCfdiUuid": "Folio fiscal (UUID)",
+  "@incomeFieldCfdiUuid": {
+    "description": "The CFDI's folio fiscal."
+  },
+  "incomeSectionWithholdings": "Retenciones",
+  "@incomeSectionWithholdings": {
+    "description": "Collapsed section with the withholdings."
+  },
+  "incomeSectionMore": "Más detalles",
+  "@incomeSectionMore": {
+    "description": "Collapsed section: IVA amount, the other date, folio fiscal."
+  },
+  "incomeWithholdingsHelp": "Prellenadas con la tasa sugerida. Corrígelas con lo que diga el CFDI.",
+  "@incomeWithholdingsHelp": {
+    "description": "Help under the withholdings section."
+  },
+  "incomeSummaryTotal": "Total con IVA {total}",
+  "@incomeSummaryTotal": {
+    "description": "Live total under the amount.",
+    "placeholders": {
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "incomeSummaryNet": "IVA {iva} · Retenciones {withheld} · Neto {net}",
+  "@incomeSummaryNet": {
+    "description": "Live breakdown under the amount.",
+    "placeholders": {
+      "iva": {
+        "type": "String"
+      },
+      "withheld": {
+        "type": "String"
+      },
+      "net": {
+        "type": "String"
+      }
+    }
+  },
+  "incomeInformationalRegime": "Este régimen es informativo: el ingreso no cambia tu estimación.",
+  "@incomeInformationalRegime": {
+    "description": "Notice for an income in an informational regime (OQ-4)."
+  },
+  "incomeCfdiInvalid": "Escribe el folio como aparece en el CFDI: 32 letras y números en grupos de 8-4-4-4-12.",
+  "@incomeCfdiInvalid": {
+    "description": "Format error of the folio fiscal."
+  },
+  "incomeDefaultsFailed": "No se pudieron cargar las tasas sugeridas. Puedes capturar los montos directamente.",
+  "@incomeDefaultsFailed": {
+    "description": "Defaults endpoint failed; the form still works."
+  },
+  "incomeErrorOutOfRange": "La fecha debe estar entre el 1 de enero de 2022 y hoy.",
+  "@incomeErrorOutOfRange": {
+    "description": "Server detail out_of_range on a date."
+  },
+  "incomeErrorIvaMismatch": "El IVA no corresponde a la tasa elegida. Revísalo en el CFDI.",
+  "@incomeErrorIvaMismatch": {
+    "description": "Server detail iva_amount_mismatch."
+  },
+  "incomeErrorRateNotValid": "Esta tasa no está vigente en la fecha del ingreso.",
+  "@incomeErrorRateNotValid": {
+    "description": "Server detail rate_not_valid_on_date."
+  },
+  "incomeErrorWithholdingNotApplicable": "Con este tipo de cliente no hay esta retención.",
+  "@incomeErrorWithholdingNotApplicable": {
+    "description": "Server detail withholding_not_applicable."
+  },
+  "incomeErrorWithholdingExceedsBase": "La retención no puede ser mayor que su base.",
+  "@incomeErrorWithholdingExceedsBase": {
+    "description": "Server detail withholding_exceeds_base."
+  },
+  "incomeErrorRegimeNotActive": "El contribuyente no tenía este régimen en esa fecha.",
+  "@incomeErrorRegimeNotActive": {
+    "description": "Server detail regime_not_active."
+  },
+  "incomeErrorActivityNotHeld": "Esta actividad no está registrada en el régimen.",
+  "@incomeErrorActivityNotHeld": {
+    "description": "Server detail activity_not_held."
+  },
+  "incomeErrorInvalid": "Revisa este dato.",
+  "@incomeErrorInvalid": {
+    "description": "Any other server verdict on a field."
+  },
+  "incomeSaveUnreachable": "No se pudo guardar por falta de conexión. Vuelve a tocar Guardar: no se duplicará.",
+  "@incomeSaveUnreachable": {
+    "description": "Save failed offline; the retry is idempotent."
+  },
+  "incomeSaveIdReused": "Este ingreso ya se había guardado con otros datos. Revisa la lista de ingresos.",
+  "@incomeSaveIdReused": {
+    "description": "409 id_reused on create."
+  },
+  "incomeSaveGone": "Este ingreso ya no existe: se eliminó en otro lugar.",
+  "@incomeSaveGone": {
+    "description": "404 on an edit: the income was deleted elsewhere."
+  },
+  "incomeSaveFailed": "No se pudo guardar el ingreso. Intenta de nuevo.",
+  "@incomeSaveFailed": {
+    "description": "Any other save failure."
+  },
+  "incomeSaved": "Ingreso guardado",
+  "@incomeSaved": {
+    "description": "Toast after saving an income."
+  },
+  "incomeSavedWithWarnings": "Ingreso guardado, con un aviso:",
+  "@incomeSavedWithWarnings": {
+    "description": "Heading before the non-blocking warnings of a saved income."
+  },
+  "incomeWarningDuplicateCfdi": "Ya hay otro ingreso con este folio fiscal. Si es un pago parcial del mismo CFDI, está bien.",
+  "@incomeWarningDuplicateCfdi": {
+    "description": "Warning duplicate_cfdi_uuid (non-blocking)."
+  },
+  "incomeWarningWithholdingDiffers": "La retención es distinta de la tasa sugerida. Se guardó lo que escribiste: el CFDI manda.",
+  "@incomeWarningWithholdingDiffers": {
+    "description": "Warning withholding_differs_from_rate (non-blocking)."
+  },
+  "incomeTrialCapTitle": "Llegaste al límite de ingresos de prueba",
+  "@incomeTrialCapTitle": {
+    "description": "Paywall title on 402 trial_cap_reached for incomes."
+  },
+  "incomeTrialCapBody": "La prueba incluye 5 ingresos y ya los registraste. Para registrar más ingresos se necesita un plan. Lo que capturaste sigue en el formulario.",
+  "@incomeTrialCapBody": {
+    "description": "Paywall body on 402 trial_cap_reached for incomes."
+  },
+  "incomeDiscardTitle": "¿Descartar este ingreso?",
+  "@incomeDiscardTitle": {
+    "description": "Leaving the form with unsaved changes."
+  },
+  "incomeDiscardBody": "Lo que escribiste se perderá.",
+  "@incomeDiscardBody": {
+    "description": "Body of the discard confirmation."
+  },
+  "incomeDiscardKeep": "Seguir editando",
+  "@incomeDiscardKeep": {
+    "description": "Stays on the form."
+  },
+  "incomeDiscardConfirm": "Descartar",
+  "@incomeDiscardConfirm": {
+    "description": "Leaves the form, losing the changes."
+  },
   "homeOpenEstimate": "Ver estimado del mes",
   "@homeOpenEstimate": {
     "description": "Home entry to the estimate screen (module_tax_engine)."

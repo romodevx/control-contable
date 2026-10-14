@@ -18,12 +18,8 @@ _Income _$IncomeFromJson(Map<String, dynamic> json) => _Income(
   ivaCents: (json['iva_cents'] as num).toInt(),
   isrWithheldCents: (json['isr_withheld_cents'] as num).toInt(),
   ivaWithheldCents: (json['iva_withheld_cents'] as num).toInt(),
-  invoicedOn: json['invoiced_on'] == null
-      ? null
-      : DateTime.parse(json['invoiced_on'] as String),
-  collectedOn: json['collected_on'] == null
-      ? null
-      : DateTime.parse(json['collected_on'] as String),
+  invoicedOn: json['invoiced_on'] as String?,
+  collectedOn: json['collected_on'] as String?,
   platformActivity: json['platform_activity'] == null
       ? null
       : PlatformActivity.fromJson(json['platform_activity'] as String),
@@ -47,8 +43,8 @@ Map<String, dynamic> _$IncomeToJson(_Income instance) => <String, dynamic>{
   'iva_cents': instance.ivaCents,
   'isr_withheld_cents': instance.isrWithheldCents,
   'iva_withheld_cents': instance.ivaWithheldCents,
-  'invoiced_on': instance.invoicedOn?.toIso8601String(),
-  'collected_on': instance.collectedOn?.toIso8601String(),
+  'invoiced_on': instance.invoicedOn,
+  'collected_on': instance.collectedOn,
   'platform_activity': _$PlatformActivityEnumMap[instance.platformActivity],
   'cfdi_uuid': instance.cfdiUuid,
   'description': ?instance.description,

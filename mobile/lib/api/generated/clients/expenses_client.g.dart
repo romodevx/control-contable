@@ -24,12 +24,12 @@ class _ExpensesClient implements ExpensesClient {
   Future<ExpenseCategoryList> listExpenseCategories({
     required String taxpayerId,
     required String regime,
-    DateTime? onValue,
+    String? onValue,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
       r'regime': regime,
-      r'on': onValue?.toIso8601String(),
+      r'on': onValue,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};

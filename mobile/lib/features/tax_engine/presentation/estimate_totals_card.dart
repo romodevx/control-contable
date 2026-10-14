@@ -2,6 +2,7 @@ import 'package:control_contable/api/generated/models/regime_estimate_status.dar
 import 'package:control_contable/api/generated/models/tax_result.dart';
 import 'package:control_contable/api/generated/models/tax_result_outcome.dart';
 import 'package:control_contable/api/generated/models/taxpayer_estimate.dart';
+import 'package:control_contable/core/records/record_month.dart';
 import 'package:control_contable/core/theme/app_spacing.dart';
 import 'package:control_contable/core/theme/app_tokens.dart';
 import 'package:control_contable/features/tax_engine/domain/iva.dart';
@@ -86,7 +87,7 @@ class EstimateTotalsCard extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              l10n.estimateDueDate(estimate.dueDate),
+              l10n.estimateDueDate(parseBusinessDate(estimate.dueDate)),
               style: Theme.of(context).textTheme.bodyLarge
                   ?.copyWith(color: colors.heroText),
             ),

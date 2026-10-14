@@ -101,6 +101,47 @@ void main() {
     expect(spec['components'], isNot(isA<YamlMap>()));
   });
 
+  // swagger_parser maps `format: date` to `DateTime`, whose
+  // `toIso8601String()` sends `2026-09-10T00:00:00.000`: not a `date`, so
+  // the server and Prism refuse it. Without the format the value stays the
+  // `YYYY-MM-DD` string the contract defines.
+  test('a calendar date (format: date) stays a string; a date-time keeps '
+      'its format', () {
+    const dates = '''
+components:
+  schemas:
+    BusinessDate: { type: string, format: date }
+    Stamp: { type: string, format: date-time }
+    Holder:
+      type: object
+      properties:
+        on: { type: string, format: date }
+        list: { type: array, items: { type: string, format: date } }
+paths:
+  /x:
+    get:
+      parameters:
+        - { name: on, in: query, schema: { type: string, format: date } }
+''';
+    final spec = normalizeOpenApi(loadYaml(dates) as Map<Object?, Object?>);
+    final schemas =
+        (spec['components']! as Map<String, Object?>)['schemas']!
+            as Map<String, Object?>;
+    final holder =
+        (schemas['Holder']! as Map<String, Object?>)['properties']!
+            as Map<String, Object?>;
+    final param =
+        _paramsOf(_path(spec, '/x'), 'get').single! as Map<String, Object?>;
+
+    expect(schemas['BusinessDate'], {'type': 'string'});
+    expect(schemas['Stamp'], {'type': 'string', 'format': 'date-time'});
+    expect(holder['on'], {'type': 'string'});
+    expect((holder['list']! as Map<String, Object?>)['items'], {
+      'type': 'string',
+    });
+    expect(param['schema'], {'type': 'string'});
+  });
+
   test(r'an unresolvable parameter $ref fails loudly', () {
     const broken = r'''
 paths:

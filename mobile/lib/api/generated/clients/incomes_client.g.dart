@@ -95,14 +95,14 @@ class _IncomesClient implements IncomesClient {
     required String taxpayerId,
     required String regime,
     required CounterpartyType counterpartyType,
-    DateTime? onValue,
+    String? onValue,
     PlatformActivity? platformActivity,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
       r'regime': regime,
       r'counterparty_type': counterpartyType,
-      r'on': onValue?.toIso8601String(),
+      r'on': onValue,
       r'platform_activity': platformActivity,
     };
     queryParameters.removeWhere((k, v) => v == null);

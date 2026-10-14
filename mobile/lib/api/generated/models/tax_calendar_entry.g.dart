@@ -11,8 +11,8 @@ _TaxCalendarEntry _$TaxCalendarEntryFromJson(
 ) => _TaxCalendarEntry(
   period: json['period'] as String,
   obligation: TaxCalendarEntryObligation.fromJson(json['obligation'] as String),
-  nominalDueDate: DateTime.parse(json['nominal_due_date'] as String),
-  dueDate: DateTime.parse(json['due_date'] as String),
+  nominalDueDate: json['nominal_due_date'] as String,
+  dueDate: json['due_date'] as String,
   movedReason: json['moved_reason'] == null
       ? null
       : TaxCalendarEntryMovedReason.fromJson(json['moved_reason'] as String?),
@@ -23,8 +23,8 @@ Map<String, dynamic> _$TaxCalendarEntryToJson(
 ) => <String, dynamic>{
   'period': instance.period,
   'obligation': _$TaxCalendarEntryObligationEnumMap[instance.obligation]!,
-  'nominal_due_date': instance.nominalDueDate.toIso8601String(),
-  'due_date': instance.dueDate.toIso8601String(),
+  'nominal_due_date': instance.nominalDueDate,
+  'due_date': instance.dueDate,
   'moved_reason': ?_$TaxCalendarEntryMovedReasonEnumMap[instance.movedReason],
 };
 

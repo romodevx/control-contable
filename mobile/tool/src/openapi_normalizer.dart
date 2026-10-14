@@ -4,6 +4,11 @@
 // path-item value to a Map before skipping that key). This copies them into
 // each operation, which is spec-equivalent, so the contract keeps its
 // path-level parameters. Delete once a fixed swagger_parser is pinned.
+//
+// It also drops `format: date`: swagger_parser maps it to `DateTime`, which
+// serializes as `2026-09-10T00:00:00.000`, not the `YYYY-MM-DD` the
+// contract defines (`BusinessDate`). Kept as a string, the client sends
+// exactly what the contract says. `date-time` is untouched.
 
 /// HTTP methods that hold an Operation Object inside a Path Item.
 const _operationKeys = {
@@ -20,6 +25,8 @@ const _operationKeys = {
 const _parametersKey = 'parameters';
 const _refKey = r'$ref';
 const _parameterRefPrefix = '#/components/parameters/';
+const _formatKey = 'format';
+const _calendarDateFormat = 'date';
 
 /// Raised when the contract cannot be normalized.
 class OpenApiNormalizeError extends Error {
@@ -34,12 +41,14 @@ class OpenApiNormalizeError extends Error {
 }
 
 /// Returns a plain-map copy of [spec] in which every path-level `parameters`
-/// list is merged into each operation of that path and then removed.
+/// list is merged into each operation of that path and then removed, and
+/// every `format: date` is dropped (see the file header).
 ///
 /// An operation parameter with the same `name` and `in` overrides the path
 /// one, as the OpenAPI Specification defines.
 Map<String, Object?> normalizeOpenApi(Map<Object?, Object?> spec) {
   final plain = _toPlain(spec)! as Map<String, Object?>;
+  _dropCalendarDateFormat(plain);
   final paths = plain['paths'];
   if (paths is! Map<String, Object?>) return plain;
   final componentParameters = _componentParameters(plain);
@@ -106,6 +115,17 @@ Map<String, Object?> _componentParameters(Map<String, Object?> spec) {
   if (components is! Map<String, Object?>) return const {};
   final parameters = components[_parametersKey];
   return parameters is Map<String, Object?> ? parameters : const {};
+}
+
+/// Removes `format: date` from every schema under [node], at any depth.
+void _dropCalendarDateFormat(Object? node) {
+  switch (node) {
+    case final Map<String, Object?> map:
+      if (map[_formatKey] == _calendarDateFormat) map.remove(_formatKey);
+      map.values.forEach(_dropCalendarDateFormat);
+    case final List<Object?> list:
+      list.forEach(_dropCalendarDateFormat);
+  }
 }
 
 /// Deep-copies YAML nodes (or any map/list tree) into plain Dart collections

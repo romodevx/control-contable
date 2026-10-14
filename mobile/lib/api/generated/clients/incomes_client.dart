@@ -67,7 +67,7 @@ abstract class IncomesClient {
     @Path('taxpayerId') required Uuid taxpayerId,
     @Query('regime') required RegimeCode regime,
     @Query('counterparty_type') required CounterpartyType counterpartyType,
-    @Query('on') DateTime? onValue,
+    @Query('on') String? onValue,
     @Query('platform_activity') PlatformActivity? platformActivity,
   });
 
@@ -101,7 +101,7 @@ abstract class IncomesClient {
 
   /// Undo a delete (never consumes a trial slot).
   ///
-  /// Clears `deleted_at`. **Never consumes a trial slot**: the slot was used once at creation and never freed, so Undo works at 5/5 with no paywall. Only the read-only check applies (`402` without `details`). The regime window is re-checked (`422 regime_not_active` when the regime no longer covers the income's dates); an archived taxpayer answers `422 taxpayer_archived`. Restoring a live income answers `200` unchanged; a purged one `404`. `warnings` are computed as on create.
+  /// Clears `deleted_at`. **Never consumes a trial slot**: the slot was used once at creation and never freed, so Undo works at 5/5 with no paywall. **Allowed for a read-only user** (no access check, never `402`): Undo gives back the user's own record and creates nothing (0.6.1, MODULE-incomes §2.7). The regime window is re-checked (`422 regime_not_active` when the regime no longer covers the income's dates); an archived taxpayer answers `422 taxpayer_archived`. Restoring a live income answers `200` unchanged; a purged one, or another user's, `404`. `warnings` are computed as on create.
   @POST('/v1/taxpayers/{taxpayerId}/incomes/{incomeId}/restore')
   Future<Income> restoreIncome({
     @Path('taxpayerId') required Uuid taxpayerId,

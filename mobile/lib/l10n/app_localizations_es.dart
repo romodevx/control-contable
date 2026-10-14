@@ -843,6 +843,307 @@ class AppLocalizationsEs extends AppLocalizations {
   String get addRegimeTitle => 'Nuevo régimen';
 
   @override
+  String get recordsPreviousMonth => 'Mes anterior';
+
+  @override
+  String get recordsNextMonth => 'Mes siguiente';
+
+  @override
+  String get recordsFilterAll => 'Todos';
+
+  @override
+  String get recordsFilterLabel => 'Régimen';
+
+  @override
+  String get recordsUndo => 'Deshacer';
+
+  @override
+  String get recordsDelete => 'Eliminar';
+
+  @override
+  String get incomesNoTaxpayer =>
+      'Registra un contribuyente para llevar sus ingresos.';
+
+  @override
+  String incomesEmptyTitle(String month) {
+    return 'Sin ingresos en $month';
+  }
+
+  @override
+  String get incomesEmptyBody =>
+      'Registra tu primer ingreso y te mostramos cuánto podrías pagar.';
+
+  @override
+  String get incomesRecord => 'Registrar ingreso';
+
+  @override
+  String get incomesLoadFailed => 'No se pudieron cargar los ingresos.';
+
+  @override
+  String get incomesLoading => 'Cargando ingresos…';
+
+  @override
+  String incomesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ingresos',
+      one: '1 ingreso',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get incomesTotalTitle => 'Total del mes con IVA';
+
+  @override
+  String get incomesTotalSubtotal => 'Sin IVA';
+
+  @override
+  String get incomesTotalIva => 'IVA';
+
+  @override
+  String get incomesTotalWithheld => 'Retenciones';
+
+  @override
+  String get incomesPendingCollection => 'Por cobrar';
+
+  @override
+  String incomesDeleteTooltip(String title) {
+    return 'Eliminar ingreso: $title';
+  }
+
+  @override
+  String incomesEditLabel(String title) {
+    return 'Editar ingreso: $title';
+  }
+
+  @override
+  String incomesDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ingresos eliminados',
+      one: 'Ingreso eliminado',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String incomesRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ingresos restaurados',
+      one: 'Ingreso restaurado',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get incomesDeleteFailed => 'No se pudo eliminar el ingreso.';
+
+  @override
+  String get incomesRestoreFailed => 'No se pudo restaurar el ingreso.';
+
+  @override
+  String get incomesRestoreRegimeEnded =>
+      'No se pudo restaurar: el régimen ya no cubre la fecha del ingreso.';
+
+  @override
+  String get counterpartyPersonaFisica => 'Persona física';
+
+  @override
+  String get counterpartyPersonaMoral => 'Persona moral';
+
+  @override
+  String get counterpartyPublicoGeneral => 'Público en general';
+
+  @override
+  String get counterpartyPlataforma => 'Plataforma digital';
+
+  @override
+  String get ivaRate16 => '16 %';
+
+  @override
+  String get ivaRate8 => '8 % (región fronteriza)';
+
+  @override
+  String get ivaRate0 => '0 %';
+
+  @override
+  String get ivaRateExempt => 'Exento';
+
+  @override
+  String get activityTransportDelivery => 'Transporte o entrega';
+
+  @override
+  String get activityLodging => 'Hospedaje';
+
+  @override
+  String get activityGoodsServices => 'Venta de bienes o servicios';
+
+  @override
+  String get incomeFormTitle => 'Nuevo ingreso';
+
+  @override
+  String get incomeEditTitle => 'Editar ingreso';
+
+  @override
+  String get incomeUpdated => 'Ingreso actualizado';
+
+  @override
+  String get incomeUpdatedWithWarnings => 'Ingreso actualizado, con un aviso:';
+
+  @override
+  String get incomeFieldCollectedOn => 'Fecha de cobro';
+
+  @override
+  String get incomeFieldInvoicedOn => 'Fecha de factura';
+
+  @override
+  String get incomeFieldDescription => 'Descripción';
+
+  @override
+  String get incomeFieldAmount => 'Monto sin IVA';
+
+  @override
+  String get incomeFieldIvaRate => 'Tasa de IVA';
+
+  @override
+  String get incomeFieldCounterparty => '¿Quién pagó?';
+
+  @override
+  String get incomeFieldRegime => 'Régimen';
+
+  @override
+  String get incomeFieldActivity => 'Actividad en la plataforma';
+
+  @override
+  String get incomeFieldIvaAmount => 'IVA cobrado';
+
+  @override
+  String get incomeFieldIsrWithheld => 'ISR retenido';
+
+  @override
+  String get incomeFieldIvaWithheld => 'IVA retenido';
+
+  @override
+  String get incomeFieldCfdiUuid => 'Folio fiscal (UUID)';
+
+  @override
+  String get incomeSectionWithholdings => 'Retenciones';
+
+  @override
+  String get incomeSectionMore => 'Más detalles';
+
+  @override
+  String get incomeWithholdingsHelp =>
+      'Prellenadas con la tasa sugerida. Corrígelas con lo que diga el CFDI.';
+
+  @override
+  String incomeSummaryTotal(String total) {
+    return 'Total con IVA $total';
+  }
+
+  @override
+  String incomeSummaryNet(String iva, String withheld, String net) {
+    return 'IVA $iva · Retenciones $withheld · Neto $net';
+  }
+
+  @override
+  String get incomeInformationalRegime =>
+      'Este régimen es informativo: el ingreso no cambia tu estimación.';
+
+  @override
+  String get incomeCfdiInvalid =>
+      'Escribe el folio como aparece en el CFDI: 32 letras y números en grupos de 8-4-4-4-12.';
+
+  @override
+  String get incomeDefaultsFailed =>
+      'No se pudieron cargar las tasas sugeridas. Puedes capturar los montos directamente.';
+
+  @override
+  String get incomeErrorOutOfRange =>
+      'La fecha debe estar entre el 1 de enero de 2022 y hoy.';
+
+  @override
+  String get incomeErrorIvaMismatch =>
+      'El IVA no corresponde a la tasa elegida. Revísalo en el CFDI.';
+
+  @override
+  String get incomeErrorRateNotValid =>
+      'Esta tasa no está vigente en la fecha del ingreso.';
+
+  @override
+  String get incomeErrorWithholdingNotApplicable =>
+      'Con este tipo de cliente no hay esta retención.';
+
+  @override
+  String get incomeErrorWithholdingExceedsBase =>
+      'La retención no puede ser mayor que su base.';
+
+  @override
+  String get incomeErrorRegimeNotActive =>
+      'El contribuyente no tenía este régimen en esa fecha.';
+
+  @override
+  String get incomeErrorActivityNotHeld =>
+      'Esta actividad no está registrada en el régimen.';
+
+  @override
+  String get incomeErrorInvalid => 'Revisa este dato.';
+
+  @override
+  String get incomeSaveUnreachable =>
+      'No se pudo guardar por falta de conexión. Vuelve a tocar Guardar: no se duplicará.';
+
+  @override
+  String get incomeSaveIdReused =>
+      'Este ingreso ya se había guardado con otros datos. Revisa la lista de ingresos.';
+
+  @override
+  String get incomeSaveGone =>
+      'Este ingreso ya no existe: se eliminó en otro lugar.';
+
+  @override
+  String get incomeSaveFailed =>
+      'No se pudo guardar el ingreso. Intenta de nuevo.';
+
+  @override
+  String get incomeSaved => 'Ingreso guardado';
+
+  @override
+  String get incomeSavedWithWarnings => 'Ingreso guardado, con un aviso:';
+
+  @override
+  String get incomeWarningDuplicateCfdi =>
+      'Ya hay otro ingreso con este folio fiscal. Si es un pago parcial del mismo CFDI, está bien.';
+
+  @override
+  String get incomeWarningWithholdingDiffers =>
+      'La retención es distinta de la tasa sugerida. Se guardó lo que escribiste: el CFDI manda.';
+
+  @override
+  String get incomeTrialCapTitle => 'Llegaste al límite de ingresos de prueba';
+
+  @override
+  String get incomeTrialCapBody =>
+      'La prueba incluye 5 ingresos y ya los registraste. Para registrar más ingresos se necesita un plan. Lo que capturaste sigue en el formulario.';
+
+  @override
+  String get incomeDiscardTitle => '¿Descartar este ingreso?';
+
+  @override
+  String get incomeDiscardBody => 'Lo que escribiste se perderá.';
+
+  @override
+  String get incomeDiscardKeep => 'Seguir editando';
+
+  @override
+  String get incomeDiscardConfirm => 'Descartar';
+
+  @override
   String get homeOpenEstimate => 'Ver estimado del mes';
 
   @override
