@@ -100,6 +100,25 @@ void main() {
   }
 
   group('M4-10 layout and defaults', () {
+    // QA M3/M4 D1: the picker is a button for assistive technology too.
+    // TalkBack and VoiceOver activate a node through its tap action; the
+    // category's merged node had the button role but no action, so the
+    // picker could not be opened without touch.
+    testWidgets('the category picker opens from its semantics tap action', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpForm(tester);
+
+      final category = find.semantics.byLabel(RegExp('^Categoría: '));
+      expect(category, findsOne);
+      tester.semantics.tap(category);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Elige la categoría del gasto'), findsOneWidget);
+      handle.dispose();
+    });
+
     testWidgets('a page with the category first, the legend under it, then '
         'amount, IVA, date, payment and CFDI; defaults prefilled; the rest '
         'collapsed', (tester) async {
