@@ -335,3 +335,14 @@ them.
 - `TaxpayerEstimate.records_fingerprint` and `parameter_set` (§5, used by M8).
 - `getTaxpayerEstimate.period` is optional (current month, America/Mexico_City); periods
   before 2026 answer `422 parameters_unavailable` (OQ-T9).
+
+## Engine version log
+
+`domain.EngineVersion` is hashed into the records fingerprint (§5). It changes whenever a
+strategy changes a figure for the same input. The contract `examples` stay at `1.0.0`
+because they are only illustrations.
+
+| Version | Date | Change |
+|---|---|---|
+| 1.0.0 | 2026-10-13 | Launch strategy list (§2). |
+| 1.0.1 | 2026-10-14 | 626 PM adds the ISR it withheld from suppliers to `withheld_to_remit` (LISR 106 ¶5 / 116 ¶5 / 113-J), as 601 does. Found by the M5-24 property suite (PR #100). |
