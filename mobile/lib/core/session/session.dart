@@ -97,21 +97,46 @@ class Session extends ChangeNotifier {
 
   /// Reads the stored refresh token once at boot. An unreadable store
   /// counts as no session: the user signs in again.
+  ///
+  /// A read slower than the restore timeout signs out for now (the splash
+  /// stays bounded), but its late answer still restores the session: a
+  /// slow Keystore on a cold start must not look like a sign-out (M1-15
+  /// QA D1). A sign-in or sign-out in between wins over that answer.
   Future<void> restore() async {
     if (_status != SessionStatus.restoring) return;
     final generation = _generation;
+    final pending = _store.read();
     String? stored;
     try {
-      stored = await _store.read().timeout(_restoreTimeout);
+      stored = await pending.timeout(_restoreTimeout);
+    } on TimeoutException {
+      _settleRestore(generation, null);
+      unawaited(_restoreLate(pending, generation));
+      return;
     } on Exception {
       stored = null;
     }
+    _settleRestore(generation, stored);
+  }
+
+  void _settleRestore(int generation, String? stored) {
     if (generation != _generation || _status != SessionStatus.restoring) {
       return; // A sign-in or sign-out finished first and is the truth.
     }
     _setStatus(
       stored == null ? SessionStatus.signedOut : SessionStatus.signedIn,
     );
+  }
+
+  Future<void> _restoreLate(Future<String?> pending, int generation) async {
+    final String? stored;
+    try {
+      stored = await pending;
+    } on Exception {
+      return; // Still unreadable: the user signs in again.
+    }
+    if (stored == null || generation != _generation) return;
+    if (_status == SessionStatus.signedOut) _setStatus(SessionStatus.signedIn);
   }
 
   /// Starts the session [tokens] belong to (`login`, `verifyEmail`). The
