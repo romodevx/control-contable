@@ -16,7 +16,7 @@ COVER_EXCLUDE ?= ^github.com/romodevx/control-contable/backend/(adapter/http/gen
 
 .DEFAULT_GOAL := check
 
-.PHONY: check fmt fmt-check lint test test-integration test-contract cover cover-check vuln tidy generate codegen-check init-env db-up db-down db-reset db-roles-check migrate-up migrate-down migrate-status flags api worker access-key-rotate
+.PHONY: check fmt fmt-check lint test test-integration test-contract cover cover-check vuln tidy generate codegen-check init-env db-up db-down db-reset db-roles-check migrate-up migrate-down migrate-status flags api worker access-key-rotate db-psql-app
 
 ## check: fmt-check + lint + unit tests (what CI runs)
 check: fmt-check lint test
@@ -114,6 +114,15 @@ db-roles-check: $(LOCAL_ENV)
 	  $(COMPOSE) exec -T -e PGPASSWORD postgres \
 	    psql --no-psqlrc -h 127.0.0.1 -U $$role -d "$${CC_DB_NAME:-control_contable}" -f /bootstrap/check-runtime-role.sql; \
 	done
+
+## db-psql-app: LOCAL ONLY. Run SQL from stdin as cc_app (RLS applies), e.g. the docs/runbooks/auth.md procedures; PSQL_ARGS="-v user_id=…"
+# Same password handling as db-roles-check. Shared environments run the same SQL as cc_app
+# through their own connection (see docs/runbooks/auth.md), never through this target.
+db-psql-app: $(LOCAL_ENV)
+	@$(ASSERT_LOCAL)
+	@set -e; . $(LOCAL_ENV); PGPASSWORD="$$CC_APP_PASSWORD"; export PGPASSWORD; \
+	  $(COMPOSE) exec -T -e PGPASSWORD postgres \
+	    psql --no-psqlrc -v ON_ERROR_STOP=1 -h 127.0.0.1 -U cc_app -d "$${CC_DB_NAME:-control_contable}" $(PSQL_ARGS)
 
 # Owner URL for cmd/migrate on the LOCAL stack only, built from infra/local/.env inside the
 # recipe so the password never appears in make's output. Shared environments set

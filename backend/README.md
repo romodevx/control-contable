@@ -28,6 +28,8 @@ components: [C4](../docs/architecture/c4.md).
 | `make migrate-up` / `migrate-down` / `migrate-status` | **LOCAL only**: run `cmd/migrate` as `cc_owner` against the local stack (apply pending / roll back the latest / list) |
 | `make api` / `make worker` | **LOCAL only**: run `cmd/api` (as `cc_app`, `APP_ENV=dev`, port `API_PORT`, default 3000) / `cmd/worker` (as `cc_worker`) against the local stack, URLs built from `infra/local/.env` |
 | `make db-roles-check` | log in over TCP as `cc_app`, `cc_webhook`, `cc_worker`; fail if any is SUPERUSER, BYPASSRLS, REPLICATION, a member of another role, owner, can DDL, or can CONNECT to `postgres`/`template1` |
+| `make db-psql-app` | **LOCAL only**: run SQL from stdin as `cc_app` (RLS applies), `PSQL_ARGS="-v user_id=…"` for psql variables; used by the [auth runbook](../docs/runbooks/auth.md) |
+| `make access-key-rotate` | **LOCAL only**: new access-token signing key and kid in `infra/local/.env`; the old pair stays verify-only (restart `make api`) |
 
 CI (`.github/workflows/backend.yml`) runs `fmt-check`, golangci-lint v2.14.0, `codegen-check`,
 `vuln`, `test`, then `test-integration GOTEST_FLAGS="-covermode=atomic -coverprofile=coverage.out"`
