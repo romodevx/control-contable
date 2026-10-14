@@ -14,24 +14,30 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain"
 )
 
-// LedgerQuery selects one taxpayer's records of a fiscal year, January
-// through the period's month.
+// LedgerQuery selects one taxpayer's records from January of FirstYear
+// through the period's month of FiscalYear. A zero FirstYear is
+// FiscalYear: one fiscal year, January through Through.
 type LedgerQuery struct {
 	TaxpayerID string
+	// FirstYear opens the range on its January (EstimateRange: a window
+	// spanning two fiscal years is still one statement per table).
+	FirstYear  int
 	FiscalYear int
 	Through    time.Month
 }
 
-// IncomeMonthSums is one (regime, month) row of income aggregates.
+// IncomeMonthSums is one (regime, year, month) row of income aggregates.
 type IncomeMonthSums struct {
 	Regime fiscal.RegimeCode
+	Year   int
 	Month  time.Month
 	Sums   domain.IncomeSums
 }
 
-// ExpenseMonthSums is one (regime, month) row of expense aggregates.
+// ExpenseMonthSums is one (regime, year, month) row of expense aggregates.
 type ExpenseMonthSums struct {
 	Regime fiscal.RegimeCode
+	Year   int
 	Month  time.Month
 	Sums   domain.ExpenseSums
 }
@@ -40,15 +46,15 @@ type ExpenseMonthSums struct {
 // regime over non-deleted incomes (M3-07). It reads even when
 // module_incomes is OFF (MODULE-incomes OQ-8).
 type IncomeLedgerReader interface {
-	// IncomeSums returns one row per (regime, month) with records, ordered
-	// by regime then month; months without records are absent.
+	// IncomeSums returns one row per (regime, year, month) with records,
+	// ordered by regime, year, month; months without records are absent.
 	IncomeSums(ctx context.Context, q LedgerQuery) ([]IncomeMonthSums, error)
 }
 
 // ExpenseLedgerReader reads expense aggregates by paid_on (M4-08).
 type ExpenseLedgerReader interface {
-	// ExpenseSums returns one row per (regime, month) with records, ordered
-	// by regime then month; months without records are absent.
+	// ExpenseSums returns one row per (regime, year, month) with records,
+	// ordered by regime, year, month; months without records are absent.
 	ExpenseSums(ctx context.Context, q LedgerQuery) ([]ExpenseMonthSums, error)
 }
 
@@ -62,7 +68,9 @@ type LedgerReader interface {
 // TaxInputReader reads the taxpayer's tax inputs (taxpayer_tax_inputs,
 // M5-20/M5-21).
 type TaxInputReader interface {
-	// TaxInputs returns each regime's inputs for the fiscal year in one
-	// query; a regime without inputs is absent (the zero TaxInputs).
-	TaxInputs(ctx context.Context, taxpayerID string, fiscalYear int) (map[fiscal.RegimeCode]domain.TaxInputs, error)
+	// TaxInputs returns each regime's inputs for every fiscal year of
+	// firstYear..lastYear, by year, in one query (a range spanning two
+	// fiscal years is still one statement, MODULE-dashboard §2.4); a year
+	// or regime without inputs is absent (the zero TaxInputs).
+	TaxInputs(ctx context.Context, taxpayerID string, firstYear, lastYear int) (map[int]map[fiscal.RegimeCode]domain.TaxInputs, error)
 }

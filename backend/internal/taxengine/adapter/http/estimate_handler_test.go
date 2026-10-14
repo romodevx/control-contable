@@ -154,6 +154,15 @@ func TestGetTaxpayerEstimate_isTheContractExample(t *testing.T) {
 	assert.Equal(t, []string{"estimate|" + callerID + "|" + taxpayerID + "|2026-03"}, uc.calls)
 }
 
+// M6-03: the dashboard's hero is PresentEstimate, the same body
+// getTaxpayerEstimate answers, so the two never disagree.
+func TestPresentEstimate_isTheEstimateBody(t *testing.T) {
+	raw, err := json.Marshal(taxenginehttp.PresentEstimate(estimateNet(t)))
+
+	require.NoError(t, err)
+	assert.JSONEq(t, contractExample(t, "getTaxpayerEstimate", "crossRegimeIva"), string(raw))
+}
+
 // No period is the current month: the use case gets "".
 func TestGetTaxpayerEstimate_withoutPeriod(t *testing.T) {
 	uc := &fakeEstimates{estimate: estimateNet(t)}

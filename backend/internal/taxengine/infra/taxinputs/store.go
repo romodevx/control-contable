@@ -47,12 +47,16 @@ WHERE tr.taxpayer_id = ? AND tr.regime_code = ?`
 // stored scale ("0.1500").
 const valueColumns = "regime_code, input_key, kind, month, value_cents, value_rate::text AS value_rate, value_bool"
 
+// readerColumns are a reader row: the value columns and its fiscal year.
+const readerColumns = valueColumns + ", fiscal_year"
+
 // valuesQuery and readerQuery are served by the taxpayer_tax_inputs_key
 // btree (user_id from RLS, taxpayer_id, regime_code, fiscal_year).
 const (
 	valuesQuery = "SELECT " + valueColumns + " FROM taxpayer_tax_inputs WHERE taxpayer_id = ? AND regime_code = ? AND fiscal_year = ?"
-	readerQuery = "SELECT " + valueColumns + " FROM taxpayer_tax_inputs WHERE taxpayer_id = ? AND fiscal_year = ? ORDER BY regime_code, input_key, month"
-	deleteSQL   = "DELETE FROM taxpayer_tax_inputs WHERE taxpayer_id = ? AND regime_code = ? AND fiscal_year = ?"
+	readerQuery = "SELECT " + readerColumns + " FROM taxpayer_tax_inputs WHERE taxpayer_id = ? AND fiscal_year BETWEEN ? AND ?" +
+		" ORDER BY fiscal_year, regime_code, input_key, month"
+	deleteSQL = "DELETE FROM taxpayer_tax_inputs WHERE taxpayer_id = ? AND regime_code = ? AND fiscal_year = ?"
 )
 
 type taxpayerRow struct {
@@ -74,6 +78,8 @@ type valueRow struct {
 	ValueCents *int64  `gorm:"column:value_cents"`
 	ValueRate  *string `gorm:"column:value_rate"`
 	ValueBool  *bool   `gorm:"column:value_bool"`
+	// FiscalYear is set by readerQuery only.
+	FiscalYear int `gorm:"column:fiscal_year"`
 }
 
 // newValueRow is exactly the columns cc_app may INSERT: kind is derived by
@@ -310,29 +316,36 @@ func toNewRow(userID string, key usecase.InputsKey, v usecase.StoredInput) newVa
 	return row
 }
 
-// TaxInputs implements usecase.TaxInputReader: every regime's inputs of the
-// taxpayer's fiscal year in one query.
-func (Store) TaxInputs(ctx context.Context, taxpayerID string, fiscalYear int) (map[fiscal.RegimeCode]domain.TaxInputs, error) {
-	rows, err := readValues(ctx, readerQuery, taxpayerID, fiscalYear)
+// TaxInputs implements usecase.TaxInputReader: every regime's inputs of
+// each of the taxpayer's fiscal years firstYear..lastYear in one query.
+func (Store) TaxInputs(ctx context.Context, taxpayerID string, firstYear, lastYear int) (map[int]map[fiscal.RegimeCode]domain.TaxInputs, error) {
+	rows, err := readValues(ctx, readerQuery, taxpayerID, firstYear, lastYear)
 	if err != nil {
 		return nil, err
 	}
-	byRegime := map[fiscal.RegimeCode][]domain.TaxInputValue{}
+	type yearRegime struct {
+		year int
+		code fiscal.RegimeCode
+	}
+	grouped := map[yearRegime][]domain.TaxInputValue{}
 	for _, r := range rows {
 		v, err := r.toDomain()
 		if err != nil {
-			return nil, fmt.Errorf("taxengine infra: tax input %s/%s: %w", r.RegimeCode, r.InputKey, err)
+			return nil, fmt.Errorf("taxengine infra: tax input %d/%s/%s: %w", r.FiscalYear, r.RegimeCode, r.InputKey, err)
 		}
-		code := fiscal.RegimeCode(r.RegimeCode)
-		byRegime[code] = append(byRegime[code], v)
+		key := yearRegime{year: r.FiscalYear, code: fiscal.RegimeCode(r.RegimeCode)}
+		grouped[key] = append(grouped[key], v)
 	}
-	out := make(map[fiscal.RegimeCode]domain.TaxInputs, len(byRegime))
-	for code, values := range byRegime {
+	out := map[int]map[fiscal.RegimeCode]domain.TaxInputs{}
+	for key, values := range grouped {
 		in, err := domain.NewTaxInputs(values...)
 		if err != nil {
-			return nil, fmt.Errorf("taxengine infra: tax inputs of %s: %w", code, err)
+			return nil, fmt.Errorf("taxengine infra: tax inputs of %d/%s: %w", key.year, key.code, err)
 		}
-		out[code] = in
+		if out[key.year] == nil {
+			out[key.year] = map[fiscal.RegimeCode]domain.TaxInputs{}
+		}
+		out[key.year][key.code] = in
 	}
 	return out, nil
 }

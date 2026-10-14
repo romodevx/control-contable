@@ -65,6 +65,17 @@ type TaxpayerEstimate struct {
 	ProvisionalParameters bool
 	RecordsFingerprint    string
 	EngineVersion         string
+	// Records are the period's live records the estimate read, summed over
+	// every regime (informational ones included): no contract field of the
+	// estimate, the dashboard's income vs expense view (M6-02).
+	Records RecordTotals
+}
+
+// RecordTotals are one month's live records before IVA: incomes collected
+// (collected_on) and expenses paid (paid_on, every deductibility class).
+type RecordTotals struct {
+	IncomeCollected money.Cents
+	ExpensesPaid    money.Cents
 }
 
 // Estimator computes a taxpayer's monthly estimate (Estimator, M5-22): the
@@ -74,8 +85,26 @@ type Estimator struct {
 	deps EstimateDeps
 }
 
-// NewEstimator returns the use case over deps.
-func NewEstimator(deps EstimateDeps) *Estimator { return &Estimator{deps: deps} }
+// NewEstimator returns the use case over deps. A missing port is
+// ErrMissingDependency, so a wiring mistake fails the boot rather than the
+// first request (FU4, M5-31 G-2). Strategies is a value: an empty registry
+// estimates every regime as unsupported, never a nil dereference.
+func NewEstimator(deps EstimateDeps) (*Estimator, error) {
+	ports := []struct {
+		name    string
+		missing bool
+	}{
+		{"Tx", deps.Tx == nil}, {"Profiles", deps.Profiles == nil}, {"Ledger", deps.Ledger == nil},
+		{"Inputs", deps.Inputs == nil}, {"Texts", deps.Texts == nil}, {"Holidays", deps.Holidays == nil},
+		{"Params", deps.Params == nil}, {"Clock", deps.Clock == nil},
+	}
+	for _, p := range ports {
+		if p.missing {
+			return nil, fmt.Errorf("%w: EstimateDeps.%s", ErrMissingDependency, p.name)
+		}
+	}
+	return &Estimator{deps: deps}, nil
+}
 
 // regimeRIF is the bimonthly régimen 621: its payment follows the bimester.
 const regimeRIF fiscal.RegimeCode = "621"
@@ -101,47 +130,140 @@ type ledgerRecords struct {
 // ISR summed per regime without cross offsets (OQ-T10), withholdings to
 // remit counted once, disclaimers, and the records fingerprint.
 func (uc *Estimator) EstimateMonth(ctx context.Context, userID, taxpayerID, rawPeriod string) (TaxpayerEstimate, error) {
-	id, err := uuid.Parse(taxpayerID)
-	if err != nil {
+	if _, err := uuid.Parse(taxpayerID); err != nil {
 		return TaxpayerEstimate{}, notFound(errors.Join(ErrTaxpayerNotFound, err))
 	}
 	p, err := uc.period(rawPeriod)
 	if err != nil {
 		return TaxpayerEstimate{}, err
 	}
-	sel, err := uc.selectParams(p)
+	out, err := uc.EstimateRange(ctx, userID, taxpayerID, p, p)
 	if err != nil {
 		return TaxpayerEstimate{}, err
 	}
+	return out[0], nil
+}
+
+// EstimateRange estimates every month of [from, to], oldest first (the
+// dashboard's trend, M6-02, MODULE-dashboard §2.4). It reads once, in one
+// read-only unit of work: the profile (404), one ledger statement per
+// table from January of from's fiscal year through to, the tax inputs of
+// every fiscal year in one statement and the catalog texts; then runs the
+// pure engine per month, each fiscal year on its own records. Each estimate is exactly
+// what EstimateMonth answers for its month (EstimateMonth is the range of
+// one month).
+//
+// A malformed taxpayer id is 404; to after the current month is 400
+// out_of_range; from before the first published year is 422
+// parameters_unavailable; from after to is ErrInvalidRange (a caller bug).
+func (uc *Estimator) EstimateRange(ctx context.Context, userID, taxpayerID string, from, to domain.Period) ([]TaxpayerEstimate, error) {
+	id, err := uuid.Parse(taxpayerID)
+	if err != nil {
+		return nil, notFound(errors.Join(ErrTaxpayerNotFound, err))
+	}
+	months, err := uc.window(from, to)
+	if err != nil {
+		return nil, err
+	}
+	selections := map[int]taxparams.Selection{}
+	for year := from.Year(); year <= to.Year(); year++ {
+		if selections[year], err = uc.selectParams(year); err != nil {
+			return nil, err
+		}
+	}
 	var (
-		records ledgerRecords
-		due     fiscal.Date
+		records rangeRecords
+		dues    = make([]fiscal.Date, len(months))
 	)
 	err = uc.deps.Tx.ReadOnly(ctx, userID, func(ctx context.Context) error {
 		var err error
-		if records, err = uc.read(ctx, userID, id.String(), p); err != nil {
+		if records, err = uc.read(ctx, userID, id.String(), from, to); err != nil {
 			return err
 		}
-		due, err = uc.dueDate(ctx, p, heldIn(records.profile.Regimes, p))
-		return err
+		for i, p := range months {
+			if dues[i], err = uc.dueDate(ctx, p, heldIn(records.profile.Regimes, p)); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 	if err != nil {
-		return TaxpayerEstimate{}, present("estimate month", err)
+		return nil, present("estimate range", err)
 	}
-	out, err := uc.compute(p, sel, records)
-	if err != nil {
-		return TaxpayerEstimate{}, fmt.Errorf("taxengine: estimate %s: %w", p, err)
+	out := make([]TaxpayerEstimate, 0, len(months))
+	for i, p := range months {
+		year := records.year(p.Year())
+		est, err := uc.compute(p, selections[p.Year()], year)
+		if err != nil {
+			return nil, fmt.Errorf("taxengine: estimate %s: %w", p, err)
+		}
+		if est.Records, err = recordTotals(year, p.Month()); err != nil {
+			return nil, fmt.Errorf("taxengine: records of %s: %w", p, err)
+		}
+		est.TaxpayerID, est.DueDate = id.String(), dues[i]
+		out = append(out, est)
 	}
-	out.TaxpayerID, out.DueDate = id.String(), due
 	return out, nil
+}
+
+// window checks [from, to] against the clock and the published parameters
+// and lists its months, oldest first.
+func (uc *Estimator) window(from, to domain.Period) ([]domain.Period, error) {
+	if from.IsZero() || to.IsZero() || monthIndex(from) > monthIndex(to) {
+		return nil, fmt.Errorf("%w: %s..%s", ErrInvalidRange, from, to)
+	}
+	current, err := uc.currentPeriod()
+	if err != nil {
+		return nil, err
+	}
+	switch {
+	case monthIndex(to) > monthIndex(current):
+		return nil, futurePeriodError()
+	case from.Year() < firstParamsYear:
+		return nil, parametersUnavailableError(fieldPeriod)
+	}
+	months := make([]domain.Period, 0, monthIndex(to)-monthIndex(from)+1)
+	for index := monthIndex(from); index <= monthIndex(to); index++ {
+		p, err := domain.NewPeriod(index/monthsPerYear, time.Month(index%monthsPerYear+1))
+		if err != nil {
+			return nil, err
+		}
+		months = append(months, p)
+	}
+	return months, nil
+}
+
+// recordTotals sums the month's rows of one fiscal year over every regime.
+func recordTotals(r ledgerRecords, month time.Month) (RecordTotals, error) {
+	var (
+		out  RecordTotals
+		errs []error
+	)
+	add := func(total *money.Cents, amount money.Cents) {
+		sum, err := total.Add(amount)
+		errs = append(errs, err)
+		*total = sum
+	}
+	for _, row := range r.incomes {
+		if row.Month == month {
+			add(&out.IncomeCollected, row.Sums.Cash)
+		}
+	}
+	for _, row := range r.expenses {
+		if row.Month == month {
+			add(&out.ExpensesPaid, row.Sums.DeductiblePaid)
+			add(&out.ExpensesPaid, row.Sums.NonDeductiblePaid)
+			add(&out.ExpensesPaid, row.Sums.CashOverLimitPaid)
+		}
+	}
+	return out, errors.Join(errs...)
 }
 
 // period resolves rawPeriod against the clock's current month.
 func (uc *Estimator) period(raw string) (domain.Period, error) {
-	now := uc.deps.Clock.Now()
-	current, err := domain.NewPeriod(now.Year(), now.Month())
+	current, err := uc.currentPeriod()
 	if err != nil {
-		return domain.Period{}, fmt.Errorf("taxengine: current period: %w", err)
+		return domain.Period{}, err
 	}
 	if raw == "" {
 		return current, nil
@@ -158,42 +280,78 @@ func (uc *Estimator) period(raw string) (domain.Period, error) {
 	return p, nil
 }
 
-// selectParams picks the period's parameter set (ADR-0002 §3).
-func (uc *Estimator) selectParams(p domain.Period) (taxparams.Selection, error) {
-	sel, err := uc.deps.Params.Select(p.Year())
+// currentPeriod is the clock's month in Mexico City.
+func (uc *Estimator) currentPeriod() (domain.Period, error) {
+	now := uc.deps.Clock.Now()
+	current, err := domain.NewPeriod(now.Year(), now.Month())
+	if err != nil {
+		return domain.Period{}, fmt.Errorf("taxengine: current period: %w", err)
+	}
+	return current, nil
+}
+
+// selectParams picks the fiscal year's parameter set (ADR-0002 §3).
+func (uc *Estimator) selectParams(fiscalYear int) (taxparams.Selection, error) {
+	sel, err := uc.deps.Params.Select(fiscalYear)
 	if errors.Is(err, taxparams.ErrNoParameters) {
 		return taxparams.Selection{}, parametersUnavailableError(fieldPeriod)
 	}
 	if err != nil {
-		return taxparams.Selection{}, fmt.Errorf("taxengine: select parameters %d: %w", p.Year(), err)
+		return taxparams.Selection{}, fmt.Errorf("taxengine: select parameters %d: %w", fiscalYear, err)
 	}
 	return sel, nil
 }
 
-// read loads the profile, the year's aggregates and the tax inputs.
-func (uc *Estimator) read(ctx context.Context, userID, taxpayerID string, p domain.Period) (ledgerRecords, error) {
+// rangeRecords is what an estimate range reads, in one unit of work: the
+// ledger rows of every fiscal year in it and each year's tax inputs.
+type rangeRecords struct {
+	profile  TaxpayerProfile
+	incomes  []IncomeMonthSums
+	expenses []ExpenseMonthSums
+	inputs   map[int]map[fiscal.RegimeCode]domain.TaxInputs
+	texts    map[fiscal.RegimeCode]RegimeText
+}
+
+// year narrows the range to one fiscal year's records.
+func (r rangeRecords) year(fiscalYear int) ledgerRecords {
+	return ledgerRecords{
+		profile:  r.profile,
+		incomes:  slices.DeleteFunc(slices.Clone(r.incomes), func(row IncomeMonthSums) bool { return row.Year != fiscalYear }),
+		expenses: slices.DeleteFunc(slices.Clone(r.expenses), func(row ExpenseMonthSums) bool { return row.Year != fiscalYear }),
+		inputs:   r.inputs[fiscalYear],
+		texts:    r.texts,
+	}
+}
+
+// read loads the profile, the aggregates of January of from's fiscal year
+// through to (one statement per table), the tax inputs of every fiscal year
+// of the range (one statement) and the catalog texts.
+func (uc *Estimator) read(ctx context.Context, userID, taxpayerID string, from, to domain.Period) (rangeRecords, error) {
 	profile, err := uc.deps.Profiles.Profile(ctx, userID, taxpayerID)
 	if err != nil {
-		return ledgerRecords{}, err
+		return rangeRecords{}, err
 	}
-	q := LedgerQuery{TaxpayerID: taxpayerID, FiscalYear: p.Year(), Through: p.Month()}
+	q := LedgerQuery{TaxpayerID: taxpayerID, FiscalYear: to.Year(), Through: to.Month()}
+	if from.Year() != to.Year() {
+		q.FirstYear = from.Year()
+	}
 	incomes, err := uc.deps.Ledger.IncomeSums(ctx, q)
 	if err != nil {
-		return ledgerRecords{}, fmt.Errorf("income sums: %w", err)
+		return rangeRecords{}, fmt.Errorf("income sums: %w", err)
 	}
 	expenses, err := uc.deps.Ledger.ExpenseSums(ctx, q)
 	if err != nil {
-		return ledgerRecords{}, fmt.Errorf("expense sums: %w", err)
+		return rangeRecords{}, fmt.Errorf("expense sums: %w", err)
 	}
-	inputs, err := uc.deps.Inputs.TaxInputs(ctx, taxpayerID, p.Year())
+	inputs, err := uc.deps.Inputs.TaxInputs(ctx, taxpayerID, from.Year(), to.Year())
 	if err != nil {
-		return ledgerRecords{}, fmt.Errorf("tax inputs: %w", err)
+		return rangeRecords{}, fmt.Errorf("tax inputs %d..%d: %w", from.Year(), to.Year(), err)
 	}
 	texts, err := uc.deps.Texts.RegimeTexts(ctx, taxpayerID)
 	if err != nil {
-		return ledgerRecords{}, fmt.Errorf("regime texts: %w", err)
+		return rangeRecords{}, fmt.Errorf("regime texts: %w", err)
 	}
-	return ledgerRecords{profile: profile, incomes: incomes, expenses: expenses, inputs: inputs, texts: texts}, nil
+	return rangeRecords{profile: profile, incomes: incomes, expenses: expenses, inputs: inputs, texts: texts}, nil
 }
 
 // compute derives the estimate from what was read: no I/O.

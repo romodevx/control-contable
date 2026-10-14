@@ -188,19 +188,19 @@ func TestLedgerReader_CashBasisExactSumsByRegimeAndMonth(t *testing.T) {
 
 	assert.Equal(t, []infra.IncomeMonthSums{
 		{
-			Regime: fiscal.RegimeBusiness, Month: time.January, Cash: 11500_00,
+			Regime: fiscal.RegimeBusiness, Year: 2026, Month: time.January, Cash: 11500_00,
 			ByRate: infra.IVAByRate{
 				Rate16: infra.RateSums{Base: 11000_00, IVA: 1760_00}, Rate8: infra.RateSums{Base: 500_00, IVA: 40_00},
 			},
 			IVAWithheld: infra.Withheld{ByMoral: 1066_67}, ISRWithheld: infra.Withheld{ByMoral: 1000_00},
 		},
 		{
-			Regime: fiscal.RegimeBusiness, Month: time.March, Cash: 700_00,
+			Regime: fiscal.RegimeBusiness, Year: 2026, Month: time.March, Cash: 700_00,
 			ByRate: infra.IVAByRate{Rate0Base: 300_00, ExemptBase: 400_00},
 		},
-		{Regime: fiscal.RegimeBusiness, Month: time.September, Cash: 50_00, ByRate: rate16(50_00, 8_00)},
+		{Regime: fiscal.RegimeBusiness, Year: 2026, Month: time.September, Cash: 50_00, ByRate: rate16(50_00, 8_00)},
 		{
-			Regime: fiscal.RegimePlatforms, Month: time.February, Cash: 2000_00, ByRate: rate16(2000_00, 320_00),
+			Regime: fiscal.RegimePlatforms, Year: 2026, Month: time.February, Cash: 2000_00, ByRate: rate16(2000_00, 320_00),
 			IVAWithheld: infra.Withheld{ByPlatform: 160_00}, ISRWithheld: infra.Withheld{ByPlatform: 20_00},
 		},
 	}, got, "cash basis: Accrual stays zero; ordered by regime, then month; months without records absent")
@@ -237,10 +237,10 @@ func TestLedgerReader_AccrualBasisSplitsISRFromIVA(t *testing.T) {
 	got := readIncomeSums(t, e, userA, infra.LedgerQuery{TaxpayerID: ledgerMoral, FiscalYear: 2026, Through: time.April})
 
 	assert.Equal(t, []infra.IncomeMonthSums{
-		{Regime: fiscal.RegimeCode("601"), Month: time.January, Cash: 3000_00, ByRate: rate16(3000_00, 480_00)},
-		{Regime: fiscal.RegimeCode("601"), Month: time.March, Accrual: 15000_00},
+		{Regime: fiscal.RegimeCode("601"), Year: 2026, Month: time.January, Cash: 3000_00, ByRate: rate16(3000_00, 480_00)},
+		{Regime: fiscal.RegimeCode("601"), Year: 2026, Month: time.March, Accrual: 15000_00},
 		{
-			Regime: fiscal.RegimeCode("601"), Month: time.April, Cash: 11000_00, Accrual: 1700_00,
+			Regime: fiscal.RegimeCode("601"), Year: 2026, Month: time.April, Cash: 11000_00, Accrual: 1700_00,
 			ByRate: rate16(11000_00, 1760_00), ISRWithheld: infra.Withheld{ByPlatform: 25_00},
 		},
 	}, got)
@@ -257,7 +257,7 @@ func TestLedgerReader_RESICOWithholdingByMoral(t *testing.T) {
 	got := readIncomeSums(t, e, userA, infra.LedgerQuery{TaxpayerID: ledgerRESICO, FiscalYear: 2026, Through: time.February})
 
 	assert.Equal(t, []infra.IncomeMonthSums{{
-		Regime: fiscal.RegimeRESICO, Month: time.February, Cash: 10000_00, ByRate: rate16(10000_00, 1600_00),
+		Regime: fiscal.RegimeRESICO, Year: 2026, Month: time.February, Cash: 10000_00, ByRate: rate16(10000_00, 1600_00),
 		IVAWithheld: infra.Withheld{ByMoral: 1066_67}, ISRWithheld: infra.Withheld{ByMoral: 125_00},
 	}}, got)
 }
@@ -274,6 +274,50 @@ func TestLedgerReader_DecemberReachesTheYearEnd(t *testing.T) {
 	assert.Equal(t, money.Cents(888_00), got[0].Cash)
 	assert.Equal(t, time.December, got[1].Month)
 	assert.Equal(t, money.Cents(100_00), got[1].Cash, "the next fiscal year never counts")
+}
+
+// M6-02: one statement reads January of FirstYear through Through of FiscalYear, each row
+// naming its year, so the dashboard's two-fiscal-year window is one round trip.
+func TestLedgerReader_RangeSpansTwoFiscalYears(t *testing.T) {
+	e := newEnv(t)
+	seedLedgerTaxpayers(t, e)
+	seedIncomes(t, e, sale("2025-12-31", 777_00), sale("2026-01-02", 100_00), sale("2026-11-05", 200_00),
+		sale("2027-02-03", 300_00), sale("2027-02-28", 1_00), sale("2027-03-01", 999_00))
+
+	got := readIncomeSums(t, e, userA, infra.LedgerQuery{
+		TaxpayerID: ledgerFisica, FirstYear: 2026, FiscalYear: 2027, Through: time.February,
+	})
+
+	assert.Equal(t, []infra.IncomeMonthSums{
+		{Regime: fiscal.RegimeBusiness, Year: 2026, Month: time.January, Cash: 100_00, ByRate: rate16(100_00, 16_00)},
+		{Regime: fiscal.RegimeBusiness, Year: 2026, Month: time.November, Cash: 200_00, ByRate: rate16(200_00, 32_00)},
+		{Regime: fiscal.RegimeBusiness, Year: 2027, Month: time.February, Cash: 301_00, ByRate: rate16(301_00, 48_16)},
+	}, got, "ordered by regime, year, month; nothing before January 2026 or after February 2027")
+}
+
+// M6-02 is_empty: any live income of the taxpayer, in any period; a soft-deleted one and
+// another user's do not count.
+func TestLedgerReader_HasLive(t *testing.T) {
+	e := newEnv(t)
+	seedLedgerTaxpayers(t, e)
+	hasLive := func(userID, taxpayerID string) bool {
+		t.Helper()
+		var got bool
+		require.NoError(t, e.txm.ReadOnly(t.Context(), userID, func(ctx context.Context) error {
+			var err error
+			got, err = infra.NewLedgerReader().HasLive(ctx, taxpayerID)
+			return err
+		}))
+		return got
+	}
+
+	assert.False(t, hasLive(userA, ledgerFisica), "no income yet")
+	seedIncomes(t, e, withIncome(sale("2026-01-10", 1_00), func(f *incomeFixture) { f.deleted = true }))
+	assert.False(t, hasLive(userA, ledgerFisica), "a deleted income is not live")
+	seedIncomes(t, e, sale("2026-02-10", 1_00))
+	assert.True(t, hasLive(userA, ledgerFisica))
+	assert.False(t, hasLive(userB, ledgerFisica), "RLS: another user's taxpayer has nothing")
+	assert.False(t, hasLive(userA, ledgerRESICO), "the same user's other taxpayer")
 }
 
 func TestLedgerReader_OtherUsersRowsAreInvisible(t *testing.T) {
@@ -303,6 +347,8 @@ func TestLedgerReader_RefusesAnInvalidQuery(t *testing.T) {
 		"before the floor":  {TaxpayerID: ledgerFisica, FiscalYear: 2021, Through: time.January},
 		"malformed payer":   {TaxpayerID: "not-a-uuid", FiscalYear: 2026, Through: time.January},
 		"no taxpayer given": {FiscalYear: 2026, Through: time.January},
+		"first year after":  {TaxpayerID: ledgerFisica, FirstYear: 2027, FiscalYear: 2026, Through: time.January},
+		"first year floor":  {TaxpayerID: ledgerFisica, FirstYear: 2021, FiscalYear: 2026, Through: time.January},
 	} {
 		t.Run(name, func(t *testing.T) {
 			err := e.txm.ReadOnly(t.Context(), userA, func(ctx context.Context) error {
@@ -360,8 +406,8 @@ func TestLedgerReader_SumsWhatTheStoreWrote(t *testing.T) {
 	got := readIncomeSums(t, e, userA, infra.LedgerQuery{TaxpayerID: ledgerMoral, FiscalYear: 2026, Through: time.September})
 
 	assert.Equal(t, []infra.IncomeMonthSums{
-		{Regime: fiscal.RegimeCode("601"), Month: time.August, Accrual: 45_000_00},
-		{Regime: fiscal.RegimeCode("601"), Month: time.September, Cash: 45_000_00, ByRate: rate16(45_000_00, 7_200_00)},
+		{Regime: fiscal.RegimeCode("601"), Year: 2026, Month: time.August, Accrual: 45_000_00},
+		{Regime: fiscal.RegimeCode("601"), Year: 2026, Month: time.September, Cash: 45_000_00, ByRate: rate16(45_000_00, 7_200_00)},
 	}, got)
 }
 

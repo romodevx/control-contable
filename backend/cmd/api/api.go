@@ -24,14 +24,16 @@ type api struct {
 	*incomesHandler
 	*expensesHandler
 	*taxEngineHandler
+	*dashboardHandler
 }
 
 // flagsHandler and authHandler name the embedded handlers: health.Handler,
 // flagshttp.Handler and authhttp.Handler would otherwise all be the embedded
 // field "Handler". accountHandler is the auth module's account side (M1-09);
 // taxpayersHandler serves module_taxpayers (M2-07), incomesHandler
-// module_incomes (M3-06), expensesHandler module_expenses (M4-07) and
-// taxEngineHandler the built module_tax_engine operations (M5-21).
+// module_incomes (M3-06), expensesHandler module_expenses (M4-07),
+// taxEngineHandler the built module_tax_engine operations (M5-21) and
+// dashboardHandler module_dashboard (M6-03, dashboard.go).
 type (
 	flagsHandler     = flagshttp.Handler
 	authHandler      = authhttp.Handler

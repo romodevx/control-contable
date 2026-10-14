@@ -105,8 +105,17 @@ func newHandlerWithModules(t *testing.T, cfg config.Config, db health.Pinger, f 
 func newHandlerWithAll(t *testing.T, cfg config.Config, db health.Pinger, f flagService, auth authModule,
 	records recordModules, taxEngine taxEngineModule, logger *slog.Logger) http.Handler {
 	t.Helper()
+	dashboard := stubDashboardModule()
+	if taxEngine.estimator != nil { // the real modules (contract tests): the real dashboard over them
+		var err error
+		dashboard, err = newDashboardModule(dashboardWiring{
+			tx: records.taxpayers.tx, flags: f, taxpayers: records.taxpayers.queries, estimator: taxEngine.estimator,
+			limits: auth.limits, clock: taxEngine.clock,
+		})
+		require.NoError(t, err)
+	}
 	h, err := newHandler(cfg, deps{logger: logger, db: db, flags: f, auth: auth, taxpayers: records.taxpayers,
-		incomes: records.incomes, expenses: records.expenses, taxEngine: taxEngine, now: time.Now})
+		incomes: records.incomes, expenses: records.expenses, taxEngine: taxEngine, dashboard: dashboard, now: time.Now})
 	require.NoError(t, err)
 	return h
 }
@@ -251,12 +260,12 @@ func TestFlagGate_throughTheRealRouter(t *testing.T) {
 // exactly like a hidden module: no panic, no 500, nothing about its schema.
 func TestNotBuilt_isHiddenEvenWithItsModuleOn(t *testing.T) {
 	svc := flags.NewService(keysReader{keys: []string{
-		"module_auth", "module_taxpayers", "module_tax_engine", "module_dashboard", "module_history",
+		"module_auth", "module_taxpayers", "module_tax_engine", "module_history",
 	}})
 	h := newFlaggedHandler(t, testConfig(), pingOK{}, svc)
 
 	const taxpayer = "/v1/taxpayers/0190f2a4-7c1e-7b3a-9d2e-4f5a6b7c8d9e"
-	for _, target := range []string{taxpayer + "/dashboard", taxpayer + "/history?fiscal_year=2026"} {
+	for _, target := range []string{taxpayer + "/history?fiscal_year=2026"} {
 		req, rec := get(h, target)
 		flagtest.AssertHidden(t, rec)
 		conforms(t, req, rec)

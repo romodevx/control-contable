@@ -112,6 +112,13 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err != nil {
 		return err
 	}
+	dashboard, err := newDashboardModule(dashboardWiring{
+		tx: records.taxpayers.tx, flags: flagSvc, taxpayers: records.taxpayers.queries, estimator: taxEngine.estimator,
+		limits: auth.limits,
+	})
+	if err != nil {
+		return err
+	}
 	handler, err := newHandler(cfg, deps{
 		logger:    logger,
 		db:        pgdb.NewPinger(pool),
@@ -121,6 +128,7 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 		incomes:   records.incomes,
 		expenses:  records.expenses,
 		taxEngine: taxEngine,
+		dashboard: dashboard,
 		now:       time.Now,
 	})
 	if err != nil {
@@ -230,6 +238,7 @@ type deps struct {
 	incomes   incomesModule
 	expenses  expensesModule
 	taxEngine taxEngineModule
+	dashboard dashboardModule
 	now       func() time.Time
 }
 
@@ -266,6 +275,7 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 		incomesHandler:   d.incomes.handler,
 		expensesHandler:  d.expenses.handler,
 		taxEngineHandler: d.taxEngine.handler,
+		dashboardHandler: d.dashboard.handler,
 	}
 	if d.auth.authn == nil {
 		return nil, errors.New("api: no authenticator: secured operations would run unauthenticated")
@@ -282,7 +292,11 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 	if d.incomes.handler == nil {
 		return nil, errors.New("api: no incomes handler: module_incomes operations would panic")
 	}
-	userLimits, err := mergeLimits(d.taxpayers.userLimits, d.incomes.userLimits, d.expenses.userLimits, d.taxEngine.userLimits)
+	if d.dashboard.handler == nil {
+		return nil, errors.New("api: no dashboard handler: module_dashboard operations would panic")
+	}
+	userLimits, err := mergeLimits(d.taxpayers.userLimits, d.incomes.userLimits, d.expenses.userLimits, d.taxEngine.userLimits,
+		d.dashboard.userLimits)
 	if err != nil {
 		return nil, err
 	}

@@ -29,14 +29,14 @@ func newExpenseLedger(reader expenseSumsReader) expenseLedger { return expenseLe
 // in ctx.
 func (l expenseLedger) ExpenseSums(ctx context.Context, q taxusecase.LedgerQuery) ([]taxusecase.ExpenseMonthSums, error) {
 	rows, err := l.reader.ExpenseSums(ctx, expensesinfra.LedgerQuery{
-		TaxpayerID: q.TaxpayerID, FiscalYear: q.FiscalYear, Through: q.Through,
+		TaxpayerID: q.TaxpayerID, FirstYear: q.FirstYear, FiscalYear: q.FiscalYear, Through: q.Through,
 	})
 	if err != nil {
 		return nil, err
 	}
 	out := make([]taxusecase.ExpenseMonthSums, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, taxusecase.ExpenseMonthSums{Regime: r.Regime, Month: r.Month, Sums: expenseSumsOf(r)})
+		out = append(out, taxusecase.ExpenseMonthSums{Regime: r.Regime, Year: r.Year, Month: r.Month, Sums: expenseSumsOf(r)})
 	}
 	return out, nil
 }

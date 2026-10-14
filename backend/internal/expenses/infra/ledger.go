@@ -24,10 +24,14 @@ var ErrInvalidLedgerQuery = errors.New("expenses infra: invalid ledger query")
 // firstFiscalYear is the year of the paid_on floor (expenses_paid_on_floor).
 const firstFiscalYear = 2022
 
-// LedgerQuery selects one taxpayer's expenses paid in a fiscal year,
-// January through Through.
+// LedgerQuery selects one taxpayer's expenses paid from January of
+// FirstYear through Through of FiscalYear. A zero FirstYear is FiscalYear:
+// one fiscal year, January through Through.
 type LedgerQuery struct {
 	TaxpayerID string
+	// FirstYear opens the range on its January 1st (M6-02: the dashboard's
+	// window spans up to two fiscal years in one statement).
+	FirstYear  int
 	FiscalYear int
 	Through    time.Month
 }
@@ -60,6 +64,7 @@ type IVAByRate struct {
 // withholdings made to suppliers count whatever the deductibility.
 type ExpenseMonthSums struct {
 	Regime             fiscal.RegimeCode
+	Year               int
 	Month              time.Month
 	DeductiblePaid     money.Cents
 	NonDeductiblePaid  money.Cents
@@ -88,6 +93,7 @@ func NewLedgerReader() LedgerReader { return LedgerReader{} }
 // leaves a named parameter followed by "::" unbound.
 const expenseSumsSQL = `
 SELECT regime_code,
+       extract(year FROM paid_on)::int                                                               AS year,
        extract(month FROM paid_on)::int                                                              AS month,
        coalesce(sum(amount_cents) FILTER (WHERE deductible), 0)::bigint                              AS deductible_paid,
        coalesce(sum(amount_cents) FILTER (WHERE NOT deductible AND NOT cash_over_limit), 0)::bigint  AS non_deductible_paid,
@@ -104,12 +110,13 @@ SELECT regime_code,
        coalesce(sum(iva_withheld_cents), 0)::bigint                                                  AS iva_withheld
 FROM expenses
 WHERE taxpayer_id = @taxpayer AND deleted_at IS NULL AND paid_on >= CAST(@from_date AS date) AND paid_on < CAST(@until_date AS date)
-GROUP BY regime_code, month
-ORDER BY regime_code, month`
+GROUP BY regime_code, year, month
+ORDER BY regime_code, year, month`
 
 // sumsRow is one row of expenseSumsSQL.
 type sumsRow struct {
 	RegimeCode        string `gorm:"column:regime_code"`
+	Year              int    `gorm:"column:year"`
 	Month             int    `gorm:"column:month"`
 	DeductiblePaid    int64  `gorm:"column:deductible_paid"`
 	NonDeductiblePaid int64  `gorm:"column:non_deductible_paid"`
@@ -128,7 +135,7 @@ type sumsRow struct {
 
 func (r sumsRow) toSums() ExpenseMonthSums {
 	return ExpenseMonthSums{
-		Regime: fiscal.RegimeCode(r.RegimeCode), Month: time.Month(r.Month),
+		Regime: fiscal.RegimeCode(r.RegimeCode), Year: r.Year, Month: time.Month(r.Month),
 		DeductiblePaid:    money.Cents(r.DeductiblePaid),
 		NonDeductiblePaid: money.Cents(r.NonDeductiblePaid),
 		CashOverLimitPaid: money.Cents(r.CashOverLimitPaid),
@@ -164,6 +171,26 @@ func (LedgerReader) ExpenseSums(ctx context.Context, q LedgerQuery) ([]ExpenseMo
 	return out, nil
 }
 
+// hasLiveSQL is HasLive's statement: an EXISTS the planner answers from
+// expenses_live_paid_on_idx (user_id from the RLS policy, then
+// taxpayer_id; its partial predicate is the live rows').
+const hasLiveSQL = `SELECT EXISTS (SELECT 1 FROM expenses WHERE taxpayer_id = ? AND deleted_at IS NULL)`
+
+// HasLive reports whether the taxpayer has any live expense, in any period
+// (the dashboard's is_empty, M6-02). It runs on the unit of work in ctx,
+// as its user (RLS): another user's taxpayer has none.
+func (LedgerReader) HasLive(ctx context.Context, taxpayerID string) (bool, error) {
+	db, err := pgdb.Conn(ctx)
+	if err != nil {
+		return false, err
+	}
+	var exists bool
+	if err := db.Raw(hasLiveSQL, taxpayerID).Scan(&exists).Error; err != nil {
+		return false, translate("live expenses exist", err)
+	}
+	return exists, nil
+}
+
 // expenseSums builds the statement for q on the unit of work in ctx,
 // prefixed (EXPLAIN in the tests).
 func expenseSums(ctx context.Context, q LedgerQuery, prefix string) (*gorm.DB, error) {
@@ -185,10 +212,14 @@ func (q LedgerQuery) dates() (from, until string, err error) {
 	if _, parseErr := uuid.Parse(q.TaxpayerID); parseErr != nil {
 		return "", "", fmt.Errorf("%w: taxpayer id: %w", ErrInvalidLedgerQuery, parseErr)
 	}
-	if q.Through < time.January || q.Through > time.December || q.FiscalYear < firstFiscalYear {
-		return "", "", fmt.Errorf("%w: %d through month %d", ErrInvalidLedgerQuery, q.FiscalYear, q.Through)
+	first := q.FirstYear
+	if first == 0 {
+		first = q.FiscalYear
 	}
-	start := time.Date(q.FiscalYear, time.January, 1, 0, 0, 0, 0, time.UTC)
+	if q.Through < time.January || q.Through > time.December || first < firstFiscalYear || first > q.FiscalYear {
+		return "", "", fmt.Errorf("%w: %d..%d through month %d", ErrInvalidLedgerQuery, first, q.FiscalYear, q.Through)
+	}
+	start := time.Date(first, time.January, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(q.FiscalYear, q.Through+1, 1, 0, 0, 0, 0, time.UTC) // December rolls into January 1st
 	return start.Format(dateLayout), end.Format(dateLayout), nil
 }

@@ -69,10 +69,6 @@ func (notBuilt) GetTaxCalendar(context.Context, gen.GetTaxCalendarRequestObject)
 	return nil, errNotBuilt
 }
 
-func (notBuilt) GetDashboard(context.Context, gen.GetDashboardRequestObject) (gen.GetDashboardResponseObject, error) {
-	return nil, errNotBuilt
-}
-
 func (notBuilt) GetHistory(context.Context, gen.GetHistoryRequestObject) (gen.GetHistoryResponseObject, error) {
 	return nil, errNotBuilt
 }

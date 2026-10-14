@@ -135,7 +135,21 @@ The use case never loops 12 × `EstimateMonth`. Per request, at most:
 - **Targets** (server-side, measured in M6-03 with a Go benchmark and EXPLAIN ANALYZE; re-checked by
   k6 in REL-06): **p95 < 1 s** for 3 regimes, 10,000 records per fiscal year, a window spanning two
   fiscal years. Internal goal ≤ 300 ms (same reads as one estimate plus pure compute). A
-  statement-count test pins the ≤ 6 statements above, independent of `months`.
+  statement-count test pins the statements per request, independent of `months`.
+- **Measured statement count (M6-03, amended at the PR #114 gate): 8 reads**, not 6. The six
+  rows above are six *reads*; three of them reuse other modules' ports that are two statements
+  or a separate one: the profile is taxpayer + regimes (2, the taxpayers module's `Profile`),
+  the regime texts are their own catalog read (1, the tax engine's `RegimeTexts`), and the access
+  summary is entitlements + usage (2, `access.Policy.Summary`). Row 4 is one statement for both
+  fiscal years (`fiscal_year BETWEEN`), as planned. So: 2 + 1 + 1 + 1 + 1 + 2 = **8**, plus up to
+  2 index-only `EXISTS` (row 6) only when the window has no record of an enabled module. Every
+  statement but the two aggregates is an index scan under 0.1 ms; at 50,000 + 50,000 records
+  over two fiscal years p95 is **98 ms sequential / 103 ms concurrent** (budget 1 s, goal 300 ms).
+  Merging the profile, texts and access reads would cut three sub-millisecond round trips at
+  the cost of dashboard-specific SQL inside three other modules (Dependency Rule, ADR-0001), so
+  the target is **≤ 8 (≤ 10 with an empty window)**. `TestContract_dashboardStatementCount`
+  pins 8 in the regular integration suite for a one-year and a two-year window;
+  `TestPerf_dashboardReadPath` (CC_PERF=1) re-checks it at volume.
 - Indexes: the existing `(user_id, taxpayer_id, collected_on)` / `(…, paid_on)` serve 2/3; M6-03
   confirms with EXPLAIN that no sequential scan appears.
 - No cache in v1 (estimates are derived on every read, ADR-0002 §5). `Cache-Control: no-store`.
@@ -268,7 +282,8 @@ Home refreshes.
 
 ### US-D9 Performance
 - **Given** 3 regimes and 10,000 records per fiscal year across two fiscal years, **When**
-  `getDashboard` runs 1,000 times, **Then** server p95 < 1 s and ≤ 6 SQL statements per request.
+  `getDashboard` runs 1,000 times, **Then** server p95 < 1 s and ≤ 8 SQL statements per request
+  (≤ 10 with an empty window; §2.4 has the measured numbers).
 
 ## 5. Errors → ErrorCode (single envelope)
 

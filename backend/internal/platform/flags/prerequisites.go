@@ -22,6 +22,9 @@ var prerequisites = map[string][]string{
 	// MODULE-incomes §6, MODULE-expenses §6: records live under a taxpayer.
 	"module_incomes":  {"module_taxpayers"},
 	"module_expenses": {"module_taxpayers"},
+	// MODULE-dashboard §3: the route lives under a taxpayer. The engine is
+	// not a prerequisite (OQ-D7): with it OFF the dashboard shows no tax.
+	"module_dashboard": {"module_taxpayers"},
 }
 
 // Prerequisites returns a copy of the declared module prerequisites.

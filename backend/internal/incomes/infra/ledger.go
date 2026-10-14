@@ -25,10 +25,14 @@ var ErrInvalidLedgerQuery = errors.New("incomes infra: invalid ledger query")
 // (incomes_invoiced_on_floor, incomes_collected_on_floor).
 const firstFiscalYear = 2022
 
-// LedgerQuery selects one taxpayer's incomes of a fiscal year, January
-// through Through.
+// LedgerQuery selects one taxpayer's incomes from January of FirstYear
+// through Through of FiscalYear. A zero FirstYear is FiscalYear: one
+// fiscal year, January through Through.
 type LedgerQuery struct {
 	TaxpayerID string
+	// FirstYear opens the range on its January 1st (M6-02: the dashboard's
+	// window spans up to two fiscal years in one statement).
+	FirstYear  int
 	FiscalYear int
 	Through    time.Month
 }
@@ -71,6 +75,7 @@ type Withheld struct {
 // income still pending collection counts in Accrual only.
 type IncomeMonthSums struct {
 	Regime      fiscal.RegimeCode
+	Year        int
 	Month       time.Month
 	Cash        money.Cents
 	Accrual     money.Cents
@@ -100,13 +105,15 @@ func NewLedgerReader() LedgerReader { return LedgerReader{} }
 // CAST(... AS date): GORM leaves a named parameter followed by "::" unbound.
 const incomeSumsSQL = `
 WITH booked AS (
-  SELECT regime_code, extract(month FROM booked_on)::int AS month, sum(amount_cents) AS amount
+  SELECT regime_code, extract(year FROM booked_on)::int AS year, extract(month FROM booked_on)::int AS month,
+         sum(amount_cents) AS amount
   FROM incomes
   WHERE taxpayer_id = @taxpayer AND deleted_at IS NULL
     AND booked_on >= CAST(@from_date AS date) AND booked_on < CAST(@until_date AS date)
-  GROUP BY regime_code, month
+  GROUP BY regime_code, year, month
 ), collected AS (
   SELECT regime_code,
+         extract(year FROM collected_on)::int                                                           AS year,
          extract(month FROM collected_on)::int                                                          AS month,
          sum(amount_cents)                                                                              AS amount,
          coalesce(sum(amount_cents) FILTER (WHERE iva_rate = 'rate_16'), 0)                             AS rate16_base,
@@ -122,9 +129,10 @@ WITH booked AS (
   FROM incomes
   WHERE taxpayer_id = @taxpayer AND deleted_at IS NULL AND collected_on IS NOT NULL
     AND collected_on >= CAST(@from_date AS date) AND collected_on < CAST(@until_date AS date)
-  GROUP BY regime_code, month
+  GROUP BY regime_code, year, month
 )
 SELECT tr.regime_code,
+       coalesce(b.year, c.year)                                                          AS year,
        coalesce(b.month, c.month)                                                        AS month,
        coalesce(c.amount, 0)::bigint                                                     AS cash,
        (CASE r.income_basis WHEN 'accrual' THEN coalesce(b.amount, 0) ELSE 0 END)::bigint AS accrual,
@@ -139,15 +147,16 @@ SELECT tr.regime_code,
        coalesce(c.isr_withheld_moral, 0)::bigint                                         AS isr_withheld_moral,
        coalesce(c.isr_withheld_platform, 0)::bigint                                      AS isr_withheld_platform
 FROM booked b
-FULL JOIN collected c ON c.regime_code = b.regime_code AND c.month = b.month
+FULL JOIN collected c ON c.regime_code = b.regime_code AND c.year = b.year AND c.month = b.month
 JOIN taxpayer_regimes tr ON tr.taxpayer_id = @taxpayer AND tr.regime_code = coalesce(b.regime_code, c.regime_code)
 JOIN regimes r ON r.code = tr.regime_code AND r.person_type = tr.person_type
 WHERE c.month IS NOT NULL OR r.income_basis = 'accrual'
-ORDER BY tr.regime_code, month`
+ORDER BY tr.regime_code, year, month`
 
 // sumsRow is one row of incomeSumsSQL.
 type sumsRow struct {
 	RegimeCode          string `gorm:"column:regime_code"`
+	Year                int    `gorm:"column:year"`
 	Month               int    `gorm:"column:month"`
 	Cash                int64  `gorm:"column:cash"`
 	Accrual             int64  `gorm:"column:accrual"`
@@ -165,7 +174,7 @@ type sumsRow struct {
 
 func (r sumsRow) toSums() IncomeMonthSums {
 	return IncomeMonthSums{
-		Regime: fiscal.RegimeCode(r.RegimeCode), Month: time.Month(r.Month),
+		Regime: fiscal.RegimeCode(r.RegimeCode), Year: r.Year, Month: time.Month(r.Month),
 		Cash:    money.Cents(r.Cash),
 		Accrual: money.Cents(r.Accrual),
 		ByRate: IVAByRate{
@@ -197,6 +206,26 @@ func (LedgerReader) IncomeSums(ctx context.Context, q LedgerQuery) ([]IncomeMont
 	return out, nil
 }
 
+// hasLiveSQL is HasLive's statement: an EXISTS the planner answers from
+// incomes_booked_idx (user_id from the RLS policy, then taxpayer_id; its
+// partial predicate is the live rows', and booked_on is never NULL).
+const hasLiveSQL = `SELECT EXISTS (SELECT 1 FROM incomes WHERE taxpayer_id = ? AND deleted_at IS NULL)`
+
+// HasLive reports whether the taxpayer has any live income, in any period
+// (the dashboard's is_empty, M6-02). It runs on the unit of work in ctx,
+// as its user (RLS): another user's taxpayer has none.
+func (LedgerReader) HasLive(ctx context.Context, taxpayerID string) (bool, error) {
+	db, err := pgdb.Conn(ctx)
+	if err != nil {
+		return false, err
+	}
+	var exists bool
+	if err := db.Raw(hasLiveSQL, taxpayerID).Scan(&exists).Error; err != nil {
+		return false, fmt.Errorf("incomes infra: live incomes exist: %w", err)
+	}
+	return exists, nil
+}
+
 // incomeSums builds the statement for q on the unit of work in ctx,
 // prefixed (EXPLAIN in the tests).
 func incomeSums(ctx context.Context, q LedgerQuery, prefix string) (*gorm.DB, error) {
@@ -218,10 +247,14 @@ func (q LedgerQuery) dates() (from, until string, err error) {
 	if _, parseErr := uuid.Parse(q.TaxpayerID); parseErr != nil {
 		return "", "", fmt.Errorf("%w: taxpayer id: %w", ErrInvalidLedgerQuery, parseErr)
 	}
-	if q.Through < time.January || q.Through > time.December || q.FiscalYear < firstFiscalYear {
-		return "", "", fmt.Errorf("%w: %d through month %d", ErrInvalidLedgerQuery, q.FiscalYear, q.Through)
+	first := q.FirstYear
+	if first == 0 {
+		first = q.FiscalYear
 	}
-	start := time.Date(q.FiscalYear, time.January, 1, 0, 0, 0, 0, time.UTC)
+	if q.Through < time.January || q.Through > time.December || first < firstFiscalYear || first > q.FiscalYear {
+		return "", "", fmt.Errorf("%w: %d..%d through month %d", ErrInvalidLedgerQuery, first, q.FiscalYear, q.Through)
+	}
+	start := time.Date(first, time.January, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(q.FiscalYear, q.Through+1, 1, 0, 0, 0, 0, time.UTC) // December rolls into January 1st
 	return start.Format(time.DateOnly), end.Format(time.DateOnly), nil
 }

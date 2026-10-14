@@ -68,7 +68,10 @@ type totalsJSON struct {
 	TotalPayableRoundedCents int64         `json:"total_payable_rounded_cents"`
 }
 
-type estimateJSON struct {
+// EstimateBody is contract TaxpayerEstimate as a response sends it: the
+// body of getTaxpayerEstimate and the dashboard's estimate
+// (PresentEstimate).
+type EstimateBody struct {
 	TaxpayerID         string               `json:"taxpayer_id"`
 	Period             string               `json:"period"`
 	DueDate            string               `json:"due_date"`
@@ -109,13 +112,18 @@ type breakdownJSON struct {
 	EngineVersion string              `json:"engine_version"`
 }
 
-func toEstimate(e usecase.TaxpayerEstimate) estimateJSON {
+// PresentEstimate renders e as the contract's TaxpayerEstimate: what
+// getTaxpayerEstimate answers, and what the dashboard (M6) embeds as its
+// estimate, so the two show the same totals to the centavo.
+func PresentEstimate(e usecase.TaxpayerEstimate) EstimateBody { return toEstimate(e) }
+
+func toEstimate(e usecase.TaxpayerEstimate) EstimateBody {
 	set := toParameterSet(e.ParameterSet)
 	regimes := make([]regimeEstimateJSON, 0, len(e.Regimes))
 	for _, r := range e.Regimes {
 		regimes = append(regimes, toRegime(r, e.Period, set))
 	}
-	return estimateJSON{
+	return EstimateBody{
 		TaxpayerID:  e.TaxpayerID,
 		Period:      e.Period.String(),
 		DueDate:     e.DueDate.String(),

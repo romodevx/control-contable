@@ -29,14 +29,14 @@ func newIncomeLedger(reader incomeSumsReader) incomeLedger { return incomeLedger
 // ctx.
 func (l incomeLedger) IncomeSums(ctx context.Context, q taxusecase.LedgerQuery) ([]taxusecase.IncomeMonthSums, error) {
 	rows, err := l.reader.IncomeSums(ctx, incomesinfra.LedgerQuery{
-		TaxpayerID: q.TaxpayerID, FiscalYear: q.FiscalYear, Through: q.Through,
+		TaxpayerID: q.TaxpayerID, FirstYear: q.FirstYear, FiscalYear: q.FiscalYear, Through: q.Through,
 	})
 	if err != nil {
 		return nil, err
 	}
 	out := make([]taxusecase.IncomeMonthSums, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, taxusecase.IncomeMonthSums{Regime: r.Regime, Month: r.Month, Sums: incomeSumsOf(r)})
+		out = append(out, taxusecase.IncomeMonthSums{Regime: r.Regime, Year: r.Year, Month: r.Month, Sums: incomeSumsOf(r)})
 	}
 	return out, nil
 }

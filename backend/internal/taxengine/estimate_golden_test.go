@@ -3,6 +3,7 @@ package taxengine_test
 import (
 	"context"
 	"fmt"
+	"slices"
 	"testing"
 	"time"
 
@@ -48,18 +49,34 @@ type txLedger struct {
 	expenses []usecase.ExpenseMonthSums
 }
 
-func (f txLedger) IncomeSums(context.Context, usecase.LedgerQuery) ([]usecase.IncomeMonthSums, error) {
-	return f.incomes, nil
+// IncomeSums returns the case's rows, each in the query's fiscal year (the
+// cases are single-year).
+func (f txLedger) IncomeSums(_ context.Context, q usecase.LedgerQuery) ([]usecase.IncomeMonthSums, error) {
+	out := slices.Clone(f.incomes)
+	for i := range out {
+		out[i].Year = q.FiscalYear
+	}
+	return out, nil
 }
 
-func (f txLedger) ExpenseSums(context.Context, usecase.LedgerQuery) ([]usecase.ExpenseMonthSums, error) {
-	return f.expenses, nil
+// ExpenseSums returns the case's rows, each in the query's fiscal year.
+func (f txLedger) ExpenseSums(_ context.Context, q usecase.LedgerQuery) ([]usecase.ExpenseMonthSums, error) {
+	out := slices.Clone(f.expenses)
+	for i := range out {
+		out[i].Year = q.FiscalYear
+	}
+	return out, nil
 }
 
 type txInputs map[fiscal.RegimeCode]domain.TaxInputs
 
-func (f txInputs) TaxInputs(context.Context, string, int) (map[fiscal.RegimeCode]domain.TaxInputs, error) {
-	return f, nil
+// TaxInputs serves the same inputs for every fiscal year of the span.
+func (f txInputs) TaxInputs(_ context.Context, _ string, firstYear, lastYear int) (map[int]map[fiscal.RegimeCode]domain.TaxInputs, error) {
+	out := make(map[int]map[fiscal.RegimeCode]domain.TaxInputs, lastYear-firstYear+1)
+	for year := firstYear; year <= lastYear; year++ {
+		out[year] = f
+	}
+	return out, nil
 }
 
 // txNoTexts is a catalog without texts: the figures do not read them.
@@ -95,11 +112,13 @@ func (c txCase) estimator(t testing.TB) *usecase.Estimator {
 	require.NoError(t, err)
 	catalog, err := params.Embedded()
 	require.NoError(t, err)
-	return usecase.NewEstimator(usecase.EstimateDeps{
+	est, err := usecase.NewEstimator(usecase.EstimateDeps{
 		Tx: txUnit{}, Profiles: txProfiles{usecase.TaxpayerProfile{PersonType: c.personType, Regimes: c.regimes}},
 		Ledger: c.ledger, Inputs: c.inputs, Texts: txNoTexts{}, Holidays: txNoHolidays{},
 		Strategies: registry, Params: catalog, Clock: clock.NewFixed(txToday),
 	})
+	require.NoError(t, err)
+	return est
 }
 
 func txHold(t testing.TB, code fiscal.RegimeCode, options map[domain.OptionKey]domain.OptionValue) usecase.RegimeHold {

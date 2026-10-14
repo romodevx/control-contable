@@ -51,6 +51,9 @@ type taxEngineModule struct {
 	handler    *taxenginehttp.Handler
 	userLimits map[string]router.Limiter
 	estimator  *usecase.Estimator
+	// clock is the estimate's "today" (nil: the system clock); the
+	// dashboard shares it, so its default period is the estimate's.
+	clock clock.Clock
 }
 
 // newTaxEngineModule wires the tax-inputs use cases (M5-21) over the cc_app
@@ -79,7 +82,9 @@ func newTaxEngineModule(w taxEngineWiring) (taxEngineModule, error) {
 	for op, policy := range taxenginehttp.UserLimits {
 		out[op] = w.limits.Bucket(policy)
 	}
-	return taxEngineModule{handler: taxenginehttp.NewHandler(inputs, estimator), userLimits: out, estimator: estimator}, nil
+	return taxEngineModule{
+		handler: taxenginehttp.NewHandler(inputs, estimator), userLimits: out, estimator: estimator, clock: w.clock,
+	}, nil
 }
 
 // newEstimator builds the immutable strategy registry (every strategy the
@@ -99,7 +104,7 @@ func newEstimator(w taxEngineWiring) (*usecase.Estimator, error) {
 	if now == nil {
 		now = clock.NewSystem()
 	}
-	return usecase.NewEstimator(usecase.EstimateDeps{
+	return usecase.NewEstimator(usecase.EstimateDeps{ // a missing port fails the boot (FU4)
 		Tx:       w.tx,
 		Profiles: estimateProfiles{reader: w.taxpayers},
 		Ledger: taxLedger{
@@ -112,7 +117,7 @@ func newEstimator(w taxEngineWiring) (*usecase.Estimator, error) {
 		Strategies: registry,
 		Params:     catalog,
 		Clock:      now,
-	}), nil
+	})
 }
 
 // taxLedger is the incomes and expenses aggregate readers as the tax

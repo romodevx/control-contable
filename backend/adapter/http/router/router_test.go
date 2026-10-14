@@ -214,6 +214,11 @@ func TestValidation_rejectsInputThatBreaksTheContract(t *testing.T) {
 			flags: flagSet{"module_incomes": true}, wantFields: []string{"period"}, wantCodes: []string{"required"}},
 		{name: "query does not match its pattern", method: http.MethodGet, target: "/v1/taxpayers/" + validTaxpayer + "/incomes?period=2026-13",
 			flags: flagSet{"module_incomes": true}, wantFields: []string{"period"}, wantCodes: []string{"pattern"}},
+		// The contract's query parameters are closed (MODULE-dashboard §5,
+		// MODULE-tax-engine §5): an undeclared one is refused, never ignored.
+		{name: "query parameter the operation does not declare", method: http.MethodGet,
+			target: "/v1/taxpayers/" + validTaxpayer + "/incomes?period=2026-09&fiscal_year=2026",
+			flags:  flagSet{"module_incomes": true}, wantFields: []string{"fiscal_year"}, wantCodes: []string{"additionalProperties"}},
 		{name: "required body property missing", method: http.MethodPost, target: "/v1/auth/login", body: `{"email":"ana@example.mx"}`,
 			flags: flagSet{"module_auth": true}, wantFields: []string{"password"}, wantCodes: []string{"required"}},
 		{name: "body property of the wrong type", method: http.MethodPost, target: "/v1/auth/login", body: `{"email":"ana@example.mx","password":7}`,
