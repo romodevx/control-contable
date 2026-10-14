@@ -10,5 +10,3 @@ skipped:
 pending: # strategy key: cases (authored + generated)
   606/fisica: 25
   625/fisica: 2
-  626/fisica: 14
-  626/moral: 1
