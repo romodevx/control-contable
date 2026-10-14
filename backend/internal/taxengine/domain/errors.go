@@ -30,4 +30,7 @@ const (
 	// ErrNoSegment reports an arithmetic step before any input or lookup has
 	// started a running value.
 	ErrNoSegment Error = "taxengine: ledger step before an input"
+	// ErrInvalidIVAExclusion reports a definitive IVA exclusion (the 625
+	// hook) below zero or above the IVA charged.
+	ErrInvalidIVAExclusion Error = "taxengine: invalid definitive IVA exclusion"
 )
