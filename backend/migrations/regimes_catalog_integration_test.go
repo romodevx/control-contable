@@ -5,6 +5,7 @@ package migrations_test
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -55,9 +56,10 @@ var researchCatalog = []researchRegime{
 	{"626/moral", "full", "monthly"},
 }
 
-// regimesUnderReview are the catalog rows whose research basis is incomplete (⚠️ or
-// unstated); each carries a review_note instead of a guess.
-var regimesUnderReview = []string{"620/moral", "621/fisica", "623/moral", "624/moral", "625/fisica"}
+// regimesUnderReview are the catalog rows whose research basis is incomplete (⚠️,
+// unstated or inferred); each carries a review_note instead of a guess. 603's "annual"
+// is inferred: the research only says "generally no provisional ISR".
+var regimesUnderReview = []string{"603/moral", "620/moral", "621/fisica", "623/moral", "624/moral", "625/fisica"}
 
 func countRegimes(person string) int {
 	n := 0
@@ -186,8 +188,9 @@ func TestRegimes_RequiredInputsFollowADR0002(t *testing.T) {
 			"ptu_paid", "prior_year_losses"},
 		"622/moral":  append([]string{"coeficiente_utilidad"}, ytdPM...),
 		"625/fisica": {"prior_year_income"},
+		// Research §B.2.2 step 4 credits the art. 54 interest withholding, as 601 does.
 		"626/moral": {"prior_provisional_payments", "ytd_before_app_income", "ytd_before_app_deductions",
-			"ptu_paid", "prior_year_losses"},
+			"ptu_paid", "prior_year_losses", "interest_withholding"},
 	}, jsonKeys(t, owner, "required_inputs"))
 
 	var coeficiente string
@@ -215,7 +218,7 @@ func TestRegimes_AcceptWellFormedJSON(t *testing.T) {
 	err := insertRegime(t, owner, `[
 		{"key": "mode", "label": "Modo", "type": "enum", "allowed_values": ["a", "b"], "default": "a", "required": true},
 		{"key": "kinds", "label": "Tipos", "type": "multi_enum", "allowed_values": ["x", "y"], "default": null, "required": false},
-		{"key": "factor", "label": "Factor", "type": "rate", "default": "0.1234", "required": false},
+		{"key": "factor", "label": "Factor", "type": "rate", "min": "0", "max": "1", "default": "0.1234", "required": false},
 		{"key": "flag", "label": "Bandera", "type": "boolean", "required": false}
 	]`, `[{"key": "coeficiente_utilidad", "label": "Coeficiente", "kind": "rate", "required": true},
 		{"key": "ptu_paid", "label": "PTU pagada", "kind": "money", "required": false}]`)
@@ -247,9 +250,22 @@ func TestRegimes_RejectMalformedOptionDefs(t *testing.T) {
 		"multi_enum default scalar": `[{"key": "x", "label": "X", "type": "multi_enum", "allowed_values": ["a"], "default": "a", "required": true}]`,
 		"boolean with values":       `[{"key": "x", "label": "X", "type": "boolean", "allowed_values": ["a"], "required": true}]`,
 		"boolean default string":    `[{"key": "x", "label": "X", "type": "boolean", "default": "true", "required": true}]`,
-		"rate default number":       `[{"key": "x", "label": "X", "type": "rate", "default": 0.35, "required": true}]`,
-		"rate default not decimal":  `[{"key": "x", "label": "X", "type": "rate", "default": "35%", "required": true}]`,
-		"rate default too precise":  `[{"key": "x", "label": "X", "type": "rate", "default": "0.1234567", "required": true}]`,
+		"rate default number":       `[{"key": "x", "label": "X", "type": "rate", "min": "0", "max": "1", "default": 0.35, "required": true}]`,
+		"rate default not decimal":  `[{"key": "x", "label": "X", "type": "rate", "min": "0", "max": "1", "default": "35%", "required": true}]`,
+		"rate default too precise":  `[{"key": "x", "label": "X", "type": "rate", "min": "0", "max": "1", "default": "0.1234567", "required": true}]`,
+		// The contract key pattern is ^[a-z][a-z0-9_]{0,63}$: 64 characters at most.
+		"key longer than 64": `[{"key": "a` + strings.Repeat("b", 64) + `", "label": "X", "type": "boolean", "required": true}]`,
+		// The domain (OptionDef) refuses an empty allowed value.
+		"enum empty-string value": `[{"key": "x", "label": "X", "type": "enum", "allowed_values": ["", "a"], "required": true}]`,
+		// A rate carries inclusive DecimalRate bounds, min <= max, and a default inside them.
+		"rate without bounds":    `[{"key": "x", "label": "X", "type": "rate", "required": true}]`,
+		"rate without max":       `[{"key": "x", "label": "X", "type": "rate", "min": "0", "required": true}]`,
+		"rate bound number":      `[{"key": "x", "label": "X", "type": "rate", "min": 0, "max": "1", "required": true}]`,
+		"rate bound not decimal": `[{"key": "x", "label": "X", "type": "rate", "min": "0", "max": "1e0", "required": true}]`,
+		"rate min above max":     `[{"key": "x", "label": "X", "type": "rate", "min": "0.5", "max": "0.1", "required": true}]`,
+		"rate default below min": `[{"key": "x", "label": "X", "type": "rate", "min": "0.1", "max": "0.5", "default": "0.05", "required": true}]`,
+		"rate default above max": `[{"key": "x", "label": "X", "type": "rate", "min": "0.1", "max": "0.5", "default": "0.500001", "required": true}]`,
+		"enum with bounds":       `[{"key": "x", "label": "X", "type": "enum", "allowed_values": ["a"], "min": "0", "max": "1", "required": true}]`,
 	}
 	for name, defs := range bad {
 		t.Run(name, func(t *testing.T) {
@@ -268,6 +284,7 @@ func TestRegimes_RejectMalformedRequiredInputs(t *testing.T) {
 		"blank label":          `[{"key": "x", "label": "", "kind": "money", "required": true}]`,
 		"unknown property":     `[{"key": "x", "label": "X", "kind": "money", "required": true, "default": 0}]`,
 		"duplicate keys":       `[{"key": "x", "label": "X", "kind": "money", "required": true}, {"key": "x", "label": "X", "kind": "rate", "required": true}]`,
+		"key longer than 64":   `[{"key": "a` + strings.Repeat("b", 64) + `", "label": "X", "kind": "money", "required": true}]`,
 	}
 	for name, inputs := range bad {
 		t.Run(name, func(t *testing.T) {
@@ -302,13 +319,13 @@ func TestRegimes_RejectMalformedColumns(t *testing.T) {
 	}
 }
 
-// compatibilityRule is one pair of the matrix: "<person_type> <regime_a>/<regime_b>" ->
-// "allowed", "denied" or "review" (allowed IS NULL, pending CPA review).
+// compatibilityRules maps each pair of the matrix, "<person_type> <regime_a>/<regime_b>",
+// to "allowed", "denied" or "warn" (allowed, with a non-blocking needs_cpa_review warning).
 func compatibilityRules(t *testing.T, db *sql.DB) map[string]string {
 	t.Helper()
 	rows, err := db.QueryContext(t.Context(), `
 		SELECT person_type || ' ' || regime_a || '/' || regime_b,
-		       CASE allowed WHEN true THEN 'allowed' WHEN false THEN 'denied' ELSE 'review' END
+		       CASE WHEN NOT allowed THEN 'denied' WHEN needs_cpa_review THEN 'warn' ELSE 'allowed' END
 		FROM regime_compatibility`)
 	require.NoError(t, err)
 	defer func() { require.NoError(t, rows.Close()) }()
@@ -377,19 +394,21 @@ func containsCode(pair, code string) bool {
 	return pair[len(pair)-7:len(pair)-4] == code || pair[len(pair)-3:] == code
 }
 
-// Where the research is silent the verdict is NULL and flagged, never guessed.
-func TestRegimeCompatibility_UndeterminedPairsAreFlagged(t *testing.T) {
+// Where the research is silent the pair is allowed with a needs_cpa_review warning
+// (M2-06 surfaces it as a non-blocking warning): an unverified rule never refuses a
+// taxpayer's regimes, and it is never silently treated as verified either.
+func TestRegimeCompatibility_UndeterminedPairsAllowWithWarning(t *testing.T) {
 	owner := pgtest.NewDatabase(t).Connect(t, pgtest.RoleOwner)
 
-	var unflagged int
+	var unexplained int
 	require.NoError(t, owner.QueryRowContext(t.Context(), `
 		SELECT count(*) FROM regime_compatibility
-		WHERE allowed IS NULL AND NOT (needs_cpa_review AND btrim(review_note) <> '')`).Scan(&unflagged))
-	assert.Zero(t, unflagged)
+		WHERE needs_cpa_review AND NOT (allowed AND btrim(review_note) <> '')`).Scan(&unexplained))
+	assert.Zero(t, unexplained)
 
 	review := []string{}
 	for pair, verdict := range compatibilityRules(t, owner) {
-		if verdict == "review" {
+		if verdict == "warn" {
 			review = append(review, pair)
 		}
 	}
@@ -413,7 +432,8 @@ func TestRegimeCompatibility_RejectMalformedPairs(t *testing.T) {
 	}{
 		{"reversed pair", `('fisica', '626', '612', false, 'r', 'L', 'https://x.mx', false, NULL)`, sqlstateCheckViolation},
 		{"self pair", `('fisica', '612', '612', false, 'r', 'L', 'https://x.mx', false, NULL)`, sqlstateCheckViolation},
-		{"undetermined without review", `('fisica', '612', '699', NULL, 'r', 'L', 'https://x.mx', false, NULL)`, sqlstateCheckViolation},
+		{"no verdict", `('fisica', '612', '614', NULL, 'r', 'L', 'https://x.mx', true, 'n')`, sqlstateNotNullViolation},
+		{"unverified refusal", `('fisica', '612', '614', false, 'r', 'L', 'https://x.mx', true, 'n')`, sqlstateCheckViolation},
 		{"blank reason", `('moral', '601', '610', false, ' ', 'L', 'https://x.mx', false, NULL)`, sqlstateCheckViolation},
 		{"regime of the other person type", `('moral', '601', '612', false, 'r', 'L', 'https://x.mx', false, NULL)`, sqlstateForeignKeyViolation},
 		{"duplicate pair", `('fisica', '612', '626', true, 'r', 'L', 'https://x.mx', false, NULL)`, sqlstateUniqueViolation},
@@ -425,6 +445,8 @@ func TestRegimeCompatibility_RejectMalformedPairs(t *testing.T) {
 		})
 	}
 }
+
+const sqlstateNotNullViolation = "23502"
 
 var catalogTables = []string{"regimes", "regime_compatibility"}
 
@@ -516,6 +538,7 @@ func TestRegimeCatalog_DownRemovesItAndUpReseedsIt(t *testing.T) {
 		"to_regclass('public.regimes')", "to_regclass('public.regime_compatibility')",
 		"to_regprocedure('public.regime_option_defs_valid(jsonb)')",
 		"to_regprocedure('public.regime_required_inputs_valid(jsonb)')",
+		"to_regprocedure('public.regime_is_decimal_rate(jsonb)')",
 	} {
 		var found sql.NullString
 		require.NoError(t, owner.QueryRowContext(t.Context(), "SELECT "+obj+"::text").Scan(&found))
