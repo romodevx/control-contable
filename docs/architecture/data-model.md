@@ -272,10 +272,13 @@ erDiagram
         timestamptz processed_at
     }
     estimate_views {
+        uuid user_id PK
         uuid taxpayer_id PK
-        char7 period PK
-        uuid user_id FK
-        bytea fingerprint
+        date period PK
+        char64 records_fingerprint
+        char64 figures_fingerprint
+        text engine_version
+        text parameter_set
         timestamptz viewed_at
     }
     devices {
@@ -428,7 +431,7 @@ Every table below has `ENABLE` + `FORCE ROW LEVEL SECURITY` in its first migrati
 | incomes | owner | owner | owner | — | Soft delete and restore = UPDATE of `deleted_at`; rows leave by cascade or the purge definer (M9-08) |
 | expenses | owner | owner | owner | owner | |
 | subscriptions | owner | owner (cc_webhook) | owner (cc_webhook) | — | cc_app: SELECT only. The webhook sets `app.current_user_id` to the event's `app_user_id` (our user id) before touching `subscriptions` / `entitlements` |
-| estimate_views | owner | owner | owner | owner | |
+| estimate_views | owner | owner | owner (what was seen; key immutable) | — | Write = one upsert; rows leave only by cascade (users, taxpayers). cc_worker/cc_webhook get nothing |
 | devices | owner | owner | owner | owner | Re-login of a token owned by another user: `DELETE` through a definer function `claim_push_token(token)` |
 | reminder_settings | owner | owner | owner | — | |
 | notification_log | owner | owner (cc_worker) | owner (cc_worker) | — | |
