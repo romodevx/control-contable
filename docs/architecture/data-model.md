@@ -202,6 +202,9 @@ erDiagram
         bigint iva_withheld_cents
         date invoiced_on
         date collected_on
+        date booked_on "derived: ISR date"
+        text platform_activity
+        text cfdi_uuid
         timestamptz deleted_at
     }
     expenses {
@@ -315,8 +318,11 @@ in MODULES.md M5 are dropped (MODULES.md updated to match).
 | taxpayer_regimes | FK `(taxpayer_id, user_id, person_type) → taxpayers(id, user_id, person_type)`; FK `(regime_code, person_type) → regimes` | Ownership integrity. A moral can never hold a física-only regime, and 626 resolves to RESICO PF or PM |
 | incomes / expenses | FK `(taxpayer_id, regime_code, user_id) → taxpayer_regimes`; taxpayer_tax_inputs: same FK | A record must belong to a regime its taxpayer holds |
 | incomes / expenses | `CHECK amount_cents >= 0`, `iva_cents >= 0`, withholdings ≥ 0 | Whether an `iva_rate` is valid on the record date (e.g. `rate_8` until 2026-12-31) is checked in the use case through the engine's `RateCatalog` port, because validity is date-ranged parameter data (ADR-0002 §3), not a DB constraint |
-| incomes | `CHECK collected_on IS NOT NULL OR invoiced_on IS NOT NULL` | Per-regime requirement (cash vs. accrual) enforced in the use case |
-| incomes | `INDEX (user_id, taxpayer_id, collected_on, id) WHERE deleted_at IS NULL` + same on `invoiced_on` | Period aggregates; keyset pagination `(date DESC, id DESC)` |
+| incomes | `CHECK collected_on IS NOT NULL OR invoiced_on IS NOT NULL`; `amount_cents >= 1`; withholdings bounded by their base; zero-IVA rates carry no IVA; no withholding by `persona_fisica` / `publico_general` | Per-regime requirement (cash vs. accrual) enforced in the use case |
+| incomes | `booked_on NOT NULL`, derived by trigger `incomes_derive_booked_on` from `regimes.income_basis` (`invoiced_on` accrual, `collected_on` cash); no grant to write it | MODULE-incomes §2.2: the list period and ISR date; a cash income without `collected_on` fails NOT NULL |
+| incomes | `INDEX (user_id, taxpayer_id, booked_on, id) WHERE deleted_at IS NULL` | List, totals and ISR aggregates; keyset pagination `(booked_on DESC, id DESC)` |
+| incomes | `INDEX (user_id, taxpayer_id, collected_on, id) WHERE collected_on IS NOT NULL AND deleted_at IS NULL` | IVA aggregates (IVA is always cash) |
+| incomes | `INDEX (user_id, taxpayer_id, cfdi_uuid) WHERE cfdi_uuid IS NOT NULL AND deleted_at IS NULL`; `INDEX (user_id, taxpayer_id, regime_code)` | Duplicate-UUID warning (not unique, OQ-9); composite-FK cascade and `LatestRecordPeriod` |
 | expenses | `INDEX (user_id, taxpayer_id, paid_on, id) WHERE deleted_at IS NULL` | Same |
 | incomes / expenses | `INDEX (deleted_at) WHERE deleted_at IS NOT NULL` | Purge job |
 | expenses | `CHECK amount_cents BETWEEN 1 AND NonNegativeCents.maximum`; `rate_0`/`exempt` → `iva_cents = 0`; withholdings within their base; `payment_method` enum; `cfdi_uuid IS NULL OR has_cfdi`, upper-case 8-4-4-4-12; `paid_on >= 2022-01-01`; description trimmed, NFC, ≤ 200 | MODULE-expenses §2.1, SE-2 (M4-03) |
@@ -412,7 +418,7 @@ Every table below has `ENABLE` + `FORCE ROW LEVEL SECURITY` in its first migrati
 | taxpayers | owner | owner | owner | owner | |
 | taxpayer_regimes | owner | owner | owner | — | DELETE archives (end_period); rows leave only by cascade |
 | taxpayer_tax_inputs | owner | owner | owner | owner | |
-| incomes | owner | owner | owner | owner | Soft delete = UPDATE |
+| incomes | owner | owner | owner | — | Soft delete and restore = UPDATE of `deleted_at`; rows leave by cascade or the purge definer (M9-08) |
 | expenses | owner | owner | owner | owner | |
 | subscriptions | owner | owner (cc_webhook) | owner (cc_webhook) | — | cc_app: SELECT only. The webhook sets `app.current_user_id` to the event's `app_user_id` (our user id) before touching `subscriptions` / `entitlements` |
 | estimate_views | owner | owner | owner | owner | |

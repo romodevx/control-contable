@@ -1,8 +1,9 @@
 // Integration test against the Prism mock (`make mock`; see
 // docs/runbooks/mock-server.md): the onboarding calls (regime catalog,
-// create, RFC correction, tax inputs) through the generated client and the
-// app's own interceptor, validated by the frozen contract (0.4.0). Runs
-// only when MOCK_API_URL is set: `make mobile-test-mock`.
+// create, RFC correction, tax inputs) and the settings calls (list,
+// rename, archive, unarchive, regimes, delete) through the generated
+// client and the app's own interceptor, validated by the frozen contract
+// (0.4.0). Runs only when MOCK_API_URL is set: `make mobile-test-mock`.
 @Tags(['mock'])
 library;
 
@@ -87,6 +88,34 @@ void main() {
         );
 
         expect(updated.rfcMasked, isNotEmpty);
+      });
+
+      test('the switcher list decodes, archived included', () async {
+        final list = await repository().listTaxpayers();
+
+        expect(list, isNotEmpty);
+      });
+
+      test('the settings writes are accepted (M2-10)', () async {
+        final id = newUuidV4();
+        final settings = repository();
+
+        await settings.rename(taxpayerId: id, displayName: 'Ana G');
+        await settings.archive(id);
+        await settings.unarchive(id);
+        await settings.addRegime(taxpayerId: id, regimeCode: '612');
+        await settings.updateRegimeOptions(
+          taxpayerId: id,
+          regimeCode: '606',
+          options: const {'deduction_mode': 'actual'},
+        );
+        await settings.endRegime(
+          taxpayerId: id,
+          regimeCode: '606',
+          endPeriod: '2026-09',
+          confirm: true,
+        );
+        await settings.delete(id);
       });
 
       test('tax inputs are accepted', () async {

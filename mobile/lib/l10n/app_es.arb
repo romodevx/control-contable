@@ -418,6 +418,10 @@
   "@formErrorChoose": {
     "description": "Inline error: a required choice (radio or checkbox group) was left empty. Shown only after submit."
   },
+  "homeNoRegime": "Agrega un régimen para ver tu estimado.",
+  "@homeNoRegime": {
+    "description": "Home, when the active taxpayer has no regime in effect this month; followed by the add-regime button."
+  },
   "homeAddTaxpayer": "Registrar contribuyente",
   "@homeAddTaxpayer": {
     "description": "Home button that starts the taxpayer onboarding (module_taxpayers)."
@@ -761,5 +765,290 @@
   "onboardingInputsSkip": "Omitir",
   "@onboardingInputsSkip": {
     "description": "Skips the optional tax inputs of one regime."
+  },
+  "switcherLabel": "Contribuyente activo: {name}. Cambiar",
+  "@switcherLabel": {
+    "description": "Screen-reader label of the top-bar active-taxpayer switcher.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "switcherTitle": "Contribuyentes",
+  "@switcherTitle": {
+    "description": "Title of the taxpayer switcher sheet."
+  },
+  "switcherShowArchived": "Mostrar archivados",
+  "@switcherShowArchived": {
+    "description": "Switch in the taxpayer switcher that lists archived taxpayers too."
+  },
+  "taxpayerArchivedBadge": "Archivado",
+  "@taxpayerArchivedBadge": {
+    "description": "Badge on an archived taxpayer in the switcher."
+  },
+  "taxpayerRfcSemantics": "RFC {start}, oculto, {end}",
+  "@taxpayerRfcSemantics": {
+    "description": "Screen-reader reading of a masked RFC (the middle is hidden).",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "taxpayerSettingsTooltip": "Ajustes de {name}",
+  "@taxpayerSettingsTooltip": {
+    "description": "Tooltip of the settings button on a switcher row.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsTitle": "Ajustes del contribuyente",
+  "@settingsTitle": {
+    "description": "App bar title of the taxpayer settings screen."
+  },
+  "settingsLoading": "Cargando contribuyentes…",
+  "@settingsLoading": {
+    "description": "Taxpayer list loading."
+  },
+  "settingsLoadFailed": "No se pudieron cargar tus contribuyentes.",
+  "@settingsLoadFailed": {
+    "description": "Taxpayer list failed to load."
+  },
+  "settingsNotFound": "Este contribuyente ya no existe.",
+  "@settingsNotFound": {
+    "description": "Settings of a taxpayer that is gone."
+  },
+  "settingsDataTitle": "Datos",
+  "@settingsDataTitle": {
+    "description": "Settings section: name and RFC."
+  },
+  "settingsEditName": "Editar nombre",
+  "@settingsEditName": {
+    "description": "Opens the inline name editor."
+  },
+  "settingsCorrectRfc": "Corregir RFC",
+  "@settingsCorrectRfc": {
+    "description": "Opens the inline RFC correction."
+  },
+  "settingsRfcHelp": "Escribe el RFC completo, como en la constancia. Nunca lo mostramos completo.",
+  "@settingsRfcHelp": {
+    "description": "Helper text of the RFC correction field."
+  },
+  "settingsNameSaved": "Guardamos el nombre.",
+  "@settingsNameSaved": {
+    "description": "Confirmation after a rename."
+  },
+  "settingsRfcCorrected": "Corregimos el RFC.",
+  "@settingsRfcCorrected": {
+    "description": "Confirmation after an RFC correction with no warning."
+  },
+  "settingsArchivedWrite": "Este contribuyente está archivado. Desarchívalo para hacer cambios.",
+  "@settingsArchivedWrite": {
+    "description": "A write was refused because the taxpayer is archived."
+  },
+  "settingsRegimesTitle": "Regímenes",
+  "@settingsRegimesTitle": {
+    "description": "Settings section: the regimes."
+  },
+  "settingsRegimeSince": "Desde {start}",
+  "@settingsRegimeSince": {
+    "description": "Period of an active regime.",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsRegimeRange": "De {start} a {end}",
+  "@settingsRegimeRange": {
+    "description": "Period of an ended regime.",
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsRegimeEnded": "Terminado",
+  "@settingsRegimeEnded": {
+    "description": "Badge of an ended regime."
+  },
+  "settingsAddRegime": "Agregar régimen",
+  "@settingsAddRegime": {
+    "description": "Opens the add-regime flow; also its primary."
+  },
+  "settingsEditOptions": "Editar opciones",
+  "@settingsEditOptions": {
+    "description": "Opens a regime's options."
+  },
+  "settingsEndRegime": "Terminar régimen",
+  "@settingsEndRegime": {
+    "description": "Opens the inline end-regime panel."
+  },
+  "settingsEndRegimeLabel": "Último mes en este régimen",
+  "@settingsEndRegimeLabel": {
+    "description": "Month picker of the end-regime panel."
+  },
+  "settingsEndRegimeConfirm": "Terminar",
+  "@settingsEndRegimeConfirm": {
+    "description": "Primary of the end-regime panel."
+  },
+  "settingsEndRegimeHasRecords": "Este régimen tiene ingresos o gastos registrados. Se conservan y siguen contando hasta el mes que elijas.",
+  "@settingsEndRegimeHasRecords": {
+    "description": "409 regime_has_records: asks to confirm."
+  },
+  "settingsEndRegimeKeep": "Terminar y conservar registros",
+  "@settingsEndRegimeKeep": {
+    "description": "Confirms ending a regime that has records."
+  },
+  "settingsEndRegimeRecordsAfter": "Hay registros después de ese mes. Elige el mes del último registro o uno posterior.",
+  "@settingsEndRegimeRecordsAfter": {
+    "description": "422 records_after_end_period."
+  },
+  "settingsLastRegime": "Es su único régimen activo. Para dejar de usarlo, archiva al contribuyente.",
+  "@settingsLastRegime": {
+    "description": "Why the last active regime cannot be ended."
+  },
+  "settingsRegimeEndedDone": "Terminamos el régimen {code}.",
+  "@settingsRegimeEndedDone": {
+    "description": "Confirmation after ending a regime.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsManageTitle": "Archivar o eliminar",
+  "@settingsManageTitle": {
+    "description": "Settings section: archive and delete."
+  },
+  "settingsArchive": "Archivar",
+  "@settingsArchive": {
+    "description": "Archives the taxpayer."
+  },
+  "settingsArchiveHelp": "Lo ocultas de tu lista. Conservas su información y puedes desarchivarlo.",
+  "@settingsArchiveHelp": {
+    "description": "What archiving does."
+  },
+  "settingsArchived": "Archivaste a «{name}».",
+  "@settingsArchived": {
+    "description": "Undo toast after archiving.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsUndo": "Deshacer",
+  "@settingsUndo": {
+    "description": "Undo action of the archive toast."
+  },
+  "settingsUnarchive": "Desarchivar",
+  "@settingsUnarchive": {
+    "description": "Unarchives the taxpayer."
+  },
+  "settingsUnarchived": "«{name}» volvió a tu lista.",
+  "@settingsUnarchived": {
+    "description": "Confirmation after unarchiving.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsArchivedBanner": "Este contribuyente está archivado. Puedes consultarlo; para hacer cambios, desarchívalo.",
+  "@settingsArchivedBanner": {
+    "description": "Banner on an archived taxpayer's settings."
+  },
+  "settingsDelete": "Eliminar",
+  "@settingsDelete": {
+    "description": "Opens the delete confirmation."
+  },
+  "settingsDeleteHelp": "Borra al contribuyente y todos sus registros. No se puede deshacer.",
+  "@settingsDeleteHelp": {
+    "description": "What deleting does."
+  },
+  "settingsDeleteTitle": "¿Eliminar a «{name}»?",
+  "@settingsDeleteTitle": {
+    "description": "Title of the delete confirmation dialog.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsDeleteBody": "Se borrarán sus ingresos y gastos, sus datos para el cálculo y su historial. No se puede deshacer. Si solo quieres ocultarlo, archívalo.",
+  "@settingsDeleteBody": {
+    "description": "Body of the delete confirmation dialog."
+  },
+  "settingsDeleteConfirm": "Eliminar definitivamente",
+  "@settingsDeleteConfirm": {
+    "description": "Destructive primary of the delete dialog."
+  },
+  "settingsDeleted": "Eliminaste a «{name}».",
+  "@settingsDeleted": {
+    "description": "Confirmation after deleting.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "paywallWriteBody": "Tu periodo de prueba terminó y no hay un plan activo. Puedes consultar, archivar y eliminar tu información, pero hacer cambios requiere un plan.",
+  "@paywallWriteBody": {
+    "description": "Paywall message on a refused settings write (402)."
+  },
+  "paywallClose": "Entendido",
+  "@paywallClose": {
+    "description": "Closes the paywall message."
+  },
+  "addRegimeIntro": "Elige el régimen que vas a agregar. Cuenta a partir de este mes.",
+  "@addRegimeIntro": {
+    "description": "Intro of the add-regime step."
+  },
+  "addRegimeNoneLeft": "Ya tiene todos los regímenes disponibles para su tipo de persona.",
+  "@addRegimeNoneLeft": {
+    "description": "Nothing left to add."
+  },
+  "addRegimeAdded": "Agregamos el régimen {code}.",
+  "@addRegimeAdded": {
+    "description": "Confirmation after adding a regime.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "addRegimeCpaReview": "Agregamos el régimen {code}. Un contador debe confirmar la combinación: {reason}",
+  "@addRegimeCpaReview": {
+    "description": "Regime added with a CPA-review warning.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "optionsEditWarning": "El cambio aplica a todos los meses de este régimen, también a los anteriores.",
+  "@optionsEditWarning": {
+    "description": "OQ-7 warning on the options page."
+  },
+  "optionsSaved": "Guardamos las opciones.",
+  "@optionsSaved": {
+    "description": "Confirmation after saving options."
+  },
+  "addRegimeTitle": "Nuevo régimen",
+  "@addRegimeTitle": {
+    "description": "App bar title of the add-regime screen."
   }
 }

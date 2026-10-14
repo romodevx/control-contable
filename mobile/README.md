@@ -185,7 +185,30 @@ boundary.
 - With `module_tax_engine` on, an optional step 5 offers each regime's `required_inputs` for
   the current fiscal year (America/Mexico_City), written with `PUT …/tax-inputs`; *Omitir*
   skips it.
-- Not here yet: the active taxpayer and the switcher (M2-10).
+- A created taxpayer becomes the active one (also when the user backs out of the review).
+
+## Active taxpayer and settings (`module_taxpayers`, M2-10)
+
+- `taxpayersProvider` (`application/taxpayer_list.dart`) is the one list (archived included,
+  `GET /v1/taxpayers?include_archived=true`); every settings write reloads it, and a session
+  change reloads it too.
+- `activeTaxpayerProvider`: the stored id while it exists and is not archived, else the first
+  non-archived by `created_at`, else `null` (§2.9). Only the **id** is kept on the device
+  (`shared_preferences`, `data/active_taxpayer_store.dart`); never the RFC or a name. A
+  sign-out forgets it.
+- Home's title is the switcher (`ActiveTaxpayerSwitcher`, behind `ref.useFlag`): a sheet with
+  name, masked RFC (`GOMA••••••AB6`) and person type; archived ones behind *Mostrar
+  archivados*. A user with **no taxpayer at all** lands on the onboarding once
+  (`OnboardingLauncher`); one with only archived taxpayers stays on home.
+- Settings (`/contribuyentes/:id/ajustes`): rename and RFC correction as inline rows (the RFC
+  is retyped, never prefilled; a check-digit mismatch is saved and asks to double-check); add
+  a regime (onboarding steps 3–4 through `RegimeWizard`, held regimes hidden, conflicts with
+  them flagged); options (warning: they apply to every period, OQ-7); end a regime at a
+  chosen month (`409 regime_has_records` → confirm and keep records; the last active one
+  cannot be ended); archive (done at once, Undo in a toast that does not auto-dismiss);
+  delete (confirmation dialog naming the taxpayer and the lost incomes/expenses).
+- Read-only users (`402`, OQ-8): archive, delete and ending a regime work; other writes show
+  the paywall, and once a `402` is known they open it without asking the server.
 
 ## Session tokens (M1-12)
 
