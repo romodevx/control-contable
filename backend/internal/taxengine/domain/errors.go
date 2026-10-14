@@ -33,4 +33,12 @@ const (
 	// ErrInvalidIVAExclusion reports a definitive IVA exclusion (the 625
 	// hook) below zero or above the IVA charged.
 	ErrInvalidIVAExclusion Error = "taxengine: invalid definitive IVA exclusion"
+	// ErrInvalidStrategy reports a nil strategy, or one whose key has a
+	// blank regime code or an unknown person type, at registry build.
+	ErrInvalidStrategy Error = "taxengine: invalid strategy"
+	// ErrDuplicateStrategy reports two strategies registered under one key.
+	ErrDuplicateStrategy Error = "taxengine: duplicate strategy"
+	// ErrStrategyMismatch reports an estimate for a key other than the
+	// input's: a strategy wired to the wrong regime.
+	ErrStrategyMismatch Error = "taxengine: strategy key mismatch"
 )
