@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -73,7 +74,7 @@ func authoredCases(t *testing.T) []golden.Case {
 func TestGoldenCases(t *testing.T) {
 	authored := authoredCases(t)
 	generated := generatedCases(t, rawParams(t))
-	cases := append(authored, generated...)
+	cases := slices.Concat(authored, generated)
 
 	s := golden.Run(t, cases, strategies, catalog(t))
 

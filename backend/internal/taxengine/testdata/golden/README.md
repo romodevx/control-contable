@@ -51,7 +51,7 @@ expected:
 
 Amounts are quoted decimals with exactly two places (the centavo); an unquoted number is a YAML
 float and is refused. `iva.net` must equal charged − excluded − creditable − withheld
-(MODULE-tax-engine §2.6). Lists are compared as sets; lines in order, by tax, code and amount.
+(MODULE-tax-engine §2.6). Lists are compared as sets; lines in order, by tax, code, op and amount (`op` is the contract operation: a `subtract` line shows a positive amount).
 Every line except `info` and `rounding_adjustment` must cite a legal basis. Missing inputs come
 from the strategy's `RequiredInputs` and the case's `tax_inputs`, as the use case derives them.
 
