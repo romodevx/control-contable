@@ -184,7 +184,8 @@ func TestRegimes_RequiredInputsFollowADR0002(t *testing.T) {
 
 	ytdPM := []string{"prior_provisional_payments", "ptu_paid", "prior_year_losses", "interest_withholding"}
 	assert.Equal(t, map[string][]string{
-		"601/moral": append([]string{"coeficiente_utilidad"}, ytdPM...),
+		// M5-20 adds first_fiscal_year to 601 only (MODULE-tax-engine §9 item 6).
+		"601/moral": append([]string{"coeficiente_utilidad", "first_fiscal_year"}, ytdPM...),
 		"612/fisica": {"prior_provisional_payments", "ytd_before_app_income", "ytd_before_app_deductions",
 			"ptu_paid", "prior_year_losses"},
 		"622/moral":  append([]string{"coeficiente_utilidad"}, ytdPM...),
@@ -281,7 +282,7 @@ func TestRegimes_RejectMalformedRequiredInputs(t *testing.T) {
 		"not an array":         `{"key": "x"}`,
 		"element not object":   `[1]`,
 		"missing required":     `[{"key": "x", "label": "X", "kind": "money"}]`,
-		"kind outside the API": `[{"key": "x", "label": "X", "kind": "boolean", "required": true}]`,
+		"kind outside the API": `[{"key": "x", "label": "X", "kind": "integer", "required": true}]`,
 		"blank label":          `[{"key": "x", "label": "", "kind": "money", "required": true}]`,
 		"unknown property":     `[{"key": "x", "label": "X", "kind": "money", "required": true, "default": 0}]`,
 		"duplicate keys":       `[{"key": "x", "label": "X", "kind": "money", "required": true}, {"key": "x", "label": "X", "kind": "rate", "required": true}]`,
