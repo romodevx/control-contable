@@ -1,0 +1,30 @@
+# golden: hand-authored from docs/research/tax-regimes-mx-2026.md §A.5 PF-612-ISR-03. Never generated or rewritten by a tool.
+# "Any month" with YTD deductions > YTD income: base <= 0, ISR 0.00.
+# Chosen month: March 2026; income 30,000, deductions 45,000, prior payments 0.
+id: PF-612-ISR-03
+source: research:PF-612-ISR-03
+input:
+  regime: "612"
+  person_type: fisica
+  period: "2026-03"
+  months:
+    - {month: 1, income: {cash: "10000.00"}, expenses: {deductible_paid: "15000.00"}}
+    - {month: 2, income: {cash: "10000.00"}, expenses: {deductible_paid: "15000.00"}}
+    - {month: 3, income: {cash: "10000.00"}, expenses: {deductible_paid: "15000.00"}}
+  tax_inputs:
+    - {key: prior_provisional_payments, kind: money_monthly, month: 1, money: "0.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 2, money: "0.00"}
+expected:
+  status: complete
+  taxes: [isr]
+  isr: "0.00"
+  lines:
+    - {tax: isr, code: isr.income_ytd, op: input, amount: "30000.00"}
+    - {tax: isr, code: isr.deductions_ytd, op: subtract, amount: "45000.00"}
+    - {tax: isr, code: isr.base, op: result, amount: "-15000.00"}
+    # No positive base, no tariff lookup: the ISR caused is 0 (LISR 106 ¶1).
+    - {tax: isr, code: isr.caused, op: input, amount: "0.00"}
+    - {tax: isr, code: isr.prior_payments, op: subtract, amount: "0.00"}
+    - {tax: isr, code: isr.withheld_by_moral, op: subtract, amount: "0.00"}
+    - {tax: isr, code: isr.payable, op: result, amount: "0.00"}
+  disclaimers: [deductibility_claimed]

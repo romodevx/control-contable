@@ -4,7 +4,7 @@
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-/// Append-only (like `ErrorCode`, not frozen): the single list of `Warning.code` values. Clients show the `message` of a code they do not know. Taxpayers (M2): `rfc_check_digit_mismatch` on `rfc` (D-RFC); `regime_combination_needs_cpa_review` on `regimes.N.regime_code` (create) or `regime_code` (add regime), the pair overlaps in time and its compatibility is not yet verified by a CPA, `message` carries the pair's `reason`. Incomes (M3): `duplicate_cfdi_uuid` on `cfdi_uuid` (another live record of the taxpayer has the same folio fiscal); `withholding_differs_from_rate` on `isr_withheld_cents` / `iva_withheld_cents` (the CFDI wins). Expenses (M4): `cash_over_threshold` on `payment_method`; `no_cfdi` on `has_cfdi`; `not_isr_deductible_in_regime` and `category_not_deductible` on `deductible`; `duplicate_cfdi_uuid` on `cfdi_uuid`; `iva_not_creditable_cash_payment` on `payment_method` (a cash payment over the limit claimed as deductible: the claim stands for ISR, its IVA is not creditable, LIVA 5 fr. II ⚠️; 0.6.0).
+/// Append-only (like `ErrorCode`, not frozen): the single list of `Warning.code` values. Clients show the `message` of a code they do not know. Taxpayers (M2): `rfc_check_digit_mismatch` on `rfc` (D-RFC); `regime_combination_needs_cpa_review` on `regimes.N.regime_code` (create) or `regime_code` (add regime), the pair overlaps in time and its compatibility is not yet verified by a CPA, `message` carries the pair's `reason`. Incomes (M3): `duplicate_cfdi_uuid` on `cfdi_uuid` (another live record of the taxpayer has the same folio fiscal); `withholding_differs_from_rate` on `isr_withheld_cents` / `iva_withheld_cents` (the CFDI wins). Expenses (M4): `cash_over_threshold` on `payment_method`; `no_cfdi` on `has_cfdi`; `not_isr_deductible_in_regime` and `category_not_deductible` on `deductible`; `duplicate_cfdi_uuid` on `cfdi_uuid`; `iva_not_creditable_cash_payment` on `payment_method` (a cash payment over the limit claimed as deductible: the claim stands for ISR, its IVA is not creditable, LIVA 5 fr. II ⚠️; 0.6.0); `provisional_parameters` on `paid_on` (the payment date's fiscal year has no published tax parameters yet, so the IVA and cash rules used the previous year's; M4-05).
 @JsonEnum()
 enum WarningCode {
   @JsonValue('rfc_check_digit_mismatch')
@@ -25,6 +25,8 @@ enum WarningCode {
   categoryNotDeductible('category_not_deductible'),
   @JsonValue('iva_not_creditable_cash_payment')
   ivaNotCreditableCashPayment('iva_not_creditable_cash_payment'),
+  @JsonValue('provisional_parameters')
+  provisionalParameters('provisional_parameters'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);

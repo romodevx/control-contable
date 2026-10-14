@@ -1,0 +1,22 @@
+# golden: hand-authored from docs/research/tax-regimes-mx-2026.md §A.5 PF-626-ISR-01. Never generated or rewritten by a tool.
+# RESICO, "any month" (March 2026): collected 60,000, 20,000 of it from a PM.
+# 60,000 <= 83,333.33 -> 1.5 % = 900.00 (not marginal); withholding
+# 1.25 % x 20,000 = 250.00. ISR to pay 650.00.
+id: PF-626-ISR-01
+source: research:PF-626-ISR-01
+pending_strategy: true # M5-13 removes this when the 626 PF strategy is registered
+input:
+  regime: "626"
+  person_type: fisica
+  period: "2026-03"
+  months:
+    - {month: 3, income: {cash: "60000.00", isr_withheld: {by_moral: "250.00"}}}
+expected:
+  status: complete
+  taxes: [isr]
+  isr: "650.00"
+  lines:
+    - {tax: isr, code: isr.income_month, op: input, amount: "60000.00"}
+    - {tax: isr, code: isr.resico_rate, op: multiply, amount: "900.00"}
+    - {tax: isr, code: isr.withheld_by_moral, op: subtract, amount: "250.00"}
+    - {tax: isr, code: isr.payable, op: result, amount: "650.00"}
