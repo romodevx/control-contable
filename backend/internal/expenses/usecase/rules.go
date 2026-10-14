@@ -159,6 +159,7 @@ func stored(e StoredExpense, regime fiscal.RegimeCode, d domain.Draft, descripti
 	e.PaymentMethod, e.PaidOn, e.HasCFDI, e.CFDIUUID = d.PaymentMethod, d.PaidOn, d.HasCFDI, d.CFDIUUID
 	e.Withheld, e.Description = d.Withheld, description
 	e.Deductible, e.Overridden = a.Deductible, a.Source == domain.SourceUser
+	e.CashOverLimit, e.CreditableIVA = a.CashOverLimit, a.CreditableIVA
 	return e
 }
 
