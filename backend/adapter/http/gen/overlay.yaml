@@ -35,3 +35,30 @@ actions:
       x-go-type: nullable.Nullable[string]
       x-go-type-import: { path: github.com/oapi-codegen/nullable }
       x-go-type-skip-optional-pointer: true
+  # The same for the five clearable IncomeUpdate properties (M3-06). The dates keep
+  # the generated openapi_types.Date and the activity the generated enum type.
+  - target: $.components.schemas.IncomeUpdate.properties.invoiced_on
+    update:
+      x-go-type: nullable.Nullable[openapi_types.Date]
+      x-go-type-import: { path: github.com/oapi-codegen/nullable }
+      x-go-type-skip-optional-pointer: true
+  - target: $.components.schemas.IncomeUpdate.properties.collected_on
+    update:
+      x-go-type: nullable.Nullable[openapi_types.Date]
+      x-go-type-import: { path: github.com/oapi-codegen/nullable }
+      x-go-type-skip-optional-pointer: true
+  - target: $.components.schemas.IncomeUpdate.properties.platform_activity
+    update:
+      x-go-type: nullable.Nullable[PlatformActivity]
+      x-go-type-import: { path: github.com/oapi-codegen/nullable }
+      x-go-type-skip-optional-pointer: true
+  - target: $.components.schemas.IncomeUpdate.properties.cfdi_uuid
+    update:
+      x-go-type: nullable.Nullable[string]
+      x-go-type-import: { path: github.com/oapi-codegen/nullable }
+      x-go-type-skip-optional-pointer: true
+  - target: $.components.schemas.IncomeUpdate.properties.description
+    update:
+      x-go-type: nullable.Nullable[string]
+      x-go-type-import: { path: github.com/oapi-codegen/nullable }
+      x-go-type-skip-optional-pointer: true

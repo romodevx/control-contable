@@ -85,7 +85,6 @@ var detailMessages = map[string]string{
 	ErrTooLong.Detail():                         "This text is too long.",
 	domain.ErrNotForRegime.Detail():             "This field only applies to another regime.",
 	domain.ErrActivityNotHeld.Detail():          "The taxpayer does not hold this activity.",
-	domain.ErrParametersUnavailable.Detail():    "There are no tax parameters for this date yet.",
 	fiscal.ErrRateNotValidOnDate.Detail():       "This IVA rate is not valid on the income's date.",
 	fiscal.ErrIVAAmountMismatch.Detail():        "The IVA does not match the rate.",
 	fiscal.ErrWithholdingNotApplicable.Detail(): "This payer does not withhold this tax.",
@@ -153,9 +152,13 @@ func archivedError() error {
 }
 
 // regimeNotHeldError is the 422 for a regime the taxpayer never held.
-func regimeNotHeldError() error {
+func regimeNotHeldError() error { return regimeNotHeldOn(fieldRegimeCode) }
+
+// regimeNotHeldOn is the 422 regime_not_active naming field: the taxpayer
+// does not hold the regime on the date.
+func regimeNotHeldOn(field string) error {
 	return apperr.Wrap(ErrRegimeNotHeld, apperr.CodeBusinessRuleViolation, msgNotActive).
-		WithFields(apperr.FieldError{Field: fieldRegimeCode, Code: detailRegimeNotActive, Message: msgNotActive})
+		WithFields(apperr.FieldError{Field: field, Code: detailRegimeNotActive, Message: msgNotActive})
 }
 
 // taxpayerNotFound is the 404 of a malformed taxpayer path id (QA O3).

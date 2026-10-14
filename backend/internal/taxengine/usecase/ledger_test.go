@@ -52,6 +52,31 @@ func TestYearSumsByRegime(t *testing.T) {
 	assert.Equal(t, domain.MonthSums{Expenses: domain.ExpenseSums{DeductiblePaid: 50}}, rent.Month(time.March))
 }
 
+// The income reader's rows (M3-07) fold the same way: an accrual regime accumulates its ISR
+// income from January, while its IVA is read for the period's month only (LIVA 5-D).
+func TestYearSumsByRegime_AccrualIncomeYTDAndMonthlyIVA(t *testing.T) {
+	moral := fiscal.RegimeCode("601")
+	row := func(month time.Month, accrual, cash, base, iva money.Cents) usecase.IncomeMonthSums {
+		return usecase.IncomeMonthSums{Regime: moral, Month: month, Sums: domain.IncomeSums{
+			Accrual: accrual, Cash: cash, ByRate: domain.IVAByRate{Rate16: domain.RateSums{Base: base, IVA: iva}},
+			ISRWithheld: domain.Withheld{ByPlatform: cash / 40},
+		}}
+	}
+	years, err := usecase.YearSumsByRegime(marchQuery,
+		[]usecase.IncomeMonthSums{row(time.January, 0, 3000_00, 3000_00, 480_00), row(time.March, 15000_00, 1000_00, 1000_00, 160_00)},
+		nil,
+	)
+	require.NoError(t, err)
+
+	ytd, err := years[moral].Sum(time.January, marchQuery.Through)
+	require.NoError(t, err)
+	assert.Equal(t, money.Cents(15000_00), ytd.Income.Accrual)
+	assert.Equal(t, money.Cents(4000_00), ytd.Income.Cash)
+	assert.Equal(t, money.Cents(100_00), ytd.Income.ISRWithheld.ByPlatform)
+	assert.Equal(t, domain.RateSums{Base: 1000_00, IVA: 160_00}, years[moral].Month(time.March).Income.ByRate.Rate16,
+		"IVA is never year to date")
+}
+
 func TestYearSumsByRegime_NoRows(t *testing.T) {
 	years, err := usecase.YearSumsByRegime(marchQuery, nil, nil)
 	require.NoError(t, err)

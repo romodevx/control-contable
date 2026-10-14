@@ -9,6 +9,7 @@ import (
 
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
 	expinfra "github.com/romodevx/control-contable/backend/internal/expenses/infra"
+	incomesinfra "github.com/romodevx/control-contable/backend/internal/incomes/infra"
 	"github.com/romodevx/control-contable/backend/internal/platform/access"
 	"github.com/romodevx/control-contable/backend/internal/platform/access/accessgorm"
 	"github.com/romodevx/control-contable/backend/internal/platform/clock"
@@ -83,7 +84,7 @@ func newTaxpayersDeps(w taxpayersWiring) (usecase.Deps, error) {
 		Tx:        txm,
 		Access:    access.NewPolicy(txm, accessgorm.NewStore(), accessgorm.NewStore(), clock.NewSystem()),
 		Taxpayers: store, Regimes: store, Catalog: catalog, Directory: catalog,
-		Records: regimeRecords{expenses: expinfra.NewStore()}, // M3-06 adds the incomes
+		Records: regimeRecords{expenses: expinfra.NewStore(), incomes: incomesinfra.NewStore()},
 		RFC:     vault, Clock: clock.NewSystem(), Logger: w.logger,
 	}, nil
 }

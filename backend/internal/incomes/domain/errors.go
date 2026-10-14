@@ -10,8 +10,4 @@ var (
 	ErrNotForRegime = fiscal.ValidationError("not_for_regime")
 	// ErrActivityNotHeld: a 625 activity the taxpayer does not hold.
 	ErrActivityNotHeld = fiscal.BusinessRuleError("activity_not_held")
-	// ErrParametersUnavailable: a date whose fiscal year has no parameter
-	// set, nor the previous year's to fall back on (the tax engine's
-	// parameters_unavailable): no rate can be checked on it.
-	ErrParametersUnavailable = fiscal.BusinessRuleError("parameters_unavailable")
 )
