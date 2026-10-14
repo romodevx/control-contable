@@ -71,6 +71,11 @@ class _DashboardContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboard = ref.watch(dashboardProvider(taxpayerId));
     void reload() => ref.invalidate(dashboardProvider(taxpayerId));
+    // A failed read wins over the previous value: v1 shows no cached
+    // figures (MODULE-dashboard §5), so a failed refresh is the error state.
+    if (dashboard.error case final error? when !dashboard.isLoading) {
+      return DashboardFailure(error: error, onRetry: reload);
+    }
     if (dashboard.value case final loaded?) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -80,9 +85,6 @@ class _DashboardContent extends ConsumerWidget {
             Semantics(container: true, child: block),
         ],
       );
-    }
-    if (dashboard.error case final error? when !dashboard.isLoading) {
-      return DashboardFailure(error: error, onRetry: reload);
     }
     return const DashboardSkeleton();
   }
