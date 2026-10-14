@@ -38,7 +38,7 @@ class IncomeFormScreen extends ConsumerWidget {
       );
     }
     final today = businessToday(ref.read(clockProvider)());
-    final regimes = _inEffect(taxpayer, RecordMonth.ofDate(today).period);
+    final regimes = regimesHeldIn(taxpayer, RecordMonth.ofDate(today).period);
     if (regimes.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: Text(l10n.incomeFormTitle)),
@@ -60,13 +60,12 @@ class IncomeFormScreen extends ConsumerWidget {
       ),
     );
   }
-
-  /// The regimes [taxpayer] holds in [period] (`YYYY-MM`).
-  static List<TaxpayerRegime> _inEffect(Taxpayer taxpayer, String period) => [
-    for (final regime in taxpayer.regimes)
-      if (regime.startPeriod.compareTo(period) <= 0 &&
-          (regime.endPeriod == null ||
-              regime.endPeriod!.compareTo(period) >= 0))
-        regime,
-  ];
 }
+
+/// The regimes [taxpayer] holds in [period] (`YYYY-MM`).
+List<TaxpayerRegime> regimesHeldIn(Taxpayer taxpayer, String period) => [
+  for (final regime in taxpayer.regimes)
+    if (regime.startPeriod.compareTo(period) <= 0 &&
+        (regime.endPeriod == null || regime.endPeriod!.compareTo(period) >= 0))
+      regime,
+];

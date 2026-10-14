@@ -914,6 +914,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String incomesEditLabel(String title) {
+    return 'Editar ingreso: $title';
+  }
+
+  @override
   String incomesDeleted(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -980,6 +985,15 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get incomeFormTitle => 'Nuevo ingreso';
+
+  @override
+  String get incomeEditTitle => 'Editar ingreso';
+
+  @override
+  String get incomeUpdated => 'Ingreso actualizado';
+
+  @override
+  String get incomeUpdatedWithWarnings => 'Ingreso actualizado, con un aviso:';
 
   @override
   String get incomeFieldCollectedOn => 'Fecha de cobro';
@@ -1087,6 +1101,10 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get incomeSaveIdReused =>
       'Este ingreso ya se había guardado con otros datos. Revisa la lista de ingresos.';
+
+  @override
+  String get incomeSaveGone =>
+      'Este ingreso ya no existe: se eliminó en otro lugar.';
 
   @override
   String get incomeSaveFailed =>

@@ -85,7 +85,7 @@ void main() {
     );
     final dio = Dio(BaseOptions(baseUrl: 'http://localhost:3001'))
       ..httpClientAdapter = adapter;
-    repository = ApiIncomesRepository(ApiClient(dio).incomes);
+    repository = ApiIncomesRepository(ApiClient(dio).incomes, dio);
   });
 
   test(
@@ -171,6 +171,60 @@ void main() {
 
     expect(adapter.requests.map((r) => r.method), ['DELETE', 'POST']);
     expect(restored.id, _incomeId);
+  });
+
+  test('update PATCHes only the given keys and keeps an explicit null '
+      '(merge-patch clears it; ADR-0003 "Null on the wire")', () async {
+    adapter.reply('$_incomes/$_incomeId', (status: 200, body: _income));
+
+    final updated = await repository.update(
+      taxpayerId: _taxpayerId,
+      incomeId: _incomeId,
+      patch: const {'amount_cents': 1200000, 'description': null},
+    );
+
+    final request = adapter.requests.single;
+    expect(request.method, 'PATCH');
+    expect(request.uri.path, '$_incomes/$_incomeId');
+    final sent = jsonDecode(jsonEncode(request.data)) as Map<String, Object?>;
+    expect(sent, {'amount_cents': 1200000, 'description': null});
+    expect(sent.containsKey('description'), isTrue);
+    expect(updated.id, _incomeId);
+  });
+
+  test('get reads one income', () async {
+    adapter.reply('$_incomes/$_incomeId', (status: 200, body: _income));
+
+    final found = await repository.get(
+      taxpayerId: _taxpayerId,
+      incomeId: _incomeId,
+    );
+
+    expect(adapter.requests.single.method, 'GET');
+    expect(found.description, 'Diseño de logotipo');
+  });
+
+  test('an update of a deleted income is a 404', () async {
+    adapter.reply('$_incomes/$_incomeId', (
+      status: 404,
+      body: {
+        'error': {
+          'code': 'not_found',
+          'message': 'Not found.',
+          'request_id': 'req_1',
+        },
+      },
+    ));
+
+    final failure = await failureOf(
+      () => repository.update(
+        taxpayerId: _taxpayerId,
+        incomeId: _incomeId,
+        patch: const {'amount_cents': 1},
+      ),
+    );
+
+    expect(failure, isA<ApiNotFound>());
   });
 
   test('a spent trial cap arrives as a 402 naming incomes_remaining', () async {

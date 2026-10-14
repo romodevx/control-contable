@@ -62,6 +62,14 @@ class IncomeSuggestions {
     }
   }
 
+  /// An edit starts from a stored income: its rate and amounts are the
+  /// user's, except the IVA when it is exactly the rate's IVA
+  /// ([ivaFollowsAmount]): it then keeps following the amount.
+  void adoptStored({required bool ivaFollowsAmount}) {
+    _suggestedRate = null;
+    if (ivaFollowsAmount) _suggested[ivaAmount] = ivaAmount.text.text;
+  }
+
   /// A new form session: whatever is in the fields now is not the user's.
   void forget() => _suggested.clear();
 

@@ -115,7 +115,7 @@ class FakeIncomesRepository implements IncomesRepository {
   final List<String> calls = [];
 
   /// Thrown by the next call of the named operation (`list`, `create`,
-  /// `defaults`, `delete`, `restore`), then cleared.
+  /// `defaults`, `get`, `update`, `delete`, `restore`), then cleared.
   final Map<String, Exception> failNext = {};
 
   /// Thrown by every call of the named operation while set.
@@ -123,6 +123,9 @@ class FakeIncomesRepository implements IncomesRepository {
 
   /// Every create body, retries included.
   final List<IncomeCreate> creates = [];
+
+  /// Every merge-patch body sent to update, in order.
+  final List<Map<String, Object?>> patches = [];
 
   /// Held open while set: a create stays in flight until completed.
   Completer<void>? createGate;
@@ -256,5 +259,29 @@ class FakeIncomesRepository implements IncomesRepository {
     _call('restore', incomeId);
     deleted.remove(incomeId);
     return incomes.firstWhere((i) => i.id == incomeId);
+  }
+
+  @override
+  Future<Income> get({
+    required String taxpayerId,
+    required String incomeId,
+  }) async {
+    _call('get', incomeId);
+    return incomes.firstWhere((i) => i.id == incomeId);
+  }
+
+  @override
+  Future<Income> update({
+    required String taxpayerId,
+    required String incomeId,
+    required Map<String, Object?> patch,
+  }) async {
+    patches.add(patch);
+    _call('update', incomeId);
+    final index = incomes.indexWhere((i) => i.id == incomeId);
+    final merged = {...incomes[index].toJson(), ...patch};
+    final updated = Income.fromJson(merged);
+    incomes[index] = updated;
+    return updated;
   }
 }

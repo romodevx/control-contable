@@ -1,3 +1,4 @@
+import 'package:control_contable/api/generated/models/income.dart';
 import 'package:control_contable/api/generated/models/income_create.dart';
 import 'package:control_contable/api/generated/models/iva_rate.dart';
 import 'package:control_contable/core/forms/field_error.dart';
@@ -59,5 +60,31 @@ extension IncomeFormRequest on IncomeFormModel {
       cfdiUuid: cfdiUuid.value.isEmpty ? null : cfdiUuid.value.toUpperCase(),
       description: description.value.isEmpty ? null : description.value,
     );
+  }
+
+  /// The merge-patch of an edit (call only after the form validated): the
+  /// `updateIncome` keys whose value differs from [stored], with `null`
+  /// where an optional field was cleared. Empty when nothing changed.
+  Map<String, Object?> toPatch(Income stored) {
+    final wanted = toCreate();
+    final desired = <String, Object?>{
+      'regime_code': wanted.regimeCode,
+      'counterparty_type': wanted.counterpartyType.json,
+      'amount_cents': wanted.amountCents,
+      'iva_rate': wanted.ivaRate.json,
+      'iva_cents': wanted.ivaCents,
+      'isr_withheld_cents': wanted.isrWithheldCents ?? 0,
+      'iva_withheld_cents': wanted.ivaWithheldCents ?? 0,
+      'invoiced_on': wanted.invoicedOn,
+      'collected_on': wanted.collectedOn,
+      'platform_activity': wanted.platformActivity?.json,
+      'cfdi_uuid': wanted.cfdiUuid,
+      'description': wanted.description,
+    };
+    final current = stored.toJson();
+    return {
+      for (final MapEntry(:key, :value) in desired.entries)
+        if (current[key] != value) key: value,
+    };
   }
 }

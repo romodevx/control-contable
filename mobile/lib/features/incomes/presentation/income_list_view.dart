@@ -10,12 +10,14 @@ import 'package:control_contable/core/records/record_totals_card.dart';
 import 'package:control_contable/core/theme/app_spacing.dart';
 import 'package:control_contable/core/widgets/load_status.dart';
 import 'package:control_contable/features/incomes/application/income_list.dart';
+import 'package:control_contable/features/incomes/incomes_routes.dart';
 import 'package:control_contable/features/incomes/presentation/income_delete_action.dart';
 import 'package:control_contable/features/incomes/presentation/income_labels.dart';
 import 'package:control_contable/features/incomes/presentation/incomes_screen.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 /// Room under the last row so the floating *Registrar ingreso* never
 /// covers its delete button.
@@ -147,6 +149,10 @@ class _Loaded extends ConsumerWidget {
       tag: regime?.name ?? income.regimeCode,
       badge: income.pendingCollection ? l10n.incomesPendingCollection : null,
       deleteTooltip: l10n.incomesDeleteTooltip(title),
+      openLabel: l10n.incomesEditLabel(title),
+      onOpen: () => unawaited(
+        context.push<void>(IncomesRoutes.editOf(income.id), extra: income),
+      ),
       onDelete: () => unawaited(deleteIncome(context, ref, query, income)),
     );
   }

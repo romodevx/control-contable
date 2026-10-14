@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 
 /// One record in a month list, in the columns of its form: the date, what
 /// it was, the amount, then its regime (and a status [badge], if any). The
-/// row reads as one sentence; its delete button is a separate 44 px target.
+/// row reads as one sentence and opens the record when tapped; its delete
+/// button is a separate 44 px target.
 ///
 /// Deleting is reversible (soft delete + Undo), so [onDelete] acts at once:
 /// no confirmation here.
@@ -18,6 +19,8 @@ class RecordRow extends StatelessWidget {
     required this.tag,
     required this.deleteTooltip,
     required this.onDelete,
+    required this.openLabel,
+    required this.onOpen,
     this.badge,
     super.key,
   });
@@ -43,6 +46,12 @@ class RecordRow extends StatelessWidget {
   /// Deletes the record.
   final VoidCallback onDelete;
 
+  /// What tapping the row does, for screen readers ("Editar ingreso: …").
+  final String openLabel;
+
+  /// Opens the record (its edit page).
+  final VoidCallback onOpen;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -62,33 +71,43 @@ class RecordRow extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: MergeSemantics(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(date, style: theme.textTheme.bodySmall),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              child: Semantics(
+                button: true,
+                label: openLabel,
+                child: InkWell(
+                  onTap: onOpen,
+                  child: MergeSemantics(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Expanded(
-                          child: Text(title, style: theme.textTheme.bodyLarge),
+                        Text(date, style: theme.textTheme.bodySmall),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                title,
+                                style: theme.textTheme.bodyLarge,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            Text(
+                              formatPesos(amountCents),
+                              style: theme.textTheme.bodyLarge,
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: AppSpacing.xs),
-                        Text(
-                          formatPesos(amountCents),
-                          style: theme.textTheme.bodyLarge,
+                        Wrap(
+                          spacing: AppSpacing.xs,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(tag, style: theme.textTheme.bodySmall),
+                            if (badge != null) _Badge(badge),
+                          ],
                         ),
                       ],
                     ),
-                    Wrap(
-                      spacing: AppSpacing.xs,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text(tag, style: theme.textTheme.bodySmall),
-                        if (badge != null) _Badge(badge),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),

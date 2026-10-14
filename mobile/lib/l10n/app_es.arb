@@ -1211,6 +1211,15 @@
       }
     }
   },
+  "incomesEditLabel": "Editar ingreso: {title}",
+  "@incomesEditLabel": {
+    "description": "Screen-reader label of a row: tapping it edits the income.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "incomesDeleted": "{count, plural, =1{Ingreso eliminado} other{{count} ingresos eliminados}}",
   "@incomesDeleted": {
     "description": "Persistent toast after deleting incomes; deletes stack.",
@@ -1288,6 +1297,18 @@
   "incomeFormTitle": "Nuevo ingreso",
   "@incomeFormTitle": {
     "description": "App bar title of the new-income page."
+  },
+  "incomeEditTitle": "Editar ingreso",
+  "@incomeEditTitle": {
+    "description": "App bar title of the edit-income page (same form, prefilled)."
+  },
+  "incomeUpdated": "Ingreso actualizado",
+  "@incomeUpdated": {
+    "description": "Toast after an edit was saved."
+  },
+  "incomeUpdatedWithWarnings": "Ingreso actualizado, con un aviso:",
+  "@incomeUpdatedWithWarnings": {
+    "description": "Start of the toast after an edit saved with non-blocking warnings."
   },
   "incomeFieldCollectedOn": "Fecha de cobro",
   "@incomeFieldCollectedOn": {
@@ -1424,6 +1445,10 @@
   "incomeSaveIdReused": "Este ingreso ya se había guardado con otros datos. Revisa la lista de ingresos.",
   "@incomeSaveIdReused": {
     "description": "409 id_reused on create."
+  },
+  "incomeSaveGone": "Este ingreso ya no existe: se eliminó en otro lugar.",
+  "@incomeSaveGone": {
+    "description": "404 on an edit: the income was deleted elsewhere."
   },
   "incomeSaveFailed": "No se pudo guardar el ingreso. Intenta de nuevo.",
   "@incomeSaveFailed": {

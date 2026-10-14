@@ -1590,6 +1590,12 @@ abstract class AppLocalizations {
   /// **'Eliminar ingreso: {title}'**
   String incomesDeleteTooltip(String title);
 
+  /// Screen-reader label of a row: tapping it edits the income.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar ingreso: {title}'**
+  String incomesEditLabel(String title);
+
   /// Persistent toast after deleting incomes; deletes stack.
   ///
   /// In es, this message translates to:
@@ -1691,6 +1697,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Nuevo ingreso'**
   String get incomeFormTitle;
+
+  /// App bar title of the edit-income page (same form, prefilled).
+  ///
+  /// In es, this message translates to:
+  /// **'Editar ingreso'**
+  String get incomeEditTitle;
+
+  /// Toast after an edit was saved.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingreso actualizado'**
+  String get incomeUpdated;
+
+  /// Start of the toast after an edit saved with non-blocking warnings.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingreso actualizado, con un aviso:'**
+  String get incomeUpdatedWithWarnings;
 
   /// Date the income was collected.
   ///
@@ -1871,6 +1895,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Este ingreso ya se había guardado con otros datos. Revisa la lista de ingresos.'**
   String get incomeSaveIdReused;
+
+  /// 404 on an edit: the income was deleted elsewhere.
+  ///
+  /// In es, this message translates to:
+  /// **'Este ingreso ya no existe: se eliminó en otro lugar.'**
+  String get incomeSaveGone;
 
   /// Any other save failure.
   ///

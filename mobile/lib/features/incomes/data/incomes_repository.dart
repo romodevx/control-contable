@@ -7,6 +7,8 @@ import 'package:control_contable/api/generated/models/income_page.dart';
 import 'package:control_contable/api/generated/models/platform_activity.dart';
 import 'package:control_contable/core/network/api_client_provider.dart';
 import 'package:control_contable/core/network/api_failure.dart';
+import 'package:control_contable/core/network/dio_provider.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// The income operations of the active taxpayer (`/v1/taxpayers/{id}/incomes`).
@@ -38,6 +40,17 @@ abstract interface class IncomesRepository {
     PlatformActivity? platformActivity,
   });
 
+  /// One live income (`404` once deleted or purged).
+  Future<Income> get({required String taxpayerId, required String incomeId});
+
+  /// Edits an income with a merge-patch [patch] (top-level `updateIncome`
+  /// keys): an absent key is unchanged, `null` clears a nullable field.
+  Future<Income> update({
+    required String taxpayerId,
+    required String incomeId,
+    required Map<String, Object?> patch,
+  });
+
   /// Soft-deletes an income (allowed while read-only).
   Future<void> delete({required String taxpayerId, required String incomeId});
 
@@ -48,12 +61,16 @@ abstract interface class IncomesRepository {
   });
 }
 
-/// [IncomesRepository] over the generated client.
+/// [IncomesRepository] over the generated client, except [update]: the
+/// generated `IncomeUpdate` cannot tell "unset" from "clear" (Dart `T?`), so
+/// the merge-patch travels as a hand-written map on the same [Dio]
+/// (ADR-0003 "Null on the wire").
 class ApiIncomesRepository implements IncomesRepository {
-  /// The repository on [_client].
-  new(this._client);
+  /// The repository on [_client] and its transport [_dio].
+  new(this._client, this._dio);
 
   final IncomesClient _client;
+  final Dio _dio;
 
   @override
   Future<IncomePage> list({
@@ -96,6 +113,26 @@ class ApiIncomesRepository implements IncomesRepository {
   );
 
   @override
+  Future<Income> get({required String taxpayerId, required String incomeId}) =>
+      guardApi(
+        () => _client.getIncome(taxpayerId: taxpayerId, incomeId: incomeId),
+      );
+
+  @override
+  Future<Income> update({
+    required String taxpayerId,
+    required String incomeId,
+    required Map<String, Object?> patch,
+  }) => guardApi(() async {
+    final response = await _dio.patch<Map<String, Object?>>(
+      '/v1/taxpayers/${Uri.encodeComponent(taxpayerId)}'
+      '/incomes/${Uri.encodeComponent(incomeId)}',
+      data: patch,
+    );
+    return Income.fromJson(response.data!);
+  });
+
+  @override
   Future<void> delete({required String taxpayerId, required String incomeId}) =>
       guardApi(
         () => _client.deleteIncome(taxpayerId: taxpayerId, incomeId: incomeId),
@@ -112,6 +149,9 @@ class ApiIncomesRepository implements IncomesRepository {
 
 /// The income operations. Tests override it with a fake.
 final incomesRepositoryProvider = Provider<IncomesRepository>(
-  (ref) => ApiIncomesRepository(ref.watch(apiClientProvider).incomes),
+  (ref) => ApiIncomesRepository(
+    ref.watch(apiClientProvider).incomes,
+    ref.watch(dioProvider),
+  ),
   name: 'incomesRepositoryProvider',
 );

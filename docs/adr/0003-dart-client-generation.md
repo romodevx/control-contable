@@ -160,6 +160,11 @@ contract 0.5.0),
   oapi-codegen's `*T` + `omitempty` reads `null` and absent alike), M3-04/M4-05; the client
   sends a hand-written request type or `Map` body for the clearing call, kept in contract
   tests, M3-09/M4-10. Until then no mobile screen clears one of these fields.
+  **Incomes (M3-09, 2026-10-14):** `ApiIncomesRepository.update` sends the merge-patch as a
+  hand-written `Map` on the shared `Dio` (only the changed keys; `null` for a cleared
+  optional field), built by `IncomeFormRequest.toPatch`. Guarded by
+  `incomes_repository_test.dart` (the `null` key reaches the wire) and the Prism mock test
+  (`incomes_mock_test.dart`: the body passes the contract's validator). Expenses follow in M4-10.
 
 ## Calendar dates on the wire (M3-08, 2026-10-14)
 

@@ -20,7 +20,7 @@ const int _descriptionMaxLength = 200;
 typedef IncomeSections = ({bool withholdings, bool more});
 
 /// The open sections: as the user left them ([withholdingsOpen] `null`
-/// until toggled: opened by the defaults when a withholding is suggested),
+/// until toggled: opened when a withholding is stored or suggested),
 /// and always while a field inside shows an error (collapsed fields are
 /// not built, so the error summary could not reach them).
 IncomeSections incomeSections(
@@ -29,6 +29,7 @@ IncomeSections incomeSections(
   required bool moreOpen,
 }) {
   final suggested =
+      model.startsWithWithholding ||
       model.defaults?.isrWithholdingRate != null ||
       model.defaults?.ivaWithholdingRate != null;
   bool hasError(List<AppFormFieldModel> fields) =>

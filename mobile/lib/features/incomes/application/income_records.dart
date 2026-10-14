@@ -8,8 +8,9 @@ import 'package:control_contable/features/incomes/application/income_list.dart';
 import 'package:control_contable/features/incomes/data/incomes_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// The writes of the income list: delete and its Undo (restore), both
-/// allowed while read-only; restore never consumes a trial slot.
+/// The writes of incomes: create, edit, delete and its Undo (restore).
+/// Delete and restore are allowed while read-only; restore never consumes
+/// a trial slot.
 /// After each one every income list reloads, so the totals and the other
 /// regime filters follow the server.
 class IncomeRecords {
@@ -37,6 +38,28 @@ class IncomeRecords {
       if (failure.trialCapOf == null) {
         _ref.read(readOnlyAccessProvider.notifier).markReadOnly();
       }
+      rethrow;
+    }
+  }
+
+  /// Edits [incomeId] of [taxpayerId] with the merge-patch [patch]; every
+  /// list reloads. A `402` (edits never hit the trial cap) marks the
+  /// session read-only. Throws the `ApiFailure`.
+  Future<Income> update(
+    String taxpayerId,
+    String incomeId,
+    Map<String, Object?> patch,
+  ) async {
+    try {
+      final updated = await _repository.update(
+        taxpayerId: taxpayerId,
+        incomeId: incomeId,
+        patch: patch,
+      );
+      _ref.invalidate(incomeListProvider);
+      return updated;
+    } on ApiEntitlementRequired {
+      _ref.read(readOnlyAccessProvider.notifier).markReadOnly();
       rethrow;
     }
   }

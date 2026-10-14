@@ -95,6 +95,24 @@ void main() {
         },
       );
 
+      test('an edit is a merge-patch with an explicit null, and the '
+          'income reads back', () async {
+        const incomeId = '0192f0c4-0000-7000-8000-000000000001';
+
+        final updated = await repository().update(
+          taxpayerId: _taxpayerId,
+          incomeId: incomeId,
+          patch: const {'amount_cents': 1200000, 'description': null},
+        );
+        final stored = await repository().get(
+          taxpayerId: _taxpayerId,
+          incomeId: incomeId,
+        );
+
+        expect(updated.id, isNotEmpty);
+        expect(stored.id, isNotEmpty);
+      });
+
       test('delete, then restore (Undo)', () async {
         const incomeId = '0192f0c4-0000-7000-8000-000000000001';
 

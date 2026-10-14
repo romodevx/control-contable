@@ -27,27 +27,32 @@ String incomeSaveNoticeText(IncomeSaveNotice notice, AppLocalizations l10n) =>
     switch (notice) {
       IncomeSaveNotice.unreachable => l10n.incomeSaveUnreachable,
       IncomeSaveNotice.idReused => l10n.incomeSaveIdReused,
+      IncomeSaveNotice.gone => l10n.incomeSaveGone,
       IncomeSaveNotice.failed => l10n.incomeSaveFailed,
     };
 
-/// Confirms a save on [messenger]. Warnings never block: they are read in
-/// the toast, which then stays until closed so they are not missed.
+/// Confirms a save ([updated] for an edit) on [messenger]. Warnings never
+/// block: they are read in the toast, which then stays until closed so
+/// they are not missed.
 void showIncomeSavedToast(
   ScaffoldMessengerState messenger,
   AppLocalizations l10n,
-  List<Warning> warnings,
-) {
+  List<Warning> warnings, {
+  bool updated = false,
+}) {
   final hasWarnings = warnings.isNotEmpty;
   final notes = [for (final w in warnings) describeIncomeWarning(w, l10n)];
   messenger
     ..hideCurrentSnackBar()
     ..showSnackBar(
       SnackBar(
-        content: Text(
-          hasWarnings
-              ? '${l10n.incomeSavedWithWarnings} ${notes.join(' ')}'
-              : l10n.incomeSaved,
-        ),
+        content: Text(switch ((hasWarnings, updated)) {
+          (true, false) => '${l10n.incomeSavedWithWarnings} ${notes.join(' ')}',
+          (true, true) =>
+            '${l10n.incomeUpdatedWithWarnings} ${notes.join(' ')}',
+          (false, false) => l10n.incomeSaved,
+          (false, true) => l10n.incomeUpdated,
+        }),
         persist: hasWarnings,
         showCloseIcon: hasWarnings,
       ),

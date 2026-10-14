@@ -20,10 +20,12 @@ import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// The new-income form of one taxpayer: defaults prefilled and refreshed
-/// as the context changes, *Guardar* (back to the list) and *Guardar y
-/// crear otro* (stay, keep the context), idempotent retries, server
-/// verdicts on their fields, non-blocking warnings, the paywall on `402`.
+/// The income form of one taxpayer, new or edit (the model says which):
+/// defaults prefilled and refreshed as the context changes, *Guardar*
+/// (back to the list) and, for a new income, *Guardar y crear otro* (stay,
+/// keep the context); idempotent retries (a client id on create, a
+/// merge-patch of only the changed fields on edit), server verdicts on
+/// their fields, non-blocking warnings, the paywall on `402`.
 class IncomeFormPage extends ConsumerStatefulWidget {
   /// The form for [taxpayerId] over the model [createModel] builds.
   const new({required this.taxpayerId, required this.createModel, super.key});
@@ -69,19 +71,30 @@ class _IncomeFormPageState extends ConsumerState<IncomeFormPage> {
   AppLocalizations get _l10n => AppLocalizations.of(context);
 
   /// Sends the form; the stored income, or `null` when it was not saved
-  /// (the page already says why).
+  /// (the page already says why). An edit that changed nothing sends
+  /// nothing and answers the stored income.
   Future<Income?> _persist() async {
     final missing = _model.missingChoices;
     if (missing.isNotEmpty) {
       _model.form.showServerErrors(missing);
       return null;
     }
-    setState(() => _notice = null);
-    final outcome = await saveIncome(
-      ref.read(incomeRecordsProvider),
-      widget.taxpayerId,
-      _model.toCreate(),
-    );
+    final records = ref.read(incomeRecordsProvider);
+    final IncomeSaveOutcome outcome;
+    if (_model.editing case final stored?) {
+      final patch = _model.toPatch(stored);
+      if (patch.isEmpty) return stored;
+      setState(() => _notice = null);
+      outcome = await updateIncome(
+        records,
+        widget.taxpayerId,
+        stored.id,
+        patch,
+      );
+    } else {
+      setState(() => _notice = null);
+      outcome = await saveIncome(records, widget.taxpayerId, _model.toCreate());
+    }
     if (!mounted) return null;
     switch (outcome) {
       case IncomeSaved(:final income):
@@ -115,7 +128,14 @@ class _IncomeFormPageState extends ConsumerState<IncomeFormPage> {
   Future<void> _save() async {
     final income = await _persist();
     if (income == null || !mounted) return;
-    showIncomeSavedToast(ScaffoldMessenger.of(context), _l10n, income.warnings);
+    if (!identical(income, _model.editing)) {
+      showIncomeSavedToast(
+        ScaffoldMessenger.of(context),
+        _l10n,
+        income.warnings,
+        updated: _model.isEditing,
+      );
+    }
     _leave();
   }
 
@@ -155,14 +175,18 @@ class _IncomeFormPageState extends ConsumerState<IncomeFormPage> {
   Widget build(BuildContext context) => IncomeLeaveGuard(
     onLeave: _requestLeave,
     child: Scaffold(
-      appBar: AppBar(title: Text(_l10n.incomeFormTitle)),
+      appBar: AppBar(
+        title: Text(
+          _model.isEditing ? _l10n.incomeEditTitle : _l10n.incomeFormTitle,
+        ),
+      ),
       body: ListenableBuilder(
         listenable: _model,
         builder: (context, _) => AppForm(
           controller: _model.form,
           onSave: _save,
-          onSaveForNext: _saveForNext,
-          allowCreateAnother: true,
+          onSaveForNext: _model.isEditing ? null : _saveForNext,
+          allowCreateAnother: !_model.isEditing,
           onCancel: () => unawaited(_requestLeave()),
           children: [
             if (_notice case final notice?) FormNotice(message: notice),

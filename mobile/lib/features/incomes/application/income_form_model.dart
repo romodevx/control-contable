@@ -1,4 +1,5 @@
 import 'package:control_contable/api/generated/models/counterparty_type.dart';
+import 'package:control_contable/api/generated/models/income.dart';
 import 'package:control_contable/api/generated/models/income_defaults.dart';
 import 'package:control_contable/api/generated/models/iva_rate.dart';
 import 'package:control_contable/api/generated/models/platform_activity.dart';
@@ -8,6 +9,7 @@ import 'package:control_contable/core/forms/field_controller.dart';
 import 'package:control_contable/core/forms/field_error.dart';
 import 'package:control_contable/core/forms/flexible_date.dart';
 import 'package:control_contable/core/forms/form_controller.dart';
+import 'package:control_contable/core/forms/money.dart';
 import 'package:control_contable/core/forms/typed_field_controllers.dart';
 import 'package:control_contable/core/records/record_month.dart';
 import 'package:control_contable/features/incomes/application/income_suggestions.dart';
@@ -44,23 +46,28 @@ typedef IncomeFormCopy = ({
   String cfdiUuidInvalid,
 });
 
-/// What the new-income page holds (M3-09): its fields in the list's
+/// What the income form page holds (M3-09): its fields in the list's
 /// column order, the defaults' suggestions, and the idempotency id of the
 /// current form session (MODULE-incomes §2.3).
 ///
-/// Context fields (dates, regime, who paid, IVA rate, activity) survive
-/// "Guardar y crear otro"; the rest is cleared and a new session id starts.
+/// New income: context fields (dates, regime, who paid, IVA rate,
+/// activity) survive "Guardar y crear otro"; the rest is cleared and a new
+/// session id starts. Edit ([editing]): every field starts at the stored
+/// income, and the stored amounts are the user's (the CFDI's): a defaults
+/// suggestion never replaces them.
 class IncomeFormModel extends ChangeNotifier {
-  /// The form for [regimes] (those in effect today), starting on [today].
+  /// The form for [regimes] (those in effect on the income's date),
+  /// starting on [today], or on [editing] when it edits a stored income.
   new({
     required List<TaxpayerRegime> regimes,
     required DateTime today,
     required CounterpartyType counterparty,
     required this.copy,
     required String Function() newId,
+    this.editing,
   }) : _regimes = regimes,
        _newId = newId,
-       basis = incomeBasisOf(regimes.first.regimeCode),
+       basis = incomeBasisOf(editing?.regimeCode ?? regimes.first.regimeCode),
        _sessionId = newId() {
     _build(today, counterparty);
     _suggestions = IncomeSuggestions(
@@ -69,6 +76,12 @@ class IncomeFormModel extends ChangeNotifier {
       isrWithheld: isrWithheld,
       ivaWithheld: ivaWithheld,
     );
+    if (editing case final stored?) {
+      _suggestions.adoptStored(
+        ivaFollowsAmount:
+            stored.ivaCents == ivaCentsFor(stored.amountCents, stored.ivaRate),
+      );
+    }
     for (final field in [amount, ivaAmount, isrWithheld, ivaWithheld]) {
       field.text.addListener(_recompute);
     }
@@ -78,6 +91,16 @@ class IncomeFormModel extends ChangeNotifier {
 
   /// The copy the fields were labeled with.
   final IncomeFormCopy copy;
+
+  /// The stored income this form edits; `null` for a new income.
+  final Income? editing;
+
+  /// Whether this form edits a stored income.
+  bool get isEditing => editing != null;
+
+  /// Whether the stored income had something withheld (its section opens).
+  bool get startsWithWithholding =>
+      (editing?.isrWithheldCents ?? 0) + (editing?.ivaWithheldCents ?? 0) > 0;
 
   /// Which date books the income (from the first regime).
   final IncomeBasis basis;
@@ -129,32 +152,45 @@ class IncomeFormModel extends ChangeNotifier {
 
   void _build(DateTime today, CounterpartyType payer) {
     final accrual = basis == IncomeBasis.accrual;
+    final stored = editing;
+    String day(String? date) =>
+        date == null ? '' : formatDate(parseBusinessDate(date));
+    String money(int? cents) => cents == null ? '' : formatCentavos(cents);
     bookingDate = form.dateField(
       label: accrual ? copy.invoicedOn : copy.collectedOn,
       keepForNext: true,
-      initialText: formatDate(today),
+      initialText: stored == null
+          ? formatDate(today)
+          : day(accrual ? stored.invoicedOn : stored.collectedOn),
     );
-    description = form.textField(label: copy.description, isRequired: false);
-    amount = form.moneyField(label: copy.amount);
+    description = form.textField(
+      label: copy.description,
+      isRequired: false,
+      initialText: stored?.description ?? '',
+    );
+    amount = form.moneyField(
+      label: copy.amount,
+      initialText: money(stored?.amountCents),
+    );
     ivaRate = form.add(
       ChoiceFieldController(
         label: copy.ivaRate,
         keepForNext: true,
-        initialValue: IvaRate.rate16.json,
+        initialValue: (stored?.ivaRate ?? IvaRate.rate16).json,
       ),
     );
     counterparty = form.add(
       ChoiceFieldController(
         label: copy.counterparty,
         keepForNext: true,
-        initialValue: payer.json,
+        initialValue: (stored?.counterpartyType ?? payer).json,
       ),
     );
     regime = form.add(
       ChoiceFieldController(
         label: copy.regime,
         keepForNext: true,
-        initialValue: _regimes.first.regimeCode,
+        initialValue: stored?.regimeCode ?? _regimes.first.regimeCode,
       ),
     );
     activity = form.add(
@@ -162,16 +198,33 @@ class IncomeFormModel extends ChangeNotifier {
         label: copy.activity,
         isRequired: false,
         keepForNext: true,
+        initialValue: stored?.platformActivity?.json,
       ),
     );
-    isrWithheld = form.moneyField(label: copy.isrWithheld, isRequired: false);
-    ivaWithheld = form.moneyField(label: copy.ivaWithheld, isRequired: false);
+    // Edit: a stored 0 is written out, so no suggestion takes the field.
+    isrWithheld = form.moneyField(
+      label: copy.isrWithheld,
+      isRequired: false,
+      initialText: money(stored?.isrWithheldCents),
+    );
+    ivaWithheld = form.moneyField(
+      label: copy.ivaWithheld,
+      isRequired: false,
+      initialText: money(stored?.ivaWithheldCents),
+    );
     // Prefilled from the rate; left empty, the rate's IVA is sent.
-    ivaAmount = form.moneyField(label: copy.ivaAmount, isRequired: false);
+    ivaAmount = form.moneyField(
+      label: copy.ivaAmount,
+      isRequired: false,
+      initialText: money(stored?.ivaCents),
+    );
     otherDate = form.dateField(
       label: accrual ? copy.collectedOn : copy.invoicedOn,
       isRequired: false,
       keepForNext: true,
+      initialText: stored == null
+          ? ''
+          : day(accrual ? stored.collectedOn : stored.invoicedOn),
     );
     cfdiUuid = form.textField(
       label: copy.cfdiUuid,
@@ -180,6 +233,7 @@ class IncomeFormModel extends ChangeNotifier {
           ? null
           : CustomFieldError(copy.cfdiUuidInvalid),
       canonicalize: (value) => value.toUpperCase(),
+      initialText: stored?.cfdiUuid ?? '',
     );
   }
 

@@ -5,7 +5,8 @@ import 'package:control_contable/api/generated/models/income_create.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/features/incomes/application/income_records.dart';
 
-/// How a save of the new-income form ended, in the terms the page acts on.
+/// How a save of the income form (new or edit) ended, in the terms the
+/// page acts on.
 sealed class IncomeSaveOutcome {
   const new();
 }
@@ -47,6 +48,9 @@ enum IncomeSaveNotice {
   /// data (the first answer was lost and the form changed since).
   idReused,
 
+  /// `404` on an edit: the income was deleted (or purged) elsewhere.
+  gone,
+
   /// `429` or anything else.
   failed,
 }
@@ -69,9 +73,31 @@ Future<IncomeSaveOutcome> saveIncome(
   IncomeRecords records,
   String taxpayerId,
   IncomeCreate income,
-) async {
+) => _outcomeOf(
+  () => records.create(taxpayerId, income),
+  notFound: IncomeSaveNotice.failed,
+);
+
+/// Edits [incomeId] with the merge-patch [patch] through [records]; never
+/// throws an `ApiFailure`.
+Future<IncomeSaveOutcome> updateIncome(
+  IncomeRecords records,
+  String taxpayerId,
+  String incomeId,
+  Map<String, Object?> patch,
+) => _outcomeOf(
+  () => records.update(taxpayerId, incomeId, patch),
+  notFound: IncomeSaveNotice.gone,
+);
+
+/// Runs [write]; a `404` becomes [notFound] (the taxpayer is gone on a
+/// create, the income on an edit).
+Future<IncomeSaveOutcome> _outcomeOf(
+  Future<Income> Function() write, {
+  required IncomeSaveNotice notFound,
+}) async {
   try {
-    return IncomeSaved(await records.create(taxpayerId, income));
+    return IncomeSaved(await write());
   } on ApiEntitlementRequired catch (failure) {
     return IncomeNeedsPlan(isTrialCap: failure.trialCapOf == incomesTrialCap);
   } on ApiValidationFailure catch (failure) {
@@ -81,6 +107,8 @@ Future<IncomeSaveOutcome> saveIncome(
       return const IncomeNotSaved(IncomeSaveNotice.idReused);
     }
     return IncomeRejected(failure.details);
+  } on ApiNotFound {
+    return IncomeNotSaved(notFound);
   } on ApiUnreachable {
     return const IncomeNotSaved(IncomeSaveNotice.unreachable);
   } on ApiFailure {
