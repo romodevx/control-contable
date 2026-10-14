@@ -8,15 +8,18 @@ import 'business_date.dart';
 import 'cfdi_uuid.dart';
 import 'iva_rate.dart';
 import 'non_negative_cents.dart';
+import 'operation_kind.dart';
 import 'payment_method.dart';
 import 'positive_cents.dart';
 import 'record_description.dart';
 import 'regime_code.dart';
+import 'supplier_kind.dart';
+import 'supplier_regime.dart';
 
 part 'expense_update.freezed.dart';
 part 'expense_update.g.dart';
 
-/// Merge-patch on top-level fields: absent = unchanged, `null` clears `cfdi_uuid`, `description` or the `deductible` override. `id` is immutable and not accepted.
+/// Merge-patch on top-level fields: absent = unchanged, `null` clears `cfdi_uuid`, `description` or the `deductible` override. `id` is immutable and not accepted. Any change re-derives the withholding (ADR-0008); moving `supplier_kind` away from `pf_with_activity` clears `supplier_regime`. The deprecated `isr_withheld_cents` and `iva_withheld_cents` are removed by WH-07 (see `ExpenseCreate`).
 @Freezed()
 abstract class ExpenseUpdate with _$ExpenseUpdate {
   const factory ExpenseUpdate({
@@ -33,8 +36,20 @@ abstract class ExpenseUpdate with _$ExpenseUpdate {
     @JsonKey(includeIfNull: false, name: 'has_cfdi') bool? hasCfdi,
     @JsonKey(includeIfNull: false, name: 'cfdi_uuid') CfdiUuid? cfdiUuid,
     @JsonKey(includeIfNull: false) bool? deductible,
+    @JsonKey(includeIfNull: false, name: 'supplier_kind')
+    SupplierKind? supplierKind,
+    @JsonKey(includeIfNull: false, name: 'supplier_regime')
+    SupplierRegime? supplierRegime,
+    @JsonKey(includeIfNull: false, name: 'operation_kind')
+    OperationKind? operationKind,
+    @JsonKey(includeIfNull: false, name: 'residential_rent')
+    bool? residentialRent,
+
+    /// Deprecated in 0.10.0, removed by WH-07 (ADR-0008).
     @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')
     NonNegativeCents? isrWithheldCents,
+
+    /// Deprecated in 0.10.0, removed by WH-07 (ADR-0008).
     @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')
     NonNegativeCents? ivaWithheldCents,
     @JsonKey(includeIfNull: false) RecordDescription? description,

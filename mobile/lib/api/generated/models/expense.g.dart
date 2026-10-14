@@ -31,6 +31,19 @@ _Expense _$ExpenseFromJson(Map<String, dynamic> json) => _Expense(
   legend: json['legend'] as String,
   createdAt: DateTime.parse(json['created_at'] as String),
   updatedAt: DateTime.parse(json['updated_at'] as String),
+  supplierKind: json['supplier_kind'] == null
+      ? null
+      : SupplierKind.fromJson(json['supplier_kind'] as String),
+  supplierRegime: json['supplier_regime'] == null
+      ? null
+      : SupplierRegime.fromJson(json['supplier_regime'] as String),
+  operationKind: json['operation_kind'] == null
+      ? null
+      : OperationKind.fromJson(json['operation_kind'] as String),
+  residentialRent: json['residential_rent'] as bool?,
+  withholding: json['withholding'] == null
+      ? null
+      : Withholding.fromJson(json['withholding'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$ExpenseToJson(_Expense instance) => <String, dynamic>{
@@ -54,6 +67,11 @@ Map<String, dynamic> _$ExpenseToJson(_Expense instance) => <String, dynamic>{
   'legend': instance.legend,
   'created_at': instance.createdAt.toIso8601String(),
   'updated_at': instance.updatedAt.toIso8601String(),
+  'supplier_kind': ?_$SupplierKindEnumMap[instance.supplierKind],
+  'supplier_regime': ?_$SupplierRegimeEnumMap[instance.supplierRegime],
+  'operation_kind': ?_$OperationKindEnumMap[instance.operationKind],
+  'residential_rent': ?instance.residentialRent,
+  'withholding': ?instance.withholding,
 };
 
 const _$IvaRateEnumMap = {
@@ -79,4 +97,34 @@ const _$DeductibleSourceEnumMap = {
   DeductibleSource.categoryDefault: 'category_default',
   DeductibleSource.user: 'user',
   DeductibleSource.$unknown: r'$unknown',
+};
+
+const _$SupplierKindEnumMap = {
+  SupplierKind.pm: 'pm',
+  SupplierKind.pfWithActivity: 'pf_with_activity',
+  SupplierKind.foreign: 'foreign',
+  SupplierKind.$unknown: r'$unknown',
+};
+
+const _$SupplierRegimeEnumMap = {
+  SupplierRegime.value612: '612',
+  SupplierRegime.value606: '606',
+  SupplierRegime.value626: '626',
+  SupplierRegime.value625: '625',
+  SupplierRegime.value621: '621',
+  SupplierRegime.unknown: 'unknown',
+  SupplierRegime.$unknown: r'$unknown',
+};
+
+const _$OperationKindEnumMap = {
+  OperationKind.professionalServices: 'professional_services',
+  OperationKind.businessServices: 'business_services',
+  OperationKind.rentRealEstate: 'rent_real_estate',
+  OperationKind.rentMovable: 'rent_movable',
+  OperationKind.saleOfGoods: 'sale_of_goods',
+  OperationKind.groundFreight: 'ground_freight',
+  OperationKind.commission: 'commission',
+  OperationKind.scrap: 'scrap',
+  OperationKind.other: 'other',
+  OperationKind.$unknown: r'$unknown',
 };

@@ -35,7 +35,9 @@ func TestUserLimits_coverEveryWriteOfTheModule(t *testing.T) {
 	}
 
 	require.Len(t, writes, 4)
-	require.Len(t, reads, 3)
+	// 4 reads since contract 0.10.0: previewIncomeWithholdings spends its own
+	// withholding_previews budget, wired by WH-06 with its handler (ADR-0008).
+	require.Len(t, reads, 4)
 	assert.ElementsMatch(t, writes, keys(incomeshttp.UserLimits))
 	for _, id := range reads {
 		assert.NotContains(t, incomeshttp.UserLimits, id, "reads spend no write budget")

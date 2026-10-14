@@ -30,5 +30,10 @@ const _$WarningCodeEnumMap = {
   WarningCode.categoryNotDeductible: 'category_not_deductible',
   WarningCode.ivaNotCreditableCashPayment: 'iva_not_creditable_cash_payment',
   WarningCode.provisionalParameters: 'provisional_parameters',
+  WarningCode.withholdingCpaUnverified: 'withholding_cpa_unverified',
+  WarningCode.foreignCounterpartyNotSupported:
+      'foreign_counterparty_not_supported',
+  WarningCode.supplierRegimeUnknown: 'supplier_regime_unknown',
+  WarningCode.deductionRequiresRemittance: 'deduction_requires_remittance',
   WarningCode.$unknown: r'$unknown',
 };

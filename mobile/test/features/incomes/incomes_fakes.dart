@@ -202,6 +202,7 @@ class FakeIncomesRepository implements IncomesRepository {
       id: income.id ?? nextIncomeId(),
       taxpayerId: taxpayerId,
       regimeCode: income.regimeCode,
+      // ignore: deprecated_member_use_from_same_package, deprecated until WH-11 (ADR-0008).
       counterpartyType: income.counterpartyType,
       amountCents: income.amountCents,
       ivaRate: income.ivaRate,

@@ -157,7 +157,7 @@ func TestContract_incomes(t *testing.T) {
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 			assert.Equal(t, []gen.IvaRate{"rate_16", "rate_8", "rate_0", "exempt"}, body.IvaRatesAllowed)
 			assert.Equal(t, gen.IvaRate("rate_16"), body.SuggestedIvaRate)
-			assert.True(t, body.IsrWithholdingAllowed)
+			assert.True(t, body.IsrWithholdingAllowed) //nolint:staticcheck // SA1019: deprecated field tested until WH-06 (ADR-0008)
 			require.NotNil(t, body.IsrWithholdingRate)
 			assert.Equal(t, "0.1", *body.IsrWithholdingRate, "LISR 106: 10 %")
 			require.NotNil(t, body.IvaWithholdingRate)
@@ -175,7 +175,7 @@ func TestContract_incomes(t *testing.T) {
 			rec = serve(defaults, http.MethodGet, target+"?regime=612&counterparty_type=publico_general", "", ana)
 			require.Equal(t, http.StatusOK, rec.Code, "on defaults to today: %s", rec.Body.String())
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
-			assert.False(t, body.IsrWithholdingAllowed)
+			assert.False(t, body.IsrWithholdingAllowed) //nolint:staticcheck // SA1019: deprecated field tested until WH-06 (ADR-0008)
 			assert.Nil(t, body.IsrWithholdingRate)
 
 			refusals := []struct {

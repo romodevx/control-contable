@@ -130,6 +130,10 @@ String cpaTopicsText(AppLocalizations l10n, List<CpaTopic> topics) => topics
         CpaTopic.crossRegimeIvaNetting => l10n.cpaTopicCrossRegimeIvaNetting,
         CpaTopic.resicoPmInterestWithholding =>
           l10n.cpaTopicResicoPmInterestWithholding,
+        // Contract 0.10.0 (ADR-0008); sent from WH-09 on. WH-11/WH-12 give
+        // them their own copy; until then they read as an unknown topic.
+        CpaTopic.withholdingRuleUnverified ||
+        CpaTopic.withheldIvaCreditTiming ||
         CpaTopic.$unknown => l10n.cpaTopicOther,
       },
     )

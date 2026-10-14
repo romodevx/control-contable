@@ -230,6 +230,7 @@ void main() {
       final sent = harness.incomes.creates.single;
       expect(sent.id, harness.clientIds.first);
       expect(sent.regimeCode, '612');
+      // ignore: deprecated_member_use_from_same_package, deprecated until WH-11 (ADR-0008).
       expect(sent.counterpartyType, CounterpartyType.personaMoral);
       expect(sent.amountCents, 1000000);
       expect(sent.ivaRate, IvaRate.rate16);
@@ -312,6 +313,7 @@ void main() {
       final [first, second] = harness.incomes.creates;
       expect(first.collectedOn, '2026-10-05');
       expect(second.collectedOn, '2026-10-05');
+      // ignore: deprecated_member_use_from_same_package, deprecated until WH-11 (ADR-0008).
       expect(second.counterpartyType, CounterpartyType.personaMoral);
       expect(second.isrWithheldCents, 20000);
       expect(second.description, isNull);
