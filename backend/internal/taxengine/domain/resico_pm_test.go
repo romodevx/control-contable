@@ -278,6 +278,48 @@ func TestRESICOPMIVAIsTheSharedCalculator(t *testing.T) {
 	assert.Equal(t, cents(t, "1066.67"), est.WithheldToRemit)
 }
 
+// TestRESICOPMRemitsTheISRAndIVAItWithheld: a RESICO PM remits every ISR
+// (LISR 106 ¶5, 116 ¶5, 113-J) and IVA (LIVA 1-A) it withheld from its
+// suppliers, as 601 and the partial PM regimes do, in the withholding group
+// apart from its own ISR and IVA (MODULE-tax-engine §1; M5-24 regression).
+func TestRESICOPMRemitsTheISRAndIVAItWithheld(t *testing.T) {
+	tests := []struct {
+		name     string
+		isr, iva string
+		want     string
+		lastCode domain.LineCode
+	}{
+		{name: "ISR and IVA", isr: "5000.00", iva: "5333.33", want: "10333.33", lastCode: "withholding.to_remit"},
+		{name: "ISR only", isr: "5000.00", iva: "0.00", want: "5000.00", lastCode: "withholding.isr_to_remit"},
+		{name: "IVA only", isr: "0.00", iva: "5333.33", want: "5333.33", lastCode: domain.LineIVAWithheldToRemit},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			base := pm626ISR01(t)
+			march := cashFlowMonth(t, time.March, "500000.00", "350000.00")
+			march.Sums.Expenses.ISRWithheldToRemit = cents(t, tt.isr)
+			march.Sums.Expenses.IVAWithheldToRemit = cents(t, tt.iva)
+			in := resicoInput(t, resicoPMKey, time.March,
+				cashFlowMonth(t, time.January, "500000.00", "400000.00"),
+				cashFlowMonth(t, time.February, "500000.00", "350000.00"), march)
+			in.Inputs = base.Inputs
+			without, err := domain.NewRESICOPMStrategy().Estimate(base, params2026(t))
+			require.NoError(t, err)
+
+			est, err := domain.NewRESICOPMStrategy().Estimate(in, params2026(t))
+
+			require.NoError(t, err)
+			assert.Equal(t, cents(t, tt.want), est.WithheldToRemit)
+			assert.Equal(t, without.ISR, est.ISR, "never added to its own ISR")
+			assert.Equal(t, without.IVA, est.IVA, "never added to its own IVA")
+			last := est.Lines[len(est.Lines)-1]
+			assert.Equal(t, domain.TaxWithholding, last.Tax)
+			assert.Equal(t, tt.lastCode, last.Code)
+			assert.Equal(t, est.WithheldToRemit, last.Amount, "the figure is its last line")
+		})
+	}
+}
+
 func TestRESICOPMPropagatesErrors(t *testing.T) {
 	t.Run("a period outside the sums", func(t *testing.T) {
 		in := pm626ISR01(t)

@@ -141,13 +141,6 @@ func (er edgeRegime) isrOn(t *testing.T, m time.Month, income money.Cents) money
 
 // --- (4b) a persona moral's withholdings to remit are all of them ---
 
-// knownToRemitGaps are regimes that drop part of what the PM withheld from
-// its suppliers: real bugs, each pinned by a regression test that fails as
-// soon as the gap closes, so the entry goes with the fix.
-var knownToRemitGaps = map[domain.StrategyKey]string{
-	{Regime: fiscal.RegimeRESICO, PersonType: fiscal.PersonMoral}: "626 PM drops the ISR it withheld from its suppliers",
-}
-
 // TestEstimatePropertyPMWithholdingsToRemitAreComplete: a persona moral
 // remits every ISR and IVA it withheld from its suppliers in the month
 // (§1, TX-601-REMIT-01), as a figure of its own.
@@ -159,8 +152,7 @@ func TestEstimatePropertyPMWithholdingsToRemitAreComplete(t *testing.T) {
 		}
 		month := c.month(t)
 		for _, r := range c.estimate(t).Regimes {
-			_, known := knownToRemitGaps[r.Key]
-			if r.Status == domain.StatusInformational || known {
+			if r.Status == domain.StatusInformational {
 				continue
 			}
 			checked++
@@ -180,12 +172,11 @@ func (c propCase) toRemitOf(code fiscal.RegimeCode, m time.Month) (isr, iva mone
 	return 0, 0
 }
 
-// TestRegression626PMRemitsTheISRItWithheld is the minimal case behind the
-// knownToRemitGaps entry, found by M5-24: a RESICO PM that withheld
-// 5,000.00 ISR (10 % of 50,000.00 in fees, LISR 106 ¶5) and 5,333.33 IVA
-// from a supplier in March must remit 10,333.33, as 601, 603 and 622 do
-// (TX-601-REMIT-01). It skips, loudly, while the bug stands and fails once
-// it is fixed, so the pending entry cannot outlive the fix.
+// TestRegression626PMRemitsTheISRItWithheld is the minimal case M5-24
+// found: a RESICO PM that withheld 5,000.00 ISR (10 % of 50,000.00 in fees,
+// LISR 106 ¶5) and 5,333.33 IVA from a supplier in March must remit
+// 10,333.33, as 601, 603 and 622 do (TX-601-REMIT-01), reported once, apart
+// from its own ISR and IVA.
 func TestRegression626PMRemitsTheISRItWithheld(t *testing.T) {
 	key := domain.StrategyKey{Regime: fiscal.RegimeRESICO, PersonType: fiscal.PersonMoral}
 	c := propCase{
@@ -196,20 +187,14 @@ func TestRegression626PMRemitsTheISRItWithheld(t *testing.T) {
 		}}},
 		inputs: map[fiscal.RegimeCode][]domain.TaxInputValue{},
 	}
-	r, ok := regimeOf(c.estimate(t), key)
+	got := c.estimate(t)
+	r, ok := regimeOf(got, key)
 	require.True(t, ok)
 
 	const want = money.Cents(10_333_33)
-	reason, pending := knownToRemitGaps[key]
-	switch {
-	case r.WithheldToRemit == want && pending:
-		t.Fatalf("fixed: remove %s from knownToRemitGaps", key)
-	case r.WithheldToRemit == want:
-		return
-	case pending:
-		t.Skipf("KNOWN BUG (M5-24): %s: remits %s, want %s", reason, r.WithheldToRemit, want)
-	}
-	t.Fatalf("%s remits %s, want %s", key, r.WithheldToRemit, want)
+	assert.Equal(t, want, r.WithheldToRemit, "regime withholdings to remit")
+	assert.Equal(t, want, got.Totals.WithholdingsToRemit, "totals withholdings to remit, counted once")
+	assert.Equal(t, got.Totals.ISR.Payable()+got.Totals.IVA.Payable()+want, got.Totals.TotalPayable, "total payable")
 }
 
 // --- the generator is not vacuous ---
