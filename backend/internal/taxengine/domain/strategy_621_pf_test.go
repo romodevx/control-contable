@@ -191,7 +191,7 @@ func TestStrategy621PFReducesByTheYearInRIF(t *testing.T) {
 
 func TestStrategy621PFRejectsAYearOutsideRIF(t *testing.T) {
 	tests := map[string]domain.Options{
-		"absent":    domain.Options{},
+		"absent":    {},
 		"zero":      domain.NewOptions(map[domain.OptionKey]domain.OptionValue{domain.OptionRIFYear: domain.TextOption("0")}),
 		"eleven":    domain.NewOptions(map[domain.OptionKey]domain.OptionValue{domain.OptionRIFYear: domain.TextOption("11")}),
 		"not a num": domain.NewOptions(map[domain.OptionKey]domain.OptionValue{domain.OptionRIFYear: domain.TextOption("six")}),

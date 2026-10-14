@@ -65,7 +65,7 @@ var (
 		{Law: "Anexo 8 RMF 2026", Article: "B.VII", Note: "tarifa bimestral del RIF"},
 	}
 	rifBasisReduction = []Citation{{Law: "LISR", Article: "111", Note: "texto vigente hasta el 31-12-2021, reducción por año en el RIF"}}
-	rifBasisPayable   = []Citation{{Law: "LISR", Article: "111", Note: "texto vigente hasta el 31-12-2021, pago bimestral definitivo"}}
+	rifBasisPayable   = []Citation{{Law: "LISR", Article: "111", Note: "texto vigente hasta el 31-12-2021, pago bimestral"}}
 	rifBasisIVA       = []Citation{{Law: "LIVA", Article: "5-E", Note: "texto vigente hasta el 31-12-2021, pago bimestral"}}
 )
 
