@@ -17,13 +17,6 @@ const Set<String> _publicAuthPaths = {
   '/v1/auth/verify-email/resend',
 };
 
-/// Requests that re-enter the current password (step-up re-auth). Their
-/// 401 means a wrong password, not an expired bearer: a refresh and a
-/// retry would submit the same wrong password twice (two strikes toward
-/// the login failure limit), so their 401 is answered as is. The caller
-/// makes sure the bearer is fresh just before (`DeleteAccount`).
-const Set<(String, String)> _reauthRequests = {('DELETE', '/v1/me')};
-
 /// Marks a request already retried after a refresh: it is never refreshed
 /// for again, so a second 401 cannot loop.
 const String _retriedKey = 'auth.retried';
@@ -40,8 +33,9 @@ const String _retriedKey = 'auth.retried';
 ///   rotation) and stores the rotated refresh token.
 /// - A refused refresh ends the session (the router then shows login) and
 ///   the original 401 surfaces; an unreachable one keeps the session.
-/// - Auth endpoints (`/v1/auth/*`) and re-auth requests are never
-///   refreshed for.
+/// - Auth endpoints (`/v1/auth/*`) are never refreshed for. Only a `401`
+///   is (it always means the bearer): a wrong current password on
+///   re-authentication is a `403 invalid_password` and passes through.
 /// - Only requests to the configured API origin (scheme, host and port of
 ///   `apiBase`) get the bearer or a refresh: an absolute URL to anywhere
 ///   else never sees the token.
@@ -88,7 +82,6 @@ class AuthInterceptor extends Interceptor {
         err.response?.statusCode == HttpStatus.unauthorized &&
         _isApiOrigin(request.uri) &&
         !_isAuthPath(request.uri.path) &&
-        !_isReauth(request) &&
         request.extra[_retriedKey] != true &&
         _session.isSignedIn;
     if (!isRefreshable) return handler.next(err);
@@ -117,12 +110,6 @@ class AuthInterceptor extends Interceptor {
       uri.port == _apiBase.port;
 
   static bool _isAuthPath(String path) => path.contains(_authPrefix);
-
-  static bool _isReauth(RequestOptions request) => _reauthRequests.any(
-    (reauth) =>
-        reauth.$1 == request.method.toUpperCase() &&
-        request.uri.path.endsWith(reauth.$2),
-  );
 
   static Object? _bearerOf(RequestOptions options) =>
       options.headers[HttpHeaders.authorizationHeader];

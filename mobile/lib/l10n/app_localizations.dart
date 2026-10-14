@@ -637,6 +637,12 @@ abstract class AppLocalizations {
   /// **'La contraseña no es correcta.'**
   String get accountDeleteWrongPassword;
 
+  /// Countdown in the delete-account dialog after too many password attempts (Retry-After), as m:ss.
+  ///
+  /// In es, this message translates to:
+  /// **'Podrás intentar de nuevo en {time}.'**
+  String accountDeleteRetryIn(String time);
+
   /// Title of the screen shown after the account is deleted.
   ///
   /// In es, this message translates to:

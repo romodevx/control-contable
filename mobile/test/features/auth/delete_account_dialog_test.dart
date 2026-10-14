@@ -21,6 +21,8 @@ const _cancel = 'Cancelar';
 const _wrongPassword = 'La contraseña no es correcta.';
 const _missing = 'Escribe este dato.';
 
+String _retryIn(String time) => 'Podrás intentar de nuevo en $time.';
+
 void main() {
   late AuthHarness harness;
 
@@ -129,7 +131,7 @@ void main() {
 
     testWidgets('a wrong password: one try, field cleared and refocused, '
         'still signed in', (tester) async {
-      harness.profile.deleteError = const ApiUnauthorized();
+      harness.profile.deleteError = const ApiInvalidPassword();
       await openDialog(tester);
 
       await tester.enterText(inputLabeled(_password), syntheticPassword());
@@ -146,7 +148,7 @@ void main() {
 
     testWidgets('a wrong password is announced to screen readers, '
         'every time', (tester) async {
-      harness.profile.deleteError = const ApiUnauthorized();
+      harness.profile.deleteError = const ApiInvalidPassword();
       await openDialog(tester);
       tester.takeAnnouncements();
 
@@ -159,14 +161,46 @@ void main() {
       }
     });
 
-    testWidgets('too many tries say how long to wait', (tester) async {
-      harness.profile.deleteError = const ApiRateLimited(Duration(minutes: 5));
+    testWidgets('too many tries count the Retry-After down; a tap during '
+        'the wait sends nothing and says how long is left', (tester) async {
+      harness.profile.deleteError = const ApiRateLimited(Duration(minutes: 3));
       await openDialog(tester);
-
       await tester.enterText(inputLabeled(_password), syntheticPassword());
       await confirm(tester);
 
-      expect(find.textContaining('Espera 5 min'), findsOneWidget);
+      expect(find.textContaining('Espera 3 min'), findsOneWidget);
+      expect(find.text(_retryIn('3:00')), findsOneWidget);
+
+      await harness.elapse(tester, const Duration(minutes: 1));
+      expect(find.text(_retryIn('2:00')), findsOneWidget);
+
+      tester.takeAnnouncements();
+      await confirm(tester);
+      expect(harness.profile.deletePasswords, hasLength(1));
+      expect(tester.widget<FilledButton>(confirmButton()).onPressed, isNotNull);
+      expect(
+        tester.takeAnnouncements().map((a) => a.message),
+        contains(_retryIn('2:00')),
+      );
+
+      await harness.elapse(tester, const Duration(minutes: 2));
+      expect(find.textContaining('Podrás intentar'), findsNothing);
+
+      harness.profile.deleteError = null;
+      await confirm(tester);
+      expect(harness.profile.deletePasswords, hasLength(2));
+    });
+
+    testWidgets('too many tries without a Retry-After ask to wait a while', (
+      tester,
+    ) async {
+      harness.profile.deleteError = const ApiRateLimited(null);
+      await openDialog(tester);
+      await tester.enterText(inputLabeled(_password), syntheticPassword());
+      await confirm(tester);
+
+      expect(find.textContaining('Espera unos minutos'), findsOneWidget);
+      expect(find.textContaining('Podrás intentar'), findsNothing);
     });
 
     testWidgets('while deleting it shows busy and ignores repeat taps', (
@@ -194,7 +228,7 @@ void main() {
       await tester.enterText(inputLabeled(_password), syntheticPassword());
       await confirm(tester);
 
-      expect(harness.profile.calls, ['getMe', 'getMe', 'deleteAccount']);
+      expect(harness.profile.calls, ['getMe', 'deleteAccount']);
       expect(find.byType(GoodbyeScreen), findsOneWidget);
       expect(find.text('Cuenta eliminada'), findsOneWidget);
       expect(harness.session.status, SessionStatus.signedOut);

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:control_contable/api/generated/models/error_code.dart';
 import 'package:control_contable/api/generated/models/error_response.dart';
 import 'package:control_contable/api/generated/models/field_error.dart';
 import 'package:dio/dio.dart';
@@ -25,6 +26,14 @@ final class ApiValidationFailure extends ApiFailure {
 
 /// `401`: missing or bad credentials, code or token (one generic answer).
 final class ApiUnauthorized extends ApiFailure {
+  /// The failure.
+  const new();
+}
+
+/// `invalid_password` (a `403` on re-authentication, e.g. `DELETE /v1/me`):
+/// the bearer was fine, the current password was not. Read by its code,
+/// whatever the status, and never a cue to refresh.
+final class ApiInvalidPassword extends ApiFailure {
   /// The failure.
   const new();
 }
@@ -64,18 +73,15 @@ const Set<DioExceptionType> _unreachableTypes = {
 };
 
 /// Runs [call] (a generated client method) and rethrows its failure as an
-/// [ApiFailure]; [now] dates an HTTP-date `Retry-After`. [classify] reads an
-/// operation's own refusals first (by the envelope's `code`); when it
-/// answers `null` the status decides.
+/// [ApiFailure]; [now] dates an HTTP-date `Retry-After`.
 Future<T> guardApi<T>(
   Future<T> Function() call, {
   DateTime Function() now = DateTime.now,
-  ApiFailure? Function(DioException exception)? classify,
 }) async {
   try {
     return await call();
   } on DioException catch (exception) {
-    throw classify?.call(exception) ?? apiFailureFrom(exception, now: now);
+    throw apiFailureFrom(exception, now: now);
   } on Exception {
     // The body did not decode into the contract's shape.
     throw const ApiUnexpected();
@@ -89,6 +95,9 @@ ApiFailure apiFailureFrom(
 }) {
   if (_unreachableTypes.contains(exception.type)) return const ApiUnreachable();
   final response = exception.response;
+  if (_codeOf(response?.data) == ErrorCode.invalidPassword) {
+    return const ApiInvalidPassword();
+  }
   return switch (response?.statusCode) {
     HttpStatus.badRequest => ApiValidationFailure(_details(response!.data)),
     HttpStatus.unauthorized => const ApiUnauthorized(),
@@ -117,13 +126,15 @@ Duration? parseRetryAfter(String? header, {required DateTime now}) {
   }
 }
 
-/// The raw `error.code` of an `ErrorResponse` [body], or `null`. Read as
-/// text, not as the generated enum: a code the client does not know yet
-/// (added by the server first) stays readable instead of `$unknown`.
-String? apiErrorCode(Object? body) => switch (body) {
-  {'error': {'code': final String code}} => code,
-  _ => null,
-};
+ErrorCode? _codeOf(Object? body) {
+  if (body is! Map<String, Object?>) return null;
+  try {
+    return ErrorResponse.fromJson(body).error.code;
+  } on Object {
+    // Not the contract's envelope: the status alone decides.
+    return null;
+  }
+}
 
 List<FieldError> _details(Object? body) {
   if (body is! Map<String, Object?>) return const [];

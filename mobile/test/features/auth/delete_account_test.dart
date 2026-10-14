@@ -25,39 +25,36 @@ void main() {
     deleteAccount = DeleteAccount(repository, session);
   });
 
-  test(
-    'freshens the bearer first, deletes, then forgets the session',
-    () async {
-      await deleteAccount(syntheticPassword());
+  test('deletes in one call (the interceptor refreshes a stale bearer), '
+      'then forgets the session', () async {
+    await deleteAccount(syntheticPassword());
 
-      expect(repository.calls, ['getMe', 'deleteAccount']);
-      expect(repository.deletePasswords, [syntheticPassword()]);
-      expect(session.status, SessionStatus.signedOut);
-      expect(store.token, isNull);
-    },
-  );
+    expect(repository.calls, ['deleteAccount']);
+    expect(repository.deletePasswords, [syntheticPassword()]);
+    expect(session.status, SessionStatus.signedOut);
+    expect(store.token, isNull);
+  });
 
   test('a wrong password deletes nothing and keeps the session', () async {
-    repository.deleteError = const ApiUnauthorized();
+    repository.deleteError = const ApiInvalidPassword();
 
     await expectLater(
       deleteAccount(syntheticPassword()),
-      throwsA(isA<ApiUnauthorized>()),
+      throwsA(isA<ApiInvalidPassword>()),
     );
 
     expect(session.status, SessionStatus.signedIn);
     expect(store.token, 'r1');
   });
 
-  test('when the API cannot be reached nothing is sent', () async {
-    repository.getMeError = const ApiUnreachable();
+  test('when the API cannot be reached the session is kept', () async {
+    repository.deleteError = const ApiUnreachable();
 
     await expectLater(
       deleteAccount(syntheticPassword()),
       throwsA(isA<ApiUnreachable>()),
     );
 
-    expect(repository.calls, ['getMe']);
     expect(session.status, SessionStatus.signedIn);
   });
 }

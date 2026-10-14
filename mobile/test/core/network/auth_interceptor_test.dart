@@ -21,6 +21,10 @@ final Uri _base = Uri.parse('https://api.test');
 /// a test can hold the refresh until every request has been refused.
 class _Api implements HttpClientAdapter {
   String validAccess = _fresh;
+
+  /// Answers an authorized request `403 invalid_password` (a wrong current
+  /// password on `DELETE /v1/me`, contract 0.3.0).
+  bool wrongPassword = false;
   final List<RequestOptions> requests = [];
   int refusals = 0;
   void Function()? onRefusal;
@@ -38,6 +42,21 @@ class _Api implements HttpClientAdapter {
     if (!authorized) {
       refusals++;
       onRefusal?.call();
+    }
+    if (authorized && wrongPassword) {
+      return ResponseBody.fromString(
+        jsonEncode({
+          'error': {
+            'code': 'invalid_password',
+            'message': 'The password is incorrect.',
+            'request_id': 'req_1',
+          },
+        }),
+        HttpStatus.forbidden,
+        headers: {
+          Headers.contentTypeHeader: [ContentType.json.mimeType],
+        },
+      );
     }
     return ResponseBody.fromString(
       jsonEncode(<String, Object?>{}),
@@ -286,15 +305,19 @@ void main() {
     },
   );
 
-  test('a 401 to DELETE /v1/me (wrong current password) is answered as is: '
+  test('a 403 invalid_password to DELETE /v1/me is answered as is: '
       'no refresh, no second try', () async {
+    api
+      ..validAccess = 'access-1'
+      ..wrongPassword = true;
+
     await expectLater(
       dio.delete<void>(_protected, data: {'password': 'x'}),
       throwsA(
         isA<DioException>().having(
           (e) => e.response?.statusCode,
           'status',
-          HttpStatus.unauthorized,
+          HttpStatus.forbidden,
         ),
       ),
     );
@@ -302,6 +325,18 @@ void main() {
     expect(rotation.calls, 0);
     expect(api.requests, hasLength(1));
     expect(session.status, SessionStatus.signedIn);
+  });
+
+  test('a 401 to DELETE /v1/me is the bearer (contract 0.3.0): '
+      'one refresh, one retry with the new token', () async {
+    final response = await dio.delete<void>(
+      _protected,
+      data: {'password': 'x'},
+    );
+
+    expect(response.statusCode, HttpStatus.ok);
+    expect(rotation.calls, 1);
+    expect(api.requests.map(bearerOf), ['Bearer access-1', 'Bearer $_fresh']);
   });
 
   test('other errors pass through without a refresh', () async {

@@ -388,6 +388,16 @@
   "@accountDeleteWrongPassword": {
     "description": "The re-entered password was refused; nothing was deleted."
   },
+  "accountDeleteRetryIn": "Podrás intentar de nuevo en {time}.",
+  "@accountDeleteRetryIn": {
+    "description": "Countdown in the delete-account dialog after too many password attempts (Retry-After), as m:ss.",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "2:45"
+      }
+    }
+  },
   "goodbyeTitle": "Cuenta eliminada",
   "@goodbyeTitle": {
     "description": "Title of the screen shown after the account is deleted."

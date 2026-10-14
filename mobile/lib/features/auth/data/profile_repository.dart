@@ -4,13 +4,7 @@ import 'package:control_contable/api/generated/models/user.dart';
 import 'package:control_contable/api/generated/models/user_update.dart';
 import 'package:control_contable/core/network/api_client_provider.dart';
 import 'package:control_contable/core/network/api_failure.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-/// The envelope code a wrong current password may come with, whatever the
-/// status (the contract answers `401 unauthorized` today; a distinct
-/// `invalid_password` may follow, e.g. as a `403`).
-const String _invalidPasswordCode = 'invalid_password';
 
 /// The signed-in user's own account (`/v1/me`). Every method throws an
 /// `ApiFailure` when the server refuses or cannot be reached.
@@ -22,9 +16,8 @@ abstract interface class ProfileRepository {
   Future<User> updateName(String name);
 
   /// Deletes the account and all its data (`DELETE /v1/me`), confirmed
-  /// with the current [password]. A wrong one is an `ApiUnauthorized`,
-  /// whether the server says so with a `401` or with the
-  /// `invalid_password` code under any status.
+  /// with the current [password]. A wrong one is an `ApiInvalidPassword`
+  /// (`403 invalid_password`); too many are an `ApiRateLimited`.
   Future<void> deleteAccount(String password);
 }
 
@@ -45,13 +38,7 @@ class ApiProfileRepository implements ProfileRepository {
   @override
   Future<void> deleteAccount(String password) => guardApi(
     () => _client.deleteMe(body: DeleteAccountRequest(password: password)),
-    classify: _wrongPassword,
   );
-
-  static ApiFailure? _wrongPassword(DioException exception) =>
-      apiErrorCode(exception.response?.data) == _invalidPasswordCode
-      ? const ApiUnauthorized()
-      : null;
 }
 
 /// The account operations. Tests override it with a fake.

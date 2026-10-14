@@ -71,6 +71,7 @@ String describeAuthFailure(ApiFailure failure, AppLocalizations l10n) =>
       ApiUnreachable() => l10n.authErrorUnreachable,
       ApiNotFound() => l10n.authErrorUnavailable,
       ApiValidationFailure() => l10n.authFormRejected,
+      ApiInvalidPassword() => l10n.accountDeleteWrongPassword,
       ApiUnauthorized() || ApiUnexpected() => l10n.authErrorUnexpected,
     };
 

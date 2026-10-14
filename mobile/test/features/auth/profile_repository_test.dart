@@ -71,39 +71,27 @@ void main() {
     );
   }
 
-  group('a wrong password is an ApiUnauthorized, whatever the status', () {
-    test('401 (the contract today)', () async {
-      await expectDeleteFailure((
-        status: 401,
-        body: <String, Object?>{},
-      ), isA<ApiUnauthorized>());
-    });
-
-    test('403 invalid_password (a distinct code, mapped by code)', () async {
+  test(
+    'a wrong password (403 invalid_password) is an ApiInvalidPassword',
+    () async {
       await expectDeleteFailure((
         status: 403,
         body: envelope('invalid_password'),
-      ), isA<ApiUnauthorized>());
-    });
+      ), isA<ApiInvalidPassword>());
+    },
+  );
 
-    test('400 invalid_password is still the password', () async {
-      await expectDeleteFailure((
-        status: 400,
-        body: envelope('invalid_password'),
-      ), isA<ApiUnauthorized>());
-    });
-  });
-
-  test('a 403 with any other code is not taken for the password', () async {
+  test('a 401 on delete is the bearer, never the password', () async {
     await expectDeleteFailure((
-      status: 403,
-      body: envelope('forbidden'),
-    ), isA<ApiUnexpected>());
+      status: 401,
+      body: envelope('unauthorized'),
+    ), isA<ApiUnauthorized>());
   });
 
-  test('getMe never reads a 403 invalid_password as unauthorized', () async {
-    adapter.reply('/v1/me', (status: 403, body: envelope('invalid_password')));
-
-    await expectLater(repository.getMe(), throwsA(isA<ApiUnexpected>()));
+  test('too many tries are an ApiRateLimited', () async {
+    await expectDeleteFailure((
+      status: 429,
+      body: envelope('rate_limited'),
+    ), isA<ApiRateLimited>());
   });
 }
