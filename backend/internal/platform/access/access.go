@@ -9,10 +9,12 @@
 //   - In the trial a user creates at most TrialRecordCap incomes and
 //     TrialRecordCap expenses, counted per user across all taxpayers. A record
 //     counts when created; deleting never frees a slot, and restoring a
-//     deleted record reserves a slot like a create.
+//     deleted record never reserves one: the slot it took at creation never
+//     left the count (MODULE-incomes §2.7, OQ-10, coordinator 2026-10-13).
 //   - With an active pro or comp entitlement records are unlimited; with
-//     neither, and no running trial, access is read-only: creates, restores
-//     and edits get 402 entitlement_required, while reads and deletes stay.
+//     neither, and no running trial, access is read-only: creates and edits
+//     get 402 entitlement_required, while reads, deletes and restores (the
+//     Undo of a delete, coordinator decision) stay.
 //   - Every user, trial included, holds at most TaxpayerCap taxpayers (422
 //     taxpayer_limit_reached). Coordinator decision on P0-16; PRD §7 "Taxpayers
 //     in trial" is amended to match.
@@ -100,7 +102,7 @@ type Status struct {
 	TrialEndsAt time.Time
 }
 
-// Writable reports whether the user may create, restore or edit records.
+// Writable reports whether the user may create or edit records.
 func (s Status) Writable() bool { return s.Level != LevelReadOnly }
 
 // Unlimited reports whether record creation is uncapped.

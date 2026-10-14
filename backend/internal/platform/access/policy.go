@@ -68,8 +68,8 @@ func NewPolicy(txm tx.Manager, entitlements EntitlementReader, usage UsageCounte
 	return &Policy{txm: txm, entitlements: entitlements, usage: usage, clock: clk}
 }
 
-// ReserveRecord takes one creation slot of kind for userID: on create and on
-// restore. It returns a 402 entitlement_required *apperr.Error wrapping
+// ReserveRecord takes one creation slot of kind for userID, on create only:
+// a restore never calls it (no double count). It returns a 402 entitlement_required *apperr.Error wrapping
 // ErrReadOnly or ErrTrialCapReached when the user may not create; the slot is
 // given back only if the surrounding transaction rolls back.
 func (p *Policy) ReserveRecord(ctx context.Context, userID string, kind RecordKind) error {
