@@ -130,7 +130,9 @@ can run in parallel with M5/M6.
 ### M8 — History (`module_history`)
 - **Scope**: monthly summaries for a fiscal year; open any month's breakdown (reuses M5); a "changed since last viewed" marker.
 - **Endpoints**: `GET /v1/taxpayers/{taxpayerId}/history?fiscal_year=`, `POST /v1/taxpayers/{taxpayerId}/history/{period}/viewed`.
-- **Tables**: `estimate_views` (RLS; period, records fingerprint, viewed_at).
+- **Tables**: `estimate_views` (RLS; period, records and figures fingerprints, engine version, parameter set, viewed_at).
+- **Flags**: requires `module_tax_engine` (and through it `module_taxpayers`); either OFF → `module_history` implied OFF, both routes `404`.
+- **Contract**: frozen by M8-01 (0.9.0); see [`docs/modules/history.md`](../modules/history.md).
 
 ### M9 — Reminders (`module_reminders`)
 - **Scope**: device token registration; reminder settings; the tax calendar (due date
