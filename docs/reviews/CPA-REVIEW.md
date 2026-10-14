@@ -29,6 +29,10 @@ catalog migration `backend/migrations/20261013180000_regimes_catalog.sql` (CAT).
 - [ ] Payment rounding to whole pesos (CFF art. 20): not covered; off until confirmed (`rounding.payment_whole_pesos`). ADR §4
 - [ ] Monthly IVA netting across regimes for a PF holding 612 + 606 (one consolidated IVA result). ADR §1
 - [ ] 626 PM credits the art. 54 interest withholding like 601 (input `interest_withholding` added to 626 PM). R §B.2.2 step 4, CAT `regimes` 626 PM
+- [ ] RIF (621) rounding of the reduced ISR, golden PF-621-01 (bimester Sep-Oct 2026, year 6, base 40,000.00, bimonthly row 6, 50 % reduction). The research and a single final rounding (ADR-0002 §4) differ by one centavo; confirm which the law means:
+  - Research (round the caused ISR, then halve): 3,713.68 + (40,000.00 − 35,067.29) × 21.36 % = 3,713.68 + 1,053.626856 = 4,767.306856 → **4,767.31**; 4,767.31 × 50 % = 2,383.655 → **2,383.66**.
+  - Single rounding (halve the unrounded caused ISR, round once): 4,767.306856 × 50 % = 2,383.653428 → **2,383.65**.
+  - The golden keeps the research's 2,383.66 and stays skipped until this item and the RIF reduction % above are ticked. R §A.5 PF-621-01, golden `backend/internal/taxengine/testdata/golden/621-pf/PF-621-01.yaml`, ADR §4
 - [ ] RIF (621) IVA paid by bimester like its ISR (old LIVA 5-E), not monthly; research A.3 lists 621 under the monthly rule. MODULE-tax-engine OQ-T7
 - [ ] IVA a PM withheld **from its suppliers** (recorded on the expense) becomes creditable for that PM when paid (LIVA 5 fr. IV): v1 sends it to withholdings to remit only and does not credit it. Confirm timing and whether to credit. Distinct from IVA withheld **from** the taxpayer and recorded on the income, which v1 subtracts from the monthly IVA (LIVA 1-A, 5-D). MODULE-tax-engine OQ-T6
 
