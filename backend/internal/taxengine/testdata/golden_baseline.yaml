@@ -8,5 +8,4 @@ skipped:
   - PF-621-01 # RIF reduction % by year (⚠️) and rounding before halving: CPA-REVIEW
   - PF-625-01-IVA # LIVA 18-M definitive effect (⚠️): CPA-REVIEW
 pending: # strategy key: cases (authored + generated)
-  606/fisica: 25
   625/fisica: 2

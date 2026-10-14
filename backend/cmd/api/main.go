@@ -106,6 +106,10 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err != nil {
 		return err
 	}
+	incomes, err := newRecordModules(taxpayers, logger)
+	if err != nil {
+		return err
+	}
 	taxEngine, err := newTaxEngineModule(taxEngineWiring{pool: pool, limits: auth.limits, logger: logger})
 	if err != nil {
 		return err
@@ -116,6 +120,7 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 		flags:     flagSvc,
 		auth:      auth,
 		taxpayers: taxpayers,
+		incomes:   incomes,
 		taxEngine: taxEngine,
 		now:       time.Now,
 	})
@@ -171,6 +176,9 @@ type deps struct {
 	flags     flagService
 	auth      authModule
 	taxpayers taxpayersModule
+	// incomes is built at boot (its rate catalog fails a broken params
+	// file there); M3-06 serves it.
+	incomes   incomesModule
 	taxEngine taxEngineModule
 	now       func() time.Time
 }

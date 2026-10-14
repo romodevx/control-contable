@@ -2,6 +2,7 @@ package ratecatalog_test
 
 import (
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -53,36 +54,55 @@ func embedded(t testing.TB) *catalog {
 
 const syntheticSource = "dof-synthetic"
 
-// syntheticSet is a minimal valid set of fiscalYear holding the general IVA
-// rate (open-ended) and a border rate that lapses on December 31.
+// syntheticSet is a minimal valid set of fiscalYear holding the IVA rates
+// every set must hold (general 16 % and zero, open-ended), a border rate that
+// lapses on December 31 and the cash payment limit.
 func syntheticSet(t testing.TB, fiscalYear int, provisional bool) *taxparams.Params {
+	t.Helper()
+	return syntheticSetWithout(t, fiscalYear, provisional)
+}
+
+// syntheticSetWithout is syntheticSet without the values of omit.
+func syntheticSetWithout(t testing.TB, fiscalYear int, provisional bool, omit ...taxparams.Key) *taxparams.Params {
+	t.Helper()
+	return syntheticVersion(t, fiscalYear, 1, provisional, omit...)
+}
+
+// syntheticVersion is version of syntheticSetWithout.
+func syntheticVersion(t testing.TB, fiscalYear, version int, provisional bool, omit ...taxparams.Key) *taxparams.Params {
 	t.Helper()
 	first := date(t, fmtDate(fiscalYear, "01-01"))
 	last := date(t, fmtDate(fiscalYear, "12-31"))
 	basis := []taxparams.Citation{{Source: syntheticSource, Article: "Art. 1"}}
+	values := []taxparams.Value{
+		{
+			Key: taxparams.Key(fiscal.KeyIVAGeneral), Kind: taxparams.KindRate, Rate: rate(t, "0.16"),
+			Validity: taxparams.Validity{From: first}, Basis: basis,
+		},
+		{
+			Key: taxparams.Key(fiscal.KeyIVAZero), Kind: taxparams.KindRate, Rate: rate(t, "0"),
+			Validity: taxparams.Validity{From: first}, Basis: basis,
+		},
+		{
+			Key: taxparams.Key(fiscal.KeyIVABorder), Kind: taxparams.KindRate, Rate: rate(t, "0.08"),
+			Validity: taxparams.Validity{From: first, To: last}, Basis: basis,
+		},
+		{
+			Key: taxparams.Key(expenses.KeyCashPaymentLimit), Kind: taxparams.KindMoney, Money: cents(t, "2000.00"),
+			Validity: taxparams.Validity{From: first}, Basis: basis,
+		},
+	}
+	values = slices.DeleteFunc(values, func(v taxparams.Value) bool { return slices.Contains(omit, v.Key) })
 	set, err := taxparams.NewParams(taxparams.Spec{
 		FiscalYear:  fiscalYear,
-		Version:     1,
+		Version:     version,
 		PublishedOn: first,
 		Provisional: provisional,
 		Sources: []taxparams.Source{{
 			ID: syntheticSource, Title: "Synthetic", URL: "https://example.org/dof",
 			DOFDate: first, Reference: "Art. 1",
 		}},
-		Values: []taxparams.Value{
-			{
-				Key: taxparams.Key(fiscal.KeyIVAGeneral), Kind: taxparams.KindRate, Rate: rate(t, "0.16"),
-				Validity: taxparams.Validity{From: first}, Basis: basis,
-			},
-			{
-				Key: taxparams.Key(fiscal.KeyIVABorder), Kind: taxparams.KindRate, Rate: rate(t, "0.08"),
-				Validity: taxparams.Validity{From: first, To: last}, Basis: basis,
-			},
-			{
-				Key: taxparams.Key(expenses.KeyCashPaymentLimit), Kind: taxparams.KindMoney, Money: cents(t, "2000.00"),
-				Validity: taxparams.Validity{From: first}, Basis: basis,
-			},
-		},
+		Values: values,
 	})
 	require.NoError(t, err)
 	return set
@@ -93,9 +113,15 @@ func fmtDate(year int, monthDay string) string { return fmt.Sprintf("%04d-%s", y
 // synthetic is the adapter over the given sets.
 func synthetic(t testing.TB, sets ...*taxparams.Params) *catalog {
 	t.Helper()
-	c, err := taxparams.NewCatalog(sets...)
-	require.NoError(t, err)
-	rc, err := ratecatalog.New[expenses.AmountKey](c)
+	rc, err := newSynthetic(t, sets...)
 	require.NoError(t, err)
 	return rc
+}
+
+// newSynthetic is ratecatalog.New over the given sets, with its error.
+func newSynthetic(t testing.TB, sets ...*taxparams.Params) (*catalog, error) {
+	t.Helper()
+	c, err := taxparams.NewCatalog(sets...)
+	require.NoError(t, err)
+	return ratecatalog.New[expenses.AmountKey](c)
 }
