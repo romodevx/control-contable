@@ -28,7 +28,7 @@ type Limits struct {
 	// RetirementCapUMAs (5) UMA anuales (fr. V).
 	RetirementIncomeShare money.Rate
 	RetirementCapUMAs     int64
-	// TuitionCaps per student and level (decree DOF 26-12-2013 art. 1.9).
+	// TuitionCaps per student and level (decree DOF 26-12-2013 art. 1.10).
 	TuitionCaps map[TuitionLevel]money.Cents
 }
 

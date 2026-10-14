@@ -586,6 +586,37 @@ func TestNotesCiteTheirLegalBasisAndBecomeInfoLines(t *testing.T) {
 	assert.Equal(t, domain.OpInfo, lines[len(lines)-1].Operation)
 }
 
+// TestTuitionNotesCiteTheDecreeArticleOfTheirRule pins the colegiaturas
+// citations to the decree DOF 26-12-2013 as published: art. 1.9 states the
+// payment means (cheque, transfer, card) and art. 1.10 the cap table per
+// level (ANN-05 finding 2).
+func TestTuitionNotesCiteTheDecreeArticleOfTheirRule(t *testing.T) {
+	paidInCash := tuition("Ana", annual.LevelPrimaria, pesos(t, "100.00"), 0)
+	paidInCash.PaymentMethod = annual.PaymentCash
+	in := annual.DeductionsInput{
+		FiscalYear: fiscalYear,
+		Deductions: []annual.Deduction{
+			paidInCash,
+			tuition("Luis", annual.LevelPrimaria, pesos(t, "50000.00"), 0),
+		},
+		AccumulableIncome: pesos(t, "100000.00"), TotalIncome: pesos(t, "100000.00"),
+	}
+
+	got, err := calculator(t).Compute(in)
+
+	require.NoError(t, err)
+	cited := map[annual.NoteKind][]string{}
+	for _, n := range got.Notes {
+		for _, c := range n.Basis {
+			cited[n.Kind] = append(cited[n.Kind], c.Law+" art. "+c.Article)
+		}
+	}
+	assert.Equal(t, map[annual.NoteKind][]string{
+		annual.NoteExcludedCash: {"Decreto DOF 26-12-2013 art. 1.9"},
+		annual.NoteCapApplied:   {"Decreto DOF 26-12-2013 art. 1.10"},
+	}, cited)
+}
+
 func TestComputeDeductionsRejectsInvalidInput(t *testing.T) {
 	valid := func() annual.DeductionsInput {
 		return annual.DeductionsInput{
