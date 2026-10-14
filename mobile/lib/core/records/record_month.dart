@@ -19,18 +19,16 @@ class RecordMonth {
     : assert(month >= 1 && month <= _monthsPerYear, 'month out of range');
 
   /// The month of a `YYYY-MM` [period].
-  factory RecordMonth.parse(String period) {
+  factory parse(String period) {
     final [year, month] = period.split(_separator).map(int.parse).toList();
     return RecordMonth(year, month);
   }
 
   /// The month a calendar [date] falls in.
-  factory RecordMonth.ofDate(DateTime date) =>
-      RecordMonth(date.year, date.month);
+  factory ofDate(DateTime date) => RecordMonth(date.year, date.month);
 
   /// The current month in America/Mexico_City at [now].
-  factory RecordMonth.current(DateTime now) =>
-      RecordMonth.ofDate(businessToday(now));
+  factory current(DateTime now) => RecordMonth.ofDate(businessToday(now));
 
   /// The year.
   final int year;
