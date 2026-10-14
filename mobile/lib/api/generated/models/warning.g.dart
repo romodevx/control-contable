@@ -29,5 +29,6 @@ const _$WarningCodeEnumMap = {
   WarningCode.notIsrDeductibleInRegime: 'not_isr_deductible_in_regime',
   WarningCode.categoryNotDeductible: 'category_not_deductible',
   WarningCode.ivaNotCreditableCashPayment: 'iva_not_creditable_cash_payment',
+  WarningCode.provisionalParameters: 'provisional_parameters',
   WarningCode.$unknown: r'$unknown',
 };
