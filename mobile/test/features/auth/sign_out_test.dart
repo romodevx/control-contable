@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../helpers/recording_adapter.dart';
+import '../../helpers/recording_error_reporter.dart';
 import '../../helpers/session_fakes.dart';
 import 'auth_fakes.dart';
 
@@ -16,8 +17,10 @@ void main() {
   late FakeAuthRepository repository;
   late Session session;
   late SignOut signOut;
+  late RecordingErrorReporter reporter;
 
   setUp(() async {
+    reporter = RecordingErrorReporter();
     store = InMemoryRefreshTokenStore(_stored);
     rotation = FakeTokenRotation();
     repository = FakeAuthRepository();
@@ -25,10 +28,11 @@ void main() {
       store: store,
       rotate: rotation.call,
       storageRetryDelays: const [],
+      reporter: reporter,
     );
     addTearDown(session.dispose);
     await session.restore();
-    signOut = SignOut(repository, session);
+    signOut = SignOut(repository, session, reporter);
   });
 
   void expectSignedOutLocally() {
@@ -44,6 +48,7 @@ void main() {
     expect(repository.loggedOut, ['refresh-rotated']);
     expect(store.token, isNull);
     expectSignedOutLocally();
+    expect(reporter.reports, isEmpty);
   });
 
   // M1-16 FU2: a store read that fails while signing out escaped
@@ -60,6 +65,9 @@ void main() {
 
       expect(thrown, isNull);
       expect(repository.loggedOut, isEmpty, reason: 'no token to revoke');
+      expect(reporter.reports.map((r) => r.operation), [
+        'session.readRefreshToken',
+      ]);
       expect(store.token, isNull, reason: 'the delete still ran');
       expectSignedOutLocally();
     });
@@ -102,6 +110,8 @@ void main() {
       expect(thrown, isNull);
       expect(store.token, isNull);
       expectSignedOutLocally();
+      expect(reporter.reports.single.operation, 'signOut.revoke');
+      expect(reporter.reports.single.error, same(failure));
     });
   }
 }

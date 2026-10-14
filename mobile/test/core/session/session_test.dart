@@ -6,6 +6,7 @@ import 'package:control_contable/core/session/session.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../helpers/recording_error_reporter.dart';
 import '../../helpers/session_fakes.dart';
 
 /// A scripted `refreshSession`: records the refresh tokens it was given and
@@ -28,14 +29,17 @@ void main() {
   late InMemoryRefreshTokenStore store;
   late _Rotation rotation;
   late Session session;
+  late RecordingErrorReporter reporter;
 
   setUp(() {
     store = InMemoryRefreshTokenStore();
     rotation = _Rotation();
+    reporter = RecordingErrorReporter();
     session = Session(
       store: store,
       rotate: rotation.call,
       storageRetryDelays: _noWait,
+      reporter: reporter,
     );
     addTearDown(session.dispose);
   });
@@ -338,6 +342,8 @@ void main() {
       ..readError = PlatformException(code: 'read', message: 'refresh-1');
 
     expect(await session.readRefreshToken(), isNull);
+    expect(reporter.reports.single.operation, 'session.readRefreshToken');
+    expect(reporter.reports.single.error, isA<PlatformException>());
   });
 
   group('a failed delete at sign-out (PR #42 follow-up c)', () {
