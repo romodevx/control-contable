@@ -1,0 +1,35 @@
+# golden: hand-authored from docs/research/tax-regimes-mx-2026.md §A.5 PF-626-IVA-01. Never generated or rewritten by a tool.
+# RESICO (March 2026): IVA charged 9,600 on 60,000 collected; creditable
+# 2,000; a PM withheld 2/3 x 3,200 = 2,133.33 (IVA of the 20,000 billed to
+# it). IVA = 9,600 - 2,000 - 2,133.33 = 5,466.67.
+id: PF-626-IVA-01
+source: research:PF-626-IVA-01
+pending_strategy: true # M5-13
+input:
+  regime: "626"
+  person_type: fisica
+  period: "2026-03"
+  options:
+    iva_fully_taxable: true
+  months:
+    - month: 3
+      income:
+        cash: "60000.00"
+        by_rate: {rate_16: {base: "60000.00", iva: "9600.00"}}
+        iva_withheld: {by_moral: "2133.33"}
+        isr_withheld: {by_moral: "250.00"}
+      expenses: {creditable_iva_paid: "2000.00"}
+expected:
+  status: complete
+  taxes: [iva]
+  iva:
+    charged_collected: "9600.00"
+    creditable_paid: "2000.00"
+    withheld_from_taxpayer: "2133.33"
+    definitive_excluded: "0.00"
+    net: "5466.67"
+  lines:
+    - {tax: iva, code: iva.charged_collected, op: input, amount: "9600.00"}
+    - {tax: iva, code: iva.creditable_paid, op: subtract, amount: "2000.00"}
+    - {tax: iva, code: iva.withheld_from_taxpayer, op: subtract, amount: "2133.33"}
+    - {tax: iva, code: iva.net, op: result, amount: "5466.67"}

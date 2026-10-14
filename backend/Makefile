@@ -16,7 +16,7 @@ COVER_EXCLUDE ?= ^github.com/romodevx/control-contable/backend/(adapter/http/gen
 
 .DEFAULT_GOAL := check
 
-.PHONY: check fmt fmt-check lint test test-integration test-contract cover cover-check vuln tidy generate codegen-check init-env db-up db-down db-reset db-roles-check migrate-up migrate-down migrate-status flags api worker access-key-rotate db-psql-app
+.PHONY: check fmt fmt-check lint test golden test-integration test-contract cover cover-check vuln tidy generate codegen-check init-env db-up db-down db-reset db-roles-check migrate-up migrate-down migrate-status flags api worker access-key-rotate db-psql-app
 
 ## check: fmt-check + lint + unit tests (what CI runs)
 check: fmt-check lint test
@@ -36,6 +36,11 @@ lint:
 ## test: unit tests, including the internal/archtest Dependency Rule check
 test:
 	$(GO) test -race -count=1 $(GOTEST_FLAGS) $(PKGS)
+
+## golden: the tax engine golden gate, verbose: every skip reason and pending_strategy count
+## (the same tests already gate `make test`; there is no update flag, PLAN M5-07)
+golden:
+	$(GO) test -count=1 -v -run '^TestGolden' ./internal/taxengine/
 
 ## test-integration: tests behind the `integration` build tag (real PostgreSQL via testcontainers-go; needs Docker), contract tests included
 test-integration:

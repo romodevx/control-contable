@@ -1,0 +1,37 @@
+# golden: hand-authored from docs/research/tax-regimes-mx-2026.md §A.5 PF-621-01. Never generated or rewritten by a tool.
+# RIF, bimester Sep-Oct 2026, year 6: income 100,000, deductions 60,000.
+# Base 40,000 -> bimonthly row 6: 3,713.68 + 4,932.71 x 21.36 % = 4,767.31;
+# -50 % = 2,383.66 as the research states it.
+# Two open points keep this case skipped:
+#   1. the reduction % by year is not re-verified (research ⚠️);
+#   2. the research halves the ROUNDED 4,767.31 (2,383.655 -> 2,383.66); a
+#      single final rounding (ADR-0002 §4) of 4,767.306856 x 50 % gives
+#      2,383.65. The CPA decides which one the law means.
+id: PF-621-01
+source: research:PF-621-01
+skip_reason: "⚠️ RIF reduction % by year not re-verified (research §A.5 PF-621-01; CPA-REVIEW RIF reduction by year), and research rounds before halving (2,383.66) where one final rounding gives 2,383.65"
+pending_strategy: true # M5-17 removes this when the partial 621 PF strategy is registered
+input:
+  regime: "621"
+  person_type: fisica
+  period: "2026-10"
+  options:
+    rif_year: "6"
+  months:
+    - {month: 9, income: {cash: "50000.00"}, expenses: {deductible_paid: "30000.00"}}
+    - {month: 10, income: {cash: "50000.00"}, expenses: {deductible_paid: "30000.00"}}
+expected:
+  status: partial
+  taxes: [isr]
+  isr: "2383.66"
+  lines:
+    - {tax: isr, code: isr.income_bimester, op: input, amount: "100000.00"}
+    - {tax: isr, code: isr.deductions_bimester, op: subtract, amount: "60000.00"}
+    - {tax: isr, code: isr.base, op: result, amount: "40000.00"}
+    - {tax: isr, code: isr.tariff_row, op: lookup, amount: "3713.68"}
+    - {tax: isr, code: isr.tariff_excess, op: multiply, amount: "1053.63"}
+    - {tax: isr, code: isr.caused, op: result, amount: "4767.31"}
+    - {tax: isr, code: isr.rif_reduction, op: multiply, amount: "2383.66"}
+    - {tax: isr, code: isr.payable, op: result, amount: "2383.66"}
+  cpa_topics: [rif_reduction]
+  disclaimers: [deductibility_claimed]
