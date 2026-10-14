@@ -39,9 +39,9 @@ class EstimateScreen extends ConsumerWidget {
             EstimatePeriodPicker(
               current: current,
               selected: chosen ?? current,
-              onSelected: (period) =>
-                  ref.read(estimatePeriodProvider.notifier).period =
-                      period == current ? null : period,
+              onSelected: (period) => ref
+                  .read(estimatePeriodProvider.notifier)
+                  .select(period, current: current),
             ),
             const SizedBox(height: AppSpacing.xl),
             if (query != null)

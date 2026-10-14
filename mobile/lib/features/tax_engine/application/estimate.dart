@@ -10,11 +10,10 @@ class EstimatePeriodNotifier extends Notifier<String?> {
   @override
   String? build() => null;
 
-  /// The chosen month; `null` is the current one.
-  String? get period => state;
-
-  /// Chooses [period]; `null` goes back to the current month.
-  set period(String? period) => state = period;
+  /// Chooses [period]; choosing [current] goes back to `null`, so the
+  /// current month keeps following the server's clock.
+  void select(String period, {required String current}) =>
+      state = period == current ? null : period;
 }
 
 /// See [EstimatePeriodNotifier].
