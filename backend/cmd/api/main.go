@@ -30,6 +30,7 @@ import (
 	"github.com/romodevx/control-contable/backend/adapter/http/health"
 	"github.com/romodevx/control-contable/backend/adapter/http/middleware"
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
+	"github.com/romodevx/control-contable/backend/internal/platform/clock"
 	"github.com/romodevx/control-contable/backend/internal/platform/config"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagsgorm"
@@ -100,9 +101,7 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err != nil {
 		return err
 	}
-	taxpayers, err := newTaxpayersModule(taxpayersWiring{
-		env: cfg.Env, keys: taxpayerKeys, pool: pool, limits: auth.limits, logger: logger,
-	})
+	taxpayers, expenses, err := newRecordModules(recordWiring{env: cfg.Env, keys: taxpayerKeys, pool: pool, auth: auth, logger: logger})
 	if err != nil {
 		return err
 	}
@@ -116,6 +115,7 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 		flags:     flagSvc,
 		auth:      auth,
 		taxpayers: taxpayers,
+		expenses:  expenses,
 		taxEngine: taxEngine,
 		now:       time.Now,
 	})
@@ -129,6 +129,40 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	logger.InfoContext(ctx, "api listening", slog.String("addr", ln.Addr().String()),
 		slog.String("env", string(cfg.Env)), slog.String("version", version))
 	return serve(ctx, newServer(handler, cfg.HTTPAddr, logger), ln, logger)
+}
+
+// recordWiring is what the record modules (taxpayers, expenses) need from
+// the composition root.
+type recordWiring struct {
+	env    config.Environment
+	keys   config.Taxpayers
+	pool   *sql.DB // cc_app
+	auth   authModule
+	logger *slog.Logger
+	// expensesClock is the expense rules' clock; nil is the system clock
+	// (tests pin a day).
+	expensesClock clock.Clock
+}
+
+// newRecordModules wires the taxpayers and expenses modules over one cc_app
+// unit of work: the expense's regime check joins it, and the taxpayers
+// record lookup reads the expenses inside the taxpayers' own.
+func newRecordModules(w recordWiring) (taxpayersModule, expensesModule, error) {
+	txm, err := pgdb.NewTxManager(w.pool)
+	if err != nil {
+		return taxpayersModule{}, expensesModule{}, err
+	}
+	taxpayers, err := newTaxpayersModule(taxpayersWiring{env: w.env, keys: w.keys, tx: txm, limits: w.auth.limits, logger: w.logger})
+	if err != nil {
+		return taxpayersModule{}, expensesModule{}, err
+	}
+	expenses, err := newExpensesModule(expensesWiring{
+		tx: txm, taxpayers: taxpayers.queries, limits: w.auth.limits, clock: w.expensesClock, logger: w.logger,
+	})
+	if err != nil {
+		return taxpayersModule{}, expensesModule{}, err
+	}
+	return taxpayers, expenses, nil
 }
 
 // openDatabase opens the cc_app pool (pgx) without connecting.
@@ -171,6 +205,7 @@ type deps struct {
 	flags     flagService
 	auth      authModule
 	taxpayers taxpayersModule
+	expenses  expensesModule
 	taxEngine taxEngineModule
 	now       func() time.Time
 }
@@ -205,6 +240,7 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 		accountHandler:   d.auth.account,
 		SessionHandler:   d.auth.sessions,
 		taxpayersHandler: d.taxpayers.handler,
+		expensesHandler:  d.expenses.handler,
 		taxEngineHandler: d.taxEngine.handler,
 	}
 	if d.auth.authn == nil {
@@ -213,10 +249,13 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 	if d.taxpayers.handler == nil {
 		return nil, errors.New("api: no taxpayers handler: module_taxpayers operations would panic")
 	}
+	if d.expenses.handler == nil {
+		return nil, errors.New("api: no expenses handler: module_expenses operations would panic")
+	}
 	if d.taxEngine.handler == nil {
 		return nil, errors.New("api: no tax engine handler: module_tax_engine operations would panic")
 	}
-	userLimits, err := mergeLimits(d.taxpayers.userLimits, d.taxEngine.userLimits)
+	userLimits, err := mergeLimits(d.taxpayers.userLimits, d.expenses.userLimits, d.taxEngine.userLimits)
 	if err != nil {
 		return nil, err
 	}
@@ -231,8 +270,8 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 		// (MODULE-auth §5), keyed like the edge limiter.
 		OperationLimits: d.auth.clientLimits,
 		ClientKey:       middleware.ClientIP(cfg.TrustedProxyHops),
-		// The per-user write budgets (MODULE-taxpayers S-10, MODULE-tax-engine
-		// §5), keyed by the authenticated user.
+		// The per-user write budgets (MODULE-taxpayers S-10, expenses M4-07,
+		// MODULE-tax-engine §5), keyed by the authenticated user.
 		UserLimits: userLimits,
 	})
 	if err != nil {

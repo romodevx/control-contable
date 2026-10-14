@@ -1,0 +1,185 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+
+	"github.com/romodevx/control-contable/backend/adapter/http/router"
+	expenseshttp "github.com/romodevx/control-contable/backend/internal/expenses/adapter/http"
+	expdomain "github.com/romodevx/control-contable/backend/internal/expenses/domain"
+	expinfra "github.com/romodevx/control-contable/backend/internal/expenses/infra"
+	expusecase "github.com/romodevx/control-contable/backend/internal/expenses/usecase"
+	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
+	"github.com/romodevx/control-contable/backend/internal/platform/access"
+	"github.com/romodevx/control-contable/backend/internal/platform/access/accessgorm"
+	"github.com/romodevx/control-contable/backend/internal/platform/clock"
+	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
+	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit/ratelimitpg"
+	"github.com/romodevx/control-contable/backend/internal/taxengine/infra/ratecatalog"
+	"github.com/romodevx/control-contable/backend/internal/taxengine/params"
+	tpdomain "github.com/romodevx/control-contable/backend/internal/taxpayers/domain"
+	tpusecase "github.com/romodevx/control-contable/backend/internal/taxpayers/usecase"
+)
+
+// The regime options that change an expense category's hint.
+const (
+	optionDeductionMode    = "deduction_mode"    // 606
+	optionDefinitiveOption = "definitive_option" // 625
+)
+
+// expensesWiring is what the expenses module needs from the composition
+// root. tx must be the taxpayers module's manager: the regime check joins
+// the expense's unit of work (tx.ErrForeignTransaction otherwise).
+type expensesWiring struct {
+	tx        *pgdb.TxManager
+	taxpayers *tpusecase.Queries
+	limits    *ratelimitpg.Store
+	clock     clock.Clock // nil = the system clock
+	logger    *slog.Logger
+}
+
+// expensesModule is the expenses module's HTTP side: the handler of its
+// operations and its per-user write budget for the router.
+type expensesModule struct {
+	handler    *expenseshttp.Handler
+	userLimits map[string]router.Limiter
+}
+
+// newExpensesModule wires the expense use cases (M4-05, M4-06) over the
+// shared cc_app unit of work, the access policy (trial cap), the taxpayers
+// queries and the tax engine's RateCatalog over the embedded parameters.
+func newExpensesModule(w expensesWiring) (expensesModule, error) {
+	if w.tx == nil || w.taxpayers == nil {
+		return expensesModule{}, errors.New("expenses: the shared unit of work and the taxpayers queries are required")
+	}
+	parameters, err := newExpenseParameters()
+	if err != nil {
+		return expensesModule{}, err
+	}
+	clk := w.clock
+	if clk == nil {
+		clk = clock.NewSystem()
+	}
+	uc := expusecase.NewExpenses(expusecase.Deps{
+		Tx:         w.tx,
+		Access:     access.NewPolicy(w.tx, accessgorm.NewStore(), accessgorm.NewStore(), clock.NewSystem()),
+		Regimes:    w.taxpayers,
+		Taxpayers:  taxpayerProfiles{reader: w.taxpayers},
+		Expenses:   expinfra.NewStore(),
+		Categories: expinfra.NewCategoryCatalog(),
+		Parameters: parameters,
+		Clock:      clk,
+		Logger:     w.logger,
+	})
+	return expensesModule{
+		handler:    expenseshttp.NewHandler(uc),
+		userLimits: bucketsOf(w.limits, expenseshttp.UserLimits),
+	}, nil
+}
+
+// taxpayerProfiles adapts the taxpayers module's profile reader to the
+// expenses TaxpayerProfiles port. Its client errors (404) pass as they are.
+type taxpayerProfiles struct {
+	reader tpusecase.TaxpayerProfileReader
+}
+
+var _ expusecase.TaxpayerProfiles = taxpayerProfiles{}
+
+// Profile implements expusecase.TaxpayerProfiles.
+func (a taxpayerProfiles) Profile(ctx context.Context, userID, taxpayerID string) (expusecase.TaxpayerProfile, error) {
+	p, err := a.reader.Profile(ctx, userID, taxpayerID)
+	if err != nil {
+		return expusecase.TaxpayerProfile{}, err
+	}
+	out := expusecase.TaxpayerProfile{PersonType: fiscal.PersonType(p.PersonType), Archived: p.Archived}
+	for _, r := range p.Regimes {
+		out.Regimes = append(out.Regimes, regimeHold(r))
+	}
+	return out, nil
+}
+
+func regimeHold(r tpusecase.RegimeProfile) expusecase.RegimeHold {
+	hold := expusecase.RegimeHold{Code: fiscal.RegimeCode(r.Code), StartPeriod: r.Window.Start.String()}
+	if !r.Window.IsOpen() {
+		hold.EndPeriod = r.Window.End.String()
+	}
+	if mode, ok := r.Options[optionDeductionMode].Text(); ok {
+		hold.Options.DeductionMode = expdomain.DeductionMode(mode)
+	}
+	if definitive, ok := r.Options[optionDefinitiveOption].Bool(); ok {
+		hold.Options.DefinitiveOption = definitive
+	}
+	return hold
+}
+
+// expenseParameters adapts the tax engine's RateCatalog (M5-08), bound to
+// the expenses key type, to the expenses Parameters port.
+type expenseParameters struct {
+	*ratecatalog.Catalog[expdomain.AmountKey]
+}
+
+var _ expusecase.Parameters = expenseParameters{}
+
+// newExpenseParameters binds the catalog over the embedded parameter sets.
+func newExpenseParameters() (expenseParameters, error) {
+	sets, err := params.Embedded()
+	if err != nil {
+		return expenseParameters{}, fmt.Errorf("expenses: tax parameters: %w", err)
+	}
+	catalog, err := ratecatalog.New[expdomain.AmountKey](sets)
+	if err != nil {
+		return expenseParameters{}, fmt.Errorf("expenses: rate catalog: %w", err)
+	}
+	return expenseParameters{Catalog: catalog}, nil
+}
+
+// On implements expusecase.Parameters: a day no set covers (before the
+// first published year) is ErrParametersUnavailable, which the use cases
+// answer as 400 out_of_range on the date.
+func (a expenseParameters) On(on fiscal.Date) (expusecase.DatedParameters, error) {
+	limit, err := a.CashPaymentLimit(on)
+	if errors.Is(err, ratecatalog.ErrDateNotCovered) {
+		return expusecase.DatedParameters{}, expusecase.ErrParametersUnavailable
+	}
+	if err != nil {
+		return expusecase.DatedParameters{}, err
+	}
+	rates, err := a.AllowedIVARates(on)
+	if err != nil {
+		return expusecase.DatedParameters{}, err
+	}
+	return expusecase.DatedParameters{
+		IVARatesAllowed: rates.Value, CashPaymentLimit: limit.Value, Provisional: limit.Provisional || rates.Provisional,
+	}, nil
+}
+
+// latestExpenses is the expenses store's lookup of a regime's latest live
+// expense (expinfra.Store).
+type latestExpenses interface {
+	LatestPaidOn(ctx context.Context, taxpayerID string, regime fiscal.RegimeCode) (fiscal.Date, error)
+}
+
+// regimeRecords implements the taxpayers RegimeRecords port over the
+// expenses table (M2-14 G-1: it replaces infra.NoRecords). M3 adds the
+// incomes and keeps the later of both periods.
+type regimeRecords struct {
+	expenses latestExpenses
+}
+
+var _ tpusecase.RegimeRecords = regimeRecords{}
+
+// LatestRecordPeriod implements tpusecase.RegimeRecords. It runs on the
+// taxpayers unit of work in ctx, as its user.
+func (r regimeRecords) LatestRecordPeriod(ctx context.Context, taxpayerID, code string) (tpdomain.Period, error) {
+	latest, err := r.expenses.LatestPaidOn(ctx, taxpayerID, fiscal.RegimeCode(code))
+	if err != nil || latest.IsZero() {
+		return tpdomain.Period{}, err
+	}
+	p, err := tpdomain.ParsePeriod(latest.Period())
+	if err != nil {
+		return tpdomain.Period{}, fmt.Errorf("expenses: period of %s: %w", latest, err)
+	}
+	return p, nil
+}

@@ -2,18 +2,19 @@ package main
 
 import (
 	"crypto/rand"
-	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
 
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
+	expinfra "github.com/romodevx/control-contable/backend/internal/expenses/infra"
 	"github.com/romodevx/control-contable/backend/internal/platform/access"
 	"github.com/romodevx/control-contable/backend/internal/platform/access/accessgorm"
 	"github.com/romodevx/control-contable/backend/internal/platform/clock"
 	"github.com/romodevx/control-contable/backend/internal/platform/config"
 	"github.com/romodevx/control-contable/backend/internal/platform/crypto"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
+	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit"
 	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit/ratelimitpg"
 	taxpayershttp "github.com/romodevx/control-contable/backend/internal/taxpayers/adapter/http"
 	"github.com/romodevx/control-contable/backend/internal/taxpayers/infra"
@@ -25,29 +26,33 @@ import (
 var errMissingRFCKeys = errors.New("taxpayers: RFC keys are required outside dev")
 
 // taxpayersWiring is what the taxpayers module needs from the composition
-// root.
+// root. tx is the cc_app unit of work every module shares: the expenses
+// module's regime check joins it.
 type taxpayersWiring struct {
 	env    config.Environment
 	keys   config.Taxpayers
-	pool   *sql.DB // cc_app
+	tx     *pgdb.TxManager
 	limits *ratelimitpg.Store
 	logger *slog.Logger
 }
 
 // taxpayersModule is the taxpayers module's HTTP side: the handler of its
-// operations and its per-user write budget (S-10) for the router.
+// operations and its per-user write budget (S-10) for the router, plus the
+// read-side queries the record modules consume.
 type taxpayersModule struct {
 	handler    *taxpayershttp.Handler
 	userLimits map[string]router.Limiter
+	queries    *usecase.Queries
 }
 
 // newTaxpayersModule wires the taxpayers use cases (M2-05, M2-06) over the
-// cc_app unit of work, the RFC vault and the access policy.
+// shared cc_app unit of work, the RFC vault and the access policy. Its
+// record lookup reads the expenses (M2-14 G-1).
 func newTaxpayersModule(w taxpayersWiring) (taxpayersModule, error) {
-	txm, err := pgdb.NewTxManager(w.pool)
-	if err != nil {
-		return taxpayersModule{}, err
+	if w.tx == nil {
+		return taxpayersModule{}, errors.New("taxpayers: the shared unit of work is required")
 	}
+	txm := w.tx
 	vault, err := newRFCVault(w)
 	if err != nil {
 		return taxpayersModule{}, err
@@ -57,22 +62,24 @@ func newTaxpayersModule(w taxpayersWiring) (taxpayersModule, error) {
 		Tx:        txm,
 		Access:    access.NewPolicy(txm, accessgorm.NewStore(), accessgorm.NewStore(), clock.NewSystem()),
 		Taxpayers: store, Regimes: store, Catalog: catalog, Directory: catalog,
-		Records: infra.NoRecords{}, // M3/M4 replace it with the record lookup
+		Records: regimeRecords{expenses: expinfra.NewStore()}, // M3 adds the incomes
 		RFC:     vault, Clock: clock.NewSystem(), Logger: w.logger,
 	}
 	return taxpayersModule{
 		handler: taxpayershttp.NewHandler(taxpayershttp.UseCases{
 			Taxpayers: usecase.NewTaxpayers(deps), Regimes: usecase.NewRegimes(deps), Catalog: usecase.NewCatalog(deps),
 		}),
-		userLimits: userLimits(w.limits),
+		userLimits: bucketsOf(w.limits, taxpayershttp.UserLimits),
+		queries:    usecase.NewQueries(deps),
 	}, nil
 }
 
-// userLimits builds the router's per-user limits from the adapter's
-// policies: every write shares one bucket per user (one scope).
-func userLimits(limits *ratelimitpg.Store) map[string]router.Limiter {
-	out := make(map[string]router.Limiter, len(taxpayershttp.UserLimits))
-	for op, policy := range taxpayershttp.UserLimits {
+// bucketsOf builds the router's per-user limits from a module adapter's
+// policies by operationId: the writes of one scope share one bucket per
+// user.
+func bucketsOf(limits *ratelimitpg.Store, policies map[string]ratelimit.Policy) map[string]router.Limiter {
+	out := make(map[string]router.Limiter, len(policies))
+	for op, policy := range policies {
 		out[op] = limits.Bucket(policy)
 	}
 	return out

@@ -20,6 +20,7 @@ var builtOperations = []string{"getHealth", "listEnabledFlags", "register", "res
 	"refreshSession", "logout", "getMe", "updateMe", "deleteMe", "listLegalDocuments",
 	"listRegimes", "listTaxpayers", "createTaxpayer", "getTaxpayer", "updateTaxpayer", "deleteTaxpayer",
 	"archiveTaxpayer", "unarchiveTaxpayer", "addTaxpayerRegime", "updateTaxpayerRegime", "archiveTaxpayerRegime",
+	"listExpenseCategories", "listExpenses", "createExpense", "getExpense", "updateExpense", "deleteExpense", "restoreExpense",
 	"getTaxInputs", "putTaxInputs"}
 
 func TestNotBuilt_coversExactlyTheOperationsWithoutAHandler(t *testing.T) {

@@ -356,9 +356,9 @@ func execRegime(ctx context.Context, op string, mustMatch bool, statement string
 	return nil
 }
 
-// NoRecords implements usecase.RegimeRecords until M3 and M4 add the
-// incomes and expenses tables: no regime holds records yet. Those modules
-// replace it with an adapter that reads their tables.
+// NoRecords implements usecase.RegimeRecords with no records at all, for
+// suites that wire no record module. cmd/api wires the lookup over the
+// record tables instead (expenses since M4-07, M2-14 G-1; incomes in M3).
 type NoRecords struct{}
 
 var _ usecase.RegimeRecords = NoRecords{}
