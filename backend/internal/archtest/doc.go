@@ -36,4 +36,10 @@
 //     tx.SystemManager transaction without a user context (P0-30 D-2).
 //
 // Apart from test-harness, the composition root (cmd/) may import anything.
+//
+// CheckRepositories adds one rule that is not about imports (P0-30 D-3): a
+// module repository (internal/<module>/infra, non-test files) never calls
+// Begin, BeginTx, Commit, Rollback, SavePoint, RollbackTo or Transaction and
+// never sends SQL that sets session state (set_config, SET, RESET). The use
+// case's unit of work owns the transaction and the RLS context.
 package archtest
