@@ -67,6 +67,17 @@ func expenseProbes() []recordProbe {
 	}
 }
 
+// builtOwnedOperations are module's operations minus the not-built stubs,
+// which answer the hidden-module 404 whatever the preset (router NotBuilt).
+// The withholding previews (contract 0.10.0) join the probes when WH-06 and
+// WH-07 build them (ADR-0008).
+func builtOwnedOperations(module string) []string {
+	notBuilt := notBuiltOperations()
+	return slices.DeleteFunc(ownedOperations(module), func(op string) bool {
+		return slices.Contains(notBuilt, op)
+	})
+}
+
 func recordProbeOps(probes []recordProbe) []string {
 	ops := make([]string, 0, len(probes))
 	for _, p := range probes {
@@ -104,8 +115,8 @@ func TestPresetSmoke_recordModulesReachableOnlyWhenThePresetIncludesThem(t *test
 
 	modules := map[string][]recordProbe{moduleIncomesKey: incomeProbes(), moduleExpensesKey: expenseProbes()}
 	for module, probes := range modules {
-		require.ElementsMatch(t, ownedOperations(module), recordProbeOps(probes),
-			"every %s operation is probed", module)
+		require.ElementsMatch(t, builtOwnedOperations(module), recordProbeOps(probes),
+			"every built %s operation is probed", module)
 	}
 
 	presets, err := env.store.Presets(t.Context())
