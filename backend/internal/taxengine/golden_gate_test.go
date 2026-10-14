@@ -40,6 +40,7 @@ const (
 func gateStrategies() []domain.Strategy {
 	return []domain.Strategy{
 		domain.NewGeneralPMStrategy(), // 601 PM (M5-15)
+		domain.NewStrategy612PF(),
 	}
 }
 

@@ -5,7 +5,6 @@
 # (active_months), so no prior payment is required and the status is complete.
 id: PF-612-IVA-01
 source: research:PF-612-IVA-01
-pending_strategy: true # M5-11
 input:
   regime: "612"
   person_type: fisica
@@ -31,8 +30,10 @@ expected:
     definitive_excluded: "0.00"
     net: "2133.33"
   lines:
-    - {tax: iva, code: iva.charged_collected, op: input, amount: "4800.00"}
-    - {tax: iva, code: iva.creditable_paid, op: subtract, amount: "1600.00"}
-    - {tax: iva, code: iva.withheld_from_taxpayer, op: subtract, amount: "1066.67"}
-    - {tax: iva, code: iva.net, op: result, amount: "2133.33"}
+    # Line codes are the shared IVA components' (M5-09, domain.ComputeIVA).
+    - {tax: iva, code: iva.charged.rate_16, op: input, amount: "4800.00"}
+    - {tax: iva, code: iva.charged, op: result, amount: "4800.00"}
+    - {tax: iva, code: iva.creditable, op: subtract, amount: "1600.00"}
+    - {tax: iva, code: iva.withheld.moral, op: subtract, amount: "1066.67"}
+    - {tax: iva, code: iva.regime_net, op: result, amount: "2133.33"}
   disclaimers: [deductibility_claimed]

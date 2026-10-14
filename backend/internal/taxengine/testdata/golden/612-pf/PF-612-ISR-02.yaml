@@ -4,7 +4,6 @@
 # October row 6: 18,568.40 + (250,000 - 175,336.41) x 21.36 % = 34,516.54.
 id: PF-612-ISR-02
 source: research:PF-612-ISR-02
-pending_strategy: true # M5-11
 input:
   regime: "612"
   person_type: fisica
