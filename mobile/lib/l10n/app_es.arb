@@ -1482,16 +1482,16 @@
   "@incomeDiscardTitle": {
     "description": "Leaving the form with unsaved changes."
   },
-  "incomeDiscardBody": "Lo que escribiste se perderá.",
-  "@incomeDiscardBody": {
+  "recordDiscardBody": "Lo que escribiste se perderá.",
+  "@recordDiscardBody": {
     "description": "Body of the discard confirmation."
   },
-  "incomeDiscardKeep": "Seguir editando",
-  "@incomeDiscardKeep": {
+  "recordDiscardKeep": "Seguir editando",
+  "@recordDiscardKeep": {
     "description": "Stays on the form."
   },
-  "incomeDiscardConfirm": "Descartar",
-  "@incomeDiscardConfirm": {
+  "recordDiscardConfirm": "Descartar",
+  "@recordDiscardConfirm": {
     "description": "Leaves the form, losing the changes."
   },
   "homeOpenEstimate": "Ver estimado del mes",
@@ -1723,5 +1723,414 @@
   "comingSoon": "Disponible pronto.",
   "@comingSoon": {
     "description": "Placeholder body of a screen still being built."
+  },
+  "recordErrorInvalid": "Revisa este dato.",
+  "@recordErrorInvalid": {
+    "description": "A record field the server refused for a reason the app has no copy for."
+  },
+  "expensesNoTaxpayer": "Registra un contribuyente para llevar sus gastos.",
+  "@expensesNoTaxpayer": {
+    "description": "Expense list when the user has no active taxpayer."
+  },
+  "expensesEmptyTitle": "Sin gastos en {month}",
+  "@expensesEmptyTitle": {
+    "description": "Empty expense list for a month.",
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "expensesEmptyBody": "Registra tus gastos y te mostramos cuáles podrían bajar tus impuestos.",
+  "@expensesEmptyBody": {
+    "description": "Warm copy under the empty expense list."
+  },
+  "expensesRecord": "Registrar gasto",
+  "@expensesRecord": {
+    "description": "Opens the new-expense form (list action and empty state)."
+  },
+  "expensesLoadFailed": "No se pudieron cargar los gastos.",
+  "@expensesLoadFailed": {
+    "description": "Expense list failed to load; a retry button follows."
+  },
+  "expensesLoading": "Cargando gastos…",
+  "@expensesLoading": {
+    "description": "Expense list is loading."
+  },
+  "expensesCount": "{count, plural, =1{1 gasto} other{{count} gastos}}",
+  "@expensesCount": {
+    "description": "How many expenses the month (filtered) holds.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "expensesTotalTitle": "Total del mes con IVA",
+  "@expensesTotalTitle": {
+    "description": "Heading of the expense month totals card."
+  },
+  "expensesTotalSubtotal": "Sin IVA",
+  "@expensesTotalSubtotal": {
+    "description": "Totals card line: expenses before IVA."
+  },
+  "expensesTotalIva": "IVA pagado",
+  "@expensesTotalIva": {
+    "description": "Totals card line: IVA paid."
+  },
+  "expensesTotalWithheld": "Retenciones a enterar",
+  "@expensesTotalWithheld": {
+    "description": "Totals card line: ISR and IVA the taxpayer withheld from suppliers (to remit)."
+  },
+  "expensesNotDeductible": "No deducible",
+  "@expensesNotDeductible": {
+    "description": "Badge of an expense that does not lower ISR (words, never color alone)."
+  },
+  "expensesDeleteTooltip": "Eliminar gasto: {title}",
+  "@expensesDeleteTooltip": {
+    "description": "Tooltip and label of an expense row delete button.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "expensesEditLabel": "Editar gasto: {title}",
+  "@expensesEditLabel": {
+    "description": "Screen-reader label of an expense row: tapping it edits the expense.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "expensesDeleted": "{count, plural, =1{Gasto eliminado} other{{count} gastos eliminados}}",
+  "@expensesDeleted": {
+    "description": "Persistent toast after deleting expenses; deletes stack.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "expensesRestored": "{count, plural, =1{Gasto restaurado} other{{count} gastos restaurados}}",
+  "@expensesRestored": {
+    "description": "Toast after Undo restored every deleted expense.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "expensesRestoredSome": "{restored, plural, =0{No se restauró ninguno de los {total} gastos.} =1{Se restauró 1 de {total} gastos.} other{Se restauraron {restored} de {total} gastos.}}",
+  "@expensesRestoredSome": {
+    "description": "Toast after a stacked Undo where some expenses could not be restored; the reason follows.",
+    "placeholders": {
+      "restored": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "expensesDeleteFailed": "No se pudo eliminar el gasto.",
+  "@expensesDeleteFailed": {
+    "description": "Toast when deleting an expense failed (the row is back)."
+  },
+  "expensesRestoreFailed": "No se pudo restaurar el gasto.",
+  "@expensesRestoreFailed": {
+    "description": "Toast when an Undo failed for an unexpected reason."
+  },
+  "expensesRestoreRegimeEnded": "No se pudo restaurar: el régimen ya no cubre la fecha del gasto.",
+  "@expensesRestoreRegimeEnded": {
+    "description": "Toast when an Undo is refused because the regime no longer covers the date."
+  },
+  "expenseFormTitle": "Nuevo gasto",
+  "@expenseFormTitle": {
+    "description": "App bar title of the new-expense page."
+  },
+  "expenseEditTitle": "Editar gasto",
+  "@expenseEditTitle": {
+    "description": "App bar title of the edit-expense page."
+  },
+  "expenseFieldCategory": "Categoría",
+  "@expenseFieldCategory": {
+    "description": "Label of the expense category picker."
+  },
+  "expenseCategoryNone": "Elige una categoría",
+  "@expenseCategoryNone": {
+    "description": "Category picker before a category is chosen."
+  },
+  "expenseCategoryPickerTitle": "Elige la categoría del gasto",
+  "@expenseCategoryPickerTitle": {
+    "description": "Title of the category picker sheet."
+  },
+  "expenseCategorySearch": "Buscar categoría",
+  "@expenseCategorySearch": {
+    "description": "Label of the search field in the category picker."
+  },
+  "expenseCategoryNoMatch": "Ninguna categoría coincide con la búsqueda.",
+  "@expenseCategoryNoMatch": {
+    "description": "Category picker search with no result."
+  },
+  "expenseCategoriesLoading": "Cargando categorías…",
+  "@expenseCategoriesLoading": {
+    "description": "The expense form waits for the category catalog."
+  },
+  "expenseCategoriesLoadFailed": "No se pudieron cargar las categorías.",
+  "@expenseCategoriesLoadFailed": {
+    "description": "The category catalog failed to load; a retry follows."
+  },
+  "expenseFieldAmount": "Monto sin IVA",
+  "@expenseFieldAmount": {
+    "description": "Label: expense subtotal before IVA."
+  },
+  "expenseFieldIvaRate": "Tasa de IVA",
+  "@expenseFieldIvaRate": {
+    "description": "Label: IVA rate of the expense."
+  },
+  "expenseFieldPaidOn": "Fecha de pago",
+  "@expenseFieldPaidOn": {
+    "description": "Label: payment date (the only date of an expense)."
+  },
+  "expenseFieldPaymentMethod": "Forma de pago",
+  "@expenseFieldPaymentMethod": {
+    "description": "Label: how the expense was paid."
+  },
+  "expenseFieldHasCfdi": "¿Tienes factura?",
+  "@expenseFieldHasCfdi": {
+    "description": "Label: whether the expense has a CFDI."
+  },
+  "expenseHasCfdiYes": "Sí",
+  "@expenseHasCfdiYes": {
+    "description": "Option: the expense has a CFDI."
+  },
+  "expenseHasCfdiNo": "No",
+  "@expenseHasCfdiNo": {
+    "description": "Option: the expense has no CFDI."
+  },
+  "expenseFieldRegime": "Régimen",
+  "@expenseFieldRegime": {
+    "description": "Label: regime of the expense (only with several)."
+  },
+  "expenseFieldIvaAmount": "IVA pagado",
+  "@expenseFieldIvaAmount": {
+    "description": "Label: IVA paid, prefilled from the rate."
+  },
+  "expenseFieldDeductible": "¿Es deducible?",
+  "@expenseFieldDeductible": {
+    "description": "Label of the deductibility switch."
+  },
+  "expenseDeductibleSuggested": "Valor sugerido para esta categoría y forma de pago",
+  "@expenseDeductibleSuggested": {
+    "description": "Under the switch while it shows the suggested value."
+  },
+  "expenseDeductibleUser": "Lo elegiste tú",
+  "@expenseDeductibleUser": {
+    "description": "Under the switch while it shows the user override."
+  },
+  "expenseDeductibleReset": "Usar el valor sugerido",
+  "@expenseDeductibleReset": {
+    "description": "Button clearing the deductibility override."
+  },
+  "expenseFieldCfdiUuid": "Folio fiscal (UUID)",
+  "@expenseFieldCfdiUuid": {
+    "description": "Label: the CFDI folio fiscal."
+  },
+  "expenseFieldDescription": "Descripción",
+  "@expenseFieldDescription": {
+    "description": "Label: what the expense was."
+  },
+  "expenseFieldIsrWithheld": "ISR retenido",
+  "@expenseFieldIsrWithheld": {
+    "description": "Label: ISR the taxpayer withheld from the supplier."
+  },
+  "expenseFieldIvaWithheld": "IVA retenido",
+  "@expenseFieldIvaWithheld": {
+    "description": "Label: IVA the taxpayer withheld from the supplier."
+  },
+  "expenseSectionMore": "Más detalles",
+  "@expenseSectionMore": {
+    "description": "Collapsed section: IVA, deductibility, folio, description."
+  },
+  "expenseSectionWithholdings": "Retenciones a tu proveedor",
+  "@expenseSectionWithholdings": {
+    "description": "Collapsed section of a persona moral: what it withheld from the supplier."
+  },
+  "expenseWithholdingsHelp": "Lo que le retuviste al proveedor, como dice el CFDI. Lo tienes que enterar al SAT.",
+  "@expenseWithholdingsHelp": {
+    "description": "Help under the supplier withholdings section."
+  },
+  "expenseSummaryTotal": "Total con IVA {total}",
+  "@expenseSummaryTotal": {
+    "description": "Live total under the amount.",
+    "placeholders": {
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "expenseHintDeductible": "Normalmente deducible para tu régimen.",
+  "@expenseHintDeductible": {
+    "description": "Deductibility hint: deductible."
+  },
+  "expenseHintPartial": "Deducible sólo en parte para tu régimen.",
+  "@expenseHintPartial": {
+    "description": "Deductibility hint: partially deductible."
+  },
+  "expenseHintNotDeductible": "Normalmente no es deducible para tu régimen.",
+  "@expenseHintNotDeductible": {
+    "description": "Deductibility hint: not deductible."
+  },
+  "expenseHintNotIsr": "No reduce tu ISR en este régimen.",
+  "@expenseHintNotIsr": {
+    "description": "Deductibility hint: ISR not applicable."
+  },
+  "expenseHintResico": "No reduce tu ISR en RESICO.",
+  "@expenseHintResico": {
+    "description": "Deductibility hint for RESICO PF."
+  },
+  "expenseHintResicoIva": "En RESICO tus gastos no reducen tu ISR, pero el IVA que pagaste sí puede acreditarse.",
+  "@expenseHintResicoIva": {
+    "description": "Second line of the RESICO PF hint (PRD US-E1)."
+  },
+  "expenseHintBlind35": "Con la deducción ciega del 35 % este gasto no cuenta.",
+  "@expenseHintBlind35": {
+    "description": "Hint for 606 with the blind 35 % deduction."
+  },
+  "expenseHintBasis": "Fundamento: {basis}",
+  "@expenseHintBasis": {
+    "description": "Legal basis of the hint, article level.",
+    "placeholders": {
+      "basis": {
+        "type": "String"
+      }
+    }
+  },
+  "expenseCashOverLimit": "Los pagos en efectivo de más de {limit} no son deducibles.",
+  "@expenseCashOverLimit": {
+    "description": "Inline warning: cash above the limit (LISR 27-III).",
+    "placeholders": {
+      "limit": {
+        "type": "String"
+      }
+    }
+  },
+  "expenseCashFuel": "El combustible pagado en efectivo no es deducible.",
+  "@expenseCashFuel": {
+    "description": "Inline warning: fuel paid in cash."
+  },
+  "expenseCashIva": "El IVA de este pago en efectivo no es acreditable.",
+  "@expenseCashIva": {
+    "description": "Inline warning: the IVA of a non-deductible cash payment is not creditable (LIVA 5-II)."
+  },
+  "expenseNoCfdi": "Sin factura, el gasto no es deducible.",
+  "@expenseNoCfdi": {
+    "description": "Inline warning: no CFDI."
+  },
+  "expenseWarningNotIsrInRegime": "En tu régimen este gasto no reduce el ISR, aunque lo marcaste como deducible.",
+  "@expenseWarningNotIsrInRegime": {
+    "description": "Saved-toast note: override against an ISR-not-applicable hint."
+  },
+  "expenseWarningCategoryNotDeductible": "Esta categoría normalmente no es deducible; se guardó como la marcaste.",
+  "@expenseWarningCategoryNotDeductible": {
+    "description": "Saved-toast note: override against a not-deductible hint."
+  },
+  "expenseWarningDuplicateCfdi": "Ya hay otro gasto con este folio fiscal.",
+  "@expenseWarningDuplicateCfdi": {
+    "description": "Saved-toast note: repeated folio fiscal."
+  },
+  "expenseWarningProvisional": "Se usaron los parámetros fiscales del año anterior: los de este año aún no se publican.",
+  "@expenseWarningProvisional": {
+    "description": "Saved-toast note: provisional tax parameters."
+  },
+  "expenseSaved": "Gasto guardado",
+  "@expenseSaved": {
+    "description": "Toast after saving an expense."
+  },
+  "expenseSavedWithWarnings": "Gasto guardado, con un aviso:",
+  "@expenseSavedWithWarnings": {
+    "description": "Toast after saving an expense with warnings; the notes follow."
+  },
+  "expenseUpdated": "Gasto actualizado",
+  "@expenseUpdated": {
+    "description": "Toast after editing an expense."
+  },
+  "expenseUpdatedWithWarnings": "Gasto actualizado, con un aviso:",
+  "@expenseUpdatedWithWarnings": {
+    "description": "Toast after editing an expense with warnings; the notes follow."
+  },
+  "expenseSaveUnreachable": "No se pudo guardar por falta de conexión. Vuelve a tocar Guardar: no se duplicará.",
+  "@expenseSaveUnreachable": {
+    "description": "Form notice: offline; the retry is idempotent."
+  },
+  "expenseSaveIdReused": "Este gasto ya se había guardado con otros datos. Revisa la lista de gastos.",
+  "@expenseSaveIdReused": {
+    "description": "Form notice: 409 id_reused."
+  },
+  "expenseSaveGone": "Este gasto ya no existe: se eliminó en otro lugar.",
+  "@expenseSaveGone": {
+    "description": "Form notice: the edited expense is gone (404)."
+  },
+  "expenseSaveFailed": "No se pudo guardar el gasto. Intenta de nuevo.",
+  "@expenseSaveFailed": {
+    "description": "Form notice: any other failure."
+  },
+  "expenseTrialCapTitle": "Llegaste al límite de gastos de prueba",
+  "@expenseTrialCapTitle": {
+    "description": "Paywall title when the expenses trial cap is spent."
+  },
+  "expenseTrialCapBody": "La prueba incluye 5 gastos y ya los registraste. Para registrar más gastos se necesita un plan. Lo que capturaste sigue en el formulario.",
+  "@expenseTrialCapBody": {
+    "description": "Paywall body when the expenses trial cap is spent."
+  },
+  "expenseDiscardTitle": "¿Descartar este gasto?",
+  "@expenseDiscardTitle": {
+    "description": "Title of the leave-without-saving dialog of the expense form."
+  },
+  "expenseErrorUnknownCategory": "Elige una categoría de la lista.",
+  "@expenseErrorUnknownCategory": {
+    "description": "Server: unknown_category."
+  },
+  "expenseErrorHasCfdiMismatch": "Si capturas el folio fiscal, indica que tienes factura.",
+  "@expenseErrorHasCfdiMismatch": {
+    "description": "Server: has_cfdi_mismatch."
+  },
+  "expenseErrorRateNotValid": "Esta tasa no está vigente en la fecha del gasto.",
+  "@expenseErrorRateNotValid": {
+    "description": "Server: rate_not_valid_on_date."
+  },
+  "expenseErrorWithholdingNotApplicable": "Sólo una persona moral retiene a sus proveedores.",
+  "@expenseErrorWithholdingNotApplicable": {
+    "description": "Server: withholding_not_applicable."
+  },
+  "paymentCash": "Efectivo",
+  "@paymentCash": {
+    "description": "Payment method: cash."
+  },
+  "paymentTransfer": "Transferencia",
+  "@paymentTransfer": {
+    "description": "Payment method: bank transfer."
+  },
+  "paymentCardDebit": "Tarjeta de débito",
+  "@paymentCardDebit": {
+    "description": "Payment method: debit card."
+  },
+  "paymentCardCredit": "Tarjeta de crédito",
+  "@paymentCardCredit": {
+    "description": "Payment method: credit card."
+  },
+  "paymentCheck": "Cheque",
+  "@paymentCheck": {
+    "description": "Payment method: check."
+  },
+  "paymentEWallet": "Monedero electrónico",
+  "@paymentEWallet": {
+    "description": "Payment method: e-wallet."
+  },
+  "paymentOther": "Otro",
+  "@paymentOther": {
+    "description": "Payment method: other."
   }
 }
