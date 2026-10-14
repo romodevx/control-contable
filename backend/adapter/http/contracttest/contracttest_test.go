@@ -314,3 +314,40 @@ func TestServe_regimeOptionKeysAreNotUndeclared(t *testing.T) {
 	})
 	assert.NotEmpty(t, spy.report(), "option values are still validated")
 }
+
+// EstimateTotals.iva and .isr are a $ref to TaxResult with a sibling
+// description (OAS 3.1). The strict validator then sees an object with no
+// declared property and reports every TaxResult field; their properties are
+// exempt from strict mode only. Base validation still checks them against
+// TaxResult, and the rest of the body stays strict.
+func TestServe_refWithSiblingsIsNotUndeclared(t *testing.T) {
+	c := contracttest.Load(t)
+	const estimate = `{"taxpayer_id":"0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80","period":"2026-03","due_date":"2026-04-17",` +
+		`"legend":"Esto es un aproximado. No todos los gastos aplican para tu giro comercial.",` +
+		`"disclaimers":[{"code":"not_tax_advice","severity":"info","text":"t"}],"regimes":[],` +
+		`"totals":{"iva":{"amount_cents":0,"payable_rounded_cents":0,"outcome":"zero"},` +
+		`"isr":{"amount_cents":0,"payable_rounded_cents":0,"outcome":"zero"},` +
+		`"withholdings_to_remit_cents":0,"total_payable_rounded_cents":0%s},` +
+		`"parameter_set":{"fiscal_year":2026,"version":1},` +
+		`"records_fingerprint":"3f6c2a9e8d7b1c4f5a0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a","engine_version":"1.0.0"}`
+	get := func() *http.Request {
+		return httptest.NewRequest(http.MethodGet, "/v1/taxpayers/0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80/estimates", nil)
+	}
+	noStore := []string{"Cache-Control", "no-store"}
+
+	spy := run(t, func(tb testing.TB) {
+		c.Serve(tb, respond(http.StatusOK, jsonType, fmt.Sprintf(estimate, ""), noStore...), get())
+	})
+	assert.Empty(t, spy.report())
+
+	spy = run(t, func(tb testing.TB) {
+		bad := strings.Replace(fmt.Sprintf(estimate, ""), `"outcome":"zero"`, `"outcome":"owed"`, 1)
+		c.Serve(tb, respond(http.StatusOK, jsonType, bad, noStore...), get())
+	})
+	assert.Contains(t, spy.report(), "owed", "TaxResult is still validated")
+
+	spy = run(t, func(tb testing.TB) {
+		c.Serve(tb, respond(http.StatusOK, jsonType, fmt.Sprintf(estimate, `,"debug":"leak"`), noStore...), get())
+	})
+	assert.Contains(t, spy.report(), "debug", "a property next to iva and isr is still strict")
+}
