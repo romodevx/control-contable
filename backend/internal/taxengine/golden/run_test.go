@@ -29,8 +29,8 @@ type fakeStrategy struct {
 	gotParams *taxparams.Params
 }
 
-func (f *fakeStrategy) Key() domain.StrategyKey        { return key612 }
-func (f *fakeStrategy) Treatment() domain.Treatment    { return domain.TreatmentFull }
+func (f *fakeStrategy) Key() domain.StrategyKey     { return key612 }
+func (f *fakeStrategy) Treatment() domain.Treatment { return domain.TreatmentFull }
 func (f *fakeStrategy) RequiredInputs(_ domain.Options, _ domain.Period, facts domain.Facts) []domain.RequiredInput {
 	f.gotFacts = facts
 	return f.required
@@ -58,8 +58,6 @@ func (s *fakeSelector) Select(year int) (taxparams.Selection, error) {
 	s.year = year
 	return taxparams.Selection{Params: s.params, RequestedYear: year}, s.err
 }
-
-func centsPtr(c money.Cents) *money.Cents { return &c }
 
 var cite = []domain.Citation{{Law: "LISR", Article: "106"}}
 
