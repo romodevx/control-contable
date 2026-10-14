@@ -309,8 +309,33 @@ void main() {
       );
     });
 
-    testWidgets('a read-only user deletes; an Undo the server refuses (402) '
-        'opens the paywall', (tester) async {
+    testWidgets('a read-only user deletes with no confirmation and gets the '
+        'same persistent Undo, which restores the income (contract 0.6.1)', (
+      tester,
+    ) async {
+      seed();
+      await harness.pump(tester);
+      harness.container.read(readOnlyAccessProvider.notifier).markReadOnly();
+
+      await tester.tap(_deleteButtonOf('Diseño de logotipo'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(harness.incomes.calls, contains('delete:i-logo'));
+      final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+      expect(snackBar.persist, isTrue);
+
+      await tester.tap(find.text('Deshacer'));
+      await tester.pumpAndSettle();
+
+      expect(harness.incomes.calls, contains('restore:i-logo'));
+      expect(find.text('Diseño de logotipo'), findsOneWidget);
+      expect(find.text(_paywallTitle), findsNothing);
+      expect(harness.container.read(readOnlyAccessProvider), isTrue);
+    });
+
+    testWidgets('an Undo refused for an unexpected reason says so and '
+        'never opens the paywall', (tester) async {
       seed();
       harness.incomes.failNext['restore'] = const ApiEntitlementRequired();
       await harness.pump(tester);
@@ -320,27 +345,9 @@ void main() {
       await tester.tap(find.text('Deshacer'));
       await tester.pumpAndSettle();
 
-      expect(find.text(_paywallTitle), findsOneWidget);
-      expect(harness.container.read(readOnlyAccessProvider), isTrue);
-      expect(find.text('Diseño de logotipo'), findsNothing);
-    });
-
-    testWidgets('once known read-only, a delete is confirmed first and '
-        'offers no Undo', (tester) async {
-      seed();
-      await harness.pump(tester);
-      harness.container.read(readOnlyAccessProvider.notifier).markReadOnly();
-
-      await tester.tap(_deleteButtonOf('Diseño de logotipo'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('¿Eliminar este ingreso?'), findsOneWidget);
-      await tester.tap(find.widgetWithText(FilledButton, 'Eliminar'));
-      await tester.pumpAndSettle();
-
-      expect(harness.incomes.calls, contains('delete:i-logo'));
-      expect(find.text('Ingreso eliminado'), findsOneWidget);
-      expect(find.text('Deshacer'), findsNothing);
+      expect(find.text(_paywallTitle), findsNothing);
+      expect(find.text('No se pudo restaurar el ingreso.'), findsOneWidget);
+      expect(harness.container.read(readOnlyAccessProvider), isFalse);
     });
   });
 

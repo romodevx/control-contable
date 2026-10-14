@@ -41,7 +41,7 @@ abstract interface class IncomesRepository {
   /// Soft-deletes an income (allowed while read-only).
   Future<void> delete({required String taxpayerId, required String incomeId});
 
-  /// Undoes a delete (never consumes a trial slot; `402` while read-only).
+  /// Undoes a delete (never consumes a trial slot; allowed while read-only).
   Future<Income> restore({
     required String taxpayerId,
     required String incomeId,

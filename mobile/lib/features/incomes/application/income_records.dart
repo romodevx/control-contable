@@ -8,8 +8,8 @@ import 'package:control_contable/features/incomes/application/income_list.dart';
 import 'package:control_contable/features/incomes/data/incomes_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// The writes of the income list: delete (allowed while read-only) and its
-/// Undo (restore: never consumes a trial slot, `402` while read-only).
+/// The writes of the income list: delete and its Undo (restore), both
+/// allowed while read-only; restore never consumes a trial slot.
 /// After each one every income list reloads, so the totals and the other
 /// regime filters follow the server.
 class IncomeRecords {
@@ -19,10 +19,6 @@ class IncomeRecords {
   final Ref _ref;
 
   IncomesRepository get _repository => _ref.read(incomesRepositoryProvider);
-
-  /// Whether the server already said this account is read-only: a delete
-  /// is then one-way (its Undo would be refused).
-  bool get knownReadOnly => _ref.read(readOnlyAccessProvider);
 
   /// Records [income] for [taxpayerId]; every list reloads. A `402`
   /// without a trial cap marks the session read-only (a spent trial cap
@@ -60,7 +56,8 @@ class IncomeRecords {
   }
 
   /// Restores [incomes] in order; stops at the first refusal and throws
-  /// it. A `402` marks the session read-only.
+  /// it. Allowed while read-only (contract 0.6.1), so no answer here marks
+  /// the session.
   Future<void> restore(List<Income> incomes) async {
     try {
       for (final income in incomes) {
@@ -69,9 +66,6 @@ class IncomeRecords {
           incomeId: income.id,
         );
       }
-    } on ApiEntitlementRequired {
-      _ref.read(readOnlyAccessProvider.notifier).markReadOnly();
-      rethrow;
     } finally {
       _ref.invalidate(incomeListProvider);
     }

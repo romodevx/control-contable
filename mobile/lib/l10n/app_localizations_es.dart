@@ -946,13 +946,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudo restaurar: el régimen ya no cubre la fecha del ingreso.';
 
   @override
-  String get incomesDeleteOneWayTitle => '¿Eliminar este ingreso?';
-
-  @override
-  String get incomesDeleteOneWayBody =>
-      'Tu cuenta es de solo consulta: después no podrás deshacerlo.';
-
-  @override
   String get counterpartyPersonaFisica => 'Persona física';
 
   @override

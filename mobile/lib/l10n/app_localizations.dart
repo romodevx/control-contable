@@ -1620,18 +1620,6 @@ abstract class AppLocalizations {
   /// **'No se pudo restaurar: el régimen ya no cubre la fecha del ingreso.'**
   String get incomesRestoreRegimeEnded;
 
-  /// Confirmation of a delete a read-only account cannot undo.
-  ///
-  /// In es, this message translates to:
-  /// **'¿Eliminar este ingreso?'**
-  String get incomesDeleteOneWayTitle;
-
-  /// Body of the one-way delete confirmation.
-  ///
-  /// In es, this message translates to:
-  /// **'Tu cuenta es de solo consulta: después no podrás deshacerlo.'**
-  String get incomesDeleteOneWayBody;
-
   /// Who paid: an individual.
   ///
   /// In es, this message translates to:

@@ -1241,14 +1241,6 @@
   "@incomesRestoreRegimeEnded": {
     "description": "Toast when Undo failed with 422 regime_not_active."
   },
-  "incomesDeleteOneWayTitle": "¿Eliminar este ingreso?",
-  "@incomesDeleteOneWayTitle": {
-    "description": "Confirmation of a delete a read-only account cannot undo."
-  },
-  "incomesDeleteOneWayBody": "Tu cuenta es de solo consulta: después no podrás deshacerlo.",
-  "@incomesDeleteOneWayBody": {
-    "description": "Body of the one-way delete confirmation."
-  },
   "counterpartyPersonaFisica": "Persona física",
   "@counterpartyPersonaFisica": {
     "description": "Who paid: an individual."
