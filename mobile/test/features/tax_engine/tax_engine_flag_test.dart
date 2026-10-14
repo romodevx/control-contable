@@ -56,8 +56,11 @@ void main() {
 
     expect(find.text('Ver estimado del mes'), findsNothing);
     // M5-29 QA: the home placeholder promised an estimate the hidden module
-    // never shows.
-    expect(find.textContaining('estimado'), findsNothing);
+    // never shows ("Estimado", "estimada" included).
+    expect(
+      find.textContaining(RegExp('estimad', caseSensitive: false)),
+      findsNothing,
+    );
     for (final location in _locations) {
       harness.container.read(appRouterProvider).go(location);
       await tester.pumpAndSettle();
