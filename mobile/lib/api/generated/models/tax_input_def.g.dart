@@ -23,6 +23,8 @@ Map<String, dynamic> _$TaxInputDefToJson(_TaxInputDef instance) =>
 
 const _$TaxInputDefKindEnumMap = {
   TaxInputDefKind.money: 'money',
+  TaxInputDefKind.moneyMonthly: 'money_monthly',
   TaxInputDefKind.rate: 'rate',
+  TaxInputDefKind.boolean: 'boolean',
   TaxInputDefKind.$unknown: r'$unknown',
 };

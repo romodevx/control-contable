@@ -54,7 +54,7 @@ abstract class ExpensesClient {
   ///
   /// `FieldError.code` values beyond JSON Schema keywords: `category_code` → `unknown_category`; `cfdi_uuid` → `has_cfdi_mismatch` (a folio fiscal with `has_cfdi: false`); `paid_on` → `out_of_range` (before 2022-01-01 or after today). `422 business_rule_violation` details: `regime_code` → `regime_not_active`; `taxpayerId` → `taxpayer_archived`; `iva_rate` → `rate_not_valid_on_date`; `iva_cents` → `iva_amount_mismatch`; `isr_withheld_cents` / `iva_withheld_cents` → `withholding_not_applicable` (only a persona moral withholds from its suppliers), `withholding_exceeds_base`.
   ///
-  /// Success bodies carry non-blocking `warnings`: `cash_over_threshold` on `payment_method`, `no_cfdi` on `has_cfdi`, `not_isr_deductible_in_regime` and `category_not_deductible` on `deductible` (an override to `true` against the hint), `duplicate_cfdi_uuid` on `cfdi_uuid`.
+  /// Success bodies carry non-blocking `warnings`: `cash_over_threshold` on `payment_method`, `no_cfdi` on `has_cfdi`, `not_isr_deductible_in_regime` and `category_not_deductible` on `deductible` (an override to `true` against the hint), `duplicate_cfdi_uuid` on `cfdi_uuid`, `iva_not_creditable_cash_payment` on `payment_method` (a cash payment over the limit claimed as deductible: the claim stands for ISR, its IVA is not creditable, LIVA 5 fr. II ⚠️; added in 0.6.0, append-only).
   @POST('/v1/taxpayers/{taxpayerId}/expenses')
   Future<Expense> createExpense({
     @Path('taxpayerId') required Uuid taxpayerId,

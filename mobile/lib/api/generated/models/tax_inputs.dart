@@ -18,6 +18,8 @@ abstract class TaxInputs with _$TaxInputs {
     @JsonKey(name: 'regime_code') required RegimeCode regimeCode,
     @JsonKey(name: 'fiscal_year') required FiscalYear fiscalYear,
     required List<TaxInputDef> definitions,
+
+    /// Ordered by the key's position in `definitions`, then `month`.
     required List<TaxInputValue> values,
   }) = _TaxInputs;
 

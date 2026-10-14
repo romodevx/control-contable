@@ -6,10 +6,12 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 @JsonEnum()
 enum BreakdownLineTax {
-  @JsonValue('iva')
-  iva('iva'),
   @JsonValue('isr')
   isr('isr'),
+  @JsonValue('iva')
+  iva('iva'),
+  @JsonValue('withholding')
+  withholding('withholding'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);

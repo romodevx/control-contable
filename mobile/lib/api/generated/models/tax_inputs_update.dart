@@ -9,6 +9,7 @@ import 'tax_input_value.dart';
 part 'tax_inputs_update.freezed.dart';
 part 'tax_inputs_update.g.dart';
 
+/// The complete set of values for the regime and fiscal year (replace, not merge).
 @Freezed()
 abstract class TaxInputsUpdate with _$TaxInputsUpdate {
   const factory TaxInputsUpdate({required List<TaxInputValue> values}) =

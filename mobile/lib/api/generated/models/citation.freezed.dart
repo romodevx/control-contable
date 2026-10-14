@@ -16,7 +16,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Citation {
 
- String get law; String get article;@JsonKey(includeIfNull: false) String? get note;
+ String get law; String get article;/// Paragraph, fraction or remark, e.g. "párrafo quinto".
+@JsonKey(includeIfNull: true) String? get note;
 /// Create a copy of Citation
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -54,7 +55,7 @@ abstract mixin class $CitationCopyWith<$Res>  {
   factory $CitationCopyWith(Citation value, $Res Function(Citation) _then) = _$CitationCopyWithImpl;
 @useResult
 $Res call({
- String law, String article,@JsonKey(includeIfNull: false) String? note
+ String law, String article,@JsonKey(includeIfNull: true) String? note
 });
 
 
@@ -161,7 +162,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String law,  String article, @JsonKey(includeIfNull: false)  String? note)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String law,  String article, @JsonKey(includeIfNull: true)  String? note)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Citation() when $default != null:
 return $default(_that.law,_that.article,_that.note);case _:
@@ -182,7 +183,7 @@ return $default(_that.law,_that.article,_that.note);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String law,  String article, @JsonKey(includeIfNull: false)  String? note)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String law,  String article, @JsonKey(includeIfNull: true)  String? note)  $default,) {final _that = this;
 switch (_that) {
 case _Citation():
 return $default(_that.law,_that.article,_that.note);case _:
@@ -202,7 +203,7 @@ return $default(_that.law,_that.article,_that.note);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String law,  String article, @JsonKey(includeIfNull: false)  String? note)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String law,  String article, @JsonKey(includeIfNull: true)  String? note)?  $default,) {final _that = this;
 switch (_that) {
 case _Citation() when $default != null:
 return $default(_that.law,_that.article,_that.note);case _:
@@ -217,12 +218,13 @@ return $default(_that.law,_that.article,_that.note);case _:
 @JsonSerializable()
 
 class _Citation implements Citation {
-  const _Citation({required this.law, required this.article, @JsonKey(includeIfNull: false) this.note});
+  const _Citation({required this.law, required this.article, @JsonKey(includeIfNull: true) required this.note});
   factory _Citation.fromJson(Map<String, dynamic> json) => _$CitationFromJson(json);
 
 @override final  String law;
 @override final  String article;
-@override@JsonKey(includeIfNull: false) final  String? note;
+/// Paragraph, fraction or remark, e.g. "párrafo quinto".
+@override@JsonKey(includeIfNull: true) final  String? note;
 
 /// Create a copy of Citation
 /// with the given fields replaced by the non-null parameter values.
@@ -259,7 +261,7 @@ abstract mixin class _$CitationCopyWith<$Res> implements $CitationCopyWith<$Res>
   factory _$CitationCopyWith(_Citation value, $Res Function(_Citation) _then) = __$CitationCopyWithImpl;
 @override @useResult
 $Res call({
- String law, String article,@JsonKey(includeIfNull: false) String? note
+ String law, String article,@JsonKey(includeIfNull: true) String? note
 });
 
 

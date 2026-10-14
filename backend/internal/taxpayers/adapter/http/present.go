@@ -198,7 +198,7 @@ func toWarnings(warnings []usecase.Warning) *[]gen.Warning {
 	}
 	out := make([]gen.Warning, 0, len(warnings))
 	for _, w := range warnings {
-		out = append(out, gen.Warning{Code: w.Code, Field: w.Field, Message: w.Message})
+		out = append(out, gen.Warning{Code: gen.WarningCode(w.Code), Field: w.Field, Message: w.Message})
 	}
 	return &out
 }

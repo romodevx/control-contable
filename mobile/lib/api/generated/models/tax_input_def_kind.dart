@@ -8,8 +8,12 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 enum TaxInputDefKind {
   @JsonValue('money')
   money('money'),
+  @JsonValue('money_monthly')
+  moneyMonthly('money_monthly'),
   @JsonValue('rate')
   rate('rate'),
+  @JsonValue('boolean')
+  boolean('boolean'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);
