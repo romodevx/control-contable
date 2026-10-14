@@ -107,7 +107,8 @@ Some modules read another module's data and declare it as a **prerequisite**
 (`flags.Prerequisites` in `backend/internal/platform/flags/prerequisites.go`): such a module is
 effectively ON only while its own flag and every prerequisite's are ON. Otherwise its routes
 answer `404` and `GET /v1/flags` omits it; `flags list` shows it as `hidden` with a `REQUIRES`
-column and says which flag to turn ON. Today: `module_tax_engine` requires `module_taxpayers`.
+column and says which flag to turn ON. Today `module_incomes`, `module_expenses` and
+`module_tax_engine` require `module_taxpayers`.
 Every seeded preset includes the prerequisites of its modules (integration-tested).
 
 A running API sees a change within 5 s (the flag cache TTL). A flag turned ON for a module that
@@ -120,7 +121,9 @@ Enabling a flag in a shared environment requires the module's tech-lead and secu
 |---|---|---|---|
 | M1 Auth & Account | `module_auth` | Built; gates M1-16 and M1-17 passed. **OFF in shared environments** until the [enable checklist](docs/runbooks/auth.md#6-enable-module_auth-in-a-shared-environment) holds (email provider M1-06 pending) | [module](docs/modules/auth.md), [runbook](docs/runbooks/auth.md) |
 | M2 Taxpayers & Onboarding | `module_taxpayers` | Built; gates M2-13 and M2-14 passed. **OFF in shared environments** until the [enable checklist](docs/runbooks/taxpayers.md#5-enable-module_taxpayers-in-a-shared-environment) holds (needs `module_auth` enabled first) | [module](docs/modules/taxpayers.md), [runbook](docs/runbooks/taxpayers.md) |
-| M3–M9 | `module_*` | In progress or not built | [MODULES](docs/project-specs/MODULES.md), [PLAN](docs/project-specs/PLAN-control-contable.md) |
+| M3 Incomes | `module_incomes` | Built; gates M3-12 and M3-13 passed. **OFF in shared environments** until the [enable checklist](docs/runbooks/incomes-expenses.md#5-enable-module_incomes-and-module_expenses-in-a-shared-environment) holds (needs `module_taxpayers`) | [module](docs/modules/incomes.md), [runbook](docs/runbooks/incomes-expenses.md) |
+| M4 Expenses | `module_expenses` | Built; gates M4-13 and M4-14 passed. **OFF in shared environments** until the same [enable checklist](docs/runbooks/incomes-expenses.md#5-enable-module_incomes-and-module_expenses-in-a-shared-environment) holds (needs `module_taxpayers`) | [module](docs/modules/expenses.md), [runbook](docs/runbooks/incomes-expenses.md) |
+| M5–M9 | `module_*` | In progress or not built | [MODULES](docs/project-specs/MODULES.md), [PLAN](docs/project-specs/PLAN-control-contable.md) |
 
 ## API reference
 
