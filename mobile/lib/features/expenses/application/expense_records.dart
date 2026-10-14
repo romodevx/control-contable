@@ -5,6 +5,7 @@ import 'package:control_contable/core/access/read_only_access.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/records/record_list.dart';
 import 'package:control_contable/core/records/stacked_undo.dart';
+import 'package:control_contable/core/session/session_scoped.dart';
 import 'package:control_contable/features/expenses/application/expense_list.dart';
 import 'package:control_contable/features/expenses/data/expenses_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -103,10 +104,14 @@ final expenseRecordsProvider = Provider<ExpenseRecords>(
 );
 
 /// How the last expense recorded in this session was paid: the next form
-/// starts there (OQ-E6: debit card the first time). Memory only.
+/// starts there (OQ-E6: debit card the first time). Memory only, forgotten
+/// on sign-out.
 class LastPaymentMethodNotifier extends Notifier<PaymentMethod> {
   @override
-  PaymentMethod build() => PaymentMethod.cardDebit;
+  PaymentMethod build() {
+    forgetOnSignOut(ref);
+    return PaymentMethod.cardDebit;
+  }
 
   /// [expense] was just recorded: its payment method starts the next form.
   void rememberMethodOf(ExpenseCreate expense) => state = expense.paymentMethod;
@@ -121,10 +126,14 @@ lastPaymentMethodProvider =
     );
 
 /// How many expenses of each category this session recorded: the picker
-/// lists the most used first (MODULE-expenses §7). Memory only.
+/// lists the most used first (MODULE-expenses §7). Memory only, forgotten
+/// on sign-out.
 class CategoryUsageNotifier extends Notifier<Map<String, int>> {
   @override
-  Map<String, int> build() => const {};
+  Map<String, int> build() {
+    forgetOnSignOut(ref);
+    return const {};
+  }
 
   /// An expense of [categoryCode] was just recorded.
   void used(String categoryCode) =>
@@ -140,7 +149,7 @@ categoryUsageProvider =
     );
 
 /// The expenses the Undo toast would restore (it outlives the list screen).
-final expensesUndoProvider = Provider<StackedUndo<Expense>>(
-  (ref) => StackedUndo<Expense>(),
-  name: 'expensesUndoProvider',
-);
+final expensesUndoProvider = Provider<StackedUndo<Expense>>((ref) {
+  forgetOnSignOut(ref);
+  return StackedUndo<Expense>();
+}, name: 'expensesUndoProvider');
