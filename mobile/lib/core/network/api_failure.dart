@@ -39,11 +39,26 @@ final class ApiInvalidPassword extends ApiFailure {
 }
 
 /// `402 entitlement_required`: the user is read-only (no running trial, no
-/// plan). Reads, archive and delete still work; this write does not.
+/// plan), or, when [trialCapOf] names a cap, the trial's records of that
+/// kind are spent (the account is not read-only). Reads, archive and delete
+/// still work; this write does not.
 final class ApiEntitlementRequired extends ApiFailure {
-  /// The failure.
-  const new();
+  /// The failure with the envelope's [details] (none for read-only).
+  const new({this.details = const []});
+
+  /// The envelope's `error.details`.
+  final List<FieldError> details;
+
+  /// The spent trial cap (`incomes_remaining`, `expenses_remaining`), or
+  /// `null` for a read-only account.
+  String? get trialCapOf => details
+      .where((detail) => detail.code == _trialCapReached)
+      .firstOrNull
+      ?.field;
 }
+
+/// `details[].code` of a `402` whose trial cap is spent.
+const String _trialCapReached = 'trial_cap_reached';
 
 /// `409` or `422`: the server understood the request and refused it by a
 /// rule ([code]: `rfc_already_registered`, `invalid_regime_combination`,
@@ -133,7 +148,9 @@ ApiFailure apiFailureFrom(
   return switch (response?.statusCode) {
     HttpStatus.badRequest => ApiValidationFailure(_details(response!.data)),
     HttpStatus.unauthorized => const ApiUnauthorized(),
-    HttpStatus.paymentRequired => const ApiEntitlementRequired(),
+    HttpStatus.paymentRequired => ApiEntitlementRequired(
+      details: _details(response!.data),
+    ),
     HttpStatus.conflict || HttpStatus.unprocessableEntity => ApiRejected(
       code: _codeOf(response!.data),
       details: _details(response.data),

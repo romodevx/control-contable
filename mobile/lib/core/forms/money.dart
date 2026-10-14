@@ -33,6 +33,17 @@ int? parseCentavos(String text) {
       int.parse(centavos);
 }
 
+/// The minus sign of a negative amount (U+2212, never a hyphen: DESIGN
+/// "Numbers").
+const String _minus = '−';
+
+/// [centavos] as an es-MX currency amount: `$1,234.50`, `−$2,066.67`.
+/// Integer arithmetic only.
+String formatPesos(int centavos) {
+  final sign = centavos < 0 ? _minus : '';
+  return '$sign\$${formatCentavos(centavos.abs())}';
+}
+
 /// [centavos] in the es-MX canonical form, without the currency sign:
 /// `1,234.50`. Integer arithmetic only: no binary-float rounding.
 String formatCentavos(int centavos) {
