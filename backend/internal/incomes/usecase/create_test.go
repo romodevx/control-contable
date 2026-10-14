@@ -277,8 +277,10 @@ func TestCreate_DateOutsideTheLoadedParameters(t *testing.T) {
 	in := us1(t)
 	in.Dates = domain.Dates{CollectedOn: date(t, "2025-06-10")}
 	_, err := h.uc.Create(t.Context(), userA, create(incomeID, taxpayerA, in))
-	requireApp(t, err, apperr.CodeValidationFailed, "collected_on", "out_of_range")
+	fields := requireApp(t, err, apperr.CodeValidationFailed, "collected_on", "out_of_range")
 	require.ErrorIs(t, err, fiscal.ErrOutOfRange)
+	assert.Equal(t, "The date cannot be in the future nor before 2026.", fields[0].Message,
+		"the served floor is the first parameter set, 2026-01-01 (PR #97 FU-2)")
 	assert.Zero(t, h.access.reserves)
 }
 
