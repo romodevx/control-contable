@@ -20,8 +20,12 @@ expected:
   taxes: [isr]
   isr: "0.00"
   lines:
-    - {tax: isr, code: isr.income_ytd, amount: "30000.00"}
-    - {tax: isr, code: isr.deductions_ytd, amount: "45000.00"}
-    - {tax: isr, code: isr.base, amount: "-15000.00"}
-    - {tax: isr, code: isr.payable, amount: "0.00"}
+    - {tax: isr, code: isr.income_ytd, op: input, amount: "30000.00"}
+    - {tax: isr, code: isr.deductions_ytd, op: subtract, amount: "45000.00"}
+    - {tax: isr, code: isr.base, op: result, amount: "-15000.00"}
+    # No positive base, no tariff lookup: the ISR caused is 0 (LISR 106 ¶1).
+    - {tax: isr, code: isr.caused, op: input, amount: "0.00"}
+    - {tax: isr, code: isr.prior_payments, op: subtract, amount: "0.00"}
+    - {tax: isr, code: isr.withheld_by_moral, op: subtract, amount: "0.00"}
+    - {tax: isr, code: isr.payable, op: result, amount: "0.00"}
   disclaimers: [deductibility_claimed]

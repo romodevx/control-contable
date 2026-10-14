@@ -116,6 +116,7 @@ type ivaDoc struct {
 type lineDoc struct {
 	Tax    string    `yaml:"tax"`
 	Code   string    `yaml:"code"`
+	Op     string    `yaml:"op"`
 	Amount centsText `yaml:"amount"`
 }
 
@@ -438,9 +439,9 @@ func (cv *converter) lines(e Expected, docs []lineDoc) []LineWant {
 	}
 	lines := make([]LineWant, 0, len(docs))
 	for i, d := range docs {
-		l := LineWant{Tax: domain.TaxKind(d.Tax), Code: domain.LineCode(d.Code), Amount: d.Amount.cents}
-		if !e.asserts(l.Tax) || strings.TrimSpace(d.Code) == "" {
-			cv.fail("expected.lines[%d]: tax %q must be asserted and code set", i, d.Tax)
+		l := LineWant{Tax: domain.TaxKind(d.Tax), Code: domain.LineCode(d.Code), Op: domain.Operation(d.Op), Amount: d.Amount.cents}
+		if !e.asserts(l.Tax) || strings.TrimSpace(d.Code) == "" || !l.Op.Valid() {
+			cv.fail("expected.lines[%d]: tax %q must be asserted, code set and op a contract operation (got %q)", i, d.Tax, d.Op)
 		}
 		lines = append(lines, l)
 	}

@@ -30,8 +30,8 @@ expected:
   taxes: [isr]
   isr: "0.00"
   lines:
-    - {tax: isr, code: isr.platform_income, amount: "30000.00"}
-    - {tax: isr, code: isr.platform_rate, amount: "750.00"}
-    - {tax: isr, code: isr.withheld_by_platform, amount: "750.00"}
-    - {tax: isr, code: isr.payable, amount: "0.00"}
+    - {tax: isr, code: isr.platform_income, op: input, amount: "30000.00"}
+    - {tax: isr, code: isr.platform_rate, op: multiply, amount: "750.00"}
+    - {tax: isr, code: isr.withheld_by_platform, op: subtract, amount: "750.00"}
+    - {tax: isr, code: isr.payable, op: result, amount: "0.00"}
   cpa_topics: [platform_definitive_iva]

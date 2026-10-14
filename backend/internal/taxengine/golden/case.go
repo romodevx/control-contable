@@ -52,6 +52,7 @@ type Expected struct {
 type LineWant struct {
 	Tax    domain.TaxKind
 	Code   domain.LineCode
+	Op     domain.Operation // a subtract line shows a positive amount: the op carries the sign
 	Amount money.Cents
 }
 

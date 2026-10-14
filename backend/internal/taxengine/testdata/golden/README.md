@@ -43,7 +43,7 @@ expected:
   iva: {charged_collected, creditable_paid, withheld_from_taxpayer, definitive_excluded, net}
   withheld_to_remit: "5333.33"    # needs withholding in taxes
   lines:                          # every line of the asserted taxes, in order ([] if none)
-    - {tax: isr, code: isr.payable, amount: "150.96"}
+    - {tax: isr, code: isr.payable, op: result, amount: "150.96"}
   missing_inputs: [{key: prior_provisional_payments, months: [1, 2]}]   # absent = none
   cpa_topics: [rif_reduction]                                           # absent = none
   disclaimers: [deductibility_claimed]                                  # absent = none

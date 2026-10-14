@@ -21,10 +21,10 @@ expected:
   taxes: [isr]
   isr: "50000.00"
   lines:
-    - {tax: isr, code: isr.income_ytd, amount: "1500000.00"}
-    - {tax: isr, code: isr.deductions_ytd, amount: "1100000.00"}
-    - {tax: isr, code: isr.base, amount: "400000.00"}
-    - {tax: isr, code: isr.rate, amount: "120000.00"}
-    - {tax: isr, code: isr.prior_payments, amount: "70000.00"}
-    - {tax: isr, code: isr.payable, amount: "50000.00"}
+    - {tax: isr, code: isr.income_ytd, op: input, amount: "1500000.00"}
+    - {tax: isr, code: isr.deductions_ytd, op: subtract, amount: "1100000.00"}
+    - {tax: isr, code: isr.base, op: result, amount: "400000.00"}
+    - {tax: isr, code: isr.rate, op: multiply, amount: "120000.00"}
+    - {tax: isr, code: isr.prior_payments, op: subtract, amount: "70000.00"}
+    - {tax: isr, code: isr.payable, op: result, amount: "50000.00"}
   disclaimers: [deductibility_claimed]

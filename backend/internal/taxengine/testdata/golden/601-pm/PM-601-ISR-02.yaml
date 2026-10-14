@@ -19,5 +19,5 @@ expected:
   taxes: [isr]
   isr: "0.00"
   lines:
-    - {tax: isr, code: isr.first_fiscal_year, amount: "0.00"}
+    - {tax: isr, code: isr.first_fiscal_year, op: info, amount: "0.00"}
   disclaimers: [no_coefficient_first_year]

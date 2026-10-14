@@ -32,12 +32,12 @@ expected:
   taxes: [isr]
   isr: "36000.00"
   lines:
-    - {tax: isr, code: isr.income_ytd, amount: "5000000.00"}
-    - {tax: isr, code: isr.coeficiente, amount: "750000.00"}
-    - {tax: isr, code: isr.ptu, amount: "30000.00"}
-    - {tax: isr, code: isr.prior_year_losses, amount: "0.00"}
-    - {tax: isr, code: isr.base, amount: "720000.00"}
-    - {tax: isr, code: isr.rate, amount: "216000.00"}
-    - {tax: isr, code: isr.prior_payments, amount: "180000.00"}
-    - {tax: isr, code: isr.interest_withholding, amount: "0.00"}
-    - {tax: isr, code: isr.payable, amount: "36000.00"}
+    - {tax: isr, code: isr.income_ytd, op: input, amount: "5000000.00"}
+    - {tax: isr, code: isr.coeficiente, op: multiply, amount: "750000.00"}
+    - {tax: isr, code: isr.ptu, op: subtract, amount: "30000.00"}
+    - {tax: isr, code: isr.prior_year_losses, op: subtract, amount: "0.00"}
+    - {tax: isr, code: isr.base, op: result, amount: "720000.00"}
+    - {tax: isr, code: isr.rate, op: multiply, amount: "216000.00"}
+    - {tax: isr, code: isr.prior_payments, op: subtract, amount: "180000.00"}
+    - {tax: isr, code: isr.interest_withholding, op: subtract, amount: "0.00"}
+    - {tax: isr, code: isr.payable, op: result, amount: "36000.00"}

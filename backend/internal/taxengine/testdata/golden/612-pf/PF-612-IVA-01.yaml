@@ -31,8 +31,8 @@ expected:
     definitive_excluded: "0.00"
     net: "2133.33"
   lines:
-    - {tax: iva, code: iva.charged_collected, amount: "4800.00"}
-    - {tax: iva, code: iva.creditable_paid, amount: "1600.00"}
-    - {tax: iva, code: iva.withheld_from_taxpayer, amount: "1066.67"}
-    - {tax: iva, code: iva.net, amount: "2133.33"}
+    - {tax: iva, code: iva.charged_collected, op: input, amount: "4800.00"}
+    - {tax: iva, code: iva.creditable_paid, op: subtract, amount: "1600.00"}
+    - {tax: iva, code: iva.withheld_from_taxpayer, op: subtract, amount: "1066.67"}
+    - {tax: iva, code: iva.net, op: result, amount: "2133.33"}
   disclaimers: [deductibility_claimed]

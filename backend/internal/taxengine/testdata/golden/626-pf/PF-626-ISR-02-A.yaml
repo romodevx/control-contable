@@ -15,6 +15,6 @@ expected:
   taxes: [isr]
   isr: "250.00"
   lines:
-    - {tax: isr, code: isr.income_month, amount: "25000.00"}
-    - {tax: isr, code: isr.resico_rate, amount: "250.00"}
-    - {tax: isr, code: isr.payable, amount: "250.00"}
+    - {tax: isr, code: isr.income_month, op: input, amount: "25000.00"}
+    - {tax: isr, code: isr.resico_rate, op: multiply, amount: "250.00"}
+    - {tax: isr, code: isr.payable, op: result, amount: "250.00"}

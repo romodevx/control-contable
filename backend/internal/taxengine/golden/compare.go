@@ -72,7 +72,7 @@ func compareLines(want Expected, lines []domain.Line) []string {
 	got := make([]LineWant, 0, len(lines))
 	for _, l := range lines {
 		if want.asserts(l.Tax) {
-			got = append(got, LineWant{Tax: l.Tax, Code: l.Code, Amount: l.Amount})
+			got = append(got, LineWant{Tax: l.Tax, Code: l.Code, Op: l.Operation, Amount: l.Amount})
 		}
 	}
 	var out []string
@@ -89,8 +89,8 @@ func compareLines(want Expected, lines []domain.Line) []string {
 	return out
 }
 
-// String renders "isr isr.base 60000.00".
-func (l LineWant) String() string { return fmt.Sprintf("%s %s %s", l.Tax, l.Code, l.Amount) }
+// String renders "isr isr.base result 60000.00".
+func (l LineWant) String() string { return fmt.Sprintf("%s %s %s %s", l.Tax, l.Code, l.Op, l.Amount) }
 
 func uncited(lines []domain.Line) []string {
 	var out []string

@@ -23,7 +23,7 @@ expected:
     definitive_excluded: "0.00"
     net: "0.00"
   lines:
-    - {tax: iva, code: iva.charged_collected, amount: "0.00"}
-    - {tax: iva, code: iva.creditable_paid, amount: "0.00"}
-    - {tax: iva, code: iva.withheld_from_taxpayer, amount: "0.00"}
-    - {tax: iva, code: iva.net, amount: "0.00"}
+    - {tax: iva, code: iva.charged_collected, op: input, amount: "0.00"}
+    - {tax: iva, code: iva.creditable_paid, op: subtract, amount: "0.00"}
+    - {tax: iva, code: iva.withheld_from_taxpayer, op: subtract, amount: "0.00"}
+    - {tax: iva, code: iva.net, op: result, amount: "0.00"}

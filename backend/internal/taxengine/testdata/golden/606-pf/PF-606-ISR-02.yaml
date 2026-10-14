@@ -17,12 +17,12 @@ expected:
   taxes: [isr]
   isr: "-924.00"
   lines:
-    - {tax: isr, code: isr.rent_month, amount: "20000.00"}
-    - {tax: isr, code: isr.blind_deduction, amount: "7000.00"}
-    - {tax: isr, code: isr.predial, amount: "0.00"}
-    - {tax: isr, code: isr.base, amount: "13000.00"}
-    - {tax: isr, code: isr.tariff_row, amount: "1011.68"}
-    - {tax: isr, code: isr.tariff_excess, amount: "64.32"}
-    - {tax: isr, code: isr.caused, amount: "1076.00"}
-    - {tax: isr, code: isr.withheld_by_moral, amount: "2000.00"}
-    - {tax: isr, code: isr.payable, amount: "-924.00"}
+    - {tax: isr, code: isr.rent_month, op: input, amount: "20000.00"}
+    - {tax: isr, code: isr.blind_deduction, op: subtract, amount: "7000.00"}
+    - {tax: isr, code: isr.predial, op: subtract, amount: "0.00"}
+    - {tax: isr, code: isr.base, op: result, amount: "13000.00"}
+    - {tax: isr, code: isr.tariff_row, op: lookup, amount: "1011.68"}
+    - {tax: isr, code: isr.tariff_excess, op: multiply, amount: "64.32"}
+    - {tax: isr, code: isr.caused, op: result, amount: "1076.00"}
+    - {tax: isr, code: isr.withheld_by_moral, op: subtract, amount: "2000.00"}
+    - {tax: isr, code: isr.payable, op: result, amount: "-924.00"}

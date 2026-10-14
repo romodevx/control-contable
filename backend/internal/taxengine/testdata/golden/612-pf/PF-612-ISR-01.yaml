@@ -27,13 +27,13 @@ expected:
   taxes: [isr]
   isr: "150.96"
   lines:
-    - {tax: isr, code: isr.income_ytd, amount: "90000.00"}
-    - {tax: isr, code: isr.deductions_ytd, amount: "30000.00"}
-    - {tax: isr, code: isr.base, amount: "60000.00"}
-    - {tax: isr, code: isr.tariff_row, amount: "5570.52"}
-    - {tax: isr, code: isr.tariff_excess, amount: "1580.44"}
-    - {tax: isr, code: isr.caused, amount: "7150.96"}
-    - {tax: isr, code: isr.prior_payments, amount: "4000.00"}
-    - {tax: isr, code: isr.withheld_by_moral, amount: "3000.00"}
-    - {tax: isr, code: isr.payable, amount: "150.96"}
+    - {tax: isr, code: isr.income_ytd, op: input, amount: "90000.00"}
+    - {tax: isr, code: isr.deductions_ytd, op: subtract, amount: "30000.00"}
+    - {tax: isr, code: isr.base, op: result, amount: "60000.00"}
+    - {tax: isr, code: isr.tariff_row, op: lookup, amount: "5570.52"}
+    - {tax: isr, code: isr.tariff_excess, op: multiply, amount: "1580.44"}
+    - {tax: isr, code: isr.caused, op: result, amount: "7150.96"}
+    - {tax: isr, code: isr.prior_payments, op: subtract, amount: "4000.00"}
+    - {tax: isr, code: isr.withheld_by_moral, op: subtract, amount: "3000.00"}
+    - {tax: isr, code: isr.payable, op: result, amount: "150.96"}
   disclaimers: [deductibility_claimed]

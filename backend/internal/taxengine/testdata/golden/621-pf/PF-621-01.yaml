@@ -25,13 +25,13 @@ expected:
   taxes: [isr]
   isr: "2383.66"
   lines:
-    - {tax: isr, code: isr.income_bimester, amount: "100000.00"}
-    - {tax: isr, code: isr.deductions_bimester, amount: "60000.00"}
-    - {tax: isr, code: isr.base, amount: "40000.00"}
-    - {tax: isr, code: isr.tariff_row, amount: "3713.68"}
-    - {tax: isr, code: isr.tariff_excess, amount: "1053.63"}
-    - {tax: isr, code: isr.caused, amount: "4767.31"}
-    - {tax: isr, code: isr.rif_reduction, amount: "2383.66"}
-    - {tax: isr, code: isr.payable, amount: "2383.66"}
+    - {tax: isr, code: isr.income_bimester, op: input, amount: "100000.00"}
+    - {tax: isr, code: isr.deductions_bimester, op: subtract, amount: "60000.00"}
+    - {tax: isr, code: isr.base, op: result, amount: "40000.00"}
+    - {tax: isr, code: isr.tariff_row, op: lookup, amount: "3713.68"}
+    - {tax: isr, code: isr.tariff_excess, op: multiply, amount: "1053.63"}
+    - {tax: isr, code: isr.caused, op: result, amount: "4767.31"}
+    - {tax: isr, code: isr.rif_reduction, op: multiply, amount: "2383.66"}
+    - {tax: isr, code: isr.payable, op: result, amount: "2383.66"}
   cpa_topics: [rif_reduction]
   disclaimers: [deductibility_claimed]
