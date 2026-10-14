@@ -41,7 +41,8 @@ Ports M5 consumes (declared consumer-side in `internal/taxengine/usecase`):
 - `RegimeCatalogReader` (M2): `treatment`, `required_inputs`, `explanation`, `needs_cpa_review` per
   `(code, person_type)`.
 - `TaxInputReader` (M5's own repository, `taxpayer_tax_inputs`).
-- `HolidayCalendar` (P0 `holidays` table) and `Clock` (America/Mexico_City).
+- `HolidayCalendar` (the global `holidays` table, PLAN M9-03; until it lands the composition root
+  wires a weekends-only calendar, §2.10) and `Clock` (America/Mexico_City).
 - `access.Policy` (P0-16) for `putTaxInputs` only (read-only users get `402`; reads stay open).
 
 Ports M5 provides:
@@ -303,6 +304,12 @@ the coeficiente's decimals (used as given).
 - **Due date**: day 17 of the month after the period (after the bimester for 621), moved to the next
   business day using `holidays` (CFF 12 ⚠️, shown with a small "sujeto a confirmación" note). The
   RFC-digit grace days are **not** applied (research A.4 ⚠️).
+- **Holiday gap until M9-03** (M5-22): the `holidays` table ships with reminders (PLAN M9-03), so
+  until then the estimate's calendar moves the due date past **weekends only**. Checked for the
+  periods with published parameters: no 2026–2028 due date lands on an official holiday after the
+  weekend move (the first miss is March 2029), so the shown date is unaffected; the existing
+  "sujeto a confirmación" note covers it. M9-03/M9-04 replace the calendar with the table reader;
+  enabling `module_tax_engine` beyond 2028 parameters without them is a blocker.
 
 ### 2.11 Determinism and performance
 
