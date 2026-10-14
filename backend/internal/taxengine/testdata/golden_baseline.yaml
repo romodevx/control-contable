@@ -9,5 +9,3 @@ skipped:
   - PF-625-01-IVA # LIVA 18-M definitive effect (⚠️): CPA-REVIEW
 pending: # strategy key: cases (authored + generated)
   606/fisica: 25
-  626/fisica: 14
-  626/moral: 1

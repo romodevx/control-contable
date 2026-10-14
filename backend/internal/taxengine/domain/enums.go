@@ -133,6 +133,10 @@ const (
 	DisclaimerNoCoefficientFirstYear DisclaimerCode = "no_coefficient_first_year"
 	DisclaimerIVAMixedActivity       DisclaimerCode = "iva_mixed_activity"
 	DisclaimerCPAReviewPending       DisclaimerCode = "cpa_review_pending"
+	// DisclaimerRESICOCapExceeded: a 626 regime collected more than its
+	// annual cap; the taxpayer leaves RESICO (PF next month, LISR 113-E and
+	// 113-I; PM next fiscal year, LISR 214).
+	DisclaimerRESICOCapExceeded DisclaimerCode = "resico_cap_exceeded"
 )
 
 // disclaimerSeverity is the fixed severity of each code (§2.3).
@@ -146,6 +150,7 @@ var disclaimerSeverity = map[DisclaimerCode]Severity{
 	DisclaimerNoCoefficientFirstYear: SeverityInfo,
 	DisclaimerIVAMixedActivity:       SeverityWarning,
 	DisclaimerCPAReviewPending:       SeverityStrong,
+	DisclaimerRESICOCapExceeded:      SeverityWarning,
 }
 
 // Severity returns the code's severity, or "" for an unknown code.
