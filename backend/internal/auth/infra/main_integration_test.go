@@ -24,6 +24,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgtest"
 	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit"
+	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit/ratelimitpg"
 	"github.com/romodevx/control-contable/backend/migrations"
 )
 
@@ -67,6 +68,7 @@ func (i *inbox) lastCode(t *testing.T, email string) string {
 // wires them (only the email sender and the argon2 cost differ).
 type stack struct {
 	app, owner *sql.DB
+	limits     *ratelimitpg.Store
 	register   *usecase.Register
 	resend     *usecase.ResendVerification
 	verify     *usecase.VerifyEmail
@@ -102,15 +104,18 @@ func newStack(t *testing.T) *stack {
 	require.NoError(t, err)
 	logger := slog.New(slog.DiscardHandler)
 	signUps := infra.NewSignUpStore()
+	s.limits, err = ratelimitpg.NewStore(s.app, testPepper, time.Now)
+	require.NoError(t, err)
+	signUpEmails := s.limits.Bucket(usecase.SignUpEmailPolicy)
 
 	s.register = usecase.NewRegister(usecase.RegisterDeps{
 		System: txm, Clock: clock.NewSystem(), Entropy: rand.Reader, Index: s.index,
 		Codes: codes, Legal: infra.NewLegalDocumentStore(), SignUps: signUps, Email: s.inbox,
-		Notices: ratelimit.NewEvery(time.Hour, 1, time.Now), Logger: logger,
+		Notices: ratelimit.NewEvery(time.Hour, 1, time.Now), Emails: signUpEmails, Logger: logger,
 	})
 	s.resend = usecase.NewResendVerification(usecase.ResendDeps{
 		System: txm, Clock: clock.NewSystem(), Entropy: rand.Reader, Index: s.index, Codes: codes,
-		SignUps: signUps, Email: s.inbox, Logger: logger,
+		SignUps: signUps, Email: s.inbox, Emails: signUpEmails, Logger: logger,
 	})
 	s.verify = usecase.NewVerifyEmail(usecase.VerifyDeps{
 		Tx: txm, Clock: clock.NewSystem(), Entropy: rand.Reader, NewUserID: newUserID, Index: s.index,

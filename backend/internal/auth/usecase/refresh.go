@@ -21,6 +21,9 @@ type RefreshDeps struct {
 	Tokens   RefreshRotation
 	Accounts AccountStatus
 	Access   AccessTokens
+	// Rotations limits the rotations of each token family (MODULE-auth §5),
+	// spent only once the presented token is proven live. Required.
+	Rotations RateLimiter
 	// Logger receives the token_reuse audit event and the refusal reasons;
 	// nil discards them.
 	Logger *slog.Logger
@@ -44,8 +47,11 @@ type RefreshSession struct {
 	deps RefreshDeps
 }
 
-// NewRefreshSession builds the use case.
+// NewRefreshSession builds the use case. It panics without deps.Rotations.
 func NewRefreshSession(deps RefreshDeps) *RefreshSession {
+	if deps.Rotations == nil {
+		panic("auth: NewRefreshSession needs a Rotations RateLimiter")
+	}
 	if deps.Logger == nil {
 		deps.Logger = slog.New(slog.DiscardHandler)
 	}
@@ -90,6 +96,16 @@ func (uc *RefreshSession) rotate(ctx context.Context, token domain.RefreshToken)
 	stored, err := uc.claim(ctx, token)
 	if err != nil {
 		return Tokens{}, err
+	}
+	// The family is known only from a live token's row, so nobody can spend
+	// another user's budget with made-up tokens. Out of budget, nothing is
+	// rotated: the token stays live and the client retries after the wait.
+	allowed, wait, err := uc.deps.Rotations.Take(ctx, stored.Family)
+	if err != nil {
+		return Tokens{}, fmt.Errorf("auth: rotation budget: %w", err)
+	}
+	if !allowed {
+		return Tokens{}, &RateLimitedError{RetryAfter: wait}
 	}
 	userID := token.UserID()
 	active, err := uc.deps.Accounts.CanSignIn(ctx, userID)

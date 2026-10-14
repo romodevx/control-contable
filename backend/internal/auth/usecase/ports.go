@@ -212,6 +212,8 @@ const (
 type StoredRefreshToken struct {
 	// ID is the store's opaque row id.
 	ID string
+	// Family is the opaque id of the token's family.
+	Family string
 	// Hash is the stored token hash; the use case compares it with the
 	// presented token's in constant time.
 	Hash    domain.TokenHash
@@ -280,8 +282,24 @@ type EmailSender interface {
 	SendSignUpAttemptNotice(ctx context.Context, to domain.Email) error
 }
 
-// Throttle admits at most a configured number of events per key and window
-// (platform/ratelimit implements it).
+// Throttle admits at most a configured number of events per key and window,
+// in process (platform/ratelimit.Limiter). Only for best-effort deduplication
+// (the D3 sign-up notice); security limits use RateLimiter.
 type Throttle interface {
 	Allow(key string) (allowed bool, retryAfter time.Duration)
+}
+
+// RateLimiter spends one event of a key's budget, shared by every API
+// instance (ADR-0005; ratelimitpg.Bucket). allowed = false comes with the
+// wait; an error means it could not decide, and the use case fails closed.
+// The spent event outlives the caller's unit of work.
+type RateLimiter interface {
+	Take(ctx context.Context, key string) (allowed bool, retryAfter time.Duration, err error)
+}
+
+// ResettableLimiter is a RateLimiter whose budget can be refilled: login
+// counts failures only, so a success refills the account's budget.
+type ResettableLimiter interface {
+	RateLimiter
+	Reset(ctx context.Context, key string) error
 }

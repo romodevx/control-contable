@@ -22,7 +22,8 @@ VALUES (?, ?, ?, now() + make_interval(secs => ?), now() + make_interval(secs =>
 // lockRowSQL reads the presented token's row and locks it until the
 // transaction ends. RLS limits it to the unit of work's user, the one the
 // token's prefix names. Expiry is judged by the database clock.
-const lockRowSQL = `SELECT id::text AS id, token_hash, rotated_at IS NOT NULL AS rotated, revoked_at IS NOT NULL AS revoked,
+const lockRowSQL = `SELECT id::text AS id, family_id::text AS family, token_hash,
+  rotated_at IS NOT NULL AS rotated, revoked_at IS NOT NULL AS revoked,
   (expires_at <= now() OR absolute_expires_at <= now()) AS expired
 FROM refresh_tokens WHERE token_hash = ? FOR UPDATE`
 
@@ -90,6 +91,7 @@ func (RefreshTokenStore) StartFamily(ctx context.Context, token domain.RefreshTo
 
 type lockedRow struct {
 	ID        string
+	Family    string
 	TokenHash []byte
 	Rotated   bool
 	Revoked   bool
@@ -115,7 +117,7 @@ func (RefreshTokenStore) Lock(ctx context.Context, hash domain.TokenHash) (useca
 		return usecase.StoredRefreshToken{}, false, fmt.Errorf("auth infra: stored token hash: %w", err)
 	}
 	return usecase.StoredRefreshToken{
-		ID: row.ID, Hash: stored, Rotated: row.Rotated, Revoked: row.Revoked, Expired: row.Expired,
+		ID: row.ID, Family: row.Family, Hash: stored, Rotated: row.Rotated, Revoked: row.Revoked, Expired: row.Expired,
 	}, true, nil
 }
 

@@ -65,6 +65,9 @@ func NewHandler(uc UseCases) *Handler {
 // credential failure is the one generic 401 (US-A2a).
 func (h *Handler) Login(ctx context.Context, req gen.LoginRequestObject) (gen.LoginResponseObject, error) {
 	session, err := h.login.Execute(ctx, usecase.LoginInput{Email: string(req.Body.Email), Password: req.Body.Password})
+	if limited, ok := tooManyRequests(ctx, err); ok {
+		return gen.Login429JSONResponse{TooManyRequestsJSONResponse: limited}, nil
+	}
 	if err != nil {
 		return nil, toAppError(err)
 	}
@@ -88,6 +91,9 @@ func (h *Handler) Register(ctx context.Context, req gen.RegisterRequestObject) (
 		Email:             string(body.Email),
 		AcceptedDocuments: documents,
 	})
+	if limited, ok := tooManyRequests(ctx, err); ok {
+		return gen.Register429JSONResponse{TooManyRequestsJSONResponse: limited}, nil
+	}
 	if err != nil {
 		return nil, toAppError(err)
 	}

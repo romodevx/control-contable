@@ -43,7 +43,8 @@ func newSessionStack(t *testing.T) *sessionStack {
 	require.NoError(t, err)
 	s.refresh = usecase.NewRefreshSession(usecase.RefreshDeps{
 		Tx: s.txm, Clock: clock.NewSystem(), Entropy: rand.Reader, Tokens: s.store,
-		Accounts: infra.NewAccountStore(s.keyring), Access: access, Logger: slog.New(slog.DiscardHandler),
+		Accounts: infra.NewAccountStore(s.keyring), Access: access,
+		Rotations: s.limits.Bucket(usecase.RefreshFamilyPolicy), Logger: slog.New(slog.DiscardHandler),
 	})
 	s.logout = usecase.NewLogout(usecase.LogoutDeps{Tx: s.txm, Tokens: s.store})
 	return s
@@ -170,6 +171,26 @@ func TestRefresh_rotatesInsideTheFamilyWithItsAbsoluteExpiry(t *testing.T) {
 	assert.False(t, child.rotated || child.revoked)
 	// Security gate M1-02, condition 5.
 	assert.True(t, old.absoluteExpiresAt.Equal(child.absoluteExpiresAt), "the family's absolute expiry is inherited")
+}
+
+// Lock reports the token's family: the rotation budget is keyed by it
+// (MODULE-auth §5), so it must be the stored family, the same for every
+// token of the chain.
+func TestLock_reportsTheTokensFamily(t *testing.T) {
+	s := newSessionStack(t)
+	parent := s.session(t, anaEmail).Tokens.Refresh
+	tokens, err := s.refresh.Execute(t.Context(), parent.Reveal())
+	require.NoError(t, err)
+
+	for _, token := range []domain.RefreshToken{parent, tokens.Refresh} {
+		var stored usecase.StoredRefreshToken
+		require.NoError(t, s.txm.ReadWrite(t.Context(), token.UserID().String(), func(ctx context.Context) error {
+			var err error
+			stored, _, err = s.store.Lock(ctx, token.Hash())
+			return err
+		}))
+		assert.Equal(t, s.mustRow(t, parent).family, stored.Family)
+	}
 }
 
 func TestRefresh_lifetimeIsCappedByTheAbsoluteExpiry(t *testing.T) {

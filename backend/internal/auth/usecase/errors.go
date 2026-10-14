@@ -3,7 +3,21 @@ package usecase
 import (
 	"errors"
 	"fmt"
+	"time"
 )
+
+// RateLimitedError reports a key out of budget (MODULE-auth §5): login
+// failures of an email, sign-ups of an email, rotations of a token family,
+// deletion attempts of an account. RetryAfter is when the next event is
+// admitted. It is checked before any credential work, so it reveals nothing
+// about the account behind the key.
+type RateLimitedError struct {
+	RetryAfter time.Duration
+}
+
+func (e *RateLimitedError) Error() string {
+	return fmt.Sprintf("auth: rate limited, retry in %s", e.RetryAfter)
+}
 
 var (
 	// ErrVerificationRejected is the one answer for a wrong, expired,

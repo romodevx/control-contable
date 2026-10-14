@@ -104,6 +104,7 @@ type loginEnv struct {
 	credentials *fakeCredentials
 	accounts    *fakeLoginAccounts
 	refresh     *fakeRefresh
+	failures    *fakeLimiter
 	logs        interface{ String() string }
 }
 
@@ -125,6 +126,7 @@ func newLoginEnv(t *testing.T, params string, active bool) *loginEnv {
 		}},
 		accounts: &fakeLoginAccounts{account: usecase.Account{Email: email, CreatedAt: now}},
 		refresh:  &fakeRefresh{},
+		failures: &fakeLimiter{limit: 100},
 		logs:     logs,
 	}
 	e.uc, err = usecase.NewLogin(usecase.LoginDeps{
@@ -138,6 +140,7 @@ func newLoginEnv(t *testing.T, params string, active bool) *loginEnv {
 		Accounts:    e.accounts,
 		Refresh:     e.refresh,
 		Access:      fakeAccess{},
+		Failures:    e.failures,
 		Logger:      logger,
 	})
 	require.NoError(t, err)

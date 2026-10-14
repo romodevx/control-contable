@@ -11,6 +11,10 @@ import (
 )
 
 func newResend(signUps *fakeSignUps, sender *fakeSender, system *fakeSystem) *usecase.ResendVerification {
+	return newLimitedResend(signUps, sender, system, &fakeLimiter{limit: 100})
+}
+
+func newLimitedResend(signUps *fakeSignUps, sender *fakeSender, system *fakeSystem, emails usecase.RateLimiter) *usecase.ResendVerification {
 	logger, _ := capturedLogs()
 	return usecase.NewResendVerification(usecase.ResendDeps{
 		System:  system,
@@ -20,6 +24,7 @@ func newResend(signUps *fakeSignUps, sender *fakeSender, system *fakeSystem) *us
 		Codes:   concatCodes{},
 		SignUps: signUps,
 		Email:   sender,
+		Emails:  emails,
 		Logger:  logger,
 	})
 }
