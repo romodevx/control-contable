@@ -8,7 +8,7 @@ category_regime_rules) · MODULE-taxpayers.md §1, §2.4, §2.7, §2.10 · **[MO
 
 **Shared with M3, not repeated here** (MODULE-incomes): §2.1 money and currency rules, §2.3
 idempotency, §2.4 regime window, §2.5 IVA rate validity and `iva_cents` tolerance, §2.7 delete /
-undo / restore (restore uses a trial slot; archived taxpayer refuses delete and restore), §2.9
+undo / restore (restore never consumes a trial slot: DECIDED, M3 §2.7; archived taxpayer refuses delete and restore), §2.9
 list and pagination, §2.10 access table (with `expenses_remaining`), §5 security requirements
 (read `incomes` as `expenses`), §6 flag mechanics, §7 form mechanics. Expense-specific rules
 follow.
@@ -207,7 +207,7 @@ deductible = override if the user sent a boolean, else default
   first, month totals, filter by regime; the legend sits in the list header.
 - **When** I change the category of a non-overridden expense, **then** `deductible` is
   recomputed; **when** it was overridden, **then** it stays.
-- **When** I delete and tap Deshacer, **then** restore → `200` (uses a trial slot, as M3).
+- **When** I delete and tap Deshacer, **then** restore → `200` with no trial slot consumed, even at 5/5 (M3 §2.7, DECIDED); `expenses_created` is unchanged.
 
 ### US-E3 Trial cap and read-only
 - **Given** a trial user with 5 expenses created and 0 incomes, **when** they create a 6th
@@ -294,13 +294,13 @@ proportional credit for mixed activity (the 612/601 `iva_fully_taxable` option c
 per-item deduction caps (cars, restaurants, viáticos), personal deductions (annual), DIOT (NG3),
 user-defined categories.
 
-## 10. Open questions (PM defaults apply until the owner decides)
+## 10. Decisions (coordinator, 2026-10-13) — all DECIDED
 
 | # | Question | Default |
 |---|---|---|
-| OQ-E1 | Taxpayer-scoped categories endpoint instead of the global one? The global one cannot tell 626 PF from 626 PM nor apply 606/625 options | **Yes, replace it** (not frozen yet) |
-| OQ-E2 | Form as drawer or page? | **Page** (13 inputs; 6 visible at first) |
-| OQ-E3 | Category seed and per-regime defaults (§2.2) | **Ship the seed, ⚠️, CPA review before launch**; investments, restaurants, personal and "otros" default to non-deductible (conservative estimate) |
-| OQ-E4 | Cash limit $2,000 on the total with IVA, and fuel always electronic (LISR 27-III) — not in the research | **As stated, as dated parameter data**, CPA to confirm |
-| OQ-E5 | Unify `ExpenseWarning` with the generic `Warning` (`field`, append-only codes) | **Yes**, in M4-01 before the freeze |
-| OQ-E6 | Default payment method on first use | **Tarjeta de débito**; afterwards the last one used |
+| OQ-E1 | Taxpayer-scoped categories endpoint instead of the global one? The global one cannot tell 626 PF from 626 PM nor apply 606/625 options | **DECIDED: Yes, replace it** (not frozen yet) |
+| OQ-E2 | Form as drawer or page? | **DECIDED: Page** (13 inputs; 6 visible at first) |
+| OQ-E3 | Category seed and per-regime defaults (§2.2) | **DECIDED: Ship the seed, ⚠️, CPA review before launch**; investments, restaurants, personal and "otros" default to non-deductible (conservative estimate) |
+| OQ-E4 | Cash limit $2,000 on the total with IVA, and fuel always electronic (LISR 27-III) — not in the research | **DECIDED: As stated, as dated parameter data**, CPA to confirm |
+| OQ-E5 | Unify `ExpenseWarning` with the generic `Warning` (`field`, append-only codes) | **DECIDED: Yes**, in M4-01 before the freeze |
+| OQ-E6 | Default payment method on first use | **DECIDED: Tarjeta de débito**; afterwards the last one used |

@@ -154,9 +154,16 @@ Applicability is decided by the taxpayer's person type, the regime and `counterp
 
 - `DELETE` sets `deleted_at` (soft). The income leaves lists, totals, `LedgerReader` and
   `LatestRecordPeriod` at once. `204`; deleting an already-deleted income is `204` (idempotent).
-- `POST …/restore` clears `deleted_at` after re-running §2.4 and the access policy:
-  **restoring reserves a trial slot like a create** (owner rule, coded in P0-16 `access`).
-  Restoring a live income is `200` with no slot used. After the 30-day purge (M9-08) → `404`.
+- `POST …/restore` clears `deleted_at` after re-running §2.4 and the read-only check.
+  **DECIDED (coordinator, 2026-10-13): restore never consumes a trial slot.** The slot was
+  consumed once at creation and never freed, so the restored record never left the count:
+  Undo works at 5/5 with no paywall. Restoring a live income is `200` (no-op). After the 30-day
+  purge (M9-08) → `404`.
+- **Backend requirement (M3-05/M4-05):** P0-16 `access` currently documents "restoring a deleted
+  record reserves a slot like a create". The restore use cases must **not** call
+  `ReserveRecord` (no `user_usage` bump), and the `access` package doc/tests are amended so
+  restore is a read-only check only (`ErrReadOnly`), never `ErrTrialCapReached`. Test: at 5/5,
+  delete + restore → `200` and `incomes_created` stays 5.
 - `GET` of a soft-deleted income → `404`.
 - On an **archived taxpayer**, delete and restore are refused (`422 taxpayer_archived`): archive
   freezes the data (OQ-5).
@@ -185,7 +192,7 @@ Warnings are computed per write, not stored, and never echo the UUID or the desc
 |---|---|---|---|---|
 | list, get, defaults | ✓ | ✓ | ✓ | ✓ |
 | create | ✓ (uses a slot) | `402` `incomes_remaining` | `402` | ✓ |
-| restore a deleted income | ✓ (uses a slot) | `402` | `402` | ✓ |
+| restore a deleted income | ✓ (no slot) | ✓ (no slot) | `402` | ✓ |
 | edit | ✓ | ✓ | `402` | ✓ |
 | delete | ✓ | ✓ | ✓ | ✓ |
 
@@ -257,8 +264,8 @@ Warnings are computed per write, not stored, and never echo the UUID or the desc
 - **When** I tap Deshacer, **then** `POST …/restore` → `200`, the income is back in place.
 - **Given** a trial user who created 5 incomes and deleted one, **when** they create another,
   **then** `402` (`incomes_remaining`): deleting never frees a slot.
-- **Given** a trial user at 4/5 who deleted an income, **when** they restore it, **then** `200`
-  and they are at 5/5; **given** 5/5, **when** they restore, **then** `402` and the paywall.
+- **Given** a trial user at 5/5 who deleted an income, **when** they tap Deshacer (restore),
+  **then** `200`, no paywall, and `incomes_created` stays 5 (the slot never left the count).
 - **Given** the regime was ended before the income's date after the delete, **when** I restore,
   **then** `422` (`regime_not_active`).
 
@@ -289,7 +296,7 @@ Warnings are computed per write, not stored, and never echo the UUID or the desc
 | `platform_activity` on a non-625 income | 400 | `validation_failed` | `not_for_regime` |
 | Missing/invalid session | 401 | `unauthorized` | |
 | Read-only user (create, edit, restore) | 402 | `entitlement_required` | |
-| Trial cap spent (create, restore) | 402 | `entitlement_required` | `trial_cap_reached` (field `incomes_remaining`) |
+| Trial cap spent (create only; never restore) | 402 | `entitlement_required` | `trial_cap_reached` (field `incomes_remaining`) |
 | Flag OFF (or `module_taxpayers` OFF), foreign/unknown taxpayer or income, purged income, malformed path id | 404 | `not_found` | |
 | `id` reused with other content / other taxpayer / deleted; foreign `id` | 409 | `conflict` | `id_reused` (caller's only) |
 | Regime not held on a date; taxpayer archived | 422 | `business_rule_violation` | `regime_not_active`, `taxpayer_archived` (from M2) |
@@ -310,7 +317,7 @@ are es-MX safe text (localized by the client) and never carry amounts, descripti
 | S-1 | `incomes`: ENABLE + FORCE RLS in its first migration; owner policies for SELECT/INSERT/UPDATE/DELETE (`user_id = app_user_id()`); `cc_app` not owner, NOBYPASSRLS | `pgtest.AssertIsolation` (A cannot read/write B), catalog sweep |
 | S-2 | Composite FK `(taxpayer_id, regime_code, user_id) → taxpayer_regimes`; `ON DELETE CASCADE` from the taxpayer; DB CHECKs: `amount_cents > 0`, amounts ≥ 0, `iva_withheld_cents ≤ iva_cents`, `isr_withheld_cents ≤ amount_cents`, `iva_rate` enum, `collected_on IS NOT NULL OR invoiced_on IS NOT NULL`, `char_length(description) ≤ 200` | Cross-user composite-FK rejection; CHECK tests |
 | S-3 | `user_id` from the session and `taxpayer_id` from the path only (no mass assignment); `id` immutable; `additionalProperties: false` on create/update | Contract tests |
-| S-4 | Trial slot reserved atomically in the create/restore transaction (`ReserveRecord`) | Concurrency test (US-I5) |
+| S-4 | Trial slot reserved atomically in the create transaction (`ReserveRecord`); restore never reserves (no double count) | Concurrency test (US-I5); restore-at-5/5 test |
 | S-5 | Description, CFDI UUID and amounts never logged, traced or put in error messages | Log-capture test at debug level |
 | S-6 | Audit events `income.created/updated/deleted/restored` with user id, taxpayer id and income id only | Log-capture test |
 | S-7 | Per-user write budget on income mutations (default 300/h, ADR-0005 limiter) | 429 test |
@@ -389,17 +396,17 @@ M2 catalog).
 - Optimistic concurrency (ETag) on edit: last write wins in v1.
 - A combined multi-taxpayer list (PRD Q14).
 
-## 10. Open questions (PM defaults apply until the owner decides)
+## 10. Decisions (coordinator, 2026-10-13) — all DECIDED
 
 | # | Question | Default |
 |---|---|---|
-| OQ-1 | Form as a drawer (owner's guess: ≤ 6 fields) or a page? | **Page.** 11 inputs total → page by the house rule; only 5 are visible at first |
-| OQ-2 | Enter the subtotal or the total with IVA? | **Subtotal** (contract), with a live total; a "capturé el total" toggle is Could |
-| OQ-3 | IVA tolerance vs `amount × rate` | **±100 centavos** (constant `IvaTolerance`) |
-| OQ-4 | Allow incomes in informational regimes? | **Yes**, with a notice; they do not change the estimate |
-| OQ-5 | Delete/restore on an archived taxpayer | **Refused** (`422 taxpayer_archived`) |
-| OQ-6 | Undo persistence | **Toast never auto-dismisses, deletes stack**; recently-deleted view later |
-| OQ-7 | New `getIncomeDefaults` endpoint so withholding rates are not hard-coded in the app | **Yes** |
-| OQ-8 | Does M5 read incomes when `module_incomes` is OFF? | **Yes** (flags hide screens, not data); presets enable incomes with the engine |
-| OQ-9 | Duplicate CFDI UUID | **Warning**, never an error (partial collections) |
-| OQ-10 | Restore uses a trial slot, so Undo at 5/5 hits the paywall | **Keep** (owner rule, P0-16); the toast at 0 slots reads "Deshacer usará un registro de tu prueba" |
+| OQ-1 | Form as a drawer (owner's guess: ≤ 6 fields) or a page? | **DECIDED: Page.** 11 inputs total → page by the house rule; only 5 are visible at first |
+| OQ-2 | Enter the subtotal or the total with IVA? | **DECIDED: Subtotal** (contract), with a live total; a "capturé el total" toggle is Could |
+| OQ-3 | IVA tolerance vs `amount × rate` | **DECIDED: ±100 centavos** (constant `IvaTolerance`) |
+| OQ-4 | Allow incomes in informational regimes? | **DECIDED: Yes**, with a notice; they do not change the estimate |
+| OQ-5 | Delete/restore on an archived taxpayer | **DECIDED: Refused** (`422 taxpayer_archived`) |
+| OQ-6 | Undo persistence | **DECIDED: Toast never auto-dismisses, deletes stack**; recently-deleted view later |
+| OQ-7 | New `getIncomeDefaults` endpoint so withholding rates are not hard-coded in the app | **DECIDED: Yes** |
+| OQ-8 | Does M5 read incomes when `module_incomes` is OFF? | **DECIDED: Yes** (flags hide screens, not data); presets enable incomes with the engine |
+| OQ-9 | Duplicate CFDI UUID | **DECIDED: Warning**, never an error (partial collections) |
+| OQ-10 | Does restore (Undo) consume a trial slot? | **DECIDED: no** (overrides the PM default). The slot is consumed once at creation and never freed; restoring the same record does not consume another. No paywall on Undo at 5/5. Backend requirement in §2.7 |
