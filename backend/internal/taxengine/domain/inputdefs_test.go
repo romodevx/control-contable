@@ -21,25 +21,25 @@ var defs601 = []domain.InputDef{
 
 func ptr[T any](v T) *T { return &v }
 
-func cents(c int64) domain.SubmittedInput {
+func submittedPTU(c int64) domain.SubmittedInput {
 	return domain.SubmittedInput{Key: domain.InputPTUPaid, Cents: &c}
 }
 
-func payment(month int, c int64) domain.SubmittedInput {
+func submittedPayment(month int, c int64) domain.SubmittedInput {
 	return domain.SubmittedInput{Key: domain.InputPriorProvisionalPayments, Month: &month, Cents: &c}
 }
 
-func coefficient(r string) domain.SubmittedInput {
+func submittedCoefficient(r string) domain.SubmittedInput {
 	return domain.SubmittedInput{Key: domain.InputCoeficienteUtilidad, Rate: &r}
 }
 
 func TestCheckSubmittedInputs_accepts(t *testing.T) {
 	got, violations := domain.CheckSubmittedInputs(defs601, []domain.SubmittedInput{
-		coefficient("0.1500"),
+		submittedCoefficient("0.1500"),
 		{Key: domain.InputFirstFiscalYear, Bool: ptr(false)},
-		payment(1, 2_000_00),
-		payment(2, 0),
-		cents(0),
+		submittedPayment(1, 2_000_00),
+		submittedPayment(2, 0),
+		submittedPTU(0),
 	})
 
 	require.Empty(t, violations)
@@ -74,7 +74,7 @@ func TestCheckSubmittedInputs_rateBounds(t *testing.T) {
 		{raw: "", err: domain.ErrInvalidTaxInput},
 	} {
 		t.Run(tc.raw, func(t *testing.T) {
-			got, violations := domain.CheckSubmittedInputs(defs601, []domain.SubmittedInput{coefficient(tc.raw)})
+			got, violations := domain.CheckSubmittedInputs(defs601, []domain.SubmittedInput{submittedCoefficient(tc.raw)})
 			if tc.err != nil {
 				require.Len(t, violations, 1)
 				assert.Equal(t, domain.InputViolation{Index: 0, Property: domain.PropertyValueRate, Err: tc.err}, violations[0])
@@ -95,7 +95,7 @@ func TestCheckSubmittedInputs_violations(t *testing.T) {
 	}{
 		{
 			name:  "a key the regime does not define",
-			input: []domain.SubmittedInput{cents(1), {Key: "ytd_before_app_income", Cents: ptr[int64](5)}},
+			input: []domain.SubmittedInput{submittedPTU(1), {Key: "ytd_before_app_income", Cents: ptr[int64](5)}},
 			want:  []domain.InputViolation{{Index: 1, Property: domain.PropertyKey, Err: domain.ErrUnknownInput}},
 		},
 		{
@@ -128,7 +128,7 @@ func TestCheckSubmittedInputs_violations(t *testing.T) {
 		},
 		{
 			name:  "a month outside 1-12",
-			input: []domain.SubmittedInput{payment(13, 1), payment(0, 1)},
+			input: []domain.SubmittedInput{submittedPayment(13, 1), submittedPayment(0, 1)},
 			want: []domain.InputViolation{
 				{Index: 0, Property: domain.PropertyMonth, Err: domain.ErrInputOutOfRange},
 				{Index: 1, Property: domain.PropertyMonth, Err: domain.ErrInputOutOfRange},
@@ -136,7 +136,7 @@ func TestCheckSubmittedInputs_violations(t *testing.T) {
 		},
 		{
 			name:  "money outside [0, NonNegativeCents.maximum]",
-			input: []domain.SubmittedInput{cents(-1), payment(1, 100_000_000_000_000)},
+			input: []domain.SubmittedInput{submittedPTU(-1), submittedPayment(1, 100_000_000_000_000)},
 			want: []domain.InputViolation{
 				{Index: 0, Property: domain.PropertyValueCents, Err: domain.ErrInputOutOfRange},
 				{Index: 1, Property: domain.PropertyValueCents, Err: domain.ErrInputOutOfRange},
@@ -144,20 +144,20 @@ func TestCheckSubmittedInputs_violations(t *testing.T) {
 		},
 		{
 			name:  "a repeated annual key",
-			input: []domain.SubmittedInput{cents(1), cents(2)},
+			input: []domain.SubmittedInput{submittedPTU(1), submittedPTU(2)},
 			want:  []domain.InputViolation{{Index: 1, Property: domain.PropertyKey, Err: domain.ErrDuplicateTaxInput}},
 		},
 		{
 			name:  "a repeated key and month",
-			input: []domain.SubmittedInput{payment(1, 1), payment(2, 1), payment(1, 3)},
+			input: []domain.SubmittedInput{submittedPayment(1, 1), submittedPayment(2, 1), submittedPayment(1, 3)},
 			want:  []domain.InputViolation{{Index: 2, Property: domain.PropertyMonth, Err: domain.ErrDuplicateTaxInput}},
 		},
 		{
 			name: "every violation at once, by index",
 			input: []domain.SubmittedInput{
 				{Key: "nope", Cents: ptr[int64](1)},
-				coefficient("2"),
-				payment(1, 1),
+				submittedCoefficient("2"),
+				submittedPayment(1, 1),
 			},
 			want: []domain.InputViolation{
 				{Index: 0, Property: domain.PropertyKey, Err: domain.ErrUnknownInput},
