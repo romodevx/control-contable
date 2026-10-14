@@ -35,8 +35,7 @@ class IncomeRecords {
       );
       _ref
         ..invalidate(incomeListProvider)
-        ..read(lastCounterpartyProvider.notifier).remembered =
-            income.counterpartyType;
+        ..read(lastCounterpartyProvider.notifier).rememberPayerOf(income);
       return created;
     } on ApiEntitlementRequired catch (failure) {
       if (failure.trialCapOf == null) {
@@ -91,10 +90,8 @@ class LastCounterpartyNotifier extends Notifier<CounterpartyType> {
   @override
   CounterpartyType build() => CounterpartyType.personaFisica;
 
-  /// Who paid the income just recorded.
-  CounterpartyType get remembered => state;
-
-  set remembered(CounterpartyType payer) => state = payer;
+  /// [income] was just recorded: its payer starts the next form.
+  void rememberPayerOf(IncomeCreate income) => state = income.counterpartyType;
 }
 
 /// See [LastCounterpartyNotifier].
