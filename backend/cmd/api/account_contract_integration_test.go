@@ -214,6 +214,15 @@ func TestContract_authAccount(t *testing.T) {
 			assert.Equal(t, http.StatusUnauthorized, rec.Code)
 		})
 
+		// Sessions are revoked by the cascade, in the delete's own
+		// transaction: every refresh_tokens row of the user is gone, so no
+		// family can be refreshed (M1-08's RevokeFamily is not needed).
+		t.Run("the deleted account's refresh token is refused", func(t *testing.T) {
+			rec := c.ServeOp(t, contracttest.Op("refreshSession"), env.handler,
+				env.post("/v1/auth/refresh", `{"refresh_token":"`+ana.Tokens.RefreshToken+`"}`))
+			require.Equal(t, http.StatusUnauthorized, rec.Code, rec.Body.String())
+		})
+
 		t.Run("the deleted account can no longer sign in", func(t *testing.T) {
 			rec := env.do(env.post("/v1/auth/login", loginJSON(signUpEmail, acceptableSample)))
 			assert.Equal(t, http.StatusUnauthorized, rec.Code, "the account is gone")
