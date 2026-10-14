@@ -118,10 +118,10 @@ func TestListPrintsATableAndASummary(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, ""+
-		"KEY               STATE  REQUIRES  DESCRIPTION\n"+
-		"module_auth       ON     -         M1 Auth & Account\n"+
-		"module_incomes    off    -         M3 Incomes\n"+
-		"module_taxpayers  off    -         M2 Taxpayers & Onboarding\n"+
+		"KEY               STATE  REQUIRES          DESCRIPTION\n"+
+		"module_auth       ON     -                 M1 Auth & Account\n"+
+		"module_incomes    off    module_taxpayers  M3 Incomes\n"+
+		"module_taxpayers  off    -                 M2 Taxpayers & Onboarding\n"+
 		"1 of 3 modules ON\n", out)
 }
 

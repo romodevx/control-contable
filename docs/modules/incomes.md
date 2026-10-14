@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Flag | `module_incomes` (OFF by default) |
+| Flag | `module_incomes` (OFF by default; implied OFF when `module_taxpayers` is OFF) |
 | Spec | [MODULE-incomes.md](../project-specs/MODULE-incomes.md) |
 | Contract | [`docs/api/openapi.yaml`](../api/openapi.yaml), tag `Incomes`, `x-module: module_incomes` (frozen by M3-01, 0.5.0) |
 | Status | Contract frozen; implementation in progress (PLAN M3-02..M3-14). The full page lands with M3-14 |

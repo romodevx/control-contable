@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Flag | `module_expenses` (OFF by default) |
+| Flag | `module_expenses` (OFF by default; implied OFF when `module_taxpayers` is OFF) |
 | Spec | [MODULE-expenses.md](../project-specs/MODULE-expenses.md) |
 | Contract | [`docs/api/openapi.yaml`](../api/openapi.yaml), tag `Expenses`, `x-module: module_expenses` (frozen by M4-01, 0.5.0) |
 | Status | Contract frozen; implementation in progress (PLAN M4-02..M4-15). The full page lands with M4-15 |
