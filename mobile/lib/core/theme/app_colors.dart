@@ -16,11 +16,15 @@ class AppColors {
     required this.border,
     required this.primary,
     required this.onPrimary,
+    required this.accent,
     required this.heroBg,
     required this.heroText,
     required this.heroMuted,
     required this.iva,
     required this.isr,
+    required this.withholdings,
+    required this.income,
+    required this.expense,
     required this.favor,
     required this.legendBg,
     required this.legendText,
@@ -51,6 +55,11 @@ class AppColors {
   /// Text and icons on [primary].
   final Color onPrimary;
 
+  /// Material secondary role (selected chips and segments, with
+  /// [onPrimary] on it); never a chart series, so chart tokens can move
+  /// without touching controls.
+  final Color accent;
+
   /// Estimate card background.
   final Color heroBg;
 
@@ -65,6 +74,16 @@ class AppColors {
 
   /// ISR chart series.
   final Color isr;
+
+  /// Withholdings-to-remit chart series (third tax segment, MODULE-dashboard
+  /// OQ-D4).
+  final Color withholdings;
+
+  /// Income chart series ("Ingresos cobrados").
+  final Color income;
+
+  /// Expense chart series ("Gastos pagados").
+  final Color expense;
 
   /// "Saldo a favor" amounts (always paired with text, never color alone).
   final Color favor;
@@ -88,11 +107,15 @@ class AppColors {
     Color? border,
     Color? primary,
     Color? onPrimary,
+    Color? accent,
     Color? heroBg,
     Color? heroText,
     Color? heroMuted,
     Color? iva,
     Color? isr,
+    Color? withholdings,
+    Color? income,
+    Color? expense,
     Color? favor,
     Color? legendBg,
     Color? legendText,
@@ -106,11 +129,15 @@ class AppColors {
     border: border ?? this.border,
     primary: primary ?? this.primary,
     onPrimary: onPrimary ?? this.onPrimary,
+    accent: accent ?? this.accent,
     heroBg: heroBg ?? this.heroBg,
     heroText: heroText ?? this.heroText,
     heroMuted: heroMuted ?? this.heroMuted,
     iva: iva ?? this.iva,
     isr: isr ?? this.isr,
+    withholdings: withholdings ?? this.withholdings,
+    income: income ?? this.income,
+    expense: expense ?? this.expense,
     favor: favor ?? this.favor,
     legendBg: legendBg ?? this.legendBg,
     legendText: legendText ?? this.legendText,
@@ -129,11 +156,15 @@ class AppColors {
       border: mix(border, other.border),
       primary: mix(primary, other.primary),
       onPrimary: mix(onPrimary, other.onPrimary),
+      accent: mix(accent, other.accent),
       heroBg: mix(heroBg, other.heroBg),
       heroText: mix(heroText, other.heroText),
       heroMuted: mix(heroMuted, other.heroMuted),
       iva: mix(iva, other.iva),
       isr: mix(isr, other.isr),
+      withholdings: mix(withholdings, other.withholdings),
+      income: mix(income, other.income),
+      expense: mix(expense, other.expense),
       favor: mix(favor, other.favor),
       legendBg: mix(legendBg, other.legendBg),
       legendText: mix(legendText, other.legendText),

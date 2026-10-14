@@ -1092,7 +1092,10 @@
   "@addRegimeReopensFrom": {
     "description": "Add-regime step: the picked regime was ended before, so it reopens from its original start month and no month is asked (OQ-5).",
     "placeholders": {
-      "month": { "type": "String", "example": "febrero de 2026" }
+      "month": {
+        "type": "String",
+        "example": "febrero de 2026"
+      }
     }
   },
   "addRegimeAdded": "Agregamos el régimen {code}.",
@@ -2421,5 +2424,203 @@
   "taxInputsDiscardConfirm": "Descartar",
   "@taxInputsDiscardConfirm": {
     "description": "Leaves the form without saving."
+  },
+  "dashboardLoading": "Cargando el inicio…",
+  "@dashboardLoading": {
+    "description": "Home (M6) status while the dashboard loads."
+  },
+  "dashboardLoadFailed": "No se pudo cargar el inicio.",
+  "@dashboardLoadFailed": {
+    "description": "Home (M6) generic load failure; followed by a retry button."
+  },
+  "dashboardNoTaxpayer": "Registre un contribuyente para ver su inicio.",
+  "@dashboardNoTaxpayer": {
+    "description": "Home (M6) with no active taxpayer (all archived); followed by the onboarding button."
+  },
+  "dashboardCompleteOnboarding": "Completar registro",
+  "@dashboardCompleteOnboarding": {
+    "description": "Home (M6) quick action that opens the taxpayer onboarding."
+  },
+  "dashboardEmpty": "Aún no hay ingresos ni gastos registrados. El estimado aparece con el primer registro.",
+  "@dashboardEmpty": {
+    "description": "Home (M6) empty state: the taxpayer has no records."
+  },
+  "dashboardRegisterIncome": "Registrar ingreso",
+  "@dashboardRegisterIncome": {
+    "description": "Home (M6) quick action: opens the income create page."
+  },
+  "dashboardRegisterExpense": "Registrar gasto",
+  "@dashboardRegisterExpense": {
+    "description": "Home (M6) quick action: opens the expense create page."
+  },
+  "dashboardSeeDetail": "Ver detalle",
+  "@dashboardSeeDetail": {
+    "description": "Home (M6) hero link to the estimate screen."
+  },
+  "dashboardCompleteData": "Completa tus datos",
+  "@dashboardCompleteData": {
+    "description": "Home (M6) hero link when the estimate is incomplete; opens the estimate screen."
+  },
+  "dashboardInformational": "Este régimen es informativo: la app no estima su impuesto",
+  "@dashboardInformational": {
+    "description": "Home (M6) hero when every regime is informational."
+  },
+  "dashboardMonthTitle": "Este mes",
+  "@dashboardMonthTitle": {
+    "description": "Home (M6) heading of the income vs expense card."
+  },
+  "dashboardIncomeCollected": "Ingresos cobrados",
+  "@dashboardIncomeCollected": {
+    "description": "Income collected (cash basis, before IVA)."
+  },
+  "dashboardExpensePaid": "Gastos pagados",
+  "@dashboardExpensePaid": {
+    "description": "Expenses paid (before IVA)."
+  },
+  "dashboardDifference": "Diferencia",
+  "@dashboardDifference": {
+    "description": "Income collected minus expenses paid (not a tax base)."
+  },
+  "dashboardBeforeIva": "Montos antes de IVA, por fecha de cobro y de pago.",
+  "@dashboardBeforeIva": {
+    "description": "Note under the income vs expense card."
+  },
+  "dashboardTrendTitle": "Últimos {count} meses",
+  "@dashboardTrendTitle": {
+    "description": "Home (M6) heading of the trend chart.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardViewTaxes": "Impuestos",
+  "@dashboardViewTaxes": {
+    "description": "Trend chart view: estimated taxes."
+  },
+  "dashboardViewIncomeExpense": "Ingresos y gastos",
+  "@dashboardViewIncomeExpense": {
+    "description": "Trend chart view: income and expense."
+  },
+  "dashboardSeriesIva": "IVA",
+  "@dashboardSeriesIva": {
+    "description": "Chart key: IVA series."
+  },
+  "dashboardSeriesIsr": "ISR",
+  "@dashboardSeriesIsr": {
+    "description": "Chart key: ISR series."
+  },
+  "dashboardSeriesWithholdings": "Retenciones",
+  "@dashboardSeriesWithholdings": {
+    "description": "Chart key: withholdings to remit series."
+  },
+  "dashboardTotal": "Total",
+  "@dashboardTotal": {
+    "description": "Chart selection/table: the month total of estimated taxes."
+  },
+  "dashboardIvaInFavor": "IVA: saldo a favor",
+  "@dashboardIvaInFavor": {
+    "description": "Chart selection/table: the month IVA is in favor (zero bar)."
+  },
+  "dashboardMarkerKey": "▲ Mes incompleto o parcial",
+  "@dashboardMarkerKey": {
+    "description": "Chart key: what the marker over a bar means."
+  },
+  "dashboardShowTable": "Ver como tabla",
+  "@dashboardShowTable": {
+    "description": "Shows the trend as a table."
+  },
+  "dashboardShowChart": "Ver como gráfica",
+  "@dashboardShowChart": {
+    "description": "Shows the trend as a chart."
+  },
+  "dashboardTaxSummary": "Impuestos estimados, últimos {count} meses. {month}: {amount}{status}.",
+  "@dashboardTaxSummary": {
+    "description": "Screen-reader summary of the tax chart.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "month": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "dashboardTaxPeak": " Mes más alto: {month}, {amount}.",
+  "@dashboardTaxPeak": {
+    "description": "Screen-reader summary: highest month (leading space).",
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "dashboardIncomeExpenseSummary": "Ingresos y gastos, últimos {count} meses. {month}: {current}. En el periodo: {window}.",
+  "@dashboardIncomeExpenseSummary": {
+    "description": "Screen-reader summary of the income/expense chart.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "month": {
+        "type": "String"
+      },
+      "current": {
+        "type": "String"
+      },
+      "window": {
+        "type": "String"
+      }
+    }
+  },
+  "dashboardTrialBanner": "Prueba gratuita: {days, plural, =1{queda 1 día} other{quedan {days} días}}",
+  "@dashboardTrialBanner": {
+    "description": "Trial banner: days left.",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardTrialRecords": " · {incomes, plural, =1{1 ingreso} other{{incomes} ingresos}} y {expenses, plural, =1{1 gasto} other{{expenses} gastos}}",
+  "@dashboardTrialRecords": {
+    "description": "Trial banner: records left (leading separator).",
+    "placeholders": {
+      "incomes": {
+        "type": "int"
+      },
+      "expenses": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardTrialScope": "Los registros disponibles se cuentan entre todos sus contribuyentes.",
+  "@dashboardTrialScope": {
+    "description": "Trial banner, spoken only: the counts are per user."
+  },
+  "dashboardReadOnlyBanner": "Modo lectura: los datos siguen visibles. Para registrar, contrate un plan.",
+  "@dashboardReadOnlyBanner": {
+    "description": "Read-only banner on Home."
+  },
+  "dashboardSeePlans": "Ver planes",
+  "@dashboardSeePlans": {
+    "description": "Opens the plans (paywall, M7)."
+  },
+  "dashboardPlansTitle": "Planes",
+  "@dashboardPlansTitle": {
+    "description": "Plans sheet title (placeholder until M7)."
+  },
+  "dashboardPlansBody": "La contratación de planes estará disponible próximamente.",
+  "@dashboardPlansBody": {
+    "description": "Plans sheet body (placeholder until M7)."
   }
 }

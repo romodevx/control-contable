@@ -3071,6 +3071,232 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Descartar'**
   String get taxInputsDiscardConfirm;
+
+  /// Home (M6) status while the dashboard loads.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando el inicio…'**
+  String get dashboardLoading;
+
+  /// Home (M6) generic load failure; followed by a retry button.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo cargar el inicio.'**
+  String get dashboardLoadFailed;
+
+  /// Home (M6) with no active taxpayer (all archived); followed by the onboarding button.
+  ///
+  /// In es, this message translates to:
+  /// **'Registre un contribuyente para ver su inicio.'**
+  String get dashboardNoTaxpayer;
+
+  /// Home (M6) quick action that opens the taxpayer onboarding.
+  ///
+  /// In es, this message translates to:
+  /// **'Completar registro'**
+  String get dashboardCompleteOnboarding;
+
+  /// Home (M6) empty state: the taxpayer has no records.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay ingresos ni gastos registrados. El estimado aparece con el primer registro.'**
+  String get dashboardEmpty;
+
+  /// Home (M6) quick action: opens the income create page.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar ingreso'**
+  String get dashboardRegisterIncome;
+
+  /// Home (M6) quick action: opens the expense create page.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrar gasto'**
+  String get dashboardRegisterExpense;
+
+  /// Home (M6) hero link to the estimate screen.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver detalle'**
+  String get dashboardSeeDetail;
+
+  /// Home (M6) hero link when the estimate is incomplete; opens the estimate screen.
+  ///
+  /// In es, this message translates to:
+  /// **'Completa tus datos'**
+  String get dashboardCompleteData;
+
+  /// Home (M6) hero when every regime is informational.
+  ///
+  /// In es, this message translates to:
+  /// **'Este régimen es informativo: la app no estima su impuesto'**
+  String get dashboardInformational;
+
+  /// Home (M6) heading of the income vs expense card.
+  ///
+  /// In es, this message translates to:
+  /// **'Este mes'**
+  String get dashboardMonthTitle;
+
+  /// Income collected (cash basis, before IVA).
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresos cobrados'**
+  String get dashboardIncomeCollected;
+
+  /// Expenses paid (before IVA).
+  ///
+  /// In es, this message translates to:
+  /// **'Gastos pagados'**
+  String get dashboardExpensePaid;
+
+  /// Income collected minus expenses paid (not a tax base).
+  ///
+  /// In es, this message translates to:
+  /// **'Diferencia'**
+  String get dashboardDifference;
+
+  /// Note under the income vs expense card.
+  ///
+  /// In es, this message translates to:
+  /// **'Montos antes de IVA, por fecha de cobro y de pago.'**
+  String get dashboardBeforeIva;
+
+  /// Home (M6) heading of the trend chart.
+  ///
+  /// In es, this message translates to:
+  /// **'Últimos {count} meses'**
+  String dashboardTrendTitle(int count);
+
+  /// Trend chart view: estimated taxes.
+  ///
+  /// In es, this message translates to:
+  /// **'Impuestos'**
+  String get dashboardViewTaxes;
+
+  /// Trend chart view: income and expense.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresos y gastos'**
+  String get dashboardViewIncomeExpense;
+
+  /// Chart key: IVA series.
+  ///
+  /// In es, this message translates to:
+  /// **'IVA'**
+  String get dashboardSeriesIva;
+
+  /// Chart key: ISR series.
+  ///
+  /// In es, this message translates to:
+  /// **'ISR'**
+  String get dashboardSeriesIsr;
+
+  /// Chart key: withholdings to remit series.
+  ///
+  /// In es, this message translates to:
+  /// **'Retenciones'**
+  String get dashboardSeriesWithholdings;
+
+  /// Chart selection/table: the month total of estimated taxes.
+  ///
+  /// In es, this message translates to:
+  /// **'Total'**
+  String get dashboardTotal;
+
+  /// Chart selection/table: the month IVA is in favor (zero bar).
+  ///
+  /// In es, this message translates to:
+  /// **'IVA: saldo a favor'**
+  String get dashboardIvaInFavor;
+
+  /// Chart key: what the marker over a bar means.
+  ///
+  /// In es, this message translates to:
+  /// **'▲ Mes incompleto o parcial'**
+  String get dashboardMarkerKey;
+
+  /// Shows the trend as a table.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver como tabla'**
+  String get dashboardShowTable;
+
+  /// Shows the trend as a chart.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver como gráfica'**
+  String get dashboardShowChart;
+
+  /// Screen-reader summary of the tax chart.
+  ///
+  /// In es, this message translates to:
+  /// **'Impuestos estimados, últimos {count} meses. {month}: {amount}{status}.'**
+  String dashboardTaxSummary(
+    int count,
+    String month,
+    String amount,
+    String status,
+  );
+
+  /// Screen-reader summary: highest month (leading space).
+  ///
+  /// In es, this message translates to:
+  /// **' Mes más alto: {month}, {amount}.'**
+  String dashboardTaxPeak(String month, String amount);
+
+  /// Screen-reader summary of the income/expense chart.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresos y gastos, últimos {count} meses. {month}: {current}. En el periodo: {window}.'**
+  String dashboardIncomeExpenseSummary(
+    int count,
+    String month,
+    String current,
+    String window,
+  );
+
+  /// Trial banner: days left.
+  ///
+  /// In es, this message translates to:
+  /// **'Prueba gratuita: {days, plural, =1{queda 1 día} other{quedan {days} días}}'**
+  String dashboardTrialBanner(int days);
+
+  /// Trial banner: records left (leading separator).
+  ///
+  /// In es, this message translates to:
+  /// **' · {incomes, plural, =1{1 ingreso} other{{incomes} ingresos}} y {expenses, plural, =1{1 gasto} other{{expenses} gastos}}'**
+  String dashboardTrialRecords(int incomes, int expenses);
+
+  /// Trial banner, spoken only: the counts are per user.
+  ///
+  /// In es, this message translates to:
+  /// **'Los registros disponibles se cuentan entre todos sus contribuyentes.'**
+  String get dashboardTrialScope;
+
+  /// Read-only banner on Home.
+  ///
+  /// In es, this message translates to:
+  /// **'Modo lectura: los datos siguen visibles. Para registrar, contrate un plan.'**
+  String get dashboardReadOnlyBanner;
+
+  /// Opens the plans (paywall, M7).
+  ///
+  /// In es, this message translates to:
+  /// **'Ver planes'**
+  String get dashboardSeePlans;
+
+  /// Plans sheet title (placeholder until M7).
+  ///
+  /// In es, this message translates to:
+  /// **'Planes'**
+  String get dashboardPlansTitle;
+
+  /// Plans sheet body (placeholder until M7).
+  ///
+  /// In es, this message translates to:
+  /// **'La contratación de planes estará disponible próximamente.'**
+  String get dashboardPlansBody;
 }
 
 class _AppLocalizationsDelegate

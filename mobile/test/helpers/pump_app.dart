@@ -22,7 +22,8 @@ final AppConfig testConfig = AppConfig.resolve(flavor: AppFlavor.dev);
 /// through [flagsRepository] when a test scripts several answers. The
 /// module slices are the app's own unless a test passes its [features].
 /// The session store is in memory ([refreshTokens], empty by default: signed
-/// out), never the platform's.
+/// out), never the platform's. [settle] `false` pumps a few frames instead
+/// of settling, for a screen that shows an endless spinner while it loads.
 Future<void> pumpControlContableApp(
   WidgetTester tester, {
   Brightness brightness = Brightness.light,
@@ -31,6 +32,7 @@ Future<void> pumpControlContableApp(
   FlagsRepository? flagsRepository,
   List<FeatureModule>? features,
   RefreshTokenStore? refreshTokens,
+  bool settle = true,
 }) async {
   tester.platformDispatcher.platformBrightnessTestValue = brightness;
   addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
@@ -50,5 +52,15 @@ Future<void> pumpControlContableApp(
       child: const ControlContableApp(),
     ),
   );
-  await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    for (var frame = 0; frame < _unsettledFrames; frame++) {
+      await tester.pump();
+    }
+  }
 }
+
+/// Frames pumped without settling: enough for the flags, the session and
+/// the first reads to resolve.
+const int _unsettledFrames = 10;

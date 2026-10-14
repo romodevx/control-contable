@@ -69,4 +69,36 @@ void main() {
 
     expect(find.text(_menuEntry), findsNothing);
   });
+
+  for (final (enabled, shown) in [
+    (<AppModule>{}, 'antes'),
+    ({AppModule.dashboard}, 'tablero'),
+  ]) {
+    testWidgets('a fallback stands in while the module is OFF ($shown)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            flagsRepositoryProvider.overrideWithValue(
+              FakeFlagsRepository(enabled),
+            ),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: FlagGate(
+                module: AppModule.dashboard,
+                fallback: Text('antes'),
+                child: Text('tablero'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(shown), findsOneWidget);
+      expect(find.text(shown == 'antes' ? 'tablero' : 'antes'), findsNothing);
+    });
+  }
 }
