@@ -1,4 +1,3 @@
-import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/session/session.dart';
 import 'package:control_contable/features/auth/data/auth_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,8 +14,9 @@ class SignOut {
   final AuthRepository _repository;
   final Session _session;
 
-  /// Revokes, then wipes. Never throws an [ApiFailure]: the user ends up
-  /// signed out either way, and the router shows the login form.
+  /// Revokes, then wipes. Never throws: the user ends up signed out either
+  /// way, and the router shows the login form. A token the wipe could not
+  /// remove is reported by `Session.tokenLeftOnDevice`, never by an error.
   Future<void> call() async {
     try {
       // `logout` needs a bearer; after a cold start there is none in memory
@@ -25,8 +25,10 @@ class SignOut {
       if (_session.accessToken == null) await _session.refresh();
       final refreshToken = await _session.readRefreshToken();
       if (refreshToken != null) await _repository.logout(refreshToken);
-    } on ApiFailure {
-      // Best effort by design (see the class doc): the wipe below still runs.
+    } on Exception {
+      // Best effort by design (see the class doc): an `ApiFailure`, or a
+      // platform error that may echo the token, is dropped; the wipe below
+      // still runs (M1-16 FU2).
     } finally {
       await _session.end();
     }

@@ -150,9 +150,16 @@ class Session extends ChangeNotifier {
   }
 
   /// The refresh token (for `logout`): the unsaved one when the store
-  /// lags, else the stored one, or `null`.
-  Future<String?> readRefreshToken() async =>
-      _unsavedRefreshToken ?? await _store.read();
+  /// lags, else the stored one, or `null` when there is none or the store
+  /// cannot be read. Never throws: the store's error may echo the token.
+  Future<String?> readRefreshToken() async {
+    if (_unsavedRefreshToken case final unsaved?) return unsaved;
+    try {
+      return await _store.read();
+    } on Exception {
+      return null;
+    }
+  }
 
   /// A new access token, rotating the refresh token once for every caller
   /// waiting at the same time. `null` when there is none: the server
