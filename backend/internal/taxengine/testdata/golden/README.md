@@ -31,7 +31,7 @@ input:
   months:                         # MonthSums per month, January..period; absent amounts are 0
     - month: 3
       income:   {cash, accrual, by_rate: {rate_16: {base, iva}, rate_8: {base, iva}, rate_0_base, exempt_base}, iva_withheld: {by_moral, by_platform}, isr_withheld: {...}}
-      expenses: {deductible_paid, creditable_iva_paid, predial_paid, isr_withheld_to_remit, iva_withheld_to_remit}
+      expenses: {deductible_paid, non_deductible_paid, cash_over_limit_paid, iva_paid: {rate_16: {base, iva}, ...}, creditable_iva_paid, predial_paid, isr_withheld_to_remit, iva_withheld_to_remit}
   tax_inputs:                     # one value, matching the kind
     - {key: prior_provisional_payments, kind: money_monthly, month: 1, money: "2000.00"}
     - {key: coeficiente_utilidad, kind: rate, rate: "0.1500"}

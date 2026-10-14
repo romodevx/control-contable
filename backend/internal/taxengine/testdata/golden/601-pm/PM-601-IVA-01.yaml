@@ -3,9 +3,9 @@
 # 200,000; IVA withheld from a PF lawyer (fees 50,000 -> IVA 8,000 x 2/3)
 # 5,333.33, remitted separately. IVA 120,000.00 + withheld IVA 5,333.33.
 # The ISR inputs of PM-601-ISR-01 are given so the regime is complete.
+# Line codes are the shared IVA components' (M5-09), renamed by hand in M5-15.
 id: PM-601-IVA-01
 source: research:PM-601-IVA-01
-pending_strategy: true # M5-15
 input:
   regime: "601"
   person_type: moral
@@ -34,8 +34,9 @@ expected:
     net: "120000.00"
   withheld_to_remit: "5333.33"
   lines:
-    - {tax: iva, code: iva.charged_collected, op: input, amount: "320000.00"}
-    - {tax: iva, code: iva.creditable_paid, op: subtract, amount: "200000.00"}
-    - {tax: iva, code: iva.withheld_from_taxpayer, op: subtract, amount: "0.00"}
-    - {tax: iva, code: iva.net, op: result, amount: "120000.00"}
+    - {tax: iva, code: iva.charged.rate_16, op: input, amount: "320000.00"}
+    - {tax: iva, code: iva.charged, op: result, amount: "320000.00"}
+    - {tax: iva, code: iva.creditable, op: subtract, amount: "200000.00"}
+    - {tax: iva, code: iva.withheld.moral, op: subtract, amount: "0.00"}
+    - {tax: iva, code: iva.regime_net, op: result, amount: "120000.00"}
     - {tax: withholding, code: withholding.iva_to_remit, op: input, amount: "5333.33"}

@@ -12,6 +12,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/access"
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
+	"github.com/romodevx/control-contable/backend/internal/platform/money"
 )
 
 func TestCreate_RecordsADeductibleExpenseAndReservesOneSlot(t *testing.T) {
@@ -348,45 +349,47 @@ func TestCreate_CategoryRulesPerRegime(t *testing.T) {
 		deductible bool
 		source     domain.DeductibleSource
 		warnings   []string
+		cashOver   bool        // stored cash_over_limit
+		creditable money.Cents // stored creditable_iva_cents
 	}{
-		{"612 software by card", func(*usecase.CreateInput) {}, true, domain.SourceCategoryDefault, []string{}},
+		{"612 software by card", func(*usecase.CreateInput) {}, true, domain.SourceCategoryDefault, []string{}, false, 80_00},
 		{"RESICO física never deducts", func(in *usecase.CreateInput) {
 			in.Regime, in.Draft.PaidOn = fiscal.RegimeRESICO, date(t, "2025-06-10")
-		}, false, domain.SourceCategoryDefault, []string{}},
+		}, false, domain.SourceCategoryDefault, []string{}, false, 80_00},
 		{"606 blind 35 %: maintenance does not count", func(in *usecase.CreateInput) {
 			in.Regime, in.Draft.Category = fiscal.RegimeRent, "mantenimiento"
-		}, false, domain.SourceCategoryDefault, []string{}},
+		}, false, domain.SourceCategoryDefault, []string{}, false, 0},
 		{"606 blind 35 %: predial still counts", func(in *usecase.CreateInput) {
 			in.Regime, in.Draft.Category = fiscal.RegimeRent, "predial"
-		}, true, domain.SourceCategoryDefault, []string{}},
+		}, true, domain.SourceCategoryDefault, []string{}, false, 80_00},
 		{"cash over the limit", func(in *usecase.CreateInput) {
 			in.Draft.Category, in.Draft.PaymentMethod = "papeleria", domain.PaymentCash
 			in.Draft.Amount, in.Draft.IVA = 2_000_00, 320_00
-		}, false, domain.SourceCategoryDefault, []string{"cash_over_threshold@payment_method"}},
+		}, false, domain.SourceCategoryDefault, []string{"cash_over_threshold@payment_method"}, true, 0},
 		{"fuel in cash, any amount", func(in *usecase.CreateInput) {
 			in.Draft.Category, in.Draft.PaymentMethod = "combustible", domain.PaymentCash
 			in.Draft.Amount, in.Draft.IVA = 300_00, 48_00
-		}, false, domain.SourceCategoryDefault, []string{"cash_over_threshold@payment_method"}},
+		}, false, domain.SourceCategoryDefault, []string{"cash_over_threshold@payment_method"}, true, 0},
 		{"cash over the limit claimed deductible", func(in *usecase.CreateInput) {
 			in.Draft.Category, in.Draft.PaymentMethod = "papeleria", domain.PaymentCash
 			in.Draft.Amount, in.Draft.IVA = 2_000_00, 320_00
 			in.Draft.Deductible = domain.ClaimDeductible
-		}, true, domain.SourceUser, []string{"cash_over_threshold@payment_method", "iva_not_creditable_cash_payment@payment_method"}},
+		}, true, domain.SourceUser, []string{"cash_over_threshold@payment_method", "iva_not_creditable_cash_payment@payment_method"}, true, 0},
 		{"cash under the limit", func(in *usecase.CreateInput) {
 			in.Draft.PaymentMethod = domain.PaymentCash
-		}, true, domain.SourceCategoryDefault, []string{}},
+		}, true, domain.SourceCategoryDefault, []string{}, false, 80_00},
 		{"no CFDI", func(in *usecase.CreateInput) { in.Draft.HasCFDI = false },
-			false, domain.SourceCategoryDefault, []string{"no_cfdi@has_cfdi"}},
+			false, domain.SourceCategoryDefault, []string{"no_cfdi@has_cfdi"}, false, 0},
 		{"partial category overridden", func(in *usecase.CreateInput) {
 			in.Draft.Category, in.Draft.Deductible = "restaurantes", domain.ClaimDeductible
-		}, true, domain.SourceUser, []string{}},
+		}, true, domain.SourceUser, []string{}, false, 80_00},
 		{"not deductible category overridden", func(in *usecase.CreateInput) {
 			in.Draft.Category, in.Draft.Deductible = "gastos_personales", domain.ClaimDeductible
-		}, true, domain.SourceUser, []string{"category_not_deductible@deductible"}},
+		}, true, domain.SourceUser, []string{"category_not_deductible@deductible"}, false, 0},
 		{"RESICO física overridden", func(in *usecase.CreateInput) {
 			in.Regime, in.Draft.PaidOn = fiscal.RegimeRESICO, date(t, "2025-06-10")
 			in.Draft.Deductible = domain.ClaimDeductible
-		}, true, domain.SourceUser, []string{"not_isr_deductible_in_regime@deductible"}},
+		}, true, domain.SourceUser, []string{"not_isr_deductible_in_regime@deductible"}, false, 80_00},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -404,6 +407,8 @@ func TestCreate_CategoryRulesPerRegime(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, c.deductible, stored.Deductible)
 			assert.Equal(t, c.source == domain.SourceUser, stored.Overridden)
+			assert.Equal(t, c.cashOver, stored.CashOverLimit, "the assessed cash rule is stored")
+			assert.Equal(t, c.creditable, stored.CreditableIVA, "the assessed creditable-IVA candidate is stored")
 		})
 	}
 }

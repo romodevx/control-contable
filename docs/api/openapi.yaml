@@ -3478,8 +3478,11 @@ components:
         `no_coefficient_first_year` for a 601 in its first fiscal year; `iva_mixed_activity`
         when a regime's creditable IVA was taken in full although it has exempt acts
         (`iva_fully_taxable = false`, or exempt collections in the month; LIVA 5 fr. V);
-        `cpa_review_pending` when a line applies a rule a CPA has not validated
-        (MODULE-tax-engine §2.3, §2.9).
+        `cpa_review_pending` when a line applies a rule a CPA has not validated;
+        `resico_cap_exceeded` when a RESICO (626) regime's income collected in the year is above
+        its cap (PF 3,500,000, LISR 113-E; PM 35,000,000, LISR 206): the taxpayer leaves RESICO
+        (PF from the next month, LISR 113-E/113-I; PM from the next fiscal year, LISR 214), the
+        month is still estimated under RESICO (MODULE-tax-engine §2.3, §2.9).
       enum:
         - not_tax_advice
         - incomplete_inputs
@@ -3490,6 +3493,7 @@ components:
         - no_coefficient_first_year
         - iva_mixed_activity
         - cpa_review_pending
+        - resico_cap_exceeded
     DisclaimerSeverity:
       x-frozen: sha256:8429837655ae31f5f2ec2bbcdb5e05b87988db4e779030e4cf985bd03611eafc
       type: string

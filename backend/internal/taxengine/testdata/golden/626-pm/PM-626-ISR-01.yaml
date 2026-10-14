@@ -4,7 +4,6 @@
 # 400,000 x 30 % = 120,000 - 70,000 = 50,000.00.
 id: PM-626-ISR-01
 source: research:PM-626-ISR-01
-pending_strategy: true # M5-16 removes this when the 626 PM strategy is registered
 input:
   regime: "626"
   person_type: moral
