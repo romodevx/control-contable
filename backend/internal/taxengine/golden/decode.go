@@ -68,7 +68,8 @@ type incomeDoc struct {
 	ISRWithheld withheldDoc `yaml:"isr_withheld"`
 }
 
-// byRateDoc is domain.IVAByRate: the collected income by IVA treatment.
+// byRateDoc is domain.IVAByRate: the income collected, or the expenses
+// paid, by IVA treatment.
 type byRateDoc struct {
 	Rate16     rateSumsDoc `yaml:"rate_16"`
 	Rate8      rateSumsDoc `yaml:"rate_8"`
@@ -88,6 +89,9 @@ type withheldDoc struct {
 
 type expensesDoc struct {
 	DeductiblePaid     centsText `yaml:"deductible_paid"`
+	NonDeductiblePaid  centsText `yaml:"non_deductible_paid"`
+	CashOverLimitPaid  centsText `yaml:"cash_over_limit_paid"`
+	IVAPaid            byRateDoc `yaml:"iva_paid"`
 	CreditableIVAPaid  centsText `yaml:"creditable_iva_paid"`
 	PredialPaid        centsText `yaml:"predial_paid"`
 	ISRWithheldToRemit centsText `yaml:"isr_withheld_to_remit"`
@@ -312,7 +316,11 @@ func (cv *converter) sums(through time.Month, docs []monthDoc) domain.YearSums {
 				IVAWithheld: withheld(m.Income.IVAWithheld), ISRWithheld: withheld(m.Income.ISRWithheld),
 			},
 			Expenses: domain.ExpenseSums{
-				DeductiblePaid: m.Expenses.DeductiblePaid.cents, CreditableIVAPaid: m.Expenses.CreditableIVAPaid.cents,
+				DeductiblePaid:     m.Expenses.DeductiblePaid.cents,
+				NonDeductiblePaid:  m.Expenses.NonDeductiblePaid.cents,
+				CashOverLimitPaid:  m.Expenses.CashOverLimitPaid.cents,
+				IVAPaid:            byRate(m.Expenses.IVAPaid),
+				CreditableIVAPaid:  m.Expenses.CreditableIVAPaid.cents,
 				PredialPaid:        m.Expenses.PredialPaid.cents,
 				ISRWithheldToRemit: m.Expenses.ISRWithheldToRemit.cents,
 				IVAWithheldToRemit: m.Expenses.IVAWithheldToRemit.cents,
