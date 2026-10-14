@@ -4,6 +4,7 @@ import 'package:control_contable/api/generated/models/regime.dart';
 import 'package:control_contable/api/generated/models/regime_incompatibility.dart';
 import 'package:control_contable/api/generated/models/tax_input_value.dart';
 import 'package:control_contable/api/generated/models/warning.dart';
+import 'package:control_contable/api/generated/models/warning_code.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/features/taxpayers/application/onboarding_flow.dart';
 import 'package:control_contable/features/taxpayers/domain/rfc.dart';
@@ -13,12 +14,12 @@ import 'taxpayers_fakes.dart';
 
 const _clientId = '0192f0c4-0000-4000-8000-000000000001';
 const _rfcMismatch = Warning(
-  code: 'rfc_check_digit_mismatch',
+  code: WarningCode.rfcCheckDigitMismatch,
   field: 'rfc',
   message: 'Revisa tu RFC.',
 );
 const _cpaReview = Warning(
-  code: 'regime_combination_needs_cpa_review',
+  code: WarningCode.regimeCombinationNeedsCpaReview,
   field: 'regimes.1.regime_code',
   message: 'Combinación por confirmar con un contador.',
 );
@@ -519,7 +520,7 @@ void main() {
         taxpayer(
           warnings: [
             const Warning(
-              code: 'regime_combination_needs_cpa_review',
+              code: WarningCode.regimeCombinationNeedsCpaReview,
               field: 'regimes.1.regime_code',
               message: 'Pendiente.',
             ),

@@ -9,6 +9,7 @@ import 'fiscal_year.dart';
 part 'parameter_set_ref.freezed.dart';
 part 'parameter_set_ref.g.dart';
 
+/// The tax parameter set used (embedded `params/<fiscal_year>/v<version>.yaml`, ADR-0002 §3): the highest published version of the period's fiscal year, or the previous year's with `provisional_parameters`.
 @Freezed()
 abstract class ParameterSetRef with _$ParameterSetRef {
   const factory ParameterSetRef({

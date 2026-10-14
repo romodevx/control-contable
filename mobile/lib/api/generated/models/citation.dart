@@ -12,7 +12,9 @@ abstract class Citation with _$Citation {
   const factory Citation({
     required String law,
     required String article,
-    @JsonKey(includeIfNull: false) String? note,
+
+    /// Paragraph, fraction or remark, e.g. "párrafo quinto".
+    @JsonKey(includeIfNull: true) required String? note,
   }) = _Citation;
 
   factory Citation.fromJson(Map<String, Object?> json) =>

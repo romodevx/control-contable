@@ -10,6 +10,8 @@ enum RegimeEstimateStatus {
   complete('complete'),
   @JsonValue('incomplete')
   incomplete('incomplete'),
+  @JsonValue('partial')
+  partial('partial'),
   @JsonValue('informational')
   informational('informational'),
 

@@ -16,7 +16,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TaxInputDef {
 
- String get key; String get label; TaxInputDefKind get kind;/// The name has been replaced because it contains a keyword. Original name: `required`.
+ String get key;/// Spanish label shown in the tax-inputs form.
+ String get label; TaxInputDefKind get kind;/// The name has been replaced because it contains a keyword. Original name: `required`.
 @JsonKey(name: 'required') bool get requiredValue;
 /// Create a copy of TaxInputDef
 /// with the given fields replaced by the non-null parameter values.
@@ -223,6 +224,7 @@ class _TaxInputDef implements TaxInputDef {
   factory _TaxInputDef.fromJson(Map<String, dynamic> json) => _$TaxInputDefFromJson(json);
 
 @override final  String key;
+/// Spanish label shown in the tax-inputs form.
 @override final  String label;
 @override final  TaxInputDefKind kind;
 /// The name has been replaced because it contains a keyword. Original name: `required`.

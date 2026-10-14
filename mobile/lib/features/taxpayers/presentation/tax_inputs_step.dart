@@ -67,6 +67,10 @@ class _TaxInputsStepState extends State<TaxInputsStep> {
           validator: (value) => checkRate(value, l10n),
           canonicalize: (value) => parseDecimalRate(value) ?? value,
         ),
+        // Monthly amounts and yes/no inputs belong to the per-regime
+        // tax-inputs form (M5-27), not to this optional onboarding step.
+        TaxInputDefKind.moneyMonthly ||
+        TaxInputDefKind.boolean ||
         TaxInputDefKind.$unknown => null,
       };
 

@@ -17,7 +17,7 @@ T _$identity<T>(T value) => value;
 mixin _$Expense {
 
  Uuid get id;@JsonKey(name: 'taxpayer_id') Uuid get taxpayerId;@JsonKey(name: 'regime_code') RegimeCode get regimeCode;@JsonKey(name: 'category_code') String get categoryCode;@JsonKey(name: 'amount_cents') PositiveCents get amountCents;@JsonKey(name: 'iva_rate') IvaRate get ivaRate;@JsonKey(name: 'iva_cents') NonNegativeCents get ivaCents;@JsonKey(name: 'payment_method') PaymentMethod get paymentMethod;@JsonKey(name: 'paid_on') BusinessDate get paidOn;@JsonKey(name: 'has_cfdi') bool get hasCfdi;@JsonKey(includeIfNull: true, name: 'cfdi_uuid') CfdiUuid? get cfdiUuid;@JsonKey(name: 'isr_withheld_cents') NonNegativeCents get isrWithheldCents;@JsonKey(name: 'iva_withheld_cents') NonNegativeCents get ivaWithheldCents; RecordDescription? get description;/// Effective value ("the user claims it lowers ISR"): the override if any, else the default.
- bool get deductible;@JsonKey(name: 'deductible_source') DeductibleSource get deductibleSource;/// Non-blocking notices computed on writes (create, update, restore), never stored; `[]` on reads. Codes (append-only): `cash_over_threshold` (`payment_method`), `no_cfdi` (`has_cfdi`), `not_isr_deductible_in_regime` and `category_not_deductible` (`deductible`), `duplicate_cfdi_uuid` (`cfdi_uuid`).
+ bool get deductible;@JsonKey(name: 'deductible_source') DeductibleSource get deductibleSource;/// Non-blocking notices computed on writes (create, update, restore), never stored; `[]` on reads. Codes (append-only): `cash_over_threshold` (`payment_method`), `no_cfdi` (`has_cfdi`), `not_isr_deductible_in_regime` and `category_not_deductible` (`deductible`), `duplicate_cfdi_uuid` (`cfdi_uuid`), `iva_not_creditable_cash_payment` (`payment_method`).
  List<Warning> get warnings; Legend get legend;@JsonKey(name: 'created_at') DateTime get createdAt;@JsonKey(name: 'updated_at') DateTime get updatedAt;
 /// Create a copy of Expense
 /// with the given fields replaced by the non-null parameter values.
@@ -256,9 +256,9 @@ class _Expense implements Expense {
 /// Effective value ("the user claims it lowers ISR"): the override if any, else the default.
 @override final  bool deductible;
 @override@JsonKey(name: 'deductible_source') final  DeductibleSource deductibleSource;
-/// Non-blocking notices computed on writes (create, update, restore), never stored; `[]` on reads. Codes (append-only): `cash_over_threshold` (`payment_method`), `no_cfdi` (`has_cfdi`), `not_isr_deductible_in_regime` and `category_not_deductible` (`deductible`), `duplicate_cfdi_uuid` (`cfdi_uuid`).
+/// Non-blocking notices computed on writes (create, update, restore), never stored; `[]` on reads. Codes (append-only): `cash_over_threshold` (`payment_method`), `no_cfdi` (`has_cfdi`), `not_isr_deductible_in_regime` and `category_not_deductible` (`deductible`), `duplicate_cfdi_uuid` (`cfdi_uuid`), `iva_not_creditable_cash_payment` (`payment_method`).
  final  List<Warning> _warnings;
-/// Non-blocking notices computed on writes (create, update, restore), never stored; `[]` on reads. Codes (append-only): `cash_over_threshold` (`payment_method`), `no_cfdi` (`has_cfdi`), `not_isr_deductible_in_regime` and `category_not_deductible` (`deductible`), `duplicate_cfdi_uuid` (`cfdi_uuid`).
+/// Non-blocking notices computed on writes (create, update, restore), never stored; `[]` on reads. Codes (append-only): `cash_over_threshold` (`payment_method`), `no_cfdi` (`has_cfdi`), `not_isr_deductible_in_regime` and `category_not_deductible` (`deductible`), `duplicate_cfdi_uuid` (`cfdi_uuid`), `iva_not_creditable_cash_payment` (`payment_method`).
 @override List<Warning> get warnings {
   if (_warnings is EqualUnmodifiableListView) return _warnings;
   // ignore: implicit_dynamic_type

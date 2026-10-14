@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Warning {
 
- String get code;/// Same dotted naming as `FieldError.field`.
+ WarningCode get code;/// Same dotted naming as `FieldError.field`.
  String get field;/// Safe to show (es-MX); never contains the RFC.
  String get message;
 /// Create a copy of Warning
@@ -56,7 +56,7 @@ abstract mixin class $WarningCopyWith<$Res>  {
   factory $WarningCopyWith(Warning value, $Res Function(Warning) _then) = _$WarningCopyWithImpl;
 @useResult
 $Res call({
- String code, String field, String message
+ WarningCode code, String field, String message
 });
 
 
@@ -76,7 +76,7 @@ class _$WarningCopyWithImpl<$Res>
 @pragma('vm:prefer-inline') @override $Res call({Object? code = null,Object? field = null,Object? message = null,}) {
   return _then(Warning(
 code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
-as String,field: null == field ? _self.field : field // ignore: cast_nullable_to_non_nullable
+as WarningCode,field: null == field ? _self.field : field // ignore: cast_nullable_to_non_nullable
 as String,message: null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
 as String,
   ));
@@ -163,7 +163,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String code,  String field,  String message)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( WarningCode code,  String field,  String message)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Warning() when $default != null:
 return $default(_that.code,_that.field,_that.message);case _:
@@ -184,7 +184,7 @@ return $default(_that.code,_that.field,_that.message);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String code,  String field,  String message)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( WarningCode code,  String field,  String message)  $default,) {final _that = this;
 switch (_that) {
 case _Warning():
 return $default(_that.code,_that.field,_that.message);case _:
@@ -204,7 +204,7 @@ return $default(_that.code,_that.field,_that.message);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String code,  String field,  String message)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( WarningCode code,  String field,  String message)?  $default,) {final _that = this;
 switch (_that) {
 case _Warning() when $default != null:
 return $default(_that.code,_that.field,_that.message);case _:
@@ -222,7 +222,7 @@ class _Warning implements Warning {
   const _Warning({required this.code, required this.field, required this.message});
   factory _Warning.fromJson(Map<String, dynamic> json) => _$WarningFromJson(json);
 
-@override final  String code;
+@override final  WarningCode code;
 /// Same dotted naming as `FieldError.field`.
 @override final  String field;
 /// Safe to show (es-MX); never contains the RFC.
@@ -263,7 +263,7 @@ abstract mixin class _$WarningCopyWith<$Res> implements $WarningCopyWith<$Res> {
   factory _$WarningCopyWith(_Warning value, $Res Function(_Warning) _then) = __$WarningCopyWithImpl;
 @override @useResult
 $Res call({
- String code, String field, String message
+ WarningCode code, String field, String message
 });
 
 
@@ -283,7 +283,7 @@ class __$WarningCopyWithImpl<$Res>
 @override @pragma('vm:prefer-inline') $Res call({Object? code = null,Object? field = null,Object? message = null,}) {
   return _then(_Warning(
 code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
-as String,field: null == field ? _self.field : field // ignore: cast_nullable_to_non_nullable
+as WarningCode,field: null == field ? _self.field : field // ignore: cast_nullable_to_non_nullable
 as String,message: null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
 as String,
   ));

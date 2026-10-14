@@ -23,10 +23,11 @@ class _TaxEngineClient implements TaxEngineClient {
   @override
   Future<TaxpayerEstimate> getTaxpayerEstimate({
     required String taxpayerId,
-    required String period,
+    String? period,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{r'period': period};
+    queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
     final _options = _setStreamType<TaxpayerEstimate>(

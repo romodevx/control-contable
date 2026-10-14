@@ -5,6 +5,7 @@ import 'package:control_contable/api/generated/models/person_type.dart';
 import 'package:control_contable/api/generated/models/regime_option_def_type.dart';
 import 'package:control_contable/api/generated/models/tax_input_def_kind.dart';
 import 'package:control_contable/api/generated/models/warning.dart';
+import 'package:control_contable/api/generated/models/warning_code.dart';
 import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/features/taxpayers/presentation/onboarding_screen.dart';
@@ -452,12 +453,12 @@ void main() {
 
   group('after create: non-blocking warnings', () {
     const mismatch = Warning(
-      code: 'rfc_check_digit_mismatch',
+      code: WarningCode.rfcCheckDigitMismatch,
       field: 'rfc',
       message: 'Check digit mismatch.',
     );
     const cpa = Warning(
-      code: 'regime_combination_needs_cpa_review',
+      code: WarningCode.regimeCombinationNeedsCpaReview,
       field: 'regimes.1.regime_code',
       message: 'Combinación por confirmar con un contador.',
     );
@@ -533,7 +534,7 @@ void main() {
         taxpayer(
           warnings: [
             const Warning(
-              code: 'regime_combination_needs_cpa_review',
+              code: WarningCode.regimeCombinationNeedsCpaReview,
               field: 'regimes.1.regime_code',
               message: cpaPendingReason,
             ),
@@ -677,6 +678,41 @@ void main() {
       await tapText(tester, _create);
 
       expect(find.text('Otro dato'), findsNothing);
+      expect(find.text('Ingresos del año'), findsOneWidget);
+    });
+
+    testWidgets('monthly and yes/no inputs are left to the tax-inputs form '
+        '(M5-27)', (tester) async {
+      harness.repository.catalogs[PersonType.moral] = [
+        regime(
+          '601',
+          personType: PersonType.moral,
+          requiredInputs: [
+            inputDef(
+              'prior_provisional_payments',
+              label: 'Pagos provisionales anteriores',
+              kind: TaxInputDefKind.moneyMonthly,
+            ),
+            inputDef(
+              'first_fiscal_year',
+              label: 'Primer ejercicio fiscal',
+              kind: TaxInputDefKind.boolean,
+            ),
+            inputDef('ytd', label: 'Ingresos del año'),
+          ],
+        ),
+      ];
+      await openRegimes(
+        tester,
+        card: 'Persona moral',
+        rfc: 'ABC680524P76',
+        alsoEnabled: {AppModule.taxEngine},
+      );
+      await _pick(tester, '601');
+      await tapText(tester, _create);
+
+      expect(find.text('Pagos provisionales anteriores'), findsNothing);
+      expect(find.text('Primer ejercicio fiscal'), findsNothing);
       expect(find.text('Ingresos del año'), findsOneWidget);
     });
   });

@@ -16,7 +16,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TaxInputValue {
 
- String get key;@JsonKey(includeIfNull: false, name: 'value_cents') MoneyCents? get valueCents;@JsonKey(includeIfNull: false, name: 'value_rate') DecimalRate? get valueRate;
+ String get key;/// Month of the fiscal year, only for `money_monthly`.
+@JsonKey(includeIfNull: false) int? get month;@JsonKey(includeIfNull: false, name: 'value_cents') NonNegativeCents? get valueCents;@JsonKey(includeIfNull: false, name: 'value_rate') DecimalRate? get valueRate;@JsonKey(includeIfNull: false, name: 'value_bool') bool? get valueBool;
 /// Create a copy of TaxInputValue
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +31,20 @@ $TaxInputValueCopyWith<TaxInputValue> get copyWith => _$TaxInputValueCopyWithImp
 @override
 bool operator ==(Object other) {
   final _this = this as TaxInputValue;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TaxInputValue&&(identical(other.key, _this.key) || other.key == _this.key)&&(identical(other.valueCents, _this.valueCents) || other.valueCents == _this.valueCents)&&(identical(other.valueRate, _this.valueRate) || other.valueRate == _this.valueRate));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TaxInputValue&&(identical(other.key, _this.key) || other.key == _this.key)&&(identical(other.month, _this.month) || other.month == _this.month)&&(identical(other.valueCents, _this.valueCents) || other.valueCents == _this.valueCents)&&(identical(other.valueRate, _this.valueRate) || other.valueRate == _this.valueRate)&&(identical(other.valueBool, _this.valueBool) || other.valueBool == _this.valueBool));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as TaxInputValue;
-  return Object.hash(runtimeType,_this.key,_this.valueCents,_this.valueRate);
+  return Object.hash(runtimeType,_this.key,_this.month,_this.valueCents,_this.valueRate,_this.valueBool);
 }
 
 @override
 String toString() {
   final _this = this as TaxInputValue;
-  return 'TaxInputValue(key: ${_this.key}, valueCents: ${_this.valueCents}, valueRate: ${_this.valueRate})';
+  return 'TaxInputValue(key: ${_this.key}, month: ${_this.month}, valueCents: ${_this.valueCents}, valueRate: ${_this.valueRate}, valueBool: ${_this.valueBool})';
 }
 
 
@@ -54,7 +55,7 @@ abstract mixin class $TaxInputValueCopyWith<$Res>  {
   factory $TaxInputValueCopyWith(TaxInputValue value, $Res Function(TaxInputValue) _then) = _$TaxInputValueCopyWithImpl;
 @useResult
 $Res call({
- String key,@JsonKey(includeIfNull: false, name: 'value_cents') MoneyCents? valueCents,@JsonKey(includeIfNull: false, name: 'value_rate') DecimalRate? valueRate
+ String key,@JsonKey(includeIfNull: false) int? month,@JsonKey(includeIfNull: false, name: 'value_cents') NonNegativeCents? valueCents,@JsonKey(includeIfNull: false, name: 'value_rate') DecimalRate? valueRate,@JsonKey(includeIfNull: false, name: 'value_bool') bool? valueBool
 });
 
 
@@ -71,12 +72,14 @@ class _$TaxInputValueCopyWithImpl<$Res>
 
 /// Create a copy of TaxInputValue
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? key = null,Object? valueCents = freezed,Object? valueRate = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? key = null,Object? month = freezed,Object? valueCents = freezed,Object? valueRate = freezed,Object? valueBool = freezed,}) {
   return _then(TaxInputValue(
 key: null == key ? _self.key : key // ignore: cast_nullable_to_non_nullable
-as String,valueCents: freezed == valueCents ? _self.valueCents : valueCents // ignore: cast_nullable_to_non_nullable
-as MoneyCents?,valueRate: freezed == valueRate ? _self.valueRate : valueRate // ignore: cast_nullable_to_non_nullable
-as DecimalRate?,
+as String,month: freezed == month ? _self.month : month // ignore: cast_nullable_to_non_nullable
+as int?,valueCents: freezed == valueCents ? _self.valueCents : valueCents // ignore: cast_nullable_to_non_nullable
+as NonNegativeCents?,valueRate: freezed == valueRate ? _self.valueRate : valueRate // ignore: cast_nullable_to_non_nullable
+as DecimalRate?,valueBool: freezed == valueBool ? _self.valueBool : valueBool // ignore: cast_nullable_to_non_nullable
+as bool?,
   ));
 }
 
@@ -161,10 +164,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String key, @JsonKey(includeIfNull: false, name: 'value_cents')  MoneyCents? valueCents, @JsonKey(includeIfNull: false, name: 'value_rate')  DecimalRate? valueRate)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String key, @JsonKey(includeIfNull: false)  int? month, @JsonKey(includeIfNull: false, name: 'value_cents')  NonNegativeCents? valueCents, @JsonKey(includeIfNull: false, name: 'value_rate')  DecimalRate? valueRate, @JsonKey(includeIfNull: false, name: 'value_bool')  bool? valueBool)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TaxInputValue() when $default != null:
-return $default(_that.key,_that.valueCents,_that.valueRate);case _:
+return $default(_that.key,_that.month,_that.valueCents,_that.valueRate,_that.valueBool);case _:
   return orElse();
 
 }
@@ -182,10 +185,10 @@ return $default(_that.key,_that.valueCents,_that.valueRate);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String key, @JsonKey(includeIfNull: false, name: 'value_cents')  MoneyCents? valueCents, @JsonKey(includeIfNull: false, name: 'value_rate')  DecimalRate? valueRate)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String key, @JsonKey(includeIfNull: false)  int? month, @JsonKey(includeIfNull: false, name: 'value_cents')  NonNegativeCents? valueCents, @JsonKey(includeIfNull: false, name: 'value_rate')  DecimalRate? valueRate, @JsonKey(includeIfNull: false, name: 'value_bool')  bool? valueBool)  $default,) {final _that = this;
 switch (_that) {
 case _TaxInputValue():
-return $default(_that.key,_that.valueCents,_that.valueRate);case _:
+return $default(_that.key,_that.month,_that.valueCents,_that.valueRate,_that.valueBool);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -202,10 +205,10 @@ return $default(_that.key,_that.valueCents,_that.valueRate);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String key, @JsonKey(includeIfNull: false, name: 'value_cents')  MoneyCents? valueCents, @JsonKey(includeIfNull: false, name: 'value_rate')  DecimalRate? valueRate)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String key, @JsonKey(includeIfNull: false)  int? month, @JsonKey(includeIfNull: false, name: 'value_cents')  NonNegativeCents? valueCents, @JsonKey(includeIfNull: false, name: 'value_rate')  DecimalRate? valueRate, @JsonKey(includeIfNull: false, name: 'value_bool')  bool? valueBool)?  $default,) {final _that = this;
 switch (_that) {
 case _TaxInputValue() when $default != null:
-return $default(_that.key,_that.valueCents,_that.valueRate);case _:
+return $default(_that.key,_that.month,_that.valueCents,_that.valueRate,_that.valueBool);case _:
   return null;
 
 }
@@ -217,12 +220,15 @@ return $default(_that.key,_that.valueCents,_that.valueRate);case _:
 @JsonSerializable()
 
 class _TaxInputValue implements TaxInputValue {
-  const _TaxInputValue({required this.key, @JsonKey(includeIfNull: false, name: 'value_cents') this.valueCents, @JsonKey(includeIfNull: false, name: 'value_rate') this.valueRate});
+  const _TaxInputValue({required this.key, @JsonKey(includeIfNull: false) this.month, @JsonKey(includeIfNull: false, name: 'value_cents') this.valueCents, @JsonKey(includeIfNull: false, name: 'value_rate') this.valueRate, @JsonKey(includeIfNull: false, name: 'value_bool') this.valueBool});
   factory _TaxInputValue.fromJson(Map<String, dynamic> json) => _$TaxInputValueFromJson(json);
 
 @override final  String key;
-@override@JsonKey(includeIfNull: false, name: 'value_cents') final  MoneyCents? valueCents;
+/// Month of the fiscal year, only for `money_monthly`.
+@override@JsonKey(includeIfNull: false) final  int? month;
+@override@JsonKey(includeIfNull: false, name: 'value_cents') final  NonNegativeCents? valueCents;
 @override@JsonKey(includeIfNull: false, name: 'value_rate') final  DecimalRate? valueRate;
+@override@JsonKey(includeIfNull: false, name: 'value_bool') final  bool? valueBool;
 
 /// Create a copy of TaxInputValue
 /// with the given fields replaced by the non-null parameter values.
@@ -237,18 +243,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TaxInputValue&&(identical(other.key, key) || other.key == key)&&(identical(other.valueCents, valueCents) || other.valueCents == valueCents)&&(identical(other.valueRate, valueRate) || other.valueRate == valueRate));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TaxInputValue&&(identical(other.key, key) || other.key == key)&&(identical(other.month, month) || other.month == month)&&(identical(other.valueCents, valueCents) || other.valueCents == valueCents)&&(identical(other.valueRate, valueRate) || other.valueRate == valueRate)&&(identical(other.valueBool, valueBool) || other.valueBool == valueBool));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,key,valueCents,valueRate);
+    return Object.hash(runtimeType,key,month,valueCents,valueRate,valueBool);
 }
 
 @override
 String toString() {
-    return 'TaxInputValue(key: $key, valueCents: $valueCents, valueRate: $valueRate)';
+    return 'TaxInputValue(key: $key, month: $month, valueCents: $valueCents, valueRate: $valueRate, valueBool: $valueBool)';
 }
 
 
@@ -259,7 +265,7 @@ abstract mixin class _$TaxInputValueCopyWith<$Res> implements $TaxInputValueCopy
   factory _$TaxInputValueCopyWith(_TaxInputValue value, $Res Function(_TaxInputValue) _then) = __$TaxInputValueCopyWithImpl;
 @override @useResult
 $Res call({
- String key,@JsonKey(includeIfNull: false, name: 'value_cents') MoneyCents? valueCents,@JsonKey(includeIfNull: false, name: 'value_rate') DecimalRate? valueRate
+ String key,@JsonKey(includeIfNull: false) int? month,@JsonKey(includeIfNull: false, name: 'value_cents') NonNegativeCents? valueCents,@JsonKey(includeIfNull: false, name: 'value_rate') DecimalRate? valueRate,@JsonKey(includeIfNull: false, name: 'value_bool') bool? valueBool
 });
 
 
@@ -276,12 +282,14 @@ class __$TaxInputValueCopyWithImpl<$Res>
 
 /// Create a copy of TaxInputValue
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? key = null,Object? valueCents = freezed,Object? valueRate = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? key = null,Object? month = freezed,Object? valueCents = freezed,Object? valueRate = freezed,Object? valueBool = freezed,}) {
   return _then(_TaxInputValue(
 key: null == key ? _self.key : key // ignore: cast_nullable_to_non_nullable
-as String,valueCents: freezed == valueCents ? _self.valueCents : valueCents // ignore: cast_nullable_to_non_nullable
-as MoneyCents?,valueRate: freezed == valueRate ? _self.valueRate : valueRate // ignore: cast_nullable_to_non_nullable
-as DecimalRate?,
+as String,month: freezed == month ? _self.month : month // ignore: cast_nullable_to_non_nullable
+as int?,valueCents: freezed == valueCents ? _self.valueCents : valueCents // ignore: cast_nullable_to_non_nullable
+as NonNegativeCents?,valueRate: freezed == valueRate ? _self.valueRate : valueRate // ignore: cast_nullable_to_non_nullable
+as DecimalRate?,valueBool: freezed == valueBool ? _self.valueBool : valueBool // ignore: cast_nullable_to_non_nullable
+as bool?,
   ));
 }
 

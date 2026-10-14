@@ -7,6 +7,7 @@ import 'package:control_contable/api/generated/models/taxpayer.dart';
 import 'package:control_contable/api/generated/models/taxpayer_create.dart';
 import 'package:control_contable/api/generated/models/taxpayer_regime_create.dart';
 import 'package:control_contable/api/generated/models/warning.dart';
+import 'package:control_contable/api/generated/models/warning_code.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/time/clock.dart';
 import 'package:control_contable/features/taxpayers/application/onboarding_failures.dart';
@@ -20,10 +21,11 @@ export 'package:control_contable/features/taxpayers/application/onboarding_failu
     show OnboardingNotice, RfcRejection;
 
 /// `Warning.code` of a check-digit mismatch (D-RFC).
-const String rfcCheckDigitWarning = 'rfc_check_digit_mismatch';
+const WarningCode rfcCheckDigitWarning = WarningCode.rfcCheckDigitMismatch;
 
 /// `Warning.code` of a regime pair still under CPA review (§2.5).
-const String cpaReviewWarning = 'regime_combination_needs_cpa_review';
+const WarningCode cpaReviewWarning =
+    WarningCode.regimeCombinationNeedsCpaReview;
 
 /// A regime pair the server allowed under CPA review (§2.5): the regimes
 /// sent, in request order (empty when the warning names none), and the

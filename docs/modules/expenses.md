@@ -16,7 +16,8 @@
 - `deductible` is the effective value; `deductible_source` says whether the user overrode it.
   `deductible: null` in a `PATCH` clears the override.
 - `warnings[]` (generic `Warning`, with `field`): `cash_over_threshold`, `no_cfdi`,
-  `not_isr_deductible_in_regime`, `category_not_deductible`, `duplicate_cfdi_uuid`.
+  `not_isr_deductible_in_regime`, `category_not_deductible`, `duplicate_cfdi_uuid`,
+  `iva_not_creditable_cash_payment` (0.6.0).
 - `legend` (the mandatory "Esto es un aproximado..." text) travels on every expense, page and
   category list; the app renders the server field.
 

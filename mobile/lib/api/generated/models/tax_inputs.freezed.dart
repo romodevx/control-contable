@@ -16,7 +16,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TaxInputs {
 
-@JsonKey(name: 'regime_code') RegimeCode get regimeCode;@JsonKey(name: 'fiscal_year') FiscalYear get fiscalYear; List<TaxInputDef> get definitions; List<TaxInputValue> get values;
+@JsonKey(name: 'regime_code') RegimeCode get regimeCode;@JsonKey(name: 'fiscal_year') FiscalYear get fiscalYear; List<TaxInputDef> get definitions;/// Ordered by the key's position in `definitions`, then `month`.
+ List<TaxInputValue> get values;
 /// Create a copy of TaxInputs
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -230,7 +231,9 @@ class _TaxInputs implements TaxInputs {
   return EqualUnmodifiableListView(_definitions);
 }
 
+/// Ordered by the key's position in `definitions`, then `month`.
  final  List<TaxInputValue> _values;
+/// Ordered by the key's position in `definitions`, then `month`.
 @override List<TaxInputValue> get values {
   if (_values is EqualUnmodifiableListView) return _values;
   // ignore: implicit_dynamic_type
