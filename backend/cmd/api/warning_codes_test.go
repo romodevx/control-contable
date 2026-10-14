@@ -7,6 +7,7 @@ import (
 
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
 	expenses "github.com/romodevx/control-contable/backend/internal/expenses/domain"
+	expensesuc "github.com/romodevx/control-contable/backend/internal/expenses/usecase"
 	incomes "github.com/romodevx/control-contable/backend/internal/incomes/domain"
 	taxpayers "github.com/romodevx/control-contable/backend/internal/taxpayers/usecase"
 )
@@ -20,13 +21,14 @@ func TestModuleWarningCodesAreInTheContract(t *testing.T) {
 		taxpayers.WarningRegimeNeedsCPAReview,
 		string(incomes.WarningWithholdingDiffersFromRate),
 		string(incomes.WarningDuplicateCFDIUUID),
-		string(incomes.WarningProvisionalRates),
+		string(incomes.WarningProvisionalParameters),
 		string(expenses.WarningCashOverThreshold),
 		string(expenses.WarningNoCFDI),
 		string(expenses.WarningNotISRDeductibleInRegime),
 		string(expenses.WarningCategoryNotDeductible),
 		string(expenses.WarningDuplicateCFDIUUID),
 		string(expenses.WarningIVANotCreditableCashPayment),
+		string(expensesuc.WarningProvisionalParameters),
 	}
 	for _, code := range codes {
 		t.Run(code, func(t *testing.T) {

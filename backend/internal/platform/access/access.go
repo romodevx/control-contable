@@ -9,12 +9,12 @@
 //   - In the trial a user creates at most TrialRecordCap incomes and
 //     TrialRecordCap expenses, counted per user across all taxpayers. A record
 //     counts when created; deleting never frees a slot, and restoring a
-//     deleted record never reserves one: the slot it took at creation never
-//     left the count (MODULE-incomes §2.7, OQ-10, coordinator 2026-10-13).
+//     deleted record never takes one (DECIDED, MODULE-incomes §2.7): its slot
+//     was spent at creation and never left the count.
 //   - With an active pro or comp entitlement records are unlimited; with
 //     neither, and no running trial, access is read-only: creates and edits
-//     get 402 entitlement_required, while reads, deletes and restores (the
-//     Undo of a delete, coordinator decision) stay.
+//     get 402 entitlement_required, while reads, deletes and restores of the
+//     user's own deleted records stay (coordinator decision, M4).
 //   - Every user, trial included, holds at most TaxpayerCap taxpayers (422
 //     taxpayer_limit_reached). Coordinator decision on P0-16; PRD §7 "Taxpayers
 //     in trial" is amended to match.

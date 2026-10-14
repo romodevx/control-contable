@@ -288,7 +288,7 @@ func TestCreate_ProvisionalParametersWarn(t *testing.T) {
 	in.Dates = domain.Dates{CollectedOn: date(t, "2027-01-05")}
 	got, err := h.uc.Create(t.Context(), userA, create(incomeID, taxpayerA, in))
 	require.NoError(t, err)
-	assert.Equal(t, []domain.Warning{{Code: domain.WarningProvisionalRates, Field: "collected_on"}}, got.Warnings)
+	assert.Equal(t, []domain.Warning{{Code: domain.WarningProvisionalParameters, Field: "collected_on"}}, got.Warnings)
 }
 
 // The rate_8 border decree lapses on 2026-12-31 (US-I1).

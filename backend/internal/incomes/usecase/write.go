@@ -250,7 +250,7 @@ func (uc *Incomes) checkParameters(basis domain.IncomeBasis, dates domain.Dates)
 		case err != nil:
 			vs.Add(d.field, domain.ErrParametersUnavailable)
 		case provisional:
-			warnings = append(warnings, domain.Warning{Code: domain.WarningProvisionalRates, Field: d.field})
+			warnings = append(warnings, domain.Warning{Code: domain.WarningProvisionalParameters, Field: d.field})
 		}
 	}
 	if len(vs) > 0 {
