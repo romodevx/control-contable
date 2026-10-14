@@ -161,3 +161,8 @@ mobile-artifact-check-test:
 ## mobile-build-ipa: obfuscated release IPA for FLAVOR (needs Xcode + the iOS schemes, OB6)
 mobile-build-ipa: mobile-require-api-url
 	cd $(MOBILE) && flutter build ipa $(MOBILE_RELEASE_FLAGS)
+
+.PHONY: hooks
+## hooks: enable the repo's git hooks (gitleaks pre-commit secret scan)
+hooks:
+	git config core.hooksPath .githooks
