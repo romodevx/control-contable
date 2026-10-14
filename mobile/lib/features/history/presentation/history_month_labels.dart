@@ -26,9 +26,35 @@ class HistoryMonthLabels {
 
   /// "Febrero".
   String get name {
-    final word = DateFormat.MMMM(_locale).format(periodMonth(month.period));
+    final word = _monthWord;
     return word[0].toUpperCase() + word.substring(1);
   }
+
+  /// "Febrero de 2026".
+  String get title => _l10n.historyMonthOfYear(name, '$_year');
+
+  /// "Ver ingresos de febrero de 2026": the incomes link, spoken.
+  String get incomesLink => _l10n.historyViewIncomesOf(
+    _l10n.historyMonthOfYear(_monthWord, '$_year'),
+  );
+
+  /// "Ver gastos de febrero de 2026": the expenses link, spoken.
+  String get expensesLink => _l10n.historyViewExpensesOf(
+    _l10n.historyMonthOfYear(_monthWord, '$_year'),
+  );
+
+  /// What a screen reader hears on coming back from the month
+  /// (MODULE-history §6): "Febrero de 2026. Visto el 20 mar.", or its
+  /// marker when it still differs; `null` when it carries neither.
+  String? get returnState {
+    final state = marker ?? viewed;
+    return state == null ? null : [title, state].map(_sentence).join(' ');
+  }
+
+  String get _monthWord =>
+      DateFormat.MMMM(_locale).format(periodMonth(month.period));
+
+  int get _year => periodMonth(month.period).year;
 
   /// "ISR $400.00 · IVA $3,100.00", or the IVA as saldo a favor.
   String taxLine(HistoryTax tax) {
@@ -83,8 +109,6 @@ class HistoryMonthLabels {
   /// "Febrero de 2026. Total a pagar: 3,500 pesos. Completo. Cambió …".
   String get spoken {
     final tax = month.tax;
-    final year = periodMonth(month.period).year;
-    final title = _l10n.historyMonthOfYear(name, '$year');
     return [
       if (month.isCurrent) _l10n.historyMonthCurrentSpoken(title) else title,
       if (tax != null) _spokenTotal(tax.totalPayableRoundedCents),

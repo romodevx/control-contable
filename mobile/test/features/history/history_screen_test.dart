@@ -372,7 +372,7 @@ void main() {
       expect(_inRow('2026-01', find.text('Visto el 20 mar')), findsOneWidget);
     });
 
-    testWidgets('returning announces the month\'s new state politely (§6)', (
+    testWidgets("returning announces the month's new state politely (§6)", (
       tester,
     ) async {
       _tall(tester);

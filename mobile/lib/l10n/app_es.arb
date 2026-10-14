@@ -2722,6 +2722,32 @@
   "@historyYearTotalsNote": {
     "description": "Note under the year totals: not the annual return (MODULE-history §10)."
   },
+  "historyViewIncomes": "Ver ingresos",
+  "@historyViewIncomes": {
+    "description": "Link under a History month to that month's incomes list (US-H6)."
+  },
+  "historyViewIncomesOf": "Ver ingresos de {month}",
+  "@historyViewIncomesOf": {
+    "description": "What a screen reader says for the incomes link, e.g. Ver ingresos de febrero de 2026.",
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "historyViewExpenses": "Ver gastos",
+  "@historyViewExpenses": {
+    "description": "Link under a History month to that month's expenses list (US-H6)."
+  },
+  "historyViewExpensesOf": "Ver gastos de {month}",
+  "@historyViewExpensesOf": {
+    "description": "What a screen reader says for the expenses link, e.g. Ver gastos de febrero de 2026.",
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
   "historyMonthOfYear": "{month} de {year}",
   "@historyMonthOfYear": {
     "description": "A month row as a screen reader reads it, e.g. Febrero de 2026.",

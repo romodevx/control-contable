@@ -2093,6 +2093,22 @@ class AppLocalizationsEs extends AppLocalizations {
   String get historyYearTotalsNote => 'No es la declaración anual.';
 
   @override
+  String get historyViewIncomes => 'Ver ingresos';
+
+  @override
+  String historyViewIncomesOf(String month) {
+    return 'Ver ingresos de $month';
+  }
+
+  @override
+  String get historyViewExpenses => 'Ver gastos';
+
+  @override
+  String historyViewExpensesOf(String month) {
+    return 'Ver gastos de $month';
+  }
+
+  @override
   String historyMonthOfYear(String month, String year) {
     return '$month de $year';
   }

@@ -3406,6 +3406,30 @@ abstract class AppLocalizations {
   /// **'No es la declaración anual.'**
   String get historyYearTotalsNote;
 
+  /// Link under a History month to that month's incomes list (US-H6).
+  ///
+  /// In es, this message translates to:
+  /// **'Ver ingresos'**
+  String get historyViewIncomes;
+
+  /// What a screen reader says for the incomes link, e.g. Ver ingresos de febrero de 2026.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver ingresos de {month}'**
+  String historyViewIncomesOf(String month);
+
+  /// Link under a History month to that month's expenses list (US-H6).
+  ///
+  /// In es, this message translates to:
+  /// **'Ver gastos'**
+  String get historyViewExpenses;
+
+  /// What a screen reader says for the expenses link, e.g. Ver gastos de febrero de 2026.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver gastos de {month}'**
+  String historyViewExpensesOf(String month);
+
   /// A month row as a screen reader reads it, e.g. Febrero de 2026.
   ///
   /// In es, this message translates to:

@@ -82,11 +82,12 @@ class _HistoryContent extends ConsumerWidget {
       if (context.mounted) ref.invalidate(historyYearProvider(query));
     }
 
-    if (history.value case final loaded?) {
-      return HistoryYearView(year: loaded, onReturn: reload);
-    }
+    // A failed re-read shows the failure, never the stale year (§5).
     if (history.error case final error? when !history.isLoading) {
       return HistoryFailure(error: error, onRetry: reload);
+    }
+    if (history.value case final loaded?) {
+      return HistoryYearView(year: loaded, onReturn: reload);
     }
     return const HistorySkeleton();
   }
