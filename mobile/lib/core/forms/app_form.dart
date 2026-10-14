@@ -61,7 +61,21 @@ class AppForm extends StatelessWidget {
     final ran = await controller.submit(
       saveForNext == null ? onSave : () async => saved = await saveForNext(),
     );
-    if (ran && saved) controller.prepareNext();
+    if (ran && saved) {
+      controller.prepareNext();
+      _revealFocusAfterLayout();
+    }
+  }
+
+  /// A text field scrolls itself into view when focused; a button (the
+  /// expense category) does not, so the next record's first field is
+  /// revealed once the cleared form is laid out (WCAG 2.2 · 2.4.11).
+  static void _revealFocusAfterLayout() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final focused = FocusManager.instance.primaryFocus?.context;
+      if (focused == null || !focused.mounted) return;
+      Scrollable.ensureVisible(focused, alignment: 0.5);
+    });
   }
 
   @override
