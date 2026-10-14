@@ -49,10 +49,6 @@ func (notBuilt) UnregisterDevice(context.Context, gen.UnregisterDeviceRequestObj
 	return nil, errNotBuilt
 }
 
-func (notBuilt) ListExpenseCategories(context.Context, gen.ListExpenseCategoriesRequestObject) (gen.ListExpenseCategoriesResponseObject, error) {
-	return nil, errNotBuilt
-}
-
 func (notBuilt) GetReminderSettings(context.Context, gen.GetReminderSettingsRequestObject) (gen.GetReminderSettingsResponseObject, error) {
 	return nil, errNotBuilt
 }
@@ -82,30 +78,6 @@ func (notBuilt) GetTaxpayerEstimate(context.Context, gen.GetTaxpayerEstimateRequ
 }
 
 func (notBuilt) GetEstimateBreakdown(context.Context, gen.GetEstimateBreakdownRequestObject) (gen.GetEstimateBreakdownResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) ListExpenses(context.Context, gen.ListExpensesRequestObject) (gen.ListExpensesResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) CreateExpense(context.Context, gen.CreateExpenseRequestObject) (gen.CreateExpenseResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) DeleteExpense(context.Context, gen.DeleteExpenseRequestObject) (gen.DeleteExpenseResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) GetExpense(context.Context, gen.GetExpenseRequestObject) (gen.GetExpenseResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) UpdateExpense(context.Context, gen.UpdateExpenseRequestObject) (gen.UpdateExpenseResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) RestoreExpense(context.Context, gen.RestoreExpenseRequestObject) (gen.RestoreExpenseResponseObject, error) {
 	return nil, errNotBuilt
 }
 

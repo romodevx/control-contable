@@ -135,15 +135,3 @@ func flag(v taxpayersdomain.OptionValue) bool {
 	b, _ := v.Bool()
 	return b
 }
-
-// newRecordModules wires the record modules over the taxpayers module's
-// unit of work and one rate catalog.
-func newRecordModules(t taxpayersModule, logger *slog.Logger) (incomesModule, error) {
-	rates, err := newRateCatalog()
-	if err != nil {
-		return incomesModule{}, err
-	}
-	return newIncomesModule(incomesWiring{
-		tx: t.tx, taxpayers: t.queries, rates: rates, clock: clock.NewSystem(), accessClock: clock.NewSystem(), logger: logger,
-	})
-}

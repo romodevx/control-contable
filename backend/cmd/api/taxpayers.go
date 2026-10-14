@@ -8,12 +8,14 @@ import (
 	"log/slog"
 
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
+	expinfra "github.com/romodevx/control-contable/backend/internal/expenses/infra"
 	"github.com/romodevx/control-contable/backend/internal/platform/access"
 	"github.com/romodevx/control-contable/backend/internal/platform/access/accessgorm"
 	"github.com/romodevx/control-contable/backend/internal/platform/clock"
 	"github.com/romodevx/control-contable/backend/internal/platform/config"
 	"github.com/romodevx/control-contable/backend/internal/platform/crypto"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
+	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit"
 	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit/ratelimitpg"
 	"github.com/romodevx/control-contable/backend/internal/platform/tx"
 	taxpayershttp "github.com/romodevx/control-contable/backend/internal/taxpayers/adapter/http"
@@ -59,7 +61,7 @@ func newTaxpayersModule(w taxpayersWiring) (taxpayersModule, error) {
 		handler: taxpayershttp.NewHandler(taxpayershttp.UseCases{
 			Taxpayers: usecase.NewTaxpayers(deps), Regimes: usecase.NewRegimes(deps), Catalog: usecase.NewCatalog(deps),
 		}),
-		userLimits: userLimits(w.limits),
+		userLimits: bucketsOf(w.limits, taxpayershttp.UserLimits),
 		tx:         deps.Tx,
 		queries:    usecase.NewQueries(deps),
 	}, nil
@@ -81,16 +83,17 @@ func newTaxpayersDeps(w taxpayersWiring) (usecase.Deps, error) {
 		Tx:        txm,
 		Access:    access.NewPolicy(txm, accessgorm.NewStore(), accessgorm.NewStore(), clock.NewSystem()),
 		Taxpayers: store, Regimes: store, Catalog: catalog, Directory: catalog,
-		Records: infra.NoRecords{}, // M3/M4 replace it with the record lookup
+		Records: regimeRecords{expenses: expinfra.NewStore()}, // M3-06 adds the incomes
 		RFC:     vault, Clock: clock.NewSystem(), Logger: w.logger,
 	}, nil
 }
 
-// userLimits builds the router's per-user limits from the adapter's
-// policies: every write shares one bucket per user (one scope).
-func userLimits(limits *ratelimitpg.Store) map[string]router.Limiter {
-	out := make(map[string]router.Limiter, len(taxpayershttp.UserLimits))
-	for op, policy := range taxpayershttp.UserLimits {
+// bucketsOf builds the router's per-user limits from a module adapter's
+// policies by operationId: the writes of one scope share one bucket per
+// user.
+func bucketsOf(limits *ratelimitpg.Store, policies map[string]ratelimit.Policy) map[string]router.Limiter {
+	out := make(map[string]router.Limiter, len(policies))
+	for op, policy := range policies {
 		out[op] = limits.Bucket(policy)
 	}
 	return out
