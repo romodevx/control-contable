@@ -1,0 +1,28 @@
+# golden: hand-authored from research AN-08 (docs/research/annual-return-2026.md Part D). Never generated or rewritten by a tool.
+id: AN-08
+source: research:AN-08
+pending_strategy: true # ANN-08 registers pf_art152
+input:
+  fiscal_year: 2026
+  person_type: fisica
+  regimes:
+    - regime: "612"
+      income: "300000.00" # utilidad 300,000 = total income
+  personal_deductions:
+    - {category: medical, amount: "60000.00", payment_method: electronic, beneficiary: self}
+    - {category: health_insurance, amount: "20000.00", payment_method: electronic, beneficiary: self}
+expected:
+  informative_income_over_500k: false
+  sections:
+    - kind: pf_art152
+      regimes: ["612"]
+      status: complete
+      obligation: obligated
+      cpa_topics: []
+      tax: # the research states the ISR before credits only
+        accumulable_income: "300000.00"
+        personal_deductions: "45000.00" # min(213,973.20; 15 % x 300,000), not 80,000
+        base: "255000.00"
+        isr: "31807.91" # row 6: 22,282.14 + (255,000 - 210,403.70) x 21.36 %
+      lines:
+        - {code: deductions.cap_applied, op: info, amount: "45000.00"} # Tope aplicado: global, de 80,000 a 45,000

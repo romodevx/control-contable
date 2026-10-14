@@ -1,0 +1,14 @@
+# Annual golden ratchet baseline (PLAN ANN-06). Hand-edited, only downwards.
+# TestGoldenAnnualCases fails when a case is skipped that is not listed here,
+# or when a section kind has more pending_strategy cases than its count: new
+# goldens must run, not wait. It also fails when the run is BELOW the
+# baseline, so the PR that registers a section (ANN-08..ANN-11) lowers its
+# count here, and the CPA sign-off (ANN-27) that lifts a skip removes its id.
+skipped:
+  - AN-04 # 625 non-definitive in art. 152 (⚠️ platform_nondefinitive_annual)
+  - AN-07-PTU # RESICO PM PTU base (⚠️ resico_pm_ptu_base)
+pending: # section kind: cases
+  pf_art152: 4 # AN-01, AN-02, AN-05, AN-08 (ANN-08)
+  pf_resico_check: 2 # AN-03-A, AN-03-B (ANN-09)
+  pm_601: 1 # AN-06 (ANN-10)
+  pm_resico: 1 # AN-07 (ANN-11)

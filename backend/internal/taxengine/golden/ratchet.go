@@ -44,14 +44,21 @@ func ReadBaseline(data []byte) (Baseline, error) {
 // below it (the baseline must be lowered, or the slack lets it grow back).
 // Pending findings come first, by strategy key; then skips, by id.
 func (s *Summary) Ratchet(b Baseline) []string {
-	return slices.Concat(s.pendingRatchet(b.Pending), s.skipRatchet(b.Skipped))
-}
-
-func (s *Summary) pendingRatchet(ceiling map[string]int) []string {
 	counts := make(map[string]int, len(s.pending))
 	for k, n := range s.pending {
 		counts[k.String()] = n
 	}
+	return b.Findings(counts, s.skippedIDs)
+}
+
+// Findings compares a run's pending counts per key and skipped ids to the
+// baseline, as Summary.Ratchet does; the annual harness, whose keys are
+// section kinds, shares it (PLAN ANN-06).
+func (b Baseline) Findings(pending map[string]int, skippedIDs []string) []string {
+	return slices.Concat(pendingRatchet(pending, b.Pending), skipRatchet(skippedIDs, b.Skipped))
+}
+
+func pendingRatchet(counts, ceiling map[string]int) []string {
 	keys := slices.Concat(slices.Collect(maps.Keys(counts)), slices.Collect(maps.Keys(ceiling)))
 	slices.Sort(keys)
 	keys = slices.Compact(keys)
@@ -68,15 +75,15 @@ func (s *Summary) pendingRatchet(ceiling map[string]int) []string {
 	return out
 }
 
-func (s *Summary) skipRatchet(allowed []string) []string {
+func skipRatchet(skippedIDs, allowed []string) []string {
 	var out []string
-	for _, id := range slices.Sorted(slices.Values(s.skippedIDs)) {
+	for _, id := range slices.Sorted(slices.Values(skippedIDs)) {
 		if !slices.Contains(allowed, id) {
 			out = append(out, fmt.Sprintf("skipped %s is not in the baseline: verify the rule instead of skipping it", id))
 		}
 	}
 	for _, id := range slices.Sorted(slices.Values(allowed)) {
-		if !slices.Contains(s.skippedIDs, id) {
+		if !slices.Contains(skippedIDs, id) {
 			out = append(out, fmt.Sprintf("skipped %s no longer skips: remove it from the baseline", id))
 		}
 	}

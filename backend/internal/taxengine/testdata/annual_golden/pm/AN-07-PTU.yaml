@@ -1,0 +1,25 @@
+# golden: hand-authored from research AN-07 (docs/research/annual-return-2026.md Part D). Never generated or rewritten by a tool.
+id: AN-07-PTU
+source: research:AN-07
+skip_reason: "⚠️ RESICO PM PTU base per LISR 212 ¶2: whether PTU paid is subtracted (1,150,000) or not (1,200,000) is CPA item 8, topic resico_pm_ptu_base, until the CPA sign-off (ANN-27)"
+pending_strategy: true # ANN-11 registers pm_resico
+input:
+  fiscal_year: 2026
+  person_type: moral
+  regimes:
+    - regime: "626"
+      income: "6000000.00"
+      deductions: "4800000.00"
+      tax_inputs:
+        - {key: ptu_paid, money: "50000.00"}
+  payments:
+    - {regime: "626", amount: "360000.00", source: filed}
+expected:
+  sections:
+    - kind: pm_resico
+      regimes: ["626"]
+      status: complete
+      cpa_topics: [resico_pm_ptu_base]
+      pm_extras:
+        ptu_base: "1150000.00"
+        ptu_to_distribute: "115000.00"
