@@ -335,9 +335,49 @@ func TestStrategy625PFDefinitiveIVA(t *testing.T) {
 			want: domain.IVAComponents{ChargedCollected: 4_800_00, WithheldFromTaxpayer: 4_800_00},
 		},
 		{
-			name: "directly collected IVA stays under the general rules",
+			// LIVA 18-M ¶2: direct collections pay 8 %. 30,000 through the
+			// app (IVA 4,800, half withheld) + 10,000 direct (IVA 1,600):
+			// net 800 = 8 % × 10,000; the other half of the direct IVA is
+			// excluded with the platform's half.
+			name: "directly collected IVA is paid at 8 % (LIVA 18-M second paragraph)",
 			rfc:  true, month: pf625Platform(t, "40000.00", "6400.00", "2400.00", "750.00"),
-			want: domain.IVAComponents{ChargedCollected: 6_400_00, WithheldFromTaxpayer: 2_400_00, DefinitiveExcluded: 2_400_00},
+			want: domain.IVAComponents{ChargedCollected: 6_400_00, WithheldFromTaxpayer: 2_400_00, DefinitiveExcluded: 3_200_00},
+			lines: []pf625Line{
+				{"iva.charged.rate_16", domain.OpInput, "6400.00"},
+				{"iva.charged", domain.OpResult, "6400.00"},
+				{"iva.definitive_excluded", domain.OpSubtract, "3200.00"},
+				{"iva.creditable", domain.OpSubtract, "0.00"},
+				{"iva.withheld.moral", domain.OpSubtract, "0.00"},
+				{"iva.withheld.platform", domain.OpSubtract, "2400.00"},
+				{"iva.regime_net", domain.OpResult, "800.00"},
+			},
+		},
+		{
+			// No RFC: the platform withheld all its IVA (4,800); the
+			// 10,000 direct still pay 8 % = 800.
+			name: "no RFC: direct collections still pay 8 % (LIVA 18-M second paragraph)",
+			rfc:  false, month: pf625Platform(t, "40000.00", "6400.00", "4800.00", "6000.00"),
+			want: domain.IVAComponents{ChargedCollected: 6_400_00, WithheldFromTaxpayer: 4_800_00, DefinitiveExcluded: 800_00},
+		},
+		{
+			// An odd centavo of direct IVA is not halved away: the
+			// estimate rounds toward paying (net 0.01).
+			name: "an odd centavo of direct IVA stays payable",
+			rfc:  true, month: pf625Platform(t, "30000.00", "4800.01", "2400.00", "750.00"),
+			want: domain.IVAComponents{ChargedCollected: 4_800_01, WithheldFromTaxpayer: 2_400_00, DefinitiveExcluded: 2_400_00},
+		},
+		{
+			// Border direct sales already carry 8 %: 18-M's 8 % equals it,
+			// nothing more is excluded.
+			name: "border 8 % direct IVA is the 18-M 8 %: not halved",
+			rfc:  true,
+			month: func() domain.MonthSums {
+				m := pf625Platform(t, "40000.00", "4800.00", "2400.00", "750.00")
+				m.Income.ByRate.Rate16.Base = cents(t, "30000.00")
+				m.Income.ByRate.Rate8 = domain.RateSums{Base: cents(t, "10000.00"), IVA: cents(t, "800.00")}
+				return m
+			}(),
+			want: domain.IVAComponents{ChargedCollected: 5_600_00, WithheldFromTaxpayer: 2_400_00, DefinitiveExcluded: 2_400_00},
 		},
 		{
 			// 100 % withheld contradicts rfc_given_to_platform: the platform
