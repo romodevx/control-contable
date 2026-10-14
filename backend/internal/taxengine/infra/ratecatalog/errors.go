@@ -20,4 +20,9 @@ const (
 	// refuses it: the boolean port would otherwise turn the gap into "not in
 	// force" and refuse every such record with rate_not_valid_on_date.
 	ErrMissingIVARate Error = "ratecatalog: a parameter set lacks a required IVA rate"
+	// ErrMissingWithholdingRate reports a parameter set without one of the
+	// withholding rates fiscal.DeriveWithholdings reads (it also wraps the
+	// taxparams lookup error). New refuses it, so the gap fails the boot
+	// instead of every record that needs the rate.
+	ErrMissingWithholdingRate Error = "ratecatalog: a parameter set lacks a required withholding rate"
 )

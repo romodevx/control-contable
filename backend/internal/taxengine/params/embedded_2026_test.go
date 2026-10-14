@@ -87,7 +87,7 @@ func TestEmbedded2026DefinesEveryKeyTheModulesRead(t *testing.T) {
 		// incomes/domain/catalog.go and expenses/domain/catalog.go
 		"isr.withholding.resico_pf", "isr.platform.transport_delivery", "isr.platform.lodging",
 		"isr.platform.goods_services", "isr.platform.no_rfc", "isr.platform.persona_moral",
-		"iva.withholding.freight_pm",
+		"iva.withholding.freight_pm", "iva.withholding.scrap_pm", // MODULE-withholdings §3 (WH-05)
 		"isr.platform.persona_moral_no_rfc", "isr.rate.persona_moral", "isr.withholding.interest_annual",
 		"isr.rent.blind_deduction",
 	}
@@ -231,6 +231,7 @@ func TestEmbedded2026Rates(t *testing.T) {
 		{"iva.rate.border_8", "2026-01-01", "0.08"},           // 16 % less the 50 % credit
 		{"iva.rate.border_8", "2026-12-31", "0.08"},           // decree in force until 31-12-2026
 		{"iva.withholding.freight_pm", "2026-06-30", "0.04"},  // RLIVA 3 fr. II
+		{"iva.withholding.scrap_pm", "2026-06-30", "1"},       // LIVA 1-A fr. II b), no RLIVA 3 reduction
 		{"isr.rate.persona_moral", "2026-06-30", "0.30"},      // LISR 9
 		{"isr.withholding.fees_pm", "2026-06-30", "0.10"},     // LISR 106
 		{"isr.withholding.rent_pm", "2026-06-30", "0.10"},     // LISR 116
@@ -249,6 +250,35 @@ func TestEmbedded2026Rates(t *testing.T) {
 			got, err := p.Rate(tt.key, date(t, tt.on))
 			require.NoError(t, err)
 			assert.Equal(t, rate(t, tt.want), got)
+		})
+	}
+}
+
+// The withholding rates MODULE-withholdings §3 derives from (WH-05) start
+// with the set on January 1, still hold on December 31, and are absent the
+// day before: a record dated outside a value's validity never gets a silent
+// rate.
+func TestEmbedded2026WithholdingRatesAtTheYearBoundaries(t *testing.T) {
+	p := embedded2026(t)
+	tests := []struct {
+		key  taxparams.Key
+		want string
+	}{
+		{"isr.withholding.fees_pm", "0.10"},     // LISR 106, honorarios
+		{"isr.withholding.rent_pm", "0.10"},     // LISR 116, arrendamiento
+		{"isr.withholding.resico_pf", "0.0125"}, // LISR 113-J
+		{"iva.withholding.freight_pm", "0.04"},  // RLIVA 3 fr. II, of the price
+		{"iva.withholding.scrap_pm", "1"},       // LIVA 1-A fr. II b), of the IVA
+	}
+	for _, tt := range tests {
+		t.Run(string(tt.key), func(t *testing.T) {
+			for _, on := range []string{"2026-01-01", "2026-12-31"} {
+				got, err := p.Rate(tt.key, date(t, on))
+				require.NoError(t, err, on)
+				assert.Equal(t, rate(t, tt.want), got, on)
+			}
+			_, err := p.Rate(tt.key, date(t, "2025-12-31"))
+			require.ErrorIs(t, err, taxparams.ErrNotInForce)
 		})
 	}
 }
