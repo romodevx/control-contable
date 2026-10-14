@@ -110,11 +110,16 @@ func (a incomesTaxpayers) Profile(ctx context.Context, userID, taxpayerID string
 	}
 	out := incomes.TaxpayerProfile{PersonType: fiscal.PersonType(p.PersonType), Archived: p.Archived}
 	for _, r := range p.Regimes {
-		out.Regimes = append(out.Regimes, incomes.RegimeProfile{
+		held := incomes.RegimeProfile{
 			Code:               fiscal.RegimeCode(r.Code),
+			StartPeriod:        r.Window.Start.String(),
 			PlatformActivities: activities(r.Options[optionActivities]),
 			RFCGivenToPlatform: flag(r.Options[optionRFCGivenToPlatform]),
-		})
+		}
+		if !r.Window.IsOpen() {
+			held.EndPeriod = r.Window.End.String()
+		}
+		out.Regimes = append(out.Regimes, held)
 	}
 	return out, nil
 }

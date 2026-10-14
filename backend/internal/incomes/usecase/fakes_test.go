@@ -162,6 +162,13 @@ func (f *fakeTaxpayers) Profile(_ context.Context, _ string, taxpayerID string) 
 	if !ok {
 		return usecase.TaxpayerProfile{}, errTaxpayerNotFound
 	}
+	regimes := make([]usecase.RegimeProfile, len(p.Regimes))
+	for i, r := range p.Regimes {
+		w := f.windows[taxpayerID+"|"+string(r.Code)]
+		r.StartPeriod, r.EndPeriod = w[0], w[1]
+		regimes[i] = r
+	}
+	p.Regimes = regimes
 	return p, nil
 }
 

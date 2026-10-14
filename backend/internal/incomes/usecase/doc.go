@@ -13,8 +13,8 @@
 // any access check; other fields, another taxpayer or a deleted income are
 // 409 id_reused; another user's id is a bare 409) → read-only access (402)
 // → archive and regime window (422, CheckRegime per distinct period) →
-// domain rules (400/422, domain.Assess) → parameter coverage of the dates
-// (422 parameters_unavailable) → trial slot (402, access.ReserveRecord) →
+// domain rules (400/422, domain.Assess; a date before the first parameter
+// set is 400 out_of_range) → trial slot (402, access.ReserveRecord) →
 // insert. Update re-runs everything but the slot. Restore re-runs the
 // archive and regime checks only: it never reserves a slot (OQ-10) and a
 // read-only user may undo a delete (coordinator decision). Delete is

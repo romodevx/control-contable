@@ -37,8 +37,9 @@ func TestIncomesTaxpayers_Profile(t *testing.T) {
 	q := &stubQueries{profile: taxpayers.TaxpayerProfile{
 		TaxpayerID: "t", PersonType: taxpayersdomain.PersonTypeFisica, Archived: true,
 		Regimes: []taxpayers.RegimeProfile{
-			{Code: "612", Options: map[string]taxpayersdomain.OptionValue{"iva_border_region": taxpayersdomain.BoolOption(false)}},
-			{Code: "625", Options: map[string]taxpayersdomain.OptionValue{
+			{Code: "612", Options: map[string]taxpayersdomain.OptionValue{"iva_border_region": taxpayersdomain.BoolOption(false)},
+				Window: taxpayersdomain.Window{Start: period(t, "2025-02"), End: period(t, "2026-06")}},
+			{Code: "625", Window: taxpayersdomain.Window{Start: period(t, "2026-03")}, Options: map[string]taxpayersdomain.OptionValue{
 				"activities":            taxpayersdomain.ListOption([]string{"lodging", "goods_services"}),
 				"rfc_given_to_platform": taxpayersdomain.BoolOption(true),
 			}},
@@ -49,8 +50,8 @@ func TestIncomesTaxpayers_Profile(t *testing.T) {
 	assert.Equal(t, incomes.TaxpayerProfile{
 		PersonType: fiscal.PersonFisica, Archived: true,
 		Regimes: []incomes.RegimeProfile{
-			{Code: "612"},
-			{Code: "625", PlatformActivities: []domain.PlatformActivity{domain.ActivityLodging, domain.ActivityGoodsServices}, RFCGivenToPlatform: true},
+			{Code: "612", StartPeriod: "2025-02", EndPeriod: "2026-06"},
+			{Code: "625", StartPeriod: "2026-03", PlatformActivities: []domain.PlatformActivity{domain.ActivityLodging, domain.ActivityGoodsServices}, RFCGivenToPlatform: true},
 		},
 	}, got)
 }
