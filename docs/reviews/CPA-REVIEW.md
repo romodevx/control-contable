@@ -90,7 +90,7 @@ below is a figure the user cannot correct. Records matching a ⚠️ rule carry
 (MODULE-withholdings §5.3).
 
 - [ ] A1: the Federación, estados and municipios withhold ISR like a persona moral (10 % fees and rent, 1.25 % RESICO). LISR 86 vs 106/116/113-J. WM §6 A1
-- [ ] A2: IVA fraction the Federación withholds from a PF: 2/3 (RLIVA 3) on professional services; on any other operation only above $2,000 (RMF 4.1.3). The literal LIVA 3 ¶3 reading is 100 %. WM §6 A2, WH-12
+- [ ] A2: IVA fraction the Federación withholds from a PF: 2/3 (RLIVA 3) on professional services; on any other operation only above $2,000 (RMF 4.1.3). The literal LIVA 3 ¶3 reading is 100 %. Also: RMF 4.1.3 ¶1 relieves only "adquisición de bienes o prestación de servicios"; the app applies the $2,000 threshold to rent too (WM), while the literal reading withholds rent at any amount. WM §6 A2, WH-12, WH-05-params-verification addendum
 - [ ] A3: RESICO PF renting real estate to a PM is withheld 1.25 % (113-J), not 10 % (116). WM §6 A3
 - [ ] A4: RESICO PF month where the 1.25 % withheld exceeds the monthly ISR: shown as 0 to pay, excess "a favor en la anual" (no monthly refund or carry). WM §6 A4
 - [ ] A5: 2/3 computed as IVA × 2 / 3 rounded half away from zero to the centavo (not `0.106667 × price`). WM §6 A5

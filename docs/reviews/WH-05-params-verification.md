@@ -88,3 +88,20 @@ None in `v1.yaml`. The only mismatch seen during the work was in my own harness 
 ## Author follow-up
 
 The author applied recommendations 1 and 2 after this review, on the same branch. `rent_pm` now cites "Art. 116, penúltimo párrafo"; the author re-checked that the 10 % paragraph is followed only by the paragraph on the optional comprobante. The `scrap_pm` comment no longer mentions "reciclables" and paraphrases only LIVA 1o.-A fr. II b) ("como insumo de su actividad industrial o para su comercialización"). No rate, date or source changed, so the 25-field comparison above still holds.
+
+## Addendum: `iva.withholding.federal_threshold` (WH-04 review, PR #124)
+
+- **Reviewed:** the key added to `v1.yaml` for IVA-7 (`fiscal.KeyIVAFederalWithholdingThreshold`), new source `rmf-2026`, and the `liva` reference. **Reviewer:** tech-lead, 2026-10-14. **Result:** 0 mismatches across 9 fields (value, `valid_from`, `valid_to`, 2 citations, source `url`, `dof_date`, `reference`, `liva` `dof_date`).
+- **Method.** I fetched both texts myself (`curl -L`, HTTP 200, no redirect), extracted them with `pdftotext -layout`, and read the rule before writing the value. The research doc was only a pointer to the rule number.
+
+| Source | URL | SHA-256 | Edition |
+|---|---|---|---|
+| `rmf-2026` | https://www.sat.gob.mx/minisitio/NormatividadRMFyRGCE/documentos2026/rmf/rmf/RMF_2026-DOF-28122025.pdf | `6f71ce0cccf430171fe858c5d244b1c321fa68306f962d44ec4977858a52919a` | DOF 28-12-2025, 666 pages |
+| `liva` | https://www.diputados.gob.mx/LeyesBiblio/pdf/LIVA.pdf | `f2b5b1770441a6a4e48f3ade408f9ff7a3e9c81bd5d529e52484f49e4a8e91a6` (same as above) | DOF 12-11-2021 |
+
+- **RMF 2026 rule 4.1.3, first ¶:** "la Federación y sus organismos descentralizados, no estarán a lo establecido por el citado artículo, por las erogaciones que efectúen por concepto de adquisición de bienes o prestación de servicios, siempre que el monto del precio o de la contraprestación pactada no rebase la cantidad de $2,000.00". So the value is `2000.00`, and the comparison is "not above": exactly $2,000.00 is not withheld. The kernel implements this as `Subtotal <= threshold → IVA-8`.
+- **Second ¶:** "No será aplicable … tratándose de los servicios personales independientes y de autotransporte terrestre de bienes … independientemente del monto". The kernel matches: professional services never compare against the threshold, and freight is decided earlier by IVA-4.
+- **LIVA 3o., third ¶** gives the Federación's duty to withhold under 1o.-A, and only the Federación's: "Los Estados, el Distrito Federal y los Municipios … no efectuarán la retención". The kernel matches with IVA-2.
+- **Validity.** An RMF lasts one fiscal year, so `valid_to: 2026-12-31`. This is the same pattern as the LIF 2026 keys. In 2027 the derivation returns `rate_not_valid_on_date` until the RMF 2027 is transcribed. That is deliberate: the value must not be guessed.
+- **Tests and mutation.** `TestEmbedded2026Thresholds`, `TestEmbedded2026AmountsThatLapseAtYearEnd`, `ratecatalog.TestIVAWithholdingFederalThreshold*`, `TestNewRequiresTheFederalThreshold` and `TestDeriveWithholdingsOverThe2026Parameters` compare the file against the values above. Each mutation failed the suite and was then reverted: the yaml value set to `2000.01`, the boot `RequireMoney` dropped, and the kernel comparison hard-coded to `2_000_00`.
+- **Open question for the CPA (A2, non-blocking).** The relief in ¶1 covers "adquisición de bienes o prestación de servicios". LIVA treats *uso o goce temporal* (rent) as a separate act (art. 1o. fr. III), so read literally, rent paid by the Federación is withheld at any amount. The research (WM §1 row "606 rent") applies the $2,000 threshold to rent, and the kernel follows the research. The difference matters only for rent of $2,000.00 or less paid by the Federación. It is added to CPA item A2.
