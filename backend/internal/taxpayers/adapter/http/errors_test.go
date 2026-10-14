@@ -20,7 +20,6 @@ func TestErrorMapperMapsEveryDomainError(t *testing.T) {
 		{err: domain.ErrInvalidPersonType, want: apperr.CodeValidationFailed},
 		{err: domain.ErrRFCMalformed, want: apperr.CodeValidationFailed},
 		{err: domain.ErrRFCInvalidDate, want: apperr.CodeValidationFailed},
-		{err: domain.ErrRFCCheckDigit, want: apperr.CodeValidationFailed},
 		{err: domain.ErrRFCGeneric, want: apperr.CodeValidationFailed},
 		{err: domain.ErrPersonTypeMismatch, want: apperr.CodeValidationFailed},
 		{err: domain.ErrOptionUnknown, want: apperr.CodeValidationFailed},
@@ -47,7 +46,7 @@ func TestErrorMapperMapsEveryDomainError(t *testing.T) {
 // never echo the domain error text, an option key or an RFC.
 func TestErrorMapperMessagesAreClientSafe(t *testing.T) {
 	for _, err := range []error{
-		domain.ErrRFCMalformed, domain.ErrRFCCheckDigit, domain.ErrRFCGeneric, domain.ErrPersonTypeMismatch,
+		domain.ErrRFCMalformed, domain.ErrRFCInvalidDate, domain.ErrRFCGeneric, domain.ErrPersonTypeMismatch,
 		&domain.OptionError{Key: "deduction_mode", Err: domain.ErrOptionValue},
 	} {
 		resolved := taxpayershttp.ErrorMapper.Resolve(err)

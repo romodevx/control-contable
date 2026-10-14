@@ -49,6 +49,38 @@ func TestNewRFCAcceptsAndInfersPersonType(t *testing.T) {
 			assert.Equal(t, tt.want, rfc.String())
 			assert.Equal(t, tt.typ, rfc.PersonType())
 			assert.False(t, rfc.IsZero())
+			assert.True(t, rfc.CheckDigitValid())
+		})
+	}
+}
+
+// TestNewRFCAcceptsACheckDigitMismatch pins decision D-RFC: about 1.5% of
+// the RFCs the SAT has issued fail the published check-digit algorithm, so
+// a mismatch is a warning the RFC carries (CheckDigitValid), never an error.
+// Shape, charset and date errors still fail (TestNewRFCRejects).
+func TestNewRFCAcceptsACheckDigitMismatch(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		want string
+		typ  domain.PersonType
+	}{
+		{name: "fisica check digit off by one", raw: "PEXJ900215HK9", want: "PEXJ900215HK9", typ: domain.PersonTypeFisica},
+		{name: "fisica check digit A instead of 0", raw: "AAAA010101AAA", want: "AAAA010101AAA", typ: domain.PersonTypeFisica},
+		{name: "moral check digit 0 instead of A", raw: "EJE840315K30", want: "EJE840315K30", typ: domain.PersonTypeMoral},
+		{name: "moral check digit letter outside 0-9A", raw: "A&B020304XYB", want: "A&B020304XYB", typ: domain.PersonTypeMoral},
+		{name: "transposed homoclave", raw: "PEXJ900215KH8", want: "PEXJ900215KH8", typ: domain.PersonTypeFisica},
+		{name: "one name letter changed", raw: "PEXK900215HK8", want: "PEXK900215HK8", typ: domain.PersonTypeFisica},
+		{name: "Ñ replaced by N changes the digit", raw: "NEX991231B22", want: "NEX991231B22", typ: domain.PersonTypeMoral},
+		{name: "normalized before the digit is checked", raw: " pexj900215hk9 ", want: "PEXJ900215HK9", typ: domain.PersonTypeFisica},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rfc, err := domain.NewRFC(tt.raw)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, rfc.String())
+			assert.Equal(t, tt.typ, rfc.PersonType())
+			assert.False(t, rfc.CheckDigitValid())
 		})
 	}
 }
@@ -83,13 +115,8 @@ func TestNewRFCRejects(t *testing.T) {
 		{name: "32 January", raw: "A&B020132XY2", wantErr: domain.ErrRFCInvalidDate},
 		{name: "29 Feb of a non-leap year", raw: "PEXJ990229HK8", wantErr: domain.ErrRFCInvalidDate},
 		{name: "30 Feb", raw: "MUÑA000230Z19", wantErr: domain.ErrRFCInvalidDate},
-		{name: "fisica check digit off by one", raw: "PEXJ900215HK9", wantErr: domain.ErrRFCCheckDigit},
-		{name: "fisica check digit A instead of 0", raw: "AAAA010101AAA", wantErr: domain.ErrRFCCheckDigit},
-		{name: "moral check digit 0 instead of A", raw: "EJE840315K30", wantErr: domain.ErrRFCCheckDigit},
-		{name: "moral check digit letter outside 0-9A", raw: "A&B020304XYB", wantErr: domain.ErrRFCCheckDigit},
-		{name: "transposed homoclave", raw: "PEXJ900215KH8", wantErr: domain.ErrRFCCheckDigit},
-		{name: "one name letter changed", raw: "PEXK900215HK8", wantErr: domain.ErrRFCCheckDigit},
-		{name: "Ñ replaced by N changes the digit", raw: "NEX991231B22", wantErr: domain.ErrRFCCheckDigit},
+		{name: "bad date with a wrong check digit is still a date error", raw: "PEXJ900431HK9", wantErr: domain.ErrRFCInvalidDate},
+		{name: "bad shape with a wrong check digit is still malformed", raw: "PEX1900215HK9", wantErr: domain.ErrRFCMalformed},
 		{name: "generic RFC for the general public", raw: "XAXX010101000", wantErr: domain.ErrRFCGeneric},
 		{name: "generic RFC for foreign residents", raw: "XEXX010101000", wantErr: domain.ErrRFCGeneric},
 		{name: "generic RFC in lower case with spaces", raw: " xaxx010101000 ", wantErr: domain.ErrRFCGeneric},
@@ -106,7 +133,7 @@ func TestNewRFCRejects(t *testing.T) {
 // TestNewRFCErrorsNeverCarryTheInput: an RFC is personal data for a persona
 // física, so no error text may echo it.
 func TestNewRFCErrorsNeverCarryTheInput(t *testing.T) {
-	for _, raw := range []string{"PEXJ900215HK9", "PEXJ900431HK8", "XAXX010101000", "PEXJ900215"} {
+	for _, raw := range []string{"PEXJ9002I5HK8", "PEXJ900431HK8", "XAXX010101000", "PEXJ900215"} {
 		_, err := domain.NewRFC(raw)
 		require.Error(t, err)
 		assert.NotContains(t, err.Error(), "PEXJ")
@@ -127,7 +154,9 @@ func TestNewRFCForChecksTheDeclaredPersonType(t *testing.T) {
 		{name: "fisica RFC declared moral", declared: domain.PersonTypeMoral, raw: "PEXJ900215HK8", wantErr: domain.ErrPersonTypeMismatch},
 		{name: "unknown declared type", declared: domain.PersonType("extranjero"), raw: "PEXJ900215HK8", wantErr: domain.ErrInvalidPersonType},
 		{name: "zero declared type", declared: domain.PersonType(""), raw: "PEXJ900215HK8", wantErr: domain.ErrInvalidPersonType},
-		{name: "invalid RFC reports the RFC error", declared: domain.PersonTypeFisica, raw: "PEXJ900215HK9", wantErr: domain.ErrRFCCheckDigit},
+		{name: "invalid RFC reports the RFC error", declared: domain.PersonTypeFisica, raw: "PEXJ900431HK8", wantErr: domain.ErrRFCInvalidDate},
+		{name: "check digit mismatch is no error", declared: domain.PersonTypeFisica, raw: "PEXJ900215HK9"},
+		{name: "check digit mismatch still checks the type", declared: domain.PersonTypeMoral, raw: "PEXJ900215HK9", wantErr: domain.ErrPersonTypeMismatch},
 		{name: "generic RFC rejected whatever the type", declared: domain.PersonTypeFisica, raw: "XAXX010101000", wantErr: domain.ErrRFCGeneric},
 	}
 	for _, tt := range tests {
@@ -168,6 +197,7 @@ func TestRFCZeroValue(t *testing.T) {
 	assert.Empty(t, zero.String())
 	assert.Empty(t, zero.Masked())
 	assert.False(t, zero.PersonType().Valid())
+	assert.False(t, zero.CheckDigitValid())
 }
 
 func TestRFCNeverPrintsTheValue(t *testing.T) {
