@@ -10,7 +10,7 @@ import (
 )
 
 // diningCategory is the Spanish catalog code of MODULE-expenses §2.2 row 11.
-const diningCategory domain.CategoryCode = "restaurantes" //nolint:misspell // a Spanish catalog code, not English prose
+const diningCategory domain.CategoryCode = "restaurantes"
 
 // Category rule rows of MODULE-expenses §2.2, as category_regime_rules
 // serves them for one (category, regime, person type).
