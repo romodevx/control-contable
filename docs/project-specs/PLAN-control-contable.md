@@ -194,21 +194,54 @@ marked **pre-enable** must land before `module_auth` is ON in a shared environme
 
 | ID | Task | Owner | Deps | Est (h) | Par | Branch | Blocked by | Done |
 |---|---|---|---|---|---|---|---|---|
-| M2-01 | Contract freeze: `/v1/regimes`, `/v1/taxpayers/**`, lint | architect | P0-05 | 1.5 | — | `feature/taxpayers-contract` | — | [ ] |
-| M2-02 | Migration `regimes` + `regime_compatibility` (global) seeded from research A.1/B.1 (option_defs, required_inputs) | db-sr | P0-10 | 3 | — | `feature/taxpayers-catalog-migration` | — | [ ] |
-| M2-03 | Migration `taxpayers` + `taxpayer_regimes` with RLS, composite FKs, immutable person_type grant, isolation tests | db-sr | P0-11, M2-02 | 3.5 | — | `feature/taxpayers-migration` | — | [ ] |
-| M2-04 | Taxpayer domain: RFC VO (PF 13 / PM 12, check digit), PersonType, regime option validation (table-driven TDD) | backend-sr | P0-03 | 3 | — | `feature/taxpayers-domain` | — | [ ] |
-| M2-05 | Taxpayer use cases: create (encrypt + hash RFC, soft cap 10), list, get, patch, archive, delete | backend-sr | M2-01, M2-03, M2-04, P0-29, P0-30 | 4 | — | `feature/taxpayers-usecases` | — | [ ] |
-| M2-06 | Regime assignment use cases (compatibility, options, end period) + TaxpayerRegimeChecker and TaxpayerProfileReader adapters | backend-sr | M2-05 | 4 | — | `feature/taxpayers-usecases` | — | [ ] |
-| M2-07 | M2 handlers incl. `GET /v1/regimes`, contract tests, flag ON/OFF | backend-sr | M2-06, M1-07 | 3 | — | `feature/taxpayers-http` | — | [ ] |
-| M2-08 | Flutter onboarding steps 1–2: persona física/moral first, then RFC | frontend-sr | M1-13, M2-01 | 3 | — | `feature/taxpayers-mobile-onboarding` | — | [ ] |
-| M2-09 | Flutter onboarding steps 3–4: regimes filtered by person type + per-regime options | frontend-sr | M2-08 | 4 | — | `feature/taxpayers-mobile-onboarding` | — | [ ] |
-| M2-10 | Flutter active-taxpayer switcher + taxpayer settings (edit, add/archive regime, archive) | frontend-sr | M2-09 | 4 | — | `feature/taxpayers-mobile-settings` | — | [ ] |
-| M2-11 | Register flag `module_taxpayers` | backend-sr | M2-07, M2-10 | 0.5 | — | `feature/taxpayers-flag` | — | [ ] |
-| M2-12 | QA M2 (onboarding PF and PM, duplicate RFC, cross-user 404, flag OFF) | qa-sr | M2-11 | 3 | — | `feature/taxpayers-qa-fixes` | OB6 | [ ] |
-| M2-13 | Tech-lead gate M2 | tech-lead | M2-12 | 1.5 | — | (PR review) | — | [ ] |
-| M2-14 | Security gate M2 (RFC encryption/HMAC, composite-FK isolation) | security | M2-12 | 2 | — | (PR review) | — | [ ] |
-| M2-15 | Docs M2 | doc-writer | M2-13, M2-14 | 1 | — | `feature/taxpayers-docs` | — | [ ] |
+| M2-01 | Contract freeze: `/v1/regimes`, `/v1/taxpayers/**`, lint | architect | P0-05 | 1.5 | — | `feature/taxpayers-contract` | — | [x] |
+| M2-02 | Migration `regimes` + `regime_compatibility` (global) seeded from research A.1/B.1 (option_defs, required_inputs) | db-sr | P0-10 | 3 | — | `feature/taxpayers-catalog-migration` | — | [x] |
+| M2-03 | Migration `taxpayers` + `taxpayer_regimes` with RLS, composite FKs, immutable person_type grant, isolation tests | db-sr | P0-11, M2-02 | 3.5 | — | `feature/taxpayers-migration` | — | [x] |
+| M2-04 | Taxpayer domain: RFC VO (PF 13 / PM 12, check digit), PersonType, regime option validation (table-driven TDD) | backend-sr | P0-03 | 3 | — | `feature/taxpayers-domain` | — | [x] |
+| M2-05 | Taxpayer use cases: create (encrypt + hash RFC, soft cap 10), list, get, patch, archive, delete | backend-sr | M2-01, M2-03, M2-04, P0-29, P0-30 | 4 | — | `feature/taxpayers-usecases` | — | [x] |
+| M2-06 | Regime assignment use cases (compatibility, options, end period) + TaxpayerRegimeChecker and TaxpayerProfileReader adapters | backend-sr | M2-05 | 4 | — | `feature/taxpayers-usecases` | — | [x] |
+| M2-07 | M2 handlers incl. `GET /v1/regimes`, contract tests, flag ON/OFF | backend-sr | M2-06, M1-07 | 3 | — | `feature/taxpayers-http` | — | [x] |
+| M2-08 | Flutter onboarding steps 1–2: persona física/moral first, then RFC | frontend-sr | M1-13, M2-01 | 3 | — | `feature/taxpayers-mobile-onboarding` | — | [x] |
+| M2-09 | Flutter onboarding steps 3–4: regimes filtered by person type + per-regime options | frontend-sr | M2-08 | 4 | — | `feature/taxpayers-mobile-onboarding` | — | [x] |
+| M2-10 | Flutter active-taxpayer switcher + taxpayer settings (edit, add/archive regime, archive) | frontend-sr | M2-09 | 4 | — | `feature/taxpayers-mobile-settings` | — | [x] |
+| M2-11 | Register flag `module_taxpayers` | backend-sr | M2-07, M2-10 | 0.5 | — | `feature/taxpayers-flag` | — | [x] |
+| M2-12 | QA M2 (onboarding PF and PM, duplicate RFC, cross-user 404, flag OFF) | qa-sr | M2-11 | 3 | — | `feature/taxpayers-qa-fixes` | OB6 | [x] |
+| M2-13 | Tech-lead gate M2 | tech-lead | M2-12 | 1.5 | — | (PR review) | — | [x] |
+| M2-14 | Security gate M2 (RFC encryption/HMAC, composite-FK isolation) | security | M2-12 | 2 | — | (PR review) | — | [x] |
+| M2-15 | Docs M2 | doc-writer | M2-13, M2-14 | 1 | — | `feature/taxpayers-docs` | — | [x] |
+
+#### M2 follow-ups
+
+Deferred by the M2 gates; none blocks M2's merge. Each lands with the task or module in its
+target column. Sources: [M2-13 tech-lead gate](../reviews/M2-13-tech-lead-gate.md) (FU*) and
+[M2-14 security gate](../reviews/M2-14-security-gate.md) §3–§4 (G-*, PR numbers). Items
+marked **pre-enable** must land before `module_taxpayers` is ON in a shared environment
+([taxpayers runbook §5](../runbooks/taxpayers.md#5-enable-module_taxpayers-in-a-shared-environment)).
+
+| ID | Item | Owner | Target |
+|---|---|---|---|
+| FU1 | **Pre-enable.** Spec ↔ seed drift in the compatibility matrix (621 × 612, 626 × 621, PM pairs): amend [spec §2.5](MODULE-taxpayers.md#25-compatibility-data-not-code) / OQ-6, or forward migration setting `allowed = false` | pm + db-sr | Before enable |
+| FU2 | Duplicate RFC of an archived taxpayer: message should suggest unarchiving (US-T2), or amend the spec | pm / backend-sr | M2 hardening |
+| FU3 | `unawaited(adopt/select/clear)` store exceptions escape; `activeTaxpayerProvider` must fall back on a store failure (§2.9) | frontend-sr | M2 hardening |
+| FU4 | Block `OnboardingFlow.back()` and step-5 *Omitir* while the create is in flight | frontend-sr | M2 hardening |
+| FU5 | `SemanticsService.sendAnnouncement` boilerplate (M1-16 FU4 carried); `takeAnnouncements` assertions for paywall and settings errors | frontend-sr | Before M3 forms |
+| FU6 | `inline_text_editor.dart`: return focus to *Editar* after Save/Cancel | frontend-sr | M2 hardening |
+| FU7 | Split `onboarding_flow.dart`: shared `RegimeDraft` with `AddRegimeFlow`, post-create flow | frontend-sr | Refactor before M3 |
+| FU8, G-4 | Key `active_taxpayer_id` by user id (or amend spec §2.9) | frontend-sr | M3-08 |
+| FU9 | Backend nits: `toOptions` drops the `setOption` error; `errors.Join` vs `%w` in `usecase/regimes.go`; spec §2.8/S-5 say `FOR UPDATE` (code uses `FOR NO KEY UPDATE`); one catalog query per regime; map `taxpayers_rfc_masked_format` | backend-sr | M2 refactor |
+| FU10 | Regimes step uses `review_pending_with` to warn before submit | frontend-sr | M2 hardening |
+| FU11 | PR #68 leftovers: probe comment, preset state, one `gen` helper for module-owned operations | qa-sr | Next touch |
+| FU12 | Re-verify M1-16 FU3, FU7, FU10 | backend-sr / tech-lead | As tracked in M1 follow-ups |
+| G-1 | Replace `infra.NoRecords{}` with the M3/M4 latest-record lookup before any record write path is enabled (P-5: `module_incomes` / `module_expenses` stay OFF until then) | backend-sr | M3-04 / M4-05 |
+| G-2, #59 | **RFC key-rotation re-seal job** (previous keyring entry, resumable per-row re-seal, pepper re-hash with a hash-version column). Until then no rotation of `RFC_ENC_KEY` / `RFC_INDEX_PEPPER` ([runbook §2](../runbooks/taxpayers.md#2-do-not-rotate-rfc_enc_key-until-the-m9-re-seal-job-exists), P-4) | backend-sr + db-sr | M9 |
+| G-3 | `RFCVault.Seal` stores the key id parsed from the ciphertext (`crypto.KeyIDOf`) | backend-sr | With the M9 re-seal job |
+| #59 nit | Contract note: an idempotent create retry ignores a different body | architect | Next contract touch |
+| #61 FU | Undo of archiving the active taxpayer restores it as active; reload the list on a taxpayer-scoped 404 | frontend-sr | M3-08 |
+| #58 | `checkRate` names a missing bound as `0`/`999`; "guardado" in the review title | frontend-sr | Next mobile touch |
+| #68 D1–D3 | UX polish backlog (cap step, read-only Undo, CPA copy): fixed in M2-13; keep the backlog item for review | pm + frontend-sr | M2 UX polish |
+| #55, #56 | Regime-level `needs_cpa_review` exposure; `first_fiscal_year`; 625 per-option treatment | architect + backend-sr | M5-19 |
+| OQ-6, OQ-7 | CPA review of the compatibility matrix and of mid-year option changes ([CPA-REVIEW.md](../reviews/CPA-REVIEW.md)) | owner + CPA | Before launch |
+| M1-17 G-3, P0-30 D-6 | `Cache-Control: no-store` on error responses | backend-sr | Next platform touch |
 
 ### M3 — Incomes (`module_incomes`)
 

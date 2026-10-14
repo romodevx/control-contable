@@ -17,7 +17,7 @@ import 'package:flutter/material.dart';
 /// exists. A check-digit mismatch (D-RFC) shows "Revisa que tu RFC esté
 /// bien escrito" over the RFC, editable: *Continuar* as typed confirms it;
 /// a changed RFC is corrected first (`PATCH`). A regime pair under CPA
-/// review shows the server's reason.
+/// review names the pair and shows the server's reason.
 class ReviewStep extends StatefulWidget {
   /// The step of [flow].
   const new({required this.flow, super.key});
@@ -111,8 +111,11 @@ class _ReviewStepState extends State<ReviewStep> {
                 autocorrect: false,
               ),
             ],
-            for (final reason in _flow.cpaReviewReasons)
-              WarningBlock(title: l10n.onboardingCpaWarningTitle, body: reason),
+            for (final review in _flow.cpaReviews)
+              WarningBlock(
+                title: l10n.onboardingCpaWarningTitle,
+                body: describeCpaReview(review, l10n),
+              ),
           ],
         );
       },

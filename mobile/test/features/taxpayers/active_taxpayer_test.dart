@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:control_contable/api/generated/models/taxpayer.dart';
+import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/session/session.dart';
 import 'package:control_contable/features/taxpayers/application/active_taxpayer.dart';
 import 'package:control_contable/features/taxpayers/application/taxpayer_list.dart';
 import 'package:control_contable/features/taxpayers/data/active_taxpayer_store.dart';
 import 'package:control_contable/features/taxpayers/data/taxpayers_repository.dart';
 import 'package:control_contable/features/taxpayers/domain/masked_rfc.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -24,8 +28,21 @@ final Taxpayer _archived = taxpayer(
   createdAt: DateTime.utc(2026, 1, 2),
 );
 
+/// A repository whose next list answer is held by [held] (then plain).
+class _HeldListRepository extends FakeTaxpayersRepository {
+  Completer<List<Taxpayer>>? held;
+
+  @override
+  Future<List<Taxpayer>> listTaxpayers() {
+    final answer = held;
+    if (answer == null) return super.listTaxpayers();
+    held = null;
+    return answer.future;
+  }
+}
+
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
+  final binding = TestWidgetsFlutterBinding.ensureInitialized();
 
   group('resolveActiveTaxpayer (MODULE-taxpayers §2.9)', () {
     test('the stored id wins while it exists and is not archived', () {
@@ -124,6 +141,72 @@ void main() {
       repository.taxpayers.clear();
       expect(await container.read(taxpayersProvider.future), isEmpty);
     });
+  });
+
+  // Gate M2-13: Riverpod reuses the notifier across rebuilds and its `ref`
+  // is the current build's, so `ref.mounted` alone cannot tell a stale
+  // answer. A refresh started for one account must never land on the next.
+  group('stale list answers', () {
+    late _HeldListRepository repository;
+    late Session session;
+    late ProviderContainer container;
+
+    setUp(() {
+      repository = _HeldListRepository()..taxpayers.addAll([_first]);
+      session = Session(
+        store: InMemoryRefreshTokenStore(),
+        rotate: (_) async => tokenPair(access: 'a2', refresh: 'r2'),
+      );
+      container = ProviderContainer(
+        overrides: [
+          sessionProvider.overrideWithValue(session),
+          taxpayersRepositoryProvider.overrideWithValue(repository),
+          activeTaxpayerStoreProvider.overrideWithValue(
+            InMemoryActiveTaxpayerStore(),
+          ),
+        ],
+      );
+    });
+    tearDown(() {
+      container.dispose();
+      session.dispose();
+    });
+
+    test(
+      'a resume refresh answered after a change of account is dropped',
+      () async {
+        await session.start(tokenPair(access: 'a1', refresh: 'r1'));
+        await container.read(taxpayersProvider.future);
+        final stale = Completer<List<Taxpayer>>();
+        repository.held = stale;
+        binding
+          ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+          ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+
+        await session.end();
+        repository.taxpayers
+          ..clear()
+          ..add(_second);
+        await session.start(tokenPair(access: 'b1', refresh: 'b2'));
+        expect(await container.read(taxpayersProvider.future), [_second]);
+        stale.complete([_first]);
+        await pumpEventQueue();
+
+        expect(container.read(taxpayersProvider).value, [_second]);
+      },
+    );
+
+    test(
+      'a reload that fails keeps the last list and does not throw',
+      () async {
+        await container.read(taxpayersProvider.future);
+        repository.failNext['list'] = const ApiUnreachable();
+
+        await container.read(taxpayersProvider.notifier).reload();
+
+        expect(container.read(taxpayersProvider).value, [_first]);
+      },
+    );
   });
 
   group('masked RFC', () {

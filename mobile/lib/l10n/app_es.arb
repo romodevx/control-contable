@@ -725,6 +725,31 @@
   "@onboardingPaywallBody": {
     "description": "Read-only user (402): explanation."
   },
+  "onboardingLimitTitle": "Llegaste al máximo de contribuyentes",
+  "@onboardingLimitTitle": {
+    "description": "Onboarding opened at the cap of taxpayers (OD-2): title."
+  },
+  "onboardingLimitBody": "Ya tienes {cap} contribuyentes, el máximo por cuenta; los archivados también cuentan. Para registrar otro, elimina uno que ya no uses.",
+  "@onboardingLimitBody": {
+    "description": "Onboarding opened at the cap of taxpayers (OD-2): why and how to free a slot.",
+    "placeholders": {
+      "cap": {
+        "type": "int"
+      }
+    }
+  },
+  "listAnd": "{head} y {last}",
+  "@listAnd": {
+    "description": "Joins the last item of a list: '606, 612 y 621'.",
+    "placeholders": {
+      "head": {
+        "type": "String"
+      },
+      "last": {
+        "type": "String"
+      }
+    }
+  },
   "onboardingPaywallAction": "Volver al inicio",
   "@onboardingPaywallAction": {
     "description": "Read-only user (402): leaves onboarding."
@@ -741,6 +766,18 @@
         "type": "String"
       },
       "rfc": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingCpaWarningBody": "Registraste juntos {regimes}. {reason}",
+  "@onboardingCpaWarningBody": {
+    "description": "Non-blocking warning: regime_combination_needs_cpa_review naming the pair (each «code · name», joined with listAnd); the server reason follows.",
+    "placeholders": {
+      "regimes": {
+        "type": "String"
+      },
+      "reason": {
         "type": "String"
       }
     }
@@ -938,6 +975,23 @@
   "@settingsArchiveHelp": {
     "description": "What archiving does."
   },
+  "settingsArchiveOneWayTitle": "¿Archivar a «{name}»?",
+  "@settingsArchiveOneWayTitle": {
+    "description": "Read-only user (OQ-8): confirmation before an archive they cannot undo; title names the taxpayer.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsArchiveOneWayBody": "Tu cuenta es de solo consulta. Podrás seguir consultándolo, pero no podrás desarchivarlo hasta tener un plan.",
+  "@settingsArchiveOneWayBody": {
+    "description": "Read-only user (OQ-8): why the archive is one-way."
+  },
+  "settingsArchiveOneWayConfirm": "Archivar de todos modos",
+  "@settingsArchiveOneWayConfirm": {
+    "description": "Read-only user (OQ-8): confirms the one-way archive."
+  },
   "settingsArchived": "Archivaste a «{name}».",
   "@settingsArchived": {
     "description": "Undo toast after archiving.",
@@ -1028,6 +1082,21 @@
     }
   },
   "addRegimeCpaReview": "Agregamos el régimen {code}. Un contador debe confirmar la combinación: {reason}",
+  "addRegimeCpaReviewWith": "Agregamos el régimen {code}. Un contador debe confirmar su combinación con {partners}: {reason}",
+  "@addRegimeCpaReviewWith": {
+    "description": "Regime added with a CPA-review warning, naming the held regimes it pairs with (e.g. '606 y 612').",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      },
+      "partners": {
+        "type": "String"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "@addRegimeCpaReview": {
     "description": "Regime added with a CPA-review warning.",
     "placeholders": {

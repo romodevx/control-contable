@@ -1,6 +1,7 @@
 import 'package:control_contable/api/generated/models/error_code.dart';
 import 'package:control_contable/api/generated/models/person_type.dart';
 import 'package:control_contable/api/generated/models/regime.dart';
+import 'package:control_contable/api/generated/models/regime_incompatibility.dart';
 import 'package:control_contable/api/generated/models/tax_input_value.dart';
 import 'package:control_contable/api/generated/models/warning.dart';
 import 'package:control_contable/api/generated/models/warning_code.dart';
@@ -294,6 +295,41 @@ void main() {
       expect(repository.catalogCalls, isEmpty);
     });
 
+    // QA M2-12 D1: at 10 taxpayers the cap was reported only after the
+    // last step. The app holds the list, so it says so before step 1.
+    test('a user already at the cap sees the limit before step 1: '
+        'nothing to fill, nothing sent', () {
+      final capped = OnboardingFlow(
+        repository: repository,
+        newId: () => _clientId,
+        clock: () => now,
+        taxEngineEnabled: false,
+        capReached: true,
+      );
+      addTearDown(capped.dispose);
+
+      expect(capped.step, OnboardingStep.limitReached);
+      expect(capped.stepNumber, isNull);
+      expect(capped.back(), isFalse);
+      expect(repository.creates, isEmpty);
+      expect(repository.catalogCalls, isEmpty);
+    });
+
+    test('read-only is said before the cap, as the server checks access '
+        'first (§2.10)', () {
+      final both = OnboardingFlow(
+        repository: repository,
+        newId: () => _clientId,
+        clock: () => now,
+        taxEngineEnabled: false,
+        knownReadOnly: true,
+        capReached: true,
+      );
+      addTearDown(both.dispose);
+
+      expect(both.step, OnboardingStep.readOnly);
+    });
+
     test(
       '409 rfc_already_registered: back to the RFC with its error',
       () async {
@@ -459,7 +495,45 @@ void main() {
 
       expect(flow.step, OnboardingStep.review);
       expect(flow.rfcWarning, isFalse);
-      expect(flow.cpaReviewReasons, [_cpaReview.message]);
+      expect(flow.cpaReviews.single.reason, _cpaReview.message);
+      expect(
+        flow.cpaReviews.single.regimes,
+        isEmpty,
+        reason: 'regimes.1 names no regime sent: only the reason is known',
+      );
+    });
+
+    // QA M2-12 D3: the warning names the pair. `field` points at the later
+    // regime sent; its partner is an earlier one the catalog lists in
+    // `review_pending_with` (either side).
+    test('a CPA-review warning names the regime pair it is about', () async {
+      final wages = regime(
+        '605',
+        name: 'Sueldos y salarios',
+        reviewPendingWith: [
+          const RegimeIncompatibility(code: '614', reason: 'Pendiente.'),
+        ],
+      );
+      final interest = regime('614', name: 'Intereses');
+      fillIdentity();
+      repository.createAnswers.add(
+        taxpayer(
+          warnings: [
+            const Warning(
+              code: 'regime_combination_needs_cpa_review',
+              field: 'regimes.1.regime_code',
+              message: 'Pendiente.',
+            ),
+          ],
+        ),
+      );
+
+      await flow.submitRegimes([wages, interest]);
+
+      expect(flow.step, OnboardingStep.review);
+      final review = flow.cpaReviews.single;
+      expect(review.regimes.map((r) => r.code), ['605', '614']);
+      expect(review.reason, 'Pendiente.');
     });
 
     test('confirming the RFC as typed continues without a call', () async {

@@ -1,3 +1,4 @@
+import 'package:control_contable/api/generated/models/regime_incompatibility.dart';
 import 'package:control_contable/api/generated/models/taxpayer.dart';
 import 'package:control_contable/api/generated/models/warning.dart';
 import 'package:control_contable/core/theme/app_spacing.dart';
@@ -6,6 +7,7 @@ import 'package:control_contable/features/taxpayers/application/add_regime_flow.
 import 'package:control_contable/features/taxpayers/application/onboarding_flow.dart';
 import 'package:control_contable/features/taxpayers/application/taxpayer_list.dart';
 import 'package:control_contable/features/taxpayers/application/taxpayer_settings.dart';
+import 'package:control_contable/features/taxpayers/presentation/onboarding_copy.dart';
 import 'package:control_contable/features/taxpayers/presentation/read_only_notice.dart';
 import 'package:control_contable/features/taxpayers/presentation/regime_options_step.dart';
 import 'package:control_contable/features/taxpayers/presentation/regimes_step.dart';
@@ -82,12 +84,26 @@ class _AddRegimeState extends ConsumerState<_AddRegime> {
       ScaffoldMessenger.of(context),
       reasons.isEmpty
           ? l10n.addRegimeAdded(added.regimeCode)
-          : l10n.addRegimeCpaReview(added.regimeCode, reasons.join(' ')),
+          : _cpaReviewMessage(added.regimeCode, reasons.join(' '), l10n),
       action: reasons.isEmpty
           ? null
           : SnackBarAction(label: l10n.paywallClose, onPressed: () {}),
     );
     _leave();
+  }
+
+  /// The added regime's CPA-review toast, naming the held regimes the
+  /// catalog pairs it with (`review_pending_with`, QA M2-12 D3).
+  String _cpaReviewMessage(String code, String reason, AppLocalizations l10n) {
+    final partners = [
+      for (final link
+          in _flow.regimes.single.reviewPendingWith ??
+              const <RegimeIncompatibility>[])
+        if (_flow.heldCodes.contains(link.code)) link.code,
+    ]..sort();
+    return partners.isEmpty
+        ? l10n.addRegimeCpaReview(code, reason)
+        : l10n.addRegimeCpaReviewWith(code, joinAsList(partners, l10n), reason);
   }
 
   void _back() {

@@ -229,6 +229,39 @@ void main() {
       expect(find.text(_paywallTitle), findsOneWidget);
       expect(find.text(_archivedBanner), findsOneWidget);
     });
+
+    // QA M2-12 D2: unarchive is a `402` for a read-only user (OQ-8), so
+    // once that is known an archive is one-way: confirm first (house rule:
+    // confirmation for the irreversible), and no Undo that only paywalls.
+    testWidgets('known read-only: archiving asks first and offers no Undo', (
+      tester,
+    ) async {
+      Iterable<String> archives() =>
+          harness.repository.calls.where((c) => c.startsWith('archive:'));
+      await pumpSettings(tester);
+      harness.container.read(readOnlyAccessProvider.notifier).markReadOnly();
+      await tester.pump();
+
+      await tapText(tester, 'Archivar');
+
+      expect(find.text('¿Archivar a «Ana»?'), findsOneWidget);
+      expect(
+        find.textContaining('no podrás desarchivarlo hasta tener un plan'),
+        findsOneWidget,
+      );
+      expect(archives(), isEmpty);
+      await tapText(tester, 'Cancelar');
+      expect(archives(), isEmpty);
+      expect(find.text(_archivedBanner), findsNothing);
+
+      await tapText(tester, 'Archivar');
+      await tapText(tester, 'Archivar de todos modos');
+
+      expect(archives(), ['archive:$_id']);
+      expect(find.text(_archivedBanner), findsOneWidget);
+      expect(find.text('Archivaste a «Ana».'), findsOneWidget);
+      expect(find.text('Deshacer'), findsNothing);
+    });
   });
 
   group('archive (reversible: do it, then offer Undo)', () {
@@ -257,6 +290,22 @@ void main() {
 
       expect(harness.repository.calls, contains('unarchive:$_id'));
       expect(find.text(_archivedBanner), findsNothing);
+    });
+
+    // Gate M2-13: the archive succeeded; a failed list reload afterwards
+    // must not turn it into an error (a retry would then answer 4xx).
+    testWidgets('a failed reload after the archive still reports success', (
+      tester,
+    ) async {
+      await pumpSettings(tester);
+      harness.repository.failNext['list'] = const ApiUnreachable();
+
+      await tapText(tester, 'Archivar');
+
+      expect(harness.repository.calls, contains('archive:$_id'));
+      expect(find.text('Archivaste a «Ana».'), findsOneWidget);
+      expect(find.textContaining('No hay conexión'), findsNothing);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('Undo still works after leaving the settings', (tester) async {

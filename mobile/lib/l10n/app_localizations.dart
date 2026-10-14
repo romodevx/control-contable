@@ -1062,6 +1062,24 @@ abstract class AppLocalizations {
   /// **'Tu periodo de prueba terminó y no hay un plan activo. Puedes consultar, archivar y eliminar tu información, pero registrar un contribuyente requiere un plan.'**
   String get onboardingPaywallBody;
 
+  /// Onboarding opened at the cap of taxpayers (OD-2): title.
+  ///
+  /// In es, this message translates to:
+  /// **'Llegaste al máximo de contribuyentes'**
+  String get onboardingLimitTitle;
+
+  /// Onboarding opened at the cap of taxpayers (OD-2): why and how to free a slot.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya tienes {cap} contribuyentes, el máximo por cuenta; los archivados también cuentan. Para registrar otro, elimina uno que ya no uses.'**
+  String onboardingLimitBody(int cap);
+
+  /// Joins the last item of a list: '606, 612 y 621'.
+  ///
+  /// In es, this message translates to:
+  /// **'{head} y {last}'**
+  String listAnd(String head, String last);
+
   /// Read-only user (402): leaves onboarding.
   ///
   /// In es, this message translates to:
@@ -1079,6 +1097,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Registramos a «{name}», RFC {rfc}.'**
   String onboardingReviewCreated(String name, String rfc);
+
+  /// Non-blocking warning: regime_combination_needs_cpa_review naming the pair (each «code · name», joined with listAnd); the server reason follows.
+  ///
+  /// In es, this message translates to:
+  /// **'Registraste juntos {regimes}. {reason}'**
+  String onboardingCpaWarningBody(String regimes, String reason);
 
   /// Non-blocking warning: regime_combination_needs_cpa_review; the server reason follows.
   ///
@@ -1308,6 +1332,24 @@ abstract class AppLocalizations {
   /// **'Lo ocultas de tu lista. Conservas su información y puedes desarchivarlo.'**
   String get settingsArchiveHelp;
 
+  /// Read-only user (OQ-8): confirmation before an archive they cannot undo; title names the taxpayer.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Archivar a «{name}»?'**
+  String settingsArchiveOneWayTitle(String name);
+
+  /// Read-only user (OQ-8): why the archive is one-way.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu cuenta es de solo consulta. Podrás seguir consultándolo, pero no podrás desarchivarlo hasta tener un plan.'**
+  String get settingsArchiveOneWayBody;
+
+  /// Read-only user (OQ-8): confirms the one-way archive.
+  ///
+  /// In es, this message translates to:
+  /// **'Archivar de todos modos'**
+  String get settingsArchiveOneWayConfirm;
+
   /// Undo toast after archiving.
   ///
   /// In es, this message translates to:
@@ -1409,6 +1451,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Agregamos el régimen {code}. Un contador debe confirmar la combinación: {reason}'**
   String addRegimeCpaReview(String code, String reason);
+
+  /// Regime added with a CPA-review warning, naming the held regimes it pairs with (e.g. '606 y 612').
+  ///
+  /// In es, this message translates to:
+  /// **'Agregamos el régimen {code}. Un contador debe confirmar su combinación con {partners}: {reason}'**
+  String addRegimeCpaReviewWith(String code, String partners, String reason);
 
   /// OQ-7 warning on the options page.
   ///

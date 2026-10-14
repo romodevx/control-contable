@@ -583,6 +583,19 @@ class AppLocalizationsEs extends AppLocalizations {
       'Tu periodo de prueba terminó y no hay un plan activo. Puedes consultar, archivar y eliminar tu información, pero registrar un contribuyente requiere un plan.';
 
   @override
+  String get onboardingLimitTitle => 'Llegaste al máximo de contribuyentes';
+
+  @override
+  String onboardingLimitBody(int cap) {
+    return 'Ya tienes $cap contribuyentes, el máximo por cuenta; los archivados también cuentan. Para registrar otro, elimina uno que ya no uses.';
+  }
+
+  @override
+  String listAnd(String head, String last) {
+    return '$head y $last';
+  }
+
+  @override
   String get onboardingPaywallAction => 'Volver al inicio';
 
   @override
@@ -591,6 +604,11 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String onboardingReviewCreated(String name, String rfc) {
     return 'Registramos a «$name», RFC $rfc.';
+  }
+
+  @override
+  String onboardingCpaWarningBody(String regimes, String reason) {
+    return 'Registraste juntos $regimes. $reason';
   }
 
   @override
@@ -729,6 +747,18 @@ class AppLocalizationsEs extends AppLocalizations {
       'Lo ocultas de tu lista. Conservas su información y puedes desarchivarlo.';
 
   @override
+  String settingsArchiveOneWayTitle(String name) {
+    return '¿Archivar a «$name»?';
+  }
+
+  @override
+  String get settingsArchiveOneWayBody =>
+      'Tu cuenta es de solo consulta. Podrás seguir consultándolo, pero no podrás desarchivarlo hasta tener un plan.';
+
+  @override
+  String get settingsArchiveOneWayConfirm => 'Archivar de todos modos';
+
+  @override
   String settingsArchived(String name) {
     return 'Archivaste a «$name».';
   }
@@ -795,6 +825,11 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String addRegimeCpaReview(String code, String reason) {
     return 'Agregamos el régimen $code. Un contador debe confirmar la combinación: $reason';
+  }
+
+  @override
+  String addRegimeCpaReviewWith(String code, String partners, String reason) {
+    return 'Agregamos el régimen $code. Un contador debe confirmar su combinación con $partners: $reason';
   }
 
   @override
