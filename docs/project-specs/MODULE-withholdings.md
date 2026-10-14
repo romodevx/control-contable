@@ -146,7 +146,7 @@ date (dated parameters: LIF/RMF rates change yearly); the fractions 2/3, 1/2, 1 
 | Emisor PF, `ground_freight`, receptor PM or federal | 0 (626: 1.25 %) | 4 % × Subtotal | receptor | ISR-7, IVA-4 | ✅ |
 | Emisor PF, `scrap`, receptor PM | 0 (626: 1.25 %) | 100 % of IVA | receptor | IVA-5 | ✅ |
 | Emisor PF, `sale_of_goods` / `business_services` / `other`, receptor PM | 0 (626: 1.25 %) | 0 | receptor (626 ISR) / — | ISR-7, IVA-8 (F4, F5) | ✅ |
-| Emisor 625 PF **not** via platform, receptor PM | 0 | 0 | — | A6 | ⚠️ |
+| Emisor 625 PF **not** via platform, receptor PM | 0 ⚠️ A6 | by operation, as any PF (rows above): 2/3 of IVA on `professional_services`, `rent_real_estate`, `rent_movable`, `commission` (LIVA 1-A fr. II a, d); 0 on goods and business services | receptor (IVA) / — | ISR-7 (A6), IVA-6 or IVA-8 | ISR ⚠️ / IVA ✅ |
 | Receptor `gov_federal`: same ISR as receptor PM | as PM | PF emisor: 2/3 of IVA on professional services, and on any other operation only when Subtotal > $2,000; freight 4 %; PM emisor: 0 except freight | receptor | IVA-4, IVA-7, A1, A2 | ⚠️ (except freight ✅) |
 | Receptor `gov_state_municipal`: same ISR as receptor PM | as PM | **0** | receptor (ISR) | IVA-2, A1 | ISR ⚠️ / IVA ✅ |
 

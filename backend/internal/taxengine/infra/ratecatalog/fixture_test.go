@@ -66,9 +66,14 @@ var syntheticWithholdingRates = map[fiscal.RateKey]string{
 	ratecatalog.KeyIVAWithholdingScrap:   "0.9",
 }
 
+// syntheticFederalThreshold is the RMF 4.1.3 threshold of syntheticSet,
+// unlike the real $2,000.00 on purpose.
+const syntheticFederalThreshold = "2100.00"
+
 // syntheticSet is a minimal valid set of fiscalYear holding the IVA rates
 // every set must hold (general 16 % and zero, open-ended), a border rate that
-// lapses on December 31, the cash payment limit and the withholding rates.
+// lapses on December 31, the cash payment limit, the withholding rates and
+// the RMF 4.1.3 threshold, which lapses with its RMF.
 func syntheticSet(t testing.TB, fiscalYear int, provisional bool) *taxparams.Params {
 	t.Helper()
 	return syntheticSetWithout(t, fiscalYear, provisional)
@@ -123,6 +128,10 @@ func syntheticValues(t testing.TB, fiscalYear int) []taxparams.Value {
 		{
 			Key: taxparams.Key(expenses.KeyCashPaymentLimit), Kind: taxparams.KindMoney, Money: cents(t, "2000.00"),
 			Validity: taxparams.Validity{From: first}, Basis: basis,
+		},
+		{
+			Key: taxparams.Key(fiscal.KeyIVAFederalWithholdingThreshold), Kind: taxparams.KindMoney,
+			Money: cents(t, syntheticFederalThreshold), Validity: taxparams.Validity{From: first, To: last}, Basis: basis,
 		},
 	}
 	for _, key := range slices.Sorted(maps.Keys(syntheticWithholdingRates)) {
