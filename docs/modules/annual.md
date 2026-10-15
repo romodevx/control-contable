@@ -2,11 +2,14 @@
 
 | | |
 |---|---|
-| Flag | `module_annual` (OFF by default; requires `module_tax_engine`, and through it `module_taxpayers`; registered by migration `20261019100000_register_module_annual` (ANN-22); in `demo_full` only) |
-| Spec | [MODULE-annual.md](../project-specs/MODULE-annual.md) |
-| Design | [ADR-0009](../adr/0009-annual-engine-placement.md) (a sub-context of the tax engine module), [ADR-0002](../adr/0002-tax-engine.md) |
-| Contract | [`docs/api/openapi.yaml`](../api/openapi.yaml), tag `Annual`, `x-module: module_annual` (frozen by ANN-02, 0.11.0) |
-| Status | Contract frozen; backend built (ANN-03..ANN-15: inputs, `EstimateAnnual`, handlers); flag registered, in `demo_full` (ANN-22); QA, gates and docs pending (ANN-23..ANN-27). The full page lands with the module docs task (ANN-26) |
+| Flag | `module_annual` (OFF by default; requires `module_tax_engine`, and through it `module_taxpayers`; registered by migration `20261019100000_register_module_annual` (ANN-22); in `demo_full` only). See [Flags, prerequisites and presets](#flags-prerequisites-and-presets) |
+| Spec | [MODULE-annual.md](../project-specs/MODULE-annual.md); legal research: [annual return 2026](../research/annual-return-2026.md) |
+| Design | [ADR-0009](../adr/0009-annual-engine-placement.md) (Accepted: a sub-context of the tax engine module), [ADR-0002](../adr/0002-tax-engine.md) ([engine version log](../adr/0002-tax-engine.md#engine-version-log): 1.1.1) |
+| Contract | [`docs/api/openapi.yaml`](../api/openapi.yaml) **0.12.0**, tag `Annual`, `x-module: module_annual` (15 operations, frozen by ANN-02 in 0.11.0, unchanged since). Reference generated from it: [API reference and errors](#api-reference-and-errors) |
+| Status | **Built**: ANN-01..ANN-26 done. QA ANN-23 pass, tech-lead ANN-24 **PASS**, security ANN-25 **PASS** ([Gates](#gates)). CPA sign-off of the ⚠️ goldens and topics (ANN-27, OB5) open |
+| User guide | [Tu declaración anual estimada](../guides/annual-user-guide.md) (Spanish, the screens' own words) |
+| Operations | [Yearly parameter update §8: the annual return](../runbooks/tax-params-update.md#8-the-annual-return-module_annual-rmf-deadlines-and-rule-renewals) (RMF of the next year, deadlines, rule renewals) |
+| Code | `backend/internal/taxengine/domain/annual/` (strategies, deductions, `explain/`), `backend/internal/taxengine/usecase/annual/`, `backend/internal/taxengine/adapter/http/annual/` (handlers, budgets), `backend/internal/taxengine/infra/annualinputs/`, `backend/internal/taxengine/infra/annuallimits/`, `backend/cmd/api/annual.go`, migrations `20261016120000_regime_annual_depreciation.sql`, `20261016121000_annual_inputs.sql`, `20261017102000_salary_statements_move_year.sql`, `20261019100000_register_module_annual.sql`, `mobile/lib/features/annual/` |
 
 ## Contract highlights
 
@@ -52,6 +55,10 @@
 - Sections run through an ordered registry (`taxengine.AnnualSections`); the annual golden
   gate runs AN-01..AN-08 through the use case. Nothing in the monthly engine imports the
   annual packages (`TestMonthlyEngineNeverImportsTheAnnual`).
+- **Balance = ISR as shown − credits**, to the centavo (ANN-16, #148): the credits come off
+  the rounded ISR, so a half-centavo ISR paid exactly is `cero`, not a favor of 0.01. Engine
+  1.1.1 (#156) applied the same rule to the monthly balance
+  ([log](../adr/0002-tax-engine.md#engine-version-log)).
 
 ## Mobile input screens (ANN-19..21)
 
@@ -70,6 +77,53 @@ Reached from "Datos para tu anual" on the annual screen and from each "Falta" li
 Writes never use a trial slot; a `402` opens the paywall and marks the session read-only,
 after which the add/save actions show the paywall without calling the server (UX only).
 Delete and restore stay available to a read-only user.
+
+## Flags, prerequisites and presets
+
+| Flag OFF | Effect on the annual |
+|---|---|
+| `module_annual` | Every one of the 15 routes answers `404 not_found`; `GET /v1/flags` omits it; the "Declaración anual" entry and the `/anual/…` routes are gone. Rows are kept |
+| `module_tax_engine` | Annual implied OFF (prerequisite, `flags.Prerequisites`): same `404`, entry hidden (History is hidden too) |
+| `module_taxpayers` | Annual implied OFF through the engine |
+| `module_incomes` / `module_expenses` | No effect on the figures: the ledger is still read (MODULE-incomes OQ-8) |
+
+- The `404` of a flag OFF is indistinguishable from an unknown or foreign taxpayer, a
+  malformed request included (`TestAnnualRoutes_needTheEngineAndTaxpayersFlags`).
+- Presets: **`demo_full` only** (OQ-A7; `annual_preset_smoke_integration_test.go`). Not in
+  `demo_core` nor `demo_monetization`.
+- Budgets (ADR-0005): `estimate_reads` for estimate, breakdown and filed payments (+1 when
+  the 12-month `Estimator` range runs), `annual_reads` 600/h for the other reads,
+  `annual_writes` 300/h for every write; spent → `429 rate_limited` with `Retry-After`.
+- **Enable in a shared environment** only when all of these hold:
+  1. ANN-24 and ANN-25 passed (both have, 2026-10-15);
+  2. the tax engine's own preconditions, first the CPA sign-off
+     ([M5-31 §5](../reviews/M5-31-security-gate.md#5-preconditions-to-enable-module_tax_engine-in-staging-or-production)),
+     since the annual cannot be ON without it;
+  3. a reviewed parameter set for the fiscal year being estimated, and the annual items of the
+     [yearly update §8](../runbooks/tax-params-update.md#8-the-annual-return-module_annual-rmf-deadlines-and-rule-renewals)
+     done for it (RMF of the next year read, deadlines and rule renewals applied or the
+     disclaimers kept);
+  4. the owner accepts the open ⚠️ topics shown with the strong CPA banner, or ANN-27 has
+     closed them.
+
+```sh
+make -C backend flags ARGS="enable module_annual"        # also needs module_tax_engine and module_taxpayers ON
+make -C backend flags ARGS="apply-preset demo_full"      # local demo with every module
+```
+
+## API reference and errors
+
+The 15 operations (estimate, breakdown, annual inputs, salary statements, personal
+deductions with restore, filed payments), their schemas, parameters and examples live only
+in the contract. Render them instead of copying them here:
+
+```sh
+make api-docs     # build/api-docs/index.html, rendered from docs/api/openapi.yaml (tag Annual)
+make mock         # Prism mock of the contract, for the screens without a backend
+```
+
+The [Contract highlights](#contract-highlights) above are a reading guide, not the
+reference; when they disagree, `openapi.yaml` wins and this page is the bug.
 
 ## Errors
 
@@ -184,3 +238,59 @@ it by hand. CI (`make api-error-tables-check`) fails when it differs from `opena
 | `putFiledPayments` | `PUT /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/filed-payments/{fiscalYear}` | 429 | `rate_limited` | Rate limit exceeded. |
 | `putFiledPayments` | `PUT /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/filed-payments/{fiscalYear}` | 500 | `internal_error` | Unexpected server error. |
 <!-- END GENERATED error-table module_annual -->
+
+
+## Gates
+
+| Gate | Verdict | Notes |
+|---|---|---|
+| ANN-23 QA ([report](../../.gstack/qa-reports/qa-report-annual-2026-10-14.md), [PR #153](https://github.com/romodevx/control-contable/pull/153)) | Pass, one accessibility fix | Android emulator against its own empty stack, every datum entered through the screens: PF 612 + 605 (refund, then constancia, caps, cash exclusion, donation without and with prior-year income, Confirmar todos), PM 601 (PTU, CU, typed payment), read-only (paywall on writes, delete + Undo open), `module_annual` OFF and `module_tax_engine` OFF. Every figure matched the hand arithmetic and the server. Fix: a section with one missing input was announced by TalkBack as one button (`Semantics(container: true)` on `AnnualLinkRow`, regression test first). New suites: `annual_qa_integration_test.go`, `annual_goldens_ui_test.go` (AN-01..AN-08 on screen) |
+| ANN-24 tech lead ([review](../reviews/ANN-24-tech-lead-gate.md)) | **PASS** after one OCP fix | The assembler named section kinds in 6 places; the facts are now fields each strategy sets on `ComputedSection`, guarded by `registry_ocp_test.go`. Pure strategies, ports only, no floats, no clock or random, `annual_estimate` always first |
+| ANN-25 security ([verdict on PR #153](https://github.com/romodevx/control-contable/pull/153#issuecomment-6186092941)) | **PASS**, no blocking finding | RLS ENABLE + FORCE and per-operation policies on the 4 tables with isolation tests, composite FKs and column grants; session context per transaction; no employer RFC, labels optional aliases (NFC, no control characters); logs carry ids only; flag matrix; input bounds (500 deductions, 20 constancias a year, under an advisory lock); every operation budgeted; `no-store`; `402` on writes, delete and restore open; no on-device persistence |
+
+## Decisions
+
+Full text in [MODULE-annual §12](../project-specs/MODULE-annual.md#12-decisions-coordinator-2026-10-15--all-decided)
+and [ADR-0009](../adr/0009-annual-engine-placement.md).
+
+| # | Decision | Effect |
+|---|---|---|
+| ADR-0009 | A sub-context of the tax engine module, one-way dependency | `module_annual` requires `module_tax_engine`; the monthly engine never imports the annual |
+| OQ-A1 | Filed payments are their own table | Precedence filed → tax input `prior_provisional_payments` → app estimate |
+| OQ-A2 | Constancias allowed for any PF | The screen suggests adding 605 when it is not held |
+| OQ-A3 | No extrapolation of the year in progress | Records through `data_through` + `year_in_progress` |
+| OQ-A4 | RESICO income out of the 15 % total income | Conservative; topic `deduction_cap_resico_income` |
+| OQ-A5 | Donations without prior-year income | Excluded, section `incomplete` |
+| OQ-A6 | 614 interest | Explanation only in v1 |
+| OQ-A7 | Presets | `demo_full` only |
+| OQ-A8 | Default year | Previous year from January to 30 April, else the current one |
+| OQ-A9 + ADR-0009 | Read-only users | Creates, edits and PUTs `402`, never a trial slot; delete and restore stay open (CONTRACT.md 0.6.1) |
+
+## Known limits and follow-ups
+
+Tracked in the [PLAN AN follow-ups](../project-specs/PLAN-control-contable.md#an-follow-ups).
+The ones a user or an operator can notice:
+
+- **CPA sign-off pending (ANN-27, OB5).** AN-04 and the AN-07 PTU assertion are golden
+  `skip`s; every ⚠️ topic (`uma_for_minimum_wage`, `ptu_rate`, `cu_rounding`,
+  `salary_obligation_basis`, ...) raises the strong banner until then.
+- **RMF 2027 is not published** (late December 2026). Deadlines, the RESICO PF relief
+  (rule 3.13.7) and the salary relief (3.17.11, written for ejercicio 2025 only, not applied)
+  may change for ejercicio 2026; `rmf_2027_pending` says so on every 2026 estimate. Handled by
+  the [yearly update §8](../runbooks/tax-params-update.md#8-the-annual-return-module_annual-rmf-deadlines-and-rule-renewals).
+- **iOS not walked** (OB6: Xcode pending), as in every module QA; Android only.
+- **Archived taxpayer not walked on a device**: covered through the stack only
+  (`TestAnnualQA_readOnlyAndArchivedOnEveryWrite`). Owed with the next device walk.
+- **RESICO PF / PM, 625 and 603 not walked on a device**: pinned by the goldens and
+  `annual_goldens_ui_test.dart`.
+- **Filed-payments prefill vs the monthly screen** (QA §6, ANN-24 FU4): the annual chains the
+  credited payments, so a month can prefill $0.00 while its monthly screen shows an ISR. Explained
+  in the [user guide §3.3](../guides/annual-user-guide.md#33-pagos-provisionales-presentados-confirmados);
+  an on-screen hint is a frontend follow-up.
+- **Security follow-ups (ANN-25, non-blocking):** the soft-delete purge job (M9-08) must cover
+  `personal_deductions`; a guard test that every `x-module: module_annual` operation has a
+  budget; reject Unicode format characters (Cf: bidi overrides, zero-width) in labels.
+- **Tech-lead follow-ups (ANN-24):** a completeness test for the deadline of each section
+  kind; a `fiscal.RegimeGeneralPM` constant for the `"601"` literals.
+- Annual inflation adjustment (601) and loss updating are out of scope
+  (`inflation_adjustment_excluded`); IVA has no annual return (`no_annual_iva`).
