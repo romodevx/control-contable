@@ -133,6 +133,8 @@ func TestAnnualTables_CrossUserWritesMatchNoRow(t *testing.T) {
 		},
 		salaryStatements.name: {
 			"UPDATE salary_statements SET isr_withheld_cents = 1 WHERE taxpayer_id = $1",
+			// 20261017100000: a fiscal-year move never reaches another user's constancia.
+			"UPDATE salary_statements SET fiscal_year = 2027 WHERE taxpayer_id = $1",
 			"DELETE FROM salary_statements WHERE taxpayer_id = $1",
 		},
 		filedPayments.name: {
@@ -158,6 +160,24 @@ func TestAnnualTables_CrossUserWritesMatchNoRow(t *testing.T) {
 				assert.EqualValues(t, 1, affected, "own row: "+query)
 			}
 		})
+	}
+}
+
+// 20261017100000 grants UPDATE (fiscal_year) only: a move stays inside the year CHECK,
+// and the owner columns stay out of reach, so a constancia never changes user or taxpayer.
+func TestSalaryStatements_FiscalYearMoveKeepsTheGuards(t *testing.T) {
+	app := seedAnnualOwners(t, pgtest.NewDatabase(t))
+	require.NoError(t, salaryStatements.insert(t, app, userA, salaryStatements.row(userA, nil)))
+	for _, year := range []int{2025, 2101} {
+		_, err := execAsUser(t, app, userA, "UPDATE salary_statements SET fiscal_year = $1", year)
+		requireSQLState(t, err, sqlstateCheckViolation)
+	}
+	for _, query := range []string{
+		"UPDATE salary_statements SET fiscal_year = 2027, taxpayer_id = '" + taxpayerB + "'",
+		"UPDATE salary_statements SET fiscal_year = 2027, user_id = '" + userB + "'",
+	} {
+		_, err := execAsUser(t, app, userA, query)
+		requireSQLState(t, err, sqlstateInsufficientPrivilege)
 	}
 }
 
