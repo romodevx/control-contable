@@ -9,6 +9,7 @@ import (
 	expenses "github.com/romodevx/control-contable/backend/internal/expenses/domain"
 	incomes "github.com/romodevx/control-contable/backend/internal/incomes/domain"
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
+	"github.com/romodevx/control-contable/backend/internal/platform/money"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/taxparams"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/infra/ratecatalog"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/params"
@@ -137,25 +138,26 @@ func TestPlatformRatesLapseWithTheYear(t *testing.T) {
 	}
 }
 
-// The suggestions the income and expense domains compute through the
+// The withholdings the kernel derives for incomes and expenses through the
 // adapter: ISR at the catalog rate, IVA as the legal share (2/3).
-func TestWithholdingSuggestionsThroughTheAdapter(t *testing.T) {
+func TestWithholdingsDerivedThroughTheAdapter(t *testing.T) {
 	c := embedded(t)
 	on := date(t, "2026-06-30")
 	const amount, iva = 10_000_00, 1_600_00
 
-	fees := incomes.PolicyFor(incomes.Payee{PersonType: fiscal.PersonFisica, Regime: fiscal.RegimeBusiness}, incomes.CounterpartyMoral, "")
-	got, err := fees.Suggest(amount, iva, on, c)
+	fees, err := fiscal.DeriveWithholdings(fiscal.WithholdingInput{
+		EmisorPersona: fiscal.PersonFisica, EmisorRegime: fiscal.RegimeBusiness, Receptor: fiscal.ReceptorPM,
+		Operation: fiscal.OperationProfessionalServices, Subtotal: amount, IVA: iva, IVARate: fiscal.IVARate16, On: on,
+	}, c.Withholdings())
 	require.NoError(t, err)
-	assert.Equal(t, fiscal.Suggested{
-		ISR: fiscal.Suggestion{Cents: 1_000_00, Known: true},
-		IVA: fiscal.Suggestion{Cents: 1_066_67, Known: true}, // 2/3 of 1,600.00
-	}, got)
+	assert.Equal(t, fiscal.Withholdings{ISR: 1_000_00, IVA: 1_066_67}, fees.Withholdings, "2/3 of 1,600.00")
 
-	resico := incomes.PolicyFor(incomes.Payee{PersonType: fiscal.PersonFisica, Regime: fiscal.RegimeRESICO}, incomes.CounterpartyMoral, "")
-	got, err = resico.Suggest(amount, iva, on, c)
+	resico, err := fiscal.DeriveWithholdings(fiscal.WithholdingInput{
+		EmisorPersona: fiscal.PersonFisica, EmisorRegime: fiscal.RegimeRESICO, Receptor: fiscal.ReceptorPM,
+		Operation: fiscal.OperationProfessionalServices, Subtotal: amount, IVA: iva, IVARate: fiscal.IVARate16, On: on,
+	}, c.Withholdings())
 	require.NoError(t, err)
-	assert.Equal(t, fiscal.Suggestion{Cents: 125_00, Known: true}, got.ISR)
+	assert.Equal(t, money.Cents(125_00), resico.ISR)
 
 	// Expenses derive what a persona moral withholds (WH-07): a 606
 	// landlord's rent, through the adapter's kernel view.

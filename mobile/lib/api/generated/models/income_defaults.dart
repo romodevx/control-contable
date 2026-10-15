@@ -4,7 +4,6 @@
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import 'decimal_rate.dart';
 import 'income_last_used.dart';
 import 'iva_rate.dart';
 import 'platform_activity.dart';
@@ -12,31 +11,17 @@ import 'platform_activity.dart';
 part 'income_defaults.freezed.dart';
 part 'income_defaults.g.dart';
 
-/// Form prefill from the rate catalog (UX only; the server re-validates every write). The four `*_withholding_*` fields are **deprecated in 0.10.0** (ADR-0008): withholdings are derived, so there is no rate to suggest; the form shows `previewIncomeWithholdings` instead. They stay for the shipped form until WH-11. `last_used` replaces them and is always sent since 0.11.3 (WH-06).
+/// Form prefill from the rate catalog (UX only; the server re-validates every write). Withholdings are derived (ADR-0008), so there is no rate to suggest: the form shows `previewIncomeWithholdings`. **0.12.0 (WH-11, ADR-0008 amendment):** the four `*_withholding_*` fields are removed and `last_used` is required.
 @Freezed()
 abstract class IncomeDefaults with _$IncomeDefaults {
   const factory IncomeDefaults({
     @JsonKey(name: 'iva_rates_allowed') required List<IvaRate> ivaRatesAllowed,
     @JsonKey(name: 'suggested_iva_rate') required IvaRate suggestedIvaRate,
-    @JsonKey(name: 'isr_withholding_allowed')
-    @Deprecated('This is marked as deprecated')
-    required bool isrWithholdingAllowed,
+    @JsonKey(name: 'last_used') required IncomeLastUsed lastUsed,
 
-    /// Fraction of `amount_cents`; `null` when not allowed or when there is no suggestion.
-    @JsonKey(includeIfNull: true, name: 'isr_withholding_rate')
-    required DecimalRate? isrWithholdingRate,
-    @JsonKey(name: 'iva_withholding_allowed')
-    @Deprecated('This is marked as deprecated')
-    required bool ivaWithholdingAllowed,
-
-    /// Fraction of `iva_cents` (2/3 = `0.666667`); `null` when not allowed or when there is no suggestion.
-    @JsonKey(includeIfNull: true, name: 'iva_withholding_rate')
-    required DecimalRate? ivaWithholdingRate,
-
-    /// The 625 activity the ISR rate is for; `null` outside 625 or when it is ambiguous.
+    /// The 625 activity to preselect; `null` outside 625 or when it is ambiguous.
     @JsonKey(includeIfNull: true, name: 'platform_activity')
     required PlatformActivity? platformActivity,
-    @JsonKey(includeIfNull: false, name: 'last_used') IncomeLastUsed? lastUsed,
   }) = _IncomeDefaults;
 
   factory IncomeDefaults.fromJson(Map<String, Object?> json) =>

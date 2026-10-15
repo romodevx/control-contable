@@ -351,8 +351,6 @@ void main() {
       final sent = harness.incomes.creates.single;
       expect(sent.counterpartyKind, CounterpartyKind.pm);
       expect(sent.operationKind, OperationKind.professionalServices);
-      expect(sent.isrWithheldCents, isNull);
-      expect(sent.ivaWithheldCents, isNull);
     });
 
     testWidgets('no withholding field can be typed: the old inputs are '

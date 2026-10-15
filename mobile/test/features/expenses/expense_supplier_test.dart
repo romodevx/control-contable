@@ -93,7 +93,6 @@ void main() {
       expect(sent.supplierRegime, isNull);
       expect(sent.operationKind, isNull);
       expect(sent.residentialRent, isNull);
-      expect(sent.isrWithheldCents, isNull);
     });
 
     testWidgets('a supplier_not_applicable verdict says so in plain words', (

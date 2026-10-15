@@ -131,7 +131,6 @@ func TestUpdate_EveryFieldPatches(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, fiscal.ReceptorPFNoActivityOrPublic, got.Income.Counterparty)
 	assert.Equal(t, fiscal.OperationSaleOfGoods, got.Income.Operation)
-	assert.Equal(t, domain.CounterpartyPublic, got.Income.CounterpartyType)
 	assert.Equal(t, fiscal.IVAExempt, got.Income.IVARate)
 	assert.Equal(t, "2026-09-30", got.Income.BookedOn.String())
 	assert.Equal(t, "Venta", got.Income.Description)
@@ -146,22 +145,22 @@ func TestUpdate_ChangingTheCounterpartyReDerives(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, fiscal.Withholdings{}, got.Income.Withholding.Withholdings)
 	assert.Equal(t, []fiscal.RuleID{fiscal.RuleISR0, fiscal.RuleIVA1}, got.Income.Withholding.RuleIDs)
-	assert.Equal(t, domain.CounterpartyFisica, got.Income.CounterpartyType)
 }
 
-// An income stored before WH-06 has no facts: an edit must answer who was
-// billed, and then derives.
-func TestUpdate_ALegacyIncomeNeedsTheCounterpartyKind(t *testing.T) {
+// An income stored before WH-06 is served with the backfill's facts
+// (0.12.0), and the app patches only what the user changed: an edit applies
+// to the served facts and derives. Answering who was billed overrides them.
+func TestUpdate_ALegacyIncomeEditsOnTheServedFacts(t *testing.T) {
 	h := seeded(t)
 	legacy := h.store.rows[incomeID]
 	legacy.Counterparty, legacy.Operation, legacy.Withholding = "", "", fiscal.WithholdingRecord{}
 	h.store.rows[incomeID] = legacy
 
-	_, err := h.uc.Update(t.Context(), userA, taxpayerA, incomeID, usecase.Patch{Description: ptr("x")})
-	requireApp(t, err, apperr.CodeValidationFailed, "counterparty_kind", "required")
-
-	got, err := h.uc.Update(t.Context(), userA, taxpayerA, incomeID, usecase.Patch{Counterparty: ptr(fiscal.ReceptorPM)})
+	got, err := h.uc.Update(t.Context(), userA, taxpayerA, incomeID, usecase.Patch{
+		Counterparty: ptr(fiscal.ReceptorPFWithActivity),
+	})
 	require.NoError(t, err)
+	assert.Equal(t, fiscal.ReceptorPFWithActivity, got.Income.Counterparty)
 	assert.Equal(t, fiscal.OperationProfessionalServices, got.Income.Operation, "the regime default")
 	assert.True(t, got.Income.Withholding.Derived())
 }

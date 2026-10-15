@@ -9,9 +9,6 @@ part of 'income_update.dart';
 _IncomeUpdate _$IncomeUpdateFromJson(Map<String, dynamic> json) =>
     _IncomeUpdate(
       regimeCode: json['regime_code'] as String?,
-      counterpartyType: json['counterparty_type'] == null
-          ? null
-          : CounterpartyType.fromJson(json['counterparty_type'] as String),
       counterpartyKind: json['counterparty_kind'] == null
           ? null
           : CounterpartyKind.fromJson(json['counterparty_kind'] as String),
@@ -25,8 +22,6 @@ _IncomeUpdate _$IncomeUpdateFromJson(Map<String, dynamic> json) =>
           ? null
           : IvaRate.fromJson(json['iva_rate'] as String),
       ivaCents: (json['iva_cents'] as num?)?.toInt(),
-      isrWithheldCents: (json['isr_withheld_cents'] as num?)?.toInt(),
-      ivaWithheldCents: (json['iva_withheld_cents'] as num?)?.toInt(),
       invoicedOn: json['invoiced_on'] as String?,
       collectedOn: json['collected_on'] as String?,
       platformActivity: json['platform_activity'] == null
@@ -40,7 +35,6 @@ Map<String, dynamic> _$IncomeUpdateToJson(
   _IncomeUpdate instance,
 ) => <String, dynamic>{
   'regime_code': ?instance.regimeCode,
-  'counterparty_type': ?_$CounterpartyTypeEnumMap[instance.counterpartyType],
   'counterparty_kind': ?_$CounterpartyKindEnumMap[instance.counterpartyKind],
   'operation_kind': ?_$OperationKindEnumMap[instance.operationKind],
   'residential_rent': ?instance.residentialRent,
@@ -48,21 +42,11 @@ Map<String, dynamic> _$IncomeUpdateToJson(
   'amount_cents': ?instance.amountCents,
   'iva_rate': ?_$IvaRateEnumMap[instance.ivaRate],
   'iva_cents': ?instance.ivaCents,
-  'isr_withheld_cents': ?instance.isrWithheldCents,
-  'iva_withheld_cents': ?instance.ivaWithheldCents,
   'invoiced_on': ?instance.invoicedOn,
   'collected_on': ?instance.collectedOn,
   'platform_activity': ?_$PlatformActivityEnumMap[instance.platformActivity],
   'cfdi_uuid': ?instance.cfdiUuid,
   'description': ?instance.description,
-};
-
-const _$CounterpartyTypeEnumMap = {
-  CounterpartyType.personaFisica: 'persona_fisica',
-  CounterpartyType.personaMoral: 'persona_moral',
-  CounterpartyType.publicoGeneral: 'publico_general',
-  CounterpartyType.plataforma: 'plataforma',
-  CounterpartyType.$unknown: r'$unknown',
 };
 
 const _$CounterpartyKindEnumMap = {

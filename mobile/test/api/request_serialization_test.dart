@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:control_contable/api/generated/models/counterparty_type.dart';
+import 'package:control_contable/api/generated/models/counterparty_kind.dart';
 import 'package:control_contable/api/generated/models/income_create.dart';
 import 'package:control_contable/api/generated/models/income_update.dart';
 import 'package:control_contable/api/generated/models/iva_rate.dart';
@@ -57,7 +57,7 @@ void main() {
     final body = wire(
       const IncomeCreate(
         regimeCode: '612',
-        counterpartyType: CounterpartyType.personaMoral,
+        counterpartyKind: CounterpartyKind.pm,
         amountCents: 1000000,
         ivaRate: IvaRate.rate16,
         ivaCents: 160000,
