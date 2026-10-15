@@ -32,7 +32,9 @@ class AnnualYearPicker extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(label, style: text.titleSmall),
+        // The field carries the label for screen readers; announcing this
+        // caption too made VoiceOver/TalkBack read "Ejercicio" twice.
+        ExcludeSemantics(child: Text(label, style: text.titleSmall)),
         const SizedBox(height: AppSpacing.xxs),
         Semantics(
           label: label,
