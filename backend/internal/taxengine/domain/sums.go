@@ -59,13 +59,19 @@ type ExpenseSums struct {
 	NonDeductiblePaid money.Cents // amount_cents of the other non-deductible expenses
 	CashOverLimitPaid money.Cents // amount_cents of non-deductible cash payments over the limit (LISR 27 fr. III)
 	IVAPaid           IVAByRate   // amount_cents and iva_cents by the record's IVA rate, all classes
-	// CreditableIVAPaid is the stored creditable-IVA candidate (LIVA 5,
-	// MODULE-expenses §2.4): CFDI, never a cash payment over the limit,
-	// a creditable category, and deductible or RESICO PF.
-	CreditableIVAPaid  money.Cents
-	PredialPaid        money.Cents // amount_cents of deductible predial (606 blind deduction, LISR 115 ¶2)
-	ISRWithheldToRemit money.Cents // ISR the taxpayer withheld from suppliers
-	IVAWithheldToRemit money.Cents // IVA the taxpayer withheld from suppliers
+	// CreditableIVAPaid is the paid part of the stored creditable IVA (LIVA
+	// 5, MODULE-expenses §2.4: CFDI, never a cash payment over the limit, a
+	// creditable category, and deductible or RESICO PF): the creditable
+	// share of IVA − IVA withheld, credited in its own month.
+	CreditableIVAPaid money.Cents
+	// CreditableIVAWithheld is the withheld part: the creditable share of
+	// the IVA the taxpayer withheld from its suppliers this month. It is
+	// credited in the next month's return, the one after the return that
+	// remits it (LIVA 5 fr. IV, MODULE-withholdings §4.2), never in its own.
+	CreditableIVAWithheld money.Cents
+	PredialPaid           money.Cents // amount_cents of deductible predial (606 blind deduction, LISR 115 ¶2)
+	ISRWithheldToRemit    money.Cents // ISR the taxpayer withheld from suppliers
+	IVAWithheldToRemit    money.Cents // IVA the taxpayer withheld from suppliers
 }
 
 // MonthSums are one regime's ledger aggregates for one month: what the
@@ -117,14 +123,15 @@ func (m MonthSums) Add(o MonthSums) (MonthSums, error) {
 			ISRWithheld: s.withheld(m.Income.ISRWithheld, o.Income.ISRWithheld),
 		},
 		Expenses: ExpenseSums{
-			DeductiblePaid:     s.add(m.Expenses.DeductiblePaid, o.Expenses.DeductiblePaid),
-			NonDeductiblePaid:  s.add(m.Expenses.NonDeductiblePaid, o.Expenses.NonDeductiblePaid),
-			CashOverLimitPaid:  s.add(m.Expenses.CashOverLimitPaid, o.Expenses.CashOverLimitPaid),
-			IVAPaid:            s.byRate(m.Expenses.IVAPaid, o.Expenses.IVAPaid),
-			CreditableIVAPaid:  s.add(m.Expenses.CreditableIVAPaid, o.Expenses.CreditableIVAPaid),
-			PredialPaid:        s.add(m.Expenses.PredialPaid, o.Expenses.PredialPaid),
-			ISRWithheldToRemit: s.add(m.Expenses.ISRWithheldToRemit, o.Expenses.ISRWithheldToRemit),
-			IVAWithheldToRemit: s.add(m.Expenses.IVAWithheldToRemit, o.Expenses.IVAWithheldToRemit),
+			DeductiblePaid:        s.add(m.Expenses.DeductiblePaid, o.Expenses.DeductiblePaid),
+			NonDeductiblePaid:     s.add(m.Expenses.NonDeductiblePaid, o.Expenses.NonDeductiblePaid),
+			CashOverLimitPaid:     s.add(m.Expenses.CashOverLimitPaid, o.Expenses.CashOverLimitPaid),
+			IVAPaid:               s.byRate(m.Expenses.IVAPaid, o.Expenses.IVAPaid),
+			CreditableIVAPaid:     s.add(m.Expenses.CreditableIVAPaid, o.Expenses.CreditableIVAPaid),
+			CreditableIVAWithheld: s.add(m.Expenses.CreditableIVAWithheld, o.Expenses.CreditableIVAWithheld),
+			PredialPaid:           s.add(m.Expenses.PredialPaid, o.Expenses.PredialPaid),
+			ISRWithheldToRemit:    s.add(m.Expenses.ISRWithheldToRemit, o.Expenses.ISRWithheldToRemit),
+			IVAWithheldToRemit:    s.add(m.Expenses.IVAWithheldToRemit, o.Expenses.IVAWithheldToRemit),
 		},
 	}
 	if s.err != nil {
@@ -140,10 +147,13 @@ type MonthEntry struct {
 }
 
 // YearSums are one regime's MonthSums for January..Through of the period's
-// fiscal year. A month without records is all zeros.
+// fiscal year, plus the withheld creditable IVA of the previous fiscal
+// year's December, which January credits (LIVA 5 fr. IV). A month without
+// records is all zeros.
 type YearSums struct {
-	through time.Month
-	months  [monthsPerYear]MonthSums
+	through       time.Month
+	months        [monthsPerYear]MonthSums
+	priorDecember money.Cents // ExpenseSums.CreditableIVAWithheld of the previous December
 }
 
 // monthsPerYear is the length of a fiscal year in tax periods.
@@ -176,6 +186,28 @@ func (y YearSums) Month(month time.Month) MonthSums {
 		return MonthSums{}
 	}
 	return y.months[month-1]
+}
+
+// WithPriorDecember returns a copy of y holding withheld, the creditable IVA
+// withheld from suppliers in the previous fiscal year's December: LIVA is
+// monthly, not annual, so January credits it (MODULE-withholdings §4.2).
+func (y YearSums) WithPriorDecember(withheld money.Cents) YearSums {
+	y.priorDecember = withheld
+	return y
+}
+
+// CreditableWithheldPriorMonth returns the creditable IVA withheld from
+// suppliers in the month before month, which month's return credits (LIVA
+// 5 fr. IV): the previous December's for January; zero outside
+// January..Through.
+func (y YearSums) CreditableWithheldPriorMonth(month time.Month) money.Cents {
+	switch {
+	case !validMonth(month) || month > y.through:
+		return 0
+	case month == time.January:
+		return y.priorDecember
+	}
+	return y.months[month-2].Expenses.CreditableIVAWithheld
 }
 
 // Sum returns the sums of from..to inclusive: Sum(January, n) is year to

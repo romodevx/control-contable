@@ -37,13 +37,19 @@ func TestExpenseLedger_MapsEveryField(t *testing.T) {
 			Rate0Base: 8, ExemptBase: 9,
 		},
 		CreditableIVAPaid: 10, PredialPaid: 11, ISRWithheldToRemit: 12, IVAWithheldToRemit: 13,
+		CreditableIVAWithheld: 14,
 	}}}
-	q := taxusecase.LedgerQuery{TaxpayerID: "0199d4a2-1111-7000-8000-0000000e000a", FirstYear: 2026, FiscalYear: 2027, Through: time.March}
+	q := taxusecase.LedgerQuery{
+		TaxpayerID: "0199d4a2-1111-7000-8000-0000000e000a", FirstYear: 2026, FiscalYear: 2027, Through: time.March,
+		PriorDecember: true,
+	}
 
 	got, err := newExpenseLedger(source).ExpenseSums(t.Context(), q)
 
 	require.NoError(t, err)
-	assert.Equal(t, expensesinfra.LedgerQuery{TaxpayerID: q.TaxpayerID, FirstYear: 2026, FiscalYear: 2027, Through: time.March}, source.got)
+	assert.Equal(t, expensesinfra.LedgerQuery{
+		TaxpayerID: q.TaxpayerID, FirstYear: 2026, FiscalYear: 2027, Through: time.March, PriorDecember: true,
+	}, source.got)
 	assert.Equal(t, []taxusecase.ExpenseMonthSums{{
 		Regime: fiscal.RegimeBusiness, Year: 2027, Month: time.March,
 		Sums: domain.ExpenseSums{
@@ -53,6 +59,7 @@ func TestExpenseLedger_MapsEveryField(t *testing.T) {
 				Rate0Base: 8, ExemptBase: 9,
 			},
 			CreditableIVAPaid: 10, PredialPaid: 11, ISRWithheldToRemit: 12, IVAWithheldToRemit: 13,
+			CreditableIVAWithheld: 14,
 		},
 	}}, got)
 }

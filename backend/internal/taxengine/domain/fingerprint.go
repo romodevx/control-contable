@@ -63,6 +63,10 @@ func appendRegime(b []byte, r FingerprintRegime) []byte {
 		v := in.Inputs.values[slot]
 		b = fmt.Appendf(b, "input %q %q %d %d %d %t\n", v.Key, v.Kind, v.Month, v.Money, v.Rate, v.Bool)
 	}
+	// The previous December's withheld IVA is January's credit. It is hashed
+	// for every month: a later edit of it may mark a month as changed whose
+	// figures did not move, never the reverse (M8).
+	b = fmt.Appendf(b, "prior_december_withheld %d\n", in.Sums.CreditableWithheldPriorMonth(time.January))
 	for m := time.January; m <= in.Sums.Through(); m++ {
 		b = fmt.Appendf(b, "month %d %+v\n", m, in.Sums.Month(m))
 	}

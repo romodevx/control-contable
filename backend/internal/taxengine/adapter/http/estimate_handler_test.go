@@ -375,3 +375,27 @@ func mustPeriod(t *testing.T, s string) domain.Period {
 	require.NoError(t, err)
 	return p
 }
+
+// WH-09: the withheld IVA credited the month after (LIVA 5 fr. IV) is a CPA
+// topic with its own phrase, never the generic fallback.
+func TestGetTaxpayerEstimate_withheldIVACreditTimingTopic(t *testing.T) {
+	est := estimateNet(t)
+	est.Disclaimers = []domain.Disclaimer{{
+		Code: domain.DisclaimerCPAReviewPending, Severity: domain.SeverityStrong,
+		Topics: []domain.CPATopic{domain.TopicWithheldIVACreditTiming},
+	}}
+
+	resp, err := taxenginehttp.NewHandler(&fakeInputs{}, &fakeEstimates{estimate: est}).GetTaxpayerEstimate(authed(t),
+		gen.GetTaxpayerEstimateRequestObject{TaxpayerId: uuid.MustParse(taxpayerID)})
+
+	require.NoError(t, err)
+	rec := httptest.NewRecorder()
+	require.NoError(t, resp.VisitGetTaxpayerEstimateResponse(rec))
+	var body struct {
+		Disclaimers []gen.Disclaimer `json:"disclaimers"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Len(t, body.Disclaimers, 1)
+	assert.Equal(t, "Este cálculo usa reglas que un contador aún no valida: acreditar el mes siguiente el IVA que "+
+		"retuviste a tus proveedores. Tómalo con mayor reserva.", body.Disclaimers[0].Text)
+}

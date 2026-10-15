@@ -29,6 +29,7 @@ import (
 // argument and citation wording is not hashed.
 var goldenFiguresDigest = map[string]string{
 	"1.0.1": "2825ad18d43022db573a9bd194ae78c2a5add51ecd8dda032b7f09ef5e0a1f14",
+	"1.1.0": "25e7e526f5dba7dab3f2456c2c3fc17f9ce8aa28ba88461bd3e9c1d3fafe4128",
 }
 
 // TestEngineVersionPinsTheGoldenFigures (M5-30).

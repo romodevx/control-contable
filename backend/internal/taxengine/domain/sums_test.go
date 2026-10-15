@@ -30,7 +30,7 @@ func sums(v money.Cents) domain.MonthSums {
 				Rate16: domain.RateSums{Base: v, IVA: v}, Rate8: domain.RateSums{Base: v, IVA: v},
 				Rate0Base: v, ExemptBase: v,
 			},
-			CreditableIVAPaid: v, PredialPaid: v,
+			CreditableIVAPaid: v, CreditableIVAWithheld: v, PredialPaid: v,
 			ISRWithheldToRemit: v, IVAWithheldToRemit: v,
 		},
 	}

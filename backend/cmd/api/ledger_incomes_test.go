@@ -69,3 +69,15 @@ func TestIncomeLedger_NoRows(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, got)
 }
+
+// PriorDecember is an expense-only read (the withheld IVA credit): the
+// incomes reader has no such range, so asking for it is a wiring bug, never
+// silently a different range.
+func TestIncomeLedger_RefusesThePriorDecember(t *testing.T) {
+	source := &fakeIncomeSums{}
+	_, err := newIncomeLedger(source).IncomeSums(t.Context(), taxusecase.LedgerQuery{
+		TaxpayerID: "0199d4a2-1111-7000-8000-0000000e000a", FiscalYear: 2027, Through: time.January, PriorDecember: true,
+	})
+	require.ErrorIs(t, err, errIncomePriorDecember)
+	assert.Zero(t, source.got, "nothing is read")
+}

@@ -98,6 +98,9 @@ func TestFingerprintChangesWithEveryInput(t *testing.T) {
 		{"the period", func(in *domain.FingerprintInput) { in.Period = period(t, "2026-04") }},
 		{"the parameter set", func(in *domain.FingerprintInput) { in.ParameterSet = "2026/v2" }},
 		{"provisional parameters", func(in *domain.FingerprintInput) { in.Provisional = true }},
+		{"the previous December's withheld creditable IVA", func(in *domain.FingerprintInput) {
+			in.Regimes[0].Input.Sums = in.Regimes[0].Input.Sums.WithPriorDecember(1)
+		}},
 		{"one more regime", func(in *domain.FingerprintInput) {
 			extra := in.Regimes[0]
 			extra.Input.Key.Regime = fiscal.RegimeRent

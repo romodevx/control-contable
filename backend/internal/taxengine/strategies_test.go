@@ -12,8 +12,9 @@ import (
 )
 
 // launchStrategyKeys are the (regime, person type) pairs with a computation
-// at EngineVersion 1.0.0 and 1.0.1 (1.0.1: 626 PM remits the ISR it
-// withheld; same strategy list, different figures).
+// at EngineVersion 1.0.0 through 1.1.0 (1.0.1: 626 PM remits the ISR it
+// withheld; 1.1.0: the withheld IVA is credited the month after, LIVA 5
+// fr. IV; same strategy list, different figures).
 var launchStrategyKeys = []string{
 	"601/moral", "603/moral", "606/fisica", "612/fisica", "621/fisica", "622/moral", "625/fisica", "626/fisica", "626/moral",
 }
@@ -55,7 +56,7 @@ func TestRegistryResolves625PF(t *testing.T) {
 // M8 marks a month "changed since viewed" only when the fingerprint moves.
 // Change this pin and EngineVersion in the same commit.
 func TestEngineVersionPinsTheStrategyList(t *testing.T) {
-	pinned := map[string][]string{"1.0.1": launchStrategyKeys}
+	pinned := map[string][]string{"1.0.1": launchStrategyKeys, "1.1.0": launchStrategyKeys}
 
 	want, ok := pinned[domain.EngineVersion]
 
