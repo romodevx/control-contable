@@ -145,11 +145,17 @@ from the sketch above, neither a change of meaning:
 - `MonthlyDueDate(year int, month time.Month, bimonthly bool, h HolidaySet)`: the kernel has
   no `Period` type (the tax engine's `domain.Period` and History's `Month` are their own), and
   adding a third for one function would grow the kernel for nothing. `MovedNone` is `""`.
-- Each consumer's port is `Holidays(ctx) (fiscal.HolidaySet, error)`, read once per unit of
-  work (one estimate range, one annual estimate, one calendar request), with a GORM reader per
+- Each consumer's port is `Holidays(ctx) (fiscal.HolidaySet, error)`, with a GORM reader per
   consumer: `taxengine/infra/holidays` and `reminders/infra/holidays`, both over the M9-03
   tables, so either module stays removable without the other (Decision item 6).
   `noHolidays` is gone.
+- The API reads each reader **once at boot** (`cmd/api/holidays.go`, one system unit of work,
+  one statement each) and wires the immutable `HolidaySet` as a snapshot: requests spend no
+  statement on holidays, so Dashboard (8) and History (7) keep their pinned statement counts and
+  the calendar opens no unit of work. Chosen over a per-request read because the tables are
+  global, a few dozen rows, and never written at run time (a new or corrected year is a
+  migration, so a deploy, so a restart). A failed boot read fails the boot. The reminder job
+  (M9-06), a separate process, reads through the same reader in its own unit of work.
 
 The tax-engine goldens (monthly, annual, property suites) now run on the seeded 2026–2027
 holidays instead of none, and none moved: **`EngineVersion` is not bumped** (ADR-0002 engine

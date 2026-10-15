@@ -18,7 +18,6 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/infra/annualinputs"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/infra/annuallimits"
-	taxholidays "github.com/romodevx/control-contable/backend/internal/taxengine/infra/holidays"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/infra/taxinputs"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/params"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/usecase"
@@ -41,8 +40,10 @@ type annualWiring struct {
 	tx        tx.Manager
 	taxpayers tpusecase.TaxpayerProfileReader
 	estimator *usecase.Estimator
-	limits    *ratelimitpg.Store
-	logger    *slog.Logger
+	// holidays is the tax engine's boot snapshot (taxEngineModule.holidays).
+	holidays usecase.HolidayCalendar
+	limits   *ratelimitpg.Store
+	logger   *slog.Logger
 	// clock is the annual's "today" (the year in progress, the future-year
 	// refusal); nil is the system clock.
 	clock clock.Clock
@@ -126,7 +127,7 @@ func newAnnualEstimator(w annualWiring, now clock.Clock) (*usecaseannual.Estimat
 		Monthly:           w.estimator,
 		MonthlyStrategies: monthly,
 		Sections:          sections,
-		Holidays:          taxholidays.NewReader(),
+		Holidays:          w.holidays,
 		Params:            catalog,
 		Clock:             now,
 	})

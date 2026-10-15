@@ -7,9 +7,7 @@ import (
 
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
 	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit/ratelimitpg"
-	"github.com/romodevx/control-contable/backend/internal/platform/tx"
 	remindershttp "github.com/romodevx/control-contable/backend/internal/reminders/adapter/http"
-	remindersholidays "github.com/romodevx/control-contable/backend/internal/reminders/infra/holidays"
 	remindersusecase "github.com/romodevx/control-contable/backend/internal/reminders/usecase"
 )
 
@@ -18,13 +16,13 @@ import (
 type remindersHandler = remindershttp.Handler
 
 // remindersWiring is what the reminders module needs from the composition
-// root: a unit of work for the holidays read (global tables, any user's
-// transaction reads them), the per-user budgets and the logger the
-// calendar alerts go to.
+// root: the holidays (a boot snapshot over the reminders' own reader,
+// loadHolidays), the per-user budgets and the logger the calendar alerts
+// go to.
 type remindersWiring struct {
-	tx     tx.Manager
-	limits *ratelimitpg.Store
-	logger *slog.Logger
+	holidays remindersusecase.HolidayCalendar
+	limits   *ratelimitpg.Store
+	logger   *slog.Logger
 }
 
 // remindersModule is the reminders module's HTTP side and its budgets.
@@ -33,13 +31,13 @@ type remindersModule struct {
 	userLimits map[string]router.Limiter
 }
 
-// newRemindersModule wires the tax calendar over the holidays tables.
+// newRemindersModule wires the tax calendar over the holidays snapshot.
 func newRemindersModule(w remindersWiring) (remindersModule, error) {
 	if w.limits == nil || w.logger == nil {
 		return remindersModule{}, fmt.Errorf("%w: reminders wiring", remindersusecase.ErrMissingDependency)
 	}
 	calendar, err := remindersusecase.NewCalendar(remindersusecase.CalendarDeps{
-		Tx: w.tx, Holidays: remindersholidays.NewReader(), Alerts: calendarAlerts{logger: w.logger},
+		Holidays: w.holidays, Alerts: calendarAlerts{logger: w.logger},
 	})
 	if err != nil {
 		return remindersModule{}, err

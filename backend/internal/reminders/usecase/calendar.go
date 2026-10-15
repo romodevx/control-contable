@@ -12,7 +12,6 @@ import (
 
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
-	"github.com/romodevx/control-contable/backend/internal/platform/tx"
 )
 
 // ErrMissingDependency reports a use case wired without one of its ports.
@@ -34,8 +33,10 @@ const (
 	subjectToConfirmation = true
 )
 
-// HolidayCalendar reads the holidays that move a due date (the M9-03
-// tables) as the kernel's HolidaySet, inside the caller's unit of work.
+// HolidayCalendar answers the holidays that move a due date (the M9-03
+// tables) as the kernel's HolidaySet. The API serves it from a boot
+// snapshot (no statement per request); the reader in infra/holidays reads
+// it inside the caller's unit of work (the boot read, the reminder job).
 type HolidayCalendar interface {
 	Holidays(ctx context.Context) (fiscal.HolidaySet, error)
 }
@@ -49,7 +50,6 @@ type Alerts interface {
 
 // CalendarDeps are the ports of the Calendar.
 type CalendarDeps struct {
-	Tx       tx.Manager
 	Holidays HolidayCalendar
 	Alerts   Alerts
 }
@@ -62,8 +62,6 @@ type Calendar struct {
 // NewCalendar returns the Calendar, or ErrMissingDependency.
 func NewCalendar(deps CalendarDeps) (*Calendar, error) {
 	switch {
-	case deps.Tx == nil:
-		return nil, fmt.Errorf("%w: CalendarDeps.Tx", ErrMissingDependency)
 	case deps.Holidays == nil:
 		return nil, fmt.Errorf("%w: CalendarDeps.Holidays", ErrMissingDependency)
 	case deps.Alerts == nil:
@@ -88,17 +86,12 @@ type Entry struct {
 }
 
 // Year answers the periods year-01..year-12 (December due in year+1), the
-// same for every user (MODULE-reminders §2.1). The holidays are read in one
-// read-only unit of work as userID. year unseeded → 422
+// same for every user (MODULE-reminders §2.1): it reads no user data, so it
+// opens no unit of work. year unseeded → 422
 // calendar_unavailable; year+1 unseeded → December weekends-only and the
 // alert. The router has checked year's range against the contract.
-func (c *Calendar) Year(ctx context.Context, userID string, year int) (Year, error) {
-	var holidays fiscal.HolidaySet
-	err := c.deps.Tx.ReadOnly(ctx, userID, func(ctx context.Context) error {
-		var err error
-		holidays, err = c.deps.Holidays.Holidays(ctx)
-		return err
-	})
+func (c *Calendar) Year(ctx context.Context, year int) (Year, error) {
+	holidays, err := c.deps.Holidays.Holidays(ctx)
 	if err != nil {
 		return Year{}, fmt.Errorf("reminders: calendar %d: holidays: %w", year, err)
 	}

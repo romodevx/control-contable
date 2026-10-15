@@ -32,7 +32,7 @@ const (
 
 // Calendar is the tax calendar use case (usecase.Calendar).
 type Calendar interface {
-	Year(ctx context.Context, userID string, year int) (usecase.Year, error)
+	Year(ctx context.Context, year int) (usecase.Year, error)
 }
 
 // Handler implements getTaxCalendar of gen.StrictServerInterface. cmd/api
@@ -49,11 +49,10 @@ func NewHandler(calendar Calendar) *Handler { return &Handler{calendar: calendar
 // GetTaxCalendar implements gen.StrictServerInterface (GET
 // /v1/tax-calendar). The router has validated year against the contract.
 func (h *Handler) GetTaxCalendar(ctx context.Context, req gen.GetTaxCalendarRequestObject) (gen.GetTaxCalendarResponseObject, error) {
-	userID, err := principal.UserID(ctx)
-	if err != nil {
+	if _, err := principal.UserID(ctx); err != nil {
 		return gen.GetTaxCalendar401JSONResponse{UnauthorizedJSONResponse: unauthorized(ctx)}, nil
 	}
-	year, err := h.calendar.Year(ctx, userID, req.Params.Year)
+	year, err := h.calendar.Year(ctx, req.Params.Year)
 	if err != nil {
 		return nil, err
 	}

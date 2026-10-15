@@ -14,8 +14,8 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/taxengine/usecase"
 )
 
-// holidaysQuery is the one read (it runs inside every estimate's unit of
-// work, so it is a single statement): each seeded year with the days of it
+// holidaysQuery is the one read (the API runs it once at boot, cmd/api
+// holidays.go; a single statement): each seeded year with the days of it
 // that move a due date, a year with none as one row with a NULL day. Both
 // tables are a handful of rows per seeded year.
 const holidaysQuery = `SELECT y.year, h.day

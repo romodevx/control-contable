@@ -63,8 +63,8 @@ type ParamsCatalog interface {
 }
 
 // HolidayCalendar reads the holidays that move a due date (the M9-03
-// holidays table) as the kernel's HolidaySet, inside the caller's unit of
-// work. The due-date rule itself is fiscal.MonthlyDueDate and
+// holidays table) as the kernel's HolidaySet; the API wires a boot snapshot
+// (no statement per estimate). The due-date rule is fiscal.MonthlyDueDate and
 // fiscal.NextBusinessDay (ADR-0007 Amendment 1).
 type HolidayCalendar interface {
 	Holidays(ctx context.Context) (fiscal.HolidaySet, error)

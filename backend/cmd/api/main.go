@@ -105,9 +105,13 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err != nil {
 		return err
 	}
+	holidays, err := loadHolidaySnapshots(ctx, pool)
+	if err != nil {
+		return err
+	}
 	taxEngine, err := newTaxEngineModule(taxEngineWiring{
 		pool: pool, limits: auth.limits, logger: logger,
-		tx: records.taxpayers.tx, taxpayers: records.taxpayers.queries,
+		tx: records.taxpayers.tx, taxpayers: records.taxpayers.queries, holidays: holidays.taxEngine,
 	})
 	if err != nil {
 		return err
@@ -127,12 +131,12 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	}
 	annual, err := newAnnualModule(annualWiring{
 		tx: records.taxpayers.tx, taxpayers: records.taxpayers.queries, estimator: taxEngine.estimator,
-		limits: auth.limits, logger: logger,
+		holidays: taxEngine.holidays, limits: auth.limits, logger: logger,
 	})
 	if err != nil {
 		return err
 	}
-	reminders, err := newRemindersModule(remindersWiring{tx: records.taxpayers.tx, limits: auth.limits, logger: logger})
+	reminders, err := newRemindersModule(remindersWiring{holidays: holidays.reminders, limits: auth.limits, logger: logger})
 	if err != nil {
 		return err
 	}
