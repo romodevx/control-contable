@@ -289,6 +289,16 @@ func TestLedgerErrorsAreSticky(t *testing.T) {
 			l.Input(ok, math.MaxInt64)
 			l.Scale(ok, 2*money.RateScale)
 		}, wantErr: money.ErrOverflow},
+		// MaxInt64 Exact rounds up to a centavo whose Exact value is past
+		// MaxInt64: carrying the shown figure on must fail, not wrap.
+		{name: "result rounded overflow", run: func(l *domain.Ledger) {
+			l.Input(ok, math.MaxInt64)
+			l.ResultRounded(ok)
+		}, wantErr: money.ErrOverflow},
+		{name: "scale rounded overflow", run: func(l *domain.Ledger) {
+			l.Input(ok, math.MaxInt64)
+			l.ScaleRounded(ok, money.RateScale)
+		}, wantErr: money.ErrOverflow},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
