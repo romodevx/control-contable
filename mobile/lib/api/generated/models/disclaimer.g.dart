@@ -30,6 +30,15 @@ const _$DisclaimerCodeEnumMap = {
   DisclaimerCode.ivaMixedActivity: 'iva_mixed_activity',
   DisclaimerCode.cpaReviewPending: 'cpa_review_pending',
   DisclaimerCode.resicoCapExceeded: 'resico_cap_exceeded',
+  DisclaimerCode.annualEstimate: 'annual_estimate',
+  DisclaimerCode.yearInProgress: 'year_in_progress',
+  DisclaimerCode.paymentsEstimated: 'payments_estimated',
+  DisclaimerCode.deductionsAsEntered: 'deductions_as_entered',
+  DisclaimerCode.resicoPfDefinitive: 'resico_pf_definitive',
+  DisclaimerCode.informativeIncome: 'informative_income',
+  DisclaimerCode.rmf2027Pending: 'rmf_2027_pending',
+  DisclaimerCode.inflationAdjustmentExcluded: 'inflation_adjustment_excluded',
+  DisclaimerCode.noAnnualIva: 'no_annual_iva',
   DisclaimerCode.$unknown: r'$unknown',
 };
 

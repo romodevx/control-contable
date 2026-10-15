@@ -12,6 +12,17 @@ void main() {
       expect(month.firstDay, DateTime(2026, 9));
     });
 
+    test('opening: a location month up to now, else the current one', () {
+      // 2026-10-13 noon in Mexico City.
+      final now = DateTime.utc(2026, 10, 13, 18);
+
+      expect(RecordMonth.opening('2026-03', now).period, '2026-03');
+      expect(RecordMonth.opening('2026-10', now).period, '2026-10');
+      for (final odd in [null, '', '2026-13', '2026-3', 'marzo', '2026-11']) {
+        expect(RecordMonth.opening(odd, now).period, '2026-10', reason: '$odd');
+      }
+    });
+
     test('steps across year boundaries', () {
       expect(RecordMonth.parse('2026-01').previous.period, '2025-12');
       expect(RecordMonth.parse('2025-12').next.period, '2026-01');

@@ -74,5 +74,13 @@ const _$CpaTopicEnumMap = {
   CpaTopic.resicoPmInterestWithholding: 'resico_pm_interest_withholding',
   CpaTopic.withholdingRuleUnverified: 'withholding_rule_unverified',
   CpaTopic.withheldIvaCreditTiming: 'withheld_iva_credit_timing',
+  CpaTopic.platformNondefinitiveAnnual: 'platform_nondefinitive_annual',
+  CpaTopic.umaForMinimumWage: 'uma_for_minimum_wage',
+  CpaTopic.deductionCapResicoIncome: 'deduction_cap_resico_income',
+  CpaTopic.salaryObligationBasis: 'salary_obligation_basis',
+  CpaTopic.cuRounding: 'cu_rounding',
+  CpaTopic.resicoPmPtuBase: 'resico_pm_ptu_base',
+  CpaTopic.resicoPfReliefRenewal: 'resico_pf_relief_renewal',
+  CpaTopic.ptuRate: 'ptu_rate',
   CpaTopic.$unknown: r'$unknown',
 };

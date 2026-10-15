@@ -42,6 +42,26 @@ void main() {
   ]);
 
   group('M3-08 list', () {
+    testWidgets('opens on the month the location names (History, US-H6)', (
+      tester,
+    ) async {
+      seed();
+      await harness.pump(tester, location: IncomesRoutes.listOf('2026-09'));
+
+      expect(find.text('septiembre de 2026'), findsOneWidget);
+      expect(harness.incomes.calls.first, 'list:2026-09 * -');
+      expect(find.text('Asesoría'), findsOneWidget);
+    });
+
+    testWidgets('a malformed or future month in the location opens the '
+        'current one', (tester) async {
+      seed();
+      await harness.pump(tester, location: '/ingresos?periodo=2026-11');
+
+      expect(find.text('octubre de 2026'), findsOneWidget);
+      expect(harness.incomes.calls.first, 'list:2026-10 * -');
+    });
+
     testWidgets('shows the current month newest first: date, description, '
         'total with IVA and regime, plus the month totals in es-MX', (
       tester,

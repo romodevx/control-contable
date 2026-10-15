@@ -86,7 +86,8 @@ func TestEstimateRangeKeepsFiscalYearsApart(t *testing.T) {
 
 // The records the estimate read in each month: income collected (cash,
 // before IVA) and expenses paid (every deductibility class): the
-// dashboard's income vs expense figures come from the same rows.
+// dashboard's income vs expense figures come from the same rows. Whether
+// any record row falls in the month is History's has_records (M8-03).
 func TestEstimateRangeCarriesEachMonthsRecordTotals(t *testing.T) {
 	f, s612 := newRangeFixture()
 
@@ -94,9 +95,9 @@ func TestEstimateRangeCarriesEachMonthsRecordTotals(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Len(t, got, 4)
-	assert.Equal(t, usecase.RecordTotals{IncomeCollected: 100_00}, got[0].Records)
-	assert.Equal(t, usecase.RecordTotals{IncomeCollected: 50_00}, got[1].Records)
-	assert.Equal(t, usecase.RecordTotals{IncomeCollected: 200_00, ExpensesPaid: 60_00}, got[2].Records)
+	assert.Equal(t, usecase.RecordTotals{IncomeCollected: 100_00, HasIncomes: true}, got[0].Records)
+	assert.Equal(t, usecase.RecordTotals{IncomeCollected: 50_00, HasIncomes: true}, got[1].Records)
+	assert.Equal(t, usecase.RecordTotals{IncomeCollected: 200_00, ExpensesPaid: 60_00, HasIncomes: true, HasExpenses: true}, got[2].Records)
 	assert.Equal(t, usecase.RecordTotals{}, got[3].Records, "a month without records is zero")
 }
 
@@ -155,4 +156,22 @@ func TestNewEstimatorValidatesItsDeps(t *testing.T) {
 			require.ErrorIs(t, err, usecase.ErrMissingDependency)
 		})
 	}
+}
+
+// has_records (MODULE-history §2.2): a month with a ledger row has records
+// even when nothing was collected or paid in it (an accrual income
+// invoiced but not yet collected).
+func TestEstimateRangeHasRecordsWithoutCash(t *testing.T) {
+	f := newEstFixture(fiscal.PersonFisica, estHold(fiscal.RegimeBusiness, "2026-01", domain.TreatmentFull))
+	f.ledger.incomes = []usecase.IncomeMonthSums{{Regime: fiscal.RegimeBusiness, Month: time.March}}
+	f.ledger.expenses = []usecase.ExpenseMonthSums{{Regime: fiscal.RegimeBusiness, Month: time.April}}
+
+	got, err := f.estimator(&estStrategy{key: est612, treatment: domain.TreatmentFull}).
+		EstimateRange(t.Context(), userA, taxpayerA, mustPeriod("2026-03"), mustPeriod("2026-05"))
+
+	require.NoError(t, err)
+	require.Len(t, got, 3)
+	assert.Equal(t, usecase.RecordTotals{HasIncomes: true}, got[0].Records)
+	assert.Equal(t, usecase.RecordTotals{HasExpenses: true}, got[1].Records)
+	assert.Equal(t, usecase.RecordTotals{}, got[2].Records)
 }
