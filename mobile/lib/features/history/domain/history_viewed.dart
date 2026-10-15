@@ -6,7 +6,7 @@ import 'package:control_contable/api/generated/models/taxpayer_estimate.dart';
 /// verbatim (MODULE-history §2.5), or `null` when nothing is to be marked:
 /// the [current] month (`YYYY-MM`) or a later one is live and never marked
 /// (OQ-H3). Every estimate carries `figures_fingerprint` (required since
-/// M8-03, contract 0.10.1).
+/// M8-03, contract 0.11.1).
 HistoryViewedRequest? viewedRequestOf(
   TaxpayerEstimate estimate, {
   required String current,

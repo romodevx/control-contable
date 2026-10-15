@@ -340,7 +340,7 @@ them.
 
 ### A2.1 Figures fingerprint
 
-Every estimate also carries `figures_fingerprint` (contract 0.10.1, required): the SHA-256 of
+Every estimate also carries `figures_fingerprint` (contract 0.11.1, required): the SHA-256 of
 a canonical text of the figures the user sees, computed by `domain.FiguresFingerprint` next
 to `Fingerprint`. Scheme `figures/1`: the due date; the totals' ISR and IVA amounts,
 withholdings to remit and total payable; per regime (sorted by key) its key, status,

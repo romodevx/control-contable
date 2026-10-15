@@ -5,7 +5,7 @@
 | Flag | `module_history` (OFF by default; implied OFF when `module_tax_engine` is OFF, and through it `module_taxpayers`) |
 | Spec | [MODULE-history.md](../project-specs/MODULE-history.md) |
 | Contract | [`docs/api/openapi.yaml`](../api/openapi.yaml), tag `History`, `x-module: module_history` (frozen by M8-01, 0.9.0) |
-| Status | Contract frozen (0.9.0; M8-03 re-freeze 0.10.1); backend built (M8-03, M8-04); Flutter, flag registration, QA and gates pending (PLAN M8-05..M8-09). The full page lands with the module docs task (M8-10) |
+| Status | Contract frozen (0.9.0; M8-03 re-freeze 0.11.1); backend built (M8-03, M8-04); Flutter, flag registration, QA and gates pending (PLAN M8-05..M8-09). The full page lands with the module docs task (M8-10) |
 
 ## Contract highlights
 
@@ -24,7 +24,7 @@
   `HistoryViewedRequest` (`records_fingerprint`, `figures_fingerprint`, `engine_version`,
   `parameter_set`) copied from the `TaxpayerEstimate` the app rendered, from any entry point
   (OQ-H7). Idempotent upsert, `204`. The current month is accepted, never marked.
-- `TaxpayerEstimate.figures_fingerprint` is required since M8-03 (0.10.1): `domain.FiguresFingerprint`, scheme `figures/1`, golden-pinned (ADR-0002 Amendment 2).
+- `TaxpayerEstimate.figures_fingerprint` is required since M8-03 (0.11.1): `domain.FiguresFingerprint`, scheme `figures/1`, golden-pinned (ADR-0002 Amendment 2).
 - Backend (M8-03/M8-04): one range estimate plus one `estimate_views` range scan per `getHistory` (7 read statements, pinned by `TestContract_historyStatementCount`); `markHistoryViewed` is one upsert, the composite foreign key is its ownership `404`. Budgets `history_reads` (600/h) and `history_views` (1,200/h, burst 120).
 - Flags: `module_history`, `module_tax_engine` or `module_taxpayers` OFF → both routes `404`,
   indistinguishable from an unknown taxpayer. `module_incomes` / `module_expenses` OFF only

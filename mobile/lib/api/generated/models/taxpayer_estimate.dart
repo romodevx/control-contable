@@ -33,7 +33,7 @@ abstract class TaxpayerEstimate with _$TaxpayerEstimate {
     @JsonKey(name: 'records_fingerprint')
     required RecordsFingerprint recordsFingerprint,
 
-    /// Hash of the figures shown (M8-01; required since M8-03, 0.10.1, a response narrowing). The app posts it, with `records_fingerprint`, `engine_version` and `parameter_set`, to `markHistoryViewed`.
+    /// Hash of the figures shown (M8-01; required since M8-03, 0.11.1, a response narrowing). The app posts it, with `records_fingerprint`, `engine_version` and `parameter_set`, to `markHistoryViewed`.
     @JsonKey(name: 'figures_fingerprint')
     required FiguresFingerprint figuresFingerprint,
     @JsonKey(name: 'engine_version') required EngineVersion engineVersion,

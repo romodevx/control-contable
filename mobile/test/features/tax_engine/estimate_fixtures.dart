@@ -6,7 +6,7 @@ import 'package:control_contable/api/generated/models/taxpayer_estimate.dart';
 const String fixtureTaxpayerId = '0192f0c4-7b1e-7c3a-9d2e-6f1a2b3c4d5e';
 
 /// The figures fingerprint every estimate fixture carries (required since
-/// M8-03, contract 0.10.1).
+/// M8-03, contract 0.11.1).
 const String fixtureFiguresFingerprint =
     'f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1';
 
