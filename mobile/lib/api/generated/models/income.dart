@@ -55,27 +55,27 @@ abstract class Income with _$Income {
     /// Accrual income with `collected_on` still `null` ("Por cobrar"); counts for IVA only once collected.
     @JsonKey(name: 'pending_collection') required bool pendingCollection,
 
-    /// Non-blocking notices computed on writes (create, update, restore), never stored; `[]` on reads. Codes: `duplicate_cfdi_uuid` (`cfdi_uuid`), `provisional_parameters` (`collected_on` / `invoiced_on`), `withholding_cpa_unverified` (`withholding`), `foreign_counterparty_not_supported` (`counterparty_kind`). `withholding_differs_from_rate` is retired: WH-06 stops sending it (no typed amount is left to compare).
+    /// Non-blocking notices computed on writes (create, update, restore), never stored; `[]` on reads. Codes: `duplicate_cfdi_uuid` (`cfdi_uuid`), `provisional_parameters` (`collected_on` / `invoiced_on`), `withholding_cpa_unverified` (`withholding`), `foreign_counterparty_not_supported` (`counterparty_kind`). `withholding_differs_from_rate` is retired: never sent since 0.10.1 (no typed amount is left to compare).
     required List<Warning> warnings,
     @JsonKey(name: 'created_at') required DateTime createdAt,
     @JsonKey(name: 'updated_at') required DateTime updatedAt,
 
-    /// Who was billed. Present on every income once WH-06 lands (then required).
+    /// Who was billed. Present on every income written since 0.10.1 (WH-06); a legacy row gets it from the WH-08 backfill.
     @JsonKey(includeIfNull: false, name: 'counterparty_kind')
     CounterpartyKind? counterpartyKind,
 
-    /// As sent, or the default stored when the question was hidden. Required once WH-06 lands.
+    /// As sent, or the default stored when the question was hidden (last used in the regime, else the regime default). Present on every income written since 0.10.1.
     @JsonKey(includeIfNull: false, name: 'operation_kind')
     OperationKind? operationKind,
 
-    /// Required once WH-06 lands.
+    /// Always sent since 0.10.1.
     @JsonKey(includeIfNull: false, name: 'residential_rent')
     bool? residentialRent,
 
-    /// Required once WH-06 lands.
+    /// Always sent since 0.10.1.
     @JsonKey(includeIfNull: false, name: 'via_platform') bool? viaPlatform,
 
-    /// The derived withholding (read-only). Required once WH-06 lands.
+    /// The derived withholding (read-only). Sent for every income written since 0.10.1 (WH-06); absent only on a legacy row until the WH-08 backfill derives it.
     @JsonKey(includeIfNull: false) Withholding? withholding,
   }) = _Income;
 

@@ -19,12 +19,12 @@ mixin _$Income {
  Uuid get id;@JsonKey(name: 'taxpayer_id') Uuid get taxpayerId;@JsonKey(name: 'regime_code') RegimeCode get regimeCode;@JsonKey(name: 'counterparty_type')@Deprecated('This is marked as deprecated') CounterpartyType get counterpartyType;@JsonKey(name: 'amount_cents') PositiveCents get amountCents;@JsonKey(name: 'iva_rate') IvaRate get ivaRate;@JsonKey(name: 'iva_cents') NonNegativeCents get ivaCents;/// Read-only mirror of `withholding.isr_cents` (kept for list totals and the estimate).
 @JsonKey(name: 'isr_withheld_cents') NonNegativeCents get isrWithheldCents;/// Read-only mirror of `withholding.iva_cents` (kept for list totals and the estimate).
 @JsonKey(name: 'iva_withheld_cents') NonNegativeCents get ivaWithheldCents;@JsonKey(includeIfNull: true, name: 'invoiced_on') BusinessDate? get invoicedOn;@JsonKey(includeIfNull: true, name: 'collected_on') BusinessDate? get collectedOn;@JsonKey(includeIfNull: true, name: 'platform_activity') PlatformActivity? get platformActivity;@JsonKey(includeIfNull: true, name: 'cfdi_uuid') CfdiUuid? get cfdiUuid; RecordDescription? get description;/// Accrual income with `collected_on` still `null` ("Por cobrar"); counts for IVA only once collected.
-@JsonKey(name: 'pending_collection') bool get pendingCollection;/// Non-blocking notices computed on writes (create, update, restore), never stored; `[]` on reads. Codes: `duplicate_cfdi_uuid` (`cfdi_uuid`), `provisional_parameters` (`collected_on` / `invoiced_on`), `withholding_cpa_unverified` (`withholding`), `foreign_counterparty_not_supported` (`counterparty_kind`). `withholding_differs_from_rate` is retired: WH-06 stops sending it (no typed amount is left to compare).
- List<Warning> get warnings;@JsonKey(name: 'created_at') DateTime get createdAt;@JsonKey(name: 'updated_at') DateTime get updatedAt;/// Who was billed. Present on every income once WH-06 lands (then required).
-@JsonKey(includeIfNull: false, name: 'counterparty_kind') CounterpartyKind? get counterpartyKind;/// As sent, or the default stored when the question was hidden. Required once WH-06 lands.
-@JsonKey(includeIfNull: false, name: 'operation_kind') OperationKind? get operationKind;/// Required once WH-06 lands.
-@JsonKey(includeIfNull: false, name: 'residential_rent') bool? get residentialRent;/// Required once WH-06 lands.
-@JsonKey(includeIfNull: false, name: 'via_platform') bool? get viaPlatform;/// The derived withholding (read-only). Required once WH-06 lands.
+@JsonKey(name: 'pending_collection') bool get pendingCollection;/// Non-blocking notices computed on writes (create, update, restore), never stored; `[]` on reads. Codes: `duplicate_cfdi_uuid` (`cfdi_uuid`), `provisional_parameters` (`collected_on` / `invoiced_on`), `withholding_cpa_unverified` (`withholding`), `foreign_counterparty_not_supported` (`counterparty_kind`). `withholding_differs_from_rate` is retired: never sent since 0.10.1 (no typed amount is left to compare).
+ List<Warning> get warnings;@JsonKey(name: 'created_at') DateTime get createdAt;@JsonKey(name: 'updated_at') DateTime get updatedAt;/// Who was billed. Present on every income written since 0.10.1 (WH-06); a legacy row gets it from the WH-08 backfill.
+@JsonKey(includeIfNull: false, name: 'counterparty_kind') CounterpartyKind? get counterpartyKind;/// As sent, or the default stored when the question was hidden (last used in the regime, else the regime default). Present on every income written since 0.10.1.
+@JsonKey(includeIfNull: false, name: 'operation_kind') OperationKind? get operationKind;/// Always sent since 0.10.1.
+@JsonKey(includeIfNull: false, name: 'residential_rent') bool? get residentialRent;/// Always sent since 0.10.1.
+@JsonKey(includeIfNull: false, name: 'via_platform') bool? get viaPlatform;/// The derived withholding (read-only). Sent for every income written since 0.10.1 (WH-06); absent only on a legacy row until the WH-08 backfill derives it.
 @JsonKey(includeIfNull: false) Withholding? get withholding;
 /// Create a copy of Income
 /// with the given fields replaced by the non-null parameter values.
@@ -279,9 +279,9 @@ class _Income implements Income {
 @override final  RecordDescription? description;
 /// Accrual income with `collected_on` still `null` ("Por cobrar"); counts for IVA only once collected.
 @override@JsonKey(name: 'pending_collection') final  bool pendingCollection;
-/// Non-blocking notices computed on writes (create, update, restore), never stored; `[]` on reads. Codes: `duplicate_cfdi_uuid` (`cfdi_uuid`), `provisional_parameters` (`collected_on` / `invoiced_on`), `withholding_cpa_unverified` (`withholding`), `foreign_counterparty_not_supported` (`counterparty_kind`). `withholding_differs_from_rate` is retired: WH-06 stops sending it (no typed amount is left to compare).
+/// Non-blocking notices computed on writes (create, update, restore), never stored; `[]` on reads. Codes: `duplicate_cfdi_uuid` (`cfdi_uuid`), `provisional_parameters` (`collected_on` / `invoiced_on`), `withholding_cpa_unverified` (`withholding`), `foreign_counterparty_not_supported` (`counterparty_kind`). `withholding_differs_from_rate` is retired: never sent since 0.10.1 (no typed amount is left to compare).
  final  List<Warning> _warnings;
-/// Non-blocking notices computed on writes (create, update, restore), never stored; `[]` on reads. Codes: `duplicate_cfdi_uuid` (`cfdi_uuid`), `provisional_parameters` (`collected_on` / `invoiced_on`), `withholding_cpa_unverified` (`withholding`), `foreign_counterparty_not_supported` (`counterparty_kind`). `withholding_differs_from_rate` is retired: WH-06 stops sending it (no typed amount is left to compare).
+/// Non-blocking notices computed on writes (create, update, restore), never stored; `[]` on reads. Codes: `duplicate_cfdi_uuid` (`cfdi_uuid`), `provisional_parameters` (`collected_on` / `invoiced_on`), `withholding_cpa_unverified` (`withholding`), `foreign_counterparty_not_supported` (`counterparty_kind`). `withholding_differs_from_rate` is retired: never sent since 0.10.1 (no typed amount is left to compare).
 @override List<Warning> get warnings {
   if (_warnings is EqualUnmodifiableListView) return _warnings;
   // ignore: implicit_dynamic_type
@@ -290,15 +290,15 @@ class _Income implements Income {
 
 @override@JsonKey(name: 'created_at') final  DateTime createdAt;
 @override@JsonKey(name: 'updated_at') final  DateTime updatedAt;
-/// Who was billed. Present on every income once WH-06 lands (then required).
+/// Who was billed. Present on every income written since 0.10.1 (WH-06); a legacy row gets it from the WH-08 backfill.
 @override@JsonKey(includeIfNull: false, name: 'counterparty_kind') final  CounterpartyKind? counterpartyKind;
-/// As sent, or the default stored when the question was hidden. Required once WH-06 lands.
+/// As sent, or the default stored when the question was hidden (last used in the regime, else the regime default). Present on every income written since 0.10.1.
 @override@JsonKey(includeIfNull: false, name: 'operation_kind') final  OperationKind? operationKind;
-/// Required once WH-06 lands.
+/// Always sent since 0.10.1.
 @override@JsonKey(includeIfNull: false, name: 'residential_rent') final  bool? residentialRent;
-/// Required once WH-06 lands.
+/// Always sent since 0.10.1.
 @override@JsonKey(includeIfNull: false, name: 'via_platform') final  bool? viaPlatform;
-/// The derived withholding (read-only). Required once WH-06 lands.
+/// The derived withholding (read-only). Sent for every income written since 0.10.1 (WH-06); absent only on a legacy row until the WH-08 backfill derives it.
 @override@JsonKey(includeIfNull: false) final  Withholding? withholding;
 
 /// Create a copy of Income

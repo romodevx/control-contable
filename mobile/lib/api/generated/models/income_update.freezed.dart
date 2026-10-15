@@ -16,8 +16,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$IncomeUpdate {
 
-@JsonKey(includeIfNull: false, name: 'regime_code') RegimeCode? get regimeCode;@JsonKey(includeIfNull: false, name: 'counterparty_type')@Deprecated('This is marked as deprecated') CounterpartyType? get counterpartyType;@JsonKey(includeIfNull: false, name: 'counterparty_kind') CounterpartyKind? get counterpartyKind;@JsonKey(includeIfNull: false, name: 'operation_kind') OperationKind? get operationKind;@JsonKey(includeIfNull: false, name: 'residential_rent') bool? get residentialRent;@JsonKey(includeIfNull: false, name: 'via_platform') bool? get viaPlatform;@JsonKey(includeIfNull: false, name: 'amount_cents') PositiveCents? get amountCents;@JsonKey(includeIfNull: false, name: 'iva_rate') IvaRate? get ivaRate;@JsonKey(includeIfNull: false, name: 'iva_cents') NonNegativeCents? get ivaCents;/// Deprecated in 0.10.0, removed by WH-06 (ADR-0008).
-@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') NonNegativeCents? get isrWithheldCents;/// Deprecated in 0.10.0, removed by WH-06 (ADR-0008).
+@JsonKey(includeIfNull: false, name: 'regime_code') RegimeCode? get regimeCode;@JsonKey(includeIfNull: false, name: 'counterparty_type')@Deprecated('This is marked as deprecated') CounterpartyType? get counterpartyType;@JsonKey(includeIfNull: false, name: 'counterparty_kind') CounterpartyKind? get counterpartyKind;@JsonKey(includeIfNull: false, name: 'operation_kind') OperationKind? get operationKind;@JsonKey(includeIfNull: false, name: 'residential_rent') bool? get residentialRent;@JsonKey(includeIfNull: false, name: 'via_platform') bool? get viaPlatform;@JsonKey(includeIfNull: false, name: 'amount_cents') PositiveCents? get amountCents;@JsonKey(includeIfNull: false, name: 'iva_rate') IvaRate? get ivaRate;@JsonKey(includeIfNull: false, name: 'iva_cents') NonNegativeCents? get ivaCents;/// Retired by WH-06 (0.10.1). Any value answers `400 additionalProperties`.
+@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') NonNegativeCents? get isrWithheldCents;/// Retired by WH-06 (0.10.1). Any value answers `400 additionalProperties`.
 @JsonKey(includeIfNull: false, name: 'iva_withheld_cents') NonNegativeCents? get ivaWithheldCents;@JsonKey(includeIfNull: false, name: 'invoiced_on') BusinessDate? get invoicedOn;@JsonKey(includeIfNull: false, name: 'collected_on') BusinessDate? get collectedOn;@JsonKey(includeIfNull: false, name: 'platform_activity') PlatformActivity? get platformActivity;@JsonKey(includeIfNull: false, name: 'cfdi_uuid') CfdiUuid? get cfdiUuid;@JsonKey(includeIfNull: false) RecordDescription? get description;
 /// Create a copy of IncomeUpdate
 /// with the given fields replaced by the non-null parameter values.
@@ -244,9 +244,9 @@ class _IncomeUpdate implements IncomeUpdate {
 @override@JsonKey(includeIfNull: false, name: 'amount_cents') final  PositiveCents? amountCents;
 @override@JsonKey(includeIfNull: false, name: 'iva_rate') final  IvaRate? ivaRate;
 @override@JsonKey(includeIfNull: false, name: 'iva_cents') final  NonNegativeCents? ivaCents;
-/// Deprecated in 0.10.0, removed by WH-06 (ADR-0008).
+/// Retired by WH-06 (0.10.1). Any value answers `400 additionalProperties`.
 @override@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') final  NonNegativeCents? isrWithheldCents;
-/// Deprecated in 0.10.0, removed by WH-06 (ADR-0008).
+/// Retired by WH-06 (0.10.1). Any value answers `400 additionalProperties`.
 @override@JsonKey(includeIfNull: false, name: 'iva_withheld_cents') final  NonNegativeCents? ivaWithheldCents;
 @override@JsonKey(includeIfNull: false, name: 'invoiced_on') final  BusinessDate? invoicedOn;
 @override@JsonKey(includeIfNull: false, name: 'collected_on') final  BusinessDate? collectedOn;

@@ -19,7 +19,7 @@ import 'regime_code.dart';
 part 'income_update.freezed.dart';
 part 'income_update.g.dart';
 
-/// Merge-patch on top-level fields: absent = unchanged, `null` clears a nullable field. `id` is immutable and not accepted. Any change re-derives the withholding (ADR-0008). The deprecated `counterparty_type`, `isr_withheld_cents` and `iva_withheld_cents` are removed by WH-06 (see `IncomeCreate`).
+/// Merge-patch on top-level fields: absent = unchanged, `null` clears a nullable field. `id` is immutable and not accepted. Any change re-derives the withholding (ADR-0008). Since 0.10.1 (WH-06) `isr_withheld_cents` / `iva_withheld_cents` with any value answer `400 additionalProperties` and `counterparty_type` is ignored (see `IncomeCreate`).
 @Freezed()
 abstract class IncomeUpdate with _$IncomeUpdate {
   const factory IncomeUpdate({
@@ -40,11 +40,11 @@ abstract class IncomeUpdate with _$IncomeUpdate {
     @JsonKey(includeIfNull: false, name: 'iva_cents')
     NonNegativeCents? ivaCents,
 
-    /// Deprecated in 0.10.0, removed by WH-06 (ADR-0008).
+    /// Retired by WH-06 (0.10.1). Any value answers `400 additionalProperties`.
     @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')
     NonNegativeCents? isrWithheldCents,
 
-    /// Deprecated in 0.10.0, removed by WH-06 (ADR-0008).
+    /// Retired by WH-06 (0.10.1). Any value answers `400 additionalProperties`.
     @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')
     NonNegativeCents? ivaWithheldCents,
     @JsonKey(includeIfNull: false, name: 'invoiced_on')
