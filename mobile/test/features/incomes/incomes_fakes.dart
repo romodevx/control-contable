@@ -47,6 +47,7 @@ Withholding _nothingWithheld(int netCents) => withholding(
 Income income({
   String? id,
   String regime = '612',
+  IncomeBasis basis = IncomeBasis.cash,
   int amountCents = 1000000,
   IvaRate ivaRate = IvaRate.rate16,
   int ivaCents = 160000,
@@ -77,8 +78,7 @@ Income income({
   platformActivity: null,
   cfdiUuid: cfdiUuid,
   description: description,
-  pendingCollection:
-      incomeBasisOf(regime) == IncomeBasis.accrual && collectedOn == null,
+  pendingCollection: basis == IncomeBasis.accrual && collectedOn == null,
   warnings: warnings,
   createdAt: DateTime.utc(2026, 10, 13),
   updatedAt: DateTime.utc(2026, 10, 13),
@@ -159,6 +159,10 @@ class FakeIncomesRepository implements IncomesRepository {
   /// Every income the server holds, live or deleted.
   final List<Income> incomes = [];
 
+  /// Regimes the server books on the invoice date (`income_basis:
+  /// accrual`); every other regime books on the collection date.
+  final Set<String> accrualRegimes = {};
+
   /// Ids of the soft-deleted incomes.
   final Set<String> deleted = {};
 
@@ -214,10 +218,8 @@ class FakeIncomesRepository implements IncomesRepository {
     if (failure != null) throw failure;
   }
 
-  static String _bookedOn(Income i) =>
-      (incomeBasisOf(i.regimeCode) == IncomeBasis.accrual
-          ? i.invoicedOn
-          : i.collectedOn) ??
+  String _bookedOn(Income i) =>
+      (accrualRegimes.contains(i.regimeCode) ? i.invoicedOn : i.collectedOn) ??
       '';
 
   @override
