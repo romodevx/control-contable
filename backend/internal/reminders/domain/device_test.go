@@ -2,6 +2,7 @@ package domain_test
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -72,6 +73,27 @@ func TestPushToken_neverPrints(t *testing.T) {
 	assert.NotContains(t, logs.String(), token)
 	assert.NotContains(t, printed, token)
 	assert.Contains(t, printed, "REDACTED")
+}
+
+// M9 security gate nit: JSON redacts it too, as the use case's PushToken
+// does, so a struct marshalled for a log or an error report cannot leak it.
+func TestPushToken_neverMarshalled(t *testing.T) {
+	token := rand.Text()
+	got, err := domain.NewPushToken(token)
+	require.NoError(t, err)
+
+	alone, err := json.Marshal(got)
+	require.NoError(t, err)
+	nested, err := json.Marshal(struct {
+		T  domain.PushToken
+		P  *domain.PushToken
+		TS []domain.PushToken
+	}{got, &got, []domain.PushToken{got}})
+	require.NoError(t, err)
+
+	assert.JSONEq(t, `"REDACTED"`, string(alone))
+	assert.NotContains(t, string(nested), token)
+	assert.JSONEq(t, `{"T":"REDACTED","P":"REDACTED","TS":["REDACTED"]}`, string(nested))
 }
 
 func TestParseAppVersion(t *testing.T) {

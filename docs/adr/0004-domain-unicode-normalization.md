@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | ACCEPTED (tech-lead, 2026-10-13, PR #35), with [Amendment 1](#amendment-1-user-text-refuses-invisible-characters-0140) (0.14.0) |
+| Status | ACCEPTED (tech-lead, 2026-10-13, PR #35), with [Amendment 1](#amendment-1-user-text-refuses-invisible-characters-0150) (0.15.0) |
 | Date | 2026-10-13 |
 | Related | [ADR-0001 layout and Dependency Rule](0001-stack.md), [PLAN M1-04](../project-specs/PLAN-control-contable.md), [P0-30 security gate](../reviews/P0-30-security-gate.md) |
 | Owner | backend-sr |
@@ -57,7 +57,7 @@ depguard (`not allowed from list 'domain'`) and `TestBackendModuleRespectsDepend
 Options B and C are rejected for the reason given above: NFKC is part of the password
 policy, and a port would make that policy depend on correct wiring.
 
-## Amendment 1: user text refuses invisible characters (0.14.0)
+## Amendment 1: user text refuses invisible characters (0.15.0)
 
 **Context.** The ANN-25 security gate (PR #153) found that the annual labels accepted
 Unicode format characters (Cf): `unicode.IsControl` only refuses Cc. A bidi override
@@ -90,8 +90,8 @@ descriptions refused nothing at all (a NUL reached the database and failed there
    instead of `invisible_characters`.
 
 **Consequences.** Tightening validation on frozen nodes is a breaking change
-(CONTRACT.md), hence 0.14.0. No shipped client sends these characters on purpose: the
-mobile fields are single-line `TextField`s. Rows stored before 0.14.0 are not rewritten.
+(CONTRACT.md), hence 0.15.0. No shipped client sends these characters on purpose: the
+mobile fields are single-line `TextField`s. Rows stored before 0.15.0 are not rewritten.
 An edit that sends the field must remove the characters; the annual updates re-check the
 merged row, so there any edit names the stored label until it is fixed. The database CHECKs still enforce trim, length and
 NFC only (PostgreSQL regular expressions have no Unicode category classes); the

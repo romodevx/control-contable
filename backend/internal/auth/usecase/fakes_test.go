@@ -121,8 +121,17 @@ type fakeTx struct {
 func (f *fakeTx) ReadWrite(ctx context.Context, userID string, work tx.Work) error {
 	f.calls++
 	f.userID = userID
-	f.workErr = work(ctx)
+	f.workErr = work(context.WithValue(ctx, txUserKey{}, userID))
 	return f.workErr
+}
+
+// txUserKey marks a context inside fakeTx's unit of work.
+type txUserKey struct{}
+
+// txUser is the user of the unit of work ctx runs in; "" outside one.
+func txUser(ctx context.Context) string {
+	user, _ := ctx.Value(txUserKey{}).(string)
+	return user
 }
 
 func (f *fakeTx) ReadOnly(context.Context, string, tx.Work) error {

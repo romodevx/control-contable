@@ -11,7 +11,7 @@ import 'package:control_contable/features/taxpayers/presentation/onboarding_copy
 import 'package:control_contable/l10n/app_localizations_es.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-// Contract 0.14.0: every user-text field answers `400 validation_failed`
+// Contract 0.15.0: every user-text field answers `400 validation_failed`
 // with the detail code `invisible_characters` (ADR-0004 Amendment 1). Each
 // form must say so on the field, never a misleading "too long" or a
 // generic "could not save".

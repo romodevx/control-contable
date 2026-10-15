@@ -27,23 +27,28 @@ type fcmReply struct {
 	status     int
 	errStatus  string // google.rpc status, e.g. NOT_FOUND
 	fcmCode    string // FcmError.errorCode, e.g. UNREGISTERED; "" for none
+	violation  string // google.rpc.BadRequest field violation, e.g. message.token; "" for none
 	bare       bool   // no JSON body (a proxy's 5xx)
 	block      bool   // never answer until the test ends (timeout)
 	retryAfter string // Retry-After header
 }
 
 var (
-	replyOK          = fcmReply{status: http.StatusOK}
-	replyUnreg       = fcmReply{status: http.StatusNotFound, errStatus: "NOT_FOUND", fcmCode: "UNREGISTERED"}
-	replyInvalidArg  = fcmReply{status: http.StatusBadRequest, errStatus: "INVALID_ARGUMENT", fcmCode: "INVALID_ARGUMENT"}
-	replyInternal    = fcmReply{status: http.StatusInternalServerError, errStatus: "INTERNAL", fcmCode: "INTERNAL"}
-	replyUnavailable = fcmReply{status: http.StatusServiceUnavailable, errStatus: "UNAVAILABLE", fcmCode: "UNAVAILABLE"}
-	replyQuota       = fcmReply{status: http.StatusTooManyRequests, errStatus: "RESOURCE_EXHAUSTED", fcmCode: "QUOTA_EXCEEDED"}
-	replyMismatch    = fcmReply{status: http.StatusForbidden, errStatus: "PERMISSION_DENIED", fcmCode: "SENDER_ID_MISMATCH"}
-	replyAPNsAuth    = fcmReply{status: http.StatusUnauthorized, errStatus: "UNAUTHENTICATED", fcmCode: "THIRD_PARTY_AUTH_ERROR"}
-	replyDenied      = fcmReply{status: http.StatusForbidden, errStatus: "PERMISSION_DENIED"}
-	replyBadGateway  = fcmReply{status: http.StatusBadGateway, bare: true}
-	replyBlock       = fcmReply{block: true}
+	replyOK    = fcmReply{status: http.StatusOK}
+	replyUnreg = fcmReply{status: http.StatusNotFound, errStatus: "NOT_FOUND", fcmCode: "UNREGISTERED"}
+	// FCM names the field it refused in a google.rpc.BadRequest detail: the
+	// token (delete the device) or the message (keep it).
+	replyInvalidToken   = fcmReply{status: http.StatusBadRequest, errStatus: "INVALID_ARGUMENT", fcmCode: "INVALID_ARGUMENT", violation: "message.token"}
+	replyInvalidPayload = fcmReply{status: http.StatusBadRequest, errStatus: "INVALID_ARGUMENT", fcmCode: "INVALID_ARGUMENT", violation: "message.notification.body"}
+	replyInvalidArg     = fcmReply{status: http.StatusBadRequest, errStatus: "INVALID_ARGUMENT", fcmCode: "INVALID_ARGUMENT"}
+	replyInternal       = fcmReply{status: http.StatusInternalServerError, errStatus: "INTERNAL", fcmCode: "INTERNAL"}
+	replyUnavailable    = fcmReply{status: http.StatusServiceUnavailable, errStatus: "UNAVAILABLE", fcmCode: "UNAVAILABLE"}
+	replyQuota          = fcmReply{status: http.StatusTooManyRequests, errStatus: "RESOURCE_EXHAUSTED", fcmCode: "QUOTA_EXCEEDED"}
+	replyMismatch       = fcmReply{status: http.StatusForbidden, errStatus: "PERMISSION_DENIED", fcmCode: "SENDER_ID_MISMATCH"}
+	replyAPNsAuth       = fcmReply{status: http.StatusUnauthorized, errStatus: "UNAUTHENTICATED", fcmCode: "THIRD_PARTY_AUTH_ERROR"}
+	replyDenied         = fcmReply{status: http.StatusForbidden, errStatus: "PERMISSION_DENIED"}
+	replyBadGateway     = fcmReply{status: http.StatusBadGateway, bare: true}
+	replyBlock          = fcmReply{block: true}
 	// A Retry-After past the SDK's 2-minute cap: the SDK does not retry.
 	replyUnavailableLong = fcmReply{status: http.StatusServiceUnavailable, errStatus: "UNAVAILABLE", fcmCode: "UNAVAILABLE", retryAfter: "600"}
 	replyThrottled       = fcmReply{status: http.StatusTooManyRequests, errStatus: "RESOURCE_EXHAUSTED"}
@@ -155,12 +160,15 @@ func writeReply(w http.ResponseWriter, reply fcmReply) {
 		_, _ = fmt.Fprintf(w, `{"name":"projects/%s/messages/%s"}`, testProject, uuid.NewString())
 		return
 	}
-	details := "[]"
+	var details []string
 	if reply.fcmCode != "" {
-		details = fmt.Sprintf(`[{"@type":"type.googleapis.com/google.firebase.fcm.v1.FcmError","errorCode":%q}]`, reply.fcmCode)
+		details = append(details, fmt.Sprintf(`{"@type":"type.googleapis.com/google.firebase.fcm.v1.FcmError","errorCode":%q}`, reply.fcmCode))
 	}
-	_, _ = fmt.Fprintf(w, `{"error":{"code":%d,"message":"fake failure","status":%q,"details":%s}}`,
-		reply.status, reply.errStatus, details)
+	if reply.violation != "" {
+		details = append(details, fmt.Sprintf(`{"@type":"type.googleapis.com/google.rpc.BadRequest","fieldViolations":[{"field":%q,"description":"fake violation"}]}`, reply.violation))
+	}
+	_, _ = fmt.Fprintf(w, `{"error":{"code":%d,"message":"fake failure","status":%q,"details":[%s]}}`,
+		reply.status, reply.errStatus, strings.Join(details, ","))
 }
 
 func newSender(t *testing.T, srv *httptest.Server, timeout time.Duration) *fcm.Sender {
@@ -233,7 +241,11 @@ func TestSender_classifiesEachDevice(t *testing.T) {
 	}{
 		{"delivered", []fcmReply{replyOK}, usecase.PushDelivered, ""},
 		{"unregistered token", []fcmReply{replyUnreg}, usecase.PushTokenInvalid, "unregistered"},
-		{"invalid token", []fcmReply{replyInvalidArg}, usecase.PushTokenInvalid, "invalid_argument"},
+		// M9 security gate F2: INVALID_ARGUMENT deletes the device only when
+		// FCM names the token as the field it refused.
+		{"invalid token", []fcmReply{replyInvalidToken}, usecase.PushTokenInvalid, "invalid_argument"},
+		{"invalid payload", []fcmReply{replyInvalidPayload}, usecase.PushRejected, "invalid_argument"},
+		{"invalid argument naming no field", []fcmReply{replyInvalidArg}, usecase.PushRejected, "invalid_argument"},
 		{"fcm internal error", []fcmReply{replyInternal}, usecase.PushTransient, "internal"},
 		{"proxy 5xx without body", []fcmReply{replyBadGateway}, usecase.PushTransient, "server_error"},
 		{"500 without fcm detail", []fcmReply{replyBareInternal}, usecase.PushTransient, "server_error"},
@@ -279,23 +291,24 @@ func TestSender_partialFailureKeepsOrder(t *testing.T) {
 	}, got)
 }
 
-// INVALID_ARGUMENT names the token only when it is not every device's
-// answer: when all of several devices get it, the message is what FCM
-// refused, and deleting every device of the user would be the wrong cleanup.
-func TestSender_invalidArgumentForEveryDeviceIsThePayload(t *testing.T) {
-	a, b := target("a"), target("b")
+// INVALID_ARGUMENT is attributed per device, never guessed from the batch:
+// several stale tokens are all deleted, a refused message deletes none.
+func TestSender_invalidArgumentIsAttributedPerDevice(t *testing.T) {
+	staleA, staleB, payload := target("a"), target("b"), target("c")
 	_, srv := newFakeFCM(t, map[string][]fcmReply{
-		a.Token.Reveal(): {replyInvalidArg},
-		b.Token.Reveal(): {replyInvalidArg},
+		staleA.Token.Reveal():  {replyInvalidToken},
+		staleB.Token.Reveal():  {replyInvalidToken},
+		payload.Token.Reveal(): {replyInvalidPayload},
 	})
 	sender := newSender(t, srv, 5*time.Second)
 
-	got, err := sender.Send(t.Context(), notification(), []usecase.PushTarget{a, b})
+	got, err := sender.Send(t.Context(), notification(), []usecase.PushTarget{staleA, staleB, payload})
 
 	require.NoError(t, err)
 	assert.Equal(t, []usecase.PushDelivery{
-		{DeviceID: a.DeviceID, Outcome: usecase.PushRejected, ErrorClass: "invalid_argument"},
-		{DeviceID: b.DeviceID, Outcome: usecase.PushRejected, ErrorClass: "invalid_argument"},
+		{DeviceID: staleA.DeviceID, Outcome: usecase.PushTokenInvalid, ErrorClass: "invalid_argument"},
+		{DeviceID: staleB.DeviceID, Outcome: usecase.PushTokenInvalid, ErrorClass: "invalid_argument"},
+		{DeviceID: payload.DeviceID, Outcome: usecase.PushRejected, ErrorClass: "invalid_argument"},
 	}, got)
 }
 

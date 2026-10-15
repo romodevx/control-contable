@@ -64,6 +64,9 @@ class FakeAuthRepository implements AuthRepository {
   Completer<void>? loginGate;
 
   final List<String> loggedOut = [];
+
+  /// The push device id each logout carried (null when none).
+  final List<String?> loggedOutDevices = [];
   Exception? logoutError;
 
   /// Called on each logout, before it answers (to observe ordering).
@@ -108,9 +111,10 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> logout(String refreshToken) async {
+  Future<void> logout(String refreshToken, {String? deviceId}) async {
     onLogout?.call();
     loggedOut.add(refreshToken);
+    loggedOutDevices.add(deviceId);
     if (logoutError case final error?) throw error;
   }
 }

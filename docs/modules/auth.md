@@ -58,8 +58,8 @@ sequenceDiagram
     API->>DB: rotate R1 to R2 in the same family
     API-->>U: 200 TokenPair {access, R2}
     Note over U,API: Presenting R1 again revokes the whole family (D9)
-    U->>API: POST /v1/auth/logout (Bearer) {refresh_token R2}
-    API->>DB: revoke the family
+    U->>API: POST /v1/auth/logout (Bearer) {refresh_token R2, device_id?}
+    API->>DB: one tx: revoke the family, delete the caller's push device device_id (0.14.0)
     API-->>U: 204
     U->>API: DELETE /v1/me (Bearer) {password}
     API->>DB: one tx: user and everything it owns cascade; trial_registry HMAC stays

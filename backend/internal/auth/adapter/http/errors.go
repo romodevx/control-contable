@@ -25,6 +25,7 @@ const (
 	msgDocuments         = "Accept the current privacy notice and terms."
 	msgInvalidCode       = "Enter the 6-digit code from the email."
 	msgCodeRejected      = "The code is invalid or has expired."
+	msgInvalidDeviceID   = "Enter a valid installation id."
 	// msgSessionEnded is the one answer to a refresh token that cannot be
 	// used, whatever the reason (the contract's refreshSession 401 example).
 	msgSessionEnded = "Your session has ended. Sign in again."
@@ -84,6 +85,7 @@ var fieldRules = []fieldRule{
 	{domain.ErrDocumentMissing, "accepted_documents", "document_missing", msgDocuments},
 	{domain.ErrDocumentDuplicate, "accepted_documents", "document_duplicate", msgDocuments},
 	{domain.ErrDocumentUnknown, "accepted_documents", "document_unknown", msgDocuments},
+	{usecase.ErrInvalidDeviceID, "device_id", "format", msgInvalidDeviceID},
 }
 
 // toAppError translates a use case error for the router: a field error

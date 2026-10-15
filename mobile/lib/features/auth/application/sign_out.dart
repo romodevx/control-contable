@@ -11,12 +11,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// covered by the 30-day sliding expiry and family revocation on reuse.
 class SignOut {
   /// Signs [_session] out through [_repository]; a failed revocation is
-  /// told to [_reporter]. [beforeRevoke] runs first, with a bearer.
+  /// told to [_reporter]. [beforeRevoke] runs first, with a bearer; the
+  /// push device [deviceId] names is removed with the session.
   new(
     this._repository,
     this._session,
     this._reporter, {
     this.beforeRevoke = const [],
+    this.deviceId = _noDevice,
   });
 
   final AuthRepository _repository;
@@ -25,6 +27,12 @@ class SignOut {
 
   /// What the slices do before the revocation (each failure absorbed).
   final List<SignOutStep> beforeRevoke;
+
+  /// This installation's push device, removed by the server with the
+  /// session (a failed lookup is reported and sends none).
+  final SignOutDeviceId deviceId;
+
+  static Future<String?> _noDevice() async => null;
 
   /// Revokes, then wipes. Never throws: the user ends up signed out either
   /// way, and the router shows the login form. A token the wipe could not
@@ -39,7 +47,9 @@ class SignOut {
         await _absorbed(step);
       }
       final refreshToken = await _session.readRefreshToken();
-      if (refreshToken != null) await _repository.logout(refreshToken);
+      if (refreshToken != null) {
+        await _repository.logout(refreshToken, deviceId: await _deviceId());
+      }
     } on Exception catch (error) {
       // Best effort by design (see the class doc): an `ApiFailure`, or a
       // platform error that may echo the token, is reported by type only;
@@ -47,6 +57,15 @@ class SignOut {
       _reporter.report('signOut.revoke', error);
     } finally {
       await _session.end();
+    }
+  }
+
+  Future<String?> _deviceId() async {
+    try {
+      return await deviceId();
+    } on Exception catch (error) {
+      _reporter.report('signOut.deviceId', error);
+      return null;
     }
   }
 
@@ -66,6 +85,7 @@ final signOutProvider = Provider<SignOut>(
     ref.watch(sessionProvider),
     ref.watch(errorReporterProvider),
     beforeRevoke: ref.watch(signOutStepsProvider),
+    deviceId: ref.watch(signOutDeviceIdProvider),
   ),
   name: 'signOutProvider',
 );
