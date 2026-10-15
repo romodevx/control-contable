@@ -1052,9 +1052,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get incomeFieldIvaRate => 'Tasa de IVA';
 
   @override
-  String get incomeFieldCounterparty => '¿Quién pagó?';
-
-  @override
   String get incomeFieldRegime => 'Régimen';
 
   @override
@@ -1064,32 +1061,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get incomeFieldIvaAmount => 'IVA cobrado';
 
   @override
-  String get incomeFieldIsrWithheld => 'ISR retenido';
-
-  @override
-  String get incomeFieldIvaWithheld => 'IVA retenido';
-
-  @override
   String get incomeFieldCfdiUuid => 'Folio fiscal (UUID)';
-
-  @override
-  String get incomeSectionWithholdings => 'Retenciones';
 
   @override
   String get incomeSectionMore => 'Más detalles';
 
   @override
-  String get incomeWithholdingsHelp =>
-      'Prellenadas con la tasa sugerida. Corrígelas con lo que diga el CFDI.';
-
-  @override
   String incomeSummaryTotal(String total) {
     return 'Total con IVA $total';
-  }
-
-  @override
-  String incomeSummaryNet(String iva, String withheld, String net) {
-    return 'IVA $iva · Retenciones $withheld · Neto $net';
   }
 
   @override
@@ -1545,20 +1524,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get expenseFieldDescription => 'Descripción';
 
   @override
-  String get expenseFieldIsrWithheld => 'ISR retenido';
-
-  @override
-  String get expenseFieldIvaWithheld => 'IVA retenido';
-
-  @override
   String get expenseSectionMore => 'Más detalles';
-
-  @override
-  String get expenseSectionWithholdings => 'Retenciones a tu proveedor';
-
-  @override
-  String get expenseWithholdingsHelp =>
-      'Lo que le retuviste al proveedor, como dice el CFDI. Lo tienes que enterar al SAT.';
 
   @override
   String expenseSummaryTotal(String total) {
@@ -2022,6 +1988,218 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get dashboardPlansBody =>
       'La contratación de planes estará disponible próximamente.';
+
+  @override
+  String get withholdingOperationProfessional =>
+      'Servicios profesionales (honorarios): asesoría, consultoría, diseño, salud…';
+
+  @override
+  String get withholdingOperationBusiness =>
+      'Otros servicios de tu negocio: reparación, mantenimiento, limpieza, comida…';
+
+  @override
+  String get withholdingOperationRentRealEstate =>
+      'Renta de un inmueble (casa, local, oficina, terreno)';
+
+  @override
+  String get withholdingOperationRentMovable =>
+      'Renta de equipo, maquinaria o vehículos';
+
+  @override
+  String get withholdingOperationGoods => 'Venta de productos o mercancía';
+
+  @override
+  String get withholdingOperationFreight =>
+      'Flete: transporte de mercancía por carretera';
+
+  @override
+  String get withholdingOperationCommission => 'Comisiones por intermediación';
+
+  @override
+  String get withholdingOperationScrap =>
+      'Desperdicios o reciclables (chatarra, cartón, PET…)';
+
+  @override
+  String get withholdingOperationOther => 'Otro';
+
+  @override
+  String get withholdingResidentialRent =>
+      '¿Es una casa o departamento para vivir?';
+
+  @override
+  String get withholdingResidentialRentHelp =>
+      'La renta de vivienda no lleva IVA.';
+
+  @override
+  String get withholdingYes => 'Sí';
+
+  @override
+  String get withholdingNo => 'No';
+
+  @override
+  String get withholdingHelpLabel => '¿Tu factura dice otra cantidad?';
+
+  @override
+  String get withholdingHelpText =>
+      'La app calcula la retención que marca la ley para lo que nos dijiste. Si tu factura muestra otra, revisa con quién te facturó o con tu contador; la estimación usa la de la ley.';
+
+  @override
+  String get withholdingOffline =>
+      'Sin conexión no podemos calcular la retención. Se calculará al guardar.';
+
+  @override
+  String get withholdingStale =>
+      'No pudimos actualizar el cálculo. Se calculará de nuevo al guardar.';
+
+  @override
+  String get withholdingWarningCpaUnverified =>
+      'Esta retención aún no la confirma un contador. Úsala como aproximado.';
+
+  @override
+  String get withholdingWarningForeign =>
+      'Las operaciones con el extranjero pueden llevar otros impuestos que la app todavía no calcula.';
+
+  @override
+  String get withholdingWarningSupplierRegimeUnknown =>
+      'Revisa el régimen en la factura de tu proveedor: cambia la retención.';
+
+  @override
+  String withholdingWarningDeduction(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.MMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'Este gasto solo es deducible si enteras las retenciones a más tardar el $dateString.';
+  }
+
+  @override
+  String get withholdingWarningNoRfc =>
+      'No le diste tu RFC a la plataforma: te retiene 20 % de ISR y todo el IVA.';
+
+  @override
+  String get incomeFieldCounterpartyKind => '¿A quién le facturaste?';
+
+  @override
+  String get counterpartyKindPm => 'Una empresa (persona moral)';
+
+  @override
+  String get counterpartyKindGovFederal =>
+      'Gobierno federal (o un organismo federal)';
+
+  @override
+  String get counterpartyKindGovStateMunicipal =>
+      'Gobierno estatal o municipal';
+
+  @override
+  String get counterpartyKindPfWithActivity =>
+      'Una persona con negocio o profesión (persona física con actividad)';
+
+  @override
+  String get counterpartyKindPfPublic =>
+      'Una persona sin negocio o público en general';
+
+  @override
+  String get counterpartyKindForeign => 'Alguien en el extranjero';
+
+  @override
+  String get incomeFieldOperationKind =>
+      '¿Qué le vendiste o qué servicio diste?';
+
+  @override
+  String get incomeFieldViaPlatform =>
+      '¿Lo cobraste a través de una plataforma digital (app de transporte, hospedaje o ventas)?';
+
+  @override
+  String incomeWithheldLine(String isr, String iva) {
+    return 'Te retienen: ISR $isr · IVA $iva';
+  }
+
+  @override
+  String incomeReceiveLine(String net) {
+    return 'Recibes $net';
+  }
+
+  @override
+  String get incomeNothingWithheld =>
+      'Nadie te retiene impuestos en esta operación.';
+
+  @override
+  String get incomeWithholdingIncomplete =>
+      'Escribe el monto y elige a quién le facturaste para ver si te retienen impuestos.';
+
+  @override
+  String get expenseSectionSupplier => 'Tu proveedor';
+
+  @override
+  String get expenseFieldSupplierKind =>
+      '¿Quién te vendió o te dio el servicio?';
+
+  @override
+  String get supplierKindPm => 'Una empresa (persona moral)';
+
+  @override
+  String get supplierKindPf => 'Una persona física con negocio o profesión';
+
+  @override
+  String get supplierKindForeign => 'Alguien en el extranjero';
+
+  @override
+  String get expenseFieldSupplierRegime => '¿En qué régimen está tu proveedor?';
+
+  @override
+  String get expenseSupplierRegimeHelp =>
+      'Viene en su factura, junto a su RFC.';
+
+  @override
+  String get supplierRegime612 => 'Actividad empresarial o profesional (612)';
+
+  @override
+  String get supplierRegime606 => 'Arrendamiento (606)';
+
+  @override
+  String get supplierRegime626 => 'RESICO (626)';
+
+  @override
+  String get supplierRegime625 => 'Plataformas digitales (625)';
+
+  @override
+  String get supplierRegime621 => 'RIF (621)';
+
+  @override
+  String get supplierRegimeUnknown => 'No sé';
+
+  @override
+  String get expenseFieldOperationKind =>
+      '¿Qué te vendió o qué servicio te dio?';
+
+  @override
+  String expenseMustWithholdLine(String isr, String iva) {
+    return 'Debes retener: ISR $isr · IVA $iva';
+  }
+
+  @override
+  String expensePaySupplierLine(String net) {
+    return 'Pagas a tu proveedor $net';
+  }
+
+  @override
+  String expenseRemitLine(String total, DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.MMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'Entregas al SAT $total a más tardar el $dateString.';
+  }
+
+  @override
+  String get expenseNothingToWithhold =>
+      'No debes retener impuestos en esta compra.';
+
+  @override
+  String get expenseWithholdingIncomplete =>
+      'Escribe el monto y elige quién te vendió para ver qué debes retener.';
+
+  @override
+  String get expenseErrorSupplierNotApplicable =>
+      'Una persona física no retiene a sus proveedores: no hace falta decir quién te vendió.';
 
   @override
   String get historyTitle => 'Historial';

@@ -19,12 +19,12 @@ mixin _$IncomeCreate {
 @JsonKey(name: 'regime_code') RegimeCode get regimeCode;@JsonKey(name: 'counterparty_type')@Deprecated('This is marked as deprecated') CounterpartyType get counterpartyType;/// Subtotal before IVA, MXN centavos.
 @JsonKey(name: 'amount_cents') PositiveCents get amountCents;@JsonKey(name: 'iva_rate') IvaRate get ivaRate;/// IVA charged; `0` for `rate_0`/`exempt`, else within 100 centavos of `amount_cents × rate`.
 @JsonKey(name: 'iva_cents') NonNegativeCents get ivaCents;/// Client-generated idempotency key (UUIDv7 recommended), once per form session.
-@JsonKey(includeIfNull: false) Uuid? get id;/// Required since 0.11.2 (`400 required` when missing).
+@JsonKey(includeIfNull: false) Uuid? get id;/// Required since 0.11.3 (`400 required` when missing).
 @JsonKey(includeIfNull: false, name: 'counterparty_kind') CounterpartyKind? get counterpartyKind;/// Asked only when the payer can withhold (`pm`, `gov_*`, not via a platform); omitted → the last value used in this regime, else the regime default (`IncomeLastUsed`).
 @JsonKey(includeIfNull: false, name: 'operation_kind') OperationKind? get operationKind;/// Housing rent (`rent_real_estate` only; default `false`). `true` requires `iva_rate: exempt` and `iva_cents: 0` (LIVA 20 fr. II), else `422` `residential_rent_exempt` on `iva_rate`.
 @JsonKey(includeIfNull: false, name: 'residential_rent') bool? get residentialRent;/// Collected through a digital platform (default `true` in 625, `false` otherwise). Allowed for 625 and persona moral regimes; `true` on any other regime answers `400` `not_for_regime`.
-@JsonKey(includeIfNull: false, name: 'via_platform') bool? get viaPlatform;/// Retired by WH-06 (0.11.2, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
-@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') NonNegativeCents? get isrWithheldCents;/// Retired by WH-06 (0.11.2, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
+@JsonKey(includeIfNull: false, name: 'via_platform') bool? get viaPlatform;/// Retired by WH-06 (0.11.3, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
+@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') NonNegativeCents? get isrWithheldCents;/// Retired by WH-06 (0.11.3, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
 @JsonKey(includeIfNull: false, name: 'iva_withheld_cents') NonNegativeCents? get ivaWithheldCents;@JsonKey(includeIfNull: false, name: 'invoiced_on') BusinessDate? get invoicedOn;@JsonKey(includeIfNull: false, name: 'collected_on') BusinessDate? get collectedOn;@JsonKey(includeIfNull: false, name: 'platform_activity') PlatformActivity? get platformActivity;@JsonKey(includeIfNull: false, name: 'cfdi_uuid') CfdiUuid? get cfdiUuid;@JsonKey(includeIfNull: false) RecordDescription? get description;
 /// Create a copy of IncomeCreate
 /// with the given fields replaced by the non-null parameter values.
@@ -252,7 +252,7 @@ class _IncomeCreate implements IncomeCreate {
 @override@JsonKey(name: 'iva_cents') final  NonNegativeCents ivaCents;
 /// Client-generated idempotency key (UUIDv7 recommended), once per form session.
 @override@JsonKey(includeIfNull: false) final  Uuid? id;
-/// Required since 0.11.2 (`400 required` when missing).
+/// Required since 0.11.3 (`400 required` when missing).
 @override@JsonKey(includeIfNull: false, name: 'counterparty_kind') final  CounterpartyKind? counterpartyKind;
 /// Asked only when the payer can withhold (`pm`, `gov_*`, not via a platform); omitted → the last value used in this regime, else the regime default (`IncomeLastUsed`).
 @override@JsonKey(includeIfNull: false, name: 'operation_kind') final  OperationKind? operationKind;
@@ -260,9 +260,9 @@ class _IncomeCreate implements IncomeCreate {
 @override@JsonKey(includeIfNull: false, name: 'residential_rent') final  bool? residentialRent;
 /// Collected through a digital platform (default `true` in 625, `false` otherwise). Allowed for 625 and persona moral regimes; `true` on any other regime answers `400` `not_for_regime`.
 @override@JsonKey(includeIfNull: false, name: 'via_platform') final  bool? viaPlatform;
-/// Retired by WH-06 (0.11.2, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
+/// Retired by WH-06 (0.11.3, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
 @override@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') final  NonNegativeCents? isrWithheldCents;
-/// Retired by WH-06 (0.11.2, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
+/// Retired by WH-06 (0.11.3, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
 @override@JsonKey(includeIfNull: false, name: 'iva_withheld_cents') final  NonNegativeCents? ivaWithheldCents;
 @override@JsonKey(includeIfNull: false, name: 'invoiced_on') final  BusinessDate? invoicedOn;
 @override@JsonKey(includeIfNull: false, name: 'collected_on') final  BusinessDate? collectedOn;

@@ -8,9 +8,11 @@ library;
 
 import 'dart:io';
 
+import 'package:control_contable/api/generated/models/counterparty_kind.dart';
 import 'package:control_contable/api/generated/models/counterparty_type.dart';
 import 'package:control_contable/api/generated/models/income_create.dart';
 import 'package:control_contable/api/generated/models/iva_rate.dart';
+import 'package:control_contable/api/generated/models/operation_kind.dart';
 import 'package:control_contable/core/config/app_config.dart';
 import 'package:control_contable/core/session/refresh_token_store.dart';
 import 'package:control_contable/core/session/session.dart';
@@ -65,7 +67,6 @@ void main() {
         final defaults = await repository().defaults(
           taxpayerId: _taxpayerId,
           regime: '612',
-          counterparty: CounterpartyType.personaMoral,
           on: '2026-10-13',
         );
 
@@ -81,11 +82,11 @@ void main() {
               id: newUuidV4(),
               regimeCode: '612',
               counterpartyType: CounterpartyType.personaMoral,
+              counterpartyKind: CounterpartyKind.pm,
+              operationKind: OperationKind.professionalServices,
               amountCents: 1000000,
               ivaRate: IvaRate.rate16,
               ivaCents: 160000,
-              isrWithheldCents: 100000,
-              ivaWithheldCents: 106667,
               collectedOn: '2026-10-05',
               description: 'Diseño de logotipo',
             ),
@@ -94,6 +95,28 @@ void main() {
           expect(created.amountCents, isPositive);
         },
       );
+
+      test("the withholding preview of the owner's case decodes "
+          '(US-W1)', () async {
+        final preview = await repository().previewWithholdings(
+          taxpayerId: _taxpayerId,
+          query: (
+            regime: '626',
+            on: '2026-07-10',
+            amountCents: 10000000,
+            ivaRate: IvaRate.rate16,
+            ivaCents: 1600000,
+            counterpartyKind: CounterpartyKind.pm,
+            operationKind: OperationKind.professionalServices,
+            residentialRent: null,
+            viaPlatform: null,
+            platformActivity: null,
+          ),
+        );
+
+        expect(preview.withholding.netCents, isPositive);
+        expect(preview.withholding.ruleIds, isNotEmpty);
+      });
 
       test('an edit is a merge-patch with an explicit null, and the '
           'income reads back', () async {

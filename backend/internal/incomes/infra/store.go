@@ -69,7 +69,9 @@ type incomeRow struct {
 	DeletedAt        *time.Time `gorm:"column:deleted_at"`
 	CreatedAt        time.Time  `gorm:"column:created_at"`
 	UpdatedAt        time.Time  `gorm:"column:updated_at"`
-	withholdingColumns
+	// Withholding is embedded by GORM; an anonymous unexported embed would be
+	// skipped (it cannot be set by reflection).
+	Withholding withholdingColumns `gorm:"embedded"`
 }
 
 // incomeColumns is the select list of incomeRow.
@@ -97,7 +99,7 @@ func (r incomeRow) toStored() (usecase.StoredIncome, error) {
 			return usecase.StoredIncome{}, fmt.Errorf("incomes infra: stored cfdi_uuid: %w", err)
 		}
 	}
-	withholding, err := r.record(r.ISRWithheldCents, r.IVAWithheldCents)
+	withholding, err := r.Withholding.record(r.ISRWithheldCents, r.IVAWithheldCents)
 	if err != nil {
 		return usecase.StoredIncome{}, err
 	}

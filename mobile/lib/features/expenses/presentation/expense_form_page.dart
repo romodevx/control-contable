@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:control_contable/api/generated/models/expense.dart';
 import 'package:control_contable/api/generated/models/field_error.dart' as api;
+import 'package:control_contable/api/generated/models/withholding_preview.dart';
+import 'package:control_contable/core/fiscal/withholding_preview_loader.dart';
 import 'package:control_contable/core/forms/app_form.dart';
 import 'package:control_contable/core/forms/field_error.dart';
 import 'package:control_contable/core/forms/form_leave_guard.dart';
@@ -16,9 +18,11 @@ import 'package:control_contable/features/expenses/application/expense_form_requ
 import 'package:control_contable/features/expenses/application/expense_records.dart';
 import 'package:control_contable/features/expenses/application/expense_save.dart';
 import 'package:control_contable/features/expenses/data/expenses_repository.dart';
+import 'package:control_contable/features/expenses/domain/expense_preview_query.dart';
 import 'package:control_contable/features/expenses/presentation/expense_copy.dart';
 import 'package:control_contable/features/expenses/presentation/expense_form_fields.dart';
 import 'package:control_contable/features/expenses/presentation/expense_save_feedback.dart';
+import 'package:control_contable/features/expenses/presentation/expense_withholding_card.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,7 +30,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// The expense form of one taxpayer, new or edit (the model says which):
 /// the category catalog loaded for the regime and date, *Guardar* (back
 /// to the list) and, for a new expense, *Guardar y crear otro* (stay, keep
-/// the context); idempotent retries (a client id on create, a merge-patch
+/// the context); for a persona moral, what to withhold from the supplier,
+/// derived live by the server (read-only card, ADR-0008); idempotent
+/// retries (a client id on create, a merge-patch
 /// of only the changed fields on edit), server verdicts on their fields,
 /// non-blocking warnings, the paywall on `402`.
 class ExpenseFormPage extends ConsumerStatefulWidget {
@@ -55,8 +61,23 @@ class _ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
           on: query.on,
         ),
   );
+  late final WithholdingPreviewLoader<ExpensePreviewQuery> _preview =
+      WithholdingPreviewLoader(
+        source: _model,
+        query: () => _model.previewQuery,
+        initial: switch (_model.editing?.withholding) {
+          final stored? => WithholdingPreview(
+            withholding: stored,
+            warnings: const [],
+          ),
+          null => null,
+        },
+        fetch: (query) => ref
+            .read(expensesRepositoryProvider)
+            .previewWithholdings(taxpayerId: widget.taxpayerId, query: query),
+      );
   bool _moreOpen = false;
-  bool? _withholdingsOpen;
+  bool? _supplierOpen;
   String? _notice;
   bool _isLeaving = false;
 
@@ -150,7 +171,7 @@ class _ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
     final expense = await _persist();
     if (expense == null || !mounted) return false;
     _model.startNextSession();
-    setState(() => _withholdingsOpen = null);
+    setState(() => _supplierOpen = null);
     _toast(expense, overForm: true);
     return true;
   }
@@ -174,6 +195,7 @@ class _ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
 
   @override
   void dispose() {
+    _preview.dispose();
     _catalog.dispose();
     _model.dispose();
     super.dispose();
@@ -208,7 +230,7 @@ class _ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
     final open = expenseSections(
       _model,
       moreOpen: _moreOpen,
-      withholdingsOpen: _withholdingsOpen,
+      supplierOpen: _supplierOpen,
     );
     return AppForm(
       controller: _model.form,
@@ -230,8 +252,11 @@ class _ExpenseFormPageState extends ConsumerState<ExpenseFormPage> {
           categoryUsage: ref.watch(categoryUsageProvider),
           open: open,
           onToggleMore: () => setState(() => _moreOpen = !open.more),
-          onToggleWithholdings: () =>
-              setState(() => _withholdingsOpen = !open.withholdings),
+          onToggleSupplier: () =>
+              setState(() => _supplierOpen = !open.supplier),
+          card: _model.isMoral
+              ? ExpenseWithholdingCard(model: _model, loader: _preview)
+              : null,
         ),
       ],
     );

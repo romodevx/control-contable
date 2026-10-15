@@ -1,16 +1,25 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:control_contable/api/generated/models/counterparty_kind.dart';
 import 'package:control_contable/api/generated/models/counterparty_type.dart';
 import 'package:control_contable/api/generated/models/income.dart';
 import 'package:control_contable/api/generated/models/income_create.dart';
 import 'package:control_contable/api/generated/models/income_defaults.dart';
+import 'package:control_contable/api/generated/models/income_last_used.dart';
 import 'package:control_contable/api/generated/models/income_page.dart';
 import 'package:control_contable/api/generated/models/iva_rate.dart';
+import 'package:control_contable/api/generated/models/operation_kind.dart';
 import 'package:control_contable/api/generated/models/period_totals.dart';
 import 'package:control_contable/api/generated/models/platform_activity.dart';
 import 'package:control_contable/api/generated/models/warning.dart';
+import 'package:control_contable/api/generated/models/withholding.dart';
+import 'package:control_contable/api/generated/models/withholding_preview.dart';
 import 'package:control_contable/features/incomes/data/incomes_repository.dart';
 import 'package:control_contable/features/incomes/domain/income_basis.dart';
+import 'package:control_contable/features/incomes/domain/income_preview_query.dart';
+
+import '../../helpers/withholding_fixtures.dart';
 
 /// The taxpayer every incomes test records for.
 const String incomesTaxpayerId = '0192f0c4-7b1e-7c3a-9d2e-6f1a2b3c4d5e';
@@ -36,6 +45,11 @@ Income income({
   String? description = 'Diseño de logotipo',
   String? cfdiUuid,
   List<Warning> warnings = const [],
+  CounterpartyKind? counterpartyKind,
+  OperationKind? operationKind,
+  bool? residentialRent,
+  bool? viaPlatform,
+  Withholding? withholding,
 }) => Income(
   id: id ?? nextIncomeId(),
   taxpayerId: incomesTaxpayerId,
@@ -56,6 +70,26 @@ Income income({
   warnings: warnings,
   createdAt: DateTime.utc(2026, 10, 13),
   updatedAt: DateTime.utc(2026, 10, 13),
+  counterpartyKind: counterpartyKind,
+  operationKind: operationKind,
+  residentialRent: residentialRent,
+  viaPlatform: viaPlatform,
+  withholding: withholding,
+);
+
+/// The withholding facts of the last income in a regime
+/// (`IncomeLastUsed`); by default a returning user who last billed the
+/// public (nothing withheld, no follow-up question).
+IncomeLastUsed lastUsed({
+  CounterpartyKind? counterpartyKind = CounterpartyKind.pfNoActivityOrPublic,
+  OperationKind operationKind = OperationKind.professionalServices,
+  bool residentialRent = false,
+  bool viaPlatform = false,
+}) => IncomeLastUsed(
+  counterpartyKind: counterpartyKind,
+  operationKind: operationKind,
+  residentialRent: residentialRent,
+  viaPlatform: viaPlatform,
 );
 
 /// The defaults of a 612 income from a persona moral (US-I1).
@@ -72,6 +106,12 @@ const IncomeDefaults moralDefaults612 = IncomeDefaults(
   ivaWithholdingAllowed: true,
   ivaWithholdingRate: '0.666667',
   platformActivity: null,
+  lastUsed: IncomeLastUsed(
+    counterpartyKind: CounterpartyKind.pm,
+    operationKind: OperationKind.professionalServices,
+    residentialRent: false,
+    viaPlatform: false,
+  ),
 );
 
 /// The defaults when nothing may be withheld (a persona física payer).
@@ -88,12 +128,17 @@ const IncomeDefaults noWithholdingDefaults = IncomeDefaults(
   ivaWithholdingAllowed: false,
   ivaWithholdingRate: null,
   platformActivity: null,
+  lastUsed: IncomeLastUsed(
+    counterpartyKind: CounterpartyKind.pfNoActivityOrPublic,
+    operationKind: OperationKind.professionalServices,
+    residentialRent: false,
+    viaPlatform: false,
+  ),
 );
 
 /// One recorded defaults request.
 typedef DefaultsRequest = ({
   String regime,
-  CounterpartyType counterparty,
   String? on,
   PlatformActivity? activity,
 });
@@ -136,14 +181,23 @@ class FakeIncomesRepository implements IncomesRepository {
   /// Warnings of the next create answer.
   List<Warning> warnNext = const [];
 
-  /// The defaults answered for each counterparty (else [moralDefaults612]).
-  final Map<CounterpartyType, IncomeDefaults> defaultsBy = {
-    CounterpartyType.personaFisica: noWithholdingDefaults,
-    CounterpartyType.publicoGeneral: noWithholdingDefaults,
-  };
+  /// The defaults answered for each regime (else [defaultsAnswer]).
+  final Map<String, IncomeDefaults> defaultsBy = {};
+
+  /// The defaults answered for a regime not in [defaultsBy].
+  IncomeDefaults defaultsAnswer = noWithholdingDefaults;
 
   /// Every defaults request.
   final List<DefaultsRequest> defaultsRequests = [];
+
+  /// Every withholding preview request, in order.
+  final List<IncomePreviewQuery> previewRequests = [];
+
+  /// The preview answered for a query (else nothing withheld).
+  WithholdingPreview Function(IncomePreviewQuery query)? previewAnswer;
+
+  /// Held open while set: a preview stays in flight until completed.
+  Completer<void>? previewGate;
 
   void _call(String operation, String argument) {
     calls.add('$operation:$argument');
@@ -202,8 +256,12 @@ class FakeIncomesRepository implements IncomesRepository {
       id: income.id ?? nextIncomeId(),
       taxpayerId: taxpayerId,
       regimeCode: income.regimeCode,
-      // ignore: deprecated_member_use_from_same_package, deprecated until WH-11 (ADR-0008).
+      // ignore: deprecated_member_use_from_same_package, removed by WH-06 (ADR-0008).
       counterpartyType: income.counterpartyType,
+      counterpartyKind: income.counterpartyKind,
+      operationKind: income.operationKind,
+      residentialRent: income.residentialRent,
+      viaPlatform: income.viaPlatform,
       amountCents: income.amountCents,
       ivaRate: income.ivaRate,
       ivaCents: income.ivaCents,
@@ -229,18 +287,24 @@ class FakeIncomesRepository implements IncomesRepository {
   Future<IncomeDefaults> defaults({
     required String taxpayerId,
     required String regime,
-    required CounterpartyType counterparty,
     String? on,
     PlatformActivity? platformActivity,
   }) async {
-    defaultsRequests.add((
-      regime: regime,
-      counterparty: counterparty,
-      on: on,
-      activity: platformActivity,
-    ));
-    _call('defaults', '$regime ${counterparty.json}');
-    return defaultsBy[counterparty] ?? moralDefaults612;
+    defaultsRequests.add((regime: regime, on: on, activity: platformActivity));
+    _call('defaults', regime);
+    return defaultsBy[regime] ?? defaultsAnswer;
+  }
+
+  @override
+  Future<WithholdingPreview> previewWithholdings({
+    required String taxpayerId,
+    required IncomePreviewQuery query,
+  }) async {
+    previewRequests.add(query);
+    await previewGate?.future;
+    _call('preview', query.counterpartyKind.json!);
+    return previewAnswer?.call(query) ??
+        nothingWithheld(query.amountCents + query.ivaCents);
   }
 
   @override
@@ -280,7 +344,10 @@ class FakeIncomesRepository implements IncomesRepository {
     patches.add(patch);
     _call('update', incomeId);
     final index = incomes.indexWhere((i) => i.id == incomeId);
-    final merged = {...incomes[index].toJson(), ...patch};
+    // Through JSON text: nested objects (`withholding`) become maps too.
+    final stored =
+        jsonDecode(jsonEncode(incomes[index])) as Map<String, Object?>;
+    final merged = {...stored, ...patch};
     final updated = Income.fromJson(merged);
     incomes[index] = updated;
     return updated;

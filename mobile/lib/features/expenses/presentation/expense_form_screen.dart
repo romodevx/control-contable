@@ -44,6 +44,8 @@ class ExpenseFormScreen extends ConsumerWidget {
         paymentMethod: ref.read(lastPaymentMethodProvider),
         copy: expenseFormCopy(l10n),
         newId: ref.read(clientIdProvider),
+        lastSupplierFor: (category) =>
+            ref.read(supplierMemoryProvider)[category],
       ),
     );
   }

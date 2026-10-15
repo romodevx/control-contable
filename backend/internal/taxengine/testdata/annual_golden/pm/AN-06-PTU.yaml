@@ -2,7 +2,6 @@
 id: AN-06-PTU
 source: research:AN-06
 skip_reason: "⚠️ PTU rate 10 % from a secondary source only: the Comisión Nacional PTU resolution (DOF) was not fetched, so it is not in params (ANN-05 finding 4); topic ptu_rate, CPA-REVIEW PTU item, until the CPA sign-off (ANN-27)"
-pending_strategy: true # ANN-10 registers pm_601
 input:
   fiscal_year: 2026
   person_type: moral

@@ -1,7 +1,11 @@
 import 'package:control_contable/api/generated/models/field_error.dart' as api;
 import 'package:control_contable/api/generated/models/payment_method.dart';
+import 'package:control_contable/api/generated/models/supplier_kind.dart';
+import 'package:control_contable/api/generated/models/supplier_regime.dart';
 import 'package:control_contable/api/generated/models/warning.dart';
 import 'package:control_contable/api/generated/models/warning_code.dart';
+import 'package:control_contable/core/fiscal/withholding_labels.dart';
+import 'package:control_contable/core/forms/choice_controllers.dart';
 import 'package:control_contable/core/forms/field_error.dart';
 import 'package:control_contable/core/forms/money.dart';
 import 'package:control_contable/core/records/record_save.dart';
@@ -26,9 +30,30 @@ ExpenseFormCopy expenseFormCopy(AppLocalizations l10n) => (
   cfdiUuid: l10n.expenseFieldCfdiUuid,
   cfdiUuidInvalid: l10n.incomeCfdiInvalid,
   description: l10n.expenseFieldDescription,
-  isrWithheld: l10n.expenseFieldIsrWithheld,
-  ivaWithheld: l10n.expenseFieldIvaWithheld,
+  supplier: (
+    supplierKind: l10n.expenseFieldSupplierKind,
+    supplierRegime: l10n.expenseFieldSupplierRegime,
+    operationKind: l10n.expenseFieldOperationKind,
+    residentialRent: l10n.withholdingResidentialRent,
+  ),
 );
+
+/// E1's options (MODULE-withholdings §2.2).
+List<ChoiceOption> supplierKindOptions(AppLocalizations l10n) => [
+  (value: SupplierKind.pm.json!, label: l10n.supplierKindPm),
+  (value: SupplierKind.pfWithActivity.json!, label: l10n.supplierKindPf),
+  (value: SupplierKind.foreign.json!, label: l10n.supplierKindForeign),
+];
+
+/// E2's options: the regimes of a persona física supplier, then "No sé".
+List<ChoiceOption> supplierRegimeOptions(AppLocalizations l10n) => [
+  (value: SupplierRegime.value612.json!, label: l10n.supplierRegime612),
+  (value: SupplierRegime.value606.json!, label: l10n.supplierRegime606),
+  (value: SupplierRegime.value626.json!, label: l10n.supplierRegime626),
+  (value: SupplierRegime.value625.json!, label: l10n.supplierRegime625),
+  (value: SupplierRegime.value621.json!, label: l10n.supplierRegime621),
+  (value: SupplierRegime.unknown.json!, label: l10n.supplierRegimeUnknown),
+];
 
 /// A payment method, as the user reads it.
 String paymentMethodLabel(PaymentMethod method, AppLocalizations l10n) =>
@@ -76,6 +101,8 @@ FieldError describeExpenseDetail(api.FieldError detail, AppLocalizations l10n) {
     'withholding_not_applicable' => l10n.expenseErrorWithholdingNotApplicable,
     'withholding_exceeds_base' => l10n.incomeErrorWithholdingExceedsBase,
     'regime_not_active' => l10n.incomeErrorRegimeNotActive,
+    'supplier_not_applicable' => l10n.expenseErrorSupplierNotApplicable,
+    'residential_rent_exempt' => l10n.withholdingResidentialRentHelp,
     'taxpayer_archived' => l10n.settingsArchivedWrite,
     _ => l10n.recordErrorInvalid,
   });
@@ -93,7 +120,7 @@ String describeExpenseWarning(Warning warning, AppLocalizations l10n) =>
       WarningCode.duplicateCfdiUuid => l10n.expenseWarningDuplicateCfdi,
       WarningCode.ivaNotCreditableCashPayment => l10n.expenseCashIva,
       WarningCode.provisionalParameters => l10n.expenseWarningProvisional,
-      _ => warning.message,
+      _ => withholdingWarningText(warning, l10n),
     };
 
 /// The form-level message of a save that did not go through.

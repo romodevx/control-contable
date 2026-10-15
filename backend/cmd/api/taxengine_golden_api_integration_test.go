@@ -98,6 +98,21 @@ func TestGolden_pm601IVAEnteredThroughTheAPI(t *testing.T) {
 		"ISR que retuviste a tus proveedores (a enterar)": 500_000,
 		"Retenciones a enterar":                           1_033_333,
 	}, withholdings)
+
+	// WH-09 fed by WH-07: the IVA the server derived and withheld in June
+	// (creditable_iva_withheld_cents) is credited in July.
+	july := env.do(env.send(http.MethodGet, breakdownTarget(taxpayer, "2026-07", "601"), "", token))
+	require.Equal(t, http.StatusOK, july.Code, july.Body.String())
+	require.NoError(t, json.Unmarshal(july.Body.Bytes(), &lines))
+	credited := map[string]gen.MoneyCents{}
+	for _, l := range lines.Lines {
+		if l.Tax == gen.BreakdownLineTaxIva {
+			credited[l.Concept] = l.AmountCents
+		}
+	}
+	assert.EqualValues(t, 533_333,
+		credited["IVA retenido el mes pasado (acreditable este mes; supone que enteraste la retención a tiempo)"],
+		"the withheld part, credited the month after remittance (LIVA 5 fr. IV)")
 }
 
 // pm601IVAInputs are the golden's tax inputs: coeficiente 0.15 and no prior

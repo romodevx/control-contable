@@ -7,6 +7,7 @@ import 'package:control_contable/core/router/app_router.dart';
 import 'package:control_contable/core/time/clock.dart';
 import 'package:control_contable/features/expenses/data/expenses_repository.dart';
 import 'package:control_contable/features/expenses/expenses_routes.dart';
+import 'package:control_contable/features/expenses/presentation/expense_category_field.dart';
 import 'package:control_contable/features/taxpayers/application/client_id.dart';
 import 'package:control_contable/features/taxpayers/data/active_taxpayer_store.dart';
 import 'package:control_contable/features/taxpayers/data/taxpayers_repository.dart';
@@ -91,4 +92,28 @@ class ExpensesHarness {
 
   /// The location on top.
   String get location => container.read(appRouterProvider).state.uri.toString();
+}
+
+/// Picks [name] in the category picker, searching for [query] first.
+Future<void> pickCategory(
+  WidgetTester tester,
+  String name, {
+  String? query,
+}) async {
+  final opener = find.descendant(
+    of: find.byType(ExpenseCategoryField),
+    matching: find.byType(OutlinedButton),
+  );
+  await tester.ensureVisible(opener.first);
+  await tester.tap(opener.first);
+  await tester.pumpAndSettle();
+  if (query != null) {
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Buscar categoría'),
+      query,
+    );
+    await tester.pumpAndSettle();
+  }
+  await tester.tap(find.text(name).last);
+  await tester.pumpAndSettle();
 }

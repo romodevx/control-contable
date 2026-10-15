@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:control_contable/api/generated/models/counterparty_type.dart';
+import 'package:control_contable/api/generated/models/counterparty_kind.dart';
 import 'package:control_contable/api/generated/models/error_code.dart';
 import 'package:control_contable/api/generated/models/iva_rate.dart';
 import 'package:control_contable/api/generated/models/person_type.dart';
@@ -18,6 +18,7 @@ import 'package:control_contable/features/incomes/incomes_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../helpers/choice_finders.dart';
 import '../taxpayers/pump_onboarding.dart' show inputLabeled, tapText, typeInto;
 import '../taxpayers/taxpayers_fakes.dart';
 import 'incomes_fakes.dart';
@@ -29,7 +30,8 @@ const _collectedOn = 'Fecha de cobro';
 const _invoicedOn = 'Fecha de factura';
 const _ivaAmount = 'IVA cobrado (opcional)';
 const _isrWithheld = 'ISR retenido (opcional)';
-const _ivaWithheld = 'IVA retenido (opcional)';
+const _more = 'Más detalles';
+const _q1 = '¿A quién le facturaste?';
 const _uuid = 'Folio fiscal (UUID) (opcional)';
 const _readOnlyTitle = 'Tu cuenta es de solo consulta';
 const _trialCapTitle = 'Llegaste al límite de ingresos de prueba';
@@ -70,27 +72,23 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  /// US-I1: 10,000.00 from a persona moral.
+  /// US-I1: 10,000.00 billed to a company, described under "Más
+  /// detalles".
   Future<void> fillUsI1(WidgetTester tester) async {
-    await typeInto(tester, _description, 'Diseño de logotipo');
     await typeInto(tester, _amount, '10000');
-    await tapText(tester, 'Persona moral');
+    await chooseIn(tester, _q1, 'Una empresa (persona moral)');
+    await tapText(tester, _more);
+    await typeInto(tester, _description, 'Diseño de logotipo');
   }
 
   group('M3-09 layout and defaults', () {
-    testWidgets('a page with the list columns first (date, description, '
-        'amount), defaults prefilled, the rest collapsed', (tester) async {
+    testWidgets('a page with the date and amount first, defaults '
+        'prefilled, at most six fields, the rest collapsed', (tester) async {
       await pumpForm(tester);
 
       expect(find.text('Nuevo ingreso'), findsOneWidget);
       expect(_textOf(tester, _collectedOn), '13/10/2026');
-      final order = [
-        _collectedOn,
-        _description,
-        _amount,
-        'Tasa de IVA',
-        '¿Quién pagó?',
-      ];
+      final order = [_collectedOn, _amount, 'Tasa de IVA', _q1];
       for (var i = 1; i < order.length; i++) {
         expect(
           tester.getTopLeft(find.text(order[i - 1]).first).dy,
@@ -102,13 +100,14 @@ void main() {
       expect(find.text('Régimen'), findsNothing);
       // Progressive disclosure: collapsed until opened.
       expect(find.text(_uuid), findsNothing);
+      expect(find.text(_description), findsNothing);
       expect(find.text(_isrWithheld), findsNothing);
-      expect(find.text('Más detalles'), findsOneWidget);
-      // Defaults: IVA 16 %, persona física the first time.
+      expect(find.text(_more), findsOneWidget);
+      // Defaults: IVA 16 %, the facts last used in the regime.
       final request = harness.incomes.defaultsRequests.last;
       expect(request.regime, '612');
-      expect(request.counterparty, CounterpartyType.personaFisica);
       expect(request.on, '2026-10-13');
+      expect(chosenIn(tester, _q1), CounterpartyKind.pfNoActivityOrPublic.json);
       final rate16 = tester.widget<RadioListTile<String>>(
         find.widgetWithText(RadioListTile<String>, '16 %'),
       );
@@ -124,31 +123,12 @@ void main() {
       expect(find.text(r'Total con IVA $11,600.00'), findsOneWidget);
     });
 
-    testWidgets('a persona moral payer opens the withholdings prefilled '
-        'from the defaults and the net follows (US-I1)', (tester) async {
-      await pumpForm(tester);
-
-      await fillUsI1(tester);
-
-      expect(
-        harness.incomes.defaultsRequests.last.counterparty,
-        CounterpartyType.personaMoral,
-      );
-      expect(_textOf(tester, _isrWithheld), '1,000.00');
-      expect(_textOf(tester, _ivaWithheld), '1,066.67');
-      expect(
-        find.text(r'IVA $1,600.00 · Retenciones −$2,066.67 · Neto $9,533.33'),
-        findsOneWidget,
-      );
-    });
-
     testWidgets('only the IVA rates allowed on the date are offered', (
       tester,
     ) async {
-      harness.incomes.defaultsBy[CounterpartyType.personaFisica] =
-          noWithholdingDefaults.copyWith(
-            ivaRatesAllowed: [IvaRate.rate16, IvaRate.rate0, IvaRate.exempt],
-          );
+      harness.incomes.defaultsAnswer = noWithholdingDefaults.copyWith(
+        ivaRatesAllowed: [IvaRate.rate16, IvaRate.rate0, IvaRate.exempt],
+      );
       await pumpForm(tester);
 
       expect(find.text('8 % (región fronteriza)'), findsNothing);
@@ -209,7 +189,7 @@ void main() {
       );
       await typeInto(tester, _invoicedOn, '05102026');
       await typeInto(tester, _amount, '1000');
-      await tapText(tester, 'Más detalles');
+      await tapText(tester, _more);
       await typeInto(tester, '$_collectedOn (opcional)', '12102026');
       await _save(tester);
 
@@ -230,13 +210,13 @@ void main() {
       final sent = harness.incomes.creates.single;
       expect(sent.id, harness.clientIds.first);
       expect(sent.regimeCode, '612');
-      // ignore: deprecated_member_use_from_same_package, deprecated until WH-11 (ADR-0008).
-      expect(sent.counterpartyType, CounterpartyType.personaMoral);
+      expect(sent.counterpartyKind, CounterpartyKind.pm);
       expect(sent.amountCents, 1000000);
       expect(sent.ivaRate, IvaRate.rate16);
       expect(sent.ivaCents, 160000);
-      expect(sent.isrWithheldCents, 100000);
-      expect(sent.ivaWithheldCents, 106667);
+      // Never typed nor sent: the server derives them (ADR-0008).
+      expect(sent.isrWithheldCents, isNull);
+      expect(sent.ivaWithheldCents, isNull);
       expect(sent.collectedOn, '2026-10-13');
       expect(sent.description, 'Diseño de logotipo');
       expect(harness.location, IncomesRoutes.list);
@@ -291,7 +271,7 @@ void main() {
     });
 
     testWidgets('"Guardar y crear otro" keeps the context (dates, regime, '
-        'who paid, rate), clears the rest, refocuses the first cleared '
+        'who was billed, rate), clears the rest, refocuses the first cleared '
         'field and starts a new id', (tester) async {
       await pumpForm(tester);
       await typeInto(tester, _collectedOn, '05102026');
@@ -304,8 +284,8 @@ void main() {
       expect(_textOf(tester, _collectedOn), '05/10/2026');
       expect(_textOf(tester, _description), isEmpty);
       expect(_textOf(tester, _amount), isEmpty);
-      final description = tester.widget<TextField>(inputLabeled(_description));
-      expect(description.focusNode!.hasFocus, isTrue);
+      final amount = tester.widget<TextField>(inputLabeled(_amount));
+      expect(amount.focusNode!.hasFocus, isTrue);
 
       await typeInto(tester, _amount, '2000');
       await _save(tester);
@@ -313,9 +293,7 @@ void main() {
       final [first, second] = harness.incomes.creates;
       expect(first.collectedOn, '2026-10-05');
       expect(second.collectedOn, '2026-10-05');
-      // ignore: deprecated_member_use_from_same_package, deprecated until WH-11 (ADR-0008).
-      expect(second.counterpartyType, CounterpartyType.personaMoral);
-      expect(second.isrWithheldCents, 20000);
+      expect(second.counterpartyKind, CounterpartyKind.pm);
       expect(second.description, isNull);
       expect(first.id, isNot(second.id));
     });
@@ -337,7 +315,7 @@ void main() {
     ) async {
       await pumpForm(tester);
       await typeInto(tester, _amount, '1000');
-      await tapText(tester, 'Más detalles');
+      await tapText(tester, _more);
 
       await typeInto(tester, _uuid, '123');
       // Leaving the field (focus moves on) checks it.
@@ -443,6 +421,7 @@ void main() {
         findsOneWidget,
       );
       await typeInto(tester, _amount, '1000');
+      await chooseIn(tester, _q1, 'Una empresa (persona moral)');
       await _save(tester);
       expect(harness.incomes.creates.single.ivaCents, 16000);
     });
@@ -622,8 +601,8 @@ void main() {
         'survives 200 % text (${brightness.name})', (tester) async {
       final handle = tester.ensureSemantics();
       await pumpForm(tester, brightness: brightness, taxpayer: anaTwoRegimes);
-      await tapText(tester, 'Persona moral');
-      await tapText(tester, 'Más detalles');
+      await chooseIn(tester, _q1, 'Una empresa (persona moral)');
+      await tapText(tester, _more);
 
       await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
       await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));

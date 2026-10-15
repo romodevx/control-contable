@@ -19,7 +19,7 @@ import 'supplier_regime.dart';
 part 'expense_update.freezed.dart';
 part 'expense_update.g.dart';
 
-/// Merge-patch on top-level fields: absent = unchanged, `null` clears `cfdi_uuid`, `description` or the `deductible` override. `id` is immutable and not accepted. Any change re-derives the withholding (ADR-0008); moving `supplier_kind` away from `pf_with_activity` clears `supplier_regime`. Since 0.11.2 (WH-07) `isr_withheld_cents` / `iva_withheld_cents` with any value answer `400 additionalProperties` (see `ExpenseCreate`).
+/// Merge-patch on top-level fields: absent = unchanged, `null` clears `cfdi_uuid`, `description` or the `deductible` override. `id` is immutable and not accepted. Any change re-derives the withholding (ADR-0008); moving `supplier_kind` away from `pf_with_activity` clears `supplier_regime`. Since 0.11.3 (WH-07) `isr_withheld_cents` / `iva_withheld_cents` with any value answer `400 additionalProperties` (see `ExpenseCreate`).
 @Freezed()
 abstract class ExpenseUpdate with _$ExpenseUpdate {
   const factory ExpenseUpdate({
@@ -45,11 +45,11 @@ abstract class ExpenseUpdate with _$ExpenseUpdate {
     @JsonKey(includeIfNull: false, name: 'residential_rent')
     bool? residentialRent,
 
-    /// Retired by WH-07 (0.11.2). Any value answers `400 additionalProperties`.
+    /// Retired by WH-07 (0.11.3). Any value answers `400 additionalProperties`.
     @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')
     NonNegativeCents? isrWithheldCents,
 
-    /// Retired by WH-07 (0.11.2). Any value answers `400 additionalProperties`.
+    /// Retired by WH-07 (0.11.3). Any value answers `400 additionalProperties`.
     @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')
     NonNegativeCents? ivaWithheldCents,
     @JsonKey(includeIfNull: false) RecordDescription? description,

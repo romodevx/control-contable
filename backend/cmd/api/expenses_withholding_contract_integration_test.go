@@ -97,6 +97,33 @@ func TestContract_expenseWithholdings(t *testing.T) {
 		}
 		create, update, get := contracttest.Op("createExpense"), contracttest.Op("updateExpense"), contracttest.Op("getExpense")
 
+		t.Run("listExpenseCategories: the E3 default for a persona moral only (PR #137)", func(t *testing.T) {
+			categories := contracttest.Op("listExpenseCategories")
+			defaults := func(taxpayer, regime string) map[string]*gen.OperationKind {
+				t.Helper()
+				rec := serve(categories, http.MethodGet, "/v1/taxpayers/"+taxpayer+"/expense-categories?regime="+regime+"&on=2026-09-12", "", ana)
+				require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+				var body gen.ExpenseCategoryList
+				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+				out := map[string]*gen.OperationKind{}
+				for _, item := range body.Items {
+					out[item.Code] = item.DefaultOperationKind
+				}
+				return out
+			}
+			moral := defaults(withholdingTaxpayerPM, "601")
+			require.NotNil(t, moral["servicios_profesionales"])
+			assert.Equal(t, gen.OperationKind("professional_services"), *moral["servicios_profesionales"])
+			require.NotNil(t, moral["fletes"])
+			assert.Equal(t, gen.OperationKind("ground_freight"), *moral["fletes"])
+			for code, kind := range moral {
+				assert.NotNil(t, kind, "%s: every persona moral category has its default", code)
+			}
+			for code, kind := range defaults(withholdingTaxpayerPF, "612") {
+				assert.Nil(t, kind, "%s: a persona física is never asked", code)
+			}
+		})
+
 		t.Run("US-W6: createExpense derives, stores and serves the withholding", func(t *testing.T) {
 			rec := serve(create, http.MethodPost, expensesPath(withholdingTaxpayerPM), usW6Body(t, clientExpenseID(1), nil), ana)
 			require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())

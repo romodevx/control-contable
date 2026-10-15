@@ -24,12 +24,15 @@ linters:
   settings:
     misspell:
       # es-MX product text (expense category names and notes, M4-02; breakdown
-      # concepts, M5-23) is not English.
+      # concepts, M5-23; annual disclaimers and explanations, ANN-12) is not
+      # English.
       ignore-rules:
         - anual
         - definitivo
+        - definitivos
         - informativo
         - materias
+        - presentas
         - previos
         - restaurantes
     depguard:

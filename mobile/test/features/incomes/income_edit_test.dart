@@ -1,12 +1,17 @@
+import 'package:control_contable/api/generated/models/counterparty_kind.dart';
 import 'package:control_contable/api/generated/models/counterparty_type.dart';
 import 'package:control_contable/api/generated/models/error_code.dart';
 import 'package:control_contable/api/generated/models/iva_rate.dart';
+import 'package:control_contable/api/generated/models/operation_kind.dart';
+import 'package:control_contable/api/generated/models/withholder.dart';
 import 'package:control_contable/core/access/read_only_access.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/features/incomes/incomes_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../helpers/choice_finders.dart';
+import '../../helpers/withholding_fixtures.dart';
 import '../taxpayers/pump_onboarding.dart' show inputLabeled, tapText, typeInto;
 import '../taxpayers/taxpayers_fakes.dart';
 import 'incomes_fakes.dart';
@@ -16,7 +21,8 @@ const _amount = 'Monto sin IVA';
 const _description = 'Descripción (opcional)';
 const _collectedOn = 'Fecha de cobro';
 const _ivaAmount = 'IVA cobrado (opcional)';
-const _isrWithheld = 'ISR retenido (opcional)';
+const _more = 'Más detalles';
+const _q1 = '¿A quién le facturaste?';
 const _readOnlyTitle = 'Tu cuenta es de solo consulta';
 const _logoId = 'i-logo';
 const _invalid = 'Revisa este dato.';
@@ -32,16 +38,27 @@ void main() {
   /// Opens the list holding the US-I1 income, then taps its row.
   Future<void> openEdit(
     WidgetTester tester, {
-    int isrWithheldCents = 100000,
     IvaRate ivaRate = IvaRate.rate16,
     int ivaCents = 160000,
+    CounterpartyKind? counterpartyKind,
   }) async {
     harness.incomes.incomes.add(
       income(
         id: _logoId,
-        isrWithheldCents: isrWithheldCents,
+        isrWithheldCents: 100000,
+        ivaWithheldCents: 106667,
         ivaRate: ivaRate,
         ivaCents: ivaCents,
+        counterpartyKind: counterpartyKind,
+        operationKind: counterpartyKind == null
+            ? null
+            : OperationKind.professionalServices,
+        withholding: withholding(
+          isrCents: 100000,
+          ivaCents: 106667,
+          withholder: Withholder.counterparty,
+          netCents: ivaCents + 1000000 - 206667,
+        ),
       ),
     );
     await harness.pump(tester, taxpayer: anaOneRegime);
@@ -57,11 +74,46 @@ void main() {
       expect(harness.location, IncomesRoutes.editOf(_logoId));
       expect(find.text('Editar ingreso'), findsOneWidget);
       expect(_textOf(tester, _collectedOn), '05/10/2026');
-      expect(_textOf(tester, _description), 'Diseño de logotipo');
       expect(_textOf(tester, _amount), '10,000.00');
       expect(find.text('Guardar y crear otro'), findsNothing);
-      // A stored withholding opens its section, with the stored value.
-      expect(_textOf(tester, _isrWithheld), '1,000.00');
+      // The stored derivation shows at once, read-only, without asking.
+      expect(
+        find.text(r'Te retienen: ISR $1,000.00 · IVA $1,066.67'),
+        findsOneWidget,
+      );
+      expect(harness.incomes.previewRequests, isEmpty);
+      // A legacy income (no facts yet) starts at its old payer type.
+      expect(chosenIn(tester, _q1), CounterpartyKind.pm.json);
+      await tapText(tester, _more);
+      expect(_textOf(tester, _description), 'Diseño de logotipo');
+    });
+
+    testWidgets('changing who was billed re-derives it and sends the new '
+        'facts (US-W9)', (tester) async {
+      await openEdit(tester, counterpartyKind: CounterpartyKind.pm);
+
+      await chooseIn(
+        tester,
+        _q1,
+        'Una persona con negocio o profesión (persona física con actividad)',
+      );
+      await settlePreview(tester);
+      expect(
+        harness.incomes.previewRequests.single.counterpartyKind,
+        CounterpartyKind.pfWithActivity,
+      );
+      expect(
+        find.text('Nadie te retiene impuestos en esta operación.'),
+        findsOneWidget,
+      );
+      await tapText(tester, 'Guardar');
+
+      expect(harness.incomes.patches, [
+        {
+          'counterparty_type': CounterpartyType.personaFisica.json,
+          'counterparty_kind': CounterpartyKind.pfWithActivity.json,
+        },
+      ]);
     });
 
     testWidgets('the row is announced as a button that edits the income', (
@@ -96,6 +148,7 @@ void main() {
     testWidgets('clearing an optional field sends null (merge-patch clears '
         'it)', (tester) async {
       await openEdit(tester);
+      await tapText(tester, _more);
 
       await typeInto(tester, _description, '');
       await tapText(tester, 'Guardar');
@@ -105,14 +158,12 @@ void main() {
       ]);
     });
 
-    testWidgets('the stored rate, IVA and withholdings are never replaced by '
-        'the defaults suggestions', (tester) async {
-      await openEdit(
-        tester,
-        ivaRate: IvaRate.rate8,
-        ivaCents: 80000,
-        isrWithheldCents: 0,
+    testWidgets('the stored rate, IVA and facts are never replaced by the '
+        'defaults suggestions', (tester) async {
+      harness.incomes.defaultsAnswer = noWithholdingDefaults.copyWith(
+        lastUsed: lastUsed(counterpartyKind: CounterpartyKind.foreign),
       );
+      await openEdit(tester, ivaRate: IvaRate.rate8, ivaCents: 80000);
 
       final rates = tester.widget<RadioGroup<String>>(
         find.ancestor(
@@ -130,8 +181,9 @@ void main() {
 
     testWidgets('a stored 16 % stays when the defaults now suggest another '
         'rate', (tester) async {
-      harness.incomes.defaultsBy[CounterpartyType.personaMoral] =
-          moralDefaults612.copyWith(suggestedIvaRate: IvaRate.rate0);
+      harness.incomes.defaultsAnswer = moralDefaults612.copyWith(
+        suggestedIvaRate: IvaRate.rate0,
+      );
       await openEdit(tester);
 
       await tapText(tester, 'Guardar');
@@ -191,6 +243,7 @@ void main() {
       );
 
       expect(harness.incomes.calls, contains('get:$_logoId'));
+      await tapText(tester, _more);
       expect(_textOf(tester, _description), 'Diseño de logotipo');
     });
 
@@ -198,7 +251,7 @@ void main() {
       tester,
     ) async {
       await openEdit(tester, ivaCents: 150000);
-      await tapText(tester, 'Más detalles');
+      await tapText(tester, _more);
       expect(_textOf(tester, _ivaAmount), '1,500.00');
 
       await typeInto(tester, _amount, '12000');

@@ -276,6 +276,7 @@ func toCategoryList(l usecase.CategoryList) gen.ExpenseCategoryList {
 		items = append(items, gen.ExpenseCategory{
 			Code: string(c.Code), Name: c.Name, Deductibility: gen.Deductibility(c.Deductibility),
 			DefaultDeductible: c.DefaultDeductible, Note: nullableText(c.Note), LegalBasis: nullableText(c.LegalBasis),
+			DefaultOperationKind: defaultOperationKind(c.DefaultOperation),
 		})
 	}
 	rates := make([]gen.IvaRate, 0, len(l.IVARatesAllowed))
@@ -285,4 +286,14 @@ func toCategoryList(l usecase.CategoryList) gen.ExpenseCategoryList {
 	return gen.ExpenseCategoryList{
 		Items: items, IvaRatesAllowed: rates, CashPaymentLimitCents: int64(l.CashPaymentLimit), Legend: gen.Legend(l.Legend),
 	}
+}
+
+// defaultOperationKind is the category's E3 default, absent for a persona
+// física's category (contract ExpenseCategory.default_operation_kind).
+func defaultOperationKind(o fiscal.OperationKind) *gen.OperationKind {
+	if o == "" {
+		return nil
+	}
+	out := gen.OperationKind(o)
+	return &out
 }

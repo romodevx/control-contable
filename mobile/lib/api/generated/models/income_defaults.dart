@@ -12,7 +12,7 @@ import 'platform_activity.dart';
 part 'income_defaults.freezed.dart';
 part 'income_defaults.g.dart';
 
-/// Form prefill from the rate catalog (UX only; the server re-validates every write). The four `*_withholding_*` fields are **deprecated in 0.10.0** (ADR-0008): withholdings are derived, so there is no rate to suggest; the form shows `previewIncomeWithholdings` instead. They stay for the shipped form until WH-11. `last_used` replaces them and is always sent since 0.11.2 (WH-06).
+/// Form prefill from the rate catalog (UX only; the server re-validates every write). The four `*_withholding_*` fields are **deprecated in 0.10.0** (ADR-0008): withholdings are derived, so there is no rate to suggest; the form shows `previewIncomeWithholdings` instead. They stay for the shipped form until WH-11. `last_used` replaces them and is always sent since 0.11.3 (WH-06).
 @Freezed()
 abstract class IncomeDefaults with _$IncomeDefaults {
   const factory IncomeDefaults({

@@ -2,7 +2,6 @@
 id: AN-07-PTU
 source: research:AN-07
 skip_reason: "⚠️ RESICO PM PTU base per LISR 212 ¶2: whether PTU paid is subtracted (1,150,000) or not (1,200,000) is CPA item 8, topic resico_pm_ptu_base, until the CPA sign-off (ANN-27)"
-pending_strategy: true # ANN-11 registers pm_resico
 input:
   fiscal_year: 2026
   person_type: moral

@@ -23,12 +23,12 @@ mixin _$ExpenseCreate {
 @JsonKey(name: 'paid_on') BusinessDate get paidOn;@JsonKey(name: 'has_cfdi') bool get hasCfdi;/// Client-generated idempotency key (UUIDv7 recommended), once per form session.
 @JsonKey(includeIfNull: false) Uuid? get id;/// Requires `has_cfdi: true` (`has_cfdi_mismatch`).
 @JsonKey(includeIfNull: false, name: 'cfdi_uuid') CfdiUuid? get cfdiUuid;/// The user's override; omitted or `null` uses the default.
-@JsonKey(includeIfNull: false) bool? get deductible;/// Persona moral taxpayers only; required for them since 0.11.2 (`400 required`).
+@JsonKey(includeIfNull: false) bool? get deductible;/// Persona moral taxpayers only; required for them since 0.11.3 (`400 required`).
 @JsonKey(includeIfNull: false, name: 'supplier_kind') SupplierKind? get supplierKind;/// Only with `supplier_kind: pf_with_activity` (omitted → `unknown`); with any other kind it answers `422` `supplier_not_applicable`.
 @JsonKey(includeIfNull: false, name: 'supplier_regime') SupplierRegime? get supplierRegime;/// Persona moral taxpayers only; omitted → the category's default operation.
 @JsonKey(includeIfNull: false, name: 'operation_kind') OperationKind? get operationKind;/// Persona moral taxpayers only, `rent_real_estate` only (default `false`). `true` requires `iva_rate: exempt` and `iva_cents: 0`, else `422` `residential_rent_exempt` on `iva_rate`.
-@JsonKey(includeIfNull: false, name: 'residential_rent') bool? get residentialRent;/// Retired by WH-07 (0.11.2, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
-@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') NonNegativeCents? get isrWithheldCents;/// Retired by WH-07 (0.11.2, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
+@JsonKey(includeIfNull: false, name: 'residential_rent') bool? get residentialRent;/// Retired by WH-07 (0.11.3, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
+@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') NonNegativeCents? get isrWithheldCents;/// Retired by WH-07 (0.11.3, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
 @JsonKey(includeIfNull: false, name: 'iva_withheld_cents') NonNegativeCents? get ivaWithheldCents;@JsonKey(includeIfNull: false) RecordDescription? get description;
 /// Create a copy of ExpenseCreate
 /// with the given fields replaced by the non-null parameter values.
@@ -266,7 +266,7 @@ class _ExpenseCreate implements ExpenseCreate {
 @override@JsonKey(includeIfNull: false, name: 'cfdi_uuid') final  CfdiUuid? cfdiUuid;
 /// The user's override; omitted or `null` uses the default.
 @override@JsonKey(includeIfNull: false) final  bool? deductible;
-/// Persona moral taxpayers only; required for them since 0.11.2 (`400 required`).
+/// Persona moral taxpayers only; required for them since 0.11.3 (`400 required`).
 @override@JsonKey(includeIfNull: false, name: 'supplier_kind') final  SupplierKind? supplierKind;
 /// Only with `supplier_kind: pf_with_activity` (omitted → `unknown`); with any other kind it answers `422` `supplier_not_applicable`.
 @override@JsonKey(includeIfNull: false, name: 'supplier_regime') final  SupplierRegime? supplierRegime;
@@ -274,9 +274,9 @@ class _ExpenseCreate implements ExpenseCreate {
 @override@JsonKey(includeIfNull: false, name: 'operation_kind') final  OperationKind? operationKind;
 /// Persona moral taxpayers only, `rent_real_estate` only (default `false`). `true` requires `iva_rate: exempt` and `iva_cents: 0`, else `422` `residential_rent_exempt` on `iva_rate`.
 @override@JsonKey(includeIfNull: false, name: 'residential_rent') final  bool? residentialRent;
-/// Retired by WH-07 (0.11.2, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
+/// Retired by WH-07 (0.11.3, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
 @override@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') final  NonNegativeCents? isrWithheldCents;
-/// Retired by WH-07 (0.11.2, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
+/// Retired by WH-07 (0.11.3, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
 @override@JsonKey(includeIfNull: false, name: 'iva_withheld_cents') final  NonNegativeCents? ivaWithheldCents;
 @override@JsonKey(includeIfNull: false) final  RecordDescription? description;
 

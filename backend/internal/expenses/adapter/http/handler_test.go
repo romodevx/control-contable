@@ -479,7 +479,8 @@ func TestListExpenseCategories(t *testing.T) {
 	on := genDate(2026, time.September, 12)
 	fake := &fakeExpenses{categoryList: usecase.CategoryList{
 		Items: []usecase.Category{
-			{Code: "software", Name: "Software", Deductibility: domain.Deductible, DefaultDeductible: true, LegalBasis: "LISR 103"},
+			{Code: "software", Name: "Software", Deductibility: domain.Deductible, DefaultDeductible: true, LegalBasis: "LISR 103",
+				DefaultOperation: fiscal.OperationBusinessServices},
 			{Code: "restaurantes", Name: "Restaurantes", Deductibility: domain.PartiallyDeductible, Note: "Sólo una parte"},
 		},
 		IVARatesAllowed:  []fiscal.IVARate{fiscal.IVARate16, fiscal.IVAExempt},
@@ -508,6 +509,8 @@ func TestListExpenseCategories(t *testing.T) {
 	assert.Equal(t, "Sólo una parte", second["note"])
 	assert.Nil(t, second["legal_basis"], "an empty basis is null")
 	assert.Equal(t, "partially_deductible", second["deductibility"])
+	assert.Equal(t, "business_services", first["default_operation_kind"], "the seed's E3 default (PR #137, WH-07)")
+	assert.NotContains(t, second, "default_operation_kind", "none for a persona física: the question does not exist")
 }
 
 func TestListExpenseCategories_defaultsToToday(t *testing.T) {

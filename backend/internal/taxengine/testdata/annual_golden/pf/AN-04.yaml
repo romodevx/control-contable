@@ -2,7 +2,6 @@
 id: AN-04
 source: research:AN-04
 skip_reason: "⚠️ LISR 152 names Cap. II Sección I only; non-definitive platform income is computed like 612 (research §A.1, CPA item 2, topic platform_nondefinitive_annual) until the CPA sign-off (ANN-27)"
-pending_strategy: true # ANN-08 registers pf_art152
 input:
   fiscal_year: 2026
   person_type: fisica
