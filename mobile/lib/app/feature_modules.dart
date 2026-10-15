@@ -1,4 +1,5 @@
 import 'package:control_contable/core/router/feature_module.dart';
+import 'package:control_contable/features/annual/annual_routes.dart';
 import 'package:control_contable/features/auth/auth_routes.dart';
 import 'package:control_contable/features/expenses/expenses_routes.dart';
 import 'package:control_contable/features/history/application/history_view_marker.dart';
@@ -19,6 +20,7 @@ final List<FeatureModule> appFeatureModules = [
   expensesFeature,
   taxEngineFeature,
   historyFeature,
+  annualFeature,
 ];
 
 /// How the slices talk without importing each other, wired at the app

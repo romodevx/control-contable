@@ -133,6 +133,8 @@ func TestAnnualTables_CrossUserWritesMatchNoRow(t *testing.T) {
 		},
 		salaryStatements.name: {
 			"UPDATE salary_statements SET isr_withheld_cents = 1 WHERE taxpayer_id = $1",
+			// 20261017100000: a fiscal-year move never reaches another user's constancia.
+			"UPDATE salary_statements SET fiscal_year = 2027 WHERE taxpayer_id = $1",
 			"DELETE FROM salary_statements WHERE taxpayer_id = $1",
 		},
 		filedPayments.name: {
@@ -158,6 +160,24 @@ func TestAnnualTables_CrossUserWritesMatchNoRow(t *testing.T) {
 				assert.EqualValues(t, 1, affected, "own row: "+query)
 			}
 		})
+	}
+}
+
+// 20261017100000 grants UPDATE (fiscal_year) only: a move stays inside the year CHECK,
+// and the owner columns stay out of reach, so a constancia never changes user or taxpayer.
+func TestSalaryStatements_FiscalYearMoveKeepsTheGuards(t *testing.T) {
+	app := seedAnnualOwners(t, pgtest.NewDatabase(t))
+	require.NoError(t, salaryStatements.insert(t, app, userA, salaryStatements.row(userA, nil)))
+	for _, year := range []int{2025, 2101} {
+		_, err := execAsUser(t, app, userA, "UPDATE salary_statements SET fiscal_year = $1", year)
+		requireSQLState(t, err, sqlstateCheckViolation)
+	}
+	for _, query := range []string{
+		"UPDATE salary_statements SET fiscal_year = 2027, taxpayer_id = '" + taxpayerB + "'",
+		"UPDATE salary_statements SET fiscal_year = 2027, user_id = '" + userB + "'",
+	} {
+		_, err := execAsUser(t, app, userA, query)
+		requireSQLState(t, err, sqlstateInsufficientPrivilege)
 	}
 }
 
@@ -487,10 +507,10 @@ func TestAnnualTables_NoAccessBeyondTheGrants(t *testing.T) {
 	}
 	immutable := map[string][]string{
 		personalDeductions.name: {"id", "user_id", "taxpayer_id", "person_type", "created_at", "updated_at"},
-		salaryStatements.name: {"id", "user_id", "taxpayer_id", "person_type", "fiscal_year", "created_at",
-			"updated_at"},
-		filedPayments.name: {"user_id", "taxpayer_id", "regime_code", "fiscal_year", "month", "created_at", "updated_at"},
-		annualInputs.name:  {"user_id", "taxpayer_id", "fiscal_year", "created_at", "updated_at"},
+		// fiscal_year moves since 20261017100000 (updateSalaryStatement, ANN-13).
+		salaryStatements.name: {"id", "user_id", "taxpayer_id", "person_type", "created_at", "updated_at"},
+		filedPayments.name:    {"user_id", "taxpayer_id", "regime_code", "fiscal_year", "month", "created_at", "updated_at"},
+		annualInputs.name:     {"user_id", "taxpayer_id", "fiscal_year", "created_at", "updated_at"},
 	}
 	for _, tbl := range allAnnualTables {
 		for _, col := range immutable[tbl.name] {
@@ -518,6 +538,7 @@ func TestAnnualTables_NoAccessBeyondTheGrants(t *testing.T) {
 			"UPDATE personal_deductions SET deleted_at = NULL",
 			`UPDATE salary_statements SET employer_label = 'Patrón 1', accumulable_cents = 1, exempt_cents = 1,
 			 isr_withheld_cents = 1, simultaneous = true, left_before_year_end = true, payer_not_withholding = true`,
+			"UPDATE salary_statements SET fiscal_year = 2027",
 			"DELETE FROM salary_statements",
 			"DELETE FROM annual_filed_payments WHERE regime_code = '612' AND fiscal_year = 2026",
 			`INSERT INTO annual_filed_payments (user_id, taxpayer_id, regime_code, fiscal_year, month, amount_cents)

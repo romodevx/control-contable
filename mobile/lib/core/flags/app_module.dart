@@ -28,7 +28,10 @@ enum AppModule {
   history('module_history'),
 
   /// M9 · Reminders (push).
-  reminders('module_reminders');
+  reminders('module_reminders'),
+
+  /// Annual estimate (declaración anual, MODULE-annual).
+  annual('module_annual');
 
   new(this.key);
 

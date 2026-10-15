@@ -10,7 +10,7 @@ void main() {
     }
   });
 
-  test('the modules are the nine product modules of MODULES.md', () {
+  test('the modules are the product modules of MODULES.md', () {
     expect(AppModule.values.map((m) => m.key), [
       'module_auth',
       'module_taxpayers',
@@ -21,6 +21,7 @@ void main() {
       'module_subscriptions',
       'module_history',
       'module_reminders',
+      'module_annual',
     ]);
   });
 
