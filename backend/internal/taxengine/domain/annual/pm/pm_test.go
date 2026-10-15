@@ -149,6 +149,26 @@ func TestEveryComputedLineIsCited(t *testing.T) {
 	}
 }
 
+// TestBalanceIsTheShownISRLessTheCredits is the ANN-16 regression
+// (MODULE-annual §2.7: balance = ISR − payments − interest withholding):
+// a base of 100,000.05 × 30 % is 30,000.015, shown 30,000.02. Paying
+// exactly that leaves a cero balance; it was a favor of 0.01 because the
+// credits were subtracted from the unrounded ISR.
+func TestBalanceIsTheShownISRLessTheCredits(t *testing.T) {
+	in := pm.Input{FiscalYear: fiscalYear, Income: cents(t, "100000.05"), Payments: filed(t, "30000.02")}
+	for _, s := range []interface {
+		Compute(pm.Input, pm.Params) (pm.Section, error)
+	}{pm.NewGeneral(), pm.NewRESICO()} {
+		got, err := s.Compute(in, params(t))
+
+		require.NoError(t, err)
+		assert.Equal(t, cents(t, "30000.02"), got.Tax.ISR, "%s", got.Kind)
+		assert.Equal(t, pm.Balance{Kind: annual.BalanceCero}, got.Tax.Balance, "%s", got.Kind)
+		assert.Contains(t, trace(got.Lines), "isr.balance result 0.00", "%s", got.Kind)
+		assert.NotContains(t, trace(got.Lines), "rounding_adjustment rounding_adjustment -0.01", "%s", got.Kind)
+	}
+}
+
 // TestGeneralSubtractsTypedDepreciation: the year's depreciation from the
 // CPA's schedule is an authorized deduction (annual_depreciation, typed).
 func TestGeneralSubtractsTypedDepreciation(t *testing.T) {

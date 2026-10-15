@@ -66,6 +66,24 @@ func TestPFRESICOCheckReproducesAN03(t *testing.T) {
 	}
 }
 
+// TestPFRESICOCheckDifferenceIsTheShownISRLessThePayments is the ANN-16
+// regression (§B.3: difference = annual ISR − payments − withheld):
+// 100,000.50 × 1.00 % is 1,000.005, shown 1,000.01. Paying exactly that
+// leaves no difference; it was −0.01 because the payments were subtracted
+// from the unrounded ISR.
+func TestPFRESICOCheckDifferenceIsTheShownISRLessThePayments(t *testing.T) {
+	pay := art152Payments{fiscal.RegimeRESICO: {art152Filed(pesos(t, "1000.01"))}}
+
+	s := resicoCheckCompute(t, resicoCheckYear(pesos(t, "100000.50"), 0), pay)
+
+	require.NotNil(t, s.RESICOCheck)
+	assert.Equal(t, pesos(t, "1000.01"), s.RESICOCheck.AnnualISR)
+	assert.Zero(t, s.RESICOCheck.Difference)
+	assert.Zero(t, art152Line(t, s.Lines, annual.LineRESICOCheckDifference).Amount)
+	assert.NotContains(t, art152Codes(s.Lines), domain.LineCode(domain.LabelRoundingAdjustment),
+		"ISR − payments needs no adjustment")
+}
+
 func TestPFRESICOCheckSubtractsTheMoralWithholding(t *testing.T) {
 	pay := art152Payments{fiscal.RegimeRESICO: {
 		{Month: 1, Amount: pesos(t, "1000.00"), Source: annual.PaymentFiled},
