@@ -70,12 +70,13 @@ AS $$ SELECT u.id FROM public.users AS u ORDER BY u.id $$;
 -- +goose StatementEnd
 COMMENT ON FUNCTION withholding_backfill_users() IS
   'WH-08: every user id, ordered, for cmd/backfill-withholdings. Definer: cc_worker_definer; EXECUTE: cc_worker.';
+-- Grants first: once the definer owns it, cc_owner (not inheriting) may not grant on it.
+REVOKE ALL ON FUNCTION withholding_backfill_users() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION withholding_backfill_users() TO cc_worker;
 -- ALTER OWNER needs the new owner to hold CREATE on the schema: lent for this statement only.
 GRANT CREATE ON SCHEMA public TO cc_worker_definer;
 ALTER FUNCTION withholding_backfill_users() OWNER TO cc_worker_definer;
 REVOKE CREATE ON SCHEMA public FROM cc_worker_definer;
-REVOKE ALL ON FUNCTION withholding_backfill_users() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION withholding_backfill_users() TO cc_worker;
 
 CREATE POLICY taxpayers_select_worker ON taxpayers FOR SELECT TO cc_worker
   USING (user_id = (SELECT app_user_id()));
