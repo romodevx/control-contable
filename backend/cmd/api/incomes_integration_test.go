@@ -78,7 +78,7 @@ func newIncomesEnv(t *testing.T, users ...string) *incomesEnv {
 		}))
 	}
 	logger := slog.New(slog.DiscardHandler)
-	deps, err := newTaxpayersDeps(taxpayersWiring{env: config.EnvDev, keys: config.Taxpayers{RFCKeyID: 1}, pool: app, logger: logger})
+	deps, err := newTaxpayersDeps(taxpayersWiring{env: config.EnvDev, keys: config.Taxpayers{RFCKeyID: 1}, tx: newAppTx(t, app), logger: logger})
 	require.NoError(t, err)
 	rates, err := newRateCatalog()
 	require.NoError(t, err)

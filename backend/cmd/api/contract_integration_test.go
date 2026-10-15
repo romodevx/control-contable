@@ -25,6 +25,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagsgorm"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagtest"
 	"github.com/romodevx/control-contable/backend/internal/platform/logging"
+	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgtest"
 )
 
@@ -58,6 +59,14 @@ type contractWiring struct {
 	// wrapApp, when set, replaces the cc_app pool every module uses (the
 	// performance test traces its statements).
 	wrapApp func(t *testing.T, app *sql.DB) *sql.DB
+}
+
+// newAppTx is the shared cc_app unit of work over app (appTx in run()).
+func newAppTx(t testing.TB, app *sql.DB) *pgdb.TxManager {
+	t.Helper()
+	txm, err := pgdb.NewTxManager(app)
+	require.NoError(t, err)
+	return txm
 }
 
 // contractOption adjusts the composition of a contractEnv.
@@ -99,18 +108,20 @@ func newContractEnv(t *testing.T, db health.Pinger, options ...contractOption) c
 	require.NoError(t, err)
 	logs := &syncBuffer{}
 	logger := logging.New(logs, nil)
+	// One cc_app unit of work for every module, as run() builds it.
+	appTx := newAppTx(t, app)
 	auth, err := newAuthModule(authWiring{
-		env: config.EnvDev, keys: testAuthKeys(), pool: app, logger: logger, now: time.Now, argon2: fastArgon2,
+		env: config.EnvDev, keys: testAuthKeys(), pool: app, tx: appTx, logger: logger, now: time.Now, argon2: fastArgon2,
 	})
 	require.NoError(t, err)
-	wiring.env, wiring.keys, wiring.pool, wiring.auth, wiring.logger = config.EnvDev, testTaxpayerKeys(), app, auth, logger
+	wiring.env, wiring.keys, wiring.tx, wiring.auth, wiring.logger = config.EnvDev, testTaxpayerKeys(), appTx, auth, logger
 	records, err := newRecordModules(wiring.recordWiring)
 	require.NoError(t, err)
-	holidays, err := loadHolidaySnapshots(t.Context(), app)
+	holidays, err := loadHolidaySnapshots(t.Context(), appTx)
 	require.NoError(t, err)
 	taxEngine, err := newTaxEngineModule(taxEngineWiring{
-		pool: app, limits: auth.limits, logger: logger,
-		tx: records.taxpayers.tx, taxpayers: records.taxpayers.queries, holidays: holidays.taxEngine, clock: wiring.taxEngineClock,
+		limits: auth.limits, logger: logger,
+		tx: appTx, taxpayers: records.taxpayers.queries, holidays: holidays.taxEngine, clock: wiring.taxEngineClock,
 	})
 	require.NoError(t, err)
 	return contractEnv{

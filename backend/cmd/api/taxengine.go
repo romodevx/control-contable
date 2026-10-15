@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -12,7 +11,6 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/access"
 	"github.com/romodevx/control-contable/backend/internal/platform/access/accessgorm"
 	"github.com/romodevx/control-contable/backend/internal/platform/clock"
-	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
 	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit/ratelimitpg"
 	"github.com/romodevx/control-contable/backend/internal/platform/tx"
 	taxenginehttp "github.com/romodevx/control-contable/backend/internal/taxengine/adapter/http"
@@ -29,7 +27,6 @@ var errNoTaxEngineTx = errors.New("taxengine: the taxpayers module's unit of wor
 // taxpayer profile nested in its own unit of work, which joins only through
 // the same manager (tx.ErrForeignTransaction otherwise).
 type taxEngineWiring struct {
-	pool      *sql.DB // cc_app
 	limits    *ratelimitpg.Store
 	logger    *slog.Logger
 	tx        tx.Manager
@@ -57,22 +54,17 @@ type taxEngineModule struct {
 	clock clock.Clock
 }
 
-// newTaxEngineModule wires the tax-inputs use cases (M5-21) over the cc_app
-// unit of work, and the estimate (M5-22) over the taxpayers module's. The
-// access policy shares the use cases' TxManager: it runs nested in their
-// transaction, and a nested call through another manager is refused
-// (tx.ErrForeignTransaction).
+// newTaxEngineModule wires the tax-inputs use cases (M5-21) and the estimate
+// (M5-22) over the shared cc_app unit of work. The access policy shares the
+// use cases' TxManager: it runs nested in their transaction, and a nested
+// call through another manager is refused (tx.ErrForeignTransaction).
 func newTaxEngineModule(w taxEngineWiring) (taxEngineModule, error) {
 	if w.tx == nil {
 		return taxEngineModule{}, errNoTaxEngineTx
 	}
-	txm, err := pgdb.NewTxManager(w.pool)
-	if err != nil {
-		return taxEngineModule{}, err
-	}
 	inputs := usecase.NewInputs(usecase.InputsDeps{
-		Tx:     txm,
-		Access: access.NewPolicy(txm, accessgorm.NewStore(), accessgorm.NewStore(), clock.NewSystem()),
+		Tx:     w.tx,
+		Access: access.NewPolicy(w.tx, accessgorm.NewStore(), accessgorm.NewStore(), clock.NewSystem()),
 		Store:  taxinputs.NewStore(), Clock: clock.NewSystem(), Logger: w.logger,
 	})
 	estimator, err := newEstimator(w)

@@ -63,14 +63,15 @@ func newEstimateEnv(t *testing.T, users ...string) *estimateEnv {
 		}))
 	}
 	logger := slog.New(slog.DiscardHandler)
-	deps, err := newTaxpayersDeps(taxpayersWiring{env: config.EnvDev, keys: config.Taxpayers{RFCKeyID: 1}, pool: app, logger: logger})
+	appTx := newAppTx(t, app)
+	deps, err := newTaxpayersDeps(taxpayersWiring{env: config.EnvDev, keys: config.Taxpayers{RFCKeyID: 1}, tx: appTx, logger: logger})
 	require.NoError(t, err)
 	limits, err := ratelimitpg.NewStore(app, bytes.Repeat([]byte{0x5e}, 32), time.Now)
 	require.NoError(t, err)
-	holidays, err := loadHolidaySnapshots(t.Context(), app)
+	holidays, err := loadHolidaySnapshots(t.Context(), appTx)
 	require.NoError(t, err)
 	module, err := newTaxEngineModule(taxEngineWiring{
-		pool: app, limits: limits, logger: logger,
+		limits: limits, logger: logger,
 		tx: deps.Tx, taxpayers: taxpayers.NewQueries(deps), holidays: holidays.taxEngine, clock: clock.NewFixed(estToday),
 	})
 	require.NoError(t, err)

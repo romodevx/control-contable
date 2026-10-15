@@ -90,7 +90,7 @@ func newRaceEnv(t *testing.T) *raceEnv {
 		return nil
 	}))
 	logger := slog.New(slog.DiscardHandler)
-	deps, err := newTaxpayersDeps(taxpayersWiring{env: config.EnvDev, keys: config.Taxpayers{RFCKeyID: 1}, pool: app, logger: logger})
+	deps, err := newTaxpayersDeps(taxpayersWiring{env: config.EnvDev, keys: config.Taxpayers{RFCKeyID: 1}, tx: newAppTx(t, app), logger: logger})
 	require.NoError(t, err)
 	records := pausingRecords{
 		inner:  regimeRecords{expenses: expinfra.NewStore(), incomes: incomesinfra.NewStore()},
