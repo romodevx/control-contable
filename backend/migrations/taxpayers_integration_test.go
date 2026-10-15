@@ -573,11 +573,15 @@ func TestTaxpayerTables_NoAccessBeyondTheGrants(t *testing.T) {
 		{pgtest.RoleApp, "TRUNCATE taxpayers CASCADE"},
 		{pgtest.RoleWebhook, "SELECT 1 FROM taxpayers"},
 		{pgtest.RoleWebhook, "SELECT 1 FROM taxpayer_regimes"},
-		// cc_worker reads its own context's profile since WH-08 (20261018100000): never
-		// the RFC ciphertext, and no write.
-		{pgtest.RoleWorker, "SELECT rfc_encrypted FROM taxpayers"},
+		// cc_worker reads its own context's profile since WH-08 (20261018100000) and
+		// re-seals its RFC since 20261024100000 (ADR-0012): the ciphertext and its key id
+		// only, never the hash, the mask or the profile.
 		{pgtest.RoleWorker, "SELECT rfc_hash FROM taxpayers"},
 		{pgtest.RoleWorker, "UPDATE taxpayers SET display_name = 'x'"},
+		{pgtest.RoleWorker, "UPDATE taxpayers SET rfc_hash = rfc_hash"},
+		{pgtest.RoleWorker, "UPDATE taxpayers SET rfc_masked = rfc_masked"},
+		{pgtest.RoleWorker, "UPDATE taxpayers SET archived_at = now()"},
+		{pgtest.RoleWorker, "DELETE FROM taxpayers"},
 		{pgtest.RoleWorker, "UPDATE taxpayer_regimes SET options = '{}'"},
 	}
 	for _, d := range denied {
