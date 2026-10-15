@@ -418,6 +418,27 @@ void main() {
       expect(harness.incomes.previewRequests.last.on, '2026-07-10');
     });
 
+    // Review of #174: an accrual regime (601) withholds on the collection
+    // date, which lives in "Más detalles" (the second date field); changing
+    // it after the amount must also reach the preview.
+    testWidgets('an accrual regime changing the collection date after the '
+        'amount asks again with it', (tester) async {
+      firstTime();
+      harness.incomes.previewAnswer = (_) => ownerExample;
+      await pumpForm(tester, taxpayer: _moral601);
+      await chooseIn(tester, _q1, _pm);
+      await typeInto(tester, _amount, '100000');
+      await settlePreview(tester);
+      final before = harness.incomes.previewRequests.length;
+
+      await tapText(tester, _more);
+      await typeInto(tester, 'Fecha de cobro (opcional)', '10072026');
+      await settlePreview(tester);
+
+      expect(harness.incomes.previewRequests.length, greaterThan(before));
+      expect(harness.incomes.previewRequests.last.on, '2026-07-10');
+    });
+
     testWidgets('typing is debounced into one request', (tester) async {
       await pumpForm(tester);
       final field = inputLabeled(_amount);
