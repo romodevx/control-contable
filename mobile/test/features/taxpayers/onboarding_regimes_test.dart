@@ -789,6 +789,26 @@ void main() {
     });
   });
 
+  testWidgets('at 200 % text on a phone the month still comes first and '
+      'step 3 lays out without overflow (#159 review)', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await openRegimes(tester);
+
+    expect(tester.takeException(), isNull);
+    final picker = find.byType(DropdownButtonFormField<String>);
+    await tester.ensureVisible(picker);
+    await tester.pumpAndSettle();
+    expect(tester.getSize(picker).height, greaterThanOrEqualTo(44));
+    await tester.scrollUntilVisible(find.textContaining('626 ·'), 200);
+    expect(
+      tester.getRect(picker).bottom,
+      lessThan(tester.getRect(find.textContaining('626 ·')).top),
+    );
+  });
+
   for (final brightness in Brightness.values) {
     testWidgets('steps 3 and 4 meet the tap-target, label and contrast '
         'guidelines (${brightness.name})', (tester) async {
