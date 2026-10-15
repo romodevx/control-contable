@@ -7,6 +7,7 @@ import 'package:control_contable/core/forms/field_error.dart';
 import 'package:control_contable/core/forms/form_controller.dart';
 import 'package:control_contable/core/forms/form_notice.dart';
 import 'package:control_contable/core/theme/app_spacing.dart';
+import 'package:control_contable/core/widgets/captioned_picker.dart';
 import 'package:control_contable/core/widgets/estimate_legend.dart';
 import 'package:control_contable/core/widgets/load_status.dart';
 import 'package:control_contable/features/taxpayers/application/regime_catalog.dart';
@@ -253,34 +254,25 @@ class _StartPeriodField extends StatelessWidget {
     final label = flow.singleRegime
         ? l10n.onboardingStartPeriodLabelSingle
         : l10n.onboardingStartPeriodLabelMany;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // The picker below carries this label for screen readers.
-        ExcludeSemantics(
-          child: Text(label, style: Theme.of(context).textTheme.titleMedium),
+    return CaptionedPicker(
+      caption: label,
+      style: Theme.of(context).textTheme.titleMedium,
+      picker: DropdownButtonFormField<String>(
+        initialValue: flow.startPeriod,
+        isExpanded: true,
+        decoration: InputDecoration(
+          helperText: l10n.onboardingStartPeriodHint,
+          helperMaxLines: _hintLines,
         ),
-        const SizedBox(height: AppSpacing.xxs),
-        Semantics(
-          label: label,
-          child: DropdownButtonFormField<String>(
-            initialValue: flow.startPeriod,
-            isExpanded: true,
-            decoration: InputDecoration(
-              helperText: l10n.onboardingStartPeriodHint,
-              helperMaxLines: _hintLines,
+        items: [
+          for (final period in flow.startPeriodChoices)
+            DropdownMenuItem(
+              value: period,
+              child: Text(months.formatMonthYear(periodMonth(period))),
             ),
-            items: [
-              for (final period in flow.startPeriodChoices)
-                DropdownMenuItem(
-                  value: period,
-                  child: Text(months.formatMonthYear(periodMonth(period))),
-                ),
-            ],
-            onChanged: (period) => flow.chooseStartPeriod(period!),
-          ),
-        ),
-      ],
+        ],
+        onChanged: (period) => flow.chooseStartPeriod(period!),
+      ),
     );
   }
 }

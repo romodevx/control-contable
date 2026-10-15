@@ -1,5 +1,6 @@
 import 'package:control_contable/core/theme/app_spacing.dart';
 import 'package:control_contable/core/theme/app_tokens.dart';
+import 'package:control_contable/core/widgets/captioned_picker.dart';
 import 'package:control_contable/features/tax_engine/domain/estimate_periods.dart';
 import 'package:control_contable/features/taxpayers/domain/periods.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
@@ -37,14 +38,10 @@ class EstimatePeriodPicker extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (periods.contains(selected)) ...[
-          // The picker below carries this label for screen readers.
-          ExcludeSemantics(
-            child: Text(l10n.estimatePeriodLabel, style: text.titleSmall),
-          ),
-          const SizedBox(height: AppSpacing.xxs),
-          Semantics(
-            label: l10n.estimatePeriodLabel,
-            child: DropdownButtonFormField<String>(
+          CaptionedPicker(
+            caption: l10n.estimatePeriodLabel,
+            style: text.titleSmall,
+            picker: DropdownButtonFormField<String>(
               key: const ValueKey('estimate-period'),
               initialValue: selected,
               isExpanded: true,

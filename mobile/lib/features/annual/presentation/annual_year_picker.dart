@@ -1,5 +1,6 @@
 import 'package:control_contable/core/theme/app_spacing.dart';
 import 'package:control_contable/core/theme/app_tokens.dart';
+import 'package:control_contable/core/widgets/captioned_picker.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
@@ -32,13 +33,10 @@ class AnnualYearPicker extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // The field carries the label for screen readers; announcing this
-        // caption too made VoiceOver/TalkBack read "Ejercicio" twice.
-        ExcludeSemantics(child: Text(label, style: text.titleSmall)),
-        const SizedBox(height: AppSpacing.xxs),
-        Semantics(
-          label: label,
-          child: DropdownButtonFormField<int>(
+        CaptionedPicker(
+          caption: label,
+          style: text.titleSmall,
+          picker: DropdownButtonFormField<int>(
             key: const ValueKey('annual-year'),
             initialValue: selected,
             isExpanded: true,
