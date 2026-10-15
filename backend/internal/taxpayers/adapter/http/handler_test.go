@@ -139,7 +139,7 @@ func mustPeriod(t *testing.T, raw string) domain.Period {
 func sampleRegime(t *testing.T) usecase.TaxpayerRegime {
 	t.Helper()
 	return usecase.TaxpayerRegime{
-		Code: "625", Name: "Plataformas", Treatment: "full",
+		Code: "625", Name: "Plataformas", Treatment: "full", IncomeBasis: "cash",
 		Options: map[string]domain.OptionValue{
 			"activities":        domain.ListOption([]string{"goods_services"}),
 			"definitive_option": domain.BoolOption(false),
@@ -217,6 +217,7 @@ func TestCreateTaxpayer_mapsTheBodyAndAnswers201WithWarnings(t *testing.T) {
 	assert.Contains(t, open, "end_period")
 	assert.Nil(t, open["end_period"])
 	assert.NotContains(t, open, "warnings", "never inside Taxpayer.regimes")
+	assert.Equal(t, "cash", open["income_basis"], "embedded from the catalog")
 	assert.Equal(t, map[string]any{"activities": []any{"goods_services"}, "definitive_option": false, "mode": "blind_35"}, open["options"])
 }
 
@@ -421,6 +422,7 @@ func TestAddTaxpayerRegime_answers201WithTheRegimeWarnings(t *testing.T) {
 	body := encode(t, got.Body)
 	assert.Equal(t, []any{map[string]any{"code": "regime_combination_needs_cpa_review", "field": "regime_code", "message": "Pendiente."}}, body["warnings"])
 	assert.Equal(t, "2026-01", body["start_period"])
+	assert.Equal(t, "cash", body["income_basis"])
 }
 
 func TestUpdateTaxpayerRegime_decodesEveryOptionKind(t *testing.T) {
@@ -483,7 +485,7 @@ func TestListRegimes_mapsTheCatalog(t *testing.T) {
 	rg.catalog = []usecase.CatalogEntry{
 		{
 			ListedRegime: usecase.ListedRegime{
-				Code: "606", PersonType: domain.PersonTypeFisica, Name: "Arrendamiento", Treatment: "full",
+				Code: "606", PersonType: domain.PersonTypeFisica, Name: "Arrendamiento", Treatment: "full", IncomeBasis: "cash",
 				OptionDefs: []usecase.OptionDefView{
 					{Key: "deduction_mode", Label: "Tipo de deducción", Type: domain.OptionTypeEnum,
 						AllowedValues: []string{"blind_35", "actual"}, Default: domain.StringOption("blind_35"), Required: true},
@@ -497,7 +499,7 @@ func TestListRegimes_mapsTheCatalog(t *testing.T) {
 		},
 		{
 			ListedRegime: usecase.ListedRegime{
-				Code: "605", PersonType: domain.PersonTypeFisica, Name: "Sueldos", Treatment: "informational",
+				Code: "605", PersonType: domain.PersonTypeFisica, Name: "Sueldos", Treatment: "informational", IncomeBasis: "accrual",
 				Explanation: "Tu patrón retiene.", OptionDefs: []usecase.OptionDefView{}, RequiredInputs: []usecase.TaxInputDefView{},
 			},
 			IncompatibleWith:  []usecase.RegimeLink{},
@@ -532,4 +534,6 @@ func TestListRegimes_mapsTheCatalog(t *testing.T) {
 	sueldos := items[1].(map[string]any)
 	assert.Equal(t, "Tu patrón retiene.", sueldos["explanation"])
 	assert.Equal(t, []any{map[string]any{"code": "625", "reason": "Pendiente."}}, sueldos["review_pending_with"])
+	assert.Equal(t, "cash", arrendamiento["income_basis"])
+	assert.Equal(t, "accrual", sueldos["income_basis"], "the catalog value, whatever the code")
 }

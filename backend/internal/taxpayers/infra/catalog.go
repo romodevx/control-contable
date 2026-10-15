@@ -95,6 +95,7 @@ type listedRow struct {
 	Code           string
 	Name           string
 	Treatment      string
+	IncomeBasis    string
 	Explanation    *string
 	OptionDefs     string
 	RequiredInputs string
@@ -107,7 +108,7 @@ func (Catalog) ListRegimes(ctx context.Context, personType domain.PersonType) ([
 		return nil, err
 	}
 	var rows []listedRow
-	err = db.Raw(`SELECT code, name, treatment, explanation,
+	err = db.Raw(`SELECT code, name, treatment, income_basis, explanation,
        option_defs::text AS option_defs, required_inputs::text AS required_inputs
 FROM regimes WHERE person_type = ? ORDER BY code`, string(personType)).Scan(&rows).Error
 	if err != nil {
@@ -134,7 +135,7 @@ func (r listedRow) toListed(personType domain.PersonType) (usecase.ListedRegime,
 		return usecase.ListedRegime{}, fmt.Errorf("taxpayers infra: regime %s required_inputs: %w", r.Code, err)
 	}
 	listed := usecase.ListedRegime{
-		Code: r.Code, PersonType: personType, Name: r.Name, Treatment: r.Treatment,
+		Code: r.Code, PersonType: personType, Name: r.Name, Treatment: r.Treatment, IncomeBasis: r.IncomeBasis,
 		OptionDefs: defs, RequiredInputs: inputs,
 	}
 	if r.Explanation != nil {

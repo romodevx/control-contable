@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:control_contable/api/generated/models/error_code.dart';
+import 'package:control_contable/api/generated/models/income_basis.dart';
 import 'package:control_contable/core/access/read_only_access.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/router/app_router.dart';
@@ -156,9 +157,11 @@ void main() {
 
     testWidgets('a row without description names who paid; an accrual one '
         'not yet collected reads "Por cobrar"', (tester) async {
+      harness.incomes.accrualRegimes.add('601');
       harness.incomes.incomes.add(
         income(
           regime: '601',
+          basis: IncomeBasis.accrual,
           description: null,
           invoicedOn: '2026-10-02',
           collectedOn: null,
@@ -166,7 +169,9 @@ void main() {
       );
       await harness.pump(
         tester,
-        taxpayer: taxpayer(regimes: [heldRegime('601')]),
+        taxpayer: taxpayer(
+          regimes: [heldRegime('601', incomeBasis: IncomeBasis.accrual)],
+        ),
       );
 
       expect(find.text('Persona moral'), findsOneWidget);

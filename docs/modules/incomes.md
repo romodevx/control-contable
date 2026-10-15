@@ -72,6 +72,9 @@ back ("Se restauró 1 de 2 ingresos."). The toast is cleared on sign-out.
 ## Booking date: cash vs accrual
 
 Which date an income counts on is catalog data, `regimes.income_basis`, not a switch in code.
+The API serves it as `income_basis` on `Regime` and on every `TaxpayerRegime` (contract 0.16.0,
+[ADR-0010](../adr/0010-regime-income-basis-in-the-contract.md)); the app reads it from there and
+keeps no list of regime codes.
 The **booking date** (`booked_on`) is the ISR date: it decides the list month and the
 estimate month. The database derives it on every write (trigger `incomes_derive_booked_on`);
 clients cannot send it (see the [runbook §3](../runbooks/incomes-expenses.md#3-derived-columns-clients-cannot-set)).

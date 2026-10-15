@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:control_contable/api/generated/models/field_error.dart' as api;
+import 'package:control_contable/api/generated/models/income_basis.dart';
 import 'package:control_contable/api/generated/models/person_type.dart';
 import 'package:control_contable/api/generated/models/regime.dart';
 import 'package:control_contable/api/generated/models/regime_incompatibility.dart';
@@ -23,6 +24,7 @@ Regime regime(
   String? name,
   PersonType personType = PersonType.fisica,
   Treatment treatment = Treatment.full,
+  IncomeBasis incomeBasis = IncomeBasis.cash,
   String? explanation,
   List<RegimeOptionDef> optionDefs = const [],
   List<TaxInputDef> requiredInputs = const [],
@@ -33,6 +35,7 @@ Regime regime(
   name: name ?? 'Régimen $code',
   personType: personType,
   treatment: treatment,
+  incomeBasis: incomeBasis,
   explanation: explanation,
   optionDefs: optionDefs,
   requiredInputs: requiredInputs,
@@ -222,11 +225,13 @@ TaxpayerRegime heldRegime(
   String startPeriod = '2026-01',
   String? endPeriod,
   Treatment treatment = Treatment.full,
+  IncomeBasis incomeBasis = IncomeBasis.cash,
   List<Warning>? warnings,
 }) => TaxpayerRegime(
   regimeCode: code,
   name: name ?? 'Régimen $code',
   treatment: treatment,
+  incomeBasis: incomeBasis,
   options: options,
   startPeriod: startPeriod,
   endPeriod: endPeriod,

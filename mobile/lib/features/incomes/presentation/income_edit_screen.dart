@@ -91,7 +91,8 @@ class IncomeEditScreen extends ConsumerWidget {
   /// The regimes held in the income's month, its own regime always first
   /// (it may have ended since).
   static List<TaxpayerRegime> _regimesFor(Taxpayer taxpayer, Income income) {
-    final period = RecordMonth.ofDate(bookingDateOf(income)).period;
+    final period = RecordMonth.ofDate(bookingDateOf(income, taxpayer.regimes))
+        .period;
     final held = regimesHeldIn(taxpayer, period);
     final own = taxpayer.regimes
         .where((r) => r.regimeCode == income.regimeCode)

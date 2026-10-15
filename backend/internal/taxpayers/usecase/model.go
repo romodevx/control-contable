@@ -29,6 +29,9 @@ type TaxpayerRegime struct {
 	Code      string
 	Name      string
 	Treatment string
+	// IncomeBasis is the catalog's regimes.income_basis ("cash" or
+	// "accrual"): which date books an income of the regime.
+	IncomeBasis string
 	// Options carries every option of the regime, defaults included.
 	Options map[string]domain.OptionValue
 	Window  domain.Window
