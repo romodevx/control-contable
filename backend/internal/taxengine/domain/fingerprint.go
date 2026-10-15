@@ -49,12 +49,19 @@ func Fingerprint(in FingerprintInput) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// appendRegime writes one regime's canonical text. An informational regime
+// computes nothing (ADR-0002 §1), so only that it is held counts: its
+// options, tax inputs and record sums never change a figure and are left
+// out (#98 FU1). A multi_enum is a set, written sorted.
 func appendRegime(b []byte, r FingerprintRegime) []byte {
 	in := r.Input
 	b = fmt.Appendf(b, "regime %q %q %q active %v\n", in.Key, r.Treatment, in.Period, r.ActiveMonths)
+	if r.Treatment == TreatmentInformational {
+		return b
+	}
 	for _, key := range slices.Sorted(maps.Keys(in.Options.values)) {
 		v := in.Options.values[key]
-		b = fmt.Appendf(b, "option %q %d %t %q %q\n", key, v.kind, v.flag, v.text, v.list)
+		b = fmt.Appendf(b, "option %q %d %t %q %q\n", key, v.kind, v.flag, v.text, slices.Sorted(slices.Values(v.list)))
 	}
 	slots := slices.SortedFunc(maps.Keys(in.Inputs.values), func(a, b inputSlot) int {
 		return cmp.Or(cmp.Compare(a.key, b.key), cmp.Compare(a.month, b.month))

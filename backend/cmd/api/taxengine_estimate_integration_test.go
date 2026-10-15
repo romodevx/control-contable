@@ -212,6 +212,7 @@ func TestEstimateMonth_overPostgresTXNet01(t *testing.T) {
 	again, err := e.estimator.EstimateMonth(t.Context(), estUserA, id, "2026-03")
 	require.NoError(t, err)
 	assert.Equal(t, got.RecordsFingerprint, again.RecordsFingerprint, "same records, same fingerprint")
+	assert.Equal(t, got.FiguresFingerprint, again.FiguresFingerprint, "same figures, same figures fingerprint")
 }
 
 // Without the stored prior payments the estimate is incomplete and names
