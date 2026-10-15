@@ -1,0 +1,42 @@
+# golden: hand-authored from docs/project-specs/MODULE-withholdings.md §8 US-W1 (research withholdings-matrix-2026.md §5 WH-01). Never generated or rewritten by a tool.
+# Owner's case, emisor side: a RESICO PF bills a company 100,000.00 of
+# professional services in July 2026, IVA 16 % = 16,000.00, collected
+# 2026-07-10; the company withholds ISR 1.25 % = 1,250.00 (LISR 113-J) and
+# IVA 2/3 = 10,666.67 (LIVA 1-A, RLIVA 3 fr. I). No other July record.
+# ISR: 100,000 <= 208,333.33 -> 2.00 % = 2,000.00 - 1,250.00 = 750.00.
+# IVA: 16,000.00 - 0.00 creditable - 10,666.67 withheld = 5,333.33.
+id: PF-626-WH-01-EST
+source: spec:module-withholdings-us-w1
+input:
+  regime: "626"
+  person_type: fisica
+  period: "2026-07"
+  options:
+    iva_fully_taxable: true
+  months:
+    - month: 7
+      income:
+        cash: "100000.00"
+        by_rate: {rate_16: {base: "100000.00", iva: "16000.00"}}
+        iva_withheld: {by_moral: "10666.67"}
+        isr_withheld: {by_moral: "1250.00"}
+expected:
+  status: complete
+  taxes: [isr, iva]
+  isr: "750.00"
+  iva:
+    charged_collected: "16000.00"
+    creditable_paid: "0.00"
+    withheld_from_taxpayer: "10666.67"
+    definitive_excluded: "0.00"
+    net: "5333.33"
+  lines:
+    - {tax: isr, code: isr.income_month, op: input, amount: "100000.00"}
+    - {tax: isr, code: isr.resico_rate, op: multiply, amount: "2000.00"}
+    - {tax: isr, code: isr.withheld_by_moral, op: subtract, amount: "1250.00"}
+    - {tax: isr, code: isr.payable, op: result, amount: "750.00"}
+    - {tax: iva, code: iva.charged.rate_16, op: input, amount: "16000.00"}
+    - {tax: iva, code: iva.charged, op: result, amount: "16000.00"}
+    - {tax: iva, code: iva.creditable, op: subtract, amount: "0.00"}
+    - {tax: iva, code: iva.withheld.moral, op: subtract, amount: "10666.67"}
+    - {tax: iva, code: iva.regime_net, op: result, amount: "5333.33"}
