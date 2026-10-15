@@ -342,8 +342,10 @@ func (uc *SalaryStatements) checkFields(in SalaryInput) error {
 		return err
 	}
 	var fields []apperr.FieldError
-	if in.EmployerLabel != nil && !validLabel(normalizeLabel(*in.EmployerLabel), maxEmployerLabel) {
-		fields = append(fields, apperr.FieldError{Field: FieldEmployerLabel, Code: DetailInvalid, Message: msgInvalidValue})
+	if in.EmployerLabel != nil {
+		if code, message := labelError(normalizeLabel(*in.EmployerLabel), maxEmployerLabel); code != "" {
+			fields = append(fields, apperr.FieldError{Field: FieldEmployerLabel, Code: code, Message: message})
+		}
 	}
 	for _, f := range []struct {
 		name  string

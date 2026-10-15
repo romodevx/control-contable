@@ -143,6 +143,8 @@ func TestUpdate_Refusals(t *testing.T) {
 			_, err := h.expenses.SetDeleted(ctxAs(t, userA), expense1, true)
 			require.NoError(t, err)
 		}, update(usecase.Patch{}), apperr.CodeNotFound, nil},
+		{"description with a zero-width space", func(*harness) {}, update(usecase.Patch{Description: ptr("nota\u200b")}),
+			apperr.CodeValidationFailed, []string{"description", "invisible_characters"}},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

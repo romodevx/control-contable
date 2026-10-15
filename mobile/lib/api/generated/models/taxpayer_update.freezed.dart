@@ -16,6 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TaxpayerUpdate {
 
+/// Trimmed and NFC-normalized; no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators; a zero-width joiner inside an emoji sequence is allowed): `400 validation_failed`, field code `invisible_characters`.
 @JsonKey(includeIfNull: false, name: 'display_name') String? get displayName;@JsonKey(includeIfNull: false) RfcInput? get rfc;
 /// Create a copy of TaxpayerUpdate
 /// with the given fields replaced by the non-null parameter values.
@@ -219,6 +220,7 @@ class _TaxpayerUpdate implements TaxpayerUpdate {
   const _TaxpayerUpdate({@JsonKey(includeIfNull: false, name: 'display_name') this.displayName, @JsonKey(includeIfNull: false) this.rfc});
   factory _TaxpayerUpdate.fromJson(Map<String, dynamic> json) => _$TaxpayerUpdateFromJson(json);
 
+/// Trimmed and NFC-normalized; no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators; a zero-width joiner inside an emoji sequence is allowed): `400 validation_failed`, field code `invisible_characters`.
 @override@JsonKey(includeIfNull: false, name: 'display_name') final  String? displayName;
 @override@JsonKey(includeIfNull: false) final  RfcInput? rfc;
 

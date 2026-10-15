@@ -314,6 +314,7 @@ func TestVerifyEmail_validationErrorsNameTheField(t *testing.T) {
 		{domain.ErrPasswordTooLong, "password", "password_policy"},
 		{domain.ErrPasswordMalformed, "password", "password_policy"},
 		{domain.ErrInvalidName, "name", "invalid_name"},
+		{domain.ErrNameInvisible, "name", "invisible_characters"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.err.Error(), func(t *testing.T) {

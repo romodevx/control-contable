@@ -2,10 +2,11 @@ package domain
 
 import (
 	"strings"
-	"unicode"
 	"unicode/utf8"
 
 	"golang.org/x/text/unicode/norm"
+
+	"github.com/romodevx/control-contable/backend/internal/platform/usertext"
 )
 
 // MaxDisplayNameLength is the contract's display_name maxLength, in
@@ -19,16 +20,20 @@ type DisplayName struct {
 }
 
 // NewDisplayName trims raw, composes it to NFC and checks it holds 1 to
-// MaxDisplayNameLength characters, valid UTF-8 and no control characters,
-// else ErrInvalidDisplayName.
+// MaxDisplayNameLength characters of valid UTF-8, else
+// ErrInvalidDisplayName, and no invisible character, else
+// ErrDisplayNameInvisible.
 func NewDisplayName(raw string) (DisplayName, error) {
 	if !utf8.ValidString(raw) {
 		return DisplayName{}, ErrInvalidDisplayName
 	}
 	value := strings.TrimSpace(norm.NFC.String(strings.TrimSpace(raw)))
 	length := utf8.RuneCountInString(value)
-	if length == 0 || length > MaxDisplayNameLength || strings.ContainsFunc(value, unicode.IsControl) {
+	if length == 0 || length > MaxDisplayNameLength {
 		return DisplayName{}, ErrInvalidDisplayName
+	}
+	if usertext.HasInvisible(value) {
+		return DisplayName{}, ErrDisplayNameInvisible
 	}
 	return DisplayName{value: value}, nil
 }

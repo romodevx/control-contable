@@ -1,6 +1,7 @@
 import 'package:control_contable/api/generated/models/person_type.dart';
 import 'package:control_contable/api/generated/models/regime.dart';
 import 'package:control_contable/core/forms/field_error.dart';
+import 'package:control_contable/features/taxpayers/application/onboarding_failures.dart';
 import 'package:control_contable/features/taxpayers/application/onboarding_flow.dart';
 import 'package:control_contable/features/taxpayers/application/regime_wizard.dart';
 import 'package:control_contable/features/taxpayers/domain/rfc.dart';
@@ -43,6 +44,15 @@ FieldError? checkDisplayName(String value, AppLocalizations l10n) =>
     value.runes.length > displayNameMaxLength
     ? CustomFieldError(l10n.onboardingDisplayNameTooLong)
     : null;
+
+/// The field error for the server's display name verdict.
+FieldError describeDisplayNameRejection(
+  DisplayNameRejection rejection,
+  AppLocalizations l10n,
+) => CustomFieldError(switch (rejection) {
+  DisplayNameRejection.invisibleCharacters => l10n.fieldInvisibleCharacters,
+  DisplayNameRejection.length => l10n.onboardingDisplayNameTooLong,
+});
 
 /// The form-level message for [notice].
 String describeNotice(OnboardingNotice notice, AppLocalizations l10n) =>

@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"strings"
 	"time"
-	"unicode"
 	"unicode/utf8"
 
 	"github.com/google/uuid"
@@ -15,6 +14,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
 	"github.com/romodevx/control-contable/backend/internal/platform/clock"
+	"github.com/romodevx/control-contable/backend/internal/platform/usertext"
 )
 
 // firstParamsYear is the first fiscal year with tax parameters: an earlier
@@ -176,12 +176,19 @@ func normalizeLabel(raw string) string {
 	return norm.NFC.String(raw)
 }
 
-// validLabel reports a label of 1 to maxRunes characters, valid UTF-8,
-// trimmed and without control characters.
-func validLabel(label string, maxRunes int) bool {
+// labelError is the FieldError code and message of a label that is not
+// 1 to maxRunes characters of valid, trimmed UTF-8 (invalid) or that holds
+// an invisible character (invisible_characters); both empty for a valid
+// label.
+func labelError(label string, maxRunes int) (code, message string) {
 	length := utf8.RuneCountInString(label)
-	return utf8.ValidString(label) && length > 0 && length <= maxRunes &&
-		label == strings.TrimSpace(label) && !strings.ContainsFunc(label, unicode.IsControl)
+	switch {
+	case !utf8.ValidString(label) || length == 0 || length > maxRunes || label != strings.TrimSpace(label):
+		return DetailInvalid, msgInvalidValue
+	case usertext.HasInvisible(label):
+		return DetailInvisibleCharacters, msgInvisibleCharacters
+	}
+	return "", ""
 }
 
 // ensureWritable checks the taxpayer of a write under lock: 404 when it is

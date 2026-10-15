@@ -251,6 +251,8 @@ func TestCreate_DomainRules(t *testing.T) {
 			apperr.CodeValidationFailed, "cfdi_uuid", fiscal.ErrInvalid},
 		{"description over 200 characters", func(in *usecase.IncomeInput) { in.Description = long },
 			apperr.CodeValidationFailed, "description", usecase.ErrTooLong},
+		{"description holding a bidi isolate", func(in *usecase.IncomeInput) { in.Description = "Dise\u2067no" },
+			apperr.CodeValidationFailed, "description", usecase.ErrInvisibleCharacters},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

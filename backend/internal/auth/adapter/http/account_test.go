@@ -182,6 +182,21 @@ func TestUpdateMe_anInvalidNameNamesTheField(t *testing.T) {
 	assert.Equal(t, "name", appErr.Fields[0].Field)
 }
 
+func TestUpdateMe_aNameWithInvisibleCharactersNamesTheFieldAndTheReason(t *testing.T) {
+	f := newAccountFixture(t)
+	f.profile.err = domain.ErrNameInvisible
+	spoofed := "Ana\u202eB"
+
+	_, err := f.handler.UpdateMe(signedIn(t), gen.UpdateMeRequestObject{Body: &gen.UpdateMeJSONRequestBody{Name: &spoofed}})
+
+	var appErr *apperr.Error
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, apperr.CodeValidationFailed, appErr.Code)
+	require.Len(t, appErr.Fields, 1)
+	assert.Equal(t, "name", appErr.Fields[0].Field)
+	assert.Equal(t, "invisible_characters", appErr.Fields[0].Code)
+}
+
 func TestUpdateMe_aDeletedAccountIsTheGeneric401(t *testing.T) {
 	f := newAccountFixture(t)
 	f.profile.err = usecase.ErrAccountNotFound

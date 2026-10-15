@@ -29,6 +29,7 @@ const (
 	msgNotActive         = "The taxpayer does not hold this regime in that period."
 	msgConfirm           = "Confirm the deletion."
 	msgInvalidField      = "This value is not valid."
+	msgInvisible         = "Remove invisible or formatting characters."
 	msgOutOfRange        = "This period is out of range."
 	msgNotForPersonType  = "This regime is not available for the taxpayer's person type."
 	msgDuplicate         = "This regime appears more than once."
@@ -59,6 +60,16 @@ func (f *fieldErrors) err() error {
 		return nil
 	}
 	return apperr.Wrap(errors.Join(f.causes...), apperr.CodeValidationFailed, msgInvalidInput).WithFields(f.fields...)
+}
+
+// addDisplayName records a display name failure: invisible_characters or
+// invalid.
+func (f *fieldErrors) addDisplayName(err error) {
+	if errors.Is(err, domain.ErrDisplayNameInvisible) {
+		f.add(fieldDisplayName, DetailInvisibleCharacters, msgInvisible, err)
+		return
+	}
+	f.add(fieldDisplayName, DetailInvalid, msgInvalidField, err)
 }
 
 // addPeriod records a period failure (detail is DetailInvalid or
@@ -171,6 +182,7 @@ var presentRules = []struct {
 	{ErrIncompatibleRegimes, apperr.CodeInvalidRegimeCombination, msgIncompatible},
 	{ErrRegimeNotForPersonType, apperr.CodeValidationFailed, msgNotForPersonType},
 	{domain.ErrInvalidDisplayName, apperr.CodeValidationFailed, msgInvalidInput},
+	{domain.ErrDisplayNameInvisible, apperr.CodeValidationFailed, msgInvalidInput},
 	{domain.ErrInvalidPeriod, apperr.CodeValidationFailed, msgInvalidInput},
 	{ErrPeriodOutOfRange, apperr.CodeValidationFailed, msgInvalidInput},
 }

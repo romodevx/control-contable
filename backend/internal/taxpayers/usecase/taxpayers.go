@@ -132,7 +132,7 @@ func (uc *Taxpayers) validateCreate(ctx context.Context, in CreateInput) (create
 	var draft createDraft
 	var err error
 	if draft.name, err = domain.NewDisplayName(in.DisplayName); err != nil {
-		fields.add(fieldDisplayName, DetailInvalid, msgInvalidField, err)
+		fields.addDisplayName(err)
 	}
 	if draft.personType, err = domain.ParsePersonType(in.PersonType); err != nil {
 		fields.add(fieldPersonType, DetailInvalid, msgInvalidField, err)
@@ -367,7 +367,7 @@ func (uc *Taxpayers) update(ctx context.Context, userID, id string, in UpdateInp
 	var name domain.DisplayName
 	if in.DisplayName != nil {
 		if name, err = domain.NewDisplayName(*in.DisplayName); err != nil {
-			fields.add(fieldDisplayName, DetailInvalid, msgInvalidField, err)
+			fields.addDisplayName(err)
 		}
 	}
 	var rfc domain.RFC

@@ -18,7 +18,7 @@ abstract class TaxpayerCreate with _$TaxpayerCreate {
     @JsonKey(name: 'person_type') required PersonType personType,
     required RfcInput rfc,
 
-    /// Trimmed and NFC-normalized.
+    /// Trimmed and NFC-normalized; no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators; a zero-width joiner inside an emoji sequence is allowed): `400 validation_failed`, field code `invisible_characters`.
     @JsonKey(name: 'display_name') required String displayName,
 
     /// At least one regime; each code at most once (`regimes.N.regime_code` / `duplicate`).

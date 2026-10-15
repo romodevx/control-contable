@@ -9,8 +9,10 @@ part 'user_update.g.dart';
 
 @Freezed()
 abstract class UserUpdate with _$UserUpdate {
-  const factory UserUpdate({@JsonKey(includeIfNull: false) String? name}) =
-      _UserUpdate;
+  const factory UserUpdate({
+    /// Trimmed and NFC-normalized; no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators; a zero-width joiner inside an emoji sequence is allowed): `400 validation_failed`, field code `invisible_characters`.
+    @JsonKey(includeIfNull: false) String? name,
+  }) = _UserUpdate;
 
   factory UserUpdate.fromJson(Map<String, Object?> json) =>
       _$UserUpdateFromJson(json);

@@ -26,6 +26,7 @@ func TestErrorMapperMapsEveryDomainError(t *testing.T) {
 		{err: domain.ErrPasswordCommon, want: apperr.CodeValidationFailed},
 		{err: domain.ErrInvalidVerificationCode, want: apperr.CodeValidationFailed},
 		{err: domain.ErrInvalidName, want: apperr.CodeValidationFailed},
+		{err: domain.ErrNameInvisible, want: apperr.CodeValidationFailed},
 		{err: domain.ErrDocumentMissing, want: apperr.CodeValidationFailed},
 		{err: domain.ErrDocumentDuplicate, want: apperr.CodeValidationFailed},
 		{err: domain.ErrDocumentUnknown, want: apperr.CodeValidationFailed},

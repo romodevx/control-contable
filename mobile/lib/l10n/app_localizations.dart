@@ -337,6 +337,12 @@ abstract class AppLocalizations {
   /// **'Escribe un correo como nombre@ejemplo.mx.'**
   String get authEmailInvalid;
 
+  /// Inline error on any text field the server refused with invisible_characters (zero-width, bidi or control characters, usually pasted).
+  ///
+  /// In es, this message translates to:
+  /// **'Quita los caracteres invisibles o de formato; suelen llegar al copiar y pegar texto.'**
+  String get fieldInvisibleCharacters;
+
   /// Inline error: the name is longer than the contract allows.
   ///
   /// In es, this message translates to:

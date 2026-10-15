@@ -7,6 +7,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/expenses/domain"
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
+	"github.com/romodevx/control-contable/backend/internal/platform/usertext"
 )
 
 // Use case errors. Stores return the ones that describe stored state; the
@@ -42,6 +43,7 @@ const (
 	DetailTaxpayerArchived = "taxpayer_archived"
 	DetailRegimeNotActive  = "regime_not_active"
 	DetailTooLong          = "too_long"
+	DetailInvisible        = usertext.DetailInvisibleCharacters
 )
 
 // Contract field names the use cases report (the domain names the rest).
@@ -84,6 +86,7 @@ var detailMessages = map[string]string{
 	"unknown_category":                       "This category does not exist.",
 	"has_cfdi_mismatch":                      "A folio fiscal needs has_cfdi to be true.",
 	DetailTooLong:                            "This text is too long.",
+	DetailInvisible:                          "Remove invisible or formatting characters.",
 }
 
 func detailMessage(code string) string {

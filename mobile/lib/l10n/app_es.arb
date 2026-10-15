@@ -173,6 +173,10 @@
   "@authEmailInvalid": {
     "description": "Inline error: the email is not a valid address. Shown on blur."
   },
+  "fieldInvisibleCharacters": "Quita los caracteres invisibles o de formato; suelen llegar al copiar y pegar texto.",
+  "@fieldInvisibleCharacters": {
+    "description": "Inline error on any text field the server refused with invisible_characters (zero-width, bidi or control characters, usually pasted)."
+  },
   "authNameTooLong": "Escribe un nombre de hasta 120 caracteres.",
   "@authNameTooLong": {
     "description": "Inline error: the name is longer than the contract allows."
