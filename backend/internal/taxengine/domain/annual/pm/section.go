@@ -13,10 +13,10 @@
 // (Input, Params) only, every step appended to a domain.Ledger, so the
 // breakdown is the computation and each line cites its legal basis.
 //
-// Placement: like package annual, these live in the tax engine's domain
-// tree until the annual-engine ADR (PLAN ANN-02) decides; a package of their
-// own keeps them apart from the PF sections written in parallel (PLAN
-// PG-AN-S). The registry is wired in ANN-14.
+// Placement (ADR-0009): the annual domain sub-tree of the tax engine,
+// internal/taxengine/domain/annual; a package of their own keeps them apart
+// from the PF sections written in parallel (PLAN PG-AN-S). The
+// SectionStrategy registry is wired in ANN-14.
 //
 // Money is int64 centavos, Exact inside and one rounding per result; there
 // is no float and no clock in this package.

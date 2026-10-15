@@ -37,19 +37,22 @@ var severityRank = map[annual.Severity]int{annual.SeverityStrong: 0, annual.Seve
 // always present; cpa_review_pending (strong) names every topic once, in
 // code order. An unknown code or topic is ErrUnknownCode.
 func Disclaimers(f DisclaimerFacts) ([]Disclaimer, error) {
-	raised := map[annual.DisclaimerCode]bool{annual.DisclaimerAnnualEstimate: true, annual.DisclaimerNoAnnualIVA: true}
-	for _, c := range f.Raised {
-		if !c.Valid() || c == annual.DisclaimerCPAReviewPending {
-			return nil, fmt.Errorf("disclaimer %q: %w", c, ErrUnknownCode)
-		}
-		raised[c] = true
-	}
 	topics := slices.Sorted(slices.Values(f.Topics))
 	topics = slices.Compact(topics)
 	for _, t := range topics {
 		if !t.Valid() {
 			return nil, fmt.Errorf("CPA topic %q: %w", t, ErrUnknownCode)
 		}
+	}
+	raised := map[annual.DisclaimerCode]bool{annual.DisclaimerAnnualEstimate: true, annual.DisclaimerNoAnnualIVA: true}
+	for _, c := range f.Raised {
+		// A section may raise cpa_review_pending beside its topics (the PF
+		// sections do); the topics decide it, so it is redundant then and
+		// unknown without them.
+		if !c.Valid() || (c == annual.DisclaimerCPAReviewPending && len(topics) == 0) {
+			return nil, fmt.Errorf("disclaimer %q: %w", c, ErrUnknownCode)
+		}
+		raised[c] = true
 	}
 	raised[annual.DisclaimerCPAReviewPending] = len(topics) > 0
 	raised[annual.DisclaimerRMF2027Pending] = f.RMFPending
