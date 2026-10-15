@@ -151,4 +151,44 @@ void main() {
       expectSignedOutLocally();
     });
   });
+
+  // M9 security gate F1: the push device the wiring names goes with the
+  // session on the server, so a lost unregister cannot leave it behind.
+  group('the push device sent with the revocation', () {
+    test('is the id the wiring names', () async {
+      signOut = SignOut(
+        repository,
+        session,
+        reporter,
+        deviceId: () async => 'installation-1',
+      );
+
+      await signOut();
+
+      expect(repository.loggedOutDevices, ['installation-1']);
+      expectSignedOutLocally();
+    });
+
+    test('is none by default', () async {
+      await signOut();
+
+      expect(repository.loggedOutDevices, [null]);
+    });
+
+    test('a failing lookup is reported and the revocation goes on', () async {
+      signOut = SignOut(
+        repository,
+        session,
+        reporter,
+        deviceId: () => Future<String?>.error(PlatformException(code: 'prefs')),
+      );
+
+      final thrown = await failureOf(signOut.call);
+
+      expect(thrown, isNull);
+      expect(repository.loggedOutDevices, [null]);
+      expect(reporter.reports.single.operation, 'signOut.deviceId');
+      expectSignedOutLocally();
+    });
+  });
 }

@@ -1,4 +1,5 @@
 import 'package:control_contable/core/flags/app_module.dart';
+import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/features/auth/application/sign_out.dart';
 import 'package:control_contable/features/reminders/domain/push_token.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -154,6 +155,89 @@ void main() {
 
       expect(harness.repository.unregistered, [testInstallationId]);
       expect(order, ['revoke after 1 delete']);
+    });
+
+    // M9 security gate F1: a phone that changes hands never keeps the
+    // previous user's device row.
+    testWidgets('a sign-out whose delete fails sends the device with the '
+        'logout and keeps the marker', (tester) async {
+      harness.repository.settings = defaultSettings.copyWith(enabled: true);
+      await harness.pump(
+        tester,
+        modules: signedInModules,
+        signedIn: true,
+        location: null,
+      );
+      harness.repository.unregisterError = const ApiUnreachable();
+
+      await harness.container.read(signOutProvider).call();
+      await tester.pumpAndSettle();
+
+      expect(harness.auth.loggedOutDevices, [testInstallationId]);
+      expect(await harness.store.isRegistered(), isTrue);
+    });
+
+    testWidgets('a sign-out whose delete worked sends no device', (
+      tester,
+    ) async {
+      harness.repository.settings = defaultSettings.copyWith(enabled: true);
+      await harness.pump(
+        tester,
+        modules: signedInModules,
+        signedIn: true,
+        location: null,
+      );
+
+      await harness.container.read(signOutProvider).call();
+      await tester.pumpAndSettle();
+
+      expect(harness.auth.loggedOutDevices, [null]);
+    });
+
+    testWidgets('a leftover registration with reminders off is claimed and '
+        'removed on sign-in', (tester) async {
+      harness.store.registered = true; // the previous user's, never removed
+      await harness.pump(
+        tester,
+        modules: signedInModules,
+        signedIn: true,
+        location: null,
+      );
+
+      expect(harness.repository.registered, hasLength(1));
+      expect(harness.repository.unregistered, [testInstallationId]);
+      expect(await harness.store.isRegistered(), isFalse);
+    });
+
+    testWidgets('a leftover registration is removed even without the OS '
+        'permission', (tester) async {
+      harness.messaging.status = PushPermission.denied;
+      harness.store.registered = true;
+      await harness.pump(
+        tester,
+        modules: signedInModules,
+        signedIn: true,
+        location: null,
+      );
+
+      expect(harness.repository.unregistered, [testInstallationId]);
+      expect(harness.messaging.prompts, 0);
+    });
+
+    testWidgets('a leftover registration with reminders on is claimed, '
+        'never removed', (tester) async {
+      harness.store.registered = true;
+      harness.repository.settings = defaultSettings.copyWith(enabled: true);
+      await harness.pump(
+        tester,
+        modules: signedInModules,
+        signedIn: true,
+        location: null,
+      );
+
+      expect(harness.repository.registered, hasLength(1));
+      expect(harness.repository.unregistered, isEmpty);
+      expect(await harness.store.isRegistered(), isTrue);
     });
   });
 }

@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 import 'fake_flags_repository.dart';
 import 'session_fakes.dart';
@@ -22,8 +24,10 @@ final AppConfig testConfig = AppConfig.resolve(flavor: AppFlavor.dev);
 /// through [flagsRepository] when a test scripts several answers. The
 /// module slices are the app's own unless a test passes its [features].
 /// The session store is in memory ([refreshTokens], empty by default: signed
-/// out), never the platform's. [settle] `false` pumps a few frames instead
-/// of settling, for a screen that shows an endless spinner while it loads.
+/// out), never the platform's; so are the plain preferences (empty: sign-out
+/// reads the push installation marker, M9 security gate F1). [settle]
+/// `false` pumps a few frames instead of settling, for a screen that shows
+/// an endless spinner while it loads.
 Future<void> pumpControlContableApp(
   WidgetTester tester, {
   Brightness brightness = Brightness.light,
@@ -35,6 +39,8 @@ Future<void> pumpControlContableApp(
   bool settle = true,
 }) async {
   tester.platformDispatcher.platformBrightnessTestValue = brightness;
+  SharedPreferencesAsyncPlatform.instance =
+      InMemorySharedPreferencesAsync.empty();
   addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
   await tester.pumpWidget(
     ProviderScope(
