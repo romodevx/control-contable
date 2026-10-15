@@ -66,7 +66,7 @@ The cases a user meets most:
 | Road freight billed to a company | as the emisor's row | 4 % of the price | IVA-4 |
 | Scrap and recyclables billed to a company | as the emisor's row | 100 % of the IVA | IVA-5 |
 | A persona moral bills a company (other operations) | 0 | 0 | ISR-2, IVA-8 |
-| Billed abroad | 0 | 0, and the warning `foreign_counterparty_not_supported` | ISR-1 |
+| Billed abroad | 0 | 0, and the warning `foreign_counterparty_not_supported` | ISR-1, IVA-0 |
 
 - **No subcontracting 6 %**: LIVA 1-A fr. IV was repealed in 2021 (owner decision 4); the
   operation does not exist in the form.
@@ -107,8 +107,9 @@ derivation. Contract 0.12.0 serves them; no deploy waits for the backfill
   that the server has not derived yet. A read never derives (reads stay pure and the table
   version auditable), and the estimate keeps using the stored amounts until the record is
   derived. A row with a table version but no derived detail reads the same way on both tables
-  (WH-15 fix, [#154](https://github.com/romodevx/control-contable/pull/154)); only a corrupt
-  derivation (an unknown withholder) is a `500`.
+  (WH-15 fix, [#154](https://github.com/romodevx/control-contable/pull/154)). On an expense, a
+  corrupt derivation (an unknown withholder) is a `500`; the income copy serves it as `""`
+  ([PLAN WH follow-ups](../project-specs/PLAN-control-contable.md#wh-follow-ups) TL FU2).
 - **Facts are filled on load.** A legacy income's missing facts come from its old
   `counterparty_type` with the backfill's own mapping (persona moral → `pm`, persona física →
   `pf_with_activity`, público en general → `pf_no_activity_or_public`, plataforma → `pm` via a
@@ -248,9 +249,10 @@ make mock                     # Prism mock of the contract, for the forms withou
 
 The preview errors are in the generated error tables of
 [incomes](incomes.md#errors) and [expenses](expenses.md#errors) (`make api-error-tables`
-regenerates them): `400` for malformed or out-of-range facts, `422` for
-`regime_not_active`, `rate_not_valid_on_date`, `iva_amount_mismatch`,
-`residential_rent_exempt`, `activity_not_held`, and the hidden `404` while the module is OFF.
+regenerates them): `400` for malformed or out-of-range facts (and `unknown_category` on the
+expense side), `422` for `regime_not_active`, `rate_not_valid_on_date`, `iva_amount_mismatch`,
+`residential_rent_exempt`, plus `activity_not_held` (income, 625) or `supplier_not_applicable`
+(expense, a persona física), and the hidden `404` while the module is OFF.
 
 ## Gates
 
