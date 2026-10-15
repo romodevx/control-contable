@@ -185,3 +185,48 @@ Three decisions refine §2 and §3 above; the wire behaviour is the one §3 prom
 3. **The kernel words the explanations** (`fiscal.Explain`, per side), from the stored
    record, so a read shows the same lines as the write and the preview. The contract
    examples are its test oracle.
+
+## Amendment 2: the contract cleanup of WH-11 / WH-12 (0.12.0)
+
+| Field | Value |
+|---|---|
+| Date | 2026-10-14 |
+| Owner | architect (PLAN WH-11 / WH-12, contract cleanup) |
+
+The new mobile forms (#137), the derivation (#139) and the backfill (#142) are merged, so the
+members Amendment 1 kept only for the shipped forms go. The wire behaviour of a well-formed
+request does not change; the schemas now say what the server already did.
+
+1. **Removed.** `IncomeCreate` / `IncomeUpdate`: `counterparty_type`, `isr_withheld_cents`,
+   `iva_withheld_cents`. `ExpenseCreate` / `ExpenseUpdate`: `isr_withheld_cents`,
+   `iva_withheld_cents`. `getIncomeDefaults`: the `counterparty_type` parameter.
+   `IncomeDefaults`: `isr_withholding_allowed`, `isr_withholding_rate`,
+   `iva_withholding_allowed`, `iva_withholding_rate`. `Income`: `counterparty_type`. The
+   `CounterpartyType` schema. Any of the removed body members answers
+   `400 validation_failed` / `additionalProperties` from the router, so the adapters' own
+   rejection of the typed amounts is gone. `counterparty_type` used to be required and
+   ignored; it now answers that `400` too, the one visible change, and the app stopped
+   sending it in the same PR.
+2. **Required.** `IncomeCreate.counterparty_kind` (the server already answered
+   `400 required`). `Income`: `counterparty_kind`, `operation_kind`, `residential_rent`,
+   `via_platform`, `withholding`. `IncomeDefaults.last_used`. `Expense`: `supplier_kind`,
+   `supplier_regime`, `operation_kind` (all three nullable), `residential_rent`,
+   `withholding`. `isr_withheld_cents` / `iva_withheld_cents` stay in responses as the
+   read-only mirrors (§7.3).
+3. **A record without a derivation is a server fault.** Required means the server can never
+   send a legacy income or expense the WH-08 backfill has not derived. The presenters answer
+   `500` for one (logged, no body that breaks the contract) instead of omitting the members.
+   Deriving on read was rejected: §2 keeps reads pure and the table version auditable. So the
+   **backfill is a deploy precondition of 0.12.0** in each environment
+   ([runbook](../runbooks/withholdings-backfill.md) §5). All withholdings modules are still
+   OFF in every shared environment (OQ-W6), so no user meets the `500` meanwhile.
+4. **Dead code removed with the members.** The income suggestion table
+   (`domain.PolicyFor`, `WithholdingPolicy.Suggest`) only fed the removed `IncomeDefaults`
+   fields, so it is deleted; `fiscal.DeriveWithholdings` is the only withholding table left.
+5. **Not done here.** The `incomes.counterparty_type` column stays (writes keep its mirror)
+   until the backfill has run in every environment; its drop is a separate migration
+   (PLAN WH-08).
+
+Version: **0.12.0**, a minor bump. Removing request members and response fields is breaking
+for a client that sent or read them; pre-release with no store build, the minor bump is the
+version signal ([CONTRACT.md](../api/CONTRACT.md), "Changing a frozen node").
