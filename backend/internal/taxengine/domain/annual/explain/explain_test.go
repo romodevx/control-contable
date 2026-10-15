@@ -245,3 +245,21 @@ func TestDisclaimersRefuseUnknownCodesAndTopics(t *testing.T) {
 	_, err = explain.Disclaimers(explain.DisclaimerFacts{Raised: []annual.DisclaimerCode{annual.DisclaimerCPAReviewPending}})
 	require.ErrorIs(t, err, explain.ErrUnknownCode, "cpa_review_pending is raised by its topics")
 }
+
+// TestDisclaimersAcceptASectionsCPAReviewPending: a section that raises
+// cpa_review_pending beside its topics (the PF sections do, ANN-08/ANN-09)
+// composes; the disclaimer still comes once, naming the topics.
+func TestDisclaimersAcceptASectionsCPAReviewPending(t *testing.T) {
+	got, err := explain.Disclaimers(explain.DisclaimerFacts{
+		Raised: []annual.DisclaimerCode{annual.DisclaimerCPAReviewPending, annual.DisclaimerRESICOPFDefinitive},
+		Topics: []annual.CPATopic{annual.TopicRESICOPFReliefRenewal},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, []explain.Disclaimer{
+		{Code: annual.DisclaimerAnnualEstimate, Severity: annual.SeverityInfo},
+		{Code: annual.DisclaimerCPAReviewPending, Severity: annual.SeverityStrong, Topics: []annual.CPATopic{annual.TopicRESICOPFReliefRenewal}},
+		{Code: annual.DisclaimerNoAnnualIVA, Severity: annual.SeverityInfo},
+		{Code: annual.DisclaimerRESICOPFDefinitive, Severity: annual.SeverityInfo},
+	}, got)
+}
