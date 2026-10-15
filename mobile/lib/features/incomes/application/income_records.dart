@@ -1,6 +1,7 @@
 import 'package:control_contable/api/generated/models/income.dart';
 import 'package:control_contable/api/generated/models/income_create.dart';
 import 'package:control_contable/core/access/read_only_access.dart';
+import 'package:control_contable/core/fiscal/tax_data_revision.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/records/stacked_undo.dart';
 import 'package:control_contable/core/session/session_scoped.dart';
@@ -12,7 +13,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Delete and restore are allowed while read-only; restore never consumes
 /// a trial slot.
 /// After each one every income list reloads, so the totals and the other
-/// regime filters follow the server.
+/// regime filters follow the server, and the tax-data revision moves, so
+/// every figure derived from the records (History, Home, the estimate)
+/// reads again wherever it is on the stack.
 class IncomeRecords {
   /// The writes over [_ref].
   new(this._ref);
@@ -20,6 +23,11 @@ class IncomeRecords {
   final Ref _ref;
 
   IncomesRepository get _repository => _ref.read(incomesRepositoryProvider);
+
+  void _changed() {
+    _ref.invalidate(incomeListProvider);
+    _ref.read(taxDataRevisionProvider.notifier).bump();
+  }
 
   /// Records [income] for [taxpayerId]; every list reloads. A `402`
   /// without a trial cap marks the session read-only (a spent trial cap
@@ -30,7 +38,7 @@ class IncomeRecords {
         taxpayerId: taxpayerId,
         income: income,
       );
-      _ref.invalidate(incomeListProvider);
+      _changed();
       return created;
     } on ApiEntitlementRequired catch (failure) {
       if (failure.trialCapOf == null) {
@@ -54,7 +62,7 @@ class IncomeRecords {
         incomeId: incomeId,
         patch: patch,
       );
-      _ref.invalidate(incomeListProvider);
+      _changed();
       return updated;
     } on ApiEntitlementRequired {
       _ref.read(readOnlyAccessProvider.notifier).markReadOnly();
@@ -72,7 +80,7 @@ class IncomeRecords {
         incomeId: income.id,
       );
     } finally {
-      _ref.invalidate(incomeListProvider);
+      _changed();
     }
   }
 
@@ -88,7 +96,7 @@ class IncomeRecords {
         ),
       );
     } finally {
-      _ref.invalidate(incomeListProvider);
+      _changed();
     }
   }
 }

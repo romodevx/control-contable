@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/flags/flag_gate.dart';
 import 'package:control_contable/core/network/api_failure.dart';
@@ -9,7 +7,6 @@ import 'package:control_contable/core/widgets/load_status.dart';
 import 'package:control_contable/features/incomes/incomes_routes.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 /// Heights of the skeleton blocks: year totals, then three months.
 const List<double> _skeletonBlocks = [160, 96, 96, 96];
@@ -76,8 +73,12 @@ class HistoryFailure extends StatelessWidget {
 /// No record in any month of the year (MODULE-history §7): the way to
 /// start, when incomes are on.
 class HistoryEmpty extends StatelessWidget {
-  /// Creates the empty state.
-  const new({super.key});
+  /// Creates the empty state; [onOpen] opens a location and reads the year
+  /// again on return, so the first income shows up at once.
+  const new({required this.onOpen, super.key});
+
+  /// Opens a location (the income form) and re-reads the year on return.
+  final ValueChanged<String> onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -91,8 +92,7 @@ class HistoryEmpty extends StatelessWidget {
         FlagGate(
           module: AppModule.incomes,
           child: FilledButton(
-            onPressed: () =>
-                unawaited(context.push<void>(IncomesRoutes.create)),
+            onPressed: () => onOpen(IncomesRoutes.create),
             child: Text(l10n.historyRegisterIncome),
           ),
         ),
