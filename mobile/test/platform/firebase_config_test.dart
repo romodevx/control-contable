@@ -56,17 +56,21 @@ void main() {
     expect(ignored, contains('**/GoogleService-Info.plist'));
   });
 
-  test('no Firebase config file is in the tree', () {
-    final found = [
-      for (final root in ['android', 'ios', 'lib'])
-        for (final entity in Directory(root).listSync(recursive: true))
-          if (entity is File &&
-              (entity.path.endsWith('google-services.json') ||
-                  entity.path.endsWith('GoogleService-Info.plist') ||
-                  entity.path.endsWith('firebase_options.dart')))
-            entity.path,
-    ];
+  test('no Firebase config file is tracked by git', () {
+    // Tracked files, not the working tree: a developer's own (ignored)
+    // google-services.json must not fail the suite (README).
+    final listed = Process.runSync('git', ['ls-files', '--', '.']);
+    expect(listed.exitCode, 0, reason: '${listed.stderr}');
+    final tracked = (listed.stdout as String).split('\n');
 
+    final found = tracked.where(
+      (path) =>
+          path.endsWith('google-services.json') ||
+          path.endsWith('GoogleService-Info.plist') ||
+          path.endsWith('firebase_options.dart'),
+    );
+
+    expect(tracked, contains('pubspec.yaml'), reason: 'listing works');
     expect(found, isEmpty);
   });
 
