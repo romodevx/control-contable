@@ -126,6 +126,8 @@ type Section struct {
 	Lines       []Line
 	// raised are the disclaimer codes the section raised.
 	raised []adomain.DisclaimerCode
+	// outsideHeadline keeps the section's figures out of the headline.
+	outsideHeadline bool
 }
 
 // Estimate is the annual estimate (contract AnnualEstimate).
@@ -226,7 +228,7 @@ func (uc *Estimator) build(id string, w yearWindow, sel taxparams.Selection, r r
 // persona física without pf_art152, the informative-income fact.
 func (est *Estimate) estimateFacts(y Year, p *taxparams.Params, computed []ComputedSection) error {
 	for _, s := range est.Sections {
-		if s.Tax != nil && s.Kind != adomain.SectionPFRESICOCheck {
+		if s.Tax != nil && !s.outsideHeadline {
 			est.HeadlineSections = append(est.HeadlineSections, s.Kind)
 		}
 		if !s.Deadline.IsZero() && (est.Deadline.IsZero() || s.Deadline.String() < est.Deadline.String()) {
@@ -234,8 +236,8 @@ func (est *Estimate) estimateFacts(y Year, p *taxparams.Params, computed []Compu
 		}
 	}
 	est.HeadlineSections = slices.Compact(est.HeadlineSections)
-	hasArt152 := slices.ContainsFunc(computed, func(c ComputedSection) bool { return c.Kind == adomain.SectionPFArt152 })
-	if est.PersonType != fiscal.PersonFisica || hasArt152 {
+	decided := slices.ContainsFunc(computed, func(c ComputedSection) bool { return c.DecidesInformativeIncome })
+	if est.PersonType != fiscal.PersonFisica || decided {
 		return nil
 	}
 	total := y.Inputs.OtherExemptIncome
@@ -323,6 +325,7 @@ func sectionOf(c ComputedSection, y Year, r readings) (Section, error) {
 		Kind: c.Kind, Regimes: c.Regimes, Status: c.Status, MissingInputs: missingInputs(c.MissingInputs),
 		Obligation: c.Obligation, ObligationReasons: obligationReasons(c, y), Tax: c.Tax, PMExtras: c.PMExtras,
 		RESICOCheck: c.RESICOCheck, CPATopics: c.CPATopics, raised: c.Disclaimers,
+		outsideHeadline: c.OutsideHeadline, Explanation: c.Explanation,
 		Deadline: r.deadlines[explain.SectionDeadline(c.Kind)], Sources: y.Payments.Counts(c.Regimes...),
 	}
 	if c.Tax != nil {
@@ -331,14 +334,13 @@ func sectionOf(c ComputedSection, y Year, r readings) (Section, error) {
 			return Section{}, err
 		}
 	}
-	if c.Kind == adomain.SectionPFRESICOCheck {
-		s.Explanation = explain.DisclaimerText(explain.Disclaimer{Code: adomain.DisclaimerRESICOPFDefinitive}, explain.TextFacts{FiscalYear: y.FiscalYear})
-	}
 	s.Notes = notesOf(c, s.Sources)
-	regimes := LineRegimes(c.Kind, c.Regimes, c.Lines)
 	s.Lines = make([]Line, len(c.Lines))
 	for i, l := range c.Lines {
-		s.Lines[i] = Line{Line: l, Regime: regimes[i]}
+		s.Lines[i] = Line{Line: l}
+		if i < len(c.LineRegimes) {
+			s.Lines[i].Regime = c.LineRegimes[i]
+		}
 	}
 	return s, nil
 }
@@ -411,17 +413,14 @@ func notesOf(c ComputedSection, sources SourceCounts) []NoteCode {
 	if slices.ContainsFunc(c.Lines, func(l domain.Line) bool { return slices.Contains(lossLines, l.Code) }) {
 		out = append(out, NoteLossCarryforward)
 	}
-	if c.Kind == adomain.SectionPM601 {
-		out = append(out, NoteCUSuggestion)
-	}
-	return out
+	return append(out, c.Notes...)
 }
 
 // obligationReasons explain the section's obligation (MODULE-annual §2.4).
 func obligationReasons(c ComputedSection, y Year) []ReasonCode {
 	switch {
-	case c.Kind == adomain.SectionPM601 || c.Kind == adomain.SectionPMRESICO:
-		return []ReasonCode{ReasonPersonaMoral}
+	case c.ObligationReasons != nil:
+		return c.ObligationReasons
 	case c.Obligation == adomain.ObligationRelieved:
 		return []ReasonCode{ReasonRESICORelief}
 	case c.Obligation == adomain.ObligationOptional:
