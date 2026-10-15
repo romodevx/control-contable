@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 )
 
 // Auth module key material (M1-05). Every secret is hex-encoded in the secret
@@ -48,7 +49,10 @@ type Auth struct {
 	EmailKey    Secret
 	// EmailKeyID names EmailKey in every ciphertext (crypto.Keyring).
 	EmailKeyID int
-	CodeKey    Secret
+	// EmailPrevious is the retired email key while a rotation is in flight
+	// (AUTH_EMAIL_PREVIOUS_KEY, ADR-0012); zero otherwise.
+	EmailPrevious PreviousKey
+	CodeKey       Secret
 	// AccessTokenKey is the Ed25519 seed of the access-token signing key.
 	AccessTokenKey Secret
 	// AccessTokenKeyID is the JWT "kid" of AccessTokenKey.
@@ -103,6 +107,12 @@ func LoadAuth(ctx context.Context, lookup Lookup, secrets SecretSource) (Auth, e
 		errs = append(errs, err)
 	}
 	errs = append(errs, loadPreviousAccessTokenKey(ctx, lookup, secrets, &cfg)...)
+	var previousErrs []error
+	cfg.EmailPrevious, previousErrs = loadPreviousKey(ctx, lookup, secrets, secretEmailKey, keyEmailKeyID, cfg.EmailKeyID)
+	errs = append(errs, previousErrs...)
+	emailPrevious, _ := previousKeyNames(secretEmailKey)
+	others := slices.DeleteFunc(authSecrets(cfg), func(s namedSecret) bool { return s.name == emailPrevious })
+	errs = append(errs, distinctSecrets([]namedSecret{{emailPrevious, cfg.EmailPrevious.Key}}, others)...)
 	if len(errs) > 0 {
 		return Auth{}, fmt.Errorf("config: %w", errors.Join(errs...))
 	}

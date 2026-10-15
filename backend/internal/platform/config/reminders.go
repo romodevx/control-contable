@@ -32,6 +32,9 @@ type Reminders struct {
 	// PushTokenIndexPepper is zero only in dev when PUSH_TOKEN_INDEX_PEPPER
 	// is not set.
 	PushTokenIndexPepper Secret
+	// PushTokenPrevious is the retired push token key while a rotation is in
+	// flight (PUSH_TOKEN_ENC_PREVIOUS_KEY, ADR-0012); zero otherwise.
+	PushTokenPrevious PreviousKey
 }
 
 // LoadReminders reads and validates the reminders keys: PUSH_TOKEN_ENC_KEY
@@ -51,10 +54,16 @@ func LoadReminders(ctx context.Context, lookup Lookup, secrets SecretSource, env
 	if cfg.PushTokenKeyID, err = parseIntInRange(lookup, keyPushTokenKeyID, defaultPushTokenKeyID, 1, maxEmailKeyID); err != nil {
 		errs = append(errs, err)
 	}
+	var previousErrs []error
+	cfg.PushTokenPrevious, previousErrs = loadPreviousKey(ctx, lookup, secrets, secretPushTokenKey, keyPushTokenKeyID, cfg.PushTokenKeyID)
+	errs = append(errs, previousErrs...)
+	previous, _ := previousKeyNames(secretPushTokenKey)
 	errs = append(errs, distinctSecrets(
-		[]namedSecret{{secretPushTokenKey, cfg.PushTokenKey}, {secretPushTokenIndexPepper, cfg.PushTokenIndexPepper}},
-		append(authSecrets(auth),
-			namedSecret{secretRFCKey, taxpayers.RFCKey}, namedSecret{secretRFCIndexPepper, taxpayers.RFCIndexPepper}),
+		[]namedSecret{
+			{secretPushTokenKey, cfg.PushTokenKey}, {secretPushTokenIndexPepper, cfg.PushTokenIndexPepper},
+			{previous, cfg.PushTokenPrevious.Key},
+		},
+		append(authSecrets(auth), taxpayersSecrets(taxpayers)...),
 	)...)
 	if len(errs) > 0 {
 		return Reminders{}, fmt.Errorf("config: %w", errors.Join(errs...))

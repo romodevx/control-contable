@@ -23,6 +23,9 @@ type AuthOutbox struct {
 	Key Secret
 	// KeyID names Key in every ciphertext (crypto.Keyring).
 	KeyID int
+	// Previous is the retired outbox key while a rotation is in flight
+	// (AUTH_OUTBOX_PREVIOUS_KEY, ADR-0012); zero otherwise.
+	Previous PreviousKey
 }
 
 // LoadAuthOutbox reads AUTH_OUTBOX_KEY (exactly 32 bytes, hex) and
@@ -43,7 +46,12 @@ func LoadAuthOutbox(ctx context.Context, lookup Lookup, secrets SecretSource, au
 	if cfg.KeyID, err = parseIntInRange(lookup, keyOutboxKeyID, defaultOutboxKeyID, 1, maxEmailKeyID); err != nil {
 		errs = append(errs, err)
 	}
-	errs = append(errs, distinctSecrets([]namedSecret{{secretOutboxKey, cfg.Key}}, authSecrets(auth))...)
+	var previousErrs []error
+	cfg.Previous, previousErrs = loadPreviousKey(ctx, lookup, secrets, secretOutboxKey, keyOutboxKeyID, cfg.KeyID)
+	errs = append(errs, previousErrs...)
+	previous, _ := previousKeyNames(secretOutboxKey)
+	errs = append(errs, distinctSecrets(
+		[]namedSecret{{secretOutboxKey, cfg.Key}, {previous, cfg.Previous.Key}}, authSecrets(auth))...)
 	if len(errs) > 0 {
 		return AuthOutbox{}, fmt.Errorf("config: %w", errors.Join(errs...))
 	}
