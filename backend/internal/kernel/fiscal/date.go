@@ -78,3 +78,18 @@ func (d Date) Before(o Date) bool { return d.Compare(o) < 0 }
 
 // After reports whether d is a later day than o.
 func (d Date) After(o Date) bool { return d.Compare(o) > 0 }
+
+// Weekday returns the day of the week of d.
+func (d Date) Weekday() time.Weekday { return d.civil().Weekday() }
+
+// AddDays returns d moved n calendar days (n may be negative). The zero
+// Date stays zero.
+func (d Date) AddDays(n int) Date {
+	if d.IsZero() {
+		return Date{}
+	}
+	return dateOf(d.civil().AddDate(0, 0, n))
+}
+
+// dateOf is the calendar day of t, read in t's own location.
+func dateOf(t time.Time) Date { return Date{year: t.Year(), month: t.Month(), day: t.Day()} }
