@@ -5,8 +5,8 @@
 // dedicated connection) until SIGINT/SIGTERM. Shutdown cancels the running
 // jobs, waits for them and then resigns, so a standby takes over at once.
 //
-// No production job is registered yet: M9 adds the reminders and the
-// soft-delete purge. Every job runs its database work through tx.Manager's
+// Jobs: the records purge (M9-08, every hour, whatever the module flags say).
+// M9 adds the reminders. Every job runs its database work through tx.Manager's
 // System unit of work (no user context; SECURITY DEFINER functions such as
 // due_reminder_users) or a per-user unit of work.
 package main
@@ -28,6 +28,8 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/logging"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
 	"github.com/romodevx/control-contable/backend/internal/platform/worker"
+	retentioninfra "github.com/romodevx/control-contable/backend/internal/retention/infra"
+	retention "github.com/romodevx/control-contable/backend/internal/retention/usecase"
 )
 
 // roleCheckTimeout bounds the startup check of the runtime database role.
@@ -61,7 +63,7 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err := guardRuntimeRole(ctx, cfg.Env, pool); err != nil {
 		return err
 	}
-	reg, err := newRegistry()
+	reg, err := newRegistry(pool, logger)
 	if err != nil {
 		return err
 	}
@@ -72,11 +74,30 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	return runner.Run(ctx)
 }
 
-// newRegistry registers the production jobs. Each one checks its module flag
-// on every run and skips while the module is OFF (feature_flags is readable by
-// cc_worker).
-func newRegistry() (*worker.Registry, error) {
-	return &worker.Registry{}, nil
+// recordsPurgeTimeout bounds one run of the records purge (its passes are
+// short transactions; a run cut short resumes on the next tick).
+const recordsPurgeTimeout = 10 * time.Minute
+
+// newRegistry registers the production jobs over pool (cc_worker). Module jobs
+// check their flag on every run and skip while the module is OFF
+// (feature_flags is readable by cc_worker); the records purge never does.
+func newRegistry(pool *sql.DB, logger *slog.Logger) (*worker.Registry, error) {
+	units, err := pgdb.NewTxManager(pool)
+	if err != nil {
+		return nil, err
+	}
+	purge, err := retention.NewPurgeJob(retention.PurgeDeps{
+		System: units, Purger: retentioninfra.NewPurger(), Logger: logger,
+		BatchSize: retention.DefaultBatchSize, MaxBatches: retention.DefaultMaxBatches,
+	})
+	if err != nil {
+		return nil, err
+	}
+	reg := &worker.Registry{}
+	if err := reg.Register(purge, recordsPurgeTimeout); err != nil {
+		return nil, err
+	}
+	return reg, nil
 }
 
 // newRunner builds the Runner over pool (cc_worker); the leader lock is held

@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/romodevx/control-contable/backend/internal/platform/config"
+	"github.com/romodevx/control-contable/backend/internal/platform/logging"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
 )
 
@@ -66,9 +67,15 @@ func TestRun_inDevStartsAndStopsWithoutADatabase(t *testing.T) {
 	assert.Contains(t, logs.String(), `"msg":"leader election failed"`)
 }
 
-func TestNewRegistry_hasNoProductionJobsYet(t *testing.T) {
-	reg, err := newRegistry()
+// The records purge (M9-08) is registered unconditionally: retention does not
+// depend on any module flag (PLAN decision 5).
+func TestNewRegistry_registersTheRecordsPurge(t *testing.T) {
+	pool, err := pgdb.Open("postgres://cc_worker@127.0.0.1:1/control_contable?sslmode=disable")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = pool.Close() })
+
+	reg, err := newRegistry(pool, logging.New(&bytes.Buffer{}, nil))
 
 	require.NoError(t, err)
-	assert.Empty(t, reg.Names(), "M9 registers the reminder and purge jobs")
+	assert.Equal(t, []string{"records_purge"}, reg.Names())
 }
