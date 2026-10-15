@@ -46,6 +46,7 @@ export 'models/logout_request.dart';
 export 'models/token_pair.dart';
 export 'models/auth_session.dart';
 export 'models/user.dart';
+export 'models/me.dart';
 export 'models/user_update.dart';
 export 'models/delete_account_request.dart';
 export 'models/legal_document_kind.dart';

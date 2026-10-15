@@ -183,12 +183,12 @@ class _AuthClient implements AuthClient {
   }
 
   @override
-  Future<User> getMe() async {
+  Future<Me> getMe() async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<User>(
+    final _options = _setStreamType<Me>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -199,9 +199,9 @@ class _AuthClient implements AuthClient {
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
     final _result = await _dio.fetch<Map<String, Object?>>(_options);
-    late User _value;
+    late Me _value;
     try {
-      _value = User.fromJson(_result.data!);
+      _value = Me.fromJson(_result.data!);
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
