@@ -8,7 +8,8 @@
 // The package imports only the standard library, so any domain may use it.
 // Each module applies it at its own validation step, after NFC and trimming,
 // and answers the 400 validation_failed envelope with a FieldError whose
-// code is DetailInvisibleCharacters.
+// code is DetailInvisibleCharacters (the message is the module's, in its
+// language).
 package usertext
 
 import (
@@ -19,10 +20,6 @@ import (
 // DetailInvisibleCharacters is the FieldError code of a text field holding
 // an invisible character.
 const DetailInvisibleCharacters = "invisible_characters"
-
-// MessageInvisibleCharacters is the FieldError message of
-// DetailInvisibleCharacters.
-const MessageInvisibleCharacters = "Remove invisible or formatting characters."
 
 // invisible are the categories refused in user text: control (Cc, line
 // breaks and tabs included: the fields are single-line), format (Cf:

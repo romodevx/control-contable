@@ -551,10 +551,12 @@ func deductionFieldErrors(in DeductionInput, today fiscal.Date) []apperr.FieldEr
 		add(FieldBeneficiary, DetailInvalid, msgInvalidValue)
 	}
 	donation, tuition := in.Category == adomain.CategoryDonation, in.Category == adomain.CategoryTuition
-	categoryField(add, FieldDoneeType, donation, in.DoneeType, func(v adomain.DoneeType) bool { return v.Valid() })
-	categoryField(add, FieldStudentLabel, tuition, in.StudentLabel, func(v string) bool { return validLabel(normalizeLabel(v), maxStudentLabel) })
-	categoryField(add, FieldTuitionLevel, tuition, in.TuitionLevel, func(v adomain.TuitionLevel) bool { return v.Valid() })
-	categoryField(add, FieldScholarship, tuition, in.Scholarship, func(v money.Cents) bool { return v >= 0 })
+	categoryField(add, FieldDoneeType, donation, in.DoneeType, validWhen(adomain.DoneeType.Valid))
+	categoryField(add, FieldStudentLabel, tuition, in.StudentLabel, func(v string) (string, string) {
+		return labelError(normalizeLabel(v), maxStudentLabel)
+	})
+	categoryField(add, FieldTuitionLevel, tuition, in.TuitionLevel, validWhen(adomain.TuitionLevel.Valid))
+	categoryField(add, FieldScholarship, tuition, in.Scholarship, validWhen(func(v money.Cents) bool { return v >= 0 }))
 	if in.CFDIUUID != nil {
 		if _, err := fiscal.ParseCFDIUUID(*in.CFDIUUID); err != nil {
 			add(FieldCFDIUUID, DetailInvalid, msgInvalidValue)
@@ -564,15 +566,28 @@ func deductionFieldErrors(in DeductionInput, today fiscal.Date) []apperr.FieldEr
 }
 
 // categoryField checks a field that exists for one category only: required
-// (and valid) when applies, absent otherwise.
-func categoryField[T any](add func(field, code, message string), field string, applies bool, v *T, valid func(T) bool) {
+// (and valid) when applies, absent otherwise. check returns the FieldError
+// code and message of an invalid value, both empty for a valid one.
+func categoryField[T any](add func(field, code, message string), field string, applies bool, v *T, check func(T) (code, message string)) {
 	switch {
 	case applies && v == nil:
 		add(field, DetailRequired, msgRequired)
 	case !applies && v != nil:
 		add(field, DetailNotApplicable, msgNotApplicable)
-	case applies && !valid(*v):
-		add(field, DetailInvalid, msgInvalidValue)
+	case applies:
+		if code, message := check(*v); code != "" {
+			add(field, code, message)
+		}
+	}
+}
+
+// validWhen is the categoryField check of a value valid or plainly invalid.
+func validWhen[T any](valid func(T) bool) func(T) (code, message string) {
+	return func(v T) (string, string) {
+		if valid(v) {
+			return "", ""
+		}
+		return DetailInvalid, msgInvalidValue
 	}
 }
 

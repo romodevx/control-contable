@@ -61,5 +61,4 @@ func TestHasInvisible(t *testing.T) {
 // clients can key their copy on it.
 func TestDetailInvisibleCharacters(t *testing.T) {
 	assert.Equal(t, "invisible_characters", usertext.DetailInvisibleCharacters)
-	assert.NotEmpty(t, usertext.MessageInvisibleCharacters)
 }
