@@ -222,6 +222,7 @@ func TestContract_healthzDegradedConforms(t *testing.T) {
 var samplePathValues = map[string]string{
 	"period":     "2026-01",
 	"regimeCode": "612",
+	"fiscalYear": "2026",
 }
 
 const sampleID = "0190f2a4-7c1e-7b3a-9d2e-4f5a6b7c8d9e"
@@ -263,9 +264,7 @@ func fillPath(template string) string {
 // contract with no feature_flags row. Its flag cannot be set, so it is swept
 // as OFF only: in every sweep each of its operations must be hidden. The
 // list only shrinks.
-var unregisteredModules = map[string]string{
-	"module_annual": "ANN-22",
-}
+var unregisteredModules = map[string]string{}
 
 // registeredModules returns the contract modules that have a flag row, and
 // fails for a module that is neither registered nor in unregisteredModules,

@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagtest"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgtest"
 )
 
@@ -22,23 +23,14 @@ const (
 	sqlstateCheckViolation        = "23514"
 )
 
-// moduleFlags is the MODULES.md flag registry: one key per product module M1–M9.
-var moduleFlags = []string{
-	"module_auth", "module_dashboard", "module_expenses", "module_history", "module_incomes",
-	"module_reminders", "module_subscriptions", "module_tax_engine", "module_taxpayers",
-}
+// moduleFlags is the MODULES.md flag registry (flagtest.ModuleKeys).
+var moduleFlags = flagtest.ModuleKeys()
 
 // presets is the MODULES.md "Presentation presets" table.
 var presets = map[string][]string{
-	"demo_core": {
-		"module_auth", "module_dashboard", "module_expenses", "module_incomes", "module_tax_engine",
-		"module_taxpayers",
-	},
-	"demo_monetization": {
-		"module_auth", "module_dashboard", "module_expenses", "module_incomes", "module_subscriptions",
-		"module_tax_engine", "module_taxpayers",
-	},
-	"demo_full": moduleFlags,
+	"demo_core":         flagtest.DemoCoreKeys(),
+	"demo_monetization": flagtest.DemoMonetizationKeys(),
+	"demo_full":         moduleFlags,
 }
 
 func requireSQLState(t *testing.T, err error, code string) {
