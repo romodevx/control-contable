@@ -40,6 +40,12 @@ func testReminderKeys(t *testing.T) config.Reminders {
 	}
 }
 
+// testOutboxKeys is a random fixture outbox key, never a real one.
+func testOutboxKeys(t *testing.T) config.AuthOutbox {
+	t.Helper()
+	return config.AuthOutbox{Key: config.NewSecret(randomBytes(t)), KeyID: 1}
+}
+
 // The collapse-id key is derived from the index pepper under its own
 // label: stable for a pepper, never the pepper itself.
 func TestCollapseKey(t *testing.T) {

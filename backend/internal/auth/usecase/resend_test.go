@@ -10,11 +10,11 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/auth/usecase"
 )
 
-func newResend(signUps *fakeSignUps, sender *fakeSender, system *fakeSystem) *usecase.ResendVerification {
-	return newLimitedResend(signUps, sender, system, &fakeLimiter{limit: 100})
+func newResend(signUps *fakeSignUps, outbox *fakeOutbox, system *fakeSystem) *usecase.ResendVerification {
+	return newLimitedResend(signUps, outbox, system, &fakeLimiter{limit: 100})
 }
 
-func newLimitedResend(signUps *fakeSignUps, sender *fakeSender, system *fakeSystem, emails usecase.RateLimiter) *usecase.ResendVerification {
+func newLimitedResend(signUps *fakeSignUps, outbox *fakeOutbox, system *fakeSystem, emails usecase.RateLimiter) *usecase.ResendVerification {
 	logger, _ := capturedLogs()
 	return usecase.NewResendVerification(usecase.ResendDeps{
 		System:  system,
@@ -23,7 +23,7 @@ func newLimitedResend(signUps *fakeSignUps, sender *fakeSender, system *fakeSyst
 		Index:   &sha256Index{},
 		Codes:   concatCodes{},
 		SignUps: signUps,
-		Email:   sender,
+		Outbox:  outbox,
 		Emails:  emails,
 		Logger:  logger,
 	})
@@ -33,22 +33,22 @@ func TestResendVerification(t *testing.T) {
 	tests := []struct {
 		name     string
 		outcome  usecase.CodeOutcome
-		wantSent []sent
+		wantSent []queued
 	}{
-		{"a live pending sign-up gets a new code", usecase.CodeResent, []sent{{kind: "code", to: normalEmail, code: "000000"}}},
+		{"a live pending sign-up gets a new code", usecase.CodeResent, []queued{{kind: "code", to: normalEmail, code: "000000", expiresAt: now.Add(usecase.CodeTTL), inUnit: true}}},
 		{"no pending sign-up, verified email or cooldown: silent", usecase.CodeUnchanged, nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			signUps, sender := &fakeSignUps{resendOutcome: tt.outcome}, &fakeSender{}
+			signUps, outbox := &fakeSignUps{resendOutcome: tt.outcome}, &fakeOutbox{}
 
-			require.NoError(t, newResend(signUps, sender, &fakeSystem{}).Execute(t.Context(), validEmail))
+			require.NoError(t, newResend(signUps, outbox, &fakeSystem{}).Execute(t.Context(), validEmail))
 
 			require.Len(t, signUps.resends, 1)
 			assert.Equal(t, emailHashOf(normalEmail), signUps.resends[0].emailHash)
 			assert.Equal(t, codeHashOf(normalEmail, "000000"), signUps.resends[0].codeHash)
 			assert.Equal(t, now.Add(usecase.CodeTTL), signUps.resends[0].expiresAt)
-			assert.Equal(t, tt.wantSent, sender.sent)
+			assert.Equal(t, tt.wantSent, outbox.queued, "queued in the unit of work, never sent in the request")
 		})
 	}
 }
@@ -56,23 +56,25 @@ func TestResendVerification(t *testing.T) {
 func TestResendVerification_invalidEmail(t *testing.T) {
 	system := &fakeSystem{}
 
-	err := newResend(&fakeSignUps{}, &fakeSender{}, system).Execute(t.Context(), "not-an-email")
+	err := newResend(&fakeSignUps{}, &fakeOutbox{}, system).Execute(t.Context(), "not-an-email")
 
 	require.ErrorIs(t, err, domain.ErrInvalidEmail)
 	assert.Zero(t, system.calls)
 }
 
-func TestResendVerification_emailFailureStaysGeneric(t *testing.T) {
-	sender := &fakeSender{err: errDB}
+func TestResendVerification_enqueueFailurePropagates(t *testing.T) {
+	outbox := &fakeOutbox{err: errDB}
 
-	assert.NoError(t, newResend(&fakeSignUps{resendOutcome: usecase.CodeResent}, sender, &fakeSystem{}).Execute(t.Context(), validEmail))
+	err := newResend(&fakeSignUps{resendOutcome: usecase.CodeResent}, outbox, &fakeSystem{}).Execute(t.Context(), validEmail)
+
+	require.ErrorIs(t, err, errDB)
 }
 
 func TestResendVerification_databaseErrorsPropagate(t *testing.T) {
-	sender := &fakeSender{}
+	outbox := &fakeOutbox{}
 
-	err := newResend(&fakeSignUps{err: errDB}, sender, &fakeSystem{}).Execute(t.Context(), validEmail)
+	err := newResend(&fakeSignUps{err: errDB}, outbox, &fakeSystem{}).Execute(t.Context(), validEmail)
 
 	require.ErrorIs(t, err, errDB)
-	assert.Empty(t, sender.sent)
+	assert.Empty(t, outbox.queued)
 }

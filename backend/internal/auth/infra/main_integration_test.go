@@ -55,6 +55,14 @@ func (i *inbox) SendSignUpAttemptNotice(_ context.Context, to domain.Email) erro
 	return nil
 }
 
+// forget drops everything received so far.
+func (i *inbox) forget() {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	clear(i.codes)
+	clear(i.notices)
+}
+
 func (i *inbox) lastCode(t *testing.T, email string) string {
 	t.Helper()
 	i.mu.Lock()
@@ -65,23 +73,43 @@ func (i *inbox) lastCode(t *testing.T, email string) string {
 }
 
 // stack is the auth use cases over a real database as cc_app, wired as cmd/api
-// wires them (only the email sender and the argon2 cost differ).
+// wires them (only the email sender and the argon2 cost differ), plus the
+// worker's email delivery as cc_worker.
 type stack struct {
-	app, owner *sql.DB
-	limits     *ratelimitpg.Store
-	register   *usecase.Register
-	resend     *usecase.ResendVerification
-	verify     *usecase.VerifyEmail
-	inbox      *inbox
-	index      *crypto.BlindIndex
-	keyring    *crypto.Keyring
-	passwords  *crypto.PasswordHasher
+	db                 *pgtest.Database
+	app, owner, worker *sql.DB
+	limits             *ratelimitpg.Store
+	register           delivering[usecase.RegisterInput]
+	resend             delivering[string]
+	verify             *usecase.VerifyEmail
+	inbox              *inbox
+	outbox             *infra.Outbox
+	delivery           *usecase.EmailDeliveryJob
+	index              *crypto.BlindIndex
+	keyring            *crypto.Keyring
+	passwords          *crypto.PasswordHasher
 }
 
 var (
-	testPepper   = bytes.Repeat([]byte{0x11}, 32)
-	testEmailKey = bytes.Repeat([]byte{0x22}, 32)
+	testPepper    = bytes.Repeat([]byte{0x11}, 32)
+	testEmailKey  = bytes.Repeat([]byte{0x22}, 32)
+	testOutboxKey = bytes.Repeat([]byte{0x33}, 32)
 )
+
+// delivering runs a use case that queues an email, then the worker's delivery
+// job, as a sign-up sees it end to end (the request itself sends nothing).
+type delivering[In any] struct {
+	execute func(context.Context, In) error
+	deliver func(context.Context) error
+}
+
+// Execute runs the use case and, when it succeeds, delivers what it queued.
+func (d delivering[In]) Execute(ctx context.Context, in In) error {
+	if err := d.execute(ctx, in); err != nil {
+		return err
+	}
+	return d.deliver(ctx)
+}
 
 // testArgon2 keeps the suite fast; production uses crypto.DefaultArgon2idParams.
 var testArgon2 = crypto.Argon2idParams{Memory: 8 * 1024, Time: 1, Threads: 1, SaltLen: 16, KeyLen: 32}
@@ -89,9 +117,15 @@ var testArgon2 = crypto.Argon2idParams{Memory: 8 * 1024, Time: 1, Threads: 1, Sa
 func newStack(t *testing.T) *stack {
 	t.Helper()
 	db := pgtest.NewDatabase(t)
-	s := &stack{app: db.Connect(t, pgtest.RoleApp), owner: db.Connect(t, pgtest.RoleOwner), inbox: newInbox()}
+	s := &stack{
+		db: db, app: db.Connect(t, pgtest.RoleApp), owner: db.Connect(t, pgtest.RoleOwner), worker: db.Connect(t, pgtest.RoleWorker),
+		inbox: newInbox(),
+	}
 	txm, err := pgdb.NewTxManager(s.app)
 	require.NoError(t, err)
+	outboxKeys, err := crypto.NewKeyring(1, map[crypto.KeyID][]byte{1: testOutboxKey})
+	require.NoError(t, err)
+	s.outbox = infra.NewOutbox(outboxKeys)
 	s.index, err = crypto.NewEmailIndex(testPepper)
 	require.NoError(t, err)
 	s.keyring, err = crypto.NewKeyring(1, map[crypto.KeyID][]byte{1: testEmailKey})
@@ -108,21 +142,37 @@ func newStack(t *testing.T) *stack {
 	require.NoError(t, err)
 	signUpEmails := s.limits.Bucket(usecase.SignUpEmailPolicy)
 
-	s.register = usecase.NewRegister(usecase.RegisterDeps{
+	s.delivery = s.newDeliveryJob(t, s.worker, s.inbox, logger)
+	register := usecase.NewRegister(usecase.RegisterDeps{
 		System: txm, Clock: clock.NewSystem(), Entropy: rand.Reader, Index: s.index,
-		Codes: codes, Legal: infra.NewLegalDocumentStore(), SignUps: signUps, Email: s.inbox,
+		Codes: codes, Legal: infra.NewLegalDocumentStore(), SignUps: signUps, Outbox: s.outbox,
 		Notices: ratelimit.NewEvery(time.Hour, 1, time.Now), Emails: signUpEmails, Logger: logger,
 	})
-	s.resend = usecase.NewResendVerification(usecase.ResendDeps{
+	resend := usecase.NewResendVerification(usecase.ResendDeps{
 		System: txm, Clock: clock.NewSystem(), Entropy: rand.Reader, Index: s.index, Codes: codes,
-		SignUps: signUps, Email: s.inbox, Emails: signUpEmails, Logger: logger,
+		SignUps: signUps, Outbox: s.outbox, Emails: signUpEmails, Logger: logger,
 	})
+	s.register = delivering[usecase.RegisterInput]{execute: register.Execute, deliver: s.delivery.Run}
+	s.resend = delivering[string]{execute: resend.Execute, deliver: s.delivery.Run}
 	s.verify = usecase.NewVerifyEmail(usecase.VerifyDeps{
 		Tx: txm, Clock: clock.NewSystem(), Entropy: rand.Reader, NewUserID: newUserID, Index: s.index,
 		Passwords: s.passwords, Codes: codes, SignUps: signUps, Accounts: infra.NewAccountStore(s.keyring), Trials: infra.NewTrialStore(),
 		Refresh: infra.NewRefreshTokenStore(), Access: access, Logger: logger,
 	})
 	return s
+}
+
+// newDeliveryJob is the worker's delivery job over pool (cc_worker), sending to sender.
+func (s *stack) newDeliveryJob(t *testing.T, pool *sql.DB, sender usecase.EmailSender, logger *slog.Logger) *usecase.EmailDeliveryJob {
+	t.Helper()
+	units, err := pgdb.NewTxManager(pool)
+	require.NoError(t, err)
+	job, err := usecase.NewEmailDeliveryJob(usecase.DeliveryDeps{
+		System: units, Queue: s.outbox, Sender: sender, Logger: logger,
+		BatchSize: usecase.DefaultDeliveryBatch, MaxBatches: usecase.DefaultDeliveryBatches,
+	})
+	require.NoError(t, err)
+	return job
 }
 
 func newUserID() (domain.UserID, error) {

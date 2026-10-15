@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	authusecase "github.com/romodevx/control-contable/backend/internal/auth/usecase"
 	"github.com/romodevx/control-contable/backend/internal/platform/clock"
 	"github.com/romodevx/control-contable/backend/internal/platform/config"
 	"github.com/romodevx/control-contable/backend/internal/platform/logging"
@@ -30,7 +31,7 @@ func TestRun_refusesAnInvalidConfiguration(t *testing.T) {
 }
 
 func TestRun_refusesAnUnparsableDatabaseURL(t *testing.T) {
-	env := map[string]string{"APP_ENV": "dev", "DATABASE_URL": "postgres://%zz"}
+	env := map[string]string{"APP_ENV": "dev", "DATABASE_URL": "postgres://%zz", "AUTH_OUTBOX_KEY": randomHex(t)}
 
 	err := run(t.Context(), lookupFrom(env), &bytes.Buffer{})
 
@@ -46,6 +47,7 @@ func TestRun_outsideDevRefusesToStartWithAnUnverifiedRole(t *testing.T) {
 		"DATABASE_URL":            "postgres://cc_worker@127.0.0.1:1/control_contable?sslmode=disable&connect_timeout=1",
 		"PUSH_TOKEN_ENC_KEY":      randomHex(t),
 		"PUSH_TOKEN_INDEX_PEPPER": randomHex(t),
+		"AUTH_OUTBOX_KEY":         randomHex(t),
 	}
 
 	err := run(t.Context(), lookupFrom(env), &bytes.Buffer{})
@@ -57,8 +59,9 @@ func TestRun_outsideDevRefusesToStartWithAnUnverifiedRole(t *testing.T) {
 // campaigns, logs the failure and stops cleanly on shutdown.
 func TestRun_inDevStartsAndStopsWithoutADatabase(t *testing.T) {
 	env := map[string]string{
-		"APP_ENV":      "dev",
-		"DATABASE_URL": "postgres://cc_worker@127.0.0.1:1/control_contable?sslmode=disable&connect_timeout=1",
+		"APP_ENV":         "dev",
+		"DATABASE_URL":    "postgres://cc_worker@127.0.0.1:1/control_contable?sslmode=disable&connect_timeout=1",
+		"AUTH_OUTBOX_KEY": randomHex(t),
 	}
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
@@ -72,42 +75,44 @@ func TestRun_inDevStartsAndStopsWithoutADatabase(t *testing.T) {
 	assert.Contains(t, logs.String(), `"msg":"leader election failed"`)
 }
 
-// The records purge (M9-08) is registered unconditionally: retention does not
-// depend on any module flag (PLAN decision 5).
-func TestNewRegistry_registersTheRecordsPurge(t *testing.T) {
+// testWiring is newJobs' wiring over an unreachable pool (building the jobs
+// needs no database), with the fixture outbox key and the given reminder keys.
+func testWiring(t *testing.T, keys config.Reminders) jobWiring {
+	t.Helper()
 	pool, err := pgdb.Open("postgres://cc_worker@127.0.0.1:1/control_contable?sslmode=disable")
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = pool.Close() })
+	return jobWiring{
+		pool: pool, logger: logging.New(&bytes.Buffer{}, nil), push: reminders.DisabledPushSender{},
+		reminderKeys: keys, outbox: testOutboxKeys(t), env: config.EnvDev,
+		now: clock.NewFixed(time.Date(2026, time.May, 14, 10, 5, 0, 0, clock.Location())),
+	}
+}
 
-	reg, err := newRegistry(pool, logging.New(&bytes.Buffer{}, nil), reminders.DisabledPushSender{}, config.Reminders{})
+// The records purge (M9-08) and the auth email delivery are registered
+// unconditionally: retention does not depend on any module flag (PLAN
+// decision 5), and an auth email queued before module_auth was turned off is
+// still delivered.
+func TestNewRegistry_registersThePurgeAndTheAuthEmailDelivery(t *testing.T) {
+	reg, err := newRegistry(testWiring(t, config.Reminders{}))
 
 	require.NoError(t, err)
-	assert.Equal(t, []string{"records_purge"}, reg.Names(), "dev without push token keys: no reminder job")
+	assert.Equal(t, []string{"records_purge", "auth_email_delivery"}, reg.Names(), "dev without push token keys: no reminder job")
 }
 
 // With the push token keys (required outside dev) the reminder job (M9-06)
 // is registered too; it checks module_reminders on every run.
 func TestNewRegistry_registersTheReminders(t *testing.T) {
-	pool, err := pgdb.Open("postgres://cc_worker@127.0.0.1:1/control_contable?sslmode=disable")
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = pool.Close() })
-
-	reg, err := newRegistry(pool, logging.New(&bytes.Buffer{}, nil), reminders.DisabledPushSender{}, testReminderKeys(t))
+	reg, err := newRegistry(testWiring(t, testReminderKeys(t)))
 
 	require.NoError(t, err)
-	assert.Equal(t, []string{"records_purge", "reminders"}, reg.Names())
+	assert.Equal(t, []string{"records_purge", "auth_email_delivery", "reminders"}, reg.Names())
 }
 
-// newJobs pairs each production job with its own per-run timeout: the
-// purge gets recordsPurgeTimeout, the reminders remindersTimeout (M9-11
+// newJobs pairs each production job with its own per-run timeout (M9-11
 // refactor: the pairing is data now, so a swap must not go unnoticed).
 func TestNewJobs_pairsEachJobWithItsTimeout(t *testing.T) {
-	pool, err := pgdb.Open("postgres://cc_worker@127.0.0.1:1/control_contable?sslmode=disable")
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = pool.Close() })
-
-	jobs, err := newJobs(pool, logging.New(&bytes.Buffer{}, nil), reminders.DisabledPushSender{},
-		testReminderKeys(t), clock.NewFixed(time.Date(2026, time.May, 14, 10, 5, 0, 0, clock.Location())))
+	jobs, err := newJobs(testWiring(t, testReminderKeys(t)))
 
 	require.NoError(t, err)
 	got := map[string]time.Duration{}
@@ -115,9 +120,23 @@ func TestNewJobs_pairsEachJobWithItsTimeout(t *testing.T) {
 		got[j.job.Name()] = j.timeout
 	}
 	assert.Equal(t, map[string]time.Duration{
-		"records_purge": recordsPurgeTimeout,
-		"reminders":     remindersTimeout,
+		"records_purge":       recordsPurgeTimeout,
+		"auth_email_delivery": authusecase.DeliveryRunTimeout,
+		"reminders":           remindersTimeout,
 	}, got)
+}
+
+// The worker opens the auth emails the API sealed: without AUTH_OUTBOX_KEY it
+// refuses to start, in every environment (config.LoadAuthOutbox).
+func TestRun_requiresTheOutboxKey(t *testing.T) {
+	env := map[string]string{
+		"APP_ENV":      "dev",
+		"DATABASE_URL": "postgres://cc_worker@127.0.0.1:1/control_contable?sslmode=disable&connect_timeout=1",
+	}
+
+	err := run(t.Context(), lookupFrom(env), &bytes.Buffer{})
+
+	require.ErrorContains(t, err, "AUTH_OUTBOX_KEY")
 }
 
 // Outside dev the worker needs the push token keys to open the tokens the
