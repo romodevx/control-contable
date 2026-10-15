@@ -1764,6 +1764,12 @@ abstract class AppLocalizations {
   /// **'Fecha de cobro'**
   String get incomeFieldCollectedOn;
 
+  /// Hint under the collection date of an accrual income (PM 601, 620, 622, 623, 624): IVA is cash-based (LIVA 1-B), so this date sets the IVA month; empty means pending collection.
+  ///
+  /// In es, this message translates to:
+  /// **'Decide el mes del IVA. Si aún no te pagan, déjala vacía: queda «Por cobrar».'**
+  String get incomeCollectedOnAccrualHelp;
+
   /// Date the CFDI was issued.
   ///
   /// In es, this message translates to:

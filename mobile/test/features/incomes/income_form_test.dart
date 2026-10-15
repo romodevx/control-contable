@@ -29,6 +29,11 @@ const _amount = 'Monto sin IVA';
 const _description = 'Descripción (opcional)';
 const _collectedOn = 'Fecha de cobro';
 const _invoicedOn = 'Fecha de factura';
+const _invoicedOnOptional = '$_invoicedOn (opcional)';
+const _collectedOnOptional = '$_collectedOn (opcional)';
+const _ivaMonthHint =
+    'Decide el mes del IVA. Si aún no te pagan, déjala vacía: queda '
+    '«Por cobrar».';
 const _ivaAmount = 'IVA cobrado (opcional)';
 const _isrWithheld = 'ISR retenido (opcional)';
 const _more = 'Más detalles';
@@ -154,21 +159,98 @@ void main() {
 
       expect(harness.incomes.defaultsRequests.last.regime, '606');
     });
+  });
 
-    testWidgets('an accrual regime (601) books by the invoice date', (
+  // FU1/D6 (MODULE-incomes §2.2, LIVA 1-B, ADR-0010): an accrual income
+  // books by its invoice date, and its IVA waits for the collection date,
+  // so that date is asked in the open, empty ("Por cobrar" is valid).
+  group('cash vs accrual dates (served income_basis)', () {
+    Future<void> pumpAccrual(WidgetTester tester) => pumpForm(
+      tester,
+      taxpayer: taxpayer(
+        personType: PersonType.moral,
+        regimes: [heldRegime('601', incomeBasis: IncomeBasis.accrual)],
+      ),
+    );
+
+    void expectAbove(WidgetTester tester, List<String> order) {
+      for (var i = 1; i < order.length; i++) {
+        expect(
+          tester.getTopLeft(find.text(order[i - 1]).first).dy,
+          lessThan(tester.getTopLeft(find.text(order[i]).first).dy),
+          reason: '${order[i - 1]} before ${order[i]}',
+        );
+      }
+    }
+
+    testWidgets('cash: the collection date books the income; the invoice '
+        'date waits, optional, under "Más detalles"', (tester) async {
+      await pumpForm(tester);
+
+      expect(_textOf(tester, _collectedOn), '13/10/2026');
+      expect(find.text(_ivaMonthHint), findsNothing);
+      expect(find.text(_invoicedOnOptional), findsNothing);
+
+      await tapText(tester, _more);
+      expect(find.text(_invoicedOnOptional), findsOneWidget);
+      expect(_textOf(tester, _invoicedOnOptional), isEmpty);
+    });
+
+    testWidgets('accrual: the invoice date first and required, then the '
+        'collection date visible and empty, with the IVA hint', (tester) async {
+      await pumpAccrual(tester);
+
+      expectAbove(tester, [_invoicedOn, _collectedOnOptional, _amount]);
+      expect(_textOf(tester, _invoicedOn), '13/10/2026');
+      expect(_textOf(tester, _collectedOnOptional), isEmpty);
+      expect(find.text(_ivaMonthHint), findsOneWidget);
+
+      await tapText(tester, _more);
+      expect(find.text(_invoicedOn), findsOneWidget, reason: 'asked once');
+      expect(find.text(_collectedOnOptional), findsOneWidget);
+    });
+
+    testWidgets('accrual: the hint is read with the collection date', (
       tester,
     ) async {
-      await pumpForm(
-        tester,
-        taxpayer: taxpayer(
-          personType: PersonType.moral,
-          regimes: [heldRegime('601', incomeBasis: IncomeBasis.accrual)],
+      final semantics = tester.ensureSemantics();
+      await pumpAccrual(tester);
+
+      final node = tester.getSemantics(
+        find.descendant(
+          of: inputLabeled(_collectedOnOptional),
+          matching: find.byType(EditableText),
         ),
       );
-      expect(find.text(_invoicedOn), findsOneWidget);
-      expect(find.text(_collectedOn), findsNothing);
+      expect(node.label, startsWith(_collectedOnOptional));
+      expect(node.hint, contains(_ivaMonthHint));
+      semantics.dispose();
+    });
 
+    testWidgets('accrual: meets the tap-target and contrast guidelines and '
+        'survives 200 % text', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pumpAccrual(tester);
+
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
+      semantics.dispose();
+
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text(_ivaMonthHint), findsOneWidget);
+    });
+
+    testWidgets('accrual: an empty collection date saves as "Por cobrar"', (
+      tester,
+    ) async {
+      await pumpAccrual(tester);
       await typeInto(tester, _amount, '1000');
+
       await _save(tester);
 
       final sent = harness.incomes.creates.single;
@@ -176,10 +258,36 @@ void main() {
       expect(sent.collectedOn, isNull);
     });
 
-    // FU1/D6 (ADR-0010): the booking date is the server's income_basis for
-    // the held regime, never a table of codes in the app.
-    testWidgets('the booking date follows the served income_basis, not the '
-        'regime code', (tester) async {
+    testWidgets('accrual: a collection date typed in the open is sent', (
+      tester,
+    ) async {
+      await pumpAccrual(tester);
+      await typeInto(tester, _invoicedOn, '05102026');
+      await typeInto(tester, _collectedOnOptional, '12102026');
+      await typeInto(tester, _amount, '1000');
+
+      await _save(tester);
+
+      final sent = harness.incomes.creates.single;
+      expect(sent.invoicedOn, '2026-10-05');
+      expect(sent.collectedOn, '2026-10-12');
+    });
+
+    testWidgets('accrual: the invoice date is required, the collection '
+        'date is not', (tester) async {
+      await pumpAccrual(tester);
+      await typeInto(tester, _invoicedOn, '');
+      await typeInto(tester, _amount, '1000');
+
+      await _save(tester);
+
+      expect(find.text('Revisa 1 dato antes de guardar'), findsOneWidget);
+      expect(find.text('Escribe este dato.'), findsOneWidget);
+      expect(harness.incomes.creates, isEmpty);
+    });
+
+    testWidgets('the basis is the served income_basis, not the regime '
+        'code', (tester) async {
       await pumpForm(
         tester,
         taxpayer: taxpayer(
@@ -188,30 +296,59 @@ void main() {
       );
 
       expect(find.text(_invoicedOn), findsOneWidget);
+      expect(find.text(_collectedOnOptional), findsOneWidget);
       expect(find.text(_collectedOn), findsNothing);
     });
 
-    // M5-30 (M5-29 QA, PM-601-IVA-01): a 601 income counts for IVA only
-    // once collected (LIVA 1-B); its collection date lives in "Más
-    // detalles" and must reach the request.
-    testWidgets('an accrual regime (601) sends the collection date given '
-        'under "Más detalles"', (tester) async {
+    testWidgets('mixed regimes: the dates follow the regime of the income '
+        'being registered', (tester) async {
       await pumpForm(
         tester,
         taxpayer: taxpayer(
           personType: PersonType.moral,
-          regimes: [heldRegime('601', incomeBasis: IncomeBasis.accrual)],
+          regimes: [
+            heldRegime('626'),
+            heldRegime('601', incomeBasis: IncomeBasis.accrual),
+          ],
         ),
       );
-      await typeInto(tester, _invoicedOn, '05102026');
-      await typeInto(tester, _amount, '1000');
-      await tapText(tester, _more);
-      await typeInto(tester, '$_collectedOn (opcional)', '12102026');
-      await _save(tester);
+      expect(_textOf(tester, _collectedOn), '13/10/2026');
 
+      await tapText(tester, 'Régimen 601');
+
+      expect(_textOf(tester, _invoicedOn), '13/10/2026');
+      expect(_textOf(tester, _collectedOnOptional), isEmpty);
+      expect(find.text(_ivaMonthHint), findsOneWidget);
+      await typeInto(tester, _amount, '1000');
+      await _save(tester);
       final sent = harness.incomes.creates.single;
-      expect(sent.invoicedOn, '2026-10-05');
-      expect(sent.collectedOn, '2026-10-12');
+      expect(sent.regimeCode, '601');
+      expect(sent.invoicedOn, '2026-10-13');
+      expect(sent.collectedOn, isNull);
+    });
+
+    testWidgets('mixed regimes: back to cash, the collection date books '
+        'again', (tester) async {
+      await pumpForm(
+        tester,
+        taxpayer: taxpayer(
+          personType: PersonType.moral,
+          regimes: [
+            heldRegime('601', incomeBasis: IncomeBasis.accrual),
+            heldRegime('626'),
+          ],
+        ),
+      );
+
+      await tapText(tester, 'Régimen 626');
+
+      expect(_textOf(tester, _collectedOn), '13/10/2026');
+      expect(find.text(_ivaMonthHint), findsNothing);
+      await typeInto(tester, _amount, '1000');
+      await _save(tester);
+      final sent = harness.incomes.creates.single;
+      expect(sent.collectedOn, '2026-10-13');
+      expect(sent.invoicedOn, isNull, reason: 'the prefill moved, not copied');
     });
   });
 
