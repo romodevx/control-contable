@@ -93,22 +93,18 @@ func TestEstimateProfiles_refusesAnUnknownTreatment(t *testing.T) {
 	assert.ErrorIs(t, err, errUnknownTreatment)
 }
 
-// Until the holidays table lands (M9-03), no date is a holiday: weekends
-// alone move the due date.
-func TestNoHolidays(t *testing.T) {
-	d, err := fiscal.ParseDate("2026-11-16")
-	require.NoError(t, err)
-
-	holiday, err := noHolidays{}.IsHoliday(t.Context(), d)
-
-	require.NoError(t, err)
-	assert.False(t, holiday)
-}
-
 // The estimate needs the taxpayers module's unit of work: its profile read
 // joins the estimate's transaction only through the same manager.
 func TestNewTaxEngineModule_requiresTheSharedUnitOfWork(t *testing.T) {
 	_, err := newTaxEngineModule(taxEngineWiring{pool: &sql.DB{}, limits: &ratelimitpg.Store{}})
 
 	assert.ErrorIs(t, err, errNoTaxEngineTx)
+}
+
+// The estimate's due date needs the holidays snapshot read at boot
+// (loadHolidays): without it the boot fails, never a weekends-only date.
+func TestNewTaxEngineModule_requiresTheHolidays(t *testing.T) {
+	_, err := newTaxEngineModule(taxEngineWiring{pool: &sql.DB{}, limits: &ratelimitpg.Store{}, tx: noopTx{}})
+
+	assert.ErrorIs(t, err, taxusecase.ErrMissingDependency)
 }

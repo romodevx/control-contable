@@ -105,9 +105,13 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err != nil {
 		return err
 	}
+	holidays, err := loadHolidaySnapshots(ctx, pool)
+	if err != nil {
+		return err
+	}
 	taxEngine, err := newTaxEngineModule(taxEngineWiring{
 		pool: pool, limits: auth.limits, logger: logger,
-		tx: records.taxpayers.tx, taxpayers: records.taxpayers.queries,
+		tx: records.taxpayers.tx, taxpayers: records.taxpayers.queries, holidays: holidays.taxEngine,
 	})
 	if err != nil {
 		return err
@@ -127,8 +131,12 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	}
 	annual, err := newAnnualModule(annualWiring{
 		tx: records.taxpayers.tx, taxpayers: records.taxpayers.queries, estimator: taxEngine.estimator,
-		limits: auth.limits, logger: logger,
+		holidays: taxEngine.holidays, limits: auth.limits, logger: logger,
 	})
+	if err != nil {
+		return err
+	}
+	reminders, err := newRemindersModule(remindersWiring{holidays: holidays.reminders, limits: auth.limits, logger: logger})
 	if err != nil {
 		return err
 	}
@@ -144,6 +152,7 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 		dashboard: dashboard,
 		history:   history,
 		annual:    annual,
+		reminders: reminders,
 		now:       time.Now,
 	})
 	if err != nil {
@@ -256,6 +265,7 @@ type deps struct {
 	dashboard dashboardModule
 	history   historyModule
 	annual    annualModule
+	reminders remindersModule
 	now       func() time.Time
 }
 
@@ -295,6 +305,7 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 		dashboardHandler: d.dashboard.handler,
 		historyHandler:   d.history.handler,
 		annualHandler:    d.annual.handler,
+		remindersHandler: d.reminders.handler,
 	}
 	if d.auth.authn == nil {
 		return nil, errors.New("api: no authenticator: secured operations would run unauthenticated")
@@ -320,8 +331,11 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 	if d.annual.handler == nil {
 		return nil, errors.New("api: no annual handler: module_annual operations would panic")
 	}
+	if d.reminders.handler == nil {
+		return nil, errors.New("api: no reminders handler: module_reminders operations would panic")
+	}
 	userLimits, err := mergeLimits(d.taxpayers.userLimits, d.incomes.userLimits, d.expenses.userLimits, d.taxEngine.userLimits,
-		d.dashboard.userLimits, d.history.userLimits, d.annual.userLimits)
+		d.dashboard.userLimits, d.history.userLimits, d.annual.userLimits, d.reminders.userLimits)
 	if err != nil {
 		return nil, err
 	}

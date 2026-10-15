@@ -151,7 +151,9 @@ func (p *estimatePorts) FiledPayments(context.Context, string, int) (map[fiscal.
 	return p.filed, nil
 }
 
-func (p *estimatePorts) IsHoliday(context.Context, fiscal.Date) (bool, error) { return false, nil }
+func (p *estimatePorts) Holidays(context.Context) (fiscal.HolidaySet, error) {
+	return fiscal.HolidaySet{}, nil
+}
 
 // EstimateRange answers 1,000.00 of ISR a month for every regime.
 func (p *estimatePorts) EstimateRange(_ context.Context, _, id string, from, to domain.Period) ([]usecase.TaxpayerEstimate, error) {

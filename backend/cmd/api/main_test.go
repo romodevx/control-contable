@@ -119,13 +119,19 @@ func newHandlerWithAll(t *testing.T, cfg config.Config, db health.Pinger, f flag
 		require.NoError(t, err)
 		annual, err = newAnnualModule(annualWiring{
 			tx: records.taxpayers.tx, taxpayers: records.taxpayers.queries, estimator: taxEngine.estimator,
-			limits: auth.limits, logger: logger, clock: taxEngine.clock,
+			holidays: taxEngine.holidays, limits: auth.limits, logger: logger, clock: taxEngine.clock,
 		})
+		require.NoError(t, err)
+	}
+	reminders := stubRemindersModule()
+	if taxEngine.holidays != nil && auth.limits != nil { // the real module over the boot snapshot (contract tests)
+		var err error
+		reminders, err = newRemindersModule(remindersWiring{holidays: taxEngine.holidays, limits: auth.limits, logger: logger})
 		require.NoError(t, err)
 	}
 	h, err := newHandler(cfg, deps{logger: logger, db: db, flags: f, auth: auth, taxpayers: records.taxpayers,
 		incomes: records.incomes, expenses: records.expenses, taxEngine: taxEngine, dashboard: dashboard, history: history,
-		annual: annual, now: time.Now})
+		annual: annual, reminders: reminders, now: time.Now})
 	require.NoError(t, err)
 	return h
 }

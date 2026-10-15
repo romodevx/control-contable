@@ -38,6 +38,9 @@ type taxEngineWiring struct {
 	logger    *slog.Logger
 	tx        tx.Manager
 	taxpayers tpusecase.TaxpayerProfileReader
+	// holidays are the due date's holidays, a boot snapshot (loadHolidays
+	// over the tax engine's reader): no statement per estimate.
+	holidays usecase.HolidayCalendar
 	// clock is the estimate's "today" (the default period, the future-month
 	// refusal); nil is the system clock (tests pin a day).
 	clock clock.Clock
@@ -51,6 +54,8 @@ type taxEngineModule struct {
 	handler    *taxenginehttp.Handler
 	userLimits map[string]router.Limiter
 	estimator  *usecase.Estimator
+	// holidays is the boot snapshot the annual estimate shares.
+	holidays usecase.HolidayCalendar
 	// clock is the estimate's "today" (nil: the system clock); the
 	// dashboard shares it, so its default period is the estimate's.
 	clock clock.Clock
@@ -83,7 +88,8 @@ func newTaxEngineModule(w taxEngineWiring) (taxEngineModule, error) {
 		out[op] = w.limits.Bucket(policy)
 	}
 	return taxEngineModule{
-		handler: taxenginehttp.NewHandler(inputs, estimator), userLimits: out, estimator: estimator, clock: w.clock,
+		handler: taxenginehttp.NewHandler(inputs, estimator), userLimits: out, estimator: estimator,
+		holidays: w.holidays, clock: w.clock,
 	}, nil
 }
 
@@ -113,7 +119,7 @@ func newEstimator(w taxEngineWiring) (*usecase.Estimator, error) {
 		},
 		Inputs:     taxinputs.NewStore(),
 		Texts:      taxinputs.NewStore(),
-		Holidays:   noHolidays{},
+		Holidays:   w.holidays,
 		Strategies: registry,
 		Params:     catalog,
 		Clock:      now,

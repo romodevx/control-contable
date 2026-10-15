@@ -107,7 +107,7 @@ func (c propCase) estimator(t testing.TB) *usecase.Estimator {
 	}
 	est, err := usecase.NewEstimator(usecase.EstimateDeps{
 		Tx: txUnit{}, Profiles: txProfiles{usecase.TaxpayerProfile{PersonType: c.person, Regimes: c.holds}},
-		Ledger: txLedger{incomes: c.incomes, expenses: c.expenses}, Inputs: inputs, Texts: txNoTexts{}, Holidays: txNoHolidays{},
+		Ledger: txLedger{incomes: c.incomes, expenses: c.expenses}, Inputs: inputs, Texts: txNoTexts{}, Holidays: seededHolidays{},
 		Strategies: registry, Params: catalog, Clock: clock.NewFixed(propToday),
 	})
 	require.NoError(t, err)

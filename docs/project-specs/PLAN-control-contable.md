@@ -388,7 +388,7 @@ holds, first the CPA sign-off (M5-33).
 | G-3 | `infra/taxinputs` and the profile reader read taxpayers by id under RLS alone: add an owner check in the query if shared access (accountant, delegated users) is ever designed | architect | ADR for any delegated-access feature |
 | #77 should-fix 2 | `provisional_parameters` notice on the records forms (categories/defaults responses) | architect | Next contract re-freeze |
 | #98 FU1 | ~~Fingerprint hashes informational sums and multi-enum order (false "changed" marks in M8)~~ **Done** (M8-03, #132) | backend-sr | M8 |
-| #98 FU2 | Replace the weekends-only due-date calendar with the `holidays` table | backend-sr | M9-03/M9-04 (blocker beyond 2028 parameters) |
+| #98 FU2 | ~~Replace the weekends-only due-date calendar with the `holidays` table~~ **Done** (M9-04: kernel `MonthlyDueDate` over the `holidays` readers; seeding each next year stays an ops task) | backend-sr | M9-03/M9-04 |
 | #90 FU | RESICO PF months after the cap still use RESICO rates (warning only) | owner + CPA | M5-33 |
 | #101 FU 1–3 | A half with an error stays open next to the opened one (up to 12 fields); `paymentMonths` offers months of a future fiscal year; `CitationDisclosure` could reuse `FormDisclosure` | frontend-sr | M5 UX polish |
 | #101 FU 4 | ~~MODULE §8 still says "inline editable 12-row table"~~ **Done** (§8 describes the shipped halves of ≤ 6 and the suggestion) | doc-writer | M5-32 |
@@ -503,7 +503,7 @@ M9-07 (FCM) and M9-09 (Flutter push) are built against fakes; live verification 
 | M9-01 | Contract freeze: devices, reminder-settings, tax-calendar (0.13.0; ADR-0007 Amendment 1; `module_reminders` → `module_taxpayers` prerequisite) | architect | P0-05 | 1 | — | `feature/reminders-contract` | — | [x] |
 | M9-02 | Migration `devices`, `reminder_settings`, `notification_log` (RLS) + definer fns `due_reminder_users`, `claim_push_token` + isolation tests | db-sr | P0-11 | 3.5 | — | `feature/reminders-migrations` | — | [x] |
 | M9-03 | Migration `holidays` (global) seeded 2026–2027 with sources | db-sr | P0-10 | 1.5 | — | `feature/reminders-migrations` | — | [x] |
-| M9-04 | Due-date rule into `internal/kernel/fiscal` (`NextBusinessDay`, `MonthlyDueDate`, `HolidaySet`; ADR-0007 §3 amended), replace both taxengine copies (monthly `duedate.go`, annual `businessDay`) and `noHolidays` with the `holidays` adapter, + `GET /v1/tax-calendar` (TDD, golden 2025-12..2027-11) | backend-sr | M9-01, M9-03, P0-13 | 4 | — | `feature/reminders-calendar` | — | [ ] |
+| M9-04 | Due-date rule into `internal/kernel/fiscal` (`NextBusinessDay`, `MonthlyDueDate`, `HolidaySet`; ADR-0007 §3 amended), replace both taxengine copies (monthly `duedate.go`, annual `businessDay`) and `noHolidays` with the `holidays` adapter, + `GET /v1/tax-calendar` (TDD, golden 2025-12..2027-11) | backend-sr | M9-01, M9-03, P0-13 | 4 | — | `feature/reminders-calendar` | — | [x] |
 | M9-05 | Devices + reminder settings use cases and handlers, contract tests, flag ON/OFF | backend-sr | M9-02, M1-07 | 3.5 | — | `feature/reminders-settings` | — | [ ] |
 | M9-06 | Reminder job: due users, per-user tx, `notification_log` exactly-once, bounded errgroup, optional amounts when module_tax_engine ON | backend-sr | P0-27, M9-04, M9-05, M5-22 | 4.5 | — | `feature/reminders-worker` | — | [ ] |
 | M9-07 | FCM sender adapter (Firebase Admin) + UNREGISTERED cleanup, fake in tests | backend-sr | P0-08 | 2.5 | PG-M79 | `feature/reminders-fcm` | OB9 (live check only) | [ ] |

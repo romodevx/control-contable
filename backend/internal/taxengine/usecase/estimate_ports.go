@@ -62,8 +62,10 @@ type ParamsCatalog interface {
 	Select(fiscalYear int) (taxparams.Selection, error)
 }
 
-// HolidayCalendar answers whether a date is an official non-business day
-// besides weekends (P0/M9 holidays table), to move the due date (CFF 12 ⚠️).
+// HolidayCalendar reads the holidays that move a due date (the M9-03
+// holidays table) as the kernel's HolidaySet; the API wires a boot snapshot
+// (no statement per estimate). The due-date rule is fiscal.MonthlyDueDate and
+// fiscal.NextBusinessDay (ADR-0007 Amendment 1).
 type HolidayCalendar interface {
-	IsHoliday(ctx context.Context, d fiscal.Date) (bool, error)
+	Holidays(ctx context.Context) (fiscal.HolidaySet, error)
 }

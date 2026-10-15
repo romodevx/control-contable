@@ -67,9 +67,11 @@ func newEstimateEnv(t *testing.T, users ...string) *estimateEnv {
 	require.NoError(t, err)
 	limits, err := ratelimitpg.NewStore(app, bytes.Repeat([]byte{0x5e}, 32), time.Now)
 	require.NoError(t, err)
+	holidays, err := loadHolidaySnapshots(t.Context(), app)
+	require.NoError(t, err)
 	module, err := newTaxEngineModule(taxEngineWiring{
 		pool: app, limits: limits, logger: logger,
-		tx: deps.Tx, taxpayers: taxpayers.NewQueries(deps), clock: clock.NewFixed(estToday),
+		tx: deps.Tx, taxpayers: taxpayers.NewQueries(deps), holidays: holidays.taxEngine, clock: clock.NewFixed(estToday),
 	})
 	require.NoError(t, err)
 	return &estimateEnv{app: app, deps: deps, estimator: module.estimator}

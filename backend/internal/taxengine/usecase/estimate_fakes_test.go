@@ -116,14 +116,31 @@ func (f *estTexts) RegimeTexts(ctx context.Context, _ string) (map[fiscal.Regime
 	return f.texts, f.err
 }
 
-// estHolidays is the holidays calendar.
+// estHolidays is the holidays calendar: the days of the map that are true,
+// covering their years (no day: weekends only).
 type estHolidays struct {
 	days map[string]bool
 	err  error
 }
 
-func (f estHolidays) IsHoliday(_ context.Context, d fiscal.Date) (bool, error) {
-	return f.days[d.String()], f.err
+func (f estHolidays) Holidays(context.Context) (fiscal.HolidaySet, error) {
+	if f.err != nil {
+		return fiscal.HolidaySet{}, f.err
+	}
+	var (
+		years []int
+		days  []fiscal.Date
+	)
+	for raw, holiday := range f.days {
+		d, err := fiscal.ParseDate(raw)
+		if err != nil {
+			return fiscal.HolidaySet{}, err
+		}
+		if holiday {
+			years, days = append(years, d.Year()), append(days, d)
+		}
+	}
+	return fiscal.NewHolidaySet(years, days)
 }
 
 // estParams selects one synthetic parameter set (the fake strategies read

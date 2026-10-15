@@ -310,7 +310,9 @@ func (p *goldenPorts) FiledPayments(context.Context, string, int) (map[fiscal.Re
 	return p.filed, nil
 }
 
-func (p *goldenPorts) IsHoliday(context.Context, fiscal.Date) (bool, error) { return false, nil }
+func (p *goldenPorts) Holidays(ctx context.Context) (fiscal.HolidaySet, error) {
+	return seededHolidays{}.Holidays(ctx)
+}
 
 // EstimateRange answers the app's estimates the case gives (zero for a
 // regime without any), month by month.

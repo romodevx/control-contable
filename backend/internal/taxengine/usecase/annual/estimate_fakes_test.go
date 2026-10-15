@@ -137,13 +137,17 @@ func (f *annMonthly) EstimateRange(ctx context.Context, userID, _ string, from, 
 // annHolidays are the official non-business days.
 type annHolidays struct{ days []string }
 
-func (f annHolidays) IsHoliday(_ context.Context, d fiscal.Date) (bool, error) {
-	for _, day := range f.days {
-		if d.String() == day {
-			return true, nil
+func (f annHolidays) Holidays(context.Context) (fiscal.HolidaySet, error) {
+	years := make([]int, 0, len(f.days))
+	days := make([]fiscal.Date, 0, len(f.days))
+	for _, raw := range f.days {
+		d, err := fiscal.ParseDate(raw)
+		if err != nil {
+			return fiscal.HolidaySet{}, err
 		}
+		years, days = append(years, d.Year()), append(days, d)
 	}
-	return false, nil
+	return fiscal.NewHolidaySet(years, days)
 }
 
 // annWorld is one annual estimate's ports.

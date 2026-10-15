@@ -106,9 +106,11 @@ func newContractEnv(t *testing.T, db health.Pinger, options ...contractOption) c
 	wiring.env, wiring.keys, wiring.pool, wiring.auth, wiring.logger = config.EnvDev, testTaxpayerKeys(), app, auth, logger
 	records, err := newRecordModules(wiring.recordWiring)
 	require.NoError(t, err)
+	holidays, err := loadHolidaySnapshots(t.Context(), app)
+	require.NoError(t, err)
 	taxEngine, err := newTaxEngineModule(taxEngineWiring{
 		pool: app, limits: auth.limits, logger: logger,
-		tx: records.taxpayers.tx, taxpayers: records.taxpayers.queries, clock: wiring.taxEngineClock,
+		tx: records.taxpayers.tx, taxpayers: records.taxpayers.queries, holidays: holidays.taxEngine, clock: wiring.taxEngineClock,
 	})
 	require.NoError(t, err)
 	return contractEnv{

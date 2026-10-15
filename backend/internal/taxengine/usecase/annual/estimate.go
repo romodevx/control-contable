@@ -345,48 +345,21 @@ func (uc *Estimator) cumulative(h usecase.RegimeHold, pt fiscal.PersonType, fisc
 // deadlines are the legal annual dates of the year, each moved to the next
 // business day (CFF 12 ⚠️, "sujeto a confirmación").
 func (uc *Estimator) deadlines(ctx context.Context, p *taxparams.Params, fiscalYear int) (map[explain.DeadlineKind]fiscal.Date, error) {
+	holidays, err := uc.deps.Holidays.Holidays(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("annual: holidays: %w", err)
+	}
 	out := map[explain.DeadlineKind]fiscal.Date{}
 	for _, kind := range []explain.DeadlineKind{explain.DeadlinePF, explain.DeadlinePM, explain.DeadlineNonprofitInformative} {
 		legal, err := explain.Deadline(p, fiscalYear, kind)
 		if err != nil {
 			return nil, err
 		}
-		if out[kind], err = uc.businessDay(ctx, legal); err != nil {
-			return nil, err
+		if out[kind], _, err = fiscal.NextBusinessDay(legal, holidays); err != nil {
+			return nil, fmt.Errorf("annual: deadline %s: %w", kind, err)
 		}
 	}
 	return out, nil
-}
-
-// maxDeadlineShift bounds the move to the next business day: no run of
-// weekends and holidays is this long, so reaching it is a calendar bug.
-const maxDeadlineShift = 14
-
-var errNoBusinessDay = fmt.Errorf("annual: no business day within %d days of a deadline", maxDeadlineShift)
-
-func (uc *Estimator) businessDay(ctx context.Context, legal fiscal.Date) (fiscal.Date, error) {
-	day, err := time.Parse(time.DateOnly, legal.String())
-	if err != nil {
-		return fiscal.Date{}, fmt.Errorf("annual: deadline %s: %w", legal, err)
-	}
-	for range maxDeadlineShift {
-		d, err := fiscal.ParseDate(day.Format(time.DateOnly))
-		if err != nil {
-			return fiscal.Date{}, fmt.Errorf("annual: deadline: %w", err)
-		}
-		weekend := day.Weekday() == time.Saturday || day.Weekday() == time.Sunday
-		if !weekend {
-			holiday, err := uc.deps.Holidays.IsHoliday(ctx, d)
-			if err != nil {
-				return fiscal.Date{}, fmt.Errorf("annual: holiday %s: %w", d, err)
-			}
-			if !holiday {
-				return d, nil
-			}
-		}
-		day = day.AddDate(0, 0, 1)
-	}
-	return fiscal.Date{}, errNoBusinessDay
 }
 
 // heldIn are the regimes whose window intersects the fiscal year, in code

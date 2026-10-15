@@ -88,14 +88,3 @@ func estimateOption(v tpdomain.OptionValue) (domain.OptionValue, bool) {
 	}
 	return domain.OptionValue{}, false
 }
-
-// noHolidays is the holiday calendar until the global holidays table lands
-// (PLAN M9-03): weekends still move the due date, an official holiday on a
-// weekday does not yet. The due date is shown "sujeto a confirmación" (CFF
-// 12 ⚠️). M9-03 replaces this with a reader of that table.
-type noHolidays struct{}
-
-var _ usecase.HolidayCalendar = noHolidays{}
-
-// IsHoliday implements usecase.HolidayCalendar: never.
-func (noHolidays) IsHoliday(context.Context, fiscal.Date) (bool, error) { return false, nil }

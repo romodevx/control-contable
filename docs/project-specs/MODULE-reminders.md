@@ -81,6 +81,11 @@ SEC FU1). Reminders own no purge logic.
   guesses: for a due date in an unseeded year it falls back to weekends-only **and** emits the
   `reminders_calendar_unseeded` metric/alert (ops seeds the next year each December after the RMF; a
   PLAN follow-up). MODULE-tax-engine §2.10's "beyond 2028" blocker stays.
+- **Holidays are a boot snapshot (M9-04).** The API reads the `holidays` tables once at start-up (one
+  statement per module reader) and serves every estimate, History, Dashboard and calendar request from
+  memory: no statement per request, so the pinned statement counts (Dashboard §2.4, History §2.6) are
+  unchanged. The tables are never written at run time; a new or corrected year is a migration, so it
+  takes effect when the API restarts on that deploy. A failed boot read fails the boot.
 - Time zone: **America/Mexico_City** (no DST since 2022). Users in Quintana Roo or Baja get the CDMX time;
   per-user zones are out of scope (§11).
 

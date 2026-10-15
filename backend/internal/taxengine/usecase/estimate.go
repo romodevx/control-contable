@@ -191,8 +191,12 @@ func (uc *Estimator) EstimateRange(ctx context.Context, userID, taxpayerID strin
 		if records, err = uc.read(ctx, userID, id.String(), from, to); err != nil {
 			return err
 		}
+		holidays, err := uc.deps.Holidays.Holidays(ctx)
+		if err != nil {
+			return fmt.Errorf("holidays: %w", err)
+		}
 		for i, p := range months {
-			if dues[i], err = uc.dueDate(ctx, p, heldIn(records.profile.Regimes, p)); err != nil {
+			if dues[i], err = dueDate(p, heldIn(records.profile.Regimes, p), holidays); err != nil {
 				return err
 			}
 		}
