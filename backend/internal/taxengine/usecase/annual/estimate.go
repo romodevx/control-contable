@@ -129,7 +129,7 @@ func (uc *Estimator) Breakdown(ctx context.Context, userID, rawTaxpayerID string
 	}
 	return Breakdown{
 		TaxpayerID: est.TaxpayerID, FiscalYear: est.FiscalYear, Section: section, Legend: est.Legend,
-		Disclaimers: disclaimers, EngineVersion: est.EngineVersion, RangeUsed: est.RangeUsed,
+		Disclaimers: disclaimers, ParameterSet: est.ParameterSet, EngineVersion: est.EngineVersion, RangeUsed: est.RangeUsed,
 	}, nil
 }
 

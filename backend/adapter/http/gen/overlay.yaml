@@ -70,3 +70,35 @@ actions:
       x-go-type: nullable.Nullable[string]
       x-go-type-import: { path: github.com/oapi-codegen/nullable }
       x-go-type-skip-optional-pointer: true
+  # The same for the clearable annual merge-patch properties (ANN-15): five of
+  # PersonalDeductionUpdate and SalaryStatementUpdate.employer_label.
+  - target: $.components.schemas.PersonalDeductionUpdate.properties.donee_type
+    update:
+      x-go-type: nullable.Nullable[DoneeType]
+      x-go-type-import: { path: github.com/oapi-codegen/nullable }
+      x-go-type-skip-optional-pointer: true
+  - target: $.components.schemas.PersonalDeductionUpdate.properties.student_label
+    update:
+      x-go-type: nullable.Nullable[string]
+      x-go-type-import: { path: github.com/oapi-codegen/nullable }
+      x-go-type-skip-optional-pointer: true
+  - target: $.components.schemas.PersonalDeductionUpdate.properties.tuition_level
+    update:
+      x-go-type: nullable.Nullable[TuitionLevel]
+      x-go-type-import: { path: github.com/oapi-codegen/nullable }
+      x-go-type-skip-optional-pointer: true
+  - target: $.components.schemas.PersonalDeductionUpdate.properties.scholarship_cents
+    update:
+      x-go-type: nullable.Nullable[int64]
+      x-go-type-import: { path: github.com/oapi-codegen/nullable }
+      x-go-type-skip-optional-pointer: true
+  - target: $.components.schemas.PersonalDeductionUpdate.properties.cfdi_uuid
+    update:
+      x-go-type: nullable.Nullable[string]
+      x-go-type-import: { path: github.com/oapi-codegen/nullable }
+      x-go-type-skip-optional-pointer: true
+  - target: $.components.schemas.SalaryStatementUpdate.properties.employer_label
+    update:
+      x-go-type: nullable.Nullable[string]
+      x-go-type-import: { path: github.com/oapi-codegen/nullable }
+      x-go-type-skip-optional-pointer: true

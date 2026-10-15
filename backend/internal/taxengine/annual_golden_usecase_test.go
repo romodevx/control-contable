@@ -20,6 +20,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/taxengine/annualgolden"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/annual"
+	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/taxparams"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/infra/annuallimits"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/usecase"
 	usecaseannual "github.com/romodevx/control-contable/backend/internal/taxengine/usecase/annual"
@@ -56,15 +57,17 @@ var goldenAnnualKeys = []domain.InputKey{
 
 // useCaseAnnual is the gate's annual engine.
 type useCaseAnnual struct {
-	t        *testing.T
+	catalog  *taxparams.Catalog
+	monthly  domain.Registry
 	sections usecaseannual.SectionRegistry
 }
 
-func newUseCaseAnnual(t *testing.T) useCaseAnnual {
+func newUseCaseAnnual(t testing.TB) useCaseAnnual {
 	t.Helper()
-	sections, err := usecaseannual.NewSectionRegistry(taxengine.AnnualSections(annuallimits.New(catalog(t)))...)
+	cat := catalog(t)
+	sections, err := usecaseannual.NewSectionRegistry(taxengine.AnnualSections(annuallimits.New(cat))...)
 	require.NoError(t, err)
-	return useCaseAnnual{t: t, sections: sections}
+	return useCaseAnnual{catalog: cat, monthly: registry(t), sections: sections}
 }
 
 // Registered: explanation sections need no strategy.
@@ -73,23 +76,28 @@ func (u useCaseAnnual) Registered(kind annual.SectionKind) bool {
 }
 
 func (u useCaseAnnual) Estimate(in annualgolden.Input) (annualgolden.Result, error) {
-	ports, err := goldenPortsOf(in)
-	if err != nil {
-		return annualgolden.Result{}, err
-	}
-	uc, err := usecaseannual.NewEstimator(usecaseannual.EstimateDeps{
-		Tx: goldenTx{}, Profiles: ports, Ledger: ports, TaxInputs: ports, YearInputs: ports, Filed: ports,
-		Monthly: ports, MonthlyStrategies: registry(u.t), Sections: u.sections, Holidays: ports,
-		Params: catalog(u.t), Clock: clock.NewFixed(goldenAfterTheYear(in.FiscalYear)),
-	})
-	if err != nil {
-		return annualgolden.Result{}, err
-	}
-	est, err := uc.Estimate(context.Background(), goldenUser, goldenTaxpayer, in.FiscalYear)
+	est, err := u.estimate(in)
 	if err != nil {
 		return annualgolden.Result{}, err
 	}
 	return goldenResultOf(est), nil
+}
+
+// estimate runs the use case on the case's year.
+func (u useCaseAnnual) estimate(in annualgolden.Input) (usecaseannual.Estimate, error) {
+	ports, err := goldenPortsOf(in)
+	if err != nil {
+		return usecaseannual.Estimate{}, err
+	}
+	uc, err := usecaseannual.NewEstimator(usecaseannual.EstimateDeps{
+		Tx: goldenTx{}, Profiles: ports, Ledger: ports, TaxInputs: ports, YearInputs: ports, Filed: ports,
+		Monthly: ports, MonthlyStrategies: u.monthly, Sections: u.sections, Holidays: ports,
+		Params: u.catalog, Clock: clock.NewFixed(goldenAfterTheYear(in.FiscalYear)),
+	})
+	if err != nil {
+		return usecaseannual.Estimate{}, err
+	}
+	return uc.Estimate(context.Background(), goldenUser, goldenTaxpayer, in.FiscalYear)
 }
 
 // goldenResultOf maps the estimate to the harness's view.

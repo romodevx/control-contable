@@ -157,6 +157,7 @@ type Breakdown struct {
 	Section       Section
 	Legend        string
 	Disclaimers   []Disclaimer
+	ParameterSet  taxparams.SetID
 	EngineVersion string
 	RangeUsed     bool
 }

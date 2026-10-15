@@ -17,22 +17,6 @@ import (
 // operation to the contract means adding it here (with its task) or covering
 // it in the same PR.
 var pendingOperations = map[string]string{
-	// module_annual (ADR-0009): handlers and contract tests ship together.
-	"getAnnualEstimate":        "ANN-15",
-	"getAnnualBreakdown":       "ANN-15",
-	"getAnnualInputs":          "ANN-15",
-	"putAnnualInputs":          "ANN-15",
-	"listSalaryStatements":     "ANN-15",
-	"createSalaryStatement":    "ANN-15",
-	"updateSalaryStatement":    "ANN-15",
-	"deleteSalaryStatement":    "ANN-15",
-	"listPersonalDeductions":   "ANN-15",
-	"createPersonalDeduction":  "ANN-15",
-	"updatePersonalDeduction":  "ANN-15",
-	"deletePersonalDeduction":  "ANN-15",
-	"restorePersonalDeduction": "ANN-15",
-	"getFiledPayments":         "ANN-15",
-	"putFiledPayments":         "ANN-15",
 	// M7 module_subscriptions
 	"getSubscription":          "M7-06",
 	"syncSubscription":         "M7-06",
