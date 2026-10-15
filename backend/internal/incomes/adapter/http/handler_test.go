@@ -573,14 +573,28 @@ func TestUnpresentableIncomeIsAServerFault(t *testing.T) {
 	}
 }
 
-// An income the WH-08 backfill has not derived yet lacks the facts and the
-// withholding the contract requires since 0.12.0 (WH-11): showing it would
-// break the contract, so it is a server fault (500), never a partial body.
-func TestGetIncome_underivedRecordIsAServerFault(t *testing.T) {
+// An income the WH-08 backfill has not derived yet is served with
+// `withholding: null` (0.12.0, ADR-0008 Amendment 2): no deploy order, and
+// never a 500 for a legacy row.
+func TestGetIncome_underivedRecordHasANullWithholding(t *testing.T) {
+	income := sample(t)
+	income.Withholding = fiscal.WithholdingRecord{Withholdings: fiscal.Withholdings{ISR: 1, IVA: 2}}
+	h := incomeshttp.NewHandler(&fakeIncomes{income: income})
+
+	res, err := h.GetIncome(authed(t), gen.GetIncomeRequestObject{TaxpayerId: uid(taxpayerID), IncomeId: uid(incomeID)})
+
+	require.NoError(t, err)
+	body := encode(t, res.(gen.GetIncome200JSONResponse).Body)
+	require.Contains(t, body, "withholding", "required, nullable")
+	assert.Nil(t, body["withholding"])
+	assert.InDelta(t, 1, body["isr_withheld_cents"], 0, "the stored amount the estimate uses")
+}
+
+// The use case serves every income with its facts (a legacy one with the
+// backfill's mapping), so an income without them is a fault, never a
+// partial body.
+func TestGetIncome_recordWithoutFactsIsAServerFault(t *testing.T) {
 	for name, legacy := range map[string]func(*usecase.Income){
-		"no withholding": func(i *usecase.Income) {
-			i.Withholding = fiscal.WithholdingRecord{Withholdings: fiscal.Withholdings{ISR: 1, IVA: 2}}
-		},
 		"no counterparty": func(i *usecase.Income) { i.Counterparty = "" },
 		"no operation":    func(i *usecase.Income) { i.Operation = "" },
 	} {

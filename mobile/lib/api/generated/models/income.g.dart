@@ -21,9 +21,9 @@ _Income _$IncomeFromJson(Map<String, dynamic> json) => _Income(
   ivaCents: (json['iva_cents'] as num).toInt(),
   isrWithheldCents: (json['isr_withheld_cents'] as num).toInt(),
   ivaWithheldCents: (json['iva_withheld_cents'] as num).toInt(),
-  withholding: Withholding.fromJson(
-    json['withholding'] as Map<String, dynamic>,
-  ),
+  withholding: json['withholding'] == null
+      ? null
+      : Withholding.fromJson(json['withholding'] as Map<String, dynamic>),
   invoicedOn: json['invoiced_on'] as String?,
   collectedOn: json['collected_on'] as String?,
   platformActivity: json['platform_activity'] == null

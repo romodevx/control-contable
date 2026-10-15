@@ -7043,14 +7043,18 @@ components:
       examples:
         - description: Diseño de logotipo y manual de marca
     Income:
-      x-frozen: sha256:d51b32d706c69233996c0228846a5daaf0ff5cdd880d7b64eef3dd04c23605ee
+      x-frozen: sha256:4948b51bb5edc40d17a57a134b4298648a4e85e918c88e76c8ae2298e11b88a9
       description: >-
         `withholding` is the derived withholding (read-only, ADR-0008). **0.12.0 (WH-11,
         ADR-0008 amendment):** `counterparty_type` is removed; `counterparty_kind`,
-        `operation_kind`, `residential_rent`, `via_platform` and `withholding` are required
-        (every income written since 0.11.3 has them, and the WH-08 backfill derives them for
-        older rows before this version is deployed). (A `$ref` keeps no sibling description:
-        the strict response validator would drop the referenced properties.)
+        `operation_kind`, `residential_rent`, `via_platform` and `withholding` are required.
+        Every income written since 0.11.3 stores them. An older income the WH-08 backfill has
+        not derived yet is still served: its facts are read from its stored counterparty and
+        the regime default (MODULE-withholdings §5.2, the backfill's own mapping) and its
+        `withholding` is `null`, as is the `withholding` of one the rules cannot derive
+        (backfill "need user input"); editing the record derives it. No deploy order is
+        assumed. (A `$ref` keeps no sibling description: the strict response validator would
+        drop the referenced properties.)
       type: object
       required:
         - id
@@ -7096,7 +7100,11 @@ components:
         iva_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
           description: Read-only mirror of `withholding.iva_cents` (kept for list totals and the estimate).
-        withholding: { $ref: '#/components/schemas/Withholding' }
+        withholding:
+          oneOf:
+            - $ref: '#/components/schemas/Withholding'
+            - type: 'null'
+          description: The stored derivation; `null` only for a record stored before automatic derivation that the server has not derived.
         invoiced_on:
           oneOf:
             - $ref: '#/components/schemas/BusinessDate'
@@ -7374,14 +7382,15 @@ components:
       examples:
         - deductible: true
     Expense:
-      x-frozen: sha256:24e3d5ac0c80037547038639300c741ee4b7ff123e39979a04321af60d48460b
+      x-frozen: sha256:e1bf9c7017482945f29517117bead5df6882b2439caf8df59ab5dcfb42d61525
       description: >-
         `withholding` is the derived withholding (read-only, ADR-0008): all zero with
         `withholder: none` for a persona física taxpayer. **0.12.0 (WH-12, ADR-0008
         amendment):** `supplier_kind`, `supplier_regime`, `operation_kind` (nullable),
-        `residential_rent` and `withholding` are required (every expense written since 0.11.3
-        has them, and the WH-08 backfill derives them for older rows before this version is
-        deployed).
+        `residential_rent` and `withholding` are required. Every expense written since 0.11.3
+        stores them. An older expense the WH-08 backfill has not derived yet (or one the rules
+        cannot derive, backfill "need user input") is still served with `withholding: null`;
+        editing the record derives it. No deploy order is assumed.
       type: object
       required:
         - id
@@ -7446,7 +7455,11 @@ components:
         iva_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
           description: Read-only mirror of `withholding.iva_cents` (kept for list totals and the estimate).
-        withholding: { $ref: '#/components/schemas/Withholding' }
+        withholding:
+          oneOf:
+            - $ref: '#/components/schemas/Withholding'
+            - type: 'null'
+          description: The stored derivation; `null` only for a record stored before automatic derivation that the server has not derived.
         description: { $ref: '#/components/schemas/RecordDescription' }
         deductible:
           type: boolean

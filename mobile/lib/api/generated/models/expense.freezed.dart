@@ -21,7 +21,8 @@ mixin _$Expense {
 @JsonKey(includeIfNull: true, name: 'supplier_regime') SupplierRegime? get supplierRegime;/// `null` for a persona física taxpayer.
 @JsonKey(includeIfNull: true, name: 'operation_kind') OperationKind? get operationKind;@JsonKey(name: 'residential_rent') bool get residentialRent;/// Read-only mirror of `withholding.isr_cents` (kept for list totals and the estimate).
 @JsonKey(name: 'isr_withheld_cents') NonNegativeCents get isrWithheldCents;/// Read-only mirror of `withholding.iva_cents` (kept for list totals and the estimate).
-@JsonKey(name: 'iva_withheld_cents') NonNegativeCents get ivaWithheldCents; Withholding get withholding; RecordDescription? get description;/// Effective value ("the user claims it lowers ISR"): the override if any, else the default.
+@JsonKey(name: 'iva_withheld_cents') NonNegativeCents get ivaWithheldCents;/// The stored derivation; `null` only for a record stored before automatic derivation that the server has not derived.
+@JsonKey(includeIfNull: true) Withholding? get withholding; RecordDescription? get description;/// Effective value ("the user claims it lowers ISR"): the override if any, else the default.
  bool get deductible;@JsonKey(name: 'deductible_source') DeductibleSource get deductibleSource;/// Non-blocking notices computed on writes (create, update, restore), never stored; `[]` on reads. Codes (append-only): `cash_over_threshold` (`payment_method`), `no_cfdi` (`has_cfdi`), `not_isr_deductible_in_regime` and `category_not_deductible` (`deductible`), `duplicate_cfdi_uuid` (`cfdi_uuid`), `iva_not_creditable_cash_payment` (`payment_method`), `provisional_parameters` (`paid_on`), `deduction_requires_remittance` (`withholding`), `withholding_cpa_unverified` (`withholding`), `supplier_regime_unknown` (`supplier_regime`), `foreign_counterparty_not_supported` (`supplier_kind`).
  List<Warning> get warnings; Legend get legend;@JsonKey(name: 'created_at') DateTime get createdAt;@JsonKey(name: 'updated_at') DateTime get updatedAt;
 /// Create a copy of Expense
@@ -61,11 +62,11 @@ abstract mixin class $ExpenseCopyWith<$Res>  {
   factory $ExpenseCopyWith(Expense value, $Res Function(Expense) _then) = _$ExpenseCopyWithImpl;
 @useResult
 $Res call({
- Uuid id,@JsonKey(name: 'taxpayer_id') Uuid taxpayerId,@JsonKey(name: 'regime_code') RegimeCode regimeCode,@JsonKey(name: 'category_code') String categoryCode,@JsonKey(name: 'amount_cents') PositiveCents amountCents,@JsonKey(name: 'iva_rate') IvaRate ivaRate,@JsonKey(name: 'iva_cents') NonNegativeCents ivaCents,@JsonKey(name: 'payment_method') PaymentMethod paymentMethod,@JsonKey(name: 'paid_on') BusinessDate paidOn,@JsonKey(name: 'has_cfdi') bool hasCfdi,@JsonKey(includeIfNull: true, name: 'cfdi_uuid') CfdiUuid? cfdiUuid,@JsonKey(includeIfNull: true, name: 'supplier_kind') SupplierKind? supplierKind,@JsonKey(includeIfNull: true, name: 'supplier_regime') SupplierRegime? supplierRegime,@JsonKey(includeIfNull: true, name: 'operation_kind') OperationKind? operationKind,@JsonKey(name: 'residential_rent') bool residentialRent,@JsonKey(name: 'isr_withheld_cents') NonNegativeCents isrWithheldCents,@JsonKey(name: 'iva_withheld_cents') NonNegativeCents ivaWithheldCents, Withholding withholding, RecordDescription? description, bool deductible,@JsonKey(name: 'deductible_source') DeductibleSource deductibleSource, List<Warning> warnings, Legend legend,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'updated_at') DateTime updatedAt
+ Uuid id,@JsonKey(name: 'taxpayer_id') Uuid taxpayerId,@JsonKey(name: 'regime_code') RegimeCode regimeCode,@JsonKey(name: 'category_code') String categoryCode,@JsonKey(name: 'amount_cents') PositiveCents amountCents,@JsonKey(name: 'iva_rate') IvaRate ivaRate,@JsonKey(name: 'iva_cents') NonNegativeCents ivaCents,@JsonKey(name: 'payment_method') PaymentMethod paymentMethod,@JsonKey(name: 'paid_on') BusinessDate paidOn,@JsonKey(name: 'has_cfdi') bool hasCfdi,@JsonKey(includeIfNull: true, name: 'cfdi_uuid') CfdiUuid? cfdiUuid,@JsonKey(includeIfNull: true, name: 'supplier_kind') SupplierKind? supplierKind,@JsonKey(includeIfNull: true, name: 'supplier_regime') SupplierRegime? supplierRegime,@JsonKey(includeIfNull: true, name: 'operation_kind') OperationKind? operationKind,@JsonKey(name: 'residential_rent') bool residentialRent,@JsonKey(name: 'isr_withheld_cents') NonNegativeCents isrWithheldCents,@JsonKey(name: 'iva_withheld_cents') NonNegativeCents ivaWithheldCents,@JsonKey(includeIfNull: true) Withholding? withholding, RecordDescription? description, bool deductible,@JsonKey(name: 'deductible_source') DeductibleSource deductibleSource, List<Warning> warnings, Legend legend,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'updated_at') DateTime updatedAt
 });
 
 
-$WithholdingCopyWith<$Res> get withholding;
+$WithholdingCopyWith<$Res>? get withholding;
 
 }
 /// @nodoc
@@ -78,7 +79,7 @@ class _$ExpenseCopyWithImpl<$Res>
 
 /// Create a copy of Expense
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? taxpayerId = null,Object? regimeCode = null,Object? categoryCode = null,Object? amountCents = null,Object? ivaRate = null,Object? ivaCents = null,Object? paymentMethod = null,Object? paidOn = null,Object? hasCfdi = null,Object? cfdiUuid = freezed,Object? supplierKind = freezed,Object? supplierRegime = freezed,Object? operationKind = freezed,Object? residentialRent = null,Object? isrWithheldCents = null,Object? ivaWithheldCents = null,Object? withholding = null,Object? description = freezed,Object? deductible = null,Object? deductibleSource = null,Object? warnings = null,Object? legend = null,Object? createdAt = null,Object? updatedAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? taxpayerId = null,Object? regimeCode = null,Object? categoryCode = null,Object? amountCents = null,Object? ivaRate = null,Object? ivaCents = null,Object? paymentMethod = null,Object? paidOn = null,Object? hasCfdi = null,Object? cfdiUuid = freezed,Object? supplierKind = freezed,Object? supplierRegime = freezed,Object? operationKind = freezed,Object? residentialRent = null,Object? isrWithheldCents = null,Object? ivaWithheldCents = null,Object? withholding = freezed,Object? description = freezed,Object? deductible = null,Object? deductibleSource = null,Object? warnings = null,Object? legend = null,Object? createdAt = null,Object? updatedAt = null,}) {
   return _then(Expense(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as Uuid,taxpayerId: null == taxpayerId ? _self.taxpayerId : taxpayerId // ignore: cast_nullable_to_non_nullable
@@ -97,8 +98,8 @@ as SupplierRegime?,operationKind: freezed == operationKind ? _self.operationKind
 as OperationKind?,residentialRent: null == residentialRent ? _self.residentialRent : residentialRent // ignore: cast_nullable_to_non_nullable
 as bool,isrWithheldCents: null == isrWithheldCents ? _self.isrWithheldCents : isrWithheldCents // ignore: cast_nullable_to_non_nullable
 as NonNegativeCents,ivaWithheldCents: null == ivaWithheldCents ? _self.ivaWithheldCents : ivaWithheldCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents,withholding: null == withholding ? _self.withholding : withholding // ignore: cast_nullable_to_non_nullable
-as Withholding,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as NonNegativeCents,withholding: freezed == withholding ? _self.withholding : withholding // ignore: cast_nullable_to_non_nullable
+as Withholding?,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
 as RecordDescription?,deductible: null == deductible ? _self.deductible : deductible // ignore: cast_nullable_to_non_nullable
 as bool,deductibleSource: null == deductibleSource ? _self.deductibleSource : deductibleSource // ignore: cast_nullable_to_non_nullable
 as DeductibleSource,warnings: null == warnings ? _self.warnings : warnings // ignore: cast_nullable_to_non_nullable
@@ -112,9 +113,12 @@ as DateTime,
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$WithholdingCopyWith<$Res> get withholding {
-  
-  return $WithholdingCopyWith<$Res>(_self.withholding, (value) {
+$WithholdingCopyWith<$Res>? get withholding {
+    if (_self.withholding == null) {
+    return null;
+  }
+
+  return $WithholdingCopyWith<$Res>(_self.withholding!, (value) {
     return _then(_self.copyWith(withholding: value));
   });
 }
@@ -199,7 +203,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Uuid id, @JsonKey(name: 'taxpayer_id')  Uuid taxpayerId, @JsonKey(name: 'regime_code')  RegimeCode regimeCode, @JsonKey(name: 'category_code')  String categoryCode, @JsonKey(name: 'amount_cents')  PositiveCents amountCents, @JsonKey(name: 'iva_rate')  IvaRate ivaRate, @JsonKey(name: 'iva_cents')  NonNegativeCents ivaCents, @JsonKey(name: 'payment_method')  PaymentMethod paymentMethod, @JsonKey(name: 'paid_on')  BusinessDate paidOn, @JsonKey(name: 'has_cfdi')  bool hasCfdi, @JsonKey(includeIfNull: true, name: 'cfdi_uuid')  CfdiUuid? cfdiUuid, @JsonKey(includeIfNull: true, name: 'supplier_kind')  SupplierKind? supplierKind, @JsonKey(includeIfNull: true, name: 'supplier_regime')  SupplierRegime? supplierRegime, @JsonKey(includeIfNull: true, name: 'operation_kind')  OperationKind? operationKind, @JsonKey(name: 'residential_rent')  bool residentialRent, @JsonKey(name: 'isr_withheld_cents')  NonNegativeCents isrWithheldCents, @JsonKey(name: 'iva_withheld_cents')  NonNegativeCents ivaWithheldCents,  Withholding withholding,  RecordDescription? description,  bool deductible, @JsonKey(name: 'deductible_source')  DeductibleSource deductibleSource,  List<Warning> warnings,  Legend legend, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Uuid id, @JsonKey(name: 'taxpayer_id')  Uuid taxpayerId, @JsonKey(name: 'regime_code')  RegimeCode regimeCode, @JsonKey(name: 'category_code')  String categoryCode, @JsonKey(name: 'amount_cents')  PositiveCents amountCents, @JsonKey(name: 'iva_rate')  IvaRate ivaRate, @JsonKey(name: 'iva_cents')  NonNegativeCents ivaCents, @JsonKey(name: 'payment_method')  PaymentMethod paymentMethod, @JsonKey(name: 'paid_on')  BusinessDate paidOn, @JsonKey(name: 'has_cfdi')  bool hasCfdi, @JsonKey(includeIfNull: true, name: 'cfdi_uuid')  CfdiUuid? cfdiUuid, @JsonKey(includeIfNull: true, name: 'supplier_kind')  SupplierKind? supplierKind, @JsonKey(includeIfNull: true, name: 'supplier_regime')  SupplierRegime? supplierRegime, @JsonKey(includeIfNull: true, name: 'operation_kind')  OperationKind? operationKind, @JsonKey(name: 'residential_rent')  bool residentialRent, @JsonKey(name: 'isr_withheld_cents')  NonNegativeCents isrWithheldCents, @JsonKey(name: 'iva_withheld_cents')  NonNegativeCents ivaWithheldCents, @JsonKey(includeIfNull: true)  Withholding? withholding,  RecordDescription? description,  bool deductible, @JsonKey(name: 'deductible_source')  DeductibleSource deductibleSource,  List<Warning> warnings,  Legend legend, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Expense() when $default != null:
 return $default(_that.id,_that.taxpayerId,_that.regimeCode,_that.categoryCode,_that.amountCents,_that.ivaRate,_that.ivaCents,_that.paymentMethod,_that.paidOn,_that.hasCfdi,_that.cfdiUuid,_that.supplierKind,_that.supplierRegime,_that.operationKind,_that.residentialRent,_that.isrWithheldCents,_that.ivaWithheldCents,_that.withholding,_that.description,_that.deductible,_that.deductibleSource,_that.warnings,_that.legend,_that.createdAt,_that.updatedAt);case _:
@@ -220,7 +224,7 @@ return $default(_that.id,_that.taxpayerId,_that.regimeCode,_that.categoryCode,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Uuid id, @JsonKey(name: 'taxpayer_id')  Uuid taxpayerId, @JsonKey(name: 'regime_code')  RegimeCode regimeCode, @JsonKey(name: 'category_code')  String categoryCode, @JsonKey(name: 'amount_cents')  PositiveCents amountCents, @JsonKey(name: 'iva_rate')  IvaRate ivaRate, @JsonKey(name: 'iva_cents')  NonNegativeCents ivaCents, @JsonKey(name: 'payment_method')  PaymentMethod paymentMethod, @JsonKey(name: 'paid_on')  BusinessDate paidOn, @JsonKey(name: 'has_cfdi')  bool hasCfdi, @JsonKey(includeIfNull: true, name: 'cfdi_uuid')  CfdiUuid? cfdiUuid, @JsonKey(includeIfNull: true, name: 'supplier_kind')  SupplierKind? supplierKind, @JsonKey(includeIfNull: true, name: 'supplier_regime')  SupplierRegime? supplierRegime, @JsonKey(includeIfNull: true, name: 'operation_kind')  OperationKind? operationKind, @JsonKey(name: 'residential_rent')  bool residentialRent, @JsonKey(name: 'isr_withheld_cents')  NonNegativeCents isrWithheldCents, @JsonKey(name: 'iva_withheld_cents')  NonNegativeCents ivaWithheldCents,  Withholding withholding,  RecordDescription? description,  bool deductible, @JsonKey(name: 'deductible_source')  DeductibleSource deductibleSource,  List<Warning> warnings,  Legend legend, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Uuid id, @JsonKey(name: 'taxpayer_id')  Uuid taxpayerId, @JsonKey(name: 'regime_code')  RegimeCode regimeCode, @JsonKey(name: 'category_code')  String categoryCode, @JsonKey(name: 'amount_cents')  PositiveCents amountCents, @JsonKey(name: 'iva_rate')  IvaRate ivaRate, @JsonKey(name: 'iva_cents')  NonNegativeCents ivaCents, @JsonKey(name: 'payment_method')  PaymentMethod paymentMethod, @JsonKey(name: 'paid_on')  BusinessDate paidOn, @JsonKey(name: 'has_cfdi')  bool hasCfdi, @JsonKey(includeIfNull: true, name: 'cfdi_uuid')  CfdiUuid? cfdiUuid, @JsonKey(includeIfNull: true, name: 'supplier_kind')  SupplierKind? supplierKind, @JsonKey(includeIfNull: true, name: 'supplier_regime')  SupplierRegime? supplierRegime, @JsonKey(includeIfNull: true, name: 'operation_kind')  OperationKind? operationKind, @JsonKey(name: 'residential_rent')  bool residentialRent, @JsonKey(name: 'isr_withheld_cents')  NonNegativeCents isrWithheldCents, @JsonKey(name: 'iva_withheld_cents')  NonNegativeCents ivaWithheldCents, @JsonKey(includeIfNull: true)  Withholding? withholding,  RecordDescription? description,  bool deductible, @JsonKey(name: 'deductible_source')  DeductibleSource deductibleSource,  List<Warning> warnings,  Legend legend, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _Expense():
 return $default(_that.id,_that.taxpayerId,_that.regimeCode,_that.categoryCode,_that.amountCents,_that.ivaRate,_that.ivaCents,_that.paymentMethod,_that.paidOn,_that.hasCfdi,_that.cfdiUuid,_that.supplierKind,_that.supplierRegime,_that.operationKind,_that.residentialRent,_that.isrWithheldCents,_that.ivaWithheldCents,_that.withholding,_that.description,_that.deductible,_that.deductibleSource,_that.warnings,_that.legend,_that.createdAt,_that.updatedAt);case _:
@@ -240,7 +244,7 @@ return $default(_that.id,_that.taxpayerId,_that.regimeCode,_that.categoryCode,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Uuid id, @JsonKey(name: 'taxpayer_id')  Uuid taxpayerId, @JsonKey(name: 'regime_code')  RegimeCode regimeCode, @JsonKey(name: 'category_code')  String categoryCode, @JsonKey(name: 'amount_cents')  PositiveCents amountCents, @JsonKey(name: 'iva_rate')  IvaRate ivaRate, @JsonKey(name: 'iva_cents')  NonNegativeCents ivaCents, @JsonKey(name: 'payment_method')  PaymentMethod paymentMethod, @JsonKey(name: 'paid_on')  BusinessDate paidOn, @JsonKey(name: 'has_cfdi')  bool hasCfdi, @JsonKey(includeIfNull: true, name: 'cfdi_uuid')  CfdiUuid? cfdiUuid, @JsonKey(includeIfNull: true, name: 'supplier_kind')  SupplierKind? supplierKind, @JsonKey(includeIfNull: true, name: 'supplier_regime')  SupplierRegime? supplierRegime, @JsonKey(includeIfNull: true, name: 'operation_kind')  OperationKind? operationKind, @JsonKey(name: 'residential_rent')  bool residentialRent, @JsonKey(name: 'isr_withheld_cents')  NonNegativeCents isrWithheldCents, @JsonKey(name: 'iva_withheld_cents')  NonNegativeCents ivaWithheldCents,  Withholding withholding,  RecordDescription? description,  bool deductible, @JsonKey(name: 'deductible_source')  DeductibleSource deductibleSource,  List<Warning> warnings,  Legend legend, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Uuid id, @JsonKey(name: 'taxpayer_id')  Uuid taxpayerId, @JsonKey(name: 'regime_code')  RegimeCode regimeCode, @JsonKey(name: 'category_code')  String categoryCode, @JsonKey(name: 'amount_cents')  PositiveCents amountCents, @JsonKey(name: 'iva_rate')  IvaRate ivaRate, @JsonKey(name: 'iva_cents')  NonNegativeCents ivaCents, @JsonKey(name: 'payment_method')  PaymentMethod paymentMethod, @JsonKey(name: 'paid_on')  BusinessDate paidOn, @JsonKey(name: 'has_cfdi')  bool hasCfdi, @JsonKey(includeIfNull: true, name: 'cfdi_uuid')  CfdiUuid? cfdiUuid, @JsonKey(includeIfNull: true, name: 'supplier_kind')  SupplierKind? supplierKind, @JsonKey(includeIfNull: true, name: 'supplier_regime')  SupplierRegime? supplierRegime, @JsonKey(includeIfNull: true, name: 'operation_kind')  OperationKind? operationKind, @JsonKey(name: 'residential_rent')  bool residentialRent, @JsonKey(name: 'isr_withheld_cents')  NonNegativeCents isrWithheldCents, @JsonKey(name: 'iva_withheld_cents')  NonNegativeCents ivaWithheldCents, @JsonKey(includeIfNull: true)  Withholding? withholding,  RecordDescription? description,  bool deductible, @JsonKey(name: 'deductible_source')  DeductibleSource deductibleSource,  List<Warning> warnings,  Legend legend, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'updated_at')  DateTime updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Expense() when $default != null:
 return $default(_that.id,_that.taxpayerId,_that.regimeCode,_that.categoryCode,_that.amountCents,_that.ivaRate,_that.ivaCents,_that.paymentMethod,_that.paidOn,_that.hasCfdi,_that.cfdiUuid,_that.supplierKind,_that.supplierRegime,_that.operationKind,_that.residentialRent,_that.isrWithheldCents,_that.ivaWithheldCents,_that.withholding,_that.description,_that.deductible,_that.deductibleSource,_that.warnings,_that.legend,_that.createdAt,_that.updatedAt);case _:
@@ -255,7 +259,7 @@ return $default(_that.id,_that.taxpayerId,_that.regimeCode,_that.categoryCode,_t
 @JsonSerializable()
 
 class _Expense implements Expense {
-  const _Expense({required this.id, @JsonKey(name: 'taxpayer_id') required this.taxpayerId, @JsonKey(name: 'regime_code') required this.regimeCode, @JsonKey(name: 'category_code') required this.categoryCode, @JsonKey(name: 'amount_cents') required this.amountCents, @JsonKey(name: 'iva_rate') required this.ivaRate, @JsonKey(name: 'iva_cents') required this.ivaCents, @JsonKey(name: 'payment_method') required this.paymentMethod, @JsonKey(name: 'paid_on') required this.paidOn, @JsonKey(name: 'has_cfdi') required this.hasCfdi, @JsonKey(includeIfNull: true, name: 'cfdi_uuid') required this.cfdiUuid, @JsonKey(includeIfNull: true, name: 'supplier_kind') required this.supplierKind, @JsonKey(includeIfNull: true, name: 'supplier_regime') required this.supplierRegime, @JsonKey(includeIfNull: true, name: 'operation_kind') required this.operationKind, @JsonKey(name: 'residential_rent') required this.residentialRent, @JsonKey(name: 'isr_withheld_cents') required this.isrWithheldCents, @JsonKey(name: 'iva_withheld_cents') required this.ivaWithheldCents, required this.withholding, required this.description, required this.deductible, @JsonKey(name: 'deductible_source') required this.deductibleSource, required  List<Warning> warnings, required this.legend, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'updated_at') required this.updatedAt}): _warnings = warnings;
+  const _Expense({required this.id, @JsonKey(name: 'taxpayer_id') required this.taxpayerId, @JsonKey(name: 'regime_code') required this.regimeCode, @JsonKey(name: 'category_code') required this.categoryCode, @JsonKey(name: 'amount_cents') required this.amountCents, @JsonKey(name: 'iva_rate') required this.ivaRate, @JsonKey(name: 'iva_cents') required this.ivaCents, @JsonKey(name: 'payment_method') required this.paymentMethod, @JsonKey(name: 'paid_on') required this.paidOn, @JsonKey(name: 'has_cfdi') required this.hasCfdi, @JsonKey(includeIfNull: true, name: 'cfdi_uuid') required this.cfdiUuid, @JsonKey(includeIfNull: true, name: 'supplier_kind') required this.supplierKind, @JsonKey(includeIfNull: true, name: 'supplier_regime') required this.supplierRegime, @JsonKey(includeIfNull: true, name: 'operation_kind') required this.operationKind, @JsonKey(name: 'residential_rent') required this.residentialRent, @JsonKey(name: 'isr_withheld_cents') required this.isrWithheldCents, @JsonKey(name: 'iva_withheld_cents') required this.ivaWithheldCents, @JsonKey(includeIfNull: true) required this.withholding, required this.description, required this.deductible, @JsonKey(name: 'deductible_source') required this.deductibleSource, required  List<Warning> warnings, required this.legend, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'updated_at') required this.updatedAt}): _warnings = warnings;
   factory _Expense.fromJson(Map<String, dynamic> json) => _$ExpenseFromJson(json);
 
 @override final  Uuid id;
@@ -280,7 +284,8 @@ class _Expense implements Expense {
 @override@JsonKey(name: 'isr_withheld_cents') final  NonNegativeCents isrWithheldCents;
 /// Read-only mirror of `withholding.iva_cents` (kept for list totals and the estimate).
 @override@JsonKey(name: 'iva_withheld_cents') final  NonNegativeCents ivaWithheldCents;
-@override final  Withholding withholding;
+/// The stored derivation; `null` only for a record stored before automatic derivation that the server has not derived.
+@override@JsonKey(includeIfNull: true) final  Withholding? withholding;
 @override final  RecordDescription? description;
 /// Effective value ("the user claims it lowers ISR"): the override if any, else the default.
 @override final  bool deductible;
@@ -333,11 +338,11 @@ abstract mixin class _$ExpenseCopyWith<$Res> implements $ExpenseCopyWith<$Res> {
   factory _$ExpenseCopyWith(_Expense value, $Res Function(_Expense) _then) = __$ExpenseCopyWithImpl;
 @override @useResult
 $Res call({
- Uuid id,@JsonKey(name: 'taxpayer_id') Uuid taxpayerId,@JsonKey(name: 'regime_code') RegimeCode regimeCode,@JsonKey(name: 'category_code') String categoryCode,@JsonKey(name: 'amount_cents') PositiveCents amountCents,@JsonKey(name: 'iva_rate') IvaRate ivaRate,@JsonKey(name: 'iva_cents') NonNegativeCents ivaCents,@JsonKey(name: 'payment_method') PaymentMethod paymentMethod,@JsonKey(name: 'paid_on') BusinessDate paidOn,@JsonKey(name: 'has_cfdi') bool hasCfdi,@JsonKey(includeIfNull: true, name: 'cfdi_uuid') CfdiUuid? cfdiUuid,@JsonKey(includeIfNull: true, name: 'supplier_kind') SupplierKind? supplierKind,@JsonKey(includeIfNull: true, name: 'supplier_regime') SupplierRegime? supplierRegime,@JsonKey(includeIfNull: true, name: 'operation_kind') OperationKind? operationKind,@JsonKey(name: 'residential_rent') bool residentialRent,@JsonKey(name: 'isr_withheld_cents') NonNegativeCents isrWithheldCents,@JsonKey(name: 'iva_withheld_cents') NonNegativeCents ivaWithheldCents, Withholding withholding, RecordDescription? description, bool deductible,@JsonKey(name: 'deductible_source') DeductibleSource deductibleSource, List<Warning> warnings, Legend legend,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'updated_at') DateTime updatedAt
+ Uuid id,@JsonKey(name: 'taxpayer_id') Uuid taxpayerId,@JsonKey(name: 'regime_code') RegimeCode regimeCode,@JsonKey(name: 'category_code') String categoryCode,@JsonKey(name: 'amount_cents') PositiveCents amountCents,@JsonKey(name: 'iva_rate') IvaRate ivaRate,@JsonKey(name: 'iva_cents') NonNegativeCents ivaCents,@JsonKey(name: 'payment_method') PaymentMethod paymentMethod,@JsonKey(name: 'paid_on') BusinessDate paidOn,@JsonKey(name: 'has_cfdi') bool hasCfdi,@JsonKey(includeIfNull: true, name: 'cfdi_uuid') CfdiUuid? cfdiUuid,@JsonKey(includeIfNull: true, name: 'supplier_kind') SupplierKind? supplierKind,@JsonKey(includeIfNull: true, name: 'supplier_regime') SupplierRegime? supplierRegime,@JsonKey(includeIfNull: true, name: 'operation_kind') OperationKind? operationKind,@JsonKey(name: 'residential_rent') bool residentialRent,@JsonKey(name: 'isr_withheld_cents') NonNegativeCents isrWithheldCents,@JsonKey(name: 'iva_withheld_cents') NonNegativeCents ivaWithheldCents,@JsonKey(includeIfNull: true) Withholding? withholding, RecordDescription? description, bool deductible,@JsonKey(name: 'deductible_source') DeductibleSource deductibleSource, List<Warning> warnings, Legend legend,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'updated_at') DateTime updatedAt
 });
 
 
-@override $WithholdingCopyWith<$Res> get withholding;
+@override $WithholdingCopyWith<$Res>? get withholding;
 
 }
 /// @nodoc
@@ -350,7 +355,7 @@ class __$ExpenseCopyWithImpl<$Res>
 
 /// Create a copy of Expense
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? taxpayerId = null,Object? regimeCode = null,Object? categoryCode = null,Object? amountCents = null,Object? ivaRate = null,Object? ivaCents = null,Object? paymentMethod = null,Object? paidOn = null,Object? hasCfdi = null,Object? cfdiUuid = freezed,Object? supplierKind = freezed,Object? supplierRegime = freezed,Object? operationKind = freezed,Object? residentialRent = null,Object? isrWithheldCents = null,Object? ivaWithheldCents = null,Object? withholding = null,Object? description = freezed,Object? deductible = null,Object? deductibleSource = null,Object? warnings = null,Object? legend = null,Object? createdAt = null,Object? updatedAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? taxpayerId = null,Object? regimeCode = null,Object? categoryCode = null,Object? amountCents = null,Object? ivaRate = null,Object? ivaCents = null,Object? paymentMethod = null,Object? paidOn = null,Object? hasCfdi = null,Object? cfdiUuid = freezed,Object? supplierKind = freezed,Object? supplierRegime = freezed,Object? operationKind = freezed,Object? residentialRent = null,Object? isrWithheldCents = null,Object? ivaWithheldCents = null,Object? withholding = freezed,Object? description = freezed,Object? deductible = null,Object? deductibleSource = null,Object? warnings = null,Object? legend = null,Object? createdAt = null,Object? updatedAt = null,}) {
   return _then(_Expense(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as Uuid,taxpayerId: null == taxpayerId ? _self.taxpayerId : taxpayerId // ignore: cast_nullable_to_non_nullable
@@ -369,8 +374,8 @@ as SupplierRegime?,operationKind: freezed == operationKind ? _self.operationKind
 as OperationKind?,residentialRent: null == residentialRent ? _self.residentialRent : residentialRent // ignore: cast_nullable_to_non_nullable
 as bool,isrWithheldCents: null == isrWithheldCents ? _self.isrWithheldCents : isrWithheldCents // ignore: cast_nullable_to_non_nullable
 as NonNegativeCents,ivaWithheldCents: null == ivaWithheldCents ? _self.ivaWithheldCents : ivaWithheldCents // ignore: cast_nullable_to_non_nullable
-as NonNegativeCents,withholding: null == withholding ? _self.withholding : withholding // ignore: cast_nullable_to_non_nullable
-as Withholding,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as NonNegativeCents,withholding: freezed == withholding ? _self.withholding : withholding // ignore: cast_nullable_to_non_nullable
+as Withholding?,description: freezed == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
 as RecordDescription?,deductible: null == deductible ? _self.deductible : deductible // ignore: cast_nullable_to_non_nullable
 as bool,deductibleSource: null == deductibleSource ? _self.deductibleSource : deductibleSource // ignore: cast_nullable_to_non_nullable
 as DeductibleSource,warnings: null == warnings ? _self._warnings : warnings // ignore: cast_nullable_to_non_nullable
@@ -385,9 +390,12 @@ as DateTime,
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$WithholdingCopyWith<$Res> get withholding {
-  
-  return $WithholdingCopyWith<$Res>(_self.withholding, (value) {
+$WithholdingCopyWith<$Res>? get withholding {
+    if (_self.withholding == null) {
+    return null;
+  }
+
+  return $WithholdingCopyWith<$Res>(_self.withholding!, (value) {
     return _then(_self.copyWith(withholding: value));
   });
 }

@@ -280,7 +280,7 @@ func TestRestore_ReDerivesTheWithholding(t *testing.T) {
 	assert.Equal(t, got.Income.Withholding, h.store.rows[incomeID].Withholding)
 }
 
-func TestRestore_WarnsAndKeepsALegacyRecord(t *testing.T) {
+func TestRestore_WarnsOfAnUnverifiedRule(t *testing.T) {
 	h := newHarness(t)
 	in := us1(t)
 	in.Counterparty = fiscal.ReceptorGovFederal
@@ -290,13 +290,4 @@ func TestRestore_WarnsAndKeepsALegacyRecord(t *testing.T) {
 	got, err := h.uc.Restore(t.Context(), userA, taxpayerA, incomeID)
 	require.NoError(t, err)
 	assert.Equal(t, []domain.Warning{{Code: domain.WarningWithholdingCPAUnverified, Field: domain.FieldWithholding}}, got.Warnings)
-
-	require.NoError(t, h.uc.Delete(t.Context(), userA, taxpayerA, incomeID))
-	legacy := h.store.rows[incomeID]
-	legacy.Counterparty, legacy.Withholding = "", fiscal.WithholdingRecord{Withholdings: fiscal.Withholdings{ISR: 7}}
-	h.store.rows[incomeID] = legacy
-	got, err = h.uc.Restore(t.Context(), userA, taxpayerA, incomeID)
-	require.NoError(t, err)
-	assert.Equal(t, fiscal.WithholdingRecord{Withholdings: fiscal.Withholdings{ISR: 7}}, got.Income.Withholding,
-		"no facts to derive from: kept for the WH-08 backfill")
 }

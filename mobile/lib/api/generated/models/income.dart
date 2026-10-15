@@ -21,7 +21,7 @@ import 'withholding.dart';
 part 'income.freezed.dart';
 part 'income.g.dart';
 
-/// `withholding` is the derived withholding (read-only, ADR-0008). **0.12.0 (WH-11, ADR-0008 amendment):** `counterparty_type` is removed; `counterparty_kind`, `operation_kind`, `residential_rent`, `via_platform` and `withholding` are required (every income written since 0.11.3 has them, and the WH-08 backfill derives them for older rows before this version is deployed). (A `$ref` keeps no sibling description: the strict response validator would drop the referenced properties.)
+/// `withholding` is the derived withholding (read-only, ADR-0008). **0.12.0 (WH-11, ADR-0008 amendment):** `counterparty_type` is removed; `counterparty_kind`, `operation_kind`, `residential_rent`, `via_platform` and `withholding` are required. Every income written since 0.11.3 stores them. An older income the WH-08 backfill has not derived yet is still served: its facts are read from its stored counterparty and the regime default (MODULE-withholdings §5.2, the backfill's own mapping) and its `withholding` is `null`, as is the `withholding` of one the rules cannot derive (backfill "need user input"); editing the record derives it. No deploy order is assumed. (A `$ref` keeps no sibling description: the strict response validator would drop the referenced properties.)
 @Freezed()
 abstract class Income with _$Income {
   const factory Income({
@@ -48,7 +48,9 @@ abstract class Income with _$Income {
     /// Read-only mirror of `withholding.iva_cents` (kept for list totals and the estimate).
     @JsonKey(name: 'iva_withheld_cents')
     required NonNegativeCents ivaWithheldCents,
-    required Withholding withholding,
+
+    /// The stored derivation; `null` only for a record stored before automatic derivation that the server has not derived.
+    @JsonKey(includeIfNull: true) required Withholding? withholding,
     @JsonKey(includeIfNull: true, name: 'invoiced_on')
     required BusinessDate? invoicedOn,
     @JsonKey(includeIfNull: true, name: 'collected_on')

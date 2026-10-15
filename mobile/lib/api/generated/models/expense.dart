@@ -24,7 +24,7 @@ import 'withholding.dart';
 part 'expense.freezed.dart';
 part 'expense.g.dart';
 
-/// `withholding` is the derived withholding (read-only, ADR-0008): all zero with `withholder: none` for a persona física taxpayer. **0.12.0 (WH-12, ADR-0008 amendment):** `supplier_kind`, `supplier_regime`, `operation_kind` (nullable), `residential_rent` and `withholding` are required (every expense written since 0.11.3 has them, and the WH-08 backfill derives them for older rows before this version is deployed).
+/// `withholding` is the derived withholding (read-only, ADR-0008): all zero with `withholder: none` for a persona física taxpayer. **0.12.0 (WH-12, ADR-0008 amendment):** `supplier_kind`, `supplier_regime`, `operation_kind` (nullable), `residential_rent` and `withholding` are required. Every expense written since 0.11.3 stores them. An older expense the WH-08 backfill has not derived yet (or one the rules cannot derive, backfill "need user input") is still served with `withholding: null`; editing the record derives it. No deploy order is assumed.
 @Freezed()
 abstract class Expense with _$Expense {
   const factory Expense({
@@ -61,7 +61,9 @@ abstract class Expense with _$Expense {
     /// Read-only mirror of `withholding.iva_cents` (kept for list totals and the estimate).
     @JsonKey(name: 'iva_withheld_cents')
     required NonNegativeCents ivaWithheldCents,
-    required Withholding withholding,
+
+    /// The stored derivation; `null` only for a record stored before automatic derivation that the server has not derived.
+    @JsonKey(includeIfNull: true) required Withholding? withholding,
     required RecordDescription description,
 
     /// Effective value ("the user claims it lowers ISR"): the override if any, else the default.

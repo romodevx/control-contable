@@ -30,9 +30,9 @@ _Expense _$ExpenseFromJson(Map<String, dynamic> json) => _Expense(
   residentialRent: json['residential_rent'] as bool,
   isrWithheldCents: (json['isr_withheld_cents'] as num).toInt(),
   ivaWithheldCents: (json['iva_withheld_cents'] as num).toInt(),
-  withholding: Withholding.fromJson(
-    json['withholding'] as Map<String, dynamic>,
-  ),
+  withholding: json['withholding'] == null
+      ? null
+      : Withholding.fromJson(json['withholding'] as Map<String, dynamic>),
   description: json['description'] as String?,
   deductible: json['deductible'] as bool,
   deductibleSource: DeductibleSource.fromJson(

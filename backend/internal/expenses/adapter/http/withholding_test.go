@@ -91,12 +91,28 @@ func TestGetExpense_personaFisicaWithholdsNothing(t *testing.T) {
 	assert.Equal(t, false, body["residential_rent"])
 }
 
-// An expense the WH-08 backfill has not derived yet lacks the withholding
-// the contract requires since 0.12.0 (WH-12): showing it would break the
-// contract, so it is a server fault (500), never a partial body.
-func TestGetExpense_underivedRecordIsAServerFault(t *testing.T) {
+// An expense the WH-08 backfill has not derived yet is served with
+// `withholding: null` (0.12.0, ADR-0008 Amendment 2): no deploy order, and
+// never a 500 for a legacy row.
+func TestGetExpense_underivedRecordHasANullWithholding(t *testing.T) {
+	e := sample(t)
+	e.Withholding = fiscal.WithholdingRecord{Withholdings: fiscal.Withholdings{ISR: 100}}
+
+	res, err := expenseshttp.NewHandler(&fakeExpenses{expense: e}).GetExpense(authed(t), gen.GetExpenseRequestObject{
+		TaxpayerId: uid(taxpayerID), ExpenseId: uid(expenseID),
+	})
+
+	require.NoError(t, err)
+	body := encode(t, res.(gen.GetExpense200JSONResponse).Body)
+	require.Contains(t, body, "withholding", "required, nullable")
+	assert.Nil(t, body["withholding"])
+	assert.InDelta(t, 100, body["isr_withheld_cents"], 0, "the stored amount the estimate uses")
+}
+
+// A derivation naming an unknown withholder is corrupt: a server fault,
+// never a partial body.
+func TestGetExpense_corruptDerivationIsAServerFault(t *testing.T) {
 	for name, record := range map[string]fiscal.WithholdingRecord{
-		"no derivation":      {Withholdings: fiscal.Withholdings{ISR: 100}},
 		"unknown withholder": {RuleIDs: []fiscal.RuleID{fiscal.RuleISR0, fiscal.RuleIVA1}, TableVersion: fiscal.WithholdingTableVersion, Withholder: "nobody"},
 	} {
 		t.Run(name, func(t *testing.T) {
