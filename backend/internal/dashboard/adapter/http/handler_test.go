@@ -105,7 +105,7 @@ func readOnlyEngineOff(t *testing.T) usecase.Dashboard[hero] {
 			{Month: month(t, "2026-01"), Figures: usecase.Figures{Income: cents(0), Expense: cents(0)}},
 			{Month: month(t, "2026-02"), Figures: usecase.Figures{Income: cents(2_500_000), Expense: cents(2_900_000)}},
 		},
-		Access: usecase.AccessSummary{Level: access.LevelReadOnly, IncomesRemaining: &zero, ExpensesRemaining: &zero},
+		Access: access.View{Level: access.LevelReadOnly, IncomesRemaining: &zero, ExpensesRemaining: &zero},
 	}
 }
 
@@ -128,7 +128,7 @@ func TestGetDashboard_incomesAndEngineOffExample(t *testing.T) {
 	for i := range out.Trend {
 		out.Trend[i].Income = nil
 	}
-	out.Access = usecase.AccessSummary{Level: access.LevelPro}
+	out.Access = access.View{Level: access.LevelPro}
 
 	rec, err := serve(t, dashboardhttp.NewHandler[hero](&fakeDashboards{out: out}), gen.GetDashboardRequestObject{
 		TaxpayerId: uuid.MustParse(exampleTax),
@@ -154,7 +154,7 @@ func TestGetDashboard_emptyTrialExample(t *testing.T) {
 			Month: month(t, "2026-01"), Figures: usecase.Figures{Income: cents(0), Expense: cents(0)},
 			Tax: &usecase.TrendTax{IVAOutcome: usecase.OutcomeZero, Status: domain.StatusComplete},
 		}},
-		Access: usecase.AccessSummary{
+		Access: access.View{
 			Level: access.LevelTrial, TrialEndsAt: &ends, TrialDaysLeft: &days, IncomesRemaining: &incomes, ExpensesRemaining: &expenses,
 		},
 		Legend: legend,

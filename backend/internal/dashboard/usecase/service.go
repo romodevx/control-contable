@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -68,16 +67,6 @@ type TrendPoint struct {
 	Tax *TrendTax
 }
 
-// AccessSummary is the caller's access (contract AccessSummary): nil
-// fields are the contract's nulls.
-type AccessSummary struct {
-	Level             access.Level
-	TrialEndsAt       *time.Time
-	TrialDaysLeft     *int
-	IncomesRemaining  *int
-	ExpensesRemaining *int
-}
-
 // Dashboard is the Home of one taxpayer for Period (contract Dashboard).
 type Dashboard[D any] struct {
 	TaxpayerID string
@@ -88,7 +77,9 @@ type Dashboard[D any] struct {
 	// Estimate is the period's full estimate; nil when the engine is OFF.
 	Estimate *D
 	Trend    []TrendPoint
-	Access   AccessSummary
+	// Access is the caller's access (contract AccessSummary), shaped by
+	// access.Summary.View like every other screen's.
+	Access access.View
 	// Legend is "" exactly when Estimate is nil.
 	Legend string
 }
@@ -220,7 +211,7 @@ func (s *Service[D]) read(ctx context.Context, userID string, on modules, window
 	if err != nil {
 		return fmt.Errorf("dashboard: access summary: %w", err)
 	}
-	out.Access = accessSummary(summary, s.deps.Clock.Now())
+	out.Access = summary.View(s.deps.Clock.Now())
 	return nil
 }
 
@@ -330,22 +321,4 @@ func inWindow(points []TrendPoint, figure func(TrendPoint) *money.Cents) bool {
 		}
 	}
 	return false
-}
-
-// accessSummary shapes the policy's summary as the contract: trial fields
-// only while the trial runs; counters for trial and read-only.
-func accessSummary(s access.Summary, now time.Time) AccessSummary {
-	out := AccessSummary{Level: s.Status.Level}
-	if s.Status.Level == access.LevelTrial {
-		ends := s.Status.TrialEndsAt
-		days := domain.TrialDaysLeft(now, ends)
-		out.TrialEndsAt, out.TrialDaysLeft = &ends, &days
-	}
-	if n, limited := s.Remaining(access.RecordIncome); limited {
-		out.IncomesRemaining = &n
-	}
-	if n, limited := s.Remaining(access.RecordExpense); limited {
-		out.ExpensesRemaining = &n
-	}
-	return out
 }
