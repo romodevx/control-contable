@@ -4,6 +4,7 @@ package migrations_test
 
 import (
 	"database/sql"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -220,7 +221,7 @@ func TestNotificationLogPurgeMigration_Down(t *testing.T) {
 	_, err = p.DownTo(t.Context(), notificationLogPurgeVersion-1)
 	require.NoError(t, err)
 	worker := db.Connect(t, pgtest.RoleWorker)
-	assert.Equal(t, purgeTargets[:len(purgeTargets)-1], queryStrings(t, worker, "SELECT target FROM purge_soft_deleted(1)"))
+	assert.Equal(t, purgeTargets[:slices.Index(purgeTargets, purgeTargetNotificationLog)], queryStrings(t, worker, "SELECT target FROM purge_soft_deleted(1)"))
 	assert.Empty(t, queryStrings(t, owner,
 		"SELECT policyname::text FROM pg_policies WHERE policyname LIKE 'notification_log\\_purge\\_%'"))
 	assert.Empty(t, queryStrings(t, owner,
