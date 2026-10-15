@@ -3,11 +3,10 @@
 // topic and disclaimer enums, and the personal-deductions calculator of
 // LISR art. 151 and the colegiaturas decree (DOF 26-12-2013 arts. 1.8–1.10).
 //
-// Placement: the annual engine lives inside the tax engine's domain tree
-// until ADR-0008 (PLAN ANN-02, "annual engine placement") decides where it
-// belongs; it imports only the money type, the tax engine's domain (the
-// Ledger steps its notes become) and the stdlib, so moving it is a path
-// change. The legal limits (UMA, caps, tuition amounts) are read through
+// Placement (ADR-0009): the annual estimate is a sub-context of the tax
+// engine module; this is its pure domain. It imports only the money type,
+// the tax engine's domain (the Ledger steps its notes become) and the
+// stdlib, and nothing in the monthly engine imports it. The legal limits (UMA, caps, tuition amounts) are read through
 // the LimitsReader port; the 2026 parameter file implements it in ANN-04.
 //
 //   - ComputeDeductions: eligibility (cash is not deductible for the
