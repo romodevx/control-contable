@@ -43,6 +43,7 @@ WHERE person_type = 'fisica' AND regime_a = '605' AND regime_b = '625'`)
 	arrendamiento := byCode["606"]
 	assert.Equal(t, domain.PersonTypeFisica, arrendamiento.PersonType)
 	assert.Equal(t, "full", arrendamiento.Treatment)
+	assert.Equal(t, "cash", arrendamiento.IncomeBasis, "regimes.income_basis")
 	require.NotEmpty(t, arrendamiento.OptionDefs)
 	def := arrendamiento.OptionDefs[0]
 	assert.Equal(t, "deduction_mode", def.Key)
@@ -67,6 +68,9 @@ WHERE person_type = 'fisica' AND regime_a = '605' AND regime_b = '625'`)
 		assert.NotNil(t, r.RequiredInputs)
 	}
 	assert.NotEmpty(t, moral)
+	moralByCode := entriesByCode(t, moral)
+	assert.Equal(t, "accrual", moralByCode["601"].IncomeBasis, "Título II books on the invoice date")
+	assert.Equal(t, "cash", moralByCode["626"].IncomeBasis, "RESICO PM books on the collection date")
 }
 
 func entriesByCode(t *testing.T, entries []usecase.CatalogEntry) map[string]usecase.CatalogEntry {

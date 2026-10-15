@@ -204,13 +204,14 @@ func (Store) Delete(ctx context.Context, id string) (bool, error) {
 	return result.RowsAffected > 0, nil
 }
 
-// regimeRow is a taxpayer_regimes row joined with its catalog name and
-// treatment.
+// regimeRow is a taxpayer_regimes row joined with its catalog name,
+// treatment and income basis.
 type regimeRow struct {
 	TaxpayerID  string
 	RegimeCode  string
 	Name        string
 	Treatment   string
+	IncomeBasis string
 	Options     string
 	StartPeriod string
 	EndPeriod   *string
@@ -218,7 +219,8 @@ type regimeRow struct {
 
 // regimeSelect joins the catalog on (code, person_type): 626 PF and 626 PM
 // are different regimes.
-const regimeSelect = `SELECT tr.taxpayer_id, tr.regime_code, r.name, r.treatment, tr.options::text AS options,
+const regimeSelect = `SELECT tr.taxpayer_id, tr.regime_code, r.name, r.treatment, r.income_basis,
+       tr.options::text AS options,
        tr.start_period, tr.end_period
 FROM taxpayer_regimes tr
 JOIN regimes r ON r.code = tr.regime_code AND r.person_type = tr.person_type`
@@ -238,7 +240,7 @@ func (r regimeRow) toHeld() (usecase.HeldRegime, error) {
 		}
 	}
 	return usecase.HeldRegime{
-		TaxpayerID: r.TaxpayerID, Code: r.RegimeCode, Name: r.Name, Treatment: r.Treatment,
+		TaxpayerID: r.TaxpayerID, Code: r.RegimeCode, Name: r.Name, Treatment: r.Treatment, IncomeBasis: r.IncomeBasis,
 		Options: options, Window: window,
 	}, nil
 }
