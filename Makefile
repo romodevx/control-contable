@@ -95,9 +95,12 @@ MOBILE_COVER_MIN ?= 80
 MOBILE_APK := $(MOBILE)/build/app/outputs/flutter-apk/app-$(FLAVOR)-release.apk
 MOBILE_AAB := $(MOBILE)/build/app/outputs/bundle/$(FLAVOR)Release/app-$(FLAVOR)-release.aab
 MOBILE_ARTIFACT_GATE := tools/mobile/check-release-artifact.sh
+# Dependency advisory scan of pubspec.lock (M9 security gate F3), pinned: a module version
+# at least two weeks old, checked against the Go checksum database by go run.
+OSV_SCANNER := github.com/google/osv-scanner/v2/cmd/osv-scanner@v2.6.0
 
 .PHONY: mobile-check mobile-test-mock mobile-client mobile-client-check mobile-run mobile-run-mock \
-	mobile-require-api-url mobile-build-apk mobile-build-aab mobile-build-ipa mobile-cover \
+	mobile-require-api-url mobile-build-apk mobile-build-aab mobile-build-ipa mobile-cover mobile-deps-scan \
 	mobile-artifact-check mobile-artifact-check-test
 
 ## mobile-check: format check, analyze (0 issues), widget/unit tests
@@ -159,6 +162,10 @@ mobile-artifact-check:
 ## mobile-artifact-check-test: prove the artifact gate rejects what it should (Linux; see the script for macOS)
 mobile-artifact-check-test:
 	tools/mobile/check-release-artifact_test.sh
+
+## mobile-deps-scan: fail on a known advisory (OSV) for a package in mobile/pubspec.lock (needs Go)
+mobile-deps-scan:
+	go run $(OSV_SCANNER) scan source --lockfile=$(MOBILE)/pubspec.lock
 
 ## mobile-build-ipa: obfuscated release IPA for FLAVOR (needs Xcode + the iOS schemes, OB6)
 mobile-build-ipa: mobile-require-api-url

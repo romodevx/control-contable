@@ -160,6 +160,7 @@ rewrites it, and CI (`make api-error-tables-check`) fails when it is stale.
 | Contract lint + ruleset self-test | `make contract-lint && make contract-lint-test` | Node |
 | Mobile format, analyze, unit/widget | `make mobile-check` | Flutter |
 | Mobile coverage gate (80 % non-generated `lib/`) | `make mobile-cover` | Flutter |
+| Mobile dependency advisories (OSV) | `make mobile-deps-scan` | Go |
 | Mobile against the mock | `make mock`, then `make mobile-test-mock` | Node, Flutter |
 | Dart client drift | `make mobile-client-check` | Flutter |
 
@@ -173,7 +174,7 @@ success without running its gates.
 |---|---|---|
 | `backend-ok` | `backend.yml` | gofmt, golangci-lint, codegen drift, govulncheck, unit tests, integration + contract tests, coverage ≥ 80 % |
 | `contract-ok` | `contract.yml` | ruleset and generator self-tests, OpenAPI lint, module error tables match the contract |
-| `mobile-ok` | `mobile.yml` | format, analyze, tests + coverage ≥ 80 %, Dart client drift and kind guard, obfuscated release build, artifact gate (no symbols or source maps shipped) |
+| `mobile-ok` | `mobile.yml` | format, analyze, tests + coverage ≥ 80 %, Dart client drift and kind guard, OSV advisory scan of `pubspec.lock`, obfuscated release build, artifact gate (no symbols or source maps shipped) |
 
 ## Contributing
 

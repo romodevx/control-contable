@@ -132,6 +132,27 @@ jobs:
           git add --intent-to-add --all -- mobile
           git diff --exit-code -- mobile
 
+  # M9 security gate F3: the backend has govulncheck; the app's packages get the same gate.
+  # osv-scanner reads mobile/pubspec.lock (direct and transitive) against OSV's Pub advisories.
+  # The version is pinned in the Makefile (OSV_SCANNER) and go run checks it against the Go
+  # checksum database.
+  deps:
+    name: Dependency advisories (osv-scanner, pubspec.lock)
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache: false
+      - name: OSV scan of mobile/pubspec.lock
+        run: make mobile-deps-scan
+
   release-android:
     name: Release build (prod, obfuscated) + artifact gate
     needs: [changes, check]
@@ -186,7 +207,7 @@ jobs:
   ok:
     name: mobile-ok
     if: ${{ always() }}
-    needs: [changes, check, client, release-android]
+    needs: [changes, check, client, deps, release-android]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
