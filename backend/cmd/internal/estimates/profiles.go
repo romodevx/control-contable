@@ -1,4 +1,4 @@
-package main
+package estimates
 
 import (
 	"context"
@@ -15,18 +15,21 @@ import (
 // errUnknownTreatment reports a catalog treatment outside the contract enum.
 var errUnknownTreatment = errors.New("taxengine: unknown regime treatment")
 
-// estimateProfiles adapts the taxpayers module's profile reader to the
+// Profiles adapts the taxpayers module's profile reader to the
 // estimate's TaxpayerProfileReader port. Modules never import each other
 // (ADR-0001), so the composition root translates the types. Its client
 // errors (404) pass as they are.
-type estimateProfiles struct {
+type Profiles struct {
 	reader tpusecase.TaxpayerProfileReader
 }
 
-var _ usecase.TaxpayerProfileReader = estimateProfiles{}
+var _ usecase.TaxpayerProfileReader = Profiles{}
+
+// NewProfiles adapts reader.
+func NewProfiles(reader tpusecase.TaxpayerProfileReader) Profiles { return Profiles{reader: reader} }
 
 // Profile implements usecase.TaxpayerProfileReader.
-func (a estimateProfiles) Profile(ctx context.Context, userID, taxpayerID string) (usecase.TaxpayerProfile, error) {
+func (a Profiles) Profile(ctx context.Context, userID, taxpayerID string) (usecase.TaxpayerProfile, error) {
 	p, err := a.reader.Profile(ctx, userID, taxpayerID)
 	if err != nil {
 		return usecase.TaxpayerProfile{}, err

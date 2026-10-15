@@ -1,4 +1,4 @@
-package main
+package estimates
 
 import (
 	"context"
@@ -40,7 +40,7 @@ func TestIncomeLedger_MapsEveryField(t *testing.T) {
 	}}}
 	q := taxusecase.LedgerQuery{TaxpayerID: "0199d4a2-1111-7000-8000-00000004f0a1", FirstYear: 2026, FiscalYear: 2027, Through: time.March}
 
-	got, err := newIncomeLedger(source).IncomeSums(t.Context(), q)
+	got, err := NewIncomeLedger(source).IncomeSums(t.Context(), q)
 
 	require.NoError(t, err)
 	assert.Equal(t, incomesinfra.LedgerQuery{TaxpayerID: q.TaxpayerID, FirstYear: 2026, FiscalYear: 2027, Through: time.March}, source.got)
@@ -60,12 +60,12 @@ func TestIncomeLedger_MapsEveryField(t *testing.T) {
 
 func TestIncomeLedger_PassesTheReaderErrorOn(t *testing.T) {
 	boom := errors.New("boom")
-	_, err := newIncomeLedger(&fakeIncomeSums{err: boom}).IncomeSums(t.Context(), taxusecase.LedgerQuery{})
+	_, err := NewIncomeLedger(&fakeIncomeSums{err: boom}).IncomeSums(t.Context(), taxusecase.LedgerQuery{})
 	require.ErrorIs(t, err, boom)
 }
 
 func TestIncomeLedger_NoRows(t *testing.T) {
-	got, err := newIncomeLedger(&fakeIncomeSums{}).IncomeSums(t.Context(), taxusecase.LedgerQuery{})
+	got, err := NewIncomeLedger(&fakeIncomeSums{}).IncomeSums(t.Context(), taxusecase.LedgerQuery{})
 	require.NoError(t, err)
 	assert.Empty(t, got)
 }
@@ -75,7 +75,7 @@ func TestIncomeLedger_NoRows(t *testing.T) {
 // silently a different range.
 func TestIncomeLedger_RefusesThePriorDecember(t *testing.T) {
 	source := &fakeIncomeSums{}
-	_, err := newIncomeLedger(source).IncomeSums(t.Context(), taxusecase.LedgerQuery{
+	_, err := NewIncomeLedger(source).IncomeSums(t.Context(), taxusecase.LedgerQuery{
 		TaxpayerID: "0199d4a2-1111-7000-8000-0000000e000a", FiscalYear: 2027, Through: time.January, PriorDecember: true,
 	})
 	require.ErrorIs(t, err, errIncomePriorDecember)

@@ -40,8 +40,10 @@ func TestRun_refusesAnUnparsableDatabaseURL(t *testing.T) {
 // boot keeps the worker from starting (fail closed).
 func TestRun_outsideDevRefusesToStartWithAnUnverifiedRole(t *testing.T) {
 	env := map[string]string{
-		"APP_ENV":      "staging",
-		"DATABASE_URL": "postgres://cc_worker@127.0.0.1:1/control_contable?sslmode=disable&connect_timeout=1",
+		"APP_ENV":                 "staging",
+		"DATABASE_URL":            "postgres://cc_worker@127.0.0.1:1/control_contable?sslmode=disable&connect_timeout=1",
+		"PUSH_TOKEN_ENC_KEY":      randomHex(t),
+		"PUSH_TOKEN_INDEX_PEPPER": randomHex(t),
 	}
 
 	err := run(t.Context(), lookupFrom(env), &bytes.Buffer{})
@@ -75,8 +77,34 @@ func TestNewRegistry_registersTheRecordsPurge(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = pool.Close() })
 
-	reg, err := newRegistry(pool, logging.New(&bytes.Buffer{}, nil), reminders.DisabledPushSender{})
+	reg, err := newRegistry(pool, logging.New(&bytes.Buffer{}, nil), reminders.DisabledPushSender{}, config.Reminders{})
 
 	require.NoError(t, err)
-	assert.Equal(t, []string{"records_purge"}, reg.Names())
+	assert.Equal(t, []string{"records_purge"}, reg.Names(), "dev without push token keys: no reminder job")
+}
+
+// With the push token keys (required outside dev) the reminder job (M9-06)
+// is registered too; it checks module_reminders on every run.
+func TestNewRegistry_registersTheReminders(t *testing.T) {
+	pool, err := pgdb.Open("postgres://cc_worker@127.0.0.1:1/control_contable?sslmode=disable")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = pool.Close() })
+
+	reg, err := newRegistry(pool, logging.New(&bytes.Buffer{}, nil), reminders.DisabledPushSender{}, testReminderKeys(t))
+
+	require.NoError(t, err)
+	assert.Equal(t, []string{"records_purge", "reminders"}, reg.Names())
+}
+
+// Outside dev the worker needs the push token keys to open the tokens the
+// API sealed: missing ones refuse the start (config.LoadReminders).
+func TestRun_outsideDevRequiresThePushTokenKeys(t *testing.T) {
+	env := map[string]string{
+		"APP_ENV":      "staging",
+		"DATABASE_URL": "postgres://cc_worker@127.0.0.1:1/control_contable?sslmode=disable&connect_timeout=1",
+	}
+
+	err := run(t.Context(), lookupFrom(env), &bytes.Buffer{})
+
+	require.ErrorContains(t, err, "PUSH_TOKEN_ENC_KEY")
 }

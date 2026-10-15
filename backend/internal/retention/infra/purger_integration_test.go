@@ -44,7 +44,7 @@ VALUES (sha256('closed-window'), 2, now() - interval '25 hours')`)
 	assert.Equal(t, []usecase.TargetCount{
 		{Target: "incomes"}, {Target: "expenses"}, {Target: "personal_deductions"},
 		{Target: "refresh_tokens"}, {Target: "email_verifications"},
-		{Target: "email_verification_failures", Purged: 1},
+		{Target: "email_verification_failures", Purged: 1}, {Target: "notification_log"},
 	}, counts)
 }
 
