@@ -41,7 +41,7 @@ func TestLatestRecordDate_IsTheLatestDateOfALiveIncomeOfTheRegime(t *testing.T) 
 
 	accrual := func(n int, invoiced, collected string) usecase.NewIncome {
 		f := usecase.Fields{
-			Regime: "601", Counterparty: domain.CounterpartyPublic, Amount: cents(100_00), IVARate: fiscal.IVAExempt,
+			Regime: "601", Counterparty: fiscal.ReceptorPFNoActivityOrPublic, Amount: cents(100_00), IVARate: fiscal.IVAExempt,
 			Dates: domain.Dates{InvoicedOn: day(t, invoiced)},
 		}
 		if collected != "" {

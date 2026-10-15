@@ -3258,9 +3258,9 @@
   "@annualPtuToDistribute": {
     "description": "PM informative figure."
   },
-  "annualSuggestedCu": "Coeficiente de utilidad sugerido para {year}: {cu}",
+  "annualSuggestedCu": "Coeficiente de utilidad sugerido para tus pagos de {year}: {cu}. Confírmalo con tu contador.",
   "@annualSuggestedCu": {
-    "description": "PM suggested coeficiente de utilidad.",
+    "description": "PM suggested coeficiente de utilidad for next year's provisional payments; MODULE-annual §2.7 requires the \"confírmalo con tu contador\" label.",
     "placeholders": {
       "year": {
         "type": "String"
@@ -3269,43 +3269,6 @@
         "type": "String"
       }
     }
-  },
-  "annualInputsTitle": "Datos para tu anual",
-  "@annualInputsTitle": {
-    "description": "Heading of the annual inputs block."
-  },
-  "annualInputDeductions": "Deducciones personales",
-  "@annualInputDeductions": {
-    "description": "Annual input: personal deductions."
-  },
-  "annualInputSalary": "Constancias de sueldos",
-  "@annualInputSalary": {
-    "description": "Annual input: salary constancias."
-  },
-  "annualInputFacts": "Datos del año",
-  "@annualInputFacts": {
-    "description": "Annual input: per-year facts."
-  },
-  "annualInputPayments": "Pagos provisionales presentados",
-  "@annualInputPayments": {
-    "description": "Annual input: filed provisional payments."
-  },
-  "annualCountRegistered": "{count, plural, =0{Ninguna registrada} =1{1 registrada} other{{count} registradas}}",
-  "@annualCountRegistered": {
-    "description": "How many deductions or constancias are registered.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "annualInputPending": "Esta pantalla llega en una próxima versión. Mientras tanto, la estimación usa lo que ya registraste.",
-  "@annualInputPending": {
-    "description": "Placeholder of an annual input screen not shipped yet."
-  },
-  "annualReadOnly": "Tu periodo de prueba terminó: puedes consultar esta estimación, pero capturar o cambiar datos requiere un plan.",
-  "@annualReadOnly": {
-    "description": "Read-only user on the annual screen."
   },
   "annualBreakdownTitle": "Cómo se calculó",
   "@annualBreakdownTitle": {
@@ -3382,6 +3345,39 @@
   "cpaTopicPtuRate": "la tasa de PTU",
   "@cpaTopicPtuRate": {
     "description": "CPA topic ptu_rate."
+  },
+  "annualInputsTitle": "Datos para tu anual",
+  "@annualInputsTitle": {
+    "description": "Heading of the annual inputs block."
+  },
+  "annualInputDeductions": "Deducciones personales",
+  "@annualInputDeductions": {
+    "description": "Annual input: personal deductions."
+  },
+  "annualInputSalary": "Constancias de sueldos",
+  "@annualInputSalary": {
+    "description": "Annual input: salary constancias."
+  },
+  "annualInputFacts": "Datos del año",
+  "@annualInputFacts": {
+    "description": "Annual input: per-year facts."
+  },
+  "annualInputPayments": "Pagos provisionales presentados",
+  "@annualInputPayments": {
+    "description": "Annual input: filed provisional payments."
+  },
+  "annualCountRegistered": "{count, plural, =0{Ninguna registrada} =1{1 registrada} other{{count} registradas}}",
+  "@annualCountRegistered": {
+    "description": "How many deductions or constancias are registered.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "annualReadOnly": "Tu periodo de prueba terminó: puedes consultar esta estimación, pero capturar o cambiar datos requiere un plan.",
+  "@annualReadOnly": {
+    "description": "Read-only user on the annual screen."
   },
   "annualInputsReadOnlyNotice": "Tu cuenta es de solo consulta: puedes ver y eliminar tus datos, pero capturar o cambiar algo requiere un plan.",
   "@annualInputsReadOnlyNotice": {

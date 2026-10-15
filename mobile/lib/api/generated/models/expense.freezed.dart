@@ -20,12 +20,11 @@ mixin _$Expense {
 @JsonKey(name: 'isr_withheld_cents') NonNegativeCents get isrWithheldCents;/// Read-only mirror of `withholding.iva_cents` (kept for list totals and the estimate).
 @JsonKey(name: 'iva_withheld_cents') NonNegativeCents get ivaWithheldCents; RecordDescription? get description;/// Effective value ("the user claims it lowers ISR"): the override if any, else the default.
  bool get deductible;@JsonKey(name: 'deductible_source') DeductibleSource get deductibleSource;/// Non-blocking notices computed on writes (create, update, restore), never stored; `[]` on reads. Codes (append-only): `cash_over_threshold` (`payment_method`), `no_cfdi` (`has_cfdi`), `not_isr_deductible_in_regime` and `category_not_deductible` (`deductible`), `duplicate_cfdi_uuid` (`cfdi_uuid`), `iva_not_creditable_cash_payment` (`payment_method`), `provisional_parameters` (`paid_on`), `deduction_requires_remittance` (`withholding`), `withholding_cpa_unverified` (`withholding`), `supplier_regime_unknown` (`supplier_regime`), `foreign_counterparty_not_supported` (`supplier_kind`).
- List<Warning> get warnings; Legend get legend;@JsonKey(name: 'created_at') DateTime get createdAt;@JsonKey(name: 'updated_at') DateTime get updatedAt;/// `null` for a persona física taxpayer. Required (nullable) once WH-07 lands.
-@JsonKey(includeIfNull: false, name: 'supplier_kind') SupplierKind? get supplierKind;/// `null` unless `supplier_kind: pf_with_activity`. Required (nullable) once WH-07 lands.
-@JsonKey(includeIfNull: false, name: 'supplier_regime') SupplierRegime? get supplierRegime;/// `null` for a persona física taxpayer. Required (nullable) once WH-07 lands.
-@JsonKey(includeIfNull: false, name: 'operation_kind') OperationKind? get operationKind;/// Required once WH-07 lands.
-@JsonKey(includeIfNull: false, name: 'residential_rent') bool? get residentialRent;/// The derived withholding (read-only); all zero with `withholder: none` for a persona física taxpayer. Required once WH-07 lands.
-@JsonKey(includeIfNull: false) Withholding? get withholding;
+ List<Warning> get warnings; Legend get legend;@JsonKey(name: 'created_at') DateTime get createdAt;@JsonKey(name: 'updated_at') DateTime get updatedAt;/// `null` for a persona física taxpayer. Always sent (nullable) since 0.11.3.
+@JsonKey(includeIfNull: false, name: 'supplier_kind') SupplierKind? get supplierKind;/// `null` unless `supplier_kind: pf_with_activity`. Always sent (nullable) since 0.11.3.
+@JsonKey(includeIfNull: false, name: 'supplier_regime') SupplierRegime? get supplierRegime;/// `null` for a persona física taxpayer. Always sent (nullable) since 0.11.3.
+@JsonKey(includeIfNull: false, name: 'operation_kind') OperationKind? get operationKind;/// Always sent since 0.11.3.
+@JsonKey(includeIfNull: false, name: 'residential_rent') bool? get residentialRent;@JsonKey(includeIfNull: false) Withholding? get withholding;
 /// Create a copy of Expense
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -294,15 +293,14 @@ class _Expense implements Expense {
 @override final  Legend legend;
 @override@JsonKey(name: 'created_at') final  DateTime createdAt;
 @override@JsonKey(name: 'updated_at') final  DateTime updatedAt;
-/// `null` for a persona física taxpayer. Required (nullable) once WH-07 lands.
+/// `null` for a persona física taxpayer. Always sent (nullable) since 0.11.3.
 @override@JsonKey(includeIfNull: false, name: 'supplier_kind') final  SupplierKind? supplierKind;
-/// `null` unless `supplier_kind: pf_with_activity`. Required (nullable) once WH-07 lands.
+/// `null` unless `supplier_kind: pf_with_activity`. Always sent (nullable) since 0.11.3.
 @override@JsonKey(includeIfNull: false, name: 'supplier_regime') final  SupplierRegime? supplierRegime;
-/// `null` for a persona física taxpayer. Required (nullable) once WH-07 lands.
+/// `null` for a persona física taxpayer. Always sent (nullable) since 0.11.3.
 @override@JsonKey(includeIfNull: false, name: 'operation_kind') final  OperationKind? operationKind;
-/// Required once WH-07 lands.
+/// Always sent since 0.11.3.
 @override@JsonKey(includeIfNull: false, name: 'residential_rent') final  bool? residentialRent;
-/// The derived withholding (read-only); all zero with `withholder: none` for a persona física taxpayer. Required once WH-07 lands.
 @override@JsonKey(includeIfNull: false) final  Withholding? withholding;
 
 /// Create a copy of Expense

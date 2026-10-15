@@ -1,6 +1,7 @@
 import 'package:control_contable/api/generated/models/annual_computed_section_kind.dart';
 import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/router/app_router.dart';
+import 'package:control_contable/core/router/not_found_screen.dart';
 import 'package:control_contable/features/annual/annual_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -29,9 +30,14 @@ final List<String> _locations = [
   ),
   AnnualRoutes.personalDeductions(fixtureTaxpayerId, 2026),
   AnnualRoutes.newPersonalDeduction(fixtureTaxpayerId, 2026),
-  AnnualRoutes.salaryStatements(fixtureTaxpayerId, 2026),
-  AnnualRoutes.annualInputs(fixtureTaxpayerId, 2026),
-  AnnualRoutes.filedPayments(fixtureTaxpayerId, 2026, '612'),
+];
+
+/// Where ANN-19..21 will capture the annual inputs: no screen yet, so no
+/// placeholder either (a deep link is not found, never a dead end).
+const List<String> _unshippedInputs = [
+  '/anual/$fixtureTaxpayerId/2026/constancias',
+  '/anual/$fixtureTaxpayerId/2026/datos',
+  '/anual/$fixtureTaxpayerId/2026/pagos/612',
 ];
 
 /// `module_annual` OFF hides every annual surface (the server's 404 is the
@@ -51,9 +57,6 @@ void main() {
         '/anual/:taxpayerId/:ejercicio/secciones/:seccion',
         '/anual/:taxpayerId/:ejercicio/deducciones',
         '/anual/:taxpayerId/:ejercicio/deducciones/nueva',
-        '/anual/:taxpayerId/:ejercicio/constancias',
-        '/anual/:taxpayerId/:ejercicio/datos',
-        '/anual/:taxpayerId/:ejercicio/pagos/:regimeCode',
       ]),
     );
   });
@@ -92,6 +95,19 @@ void main() {
       expect(harness.location, location);
       expect(find.text('Página no encontrada'), findsNothing);
       expect(find.byType(Scaffold), findsWidgets);
+    }
+  });
+
+  testWidgets('on: an input location is not found until its screen ships', (
+    tester,
+  ) async {
+    await harness.pump(tester, location: null);
+    for (final location in _unshippedInputs) {
+      harness.container.read(appRouterProvider).go(location);
+      await tester.pumpAndSettle();
+
+      // No route matches: the router's error page, never a placeholder.
+      expect(find.byType(NotFoundScreen), findsOneWidget, reason: location);
     }
   });
 }

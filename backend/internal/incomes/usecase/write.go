@@ -27,7 +27,7 @@ func (uc *Incomes) Create(ctx context.Context, userID string, in CreateInput) (W
 	if err != nil {
 		return WriteResult{}, present("create income", err)
 	}
-	fields, err := normalize(in.Income)
+	req, err := normalize(in.Income)
 	if err != nil {
 		return WriteResult{}, present("create income", err)
 	}
@@ -36,7 +36,7 @@ func (uc *Incomes) Create(ctx context.Context, userID string, in CreateInput) (W
 	for attempt := 1; ; attempt++ {
 		err = uc.deps.Tx.ReadWrite(ctx, userID, func(ctx context.Context) error {
 			var err error
-			res, err = uc.create(ctx, userID, id, taxpayerID, fields, fromClient)
+			res, err = uc.create(ctx, userID, id, taxpayerID, req, fromClient)
 			return err
 		})
 		if !errors.Is(err, ErrIDTaken) || attempt == createAttempts {
@@ -64,7 +64,7 @@ func (uc *Incomes) clientID(raw string) (string, error) {
 // create is one attempt, in the contract's order of checks. A client id is
 // locked first: a double submit in flight waits for the first and replays
 // it, never reading the trial counter the first just filled.
-func (uc *Incomes) create(ctx context.Context, userID, id, taxpayerID string, f Fields, fromClient bool) (WriteResult, error) {
+func (uc *Incomes) create(ctx context.Context, userID, id, taxpayerID string, req request, fromClient bool) (WriteResult, error) {
 	if fromClient {
 		if err := uc.deps.Store.LockID(ctx, id); err != nil {
 			return WriteResult{}, err
@@ -72,7 +72,7 @@ func (uc *Incomes) create(ctx context.Context, userID, id, taxpayerID string, f 
 	}
 	existing, err := uc.deps.Store.Find(ctx, id, LockNone)
 	if err == nil {
-		return uc.replay(ctx, userID, existing, taxpayerID, f)
+		return uc.replay(ctx, userID, existing, taxpayerID, req)
 	}
 	if !errors.Is(err, ErrIncomeNotFound) {
 		return WriteResult{}, err
@@ -80,14 +80,15 @@ func (uc *Incomes) create(ctx context.Context, userID, id, taxpayerID string, f 
 	if err := uc.deps.Access.EnsureWritable(ctx, userID); err != nil {
 		return WriteResult{}, err
 	}
-	ev, err := uc.evaluate(ctx, userID, taxpayerID, id, f, true)
+	ev, err := uc.evaluate(ctx, userID, taxpayerID, id, req, true)
 	if err != nil {
 		return WriteResult{}, err
 	}
 	if err := uc.deps.Access.ReserveRecord(ctx, userID, access.RecordIncome); err != nil {
 		return WriteResult{}, err
 	}
-	if err := uc.deps.Store.Insert(ctx, NewIncome{ID: id, UserID: userID, TaxpayerID: taxpayerID, Fields: ev.fields}); err != nil {
+	income := NewIncome{ID: id, UserID: userID, TaxpayerID: taxpayerID, Fields: ev.fields, Withholding: ev.withholding}
+	if err := uc.deps.Store.Insert(ctx, income); err != nil {
 		return WriteResult{}, err
 	}
 	stored, err := uc.deps.Store.Find(ctx, id, LockNone)
@@ -100,12 +101,12 @@ func (uc *Incomes) create(ctx context.Context, userID, id, taxpayerID string, f 
 
 // replay answers a create whose id the caller already holds: the stored
 // income with the warnings of its write when the retry carries the same
-// fields for the same taxpayer and the income is live, else ErrIDReused.
-func (uc *Incomes) replay(ctx context.Context, userID string, existing StoredIncome, taxpayerID string, f Fields) (WriteResult, error) {
-	if existing.TaxpayerID != taxpayerID || existing.Deleted || !sameFields(existing.Fields, f) {
+// facts for the same taxpayer and the income is live, else ErrIDReused.
+func (uc *Incomes) replay(ctx context.Context, userID string, existing StoredIncome, taxpayerID string, req request) (WriteResult, error) {
+	if existing.TaxpayerID != taxpayerID || existing.Deleted || !sameFields(existing.Fields, req) {
 		return WriteResult{}, ErrIDReused
 	}
-	ev, err := uc.evaluate(ctx, userID, taxpayerID, existing.ID, existing.Fields, false)
+	ev, err := uc.evaluate(ctx, userID, taxpayerID, existing.ID, stored(existing.Fields), false)
 	switch {
 	case isClientError(err):
 		// The write happened; a later change (an archive) only drops the
@@ -133,15 +134,15 @@ func (uc *Incomes) Update(ctx context.Context, userID, rawTaxpayerID, rawIncomeI
 		if err := uc.deps.Access.EnsureWritable(ctx, userID); err != nil {
 			return err
 		}
-		f, err := normalize(p.apply(stored.Fields))
+		req, err := normalize(p.apply(stored.Fields))
 		if err != nil {
 			return err
 		}
-		ev, err := uc.evaluate(ctx, userID, taxpayerID, id, f, true)
+		ev, err := uc.evaluate(ctx, userID, taxpayerID, id, req, true)
 		if err != nil {
 			return err
 		}
-		if err := uc.deps.Store.Update(ctx, id, ev.fields); err != nil {
+		if err := uc.deps.Store.Update(ctx, id, ev.fields, ev.withholding); err != nil {
 			return err
 		}
 		updated, err := uc.deps.Store.Find(ctx, id, LockNone)
@@ -158,18 +159,21 @@ func (uc *Incomes) Update(ctx context.Context, userID, rawTaxpayerID, rawIncomeI
 	return res, nil
 }
 
-// evaluation is a checked income: the fields to store (the 625 activity
-// resolved) and the write's warnings.
+// evaluation is a checked income: the facts to store (the defaults and the
+// 625 activity resolved), the derived withholding and the write's warnings.
 type evaluation struct {
-	fields   Fields
-	warnings []domain.Warning
+	fields      Fields
+	withholding fiscal.WithholdingRecord
+	warnings    []domain.Warning
 }
 
-// evaluate applies MODULE-incomes §2.4–§2.8 to f for the taxpayer, inside
-// the unit of work: archive, regime window (when window, CheckRegime per
-// distinct period), domain rules, parameter coverage of the dates, and the
-// warnings. incomeID is left out of the duplicate-folio lookup.
-func (uc *Incomes) evaluate(ctx context.Context, userID, taxpayerID, incomeID string, f Fields, window bool) (evaluation, error) {
+// evaluate applies MODULE-incomes §2.4–§2.8 and MODULE-withholdings §3 to
+// req for the taxpayer, inside the unit of work: archive, regime window
+// (when window, CheckRegime per distinct period), the defaults of the hidden
+// questions, domain rules and derivation, parameter coverage of the dates,
+// and the warnings. incomeID is left out of the duplicate-folio lookup.
+func (uc *Incomes) evaluate(ctx context.Context, userID, taxpayerID, incomeID string, req request, window bool) (evaluation, error) {
+	f := req.fields
 	today, err := uc.today()
 	if err != nil {
 		return evaluation{}, err
@@ -190,15 +194,49 @@ func (uc *Incomes) evaluate(ctx context.Context, userID, taxpayerID, incomeID st
 			return evaluation{}, err
 		}
 	}
-	basis, err := uc.deps.Store.IncomeBasis(ctx, profile.PersonType, f.Regime)
+	payee, err := uc.payee(ctx, profile.PersonType, held)
 	if err != nil {
 		return evaluation{}, err
 	}
-	payee := domain.Payee{
-		PersonType: profile.PersonType, Regime: f.Regime, Basis: basis,
-		PlatformActivities: held.PlatformActivities, RFCGivenToPlatform: held.RFCGivenToPlatform,
+	if f, err = uc.resolveDefaults(ctx, taxpayerID, profile.PersonType, req); err != nil {
+		return evaluation{}, err
 	}
 	return uc.assess(ctx, taxpayerID, incomeID, f, payee, today)
+}
+
+// payee is the domain's view of the taxpayer under a held regime.
+func (uc *Incomes) payee(ctx context.Context, person fiscal.PersonType, held RegimeProfile) (domain.Payee, error) {
+	basis, err := uc.deps.Store.IncomeBasis(ctx, person, held.Code)
+	if err != nil {
+		return domain.Payee{}, err
+	}
+	return domain.Payee{
+		PersonType: person, Regime: held.Code, Basis: basis,
+		PlatformActivities: held.PlatformActivities, RFCGivenToPlatform: held.RFCGivenToPlatform,
+	}, nil
+}
+
+// resolveDefaults answers the questions req left unanswered
+// (MODULE-withholdings §2.1): via a platform in 625 only; the operation last
+// used in the regime, else the regime's default.
+func (uc *Incomes) resolveDefaults(ctx context.Context, taxpayerID string, person fiscal.PersonType, req request) (Fields, error) {
+	f := req.fields
+	f.ViaPlatform = domain.DefaultViaPlatform(f.Regime)
+	if req.viaPlatform != nil {
+		f.ViaPlatform = *req.viaPlatform
+	}
+	if f.Operation != "" {
+		return f, nil
+	}
+	last, ok, err := uc.deps.Store.LastFacts(ctx, taxpayerID, f.Regime)
+	if err != nil {
+		return Fields{}, err
+	}
+	f.Operation = domain.DefaultOperation(person, f.Regime)
+	if ok && last.Operation != "" {
+		f.Operation = last.Operation
+	}
+	return f, nil
 }
 
 // assess runs the domain rules, then the parameter coverage: the domain's
@@ -206,7 +244,7 @@ func (uc *Incomes) evaluate(ctx context.Context, userID, taxpayerID, incomeID st
 // out_of_range: before 2026 no rate can be checked), before the business
 // rules that read its rates (422).
 func (uc *Incomes) assess(ctx context.Context, taxpayerID, incomeID string, f Fields, payee domain.Payee, today fiscal.Date) (evaluation, error) {
-	assessment, assessErr := domain.Assess(draftOf(f), payee, today, uc.deps.Rates)
+	assessment, assessErr := domain.Assess(draftOf(f), payee, today, uc.deps.Withholdings)
 	if assessErr != nil && !isBusinessRule(assessErr) {
 		return evaluation{}, assessErr
 	}
@@ -222,7 +260,10 @@ func (uc *Incomes) assess(ctx context.Context, taxpayerID, incomeID string, f Fi
 	if err != nil {
 		return evaluation{}, err
 	}
-	return evaluation{fields: f, warnings: slices.Concat(assessment.Warnings, provisional, duplicate)}, nil
+	return evaluation{
+		fields: f, withholding: assessment.Withholding,
+		warnings: slices.Concat(assessment.Warnings, provisional, duplicate),
+	}, nil
 }
 
 // checkWindow asks CheckRegime once per distinct period among the
@@ -311,8 +352,8 @@ func findRegime(p TaxpayerProfile, code fiscal.RegimeCode) (RegimeProfile, bool)
 
 func draftOf(f Fields) domain.Draft {
 	return domain.Draft{
-		Amount: f.Amount, IVARate: f.IVARate, IVA: f.IVA, Counterparty: f.Counterparty,
-		Withheld: f.Withheld, Dates: f.Dates, PlatformActivity: f.PlatformActivity,
+		Amount: f.Amount, IVARate: f.IVARate, IVA: f.IVA, Counterparty: f.Counterparty, Operation: f.Operation,
+		ResidentialRent: f.ResidentialRent, ViaPlatform: f.ViaPlatform, Dates: f.Dates, PlatformActivity: f.PlatformActivity,
 	}
 }
 

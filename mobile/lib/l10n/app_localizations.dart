@@ -4030,59 +4030,11 @@ abstract class AppLocalizations {
   /// **'PTU a repartir'**
   String get annualPtuToDistribute;
 
-  /// PM suggested coeficiente de utilidad.
+  /// PM suggested coeficiente de utilidad for next year's provisional payments; MODULE-annual §2.7 requires the "confírmalo con tu contador" label.
   ///
   /// In es, this message translates to:
-  /// **'Coeficiente de utilidad sugerido para {year}: {cu}'**
+  /// **'Coeficiente de utilidad sugerido para tus pagos de {year}: {cu}. Confírmalo con tu contador.'**
   String annualSuggestedCu(String year, String cu);
-
-  /// Heading of the annual inputs block.
-  ///
-  /// In es, this message translates to:
-  /// **'Datos para tu anual'**
-  String get annualInputsTitle;
-
-  /// Annual input: personal deductions.
-  ///
-  /// In es, this message translates to:
-  /// **'Deducciones personales'**
-  String get annualInputDeductions;
-
-  /// Annual input: salary constancias.
-  ///
-  /// In es, this message translates to:
-  /// **'Constancias de sueldos'**
-  String get annualInputSalary;
-
-  /// Annual input: per-year facts.
-  ///
-  /// In es, this message translates to:
-  /// **'Datos del año'**
-  String get annualInputFacts;
-
-  /// Annual input: filed provisional payments.
-  ///
-  /// In es, this message translates to:
-  /// **'Pagos provisionales presentados'**
-  String get annualInputPayments;
-
-  /// How many deductions or constancias are registered.
-  ///
-  /// In es, this message translates to:
-  /// **'{count, plural, =0{Ninguna registrada} =1{1 registrada} other{{count} registradas}}'**
-  String annualCountRegistered(int count);
-
-  /// Placeholder of an annual input screen not shipped yet.
-  ///
-  /// In es, this message translates to:
-  /// **'Esta pantalla llega en una próxima versión. Mientras tanto, la estimación usa lo que ya registraste.'**
-  String get annualInputPending;
-
-  /// Read-only user on the annual screen.
-  ///
-  /// In es, this message translates to:
-  /// **'Tu periodo de prueba terminó: puedes consultar esta estimación, pero capturar o cambiar datos requiere un plan.'**
-  String get annualReadOnly;
 
   /// Annual breakdown screen title.
   ///
@@ -4185,6 +4137,48 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'la tasa de PTU'**
   String get cpaTopicPtuRate;
+
+  /// Heading of the annual inputs block.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos para tu anual'**
+  String get annualInputsTitle;
+
+  /// Annual input: personal deductions.
+  ///
+  /// In es, this message translates to:
+  /// **'Deducciones personales'**
+  String get annualInputDeductions;
+
+  /// Annual input: salary constancias.
+  ///
+  /// In es, this message translates to:
+  /// **'Constancias de sueldos'**
+  String get annualInputSalary;
+
+  /// Annual input: per-year facts.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos del año'**
+  String get annualInputFacts;
+
+  /// Annual input: filed provisional payments.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagos provisionales presentados'**
+  String get annualInputPayments;
+
+  /// How many deductions or constancias are registered.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{Ninguna registrada} =1{1 registrada} other{{count} registradas}}'**
+  String annualCountRegistered(int count);
+
+  /// Read-only user on the annual screen.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu periodo de prueba terminó: puedes consultar esta estimación, pero capturar o cambiar datos requiere un plan.'**
+  String get annualReadOnly;
 
   /// Read-only notice on the annual input screens.
   ///

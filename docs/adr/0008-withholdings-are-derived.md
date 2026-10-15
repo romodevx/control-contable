@@ -154,3 +154,34 @@ and WH-07 with their handlers.
 - Risk carried from the owner's decision (OQ-W3): with no override, a CFDI that shows a
   different withholding is not reflected. The estimate uses the legal figure, and the help
   text explains why.
+
+## Amendment: the contract step as implemented by WH-06 / WH-07 (0.11.3)
+
+Three decisions refine §2 and §3 above; the wire behaviour is the one §3 promised.
+
+1. **Retired request members answer `400`, but stay in the schema until WH-11 / WH-12.**
+   Removing `isr_withheld_cents`, `iva_withheld_cents` and `counterparty_type` from the
+   request schemas regenerates the Dart client without them, and the forms the app ships
+   today still read them (`// ignore: deprecated_member_use…, deprecated until WH-11`):
+   `mobile-ok` would fail on a backend task. So 0.11.3 keeps them in the schema, and the
+   server answers any value of the typed amounts with `400 validation_failed`, detail
+   `additionalProperties` on that field: exactly what a schema without them answers, so no
+   client sees a change when WH-11 / WH-12 drop them with the new forms.
+   `counterparty_type` stays required by the schema and is **ignored** (its stored column
+   mirrors `counterparty_kind` and `via_platform` until WH-08 drops it): rejecting a field
+   the schema requires would make the schema unusable. `counterparty_kind` (incomes) and
+   `supplier_kind` (persona moral expenses) are required by the server (`400 required`), as
+   `previewExpenseWithholdings` already documents for `supplier_kind`. `withholding` and the
+   other response members stay optional in the schema for the same reason; they are sent on
+   every record written since 0.11.3, and only a legacy row (before the WH-08 backfill) lacks
+   `withholding`.
+2. **The stored derivation includes how it was computed.** Migration
+   `20261017100000_withholdings_detail` adds `withholding_isr_rate`,
+   `withholding_iva_basis` and `withholding_withholder` next to the WH-03 rule ids and
+   `table_version`. The rule ids alone do not determine the figures shown: a platform sale's
+   ISR rate (2.5 % or 20 %) and IVA share (half or all) depend on whether the seller gave the
+   platform an RFC, a 625 option the user can change after the write. Storing them keeps §2:
+   a read never re-runs the table. `net_cents` is computed from the stored amounts.
+3. **The kernel words the explanations** (`fiscal.Explain`, per side), from the stored
+   record, so a read shows the same lines as the write and the preview. The contract
+   examples are its test oracle.

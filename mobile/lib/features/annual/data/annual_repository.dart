@@ -6,12 +6,9 @@ import 'package:control_contable/core/network/api_client_provider.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// How many annual records a persona física has registered in a year.
-typedef AnnualInputCounts = ({int personalDeductions, int salaryStatements});
-
-/// The annual operations of `module_annual` (`/v1/taxpayers/{id}/annual-*`,
-/// `…/personal-deductions`, `…/salary-statements`). Every method throws an
-/// `ApiFailure` when the server refuses or cannot be reached.
+/// The annual reads of `module_annual` (`/v1/taxpayers/{id}/annual-*`).
+/// Every method throws an `ApiFailure` when the server refuses or cannot be
+/// reached.
 abstract interface class AnnualRepository {
   /// The annual estimate of [taxpayerId] for [fiscalYear].
   Future<AnnualEstimate> getEstimate({
@@ -24,13 +21,6 @@ abstract interface class AnnualRepository {
     required String taxpayerId,
     required int fiscalYear,
     required AnnualComputedSectionKind section,
-  });
-
-  /// How many personal deductions and salary constancias [taxpayerId] has
-  /// in [fiscalYear] (both lists are bounded, so no pagination).
-  Future<AnnualInputCounts> getInputCounts({
-    required String taxpayerId,
-    required int fiscalYear,
   });
 }
 
@@ -64,27 +54,6 @@ class ApiAnnualRepository implements AnnualRepository {
       section: section,
     ),
   );
-
-  @override
-  Future<AnnualInputCounts> getInputCounts({
-    required String taxpayerId,
-    required int fiscalYear,
-  }) => guardApi(() async {
-    // One after the other: a failure of either is one ApiFailure (a
-    // parallel wait would wrap it in an error the guard does not map).
-    final deductions = await _client.listPersonalDeductions(
-      taxpayerId: taxpayerId,
-      fiscalYear: fiscalYear,
-    );
-    final statements = await _client.listSalaryStatements(
-      taxpayerId: taxpayerId,
-      fiscalYear: fiscalYear,
-    );
-    return (
-      personalDeductions: deductions.items.length,
-      salaryStatements: statements.items.length,
-    );
-  });
 }
 
 /// The annual operations. Tests override them with a fake.

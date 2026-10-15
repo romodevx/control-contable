@@ -15,7 +15,7 @@ import (
 
 // Every mutation of module_expenses spends one shared per-user budget of 300
 // per hour (MODULE-taxpayers S-10's limiter, its own scope); reads spend
-// nothing. The write set is read from the contract, so a new write
+// nothing but the withholding preview. The write set is read from the contract, so a new write
 // operation without a budget fails here.
 func TestUserLimits_coverEveryWriteOfTheModule(t *testing.T) {
 	spec, err := gen.GetSpec()
@@ -35,18 +35,31 @@ func TestUserLimits_coverEveryWriteOfTheModule(t *testing.T) {
 	}
 
 	require.Len(t, writes, 4)
-	// 4 reads since contract 0.10.0: previewExpenseWithholdings spends its own
-	// withholding_previews budget, wired by WH-07 with its handler (ADR-0008).
 	require.Len(t, reads, 4)
-	assert.ElementsMatch(t, writes, keys(expenseshttp.UserLimits))
+	const preview = "previewExpenseWithholdings"
+	require.Contains(t, reads, preview)
+	assert.ElementsMatch(t, append(writes, preview), keys(expenseshttp.UserLimits))
 	for _, id := range reads {
-		assert.NotContains(t, expenseshttp.UserLimits, id, "reads spend no write budget")
+		if id != preview {
+			assert.NotContains(t, expenseshttp.UserLimits, id, "reads spend no budget")
+		}
 	}
 	want := ratelimit.PerWindow("expense_writes", 300, time.Hour)
-	for id, policy := range expenseshttp.UserLimits {
-		assert.Equal(t, want, policy, "%s shares the one write budget", id)
-		require.NoError(t, policy.Validate())
+	for _, id := range writes {
+		assert.Equal(t, want, expenseshttp.UserLimits[id], "%s shares the one write budget", id)
+		require.NoError(t, expenseshttp.UserLimits[id].Validate())
 	}
+}
+
+// The preview spends the withholding_previews budget (ADR-0008 §4: 1200 per
+// hour, burst 1200), shared with previewIncomeWithholdings by its scope.
+func TestUserLimits_previewSpendsTheSharedPreviewBudget(t *testing.T) {
+	want := ratelimit.PerWindow("withholding_previews", 1200, time.Hour)
+
+	assert.Equal(t, want, expenseshttp.UserLimits["previewExpenseWithholdings"])
+	assert.Equal(t, want, expenseshttp.PreviewBudget)
+	assert.Equal(t, 1200, want.Burst)
+	require.NoError(t, want.Validate())
 }
 
 func keys(m map[string]ratelimit.Policy) []string {

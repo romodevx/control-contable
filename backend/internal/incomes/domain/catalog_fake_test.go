@@ -69,3 +69,32 @@ func catalog2026(t *testing.T) fakeCatalog {
 		domain.KeyISRPlatformPersonaMoral: open("0.025"),
 	}
 }
+
+// fakeWithholdingCatalog adds the dated money parameters DeriveWithholdings
+// reads (fiscal.WithholdingCatalog) to fakeCatalog.
+type fakeWithholdingCatalog struct {
+	fakeCatalog
+	amounts map[fiscal.AmountKey]money.Cents
+}
+
+func (c fakeWithholdingCatalog) Amount(key fiscal.AmountKey, _ fiscal.Date) (money.Cents, bool) {
+	v, ok := c.amounts[key]
+	return v, ok
+}
+
+// withholdingCatalog2026 is catalog2026 plus the WH-05 withholding keys of
+// params/data/2026/v1.yaml: freight 4 %, the platform no-RFC rates and the
+// RMF 4.1.3 federal threshold of 2,000.00.
+func withholdingCatalog2026(t *testing.T) fakeWithholdingCatalog {
+	t.Helper()
+	rates := catalog2026(t)
+	open := func(r string) []datedRate {
+		return []datedRate{{from: date(t, "2022-01-01"), rate: rate(t, r)}}
+	}
+	rates[fiscal.KeyIVAWithholdingFreight] = open("0.04")
+	rates[fiscal.KeyISRPlatformPersonaMoralNoRFC] = open("0.20")
+	return fakeWithholdingCatalog{
+		fakeCatalog: rates,
+		amounts:     map[fiscal.AmountKey]money.Cents{fiscal.KeyIVAFederalWithholdingThreshold: 2_000_00},
+	}
+}

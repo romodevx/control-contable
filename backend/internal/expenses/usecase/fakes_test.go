@@ -325,8 +325,8 @@ func (f *fakeExpenses) Totals(ctx context.Context, q usecase.PeriodQuery) (useca
 		t.Count++
 		t.Amount += e.Amount
 		t.IVA += e.IVA
-		t.ISRWithheld += e.Withheld.ISR
-		t.IVAWithheld += e.Withheld.IVA
+		t.ISRWithheld += e.Withholding.ISR
+		t.IVAWithheld += e.Withholding.IVA
 	}
 	return t, nil
 }
@@ -346,6 +346,12 @@ var businessRules = []usecase.CategoryEntry{
 	{Rule: domain.CategoryRule{Category: "servicios_profesionales", Deductibility: domain.Deductible, DefaultDeductible: true, IVACreditable: true}, Name: "Honorarios", LegalBasis: "LISR 25"},
 }
 
+// moralOperations are the E3 defaults of the persona moral rows
+// (category_regime_rules.default_operation_kind).
+var moralOperations = map[domain.CategoryCode]fiscal.OperationKind{
+	"servicios_profesionales": fiscal.OperationProfessionalServices,
+}
+
 var errCategoryStore = &storeError{"category store down"}
 
 type storeError struct{ msg string }
@@ -357,6 +363,15 @@ func (fakeCategories) Rules(_ context.Context, regime fiscal.RegimeCode, person 
 		return nil, errCategoryStore
 	}
 	out := slices.Clone(businessRules)
+	if person == fiscal.PersonMoral {
+		for i := range out {
+			op, ok := moralOperations[out[i].Rule.Category]
+			if !ok {
+				op = fiscal.OperationBusinessServices
+			}
+			out[i].Rule.DefaultOperation = op
+		}
+	}
 	if regime == fiscal.RegimeRESICO && person == fiscal.PersonFisica {
 		for i := range out {
 			out[i].Rule.Deductibility, out[i].Rule.DefaultDeductible = domain.ISRNotApplicable, false
@@ -418,6 +433,26 @@ func (p fakeParameters) On(fiscal.Date) (usecase.DatedParameters, error) {
 	}, nil
 }
 
+// fakeWithholdings is the kernel's withholding catalog of 2026.
+type fakeWithholdings struct{}
+
+func (fakeWithholdings) Rate(key fiscal.RateKey, _ fiscal.Date) (money.Rate, bool) {
+	rates := map[fiscal.RateKey]string{
+		fiscal.KeyISRWithholdingFees: "0.10", fiscal.KeyISRWithholdingRent: "0.10",
+		fiscal.KeyISRWithholdingRESICO: "0.0125", fiscal.KeyIVAWithholdingFreight: "0.04",
+	}
+	raw, ok := rates[key]
+	if !ok {
+		return 0, false
+	}
+	r, err := money.ParseRate(raw)
+	return r, err == nil
+}
+
+func (fakeWithholdings) Amount(key fiscal.AmountKey, _ fiscal.Date) (money.Cents, bool) {
+	return 2_000_00, key == fiscal.KeyIVAFederalWithholdingThreshold
+}
+
 // harness wires the use cases over the fakes.
 type harness struct {
 	tx         *fakeTx
@@ -451,9 +486,10 @@ func (h *harness) wire() {
 	h.uc = usecase.NewExpenses(usecase.Deps{
 		Tx: h.tx, Access: h.access, Regimes: h.taxpayers, Taxpayers: h.taxpayers,
 		Expenses: h.expenses, Categories: fakeCategories{}, Parameters: h.parameters,
-		Clock:  clock.NewFixed(today),
-		NewID:  func() (string, error) { return serverID, nil },
-		Logger: slog.New(slog.NewJSONHandler(h.logs, &slog.HandlerOptions{Level: slog.LevelDebug})),
+		Withholdings: fakeWithholdings{},
+		Clock:        clock.NewFixed(today),
+		NewID:        func() (string, error) { return serverID, nil },
+		Logger:       slog.New(slog.NewJSONHandler(h.logs, &slog.HandlerOptions{Level: slog.LevelDebug})),
 	})
 }
 

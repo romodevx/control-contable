@@ -108,11 +108,20 @@ type StoredExpense struct {
 	// past month.
 	CashOverLimit bool
 	CreditableIVA money.Cents
-	Withheld      fiscal.Withholdings
-	Description   string // "" is NULL
-	Deleted       bool
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	// CreditableIVAWithheld is the creditable share of the IVA withheld
+	// from the supplier; CreditableIVA is then the share paid
+	// (MODULE-withholdings §4.2).
+	CreditableIVAWithheld money.Cents
+	// Supplier is the persona moral's description of the supplier, defaults
+	// resolved; zero for a persona física.
+	Supplier domain.Supplier
+	// Withholding is the stored derivation (ADR-0008); its zero value is a
+	// record written before WH-07.
+	Withholding fiscal.WithholdingRecord
+	Description string // "" is NULL
+	Deleted     bool
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 // ExpenseStore persists expenses on the unit of work in ctx, as the ctx

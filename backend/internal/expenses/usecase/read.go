@@ -244,6 +244,7 @@ func (u *Expenses) categories(ctx context.Context, profile TaxpayerProfile, hold
 		items = append(items, Category{
 			Code: entry.Rule.Category, Name: entry.Name, Deductibility: hint.Deductibility,
 			DefaultDeductible: hint.DefaultDeductible, Note: entry.Note, LegalBasis: entry.LegalBasis,
+			DefaultOperation: entry.Rule.DefaultOperation,
 		})
 	}
 	return CategoryList{

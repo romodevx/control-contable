@@ -16,14 +16,20 @@ const (
 
 // IncomeInput is an income as the HTTP adapter decoded it. Zero values are
 // absent or null fields; CFDIUUID and Description are raw text the use
-// case normalizes (upper case; trimmed and NFC, blank = null).
+// case normalizes (upper case; trimmed and NFC, blank = null). An empty
+// Operation and a nil ViaPlatform take their defaults
+// (MODULE-withholdings §2.1): the last operation used in the regime, else
+// the regime's; via a platform in 625 only. There is no withholding amount:
+// the use case derives it (ADR-0008).
 type IncomeInput struct {
 	Regime           fiscal.RegimeCode
-	Counterparty     domain.Counterparty
+	Counterparty     fiscal.ReceptorKind
+	Operation        fiscal.OperationKind
+	ResidentialRent  bool
+	ViaPlatform      *bool
 	Amount           money.Cents
 	IVARate          fiscal.IVARate
 	IVA              money.Cents
-	Withheld         fiscal.Withholdings
 	Dates            domain.Dates
 	PlatformActivity domain.PlatformActivity
 	CFDIUUID         string
@@ -43,12 +49,13 @@ type CreateInput struct {
 // PlatformActivity, CFDIUUID or Description).
 type Patch struct {
 	Regime           *fiscal.RegimeCode
-	Counterparty     *domain.Counterparty
+	Counterparty     *fiscal.ReceptorKind
+	Operation        *fiscal.OperationKind
+	ResidentialRent  *bool
+	ViaPlatform      *bool
 	Amount           *money.Cents
 	IVARate          *fiscal.IVARate
 	IVA              *money.Cents
-	ISRWithheld      *money.Cents
-	IVAWithheld      *money.Cents
 	InvoicedOn       *fiscal.Date
 	CollectedOn      *fiscal.Date
 	PlatformActivity *domain.PlatformActivity
@@ -59,18 +66,21 @@ type Patch struct {
 // apply returns stored's fields with p applied, as an input to normalize
 // again.
 func (p Patch) apply(stored Fields) IncomeInput {
+	via := stored.ViaPlatform
 	in := IncomeInput{
-		Regime: stored.Regime, Counterparty: stored.Counterparty, Amount: stored.Amount,
-		IVARate: stored.IVARate, IVA: stored.IVA, Withheld: stored.Withheld, Dates: stored.Dates,
+		Regime: stored.Regime, Counterparty: stored.Counterparty, Operation: stored.Operation,
+		ResidentialRent: stored.ResidentialRent, ViaPlatform: &via, Amount: stored.Amount,
+		IVARate: stored.IVARate, IVA: stored.IVA, Dates: stored.Dates,
 		PlatformActivity: stored.PlatformActivity, CFDIUUID: stored.CFDIUUID.String(), Description: stored.Description,
 	}
 	set(&in.Regime, p.Regime)
 	set(&in.Counterparty, p.Counterparty)
+	set(&in.Operation, p.Operation)
+	set(&in.ResidentialRent, p.ResidentialRent)
+	set(&via, p.ViaPlatform)
 	set(&in.Amount, p.Amount)
 	set(&in.IVARate, p.IVARate)
 	set(&in.IVA, p.IVA)
-	set(&in.Withheld.ISR, p.ISRWithheld)
-	set(&in.Withheld.IVA, p.IVAWithheld)
 	set(&in.Dates.InvoicedOn, p.InvoicedOn)
 	set(&in.Dates.CollectedOn, p.CollectedOn)
 	set(&in.PlatformActivity, p.PlatformActivity)
@@ -90,7 +100,13 @@ type Income struct {
 	ID         string
 	TaxpayerID string
 	Fields
-	BookedOn fiscal.Date
+	// Withholding is the stored derivation; not Derived() on a record
+	// stored before WH-06 (until the WH-08 backfill).
+	Withholding fiscal.WithholdingRecord
+	// CounterpartyType is the deprecated counterparty_type column, served
+	// until WH-11 / WH-08 remove it.
+	CounterpartyType domain.Counterparty
+	BookedOn         fiscal.Date
 	// PendingCollection is "Por cobrar": no collection date yet. Only an
 	// accrual income can lack it (a cash income books on it).
 	PendingCollection bool
@@ -100,7 +116,8 @@ type Income struct {
 
 func toIncome(s StoredIncome) Income {
 	return Income{
-		ID: s.ID, TaxpayerID: s.TaxpayerID, Fields: s.Fields, BookedOn: s.BookedOn,
+		ID: s.ID, TaxpayerID: s.TaxpayerID, Fields: s.Fields, Withholding: s.Withholding,
+		CounterpartyType: s.CounterpartyType, BookedOn: s.BookedOn,
 		PendingCollection: s.Dates.CollectedOn.IsZero(), CreatedAt: s.CreatedAt, UpdatedAt: s.UpdatedAt,
 	}
 }

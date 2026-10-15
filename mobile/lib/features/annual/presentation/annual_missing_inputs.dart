@@ -1,4 +1,6 @@
 import 'package:control_contable/api/generated/models/annual_missing_input.dart';
+import 'package:control_contable/core/theme/app_spacing.dart';
+import 'package:control_contable/core/theme/app_tokens.dart';
 import 'package:control_contable/features/annual/application/annual_input_location.dart';
 import 'package:control_contable/features/annual/presentation/annual_link_row.dart';
 import 'package:control_contable/features/taxpayers/domain/periods.dart';
@@ -7,7 +9,8 @@ import 'package:flutter/material.dart';
 
 /// What an `incomplete` section is missing ("Falta:"), each input a row
 /// that opens the screen completing it, with the months concerned. An
-/// input this app cannot route to is still named, without a link.
+/// input with no screen in this app version (ANN-19..21 not shipped, or an
+/// unknown target) is still named with its months, but is not a link.
 class AnnualMissingInputs extends StatelessWidget {
   /// The [missing] inputs of [taxpayerId]'s [fiscalYear].
   const new({
@@ -53,7 +56,7 @@ class AnnualMissingInputs extends StatelessWidget {
       fiscalYear: fiscalYear,
     );
     if (location == null) {
-      return Text([input.label, ?months].join(': '), style: text.bodyMedium);
+      return _NamedInput(title: input.label, months: months);
     }
     return AnnualLinkRow(
       key: ValueKey('missing-${input.key}'),
@@ -71,4 +74,37 @@ class AnnualMissingInputs extends StatelessWidget {
       : input.months
             .map((period) => months.formatMonthYear(periodMonth(period)))
             .join(', ');
+}
+
+/// A missing input named without a link: its label and, under it, the
+/// months concerned. Read as one sentence, never as a button.
+class _NamedInput extends StatelessWidget {
+  const new({required this.title, required this.months});
+
+  final String title;
+  final String? months;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final detail = months;
+    return MergeSemantics(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(title, style: text.bodyLarge),
+            if (detail != null)
+              Text(
+                detail,
+                style: text.bodyMedium?.copyWith(
+                  color: context.tokens.colors.muted,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }

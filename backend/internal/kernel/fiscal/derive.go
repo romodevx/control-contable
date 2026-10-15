@@ -354,17 +354,7 @@ func rateOn(key RateKey, on Date, catalog RateCatalog) (money.Rate, error) {
 // net is Subtotal + IVA − ISR − IVA withheld; inputs within MaxCents never
 // overflow.
 func (in WithholdingInput) net(isr, iva money.Cents) (money.Cents, error) {
-	gross, err := in.Subtotal.Add(in.IVA)
-	if err == nil {
-		gross, err = gross.Sub(isr)
-	}
-	if err == nil {
-		gross, err = gross.Sub(iva)
-	}
-	if err != nil {
-		return 0, fmt.Errorf("withholding net: %w: %w", ErrInvalidParameter, err)
-	}
-	return gross, nil
+	return WithholdingRecord{Withholdings: Withholdings{ISR: isr, IVA: iva}}.Net(in.Subtotal, in.IVA)
 }
 
 func (in WithholdingInput) warnings(ambiguities []Ambiguity) []WarningCode {

@@ -119,7 +119,7 @@ func incDate(t *testing.T, raw string) fiscal.Date {
 // (exempt, so any amount is consistent).
 func fees(t *testing.T, day string, amount money.Cents) incomes.IncomeInput {
 	return incomes.IncomeInput{
-		Regime: "612", Counterparty: domain.CounterpartyPublic, Amount: amount, IVARate: fiscal.IVAExempt,
+		Regime: "612", Counterparty: fiscal.ReceptorPFNoActivityOrPublic, Amount: amount, IVARate: fiscal.IVAExempt,
 		Dates: domain.Dates{CollectedOn: incDate(t, day)},
 	}
 }
@@ -148,7 +148,7 @@ func TestIncomes_CreateGetAndDerivedBookingDate(t *testing.T) {
 	e := newIncomesEnv(t, incUserA)
 	pm := e.taxpayer(t, incUserA, "moral", incRFCMoral, "601")
 	in := incomes.IncomeInput{
-		Regime: "601", Counterparty: domain.CounterpartyMoral, Amount: 45_000_00, IVARate: fiscal.IVARate16, IVA: 7_200_00,
+		Regime: "601", Counterparty: fiscal.ReceptorPM, Amount: 45_000_00, IVARate: fiscal.IVARate16, IVA: 7_200_00,
 		Dates: domain.Dates{InvoicedOn: incDate(t, "2026-09-05")}, CFDIUUID: "6f3b2c1d-8a4e-4b7f-9c2d-1e5a7b9c3d4f",
 		Description: "  Consultoría  ",
 	}

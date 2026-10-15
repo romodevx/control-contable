@@ -31,11 +31,12 @@ func TestUpdate_AmountAndIVA(t *testing.T) {
 	h := seeded(t)
 	got, err := h.uc.Update(t.Context(), userA, taxpayerA, incomeID, usecase.Patch{
 		Amount: ptr(money.Cents(12_000_00)), IVA: ptr(money.Cents(1_920_00)),
-		ISRWithheld: ptr(money.Cents(1_200_00)), IVAWithheld: ptr(money.Cents(1_280_00)),
 	})
 	require.NoError(t, err)
 	assert.Equal(t, money.Cents(12_000_00), got.Income.Amount)
 	assert.Equal(t, money.Cents(1_920_00), got.Income.IVA)
+	assert.Equal(t, fiscal.Withholdings{ISR: 1_200_00, IVA: 1_280_00}, got.Income.Withholding.Withholdings, "re-derived")
+	assert.Equal(t, got.Income.Withholding, h.store.rows[incomeID].Withholding, "and stored")
 	assert.Equal(t, "Diseño de logotipo", got.Income.Description, "absent fields are unchanged")
 	assert.False(t, got.Created)
 	assert.Empty(t, got.Warnings)
@@ -59,7 +60,7 @@ func TestUpdate_NullClearsANullableField(t *testing.T) {
 func TestUpdate_AccrualIncomeGetsCollected(t *testing.T) {
 	h := newHarness(t)
 	in := usecase.IncomeInput{
-		Regime: "601", Counterparty: domain.CounterpartyMoral, Amount: 45_000_00,
+		Regime: "601", Counterparty: fiscal.ReceptorPM, Amount: 45_000_00,
 		IVARate: fiscal.IVARate16, IVA: 7_200_00, Dates: domain.Dates{InvoicedOn: date(t, "2026-09-05")},
 	}
 	_, err := h.uc.Create(t.Context(), userA, create(incomeID, pmA, in))
@@ -121,15 +122,46 @@ func TestUpdate_Refusals(t *testing.T) {
 func TestUpdate_EveryFieldPatches(t *testing.T) {
 	h := seeded(t)
 	got, err := h.uc.Update(t.Context(), userA, taxpayerA, incomeID, usecase.Patch{
-		Regime: ptr(fiscal.RegimeCode("612")), Counterparty: ptr(domain.CounterpartyPublic),
+		Regime: ptr(fiscal.RegimeCode("612")), Counterparty: ptr(fiscal.ReceptorPFNoActivityOrPublic),
+		Operation: ptr(fiscal.OperationSaleOfGoods), ResidentialRent: ptr(false), ViaPlatform: ptr(false),
 		Amount: ptr(money.Cents(100_00)), IVARate: ptr(fiscal.IVAExempt), IVA: ptr(money.Cents(0)),
-		ISRWithheld: ptr(money.Cents(0)), IVAWithheld: ptr(money.Cents(0)),
 		CollectedOn: ptr(date(t, "2026-09-30")), PlatformActivity: ptr(domain.PlatformActivity("")),
 		CFDIUUID: ptr(cfdiLower), Description: ptr("Venta"),
 	})
 	require.NoError(t, err)
-	assert.Equal(t, domain.CounterpartyPublic, got.Income.Counterparty)
+	assert.Equal(t, fiscal.ReceptorPFNoActivityOrPublic, got.Income.Counterparty)
+	assert.Equal(t, fiscal.OperationSaleOfGoods, got.Income.Operation)
+	assert.Equal(t, domain.CounterpartyPublic, got.Income.CounterpartyType)
 	assert.Equal(t, fiscal.IVAExempt, got.Income.IVARate)
 	assert.Equal(t, "2026-09-30", got.Income.BookedOn.String())
 	assert.Equal(t, "Venta", got.Income.Description)
+}
+
+// US-W9: changing who was billed re-derives (ISR and IVA withheld become 0).
+func TestUpdate_ChangingTheCounterpartyReDerives(t *testing.T) {
+	h := seeded(t)
+	got, err := h.uc.Update(t.Context(), userA, taxpayerA, incomeID, usecase.Patch{
+		Counterparty: ptr(fiscal.ReceptorPFWithActivity),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, fiscal.Withholdings{}, got.Income.Withholding.Withholdings)
+	assert.Equal(t, []fiscal.RuleID{fiscal.RuleISR0, fiscal.RuleIVA1}, got.Income.Withholding.RuleIDs)
+	assert.Equal(t, domain.CounterpartyFisica, got.Income.CounterpartyType)
+}
+
+// An income stored before WH-06 has no facts: an edit must answer who was
+// billed, and then derives.
+func TestUpdate_ALegacyIncomeNeedsTheCounterpartyKind(t *testing.T) {
+	h := seeded(t)
+	legacy := h.store.rows[incomeID]
+	legacy.Counterparty, legacy.Operation, legacy.Withholding = "", "", fiscal.WithholdingRecord{}
+	h.store.rows[incomeID] = legacy
+
+	_, err := h.uc.Update(t.Context(), userA, taxpayerA, incomeID, usecase.Patch{Description: ptr("x")})
+	requireApp(t, err, apperr.CodeValidationFailed, "counterparty_kind", "required")
+
+	got, err := h.uc.Update(t.Context(), userA, taxpayerA, incomeID, usecase.Patch{Counterparty: ptr(fiscal.ReceptorPM)})
+	require.NoError(t, err)
+	assert.Equal(t, fiscal.OperationProfessionalServices, got.Income.Operation, "the regime default")
+	assert.True(t, got.Income.Withholding.Derived())
 }

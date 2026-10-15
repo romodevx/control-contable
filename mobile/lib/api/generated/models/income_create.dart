@@ -20,7 +20,7 @@ import 'uuid.dart';
 part 'income_create.freezed.dart';
 part 'income_create.g.dart';
 
-/// `user_id` comes from the session and `taxpayer_id` from the path, never from the body. The date the regime's basis needs is required by the server: `collected_on` (cash regimes) or `invoiced_on` (accrual regimes). Withholdings are **derived** from `counterparty_kind`, `operation_kind`, `residential_rent` and `via_platform` (ADR-0008); no request carries an amount. **Transition (0.10.0 → WH-06):** the deprecated `counterparty_type`, `isr_withheld_cents` and `iva_withheld_cents` are still read until WH-06 lands; WH-06 removes them (sending them then answers `400 additionalProperties`) and makes `counterparty_kind` required. New clients send both `counterparty_type` and `counterparty_kind` meanwhile and never the typed amounts.
+/// `user_id` comes from the session and `taxpayer_id` from the path, never from the body. The date the regime's basis needs is required by the server: `collected_on` (cash regimes) or `invoiced_on` (accrual regimes). Withholdings are **derived** from `counterparty_kind`, `operation_kind`, `residential_rent` and `via_platform` (ADR-0008); no request carries an amount. **0.11.3 (WH-06):** `counterparty_kind` is required (`400 required`); `isr_withheld_cents` / `iva_withheld_cents` with any value answer `400 additionalProperties`; the deprecated `counterparty_type` is still required by the schema and ignored (its stored value mirrors `counterparty_kind` and `via_platform`). The deprecated members leave the schema with WH-11, which regenerates the Dart client with the new form.
 @Freezed()
 abstract class IncomeCreate with _$IncomeCreate {
   const factory IncomeCreate({
@@ -39,7 +39,7 @@ abstract class IncomeCreate with _$IncomeCreate {
     /// Client-generated idempotency key (UUIDv7 recommended), once per form session.
     @JsonKey(includeIfNull: false) Uuid? id,
 
-    /// Required once WH-06 lands (`required` on `counterparty_kind`).
+    /// Required since 0.11.3 (`400 required` when missing).
     @JsonKey(includeIfNull: false, name: 'counterparty_kind')
     CounterpartyKind? counterpartyKind,
 
@@ -54,11 +54,11 @@ abstract class IncomeCreate with _$IncomeCreate {
     /// Collected through a digital platform (default `true` in 625, `false` otherwise). Allowed for 625 and persona moral regimes; `true` on any other regime answers `400` `not_for_regime`.
     @JsonKey(includeIfNull: false, name: 'via_platform') bool? viaPlatform,
 
-    /// Deprecated in 0.10.0, removed by WH-06 (ADR-0008). ISR withheld by the payer (default 0); at most `amount_cents`.
+    /// Retired by WH-06 (0.11.3, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
     @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')
     NonNegativeCents? isrWithheldCents,
 
-    /// Deprecated in 0.10.0, removed by WH-06 (ADR-0008). IVA withheld by the payer (default 0); at most `iva_cents`.
+    /// Retired by WH-06 (0.11.3, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
     @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')
     NonNegativeCents? ivaWithheldCents,
     @JsonKey(includeIfNull: false, name: 'invoiced_on')

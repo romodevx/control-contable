@@ -44,6 +44,8 @@ type fakeExpenses struct {
 	categories                    usecase.CategoriesInput
 	categoryList                  usecase.CategoryList
 	expense                       usecase.Expense
+	preview                       usecase.PreviewInput
+	previewRes                    usecase.Preview
 	deleted                       bool
 	err                           error
 }
@@ -76,6 +78,11 @@ func (f *fakeExpenses) Delete(_ context.Context, userID, taxpayerID, expenseID s
 func (f *fakeExpenses) Restore(_ context.Context, userID, taxpayerID, expenseID string) (usecase.Expense, error) {
 	f.userID, f.taxpayerID, f.expenseID = userID, taxpayerID, expenseID
 	return f.expense, f.err
+}
+
+func (f *fakeExpenses) Preview(_ context.Context, in usecase.PreviewInput) (usecase.Preview, error) {
+	f.preview = in
+	return f.previewRes, f.err
 }
 
 func (f *fakeExpenses) Categories(_ context.Context, in usecase.CategoriesInput) (usecase.CategoryList, error) {
@@ -115,8 +122,13 @@ func sample(t *testing.T) usecase.Expense {
 		ID: expenseID, TaxpayerID: taxpayerID, Regime: "612", Category: "software",
 		Amount: 50000, IVARate: fiscal.IVARate16, IVA: 8000, PaymentMethod: domain.PaymentCardDebit,
 		PaidOn: day(t, "2026-09-12"), HasCFDI: true, CFDIUUID: cfdi(t, folio),
-		Withheld: fiscal.Withholdings{ISR: 100, IVA: 200}, Description: "Suscripción",
-		Deductible: true, Source: domain.SourceUser, Warnings: []domain.Warning{}, Legend: domain.Legend,
+		Withholding: fiscal.WithholdingRecord{
+			Withholdings: fiscal.Withholdings{ISR: 100, IVA: 200}, IVABasis: fiscal.IVABasisNone,
+			Withholder: fiscal.WithholderNone, RuleIDs: []fiscal.RuleID{fiscal.RuleISR0, fiscal.RuleIVA1},
+			TableVersion: fiscal.WithholdingTableVersion,
+		},
+		Description: "Suscripción",
+		Deductible:  true, Source: domain.SourceUser, Warnings: []domain.Warning{}, Legend: domain.Legend,
 		CreatedAt: stamp, UpdatedAt: stamp.Add(time.Hour),
 	}
 }
@@ -134,7 +146,9 @@ func TestCreateExpense_mapsTheRequestAndAnswers201(t *testing.T) {
 	fake := &fakeExpenses{createRes: usecase.CreateResult{Expense: sample(t), Created: true}}
 	h := expenseshttp.NewHandler(fake)
 	id := uid(expenseID)
-	deductible, isr, iva := false, int64(100), int64(200)
+	deductible := false
+	kind, regime := gen.SupplierKind("pf_with_activity"), gen.SupplierRegime("612")
+	operation, residential := gen.OperationKind("professional_services"), false
 	folioLower := "3a9c7e21-5b4d-4f6a-8e2c-9d1b7a3f5c60"
 	description := "  Suscripción  "
 
@@ -143,7 +157,8 @@ func TestCreateExpense_mapsTheRequestAndAnswers201(t *testing.T) {
 		Body: &gen.ExpenseCreate{
 			Id: &id, RegimeCode: "612", CategoryCode: "software", AmountCents: 50000, IvaRate: gen.IvaRate("rate_16"),
 			IvaCents: 8000, PaymentMethod: gen.PaymentMethod("card_debit"), PaidOn: genDate(2026, time.September, 12),
-			HasCfdi: true, CfdiUuid: &folioLower, Deductible: &deductible, IsrWithheldCents: &isr, IvaWithheldCents: &iva,
+			HasCfdi: true, CfdiUuid: &folioLower, Deductible: &deductible, SupplierKind: &kind, SupplierRegime: &regime,
+			OperationKind: &operation, ResidentialRent: &residential,
 			Description: &description,
 		},
 	})
@@ -157,7 +172,8 @@ func TestCreateExpense_mapsTheRequestAndAnswers201(t *testing.T) {
 			Category: "software", Amount: 50000, IVARate: fiscal.IVARate16, IVA: 8000,
 			PaymentMethod: domain.PaymentCardDebit, PaidOn: day(t, "2026-09-12"), HasCFDI: true,
 			CFDIUUID: cfdi(t, folio), Deductible: domain.ClaimNotDeductible,
-			Withheld: fiscal.Withholdings{ISR: 100, IVA: 200},
+			Supplier: domain.Supplier{Kind: domain.SupplierPFWithActivity, Regime: domain.SupplierRegime612,
+				Operation: fiscal.OperationProfessionalServices},
 		},
 	}, fake.create)
 	body := encode(t, created.Body)
@@ -188,7 +204,7 @@ func TestCreateExpense_optionalFieldsAbsent(t *testing.T) {
 	assert.Empty(t, fake.create.ID, "no client id: the server chooses one")
 	assert.Equal(t, domain.UseDefault, fake.create.Draft.Deductible)
 	assert.True(t, fake.create.Draft.CFDIUUID.IsZero())
-	assert.Equal(t, fiscal.Withholdings{}, fake.create.Draft.Withheld)
+	assert.Equal(t, domain.Supplier{}, fake.create.Draft.Supplier)
 	assert.Empty(t, fake.create.Description)
 }
 
@@ -227,6 +243,9 @@ func TestHandler_everyOperationRequiresTheCaller(t *testing.T) {
 		"update":  func() (any, error) { return h.UpdateExpense(ctx, gen.UpdateExpenseRequestObject{}) },
 		"delete":  func() (any, error) { return h.DeleteExpense(ctx, gen.DeleteExpenseRequestObject{}) },
 		"restore": func() (any, error) { return h.RestoreExpense(ctx, gen.RestoreExpenseRequestObject{}) },
+		"preview": func() (any, error) {
+			return h.PreviewExpenseWithholdings(ctx, gen.PreviewExpenseWithholdingsRequestObject{})
+		},
 	}
 	for name, call := range responses {
 		t.Run(name, func(t *testing.T) {
@@ -284,6 +303,10 @@ func TestHandler_passesUseCaseErrorsThrough(t *testing.T) {
 				_, err := h.RestoreExpense(ctx, gen.RestoreExpenseRequestObject{TaxpayerId: uid(taxpayerID), ExpenseId: uid(expenseID)})
 				return err
 			},
+			"preview": func() error {
+				_, err := h.PreviewExpenseWithholdings(ctx, gen.PreviewExpenseWithholdingsRequestObject{TaxpayerId: uid(taxpayerID)})
+				return err
+			},
 		}
 		for name, call := range calls {
 			assert.ErrorIs(t, call(), want, name)
@@ -310,14 +333,16 @@ func TestUpdateExpense_mergePatch(t *testing.T) {
 				IvaRate: ptr(gen.IvaRate("rate_0")), IvaCents: ptr(int64(0)), PaymentMethod: ptr(gen.PaymentMethod("transfer")),
 				PaidOn: ptr(genDate(2026, time.August, 3)), HasCfdi: ptr(true),
 				CfdiUuid: nullable.NewNullableWithValue(folio), Deductible: nullable.NewNullableWithValue(true),
-				IsrWithheldCents: ptr(int64(10)), IvaWithheldCents: ptr(int64(20)),
+				SupplierKind: ptr(gen.SupplierKind("pm")), SupplierRegime: ptr(gen.SupplierRegime("unknown")),
+				OperationKind: ptr(gen.OperationKind("scrap")), ResidentialRent: ptr(true),
 				Description: nullable.NewNullableWithValue("Predial"),
 			},
 			usecase.Patch{
 				Regime: ptr(fiscal.RegimeCode("606")), Category: ptr(domain.CategoryCode("predial")), Amount: ptr(moneyOf(700)),
 				IVARate: ptr(fiscal.IVARate0), IVA: ptr(moneyOf(0)), PaymentMethod: ptr(domain.PaymentTransfer),
 				PaidOn: ptr(day(t, "2026-08-03")), HasCFDI: ptr(true), CFDIUUID: ptr(cfdi(t, folio)),
-				Deductible: ptr(domain.ClaimDeductible), ISRWithheld: ptr(moneyOf(10)), IVAWithheld: ptr(moneyOf(20)),
+				Deductible: ptr(domain.ClaimDeductible), SupplierKind: ptr(domain.SupplierPM),
+				SupplierRegime: ptr(domain.SupplierRegimeUnknown), OperationKind: ptr(fiscal.OperationScrap), ResidentialRent: ptr(true),
 				Description: ptr("Predial"),
 			}},
 		{"false is an override too", gen.ExpenseUpdate{Deductible: nullable.NewNullableWithValue(false)},
@@ -454,7 +479,8 @@ func TestListExpenseCategories(t *testing.T) {
 	on := genDate(2026, time.September, 12)
 	fake := &fakeExpenses{categoryList: usecase.CategoryList{
 		Items: []usecase.Category{
-			{Code: "software", Name: "Software", Deductibility: domain.Deductible, DefaultDeductible: true, LegalBasis: "LISR 103"},
+			{Code: "software", Name: "Software", Deductibility: domain.Deductible, DefaultDeductible: true, LegalBasis: "LISR 103",
+				DefaultOperation: fiscal.OperationBusinessServices},
 			{Code: "restaurantes", Name: "Restaurantes", Deductibility: domain.PartiallyDeductible, Note: "Sólo una parte"},
 		},
 		IVARatesAllowed:  []fiscal.IVARate{fiscal.IVARate16, fiscal.IVAExempt},
@@ -483,6 +509,8 @@ func TestListExpenseCategories(t *testing.T) {
 	assert.Equal(t, "Sólo una parte", second["note"])
 	assert.Nil(t, second["legal_basis"], "an empty basis is null")
 	assert.Equal(t, "partially_deductible", second["deductibility"])
+	assert.Equal(t, "business_services", first["default_operation_kind"], "the seed's E3 default (PR #137, WH-07)")
+	assert.NotContains(t, second, "default_operation_kind", "none for a persona física: the question does not exist")
 }
 
 func TestListExpenseCategories_defaultsToToday(t *testing.T) {
@@ -507,6 +535,10 @@ func TestWarnings_carryTheirMessages(t *testing.T) {
 		{Code: domain.WarningDuplicateCFDIUUID, Field: domain.FieldCFDIUUID},
 		{Code: domain.WarningIVANotCreditableCashPayment, Field: domain.FieldPaymentMethod},
 		{Code: usecase.WarningProvisionalParameters, Field: domain.FieldPaidOn},
+		{Code: domain.WarningSupplierRegimeUnknown, Field: domain.FieldSupplierRegime},
+		{Code: domain.WarningCPAUnverified, Field: domain.FieldWithholding},
+		{Code: domain.WarningForeignSupplier, Field: domain.FieldSupplierKind},
+		{Code: domain.WarningDeductionRequiresRemittance, Field: domain.FieldWithholding, DueOn: day(t, "2026-07-17")},
 	}
 	e := sample(t)
 	e.Warnings = warnings

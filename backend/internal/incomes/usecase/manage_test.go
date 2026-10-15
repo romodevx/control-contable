@@ -46,7 +46,7 @@ func seedMonth(t *testing.T, h *harness, n int) {
 	t.Helper()
 	add := func(id, regime, collected string, amount money.Cents) {
 		in := usecase.IncomeInput{
-			Regime: fiscal.RegimeCode(regime), Counterparty: domain.CounterpartyPublic,
+			Regime: fiscal.RegimeCode(regime), Counterparty: fiscal.ReceptorPFNoActivityOrPublic,
 			Amount: amount, IVARate: fiscal.IVAExempt, Dates: domain.Dates{CollectedOn: date(t, collected)},
 		}
 		_, err := h.uc.Create(t.Context(), userA, create(id, taxpayerA, in))
@@ -256,4 +256,47 @@ func TestRestore_Refusals(t *testing.T) {
 			assert.True(t, h.store.rows[incomeID].Deleted, "still deleted")
 		})
 	}
+}
+
+// Restore derives again (ADR-0008): with the taxpayer's current 625 options,
+// and it warns like any write.
+func TestRestore_ReDerivesTheWithholding(t *testing.T) {
+	h := newHarness(t)
+	in := usecase.IncomeInput{
+		Regime: "625", Counterparty: fiscal.ReceptorPFNoActivityOrPublic, Amount: 15_000_00,
+		IVARate: fiscal.IVARate16, IVA: 2_400_00, Dates: domain.Dates{CollectedOn: date(t, "2026-09-20")},
+	}
+	_, err := h.uc.Create(t.Context(), userA, create(incomeID, platformA, in))
+	require.NoError(t, err)
+	require.NoError(t, h.uc.Delete(t.Context(), userA, platformA, incomeID))
+	p := h.taxpayers.profiles[platformA]
+	p.Regimes[0].RFCGivenToPlatform = false
+	h.taxpayers.profiles[platformA] = p
+
+	got, err := h.uc.Restore(t.Context(), userA, platformA, incomeID)
+
+	require.NoError(t, err)
+	assert.Equal(t, fiscal.Withholdings{ISR: 3_000_00, IVA: 2_400_00}, got.Income.Withholding.Withholdings, "20 % and all the IVA without RFC")
+	assert.Equal(t, got.Income.Withholding, h.store.rows[incomeID].Withholding)
+}
+
+func TestRestore_WarnsAndKeepsALegacyRecord(t *testing.T) {
+	h := newHarness(t)
+	in := us1(t)
+	in.Counterparty = fiscal.ReceptorGovFederal
+	_, err := h.uc.Create(t.Context(), userA, create(incomeID, taxpayerA, in))
+	require.NoError(t, err)
+	require.NoError(t, h.uc.Delete(t.Context(), userA, taxpayerA, incomeID))
+	got, err := h.uc.Restore(t.Context(), userA, taxpayerA, incomeID)
+	require.NoError(t, err)
+	assert.Equal(t, []domain.Warning{{Code: domain.WarningWithholdingCPAUnverified, Field: domain.FieldWithholding}}, got.Warnings)
+
+	require.NoError(t, h.uc.Delete(t.Context(), userA, taxpayerA, incomeID))
+	legacy := h.store.rows[incomeID]
+	legacy.Counterparty, legacy.Withholding = "", fiscal.WithholdingRecord{Withholdings: fiscal.Withholdings{ISR: 7}}
+	h.store.rows[incomeID] = legacy
+	got, err = h.uc.Restore(t.Context(), userA, taxpayerA, incomeID)
+	require.NoError(t, err)
+	assert.Equal(t, fiscal.WithholdingRecord{Withholdings: fiscal.Withholdings{ISR: 7}}, got.Income.Withholding,
+		"no facts to derive from: kept for the WH-08 backfill")
 }

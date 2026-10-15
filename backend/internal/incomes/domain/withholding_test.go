@@ -23,6 +23,9 @@ var (
 	pf625 = payee(fiscal.PersonFisica, "625", domain.BasisCash)
 	pm601 = payee(fiscal.PersonMoral, "601", domain.BasisAccrual)
 	pm626 = payee(fiscal.PersonMoral, "626", domain.BasisCash)
+
+	pf625goods      = domain.Payee{PersonType: fiscal.PersonFisica, Regime: "625", Basis: domain.BasisCash, RFCGivenToPlatform: true, PlatformActivities: []domain.PlatformActivity{domain.ActivityGoodsServices}}
+	pf625goodsNoRFC = domain.Payee{PersonType: fiscal.PersonFisica, Regime: "625", Basis: domain.BasisCash, PlatformActivities: []domain.PlatformActivity{domain.ActivityGoodsServices}}
 )
 
 // TestPolicyFor is the applicability table of MODULE-incomes §2.6.

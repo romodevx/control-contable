@@ -110,7 +110,8 @@ func newRaceEnv(t *testing.T) *raceEnv {
 		Access:  access.NewPolicy(deps.Tx, accessgorm.NewStore(), accessgorm.NewStore(), clock.NewSystem()),
 		Regimes: queries, Taxpayers: taxpayerProfiles{reader: queries},
 		Expenses: expinfra.NewStore(), Categories: expinfra.NewCategoryCatalog(),
-		Parameters: newExpenseParameters(rates), Clock: clock.NewFixed(incToday), Logger: logger,
+		Parameters: newExpenseParameters(rates), Withholdings: rates.Withholdings(),
+		Clock: clock.NewFixed(incToday), Logger: logger,
 	})
 	return &raceEnv{
 		app: app, taxpayers: tpusecase.NewTaxpayers(deps), regimes: tpusecase.NewRegimes(deps),
@@ -135,7 +136,7 @@ func (e *raceEnv) taxpayer(t *testing.T) string {
 
 func (e *raceEnv) income(tp string, id int) incomes.CreateInput {
 	return incomes.CreateInput{ID: incID(id), TaxpayerID: tp, Income: incomes.IncomeInput{
-		Regime: "612", Counterparty: "publico_general", Amount: 100_00, IVARate: fiscal.IVAExempt,
+		Regime: "612", Counterparty: fiscal.ReceptorPFNoActivityOrPublic, Amount: 100_00, IVARate: fiscal.IVAExempt,
 	}}
 }
 

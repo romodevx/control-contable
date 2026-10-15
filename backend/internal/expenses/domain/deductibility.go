@@ -28,6 +28,10 @@ type CategoryRule struct {
 	// ElectronicPaymentOnly marks a category never deductible when paid in
 	// cash, whatever the amount (fuel, LISR 27 fr. III ⚠️ CPA).
 	ElectronicPaymentOnly bool
+	// DefaultOperation is default_operation_kind: what a persona moral's
+	// supplier of the category usually provides (MODULE-withholdings §2.2
+	// E3); empty on a persona física row.
+	DefaultOperation fiscal.OperationKind
 }
 
 // Options are the payer's regime options that change a hint (§2.3).

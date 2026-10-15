@@ -50,16 +50,21 @@ func TestGolden_pm601IVAEnteredThroughTheAPI(t *testing.T) {
 	}
 	post(incomesPath(taxpayer), incomeJSON(t, "", map[string]any{
 		"regime_code": "601", "amount_cents": 200_000_000, "iva_cents": 32_000_000,
-		"isr_withheld_cents": 0, "iva_withheld_cents": 0,
-		"invoiced_on": "2026-06-10", "collected_on": "2026-06-20",
+		"operation_kind": "business_services",
+		"invoiced_on":    "2026-06-10", "collected_on": "2026-06-20",
 	}))
+	// Since WH-07 the server derives the fees' withholdings from the
+	// supplier (a 612 lawyer: ISR 10 %, 2/3 of the IVA) and credits only the
+	// IVA paid in June (8,000.00 − 5,333.33); the withheld part is credited
+	// in July (MODULE-withholdings §4.2, WH-09). The golden's 200,000.00 is
+	// the paid part, so the merchandise brings the paid IVA to it.
 	post(expensesPath(taxpayer), expenseJSON(t, "", map[string]any{
 		"regime_code": "601", "category_code": "servicios_profesionales", "amount_cents": 5_000_000, "iva_cents": 800_000,
-		"isr_withheld_cents": 500_000, "iva_withheld_cents": 533_333, "paid_on": "2026-06-15",
+		"supplier_kind": "pf_with_activity", "supplier_regime": "612", "paid_on": "2026-06-15",
 	}))
 	post(expensesPath(taxpayer), expenseJSON(t, "", map[string]any{
-		"regime_code": "601", "category_code": "mercancia", "amount_cents": 120_000_000, "iva_cents": 19_200_000,
-		"paid_on": "2026-06-15",
+		"regime_code": "601", "category_code": "mercancia", "amount_cents": 123_333_331, "iva_cents": 19_733_333,
+		"supplier_kind": "pm", "paid_on": "2026-06-15",
 	}))
 	inputs := env.do(env.send(http.MethodPut, taxInputsTarget(taxpayer, "601", 2026), pm601IVAInputs, token))
 	require.Equal(t, http.StatusOK, inputs.Code, inputs.Body.String())
@@ -93,6 +98,21 @@ func TestGolden_pm601IVAEnteredThroughTheAPI(t *testing.T) {
 		"ISR que retuviste a tus proveedores (a enterar)": 500_000,
 		"Retenciones a enterar":                           1_033_333,
 	}, withholdings)
+
+	// WH-09 fed by WH-07: the IVA the server derived and withheld in June
+	// (creditable_iva_withheld_cents) is credited in July.
+	july := env.do(env.send(http.MethodGet, breakdownTarget(taxpayer, "2026-07", "601"), "", token))
+	require.Equal(t, http.StatusOK, july.Code, july.Body.String())
+	require.NoError(t, json.Unmarshal(july.Body.Bytes(), &lines))
+	credited := map[string]gen.MoneyCents{}
+	for _, l := range lines.Lines {
+		if l.Tax == gen.BreakdownLineTaxIva {
+			credited[l.Concept] = l.AmountCents
+		}
+	}
+	assert.EqualValues(t, 533_333,
+		credited["IVA retenido el mes pasado (acreditable este mes; supone que enteraste la retención a tiempo)"],
+		"the withheld part, credited the month after remittance (LIVA 5 fr. IV)")
 }
 
 // pm601IVAInputs are the golden's tax inputs: coeficiente 0.15 and no prior

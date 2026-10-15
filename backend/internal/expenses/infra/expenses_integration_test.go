@@ -349,8 +349,8 @@ func TestCreate_RegimeWindowAndCategoryRulesPerRegime(t *testing.T) {
 		{"601 moral withholding fees", func(in *usecase.CreateInput) {
 			in.TaxpayerID, in.Regime, in.Draft.Category = taxpayerM, "601", "servicios_profesionales"
 			in.Draft.Amount, in.Draft.IVA = 10_000_00, 1_600_00
-			in.Draft.Withheld = fiscal.Withholdings{ISR: 1_000_00, IVA: 1_066_67}
-		}, true, nil},
+			in.Draft.Supplier = domain.Supplier{Kind: domain.SupplierPFWithActivity, Regime: domain.SupplierRegime612}
+		}, true, []string{"deduction_requires_remittance"}},
 		{"cash over $2,000", func(in *usecase.CreateInput) {
 			in.Draft.Category, in.Draft.PaymentMethod = "papeleria", domain.PaymentCash
 			in.Draft.Amount, in.Draft.IVA = 2_000_00, 320_00
@@ -398,7 +398,9 @@ func TestCreate_Refusals(t *testing.T) {
 		{"regime not held", func(in *usecase.CreateInput) { in.Regime = "626" }, apperr.CodeBusinessRuleViolation, "regime_not_active"},
 		{"before the regime starts", func(in *usecase.CreateInput) { in.Draft.PaidOn = date(t, "2025-12-31") }, apperr.CodeBusinessRuleViolation, "regime_not_active"},
 		{"unknown category", func(in *usecase.CreateInput) { in.Draft.Category = "viajes-luna" }, apperr.CodeValidationFailed, "unknown_category"},
-		{"física withholds", func(in *usecase.CreateInput) { in.Draft.Withheld.ISR = 50_00 }, apperr.CodeBusinessRuleViolation, "withholding_not_applicable"},
+		{"US-W7: a física names a supplier", func(in *usecase.CreateInput) {
+			in.Draft.Supplier = domain.Supplier{Kind: domain.SupplierPM}
+		}, apperr.CodeBusinessRuleViolation, "supplier_not_applicable"},
 		{"iva mismatch", func(in *usecase.CreateInput) { in.Draft.IVA = 70_00 }, apperr.CodeBusinessRuleViolation, "iva_amount_mismatch"},
 		{"paid before the first parameter set", func(in *usecase.CreateInput) {
 			in.TaxpayerID, in.Regime = taxpayerOld, "612"
@@ -552,6 +554,13 @@ func TestCategories_ResolvedPerRegimePersonTypeAndOptions(t *testing.T) {
 
 	moral := resolve(taxpayerM, "601")
 	assert.Equal(t, domain.Deductible, moral["software"].Deductibility)
+	// The E3 default (default_operation_kind) is a persona moral fact only.
+	assert.Equal(t, fiscal.OperationProfessionalServices, moral["servicios_profesionales"].DefaultOperation)
+	assert.Equal(t, fiscal.OperationGroundFreight, moral["fletes"].DefaultOperation)
+	assert.Equal(t, fiscal.OperationBusinessServices, moral["software"].DefaultOperation)
+	for code, c := range business {
+		assert.Empty(t, c.DefaultOperation, "a persona física row has no E3 default: %s", code)
+	}
 
 	_, err := e.uc.Categories(t.Context(), usecase.CategoriesInput{UserID: userA, TaxpayerID: taxpayerA, Regime: "626", On: "2026-09-12"})
 	requireCode(t, err, apperr.CodeBusinessRuleViolation)

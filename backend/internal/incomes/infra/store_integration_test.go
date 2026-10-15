@@ -120,7 +120,7 @@ func id(n int) string { return fmt.Sprintf("0199d4a3-0000-7000-8000-%012d", n) }
 
 func fields(t *testing.T, regime, collected string, amount int64) usecase.Fields {
 	return usecase.Fields{
-		Regime: fiscal.RegimeCode(regime), Counterparty: domain.CounterpartyPublic, Amount: cents(amount),
+		Regime: fiscal.RegimeCode(regime), Counterparty: fiscal.ReceptorPFNoActivityOrPublic, Amount: cents(amount),
 		IVARate: fiscal.IVAExempt, Dates: domain.Dates{CollectedOn: day(t, collected)},
 	}
 }
@@ -131,27 +131,43 @@ func TestStore_InsertFindUpdateAndSoftDelete(t *testing.T) {
 	folio, err := fiscal.ParseCFDIUUID("6F3B2C1D-8A4E-4B7F-9C2D-1E5A7B9C3D4F")
 	require.NoError(t, err)
 	in := usecase.Fields{
-		Regime: "601", Counterparty: domain.CounterpartyMoral, Amount: 45_000_00, IVARate: fiscal.IVARate16,
-		IVA: 7_200_00, Withheld: fiscal.Withholdings{IVA: 100_00}, Dates: domain.Dates{InvoicedOn: day(t, "2026-09-05")},
+		Regime: "601", Counterparty: fiscal.ReceptorPM, Operation: fiscal.OperationGroundFreight, Amount: 45_000_00,
+		IVARate: fiscal.IVARate16, IVA: 7_200_00, Dates: domain.Dates{InvoicedOn: day(t, "2026-09-05")},
 		CFDIUUID: folio, Description: "Consultoría",
+	}
+	// WH-06 (WM WH-06): a persona moral carrier; IVA withheld 4 % of the price.
+	derived := fiscal.WithholdingRecord{
+		Withholdings: fiscal.Withholdings{IVA: 1_800_00}, IVABasis: fiscal.IVABasisFourPercentOfPrice,
+		Withholder: fiscal.WithholderReceptor, RuleIDs: []fiscal.RuleID{fiscal.RuleISR2, fiscal.RuleIVA4},
+		TableVersion: fiscal.WithholdingTableVersion, CPAUnverified: true,
 	}
 
 	require.NoError(t, e.as(t, userA, func(ctx context.Context) error {
-		if err := e.store.Insert(ctx, usecase.NewIncome{ID: id(1), UserID: userA, TaxpayerID: pm, Fields: in}); err != nil {
+		if err := e.store.Insert(ctx, usecase.NewIncome{ID: id(1), UserID: userA, TaxpayerID: pm, Fields: in, Withholding: derived}); err != nil {
 			return err
 		}
 		got, err := e.store.Find(ctx, id(1), usecase.LockUpdate)
 		require.NoError(t, err)
 		assert.Equal(t, in, got.Fields, "round trip, nulls included")
+		assert.Equal(t, derived, got.Withholding, "the stored derivation round trips")
+		assert.Equal(t, domain.CounterpartyMoral, got.CounterpartyType, "the deprecated mirror")
 		assert.Equal(t, "2026-09-05", got.BookedOn.String(), "accrual: booked on invoiced_on by the trigger")
 		assert.False(t, got.Deleted)
 		assert.False(t, got.CreatedAt.IsZero())
 
 		in.Dates.CollectedOn, in.Description, in.CFDIUUID = day(t, "2026-10-02"), "", fiscal.CFDIUUID{}
-		require.NoError(t, e.store.Update(ctx, id(1), in))
+		in.ViaPlatform, in.Counterparty = true, fiscal.ReceptorPFNoActivityOrPublic
+		platform := fiscal.WithholdingRecord{
+			Withholdings: fiscal.Withholdings{ISR: 1_125_00}, ISRRate: money.Rate(25_000), IVABasis: fiscal.IVABasisNone,
+			Withholder: fiscal.WithholderPlatform, RuleIDs: []fiscal.RuleID{fiscal.RuleISR2, fiscal.RuleIVA8},
+			TableVersion: fiscal.WithholdingTableVersion,
+		}
+		require.NoError(t, e.store.Update(ctx, id(1), in, platform))
 		got, err = e.store.Find(ctx, id(1), usecase.LockNone)
 		require.NoError(t, err)
 		assert.Equal(t, in, got.Fields, "null clears")
+		assert.Equal(t, platform, got.Withholding)
+		assert.Equal(t, domain.CounterpartyPlatform, got.CounterpartyType)
 
 		require.NoError(t, e.store.SetDeleted(ctx, id(1), true))
 		got, err = e.store.Find(ctx, id(1), usecase.LockNone)
@@ -162,7 +178,7 @@ func TestStore_InsertFindUpdateAndSoftDelete(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, got.Deleted)
 
-		require.ErrorIs(t, e.store.Update(ctx, id(9), in), usecase.ErrIncomeNotFound)
+		require.ErrorIs(t, e.store.Update(ctx, id(9), in, derived), usecase.ErrIncomeNotFound)
 		require.ErrorIs(t, e.store.SetDeleted(ctx, id(9), true), usecase.ErrIncomeNotFound)
 		_, err = e.store.Find(ctx, id(9), usecase.LockNone)
 		require.ErrorIs(t, err, usecase.ErrIncomeNotFound)
@@ -262,7 +278,9 @@ func TestStore_OutsideAUnitOfWork(t *testing.T) {
 	_, err := s.Find(ctx, id(1), usecase.LockNone)
 	require.ErrorIs(t, err, pgdb.ErrNoTransaction)
 	require.ErrorIs(t, s.Insert(ctx, usecase.NewIncome{}), pgdb.ErrNoTransaction)
-	require.ErrorIs(t, s.Update(ctx, id(1), usecase.Fields{}), pgdb.ErrNoTransaction)
+	require.ErrorIs(t, s.Update(ctx, id(1), usecase.Fields{}, fiscal.WithholdingRecord{}), pgdb.ErrNoTransaction)
+	_, _, err = s.LastFacts(ctx, "", "612")
+	require.ErrorIs(t, err, pgdb.ErrNoTransaction)
 	_, err = s.CFDIUUIDInUse(ctx, "", fiscal.CFDIUUID{}, "")
 	require.ErrorIs(t, err, pgdb.ErrNoTransaction)
 	_, err = s.List(ctx, usecase.ListFilter{}, usecase.Keyset{}, 1)
@@ -271,4 +289,42 @@ func TestStore_OutsideAUnitOfWork(t *testing.T) {
 	require.ErrorIs(t, err, pgdb.ErrNoTransaction)
 	_, err = s.IncomeBasis(ctx, fiscal.PersonFisica, "612")
 	require.ErrorIs(t, err, pgdb.ErrNoTransaction)
+}
+
+// LastFacts is the newest live income of the regime with facts (a record
+// stored before WH-06 has none); a deleted one does not count.
+func TestStore_LastFacts(t *testing.T) {
+	e := newEnv(t)
+	tp := e.taxpayer(t, userA, "fisica", "PEXJ900215HK8", "612")
+	withFacts := func(n int, kind fiscal.ReceptorKind, op fiscal.OperationKind) usecase.NewIncome {
+		f := fields(t, "612", "2026-09-10", 100)
+		f.Counterparty, f.Operation = kind, op
+		return usecase.NewIncome{ID: id(n), UserID: userA, TaxpayerID: tp, Fields: f}
+	}
+	require.NoError(t, e.as(t, userA, func(ctx context.Context) error {
+		_, ok, err := e.store.LastFacts(ctx, tp, "612")
+		require.NoError(t, err)
+		assert.False(t, ok, "no income yet")
+
+		require.NoError(t, e.store.Insert(ctx, withFacts(1, fiscal.ReceptorPM, fiscal.OperationCommission)))
+		require.NoError(t, e.store.Insert(ctx, withFacts(2, fiscal.ReceptorGovFederal, fiscal.OperationRentMovable)))
+		legacy := withFacts(3, "", "")
+		require.NoError(t, e.store.Insert(ctx, legacy))
+
+		got, ok, err := e.store.LastFacts(ctx, tp, "612")
+		require.NoError(t, err)
+		require.True(t, ok)
+		assert.Equal(t, usecase.LastFacts{Counterparty: fiscal.ReceptorGovFederal, Operation: fiscal.OperationRentMovable}, got,
+			"the newest with facts (ids are time-ordered within one transaction's now())")
+
+		require.NoError(t, e.store.SetDeleted(ctx, id(2), true))
+		got, _, err = e.store.LastFacts(ctx, tp, "612")
+		require.NoError(t, err)
+		assert.Equal(t, fiscal.OperationCommission, got.Operation, "a deleted income does not count")
+
+		_, ok, err = e.store.LastFacts(ctx, tp, "606")
+		require.NoError(t, err)
+		assert.False(t, ok, "per regime")
+		return nil
+	}))
 }

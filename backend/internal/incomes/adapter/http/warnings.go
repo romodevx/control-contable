@@ -6,12 +6,13 @@ import (
 )
 
 // warningMessages are the es-MX texts of each warning code
-// (MODULE-incomes §2.8). They never echo an amount, a description or a
+// (MODULE-incomes §2.8, MODULE-withholdings §6). They never echo an amount, a description or a
 // folio fiscal.
 var warningMessages = map[domain.WarningCode]string{
-	domain.WarningDuplicateCFDIUUID: "Ya tienes otro registro con este folio fiscal.",
-	domain.WarningWithholdingDiffersFromRate: "La retención no coincide con la tasa sugerida; " +
-		"guardamos la de tu factura.",
+	domain.WarningDuplicateCFDIUUID:        "Ya tienes otro registro con este folio fiscal.",
+	domain.WarningWithholdingCPAUnverified: "Esta retención aún no la confirma un contador. Úsala como aproximado.",
+	domain.WarningForeignCounterpartyNotSupported: "Las operaciones con el extranjero pueden llevar otros impuestos " +
+		"que la app todavía no calcula.",
 	domain.WarningProvisionalParameters: "Aún no se publican los parámetros fiscales de ese año; " +
 		"usamos los del año anterior.",
 }

@@ -137,8 +137,7 @@ class AnnualInputWrites {
       _ref
         ..invalidate(touched)
         ..invalidate(annualEstimateProvider)
-        ..invalidate(annualBreakdownProvider)
-        ..invalidate(annualInputCountsProvider);
+        ..invalidate(annualBreakdownProvider);
     }
   }
 }

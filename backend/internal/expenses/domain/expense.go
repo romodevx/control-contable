@@ -21,6 +21,11 @@ const (
 	FieldDeductible       = "deductible"
 	FieldISRWithheldCents = "isr_withheld_cents"
 	FieldIVAWithheldCents = "iva_withheld_cents"
+	FieldSupplierKind     = "supplier_kind"
+	FieldSupplierRegime   = "supplier_regime"
+	FieldOperationKind    = "operation_kind"
+	FieldResidentialRent  = "residential_rent"
+	FieldWithholding      = "withholding"
 )
 
 // WarningCode is a non-blocking notice (contract Warning.code,
@@ -39,13 +44,20 @@ const (
 	// the limit as deductible; the claim stands for ISR, but its IVA is not
 	// creditable (LIVA 5 fr. II ⚠️ CPA).
 	WarningIVANotCreditableCashPayment WarningCode = "iva_not_creditable_cash_payment"
+	// The withholding warnings (MODULE-withholdings §6).
+	WarningSupplierRegimeUnknown       WarningCode = "supplier_regime_unknown"
+	WarningDeductionRequiresRemittance WarningCode = "deduction_requires_remittance"
+	WarningCPAUnverified               WarningCode = "withholding_cpa_unverified"
+	WarningForeignSupplier             WarningCode = "foreign_counterparty_not_supported"
 )
 
 // Warning is a notice on one field. It never echoes an amount, a description
-// or a CFDI UUID.
+// or a CFDI UUID. DueOn is the remittance date deduction_requires_remittance
+// names; zero otherwise.
 type Warning struct {
 	Code  WarningCode
 	Field string
+	DueOn fiscal.Date
 }
 
 // Draft is an expense as the user entered it, after the adapter decoded the
@@ -60,7 +72,9 @@ type Draft struct {
 	HasCFDI       bool
 	CFDIUUID      fiscal.CFDIUUID
 	Deductible    Override
-	Withheld      fiscal.Withholdings
+	// Supplier is the persona moral's description of whoever billed it
+	// (MODULE-withholdings §2.2); zero for a persona física.
+	Supplier Supplier
 }
 
 // Totals are the live summary of an expense.
@@ -74,42 +88,52 @@ type Totals struct {
 
 // Assessment is a valid expense's derived facts: the stored effective
 // deductible and its source, the hint the form shows, the creditable-IVA
-// candidate M4-08 aggregates, the client's prefills, totals and warnings.
+// candidates M4-08 aggregates, the derived withholding, totals and warnings.
 type Assessment struct {
 	BookedOn      fiscal.Date
 	Hint          Hint
 	Deductible    bool
 	Source        DeductibleSource
 	CashOverLimit bool
-	// CreditableIVA is the IVA that may be credited (LIVA 5, ⚠️ CPA): with a
+	// CreditableIVA: the IVA may be credited (LIVA 5, ⚠️ CPA) with a
 	// CFDI, never on a cash payment over the limit (fr. II, whatever the
 	// override), only for a category the rule marks creditable (fr. I,
 	// strictly indispensable), and deductible for ISR, except in RESICO PF,
 	// where ISR deductions do not exist. M5 applies the final rule.
-	CreditableIVA money.Cents
-	Suggested     fiscal.Suggested
-	Totals        Totals
-	Warnings      []Warning
+	// CreditableIVA is then the share of the IVA paid to the supplier (IVA −
+	// IVA withheld); CreditableIVAWithheld the share withheld, credited the month after
+	// its remittance (LIVA 5 fr. IV, MODULE-withholdings §4.2).
+	CreditableIVA         money.Cents
+	CreditableIVAWithheld money.Cents
+	// Supplier is the draft's supplier with its defaults resolved, as
+	// stored; Withholding is the derivation (ADR-0008).
+	Supplier    Supplier
+	Withholding fiscal.WithholdingRecord
+	// RemitDueOn is when the taxpayer must remit what it withheld; zero
+	// when it withheld nothing.
+	RemitDueOn fiscal.Date
+	Totals     Totals
+	Warnings   []Warning
 }
 
 // Assess applies MODULE-expenses §2 to a draft paid by p, under the
 // category's rule (category_regime_rules for p's regime and person type),
-// with today the current Mexico City day (Clock port) and catalog the dated
-// parameters.
+// with today the current Mexico City day (Clock port), catalog the dated
+// parameters and withholdings the kernel's withholding rates.
 //
 // Validation (validation_failed) runs first and reports every field; only a
 // draft that passes it meets the business rules (business_rule_violation).
 // Both come back as fiscal.Violations. A parameter fault is
 // fiscal.ErrInvalidParameter. The regime window, the category's existence,
 // the idempotency key and the trial cap belong to the use case.
-func Assess(d Draft, p Payer, rule CategoryRule, today fiscal.Date, catalog RateCatalog) (Assessment, error) {
+func Assess(d Draft, p Payer, rule CategoryRule, today fiscal.Date, catalog RateCatalog, withholdings fiscal.WithholdingCatalog) (Assessment, error) {
 	if err := checkContext(d, p, rule, today, catalog); err != nil {
 		return Assessment{}, err
 	}
-	if vs := validate(d, today); len(vs) > 0 {
+	if vs := validate(d, p, today); len(vs) > 0 {
 		return Assessment{}, vs
 	}
-	return applyRules(d, p, rule, catalog)
+	return applyRules(d, p, rule, catalog, withholdings)
 }
 
 // checkContext rejects server-side inputs the rules cannot use.
@@ -132,7 +156,7 @@ func checkContext(d Draft, p Payer, rule CategoryRule, today fiscal.Date, catalo
 }
 
 // validate is the schema-level pass.
-func validate(d Draft, today fiscal.Date) fiscal.Violations {
+func validate(d Draft, p Payer, today fiscal.Date) fiscal.Violations {
 	var vs fiscal.Violations
 	if d.Category == "" {
 		vs.Add(FieldCategoryCode, fiscal.ErrRequired)
@@ -148,8 +172,7 @@ func validate(d Draft, today fiscal.Date) fiscal.Violations {
 	if !d.Deductible.Valid() {
 		vs.Add(FieldDeductible, fiscal.ErrInvalid)
 	}
-	checkBounds(&vs, FieldISRWithheldCents, d.Withheld.ISR)
-	checkBounds(&vs, FieldIVAWithheldCents, d.Withheld.IVA)
+	checkSupplier(&vs, d.Supplier, p)
 	return vs
 }
 
@@ -179,14 +202,12 @@ func checkPaidOn(vs *fiscal.Violations, on, today fiscal.Date) {
 }
 
 // applyRules is the business pass over a validated draft.
-func applyRules(d Draft, p Payer, rule CategoryRule, catalog RateCatalog) (Assessment, error) {
+func applyRules(d Draft, p Payer, rule CategoryRule, catalog RateCatalog, withholdings fiscal.WithholdingCatalog) (Assessment, error) {
 	var vs fiscal.Violations
 	if err := checkIVAInto(&vs, d, catalog); err != nil {
 		return Assessment{}, err
 	}
-	allowed := MayWithhold(p)
-	checkWithheld(&vs, FieldISRWithheldCents, d.Withheld.ISR, d.Amount, allowed)
-	checkWithheld(&vs, FieldIVAWithheldCents, d.Withheld.IVA, d.IVA, allowed)
+	supplierRules(&vs, d, p)
 	if len(vs) > 0 {
 		return Assessment{}, vs
 	}
@@ -194,22 +215,29 @@ func applyRules(d Draft, p Payer, rule CategoryRule, catalog RateCatalog) (Asses
 	if err != nil {
 		return Assessment{}, err
 	}
-	suggested, err := SuggestWithholdings(d.Category, p, d.Amount, d.IVA, d.PaidOn, catalog)
+	supplier := d.Supplier.resolve(p, rule)
+	derivation, err := derive(d, p, supplier, withholdings)
 	if err != nil {
 		return Assessment{}, err
 	}
+	record := derivation.Record()
+	due := RemittanceDue(record, d.PaidOn)
 	hint := ResolveDeductibility(rule, p)
 	deductible, source := effectiveDeductible(hint, d, cashOver)
+	paid, withheld := creditableSplit(isCreditable(d, p, rule, deductible, cashOver), d.IVA, record.IVA)
 	return Assessment{
-		BookedOn:      d.PaidOn,
-		Hint:          hint,
-		Deductible:    deductible,
-		Source:        source,
-		CashOverLimit: cashOver,
-		CreditableIVA: creditableIVA(d, p, rule, deductible, cashOver),
-		Suggested:     suggested,
-		Totals:        totalsOf(d),
-		Warnings:      warningsOf(hint, d, cashOver),
+		BookedOn:              d.PaidOn,
+		Hint:                  hint,
+		Deductible:            deductible,
+		Source:                source,
+		CashOverLimit:         cashOver,
+		CreditableIVA:         paid,
+		CreditableIVAWithheld: withheld,
+		Supplier:              supplier,
+		Withholding:           record,
+		RemitDueOn:            due,
+		Totals:                totalsOf(d, record.Withholdings),
+		Warnings:              append(warningsOf(hint, d, cashOver), withholdingWarnings(derivation, supplier, due)...),
 	}, nil
 }
 
@@ -226,17 +254,6 @@ func checkIVAInto(vs *fiscal.Violations, d Draft, catalog RateCatalog) error {
 		return err
 	}
 	return nil
-}
-
-// checkWithheld: a física withholds nothing (LIVA 1-A); a moral never above
-// the base.
-func checkWithheld(vs *fiscal.Violations, field string, withheld, base money.Cents, allowed bool) {
-	switch {
-	case withheld > 0 && !allowed:
-		vs.Add(field, fiscal.ErrWithholdingNotApplicable)
-	case withheld > base:
-		vs.Add(field, fiscal.ErrWithholdingExceedsBase)
-	}
 }
 
 // cashOverLimit is MODULE-expenses §2.5 (⚠️ CPA): a cash payment whose total
@@ -269,16 +286,14 @@ func effectiveDeductible(hint Hint, d Draft, cashOver bool) (bool, DeductibleSou
 	return hint.DefaultDeductible && d.HasCFDI && !cashOver, SourceCategoryDefault
 }
 
-// creditableIVA is the IVA candidate for crediting (see Assessment).
-func creditableIVA(d Draft, p Payer, rule CategoryRule, deductible, cashOver bool) money.Cents {
+// isCreditable reports an expense whose IVA may be credited (see
+// Assessment).
+func isCreditable(d Draft, p Payer, rule CategoryRule, deductible, cashOver bool) bool {
 	if !d.HasCFDI || cashOver || !rule.IVACreditable {
-		return 0
+		return false
 	}
 	resicoPF := p.Regime == fiscal.RegimeRESICO && p.PersonType == fiscal.PersonFisica
-	if deductible || resicoPF {
-		return d.IVA
-	}
-	return 0
+	return deductible || resicoPF
 }
 
 func warningsOf(hint Hint, d Draft, cashOver bool) []Warning {
@@ -304,10 +319,11 @@ func warningsOf(hint Hint, d Draft, cashOver bool) []Warning {
 	return warnings
 }
 
-// totalsOf sums a validated draft: every amount is within [0, fiscal.MaxCents] and
-// the withholdings within their bases, so plain int64 arithmetic is exact.
-func totalsOf(d Draft) Totals {
+// totalsOf sums a validated draft and its derived withholdings: every amount
+// is within [0, fiscal.MaxCents] and the withholdings within their bases, so
+// plain int64 arithmetic is exact.
+func totalsOf(d Draft, w fiscal.Withholdings) Totals {
 	total := d.Amount + d.IVA
-	withheld := d.Withheld.ISR + d.Withheld.IVA
+	withheld := w.ISR + w.IVA
 	return Totals{Subtotal: d.Amount, IVA: d.IVA, Total: total, Withheld: withheld, Net: total - withheld}
 }

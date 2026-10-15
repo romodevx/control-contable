@@ -12,12 +12,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	expenseshttp "github.com/romodevx/control-contable/backend/internal/expenses/adapter/http"
 	incomeshttp "github.com/romodevx/control-contable/backend/internal/incomes/adapter/http"
 	"github.com/romodevx/control-contable/backend/internal/incomes/domain"
 	incomes "github.com/romodevx/control-contable/backend/internal/incomes/usecase"
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagtest"
 	"github.com/romodevx/control-contable/backend/internal/platform/logging"
+	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit"
 	"github.com/romodevx/control-contable/backend/internal/platform/tx"
 	taxpayersdomain "github.com/romodevx/control-contable/backend/internal/taxpayers/domain"
 	taxpayers "github.com/romodevx/control-contable/backend/internal/taxpayers/usecase"
@@ -125,6 +127,10 @@ func (stubIncomeUseCases) Defaults(context.Context, string, incomes.DefaultsQuer
 	return incomes.Defaults{}, errStubIncomes
 }
 
+func (stubIncomeUseCases) Preview(context.Context, string, incomes.PreviewQuery) (incomes.Preview, error) {
+	return incomes.Preview{}, errStubIncomes
+}
+
 // stubIncomesModule has stub use cases and no write budget.
 func stubIncomesModule() incomesModule {
 	return incomesModule{handler: incomeshttp.NewHandler(stubIncomeUseCases{})}
@@ -139,7 +145,7 @@ func TestNewHandler_refusesToServeWithoutTheIncomesHandler(t *testing.T) {
 }
 
 // The incomes module needs the shared unit of work, the taxpayers queries
-// and the rate catalog; it hands the router its write budget.
+// and the rate catalog; it hands the router its write and preview budgets.
 func TestNewIncomesModule(t *testing.T) {
 	rates, err := newRateCatalog()
 	require.NoError(t, err)
@@ -154,7 +160,7 @@ func TestNewIncomesModule(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, m.handler)
 	assert.NotNil(t, m.incomes)
-	assert.ElementsMatch(t, []string{"createIncome", "updateIncome", "deleteIncome", "restoreIncome"},
+	assert.ElementsMatch(t, []string{"createIncome", "updateIncome", "deleteIncome", "restoreIncome", "previewIncomeWithholdings"},
 		slices.Collect(maps.Keys(m.userLimits)))
 }
 
@@ -163,3 +169,13 @@ type stubTx struct{}
 
 func (stubTx) ReadWrite(context.Context, string, tx.Work) error { return errStubIncomes }
 func (stubTx) ReadOnly(context.Context, string, tx.Work) error  { return errStubIncomes }
+
+// ADR-0008 §4: the two withholding previews spend one per-user budget,
+// withholding_previews (a scope is a bucket, ADR-0005), so the card of
+// either form cannot double the 1200 per hour.
+func TestWithholdingPreviewsShareOneBudget(t *testing.T) {
+	income := incomeshttp.UserLimits["previewIncomeWithholdings"]
+	expense := expenseshttp.UserLimits["previewExpenseWithholdings"]
+	assert.Equal(t, ratelimit.PerWindow("withholding_previews", 1200, time.Hour), income)
+	assert.Equal(t, income, expense)
+}

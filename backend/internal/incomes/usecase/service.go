@@ -28,7 +28,10 @@ type Deps struct {
 	Taxpayers Taxpayers
 	Access    AccessPolicy
 	Rates     RateCatalog
-	Clock     clock.Clock
+	// Withholdings are the dated parameters of the withholding decision
+	// table (ADR-0008), the same parameter sets as Rates.
+	Withholdings fiscal.WithholdingCatalog
+	Clock        clock.Clock
 	// NewID generates an income id when the client sends none; nil means
 	// uuid v7 (data-model: time-ordered keys).
 	NewID func() (string, error)
@@ -85,14 +88,22 @@ func canonicalID(raw string) (string, bool) {
 	return id.String(), true
 }
 
+// request is a normalized write before the defaults of its hidden
+// questions are resolved (resolveDefaults): an empty Operation, and a nil
+// viaPlatform, take theirs.
+type request struct {
+	fields      Fields
+	viaPlatform *bool
+}
+
 // normalize turns an input into persisted fields: the CFDI UUID upper case,
 // the description trimmed and NFC (blank is null). Its failures are
 // validation violations.
-func normalize(in IncomeInput) (Fields, error) {
+func normalize(in IncomeInput) (request, error) {
 	var vs fiscal.Violations
 	f := Fields{
-		Regime: in.Regime, Counterparty: in.Counterparty, Amount: in.Amount, IVARate: in.IVARate,
-		IVA: in.IVA, Withheld: in.Withheld, Dates: in.Dates, PlatformActivity: in.PlatformActivity,
+		Regime: in.Regime, Counterparty: in.Counterparty, Operation: in.Operation, ResidentialRent: in.ResidentialRent,
+		Amount: in.Amount, IVARate: in.IVARate, IVA: in.IVA, Dates: in.Dates, PlatformActivity: in.PlatformActivity,
 	}
 	if in.CFDIUUID != "" {
 		u, err := fiscal.ParseCFDIUUID(in.CFDIUUID)
@@ -106,16 +117,31 @@ func normalize(in IncomeInput) (Fields, error) {
 		vs.Add(fieldDescription, ErrTooLong)
 	}
 	if len(vs) > 0 {
-		return Fields{}, vs
+		return request{}, vs
 	}
-	return f, nil
+	return request{fields: f, viaPlatform: in.ViaPlatform}, nil
 }
 
-// sameFields reports whether a retry carries the stored fields. An omitted
-// 625 activity matches the stored one: the create resolved its default.
-func sameFields(stored, retry Fields) bool {
-	if retry.PlatformActivity == "" && stored.Regime == fiscal.RegimePlatforms {
-		retry.PlatformActivity = stored.PlatformActivity
+// stored is the request a stored income makes: every default resolved.
+func stored(f Fields) request {
+	via := f.ViaPlatform
+	return request{fields: f, viaPlatform: &via}
+}
+
+// sameFields reports whether a retry carries the stored facts. A question
+// the retry omits matches the stored answer: the create resolved its
+// default (the 625 activity, the operation, via a platform).
+func sameFields(stored Fields, retry request) bool {
+	f := retry.fields
+	if f.PlatformActivity == "" && stored.Regime == fiscal.RegimePlatforms {
+		f.PlatformActivity = stored.PlatformActivity
 	}
-	return stored == retry
+	if f.Operation == "" {
+		f.Operation = stored.Operation
+	}
+	f.ViaPlatform = stored.ViaPlatform
+	if retry.viaPlatform != nil {
+		f.ViaPlatform = *retry.viaPlatform
+	}
+	return stored == f
 }

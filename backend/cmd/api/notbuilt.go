@@ -73,17 +73,6 @@ func (notBuilt) ReceiveRevenueCatWebhook(context.Context, gen.ReceiveRevenueCatW
 	return nil, errNotBuilt
 }
 
-// PreviewIncomeWithholdings is built by WH-06 (ADR-0008): the incomes handler derives the
-// withholding with the kernel decision table (WH-04) and deletes this stub.
-func (notBuilt) PreviewIncomeWithholdings(context.Context, gen.PreviewIncomeWithholdingsRequestObject) (gen.PreviewIncomeWithholdingsResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-// PreviewExpenseWithholdings is built by WH-07 (ADR-0008), as PreviewIncomeWithholdings.
-func (notBuilt) PreviewExpenseWithholdings(context.Context, gen.PreviewExpenseWithholdingsRequestObject) (gen.PreviewExpenseWithholdingsResponseObject, error) {
-	return nil, errNotBuilt
-}
-
 // The module_annual operations are built by ANN-15 (ADR-0009): the annual
 // handlers in internal/taxengine/adapter/http/annual delete these stubs.
 

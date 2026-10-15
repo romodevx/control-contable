@@ -1,6 +1,9 @@
 package expenseshttp
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
 	"github.com/romodevx/control-contable/backend/internal/expenses/domain"
 	"github.com/romodevx/control-contable/backend/internal/expenses/usecase"
@@ -19,6 +22,34 @@ var warningMessages = map[domain.WarningCode]string{
 	domain.WarningDuplicateCFDIUUID:           "Ya tienes otro registro con este folio fiscal.",
 	usecase.WarningProvisionalParameters: "Aún no se publican los parámetros fiscales de ese año; " +
 		"usamos los del año anterior.",
+	domain.WarningSupplierRegimeUnknown: "Revisa el régimen en la factura de tu proveedor; cambia la retención.",
+	domain.WarningCPAUnverified:         "Esta retención aún no la confirma un contador. Úsala como aproximado.",
+	domain.WarningForeignSupplier: "Las operaciones con el extranjero pueden llevar otros impuestos que la app " +
+		"todavía no calcula.",
+}
+
+// msgRemittance is deduction_requires_remittance's text; it names the
+// remittance day (MODULE-withholdings §6).
+const msgRemittance = "Este gasto solo es deducible si enteras las retenciones a más tardar el 17 de %s."
+
+// months are the es-MX month names.
+var months = [...]string{
+	"enero", "febrero", "marzo", "abril", "mayo", "junio",
+	"julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+}
+
+// messageOf is a warning's es-MX text.
+func messageOf(w domain.Warning) string {
+	if w.Code == domain.WarningDeductionRequiresRemittance {
+		if due, err := time.Parse(dateLayout, w.DueOn.String()); err == nil {
+			return fmt.Sprintf(msgRemittance, months[due.Month()-1])
+		}
+	}
+	message, ok := warningMessages[w.Code]
+	if !ok {
+		return msgWarningFallback
+	}
+	return message
 }
 
 // msgWarningFallback is the text of a code without its own (the contract's
@@ -30,11 +61,7 @@ const msgWarningFallback = "Revisa este dato."
 func toWarnings(warnings []domain.Warning) []gen.Warning {
 	out := make([]gen.Warning, 0, len(warnings))
 	for _, w := range warnings {
-		message, ok := warningMessages[w.Code]
-		if !ok {
-			message = msgWarningFallback
-		}
-		out = append(out, gen.Warning{Code: gen.WarningCode(w.Code), Field: w.Field, Message: message})
+		out = append(out, gen.Warning{Code: gen.WarningCode(w.Code), Field: w.Field, Message: messageOf(w)})
 	}
 	return out
 }

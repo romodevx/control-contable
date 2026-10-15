@@ -83,13 +83,14 @@ func newIncomesModule(w incomesWiring) (incomesModule, error) {
 	}
 	store := accessgorm.NewStore()
 	uc := incomes.NewIncomes(incomes.Deps{
-		Tx:        w.tx,
-		Store:     incomesinfra.NewStore(),
-		Taxpayers: incomesTaxpayers{queries: w.taxpayers},
-		Access:    access.NewPolicy(w.tx, store, store, orSystem(w.accessClock)),
-		Rates:     w.rates,
-		Clock:     orSystem(w.clock),
-		Logger:    w.logger,
+		Tx:           w.tx,
+		Store:        incomesinfra.NewStore(),
+		Taxpayers:    incomesTaxpayers{queries: w.taxpayers},
+		Access:       access.NewPolicy(w.tx, store, store, orSystem(w.accessClock)),
+		Rates:        w.rates,
+		Withholdings: w.rates.Withholdings(),
+		Clock:        orSystem(w.clock),
+		Logger:       w.logger,
 	})
 	return incomesModule{
 		handler:    incomeshttp.NewHandler(uc),
