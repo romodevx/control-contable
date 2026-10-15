@@ -37,18 +37,22 @@ An Android emulator reaches the host as `10.0.2.2`: add `API_BASE_URL=http://10.
 
 ## Flavors
 
-| Flavor | Entrypoint | API base URL | Android id |
-|---|---|---|---|
-| dev | `lib/main_dev.dart` | `http://localhost:3000`; `USE_MOCK=true` → `http://localhost:3001` | `mx.romodevx.control_contable.dev` |
-| staging | `lib/main_staging.dart` | `--dart-define=API_BASE_URL=https://…` (required) | `….staging` |
-| prod | `lib/main_prod.dart` | `--dart-define=API_BASE_URL=https://…` (required) | `mx.romodevx.control_contable` |
+| Flavor | Entrypoint | API base URL | Android id | iOS bundle id |
+|---|---|---|---|---|
+| dev | `lib/main_dev.dart` | `http://localhost:3000`; `USE_MOCK=true` → `http://localhost:3001` | `mx.romodevx.control_contable.dev` | `mx.romodevx.controlContable.dev` |
+| staging | `lib/main_staging.dart` | `--dart-define=API_BASE_URL=https://…` (required) | `….staging` | `….staging` |
+| prod | `lib/main_prod.dart` | `--dart-define=API_BASE_URL=https://…` (required) | `mx.romodevx.control_contable` | `mx.romodevx.controlContable` |
 
 `API_BASE_URL` always wins when set. staging and prod refuse to boot without it or with plain
 HTTP (`AppConfigError`), so no environment host is baked into the source.
 
-Android product flavors live in `android/app/build.gradle.kts`. **iOS schemes are pending**:
-they need a full Xcode (OB6). Until then, run iOS with `-t lib/main_<flavor>.dart` and no
-`--flavor`.
+Android product flavors live in `android/app/build.gradle.kts`. iOS has one shared scheme per
+flavor (`ios/Runner.xcodeproj/xcshareddata/xcschemes/<flavor>.xcscheme`) running the
+`Debug-<flavor>`, `Profile-<flavor>` and `Release-<flavor>` build configurations; each sets the
+bundle id and `APP_DISPLAY_NAME` (the home-screen name, read by `Info.plist`).
+`test/platform/ios_flavors_test.dart` pins them. A simulator reaches the host as `localhost`
+(`API_BASE_URL=http://localhost:3000`). iOS plugins resolve through Swift Package Manager
+(no CocoaPods); `Package.resolved` pins the transitive Firebase SDK versions.
 
 ## Layout
 
@@ -313,7 +317,7 @@ fails if one appears in the tree. CI writes them from secrets before building.
 |---|---|---|
 | Android, all flavors | `android/app/google-services.json` | One file with the three clients: `mx.romodevx.control_contable` (prod), `….dev`, `….staging` |
 | Android, per flavor (alternative) | `android/app/src/{dev,staging,prod}/google-services.json` | Each build needs the file of its flavor |
-| iOS | `ios/Runner/GoogleService-Info.plist`, added to the Runner target | iOS has one scheme today; per-flavor plists arrive with the iOS schemes (OB6) via a build-phase copy |
+| iOS | `ios/Runner/GoogleService-Info.plist`, added to the Runner target | One file for every scheme today; per-flavor plists (a build-phase copy keyed on the flavor's configuration) arrive with the Firebase project (OB9) |
 
 The Gradle plugin `com.google.gms.google-services` (4.4.4) is applied only when an Android
 file exists. iOS also needs, with the Apple account (OB6): the Push Notifications capability
