@@ -7,6 +7,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/incomes/domain"
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
+	"github.com/romodevx/control-contable/backend/internal/platform/usertext"
 )
 
 // Use case errors. Stores return ErrIncomeNotFound and ErrIDTaken; the use
@@ -40,6 +41,11 @@ var (
 // ErrTooLong reports a description over maxDescription characters after
 // normalization (validation_failed).
 var ErrTooLong = fiscal.ValidationError("too_long")
+
+// ErrInvisibleCharacters reports a description holding an invisible
+// character: control, format (zero width, bidi) or line separator
+// (usertext; validation_failed).
+var ErrInvisibleCharacters = fiscal.ValidationError(usertext.DetailInvisibleCharacters)
 
 // Contract field names the use cases report beyond the domain's.
 const (
@@ -83,6 +89,7 @@ var detailMessages = map[string]string{
 	fiscal.ErrMustBePositive.Detail():           "The amount must be greater than zero.",
 	fiscal.ErrOutOfRange.Detail():               "The date cannot be in the future nor before 2026.",
 	ErrTooLong.Detail():                         "This text is too long.",
+	ErrInvisibleCharacters.Detail():             "Remove invisible or formatting characters.",
 	domain.ErrNotForRegime.Detail():             "This field only applies to another regime.",
 	domain.ErrActivityNotHeld.Detail():          "The taxpayer does not hold this activity.",
 	fiscal.ErrRateNotValidOnDate.Detail():       "This IVA rate is not valid on the income's date.",

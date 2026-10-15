@@ -15,6 +15,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/clock"
 	"github.com/romodevx/control-contable/backend/internal/platform/tx"
+	"github.com/romodevx/control-contable/backend/internal/platform/usertext"
 )
 
 // maxDescription is the longest description, in characters (contract
@@ -113,8 +114,11 @@ func normalize(in IncomeInput) (request, error) {
 		f.CFDIUUID = u
 	}
 	f.Description = norm.NFC.String(strings.TrimSpace(in.Description))
-	if utf8.RuneCountInString(f.Description) > maxDescription {
+	switch {
+	case utf8.RuneCountInString(f.Description) > maxDescription:
 		vs.Add(fieldDescription, ErrTooLong)
+	case usertext.HasInvisible(f.Description):
+		vs.Add(fieldDescription, ErrInvisibleCharacters)
 	}
 	if len(vs) > 0 {
 		return request{}, vs
