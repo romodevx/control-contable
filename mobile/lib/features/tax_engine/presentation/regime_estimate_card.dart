@@ -134,6 +134,16 @@ String cpaTopicsText(AppLocalizations l10n, List<CpaTopic> topics) => topics
         // them their own copy; until then they read as an unknown topic.
         CpaTopic.withholdingRuleUnverified ||
         CpaTopic.withheldIvaCreditTiming ||
+        // Contract 0.11.0 (ADR-0009): annual-only topics; ANN-17 gives the
+        // annual screen its own copy.
+        CpaTopic.platformNondefinitiveAnnual ||
+        CpaTopic.umaForMinimumWage ||
+        CpaTopic.deductionCapResicoIncome ||
+        CpaTopic.salaryObligationBasis ||
+        CpaTopic.cuRounding ||
+        CpaTopic.resicoPmPtuBase ||
+        CpaTopic.resicoPfReliefRenewal ||
+        CpaTopic.ptuRate ||
         CpaTopic.$unknown => l10n.cpaTopicOther,
       },
     )
