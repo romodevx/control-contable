@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/romodevx/control-contable/backend/internal/platform/clock"
 	"github.com/romodevx/control-contable/backend/internal/platform/config"
 	"github.com/romodevx/control-contable/backend/internal/platform/logging"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
@@ -94,6 +96,28 @@ func TestNewRegistry_registersTheReminders(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, []string{"records_purge", "reminders"}, reg.Names())
+}
+
+// newJobs pairs each production job with its own per-run timeout: the
+// purge gets recordsPurgeTimeout, the reminders remindersTimeout (M9-11
+// refactor: the pairing is data now, so a swap must not go unnoticed).
+func TestNewJobs_pairsEachJobWithItsTimeout(t *testing.T) {
+	pool, err := pgdb.Open("postgres://cc_worker@127.0.0.1:1/control_contable?sslmode=disable")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = pool.Close() })
+
+	jobs, err := newJobs(pool, logging.New(&bytes.Buffer{}, nil), reminders.DisabledPushSender{},
+		testReminderKeys(t), clock.NewFixed(time.Date(2026, time.May, 14, 10, 5, 0, 0, clock.Location())))
+
+	require.NoError(t, err)
+	got := map[string]time.Duration{}
+	for _, j := range jobs {
+		got[j.job.Name()] = j.timeout
+	}
+	assert.Equal(t, map[string]time.Duration{
+		"records_purge": recordsPurgeTimeout,
+		"reminders":     remindersTimeout,
+	}, got)
 }
 
 // Outside dev the worker needs the push token keys to open the tokens the
