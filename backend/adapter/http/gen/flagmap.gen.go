@@ -15,14 +15,22 @@ var operationModules = map[string]string{
 	"archiveTaxpayerRegime":      "module_taxpayers",     // DELETE /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}
 	"createExpense":              "module_expenses",      // POST /v1/taxpayers/{taxpayerId}/expenses
 	"createIncome":               "module_incomes",       // POST /v1/taxpayers/{taxpayerId}/incomes
+	"createPersonalDeduction":    "module_annual",        // POST /v1/taxpayers/{taxpayerId}/personal-deductions
+	"createSalaryStatement":      "module_annual",        // POST /v1/taxpayers/{taxpayerId}/salary-statements
 	"createTaxpayer":             "module_taxpayers",     // POST /v1/taxpayers
 	"deleteExpense":              "module_expenses",      // DELETE /v1/taxpayers/{taxpayerId}/expenses/{expenseId}
 	"deleteIncome":               "module_incomes",       // DELETE /v1/taxpayers/{taxpayerId}/incomes/{incomeId}
 	"deleteMe":                   "module_auth",          // DELETE /v1/me
+	"deletePersonalDeduction":    "module_annual",        // DELETE /v1/taxpayers/{taxpayerId}/personal-deductions/{deductionId}
+	"deleteSalaryStatement":      "module_annual",        // DELETE /v1/taxpayers/{taxpayerId}/salary-statements/{statementId}
 	"deleteTaxpayer":             "module_taxpayers",     // DELETE /v1/taxpayers/{taxpayerId}
+	"getAnnualBreakdown":         "module_annual",        // GET /v1/taxpayers/{taxpayerId}/annual-estimates/{fiscalYear}/breakdown
+	"getAnnualEstimate":          "module_annual",        // GET /v1/taxpayers/{taxpayerId}/annual-estimates/{fiscalYear}
+	"getAnnualInputs":            "module_annual",        // GET /v1/taxpayers/{taxpayerId}/annual-inputs/{fiscalYear}
 	"getDashboard":               "module_dashboard",     // GET /v1/taxpayers/{taxpayerId}/dashboard
 	"getEstimateBreakdown":       "module_tax_engine",    // GET /v1/taxpayers/{taxpayerId}/estimates/{period}/breakdown
 	"getExpense":                 "module_expenses",      // GET /v1/taxpayers/{taxpayerId}/expenses/{expenseId}
+	"getFiledPayments":           "module_annual",        // GET /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/filed-payments/{fiscalYear}
 	"getHealth":                  "platform",             // GET /healthz
 	"getHistory":                 "module_history",       // GET /v1/taxpayers/{taxpayerId}/history
 	"getIncome":                  "module_incomes",       // GET /v1/taxpayers/{taxpayerId}/incomes/{incomeId}
@@ -39,13 +47,17 @@ var operationModules = map[string]string{
 	"listExpenses":               "module_expenses",      // GET /v1/taxpayers/{taxpayerId}/expenses
 	"listIncomes":                "module_incomes",       // GET /v1/taxpayers/{taxpayerId}/incomes
 	"listLegalDocuments":         "module_auth",          // GET /v1/legal/documents
+	"listPersonalDeductions":     "module_annual",        // GET /v1/taxpayers/{taxpayerId}/personal-deductions
 	"listRegimes":                "module_taxpayers",     // GET /v1/regimes
+	"listSalaryStatements":       "module_annual",        // GET /v1/taxpayers/{taxpayerId}/salary-statements
 	"listTaxpayers":              "module_taxpayers",     // GET /v1/taxpayers
 	"login":                      "module_auth",          // POST /v1/auth/login
 	"logout":                     "module_auth",          // POST /v1/auth/logout
 	"markHistoryViewed":          "module_history",       // POST /v1/taxpayers/{taxpayerId}/history/{period}/viewed
 	"previewExpenseWithholdings": "module_expenses",      // GET /v1/taxpayers/{taxpayerId}/expenses/withholding-preview
 	"previewIncomeWithholdings":  "module_incomes",       // GET /v1/taxpayers/{taxpayerId}/incomes/withholding-preview
+	"putAnnualInputs":            "module_annual",        // PUT /v1/taxpayers/{taxpayerId}/annual-inputs/{fiscalYear}
+	"putFiledPayments":           "module_annual",        // PUT /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/filed-payments/{fiscalYear}
 	"putReminderSettings":        "module_reminders",     // PUT /v1/reminder-settings
 	"putTaxInputs":               "module_tax_engine",    // PUT /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/tax-inputs
 	"receiveRevenueCatWebhook":   "module_subscriptions", // POST /v1/webhooks/revenuecat
@@ -55,12 +67,15 @@ var operationModules = map[string]string{
 	"resendVerification":         "module_auth",          // POST /v1/auth/verify-email/resend
 	"restoreExpense":             "module_expenses",      // POST /v1/taxpayers/{taxpayerId}/expenses/{expenseId}/restore
 	"restoreIncome":              "module_incomes",       // POST /v1/taxpayers/{taxpayerId}/incomes/{incomeId}/restore
+	"restorePersonalDeduction":   "module_annual",        // POST /v1/taxpayers/{taxpayerId}/personal-deductions/{deductionId}/restore
 	"syncSubscription":           "module_subscriptions", // POST /v1/subscription/sync
 	"unarchiveTaxpayer":          "module_taxpayers",     // POST /v1/taxpayers/{taxpayerId}/unarchive
 	"unregisterDevice":           "module_reminders",     // DELETE /v1/devices/{deviceId}
 	"updateExpense":              "module_expenses",      // PATCH /v1/taxpayers/{taxpayerId}/expenses/{expenseId}
 	"updateIncome":               "module_incomes",       // PATCH /v1/taxpayers/{taxpayerId}/incomes/{incomeId}
 	"updateMe":                   "module_auth",          // PATCH /v1/me
+	"updatePersonalDeduction":    "module_annual",        // PATCH /v1/taxpayers/{taxpayerId}/personal-deductions/{deductionId}
+	"updateSalaryStatement":      "module_annual",        // PATCH /v1/taxpayers/{taxpayerId}/salary-statements/{statementId}
 	"updateTaxpayer":             "module_taxpayers",     // PATCH /v1/taxpayers/{taxpayerId}
 	"updateTaxpayerRegime":       "module_taxpayers",     // PATCH /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}
 	"verifyEmail":                "module_auth",          // POST /v1/auth/verify-email
@@ -81,60 +96,75 @@ func OperationModules() map[string]string {
 // routeModules maps every "METHOD /path" ServeMux pattern the generated server
 // registers (empty BaseURL) to its x-module.
 var routeModules = map[string]string{
-	"DELETE /v1/devices/{deviceId}":                          "module_reminders", // unregisterDevice
-	"DELETE /v1/me":                                          "module_auth",      // deleteMe
-	"DELETE /v1/taxpayers/{taxpayerId}":                      "module_taxpayers", // deleteTaxpayer
-	"DELETE /v1/taxpayers/{taxpayerId}/expenses/{expenseId}": "module_expenses",  // deleteExpense
-	"DELETE /v1/taxpayers/{taxpayerId}/incomes/{incomeId}":   "module_incomes",   // deleteIncome
-	"DELETE /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}": "module_taxpayers", // archiveTaxpayerRegime
-	"GET /healthz":                             "platform",             // getHealth
-	"GET /v1/flags":                            "platform",             // listEnabledFlags
-	"GET /v1/legal/documents":                  "module_auth",          // listLegalDocuments
-	"GET /v1/me":                               "module_auth",          // getMe
-	"GET /v1/regimes":                          "module_taxpayers",     // listRegimes
-	"GET /v1/reminder-settings":                "module_reminders",     // getReminderSettings
-	"GET /v1/subscription":                     "module_subscriptions", // getSubscription
-	"GET /v1/tax-calendar":                     "module_reminders",     // getTaxCalendar
-	"GET /v1/taxpayers":                        "module_taxpayers",     // listTaxpayers
-	"GET /v1/taxpayers/{taxpayerId}":           "module_taxpayers",     // getTaxpayer
-	"GET /v1/taxpayers/{taxpayerId}/dashboard": "module_dashboard",     // getDashboard
-	"GET /v1/taxpayers/{taxpayerId}/estimates": "module_tax_engine",    // getTaxpayerEstimate
-	"GET /v1/taxpayers/{taxpayerId}/estimates/{period}/breakdown":    "module_tax_engine", // getEstimateBreakdown
-	"GET /v1/taxpayers/{taxpayerId}/expense-categories":              "module_expenses",   // listExpenseCategories
-	"GET /v1/taxpayers/{taxpayerId}/expenses":                        "module_expenses",   // listExpenses
-	"GET /v1/taxpayers/{taxpayerId}/expenses/withholding-preview":    "module_expenses",   // previewExpenseWithholdings
-	"GET /v1/taxpayers/{taxpayerId}/expenses/{expenseId}":            "module_expenses",   // getExpense
-	"GET /v1/taxpayers/{taxpayerId}/history":                         "module_history",    // getHistory
-	"GET /v1/taxpayers/{taxpayerId}/incomes":                         "module_incomes",    // listIncomes
-	"GET /v1/taxpayers/{taxpayerId}/incomes/defaults":                "module_incomes",    // getIncomeDefaults
-	"GET /v1/taxpayers/{taxpayerId}/incomes/withholding-preview":     "module_incomes",    // previewIncomeWithholdings
-	"GET /v1/taxpayers/{taxpayerId}/incomes/{incomeId}":              "module_incomes",    // getIncome
-	"GET /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/tax-inputs": "module_tax_engine", // getTaxInputs
-	"PATCH /v1/me":                                                   "module_auth",          // updateMe
-	"PATCH /v1/taxpayers/{taxpayerId}":                               "module_taxpayers",     // updateTaxpayer
-	"PATCH /v1/taxpayers/{taxpayerId}/expenses/{expenseId}":          "module_expenses",      // updateExpense
-	"PATCH /v1/taxpayers/{taxpayerId}/incomes/{incomeId}":            "module_incomes",       // updateIncome
-	"PATCH /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}":          "module_taxpayers",     // updateTaxpayerRegime
-	"POST /v1/auth/login":                                            "module_auth",          // login
-	"POST /v1/auth/logout":                                           "module_auth",          // logout
-	"POST /v1/auth/refresh":                                          "module_auth",          // refreshSession
-	"POST /v1/auth/register":                                         "module_auth",          // register
-	"POST /v1/auth/verify-email":                                     "module_auth",          // verifyEmail
-	"POST /v1/auth/verify-email/resend":                              "module_auth",          // resendVerification
-	"POST /v1/devices":                                               "module_reminders",     // registerDevice
-	"POST /v1/subscription/sync":                                     "module_subscriptions", // syncSubscription
-	"POST /v1/taxpayers":                                             "module_taxpayers",     // createTaxpayer
-	"POST /v1/taxpayers/{taxpayerId}/archive":                        "module_taxpayers",     // archiveTaxpayer
-	"POST /v1/taxpayers/{taxpayerId}/expenses":                       "module_expenses",      // createExpense
-	"POST /v1/taxpayers/{taxpayerId}/expenses/{expenseId}/restore":   "module_expenses",      // restoreExpense
-	"POST /v1/taxpayers/{taxpayerId}/history/{period}/viewed":        "module_history",       // markHistoryViewed
-	"POST /v1/taxpayers/{taxpayerId}/incomes":                        "module_incomes",       // createIncome
-	"POST /v1/taxpayers/{taxpayerId}/incomes/{incomeId}/restore":     "module_incomes",       // restoreIncome
-	"POST /v1/taxpayers/{taxpayerId}/regimes":                        "module_taxpayers",     // addTaxpayerRegime
-	"POST /v1/taxpayers/{taxpayerId}/unarchive":                      "module_taxpayers",     // unarchiveTaxpayer
-	"POST /v1/webhooks/revenuecat":                                   "module_subscriptions", // receiveRevenueCatWebhook
-	"PUT /v1/reminder-settings":                                      "module_reminders",     // putReminderSettings
-	"PUT /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/tax-inputs": "module_tax_engine",    // putTaxInputs
+	"DELETE /v1/devices/{deviceId}":                                       "module_reminders", // unregisterDevice
+	"DELETE /v1/me":                                                       "module_auth",      // deleteMe
+	"DELETE /v1/taxpayers/{taxpayerId}":                                   "module_taxpayers", // deleteTaxpayer
+	"DELETE /v1/taxpayers/{taxpayerId}/expenses/{expenseId}":              "module_expenses",  // deleteExpense
+	"DELETE /v1/taxpayers/{taxpayerId}/incomes/{incomeId}":                "module_incomes",   // deleteIncome
+	"DELETE /v1/taxpayers/{taxpayerId}/personal-deductions/{deductionId}": "module_annual",    // deletePersonalDeduction
+	"DELETE /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}":              "module_taxpayers", // archiveTaxpayerRegime
+	"DELETE /v1/taxpayers/{taxpayerId}/salary-statements/{statementId}":   "module_annual",    // deleteSalaryStatement
+	"GET /healthz":                   "platform",             // getHealth
+	"GET /v1/flags":                  "platform",             // listEnabledFlags
+	"GET /v1/legal/documents":        "module_auth",          // listLegalDocuments
+	"GET /v1/me":                     "module_auth",          // getMe
+	"GET /v1/regimes":                "module_taxpayers",     // listRegimes
+	"GET /v1/reminder-settings":      "module_reminders",     // getReminderSettings
+	"GET /v1/subscription":           "module_subscriptions", // getSubscription
+	"GET /v1/tax-calendar":           "module_reminders",     // getTaxCalendar
+	"GET /v1/taxpayers":              "module_taxpayers",     // listTaxpayers
+	"GET /v1/taxpayers/{taxpayerId}": "module_taxpayers",     // getTaxpayer
+	"GET /v1/taxpayers/{taxpayerId}/annual-estimates/{fiscalYear}":                    "module_annual",     // getAnnualEstimate
+	"GET /v1/taxpayers/{taxpayerId}/annual-estimates/{fiscalYear}/breakdown":          "module_annual",     // getAnnualBreakdown
+	"GET /v1/taxpayers/{taxpayerId}/annual-inputs/{fiscalYear}":                       "module_annual",     // getAnnualInputs
+	"GET /v1/taxpayers/{taxpayerId}/dashboard":                                        "module_dashboard",  // getDashboard
+	"GET /v1/taxpayers/{taxpayerId}/estimates":                                        "module_tax_engine", // getTaxpayerEstimate
+	"GET /v1/taxpayers/{taxpayerId}/estimates/{period}/breakdown":                     "module_tax_engine", // getEstimateBreakdown
+	"GET /v1/taxpayers/{taxpayerId}/expense-categories":                               "module_expenses",   // listExpenseCategories
+	"GET /v1/taxpayers/{taxpayerId}/expenses":                                         "module_expenses",   // listExpenses
+	"GET /v1/taxpayers/{taxpayerId}/expenses/withholding-preview":                     "module_expenses",   // previewExpenseWithholdings
+	"GET /v1/taxpayers/{taxpayerId}/expenses/{expenseId}":                             "module_expenses",   // getExpense
+	"GET /v1/taxpayers/{taxpayerId}/history":                                          "module_history",    // getHistory
+	"GET /v1/taxpayers/{taxpayerId}/incomes":                                          "module_incomes",    // listIncomes
+	"GET /v1/taxpayers/{taxpayerId}/incomes/defaults":                                 "module_incomes",    // getIncomeDefaults
+	"GET /v1/taxpayers/{taxpayerId}/incomes/withholding-preview":                      "module_incomes",    // previewIncomeWithholdings
+	"GET /v1/taxpayers/{taxpayerId}/incomes/{incomeId}":                               "module_incomes",    // getIncome
+	"GET /v1/taxpayers/{taxpayerId}/personal-deductions":                              "module_annual",     // listPersonalDeductions
+	"GET /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/filed-payments/{fiscalYear}": "module_annual",     // getFiledPayments
+	"GET /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/tax-inputs":                  "module_tax_engine", // getTaxInputs
+	"GET /v1/taxpayers/{taxpayerId}/salary-statements":                                "module_annual",     // listSalaryStatements
+	"PATCH /v1/me":                                                                    "module_auth",          // updateMe
+	"PATCH /v1/taxpayers/{taxpayerId}":                                                "module_taxpayers",     // updateTaxpayer
+	"PATCH /v1/taxpayers/{taxpayerId}/expenses/{expenseId}":                           "module_expenses",      // updateExpense
+	"PATCH /v1/taxpayers/{taxpayerId}/incomes/{incomeId}":                             "module_incomes",       // updateIncome
+	"PATCH /v1/taxpayers/{taxpayerId}/personal-deductions/{deductionId}":              "module_annual",        // updatePersonalDeduction
+	"PATCH /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}":                           "module_taxpayers",     // updateTaxpayerRegime
+	"PATCH /v1/taxpayers/{taxpayerId}/salary-statements/{statementId}":                "module_annual",        // updateSalaryStatement
+	"POST /v1/auth/login":                                                             "module_auth",          // login
+	"POST /v1/auth/logout":                                                            "module_auth",          // logout
+	"POST /v1/auth/refresh":                                                           "module_auth",          // refreshSession
+	"POST /v1/auth/register":                                                          "module_auth",          // register
+	"POST /v1/auth/verify-email":                                                      "module_auth",          // verifyEmail
+	"POST /v1/auth/verify-email/resend":                                               "module_auth",          // resendVerification
+	"POST /v1/devices":                                                                "module_reminders",     // registerDevice
+	"POST /v1/subscription/sync":                                                      "module_subscriptions", // syncSubscription
+	"POST /v1/taxpayers":                                                              "module_taxpayers",     // createTaxpayer
+	"POST /v1/taxpayers/{taxpayerId}/archive":                                         "module_taxpayers",     // archiveTaxpayer
+	"POST /v1/taxpayers/{taxpayerId}/expenses":                                        "module_expenses",      // createExpense
+	"POST /v1/taxpayers/{taxpayerId}/expenses/{expenseId}/restore":                    "module_expenses",      // restoreExpense
+	"POST /v1/taxpayers/{taxpayerId}/history/{period}/viewed":                         "module_history",       // markHistoryViewed
+	"POST /v1/taxpayers/{taxpayerId}/incomes":                                         "module_incomes",       // createIncome
+	"POST /v1/taxpayers/{taxpayerId}/incomes/{incomeId}/restore":                      "module_incomes",       // restoreIncome
+	"POST /v1/taxpayers/{taxpayerId}/personal-deductions":                             "module_annual",        // createPersonalDeduction
+	"POST /v1/taxpayers/{taxpayerId}/personal-deductions/{deductionId}/restore":       "module_annual",        // restorePersonalDeduction
+	"POST /v1/taxpayers/{taxpayerId}/regimes":                                         "module_taxpayers",     // addTaxpayerRegime
+	"POST /v1/taxpayers/{taxpayerId}/salary-statements":                               "module_annual",        // createSalaryStatement
+	"POST /v1/taxpayers/{taxpayerId}/unarchive":                                       "module_taxpayers",     // unarchiveTaxpayer
+	"POST /v1/webhooks/revenuecat":                                                    "module_subscriptions", // receiveRevenueCatWebhook
+	"PUT /v1/reminder-settings":                                                       "module_reminders",     // putReminderSettings
+	"PUT /v1/taxpayers/{taxpayerId}/annual-inputs/{fiscalYear}":                       "module_annual",        // putAnnualInputs
+	"PUT /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/filed-payments/{fiscalYear}": "module_annual",        // putFiledPayments
+	"PUT /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/tax-inputs":                  "module_tax_engine",    // putTaxInputs
 }
 
 // RouteModule returns the x-module of a matched route, keyed by the pattern
