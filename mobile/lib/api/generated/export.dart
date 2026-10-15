@@ -67,7 +67,6 @@ export 'models/taxpayer_update.dart';
 export 'models/taxpayer_list.dart';
 export 'models/positive_cents.dart';
 export 'models/business_date.dart';
-export 'models/counterparty_type.dart';
 export 'models/counterparty_kind.dart';
 export 'models/operation_kind.dart';
 export 'models/supplier_kind.dart';

@@ -23,11 +23,6 @@ const (
 	FieldCollectedOn      = "collected_on"
 	FieldPlatformActivity = "platform_activity"
 	FieldCFDIUUID         = "cfdi_uuid"
-	// FieldCounterpartyType is the deprecated getIncomeDefaults parameter
-	// (ADR-0008); the retired typed amounts are refused by the adapter.
-	FieldCounterpartyType = "counterparty_type"
-	FieldISRWithheldCents = "isr_withheld_cents"
-	FieldIVAWithheldCents = "iva_withheld_cents"
 )
 
 // WarningCode is a non-blocking notice (contract Warning.code, MODULE-incomes

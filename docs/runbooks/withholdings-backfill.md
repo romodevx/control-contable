@@ -125,7 +125,13 @@ derived record is not visited twice.
 
 ## 5. Not done here
 
-The contract step that drops `incomes.counterparty_type` (PLAN WH-08) needs this backfill
+API contract 0.12.0 (WH-11 / WH-12, ADR-0008 Amendment 2) does **not** depend on this
+backfill having run: a record it has not derived is served with its facts (an income's from
+`counterparty_type`, the same §5.2 mapping as here) and `withholding: null`, and an edit
+derives it. Run the backfill so those records show their derivation and the estimate uses the
+derived amounts, not as a deploy precondition.
+
+The step that drops the `incomes.counterparty_type` column (PLAN WH-08) needs this backfill
 applied in every environment first: the column is the only source of a legacy income's
-counterparty. It ships as its own migration after the run, together with the API's deprecated
-`counterparty_type` mirror (WH-11).
+counterparty. It ships as its own migration after the run. The API stopped accepting and
+serving the column in 0.12.0 (WH-11); writes still fill it as a mirror until the drop.

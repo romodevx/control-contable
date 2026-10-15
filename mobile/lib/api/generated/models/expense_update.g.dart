@@ -32,8 +32,6 @@ _ExpenseUpdate _$ExpenseUpdateFromJson(Map<String, dynamic> json) =>
           ? null
           : OperationKind.fromJson(json['operation_kind'] as String),
       residentialRent: json['residential_rent'] as bool?,
-      isrWithheldCents: (json['isr_withheld_cents'] as num?)?.toInt(),
-      ivaWithheldCents: (json['iva_withheld_cents'] as num?)?.toInt(),
       description: json['description'] as String?,
     );
 
@@ -53,8 +51,6 @@ Map<String, dynamic> _$ExpenseUpdateToJson(_ExpenseUpdate instance) =>
       'supplier_regime': ?_$SupplierRegimeEnumMap[instance.supplierRegime],
       'operation_kind': ?_$OperationKindEnumMap[instance.operationKind],
       'residential_rent': ?instance.residentialRent,
-      'isr_withheld_cents': ?instance.isrWithheldCents,
-      'iva_withheld_cents': ?instance.ivaWithheldCents,
       'description': ?instance.description,
     };
 

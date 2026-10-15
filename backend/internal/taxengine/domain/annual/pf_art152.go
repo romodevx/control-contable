@@ -441,7 +441,9 @@ func (r *art152Run) annualTax() error {
 		b := r.l.Lookup(annualStep(LineArt152TariffRow, "annual_tariff_row", domain.SourceParams(paramArt152Tariff), basisTariff), table, base)
 		r.l.AddProduct(annualStep(LineArt152TariffExcess, "annual_tariff_excess", domain.SourceParams(paramArt152Tariff), basisTariff), b.Excess(base), b.Row.Rate)
 	}
-	r.tax.ISR = r.l.Result(annualStep(LineArt152ISR, "annual_isr", domain.SourceComputed(), basisISR)).Round()
+	// The credits are subtracted from the ISR as shown (step 9: balance =
+	// ISR − credits), not from its exact value.
+	r.tax.ISR = r.l.ResultRounded(annualStep(LineArt152ISR, "annual_isr", domain.SourceComputed(), basisISR)).Round()
 	return r.err
 }
 

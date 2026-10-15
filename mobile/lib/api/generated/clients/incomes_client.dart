@@ -6,7 +6,6 @@ import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 
 import '../models/counterparty_kind.dart';
-import '../models/counterparty_type.dart';
 import '../models/income.dart';
 import '../models/income_create.dart';
 import '../models/income_defaults.dart';
@@ -52,9 +51,9 @@ abstract class IncomesClient {
   ///
   /// **Trial cap.** 5 incomes per user across all taxpayers, independent of the 5 expenses. A spent cap answers `402 entitlement_required` with `{field: incomes_remaining, code: trial_cap_reached}`; deleting never frees a slot.
   ///
-  /// `FieldError.code` values beyond JSON Schema keywords (`required`, `minimum`, `enum`, `format`, `pattern`, `maxLength`, `additionalProperties`, …): `collected_on` / `invoiced_on` → `required` (the date the regime's basis needs: `collected_on` for cash regimes, `invoiced_on` for accrual), `out_of_range` (before 2026-01-01, the first fiscal year with a tax parameter set, or after today, America/Mexico_City; see `BusinessDate`); `platform_activity` → `required` (625 with more than one activity), `not_for_regime` (sent for a regime other than 625); `amount_cents` → `minimum` (0 is refused at the edge; `must_be_positive` is the domain's backstop code for the same rule). `422 business_rule_violation` details: `regime_code` → `regime_not_active` (the regime is not held on one of the income's dates); `taxpayerId` → `taxpayer_archived`; `iva_rate` → `rate_not_valid_on_date` (rate not allowed on the IVA date, e.g. `rate_8` after the border decree ends); `iva_cents` → `iva_amount_mismatch` (`rate_0`/`exempt` with IVA > 0, or more than 100 centavos away from `amount_cents × rate`); `isr_withheld_cents` / `iva_withheld_cents` → `withholding_not_applicable` (the person type, regime and `counterparty_type` allow no such withholding), `withholding_exceeds_base` (ISR above `amount_cents`, IVA above `iva_cents`), both retired by WH-06 (never sent since 0.11.3); `platform_activity` → `activity_not_held` (not among the taxpayer's 625 activities); `iva_rate` → `residential_rent_exempt` (`residential_rent: true` with a rate other than `exempt`). `via_platform: true` outside 625 and persona moral regimes → `400` `not_for_regime`.
+  /// `FieldError.code` values beyond JSON Schema keywords (`required`, `minimum`, `enum`, `format`, `pattern`, `maxLength`, `additionalProperties`, …): `collected_on` / `invoiced_on` → `required` (the date the regime's basis needs: `collected_on` for cash regimes, `invoiced_on` for accrual), `out_of_range` (before 2026-01-01, the first fiscal year with a tax parameter set, or after today, America/Mexico_City; see `BusinessDate`); `platform_activity` → `required` (625 with more than one activity), `not_for_regime` (sent for a regime other than 625); `amount_cents` → `minimum` (0 is refused at the edge; `must_be_positive` is the domain's backstop code for the same rule). `422 business_rule_violation` details: `regime_code` → `regime_not_active` (the regime is not held on one of the income's dates); `taxpayerId` → `taxpayer_archived`; `iva_rate` → `rate_not_valid_on_date` (rate not allowed on the IVA date, e.g. `rate_8` after the border decree ends); `iva_cents` → `iva_amount_mismatch` (`rate_0`/`exempt` with IVA > 0, or more than 100 centavos away from `amount_cents × rate`); `platform_activity` → `activity_not_held` (not among the taxpayer's 625 activities); `iva_rate` → `residential_rent_exempt` (`residential_rent: true` with a rate other than `exempt`). `via_platform: true` outside 625 and persona moral regimes → `400` `not_for_regime`.
   ///
-  /// **Withholdings are derived (ADR-0008, MODULE-withholdings §3).** The server derives ISR and IVA withheld from the taxpayer's person type and regime, `counterparty_kind`, `operation_kind`, `residential_rent`, `via_platform` and the amounts, stores them with the rule ids and `table_version`, and returns them read-only in `withholding` (mirrored in `isr_withheld_cents` / `iva_withheld_cents`). There is no manual override. **0.11.3 (WH-06):** `counterparty_kind` is required (`400 required`); a body that carries `isr_withheld_cents` or `iva_withheld_cents`, whatever the value, answers `400 validation_failed` with `additionalProperties` on that field, the same answer a schema without them gives. The deprecated members stay in the schema only so the generated clients keep compiling until WH-11 drops them; `counterparty_type` is still required by the schema and ignored by the server (the stored value mirrors `counterparty_kind` and `via_platform`).
+  /// **Withholdings are derived (ADR-0008, MODULE-withholdings §3).** The server derives ISR and IVA withheld from the taxpayer's person type and regime, `counterparty_kind`, `operation_kind`, `residential_rent`, `via_platform` and the amounts, stores them with the rule ids and `table_version`, and returns them read-only in `withholding` (mirrored in `isr_withheld_cents` / `iva_withheld_cents`). There is no manual override. `counterparty_kind` is required (`400 required`). **0.12.0 (WH-11, ADR-0008 amendment):** `isr_withheld_cents`, `iva_withheld_cents` and `counterparty_type` are no longer in the schema; a body that carries any of them answers `400 validation_failed` with `additionalProperties` on that field.
   ///
   /// Success bodies carry non-blocking `warnings` (MODULE-incomes §2.8, MODULE-withholdings §6): `duplicate_cfdi_uuid` on `cfdi_uuid` (another live income of the taxpayer has the same folio fiscal: legit for partial collections); `provisional_parameters` on `collected_on` / `invoiced_on` (the date reads a provisional parameter set, see `WarningCode`); `withholding_cpa_unverified` on `withholding`; `foreign_counterparty_not_supported` on `counterparty_kind`. `withholding_differs_from_rate` is retired (never sent since 0.11.3). Messages never carry amounts, descriptions or UUIDs.
   @POST('/v1/taxpayers/{taxpayerId}/incomes')
@@ -63,13 +62,11 @@ abstract class IncomesClient {
     @Body() required IncomeCreate body,
   });
 
-  /// IVA rates and suggested withholding rates for a new income (prefills the form).
+  /// IVA rates and last-used withholding facts for a new income (prefills the form).
   ///
-  /// Resolved from the rate catalog (`RateCatalog`, dated parameter data) for the taxpayer's person type, the regime and its options (625 `activities`, `rfc_given_to_platform`), the counterparty and the date `on` (default: today, America/Mexico_City). The app never hard-codes a rate. A suggestion is UX only: the stored value is what the user enters (the CFDI wins). `iva_rates_allowed` lists the rates valid on `on` (`rate_8` disappears when the border decree ends). A withholding that is not allowed has `*_allowed: false` and a `null` rate (the value must be 0); an allowed one without a suggestion has `*_allowed: true` and a `null` rate. The ISR rate applies to `amount_cents`, the IVA rate to `iva_cents`. For 625, `platform_activity` selects the ISR rate; it defaults to the taxpayer's only activity and stays `null` when there are several and none is sent. Reads are allowed for a read-only user and for an archived taxpayer. `regime` must be held by the taxpayer on `on` (`422 regime_not_active`).
+  /// Resolved from the rate catalog (`RateCatalog`, dated parameter data) for the taxpayer's person type, the regime and its options (625 `activities`) and the date `on` (default: today, America/Mexico_City). The app never hard-codes a rate. `iva_rates_allowed` lists the rates valid on `on` (`rate_8` disappears when the border decree ends). For 625, `platform_activity` defaults to the taxpayer's only activity and stays `null` when there are several and none is sent. Reads are allowed for a read-only user and for an archived taxpayer. `regime` must be held by the taxpayer on `on` (`422 regime_not_active`).
   ///
-  /// **0.10.0 (ADR-0008):** `last_used` carries the withholding facts to preselect (MODULE-withholdings §2.1); since 0.11.3 (WH-06) it is always sent. The `*_withholding_*` fields and the `counterparty_type` parameter are deprecated and kept for the shipped form until WH-11 (the derived figures come from `previewIncomeWithholdings`).
-  ///
-  /// [counterpartyType] - Deprecated in 0.10.0; removed by WH-06 (ADR-0008).
+  /// `last_used` carries the withholding facts to preselect (MODULE-withholdings §2.1). Withholdings are derived (ADR-0008), so there is no rate to suggest: the form shows `previewIncomeWithholdings`. **0.12.0 (WH-11, ADR-0008 amendment):** the `counterparty_type` parameter and the four `*_withholding_*` fields are removed; `last_used` is required.
   ///
   /// [on] - Date the dated parameters are read on (America/Mexico_City); defaults to today. `2026-01-01` (the first fiscal year with a tax parameter set) … today (`out_of_range`).
   ///
@@ -78,9 +75,6 @@ abstract class IncomesClient {
   Future<IncomeDefaults> getIncomeDefaults({
     @Path('taxpayerId') required Uuid taxpayerId,
     @Query('regime') required RegimeCode regime,
-    @Deprecated('This is marked as deprecated')
-    @Query('counterparty_type')
-    required CounterpartyType counterpartyType,
     @Query('on') String? onValue,
     @Query('platform_activity') PlatformActivity? platformActivity,
   });

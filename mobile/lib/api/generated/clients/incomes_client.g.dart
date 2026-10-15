@@ -94,14 +94,12 @@ class _IncomesClient implements IncomesClient {
   Future<IncomeDefaults> getIncomeDefaults({
     required String taxpayerId,
     required String regime,
-    required CounterpartyType counterpartyType,
     String? onValue,
     PlatformActivity? platformActivity,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
       r'regime': regime,
-      r'counterparty_type': counterpartyType,
       r'on': onValue,
       r'platform_activity': platformActivity,
     };

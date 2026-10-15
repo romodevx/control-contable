@@ -135,9 +135,7 @@ class _Loaded extends ConsumerWidget {
 
   Widget _row(BuildContext context, WidgetRef ref, Income income) {
     final l10n = AppLocalizations.of(context);
-    final title =
-        // ignore: deprecated_member_use_from_same_package, deprecated until WH-11 (ADR-0008).
-        income.description ?? counterpartyLabel(income.counterpartyType, l10n);
+    final title = income.description ?? counterpartyLabel(income, l10n);
     final regime = taxpayer.regimes
         .where((r) => r.regimeCode == income.regimeCode)
         .firstOrNull;

@@ -43,9 +43,8 @@ extension IncomeFormRequest on IncomeFormModel {
     return IncomeCreate(
       id: sessionId,
       regimeCode: regimeCode,
-      // Required by 0.10.0 until WH-06 removes it (ADR-0008).
-      counterpartyType: facts.legacyType,
-      counterpartyKind: facts.kind,
+      // Q1 is required: the form validated it.
+      counterpartyKind: facts.kind!,
       operationKind: facts.operation,
       residentialRent: facts.residentialRentSent,
       viaPlatform: facts.viaPlatformSent,
@@ -65,9 +64,6 @@ extension IncomeFormRequest on IncomeFormModel {
   /// where an optional field was cleared. Empty when nothing changed.
   Map<String, Object?> toPatch(Income stored) {
     final wanted = toCreate();
-    // A legacy income (no facts stored yet) sends its facts only once the
-    // user changes them: the backfill (WH-08) migrates the rest.
-    final sendsFacts = stored.counterpartyKind != null || facts.isDirty;
     final desired = <String, Object?>{
       'regime_code': wanted.regimeCode,
       'amount_cents': wanted.amountCents,
@@ -78,14 +74,10 @@ extension IncomeFormRequest on IncomeFormModel {
       'platform_activity': wanted.platformActivity?.json,
       'cfdi_uuid': wanted.cfdiUuid,
       'description': wanted.description,
-      if (sendsFacts) ...{
-        // ignore: deprecated_member_use_from_same_package, required by 0.10.0 until WH-06 (ADR-0008).
-        'counterparty_type': wanted.counterpartyType.json,
-        'counterparty_kind': wanted.counterpartyKind?.json,
-        'operation_kind': ?wanted.operationKind?.json,
-        'residential_rent': ?wanted.residentialRent,
-        'via_platform': ?wanted.viaPlatform,
-      },
+      'counterparty_kind': wanted.counterpartyKind.json,
+      'operation_kind': ?wanted.operationKind?.json,
+      'residential_rent': ?wanted.residentialRent,
+      'via_platform': ?wanted.viaPlatform,
     };
     final current = stored.toJson();
     return {

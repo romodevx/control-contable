@@ -185,3 +185,59 @@ Three decisions refine §2 and §3 above; the wire behaviour is the one §3 prom
 3. **The kernel words the explanations** (`fiscal.Explain`, per side), from the stored
    record, so a read shows the same lines as the write and the preview. The contract
    examples are its test oracle.
+
+## Amendment 2: the contract cleanup of WH-11 / WH-12 (0.12.0)
+
+| Field | Value |
+|---|---|
+| Date | 2026-10-14 |
+| Owner | architect (PLAN WH-11 / WH-12, contract cleanup) |
+
+The new mobile forms (#137), the derivation (#139) and the backfill (#142) are merged, so the
+members Amendment 1 kept only for the shipped forms go. The wire behaviour of a well-formed
+request does not change; the schemas now say what the server already did.
+
+1. **Removed.** `IncomeCreate` / `IncomeUpdate`: `counterparty_type`, `isr_withheld_cents`,
+   `iva_withheld_cents`. `ExpenseCreate` / `ExpenseUpdate`: `isr_withheld_cents`,
+   `iva_withheld_cents`. `getIncomeDefaults`: the `counterparty_type` parameter.
+   `IncomeDefaults`: `isr_withholding_allowed`, `isr_withholding_rate`,
+   `iva_withholding_allowed`, `iva_withholding_rate`. `Income`: `counterparty_type`. The
+   `CounterpartyType` schema. Any of the removed body members answers
+   `400 validation_failed` / `additionalProperties` from the router, so the adapters' own
+   rejection of the typed amounts is gone. `counterparty_type` used to be required and
+   ignored; it now answers that `400` too, the one visible change, and the app stopped
+   sending it in the same PR.
+2. **Required.** `IncomeCreate.counterparty_kind` (the server already answered
+   `400 required`). `Income`: `counterparty_kind`, `operation_kind`, `residential_rent`,
+   `via_platform`, `withholding` (nullable, item 3). `IncomeDefaults.last_used`. `Expense`:
+   `supplier_kind`, `supplier_regime`, `operation_kind` (all three nullable),
+   `residential_rent`, `withholding` (nullable, item 3). `isr_withheld_cents` /
+   `iva_withheld_cents` stay in responses as the read-only mirrors (§7.3).
+3. **A record the backfill has not derived is served; no deploy order.** The first draft
+   answered `500` for a legacy record and made the WH-08 backfill a deploy precondition. That
+   was rejected in review: the backfill leaves its "need user input" rows underived for good
+   (a regime no longer held, a date out of range), so those records, and every list page
+   holding one, would answer `500` forever and could never be opened to be fixed; and any
+   environment deployed before its run would fail the same way. Instead:
+   - **Facts.** The incomes use case fills a legacy income's missing facts with the
+     backfill's own §5.2 mapping (`legacyFacts`: `counterparty_type`, then the regime
+     default) on every load: get, list, update, restore and the create replay. A diff-only
+     `PATCH` therefore applies to the facts the read served, and an edit derives and stores
+     them. `counterparty_type` is `NOT NULL` with a CHECK, so the mapping is total. A legacy
+     expense's supplier facts were already nullable.
+   - **Withholding.** `Income.withholding` and `Expense.withholding` are required but
+     nullable: `null` only for a record stored before automatic derivation that the server
+     has not derived. A read never derives (§2 keeps reads pure, the table version auditable,
+     and the estimate still uses the stored amounts until the record is derived), so serving
+     a figure the estimate does not use was ruled out. The backfill, or an edit, derives it.
+   - A record with facts but a corrupt derivation (an unknown withholder) is still a `500`.
+4. **Dead code removed with the members.** The income suggestion table
+   (`domain.PolicyFor`, `WithholdingPolicy.Suggest`) only fed the removed `IncomeDefaults`
+   fields, so it is deleted; `fiscal.DeriveWithholdings` is the only withholding table left.
+5. **Not done here.** The `incomes.counterparty_type` column stays (writes keep its mirror)
+   until the backfill has run in every environment; its drop is a separate migration
+   (PLAN WH-08).
+
+Version: **0.12.0**, a minor bump. Removing request members and response fields is breaking
+for a client that sent or read them; pre-release with no store build, the minor bump is the
+version signal ([CONTRACT.md](../api/CONTRACT.md), "Changing a frozen node").

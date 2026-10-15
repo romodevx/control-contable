@@ -103,7 +103,9 @@ func (r regime) compute(in Input, p Params) (*computation, error) {
 	c.profit(r, in, &x)
 	base := c.base(r, in, &x)
 	c.l.Scale(isrStep(LineRate, domain.SourceParams(rateKey), r.basis.rate), rate)
-	isr := c.l.Result(isrStep(LineAnnualTax, domain.SourceComputed(), r.basis.tax))
+	// The credits are subtracted from the ISR as shown (balance = ISR −
+	// payments − withholding), not from its exact value.
+	isr := c.l.ResultRounded(isrStep(LineAnnualTax, domain.SourceComputed(), r.basis.tax))
 	paid := c.credit(r, in, totals, &x)
 	balance := c.l.Result(isrStep(LineBalance, domain.SourceComputed(), r.basis.balance)).Round()
 	if balance < 0 && in.Payments.EstimatedMonths() > 0 {

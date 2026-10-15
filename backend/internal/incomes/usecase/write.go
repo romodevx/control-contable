@@ -115,7 +115,11 @@ func (uc *Incomes) replay(ctx context.Context, userID string, existing StoredInc
 	case err != nil:
 		return WriteResult{}, err
 	}
-	return WriteResult{Income: toIncome(existing), Warnings: ev.warnings}, nil
+	served, err := uc.withFacts(ctx, userID, existing)
+	if err != nil {
+		return WriteResult{}, err
+	}
+	return WriteResult{Income: toIncome(served), Warnings: ev.warnings}, nil
 }
 
 // Update edits a live income (updateIncome, merge-patch). It re-runs every
@@ -127,7 +131,7 @@ func (uc *Incomes) Update(ctx context.Context, userID, rawTaxpayerID, rawIncomeI
 	}
 	var res WriteResult
 	err = uc.deps.Tx.ReadWrite(ctx, userID, func(ctx context.Context) error {
-		stored, err := uc.findLive(ctx, taxpayerID, id, LockUpdate)
+		stored, err := uc.findLive(ctx, userID, taxpayerID, id, LockUpdate)
 		if err != nil {
 			return err
 		}
