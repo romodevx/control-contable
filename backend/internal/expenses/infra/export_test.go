@@ -10,6 +10,12 @@ var (
 	EditableValues  = editable
 )
 
+// The backfill's write (WH-08), for the black-box tests.
+var (
+	DerivationStatement = derivationStatement
+	DerivationArgs      = derivationArgs
+)
+
 // EditableColumnNames are the columns every write names.
 func EditableColumnNames() []string {
 	out := make([]string, len(editableColumns))

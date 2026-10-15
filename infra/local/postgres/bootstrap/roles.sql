@@ -12,6 +12,11 @@
 --               member WITH INHERIT FALSE, SET TRUE: it may SET ROLE to it (needed to hand
 --               it the functions and to drop them on Down) but never inherits its
 --               privileges or policies. No runtime role is a member.
+--   cc_worker_definer
+--               NOLOGIN, NOBYPASSRLS. Owns the worker's cross-user SECURITY DEFINER
+--               functions (WH-08 withholding_backfill_users; M9 due_reminder_users), which
+--               cc_worker may EXECUTE: the worker itself never sees a row outside a user's
+--               context. Same membership posture as cc_auth_definer.
 -- Table, sequence and function grants are NOT given here: they belong to the versioned
 -- baseline migration (P0-10), which cc_owner runs, so every environment gets the same grants.
 -- None of the roles is SUPERUSER, CREATEDB, CREATEROLE, REPLICATION or BYPASSRLS.
@@ -28,6 +33,8 @@ CREATE ROLE cc_worker  LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION N
   PASSWORD :'cc_worker_password';
 CREATE ROLE cc_auth_definer NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT;
 GRANT cc_auth_definer TO cc_owner WITH INHERIT FALSE, SET TRUE;
+CREATE ROLE cc_worker_definer NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT;
+GRANT cc_worker_definer TO cc_owner WITH INHERIT FALSE, SET TRUE;
 
 -- Runtime roles fail fast instead of piling up on locks or idle transactions.
 ALTER ROLE cc_app     SET statement_timeout = '15s';

@@ -223,13 +223,24 @@ func withholdingWarnings(d fiscal.Derivation, s Supplier, due fiscal.Date) []War
 	return warnings
 }
 
-// creditableSplit splits a creditable expense's IVA into the share paid to
+// CreditableSplit splits a creditable expense's IVA into the share paid to
 // the supplier (credited in the payment month) and the share withheld
 // (credited the month after its remittance, LIVA 5 fr. IV). OQ-W5: the
 // all-or-nothing creditability of the expense applies to both parts.
-func creditableSplit(creditable bool, iva, withheld money.Cents) (paid, withheldPart money.Cents) {
+func CreditableSplit(creditable bool, iva, withheld money.Cents) (paid, withheldPart money.Cents) {
 	if !creditable {
 		return 0, 0
 	}
 	return iva - withheld, withheld
+}
+
+// LegacySupplier is the supplier a persona moral's expense stored before
+// WH-07 is assumed to have (MODULE-withholdings §5.2): a typed withholding
+// means a persona física with activity in 612, none a persona moral. The
+// operation is left to the category's default.
+func LegacySupplier(withheld money.Cents) Supplier {
+	if withheld > 0 {
+		return Supplier{Kind: SupplierPFWithActivity, Regime: SupplierRegime612}
+	}
+	return Supplier{Kind: SupplierPM}
 }

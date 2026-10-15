@@ -573,8 +573,12 @@ func TestTaxpayerTables_NoAccessBeyondTheGrants(t *testing.T) {
 		{pgtest.RoleApp, "TRUNCATE taxpayers CASCADE"},
 		{pgtest.RoleWebhook, "SELECT 1 FROM taxpayers"},
 		{pgtest.RoleWebhook, "SELECT 1 FROM taxpayer_regimes"},
-		{pgtest.RoleWorker, "SELECT 1 FROM taxpayers"},
-		{pgtest.RoleWorker, "SELECT 1 FROM taxpayer_regimes"},
+		// cc_worker reads its own context's profile since WH-08 (20261018100000): never
+		// the RFC ciphertext, and no write.
+		{pgtest.RoleWorker, "SELECT rfc_encrypted FROM taxpayers"},
+		{pgtest.RoleWorker, "SELECT rfc_hash FROM taxpayers"},
+		{pgtest.RoleWorker, "UPDATE taxpayers SET display_name = 'x'"},
+		{pgtest.RoleWorker, "UPDATE taxpayer_regimes SET options = '{}'"},
 	}
 	for _, d := range denied {
 		t.Run(string(d.role)+": "+d.query, func(t *testing.T) {

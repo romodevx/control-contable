@@ -210,10 +210,16 @@ func (uc *Incomes) payee(ctx context.Context, person fiscal.PersonType, held Reg
 	if err != nil {
 		return domain.Payee{}, err
 	}
+	return newPayee(person, held, basis), nil
+}
+
+// newPayee is the domain's payee: the person under a held regime with its
+// income basis and 625 options.
+func newPayee(person fiscal.PersonType, held RegimeProfile, basis domain.IncomeBasis) domain.Payee {
 	return domain.Payee{
 		PersonType: person, Regime: held.Code, Basis: basis,
 		PlatformActivities: held.PlatformActivities, RFCGivenToPlatform: held.RFCGivenToPlatform,
-	}, nil
+	}
 }
 
 // resolveDefaults answers the questions req left unanswered

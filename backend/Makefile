@@ -16,7 +16,7 @@ COVER_EXCLUDE ?= ^github.com/romodevx/control-contable/backend/(adapter/http/gen
 
 .DEFAULT_GOAL := check
 
-.PHONY: check fmt fmt-check lint test golden test-integration test-contract cover cover-check vuln tidy generate codegen-check init-env db-up db-down db-reset db-roles-check migrate-up migrate-down migrate-status flags api worker access-key-rotate db-psql-app
+.PHONY: check fmt fmt-check lint test golden test-integration test-contract cover cover-check vuln tidy generate codegen-check init-env db-up db-down db-reset db-roles-check migrate-up migrate-down migrate-status flags api worker backfill-withholdings access-key-rotate db-psql-app
 
 ## check: fmt-check + lint + unit tests (what CI runs)
 check: fmt-check lint test
@@ -186,6 +186,11 @@ access-key-rotate: $(LOCAL_ENV)
 worker: $(LOCAL_ENV)
 	@$(ASSERT_LOCAL)
 	@$(RUN_ENV) DATABASE_URL="$(call DB_URL,cc_worker,CC_WORKER_PASSWORD)" $(GO) run ./cmd/worker
+
+## backfill-withholdings: LOCAL ONLY. WH-08 backfill as cc_worker: dry run; ARGS="-apply" writes
+backfill-withholdings: $(LOCAL_ENV)
+	@$(ASSERT_LOCAL)
+	@$(RUN_ENV) DATABASE_URL="$(call DB_URL,cc_worker,CC_WORKER_PASSWORD)" $(GO) run ./cmd/backfill-withholdings $(ARGS)
 
 ## flags: LOCAL ONLY. Module flag admin as cc_owner, e.g. make flags ARGS="list" | ARGS="enable module_auth" | ARGS="apply-preset demo_core"
 flags: $(LOCAL_ENV)

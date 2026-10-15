@@ -262,6 +262,10 @@ type fakeStore struct {
 	// lastFactsErr is returned by LastFacts when set.
 	lastFactsErr error
 	clock        time.Time
+	// backfillLocks are the locks Underived was asked for; saveErr fails
+	// SaveDerivation when set (WH-08).
+	backfillLocks []usecase.Lock
+	saveErr       error
 }
 
 func newFakeStore() *fakeStore {
