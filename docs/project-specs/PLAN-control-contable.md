@@ -494,6 +494,8 @@ preconditions hold.
 
 ### M9 — Reminders (`module_reminders`)
 
+Spec: [MODULE-reminders.md](MODULE-reminders.md) (stage 1, 2026-10-15; OQ-R1 Friday extension pending owner/CPA). Calendar rule: [research §A.4.1](../research/tax-regimes-mx-2026.md).
+
 M9-07 (FCM) and M9-09 (Flutter push) are built against fakes; live verification waits for the Firebase project (OB9).
 
 | ID | Task | Owner | Deps | Est (h) | Par | Branch | Blocked by | Done |
