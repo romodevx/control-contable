@@ -44,7 +44,12 @@ void main() {
   testWidgets('shows the help under the field', (tester) async {
     await pumpPassword(tester);
 
-    expect(input(tester).decoration!.helperText, 'Al menos 12 caracteres.');
+    final help = find.text('Al menos 12 caracteres.');
+    expect(help, findsOneWidget);
+    expect(
+      tester.getTopLeft(help).dy,
+      greaterThan(tester.getTopLeft(find.byType(EditableText)).dy),
+    );
   });
 
   testWidgets('a labeled toggle shows and hides the password', (tester) async {
