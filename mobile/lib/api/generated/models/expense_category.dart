@@ -5,6 +5,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'deductibility.dart';
+import 'operation_kind.dart';
 
 part 'expense_category.freezed.dart';
 part 'expense_category.g.dart';
@@ -27,6 +28,10 @@ abstract class ExpenseCategory with _$ExpenseCategory {
     /// Article-level basis (e.g. `LISR 103`).
     @JsonKey(includeIfNull: true, name: 'legal_basis')
     required String? legalBasis,
+
+    /// The `operation_kind` of this category (seed data in `category_regime_rules`, MODULE-withholdings §2.2): what a persona moral's "Tu proveedor" question E3 starts at, and what `createExpense`, `updateExpense` and `previewExpenseWithholdings` use when `operation_kind` is omitted. Clients never keep their own copy of this table. Optional in 0.11.2 (additive); sent once WH-03 seeds it and WH-07 serves it, when it **will be required**. Absent, a client leaves E3 unselected and omits `operation_kind`, so the server applies the same default.
+    @JsonKey(includeIfNull: false, name: 'default_operation_kind')
+    OperationKind? defaultOperationKind,
   }) = _ExpenseCategory;
 
   factory ExpenseCategory.fromJson(Map<String, Object?> json) =>

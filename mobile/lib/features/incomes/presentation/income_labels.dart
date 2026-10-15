@@ -1,6 +1,8 @@
+import 'package:control_contable/api/generated/models/counterparty_kind.dart';
 import 'package:control_contable/api/generated/models/counterparty_type.dart';
 import 'package:control_contable/api/generated/models/income.dart';
 import 'package:control_contable/api/generated/models/platform_activity.dart';
+import 'package:control_contable/core/forms/choice_controllers.dart';
 import 'package:control_contable/core/records/record_month.dart';
 import 'package:control_contable/features/incomes/domain/income_basis.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
@@ -14,6 +16,32 @@ String counterpartyLabel(CounterpartyType type, AppLocalizations l10n) =>
       CounterpartyType.plataforma => l10n.counterpartyPlataforma,
       CounterpartyType.$unknown => l10n.incomeErrorInvalid,
     };
+
+/// Who was billed (Q1), as the user reads it.
+String counterpartyKindLabel(CounterpartyKind kind, AppLocalizations l10n) =>
+    switch (kind) {
+      CounterpartyKind.pm => l10n.counterpartyKindPm,
+      CounterpartyKind.govFederal => l10n.counterpartyKindGovFederal,
+      CounterpartyKind.govStateMunicipal =>
+        l10n.counterpartyKindGovStateMunicipal,
+      CounterpartyKind.pfWithActivity => l10n.counterpartyKindPfWithActivity,
+      CounterpartyKind.pfNoActivityOrPublic => l10n.counterpartyKindPfPublic,
+      CounterpartyKind.foreign ||
+      CounterpartyKind.$unknown => l10n.counterpartyKindForeign,
+    };
+
+/// Q1's options, those who can withhold first (MODULE-withholdings §2.1).
+List<ChoiceOption> counterpartyKindOptions(AppLocalizations l10n) => [
+  for (final kind in const [
+    CounterpartyKind.pm,
+    CounterpartyKind.govFederal,
+    CounterpartyKind.govStateMunicipal,
+    CounterpartyKind.pfWithActivity,
+    CounterpartyKind.pfNoActivityOrPublic,
+    CounterpartyKind.foreign,
+  ])
+    (value: kind.json!, label: counterpartyKindLabel(kind, l10n)),
+];
 
 /// A 625 platform activity, as the user reads it.
 String activityLabel(PlatformActivity activity, AppLocalizations l10n) =>

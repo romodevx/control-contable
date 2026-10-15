@@ -7,7 +7,9 @@ import 'package:control_contable/core/records/record_month.dart';
 import 'package:control_contable/features/incomes/application/income_form_model.dart';
 import 'package:control_contable/features/incomes/domain/income_basis.dart';
 
-/// What the new-income form sends, and where the server's verdicts land.
+/// What the income form sends, and where the server's verdicts land. No
+/// withholding amount is ever sent: the server derives it from the facts
+/// (ADR-0008).
 extension IncomeFormRequest on IncomeFormModel {
   /// The fields a server path names, for `matchServerFieldErrors`.
   Map<String, AppFormFieldModel> get fieldsByPath {
@@ -16,11 +18,9 @@ extension IncomeFormRequest on IncomeFormModel {
       'amount_cents': amount,
       'iva_cents': ivaAmount,
       'iva_rate': ivaRate,
-      'counterparty_type': counterparty,
+      ...facts.fieldsByPath,
       if (regimes.length > 1) 'regime_code': regime,
       if (activities.length > 1) 'platform_activity': activity,
-      'isr_withheld_cents': isrWithheld,
-      'iva_withheld_cents': ivaWithheld,
       'collected_on': accrual ? otherDate : bookingDate,
       'invoiced_on': accrual ? bookingDate : otherDate,
       'cfdi_uuid': cfdiUuid,
@@ -40,20 +40,18 @@ extension IncomeFormRequest on IncomeFormModel {
     final accrual = basis == IncomeBasis.accrual;
     final other = otherDate.date;
     final otherDay = other == null ? null : businessDate(other);
-    final withheld = amounts;
     return IncomeCreate(
       id: sessionId,
       regimeCode: regimeCode,
-      counterpartyType: payer,
+      // Required by 0.10.0 until WH-06 removes it (ADR-0008).
+      counterpartyType: facts.legacyType,
+      counterpartyKind: facts.kind,
+      operationKind: facts.operation,
+      residentialRent: facts.residentialRentSent,
+      viaPlatform: facts.viaPlatformSent,
       amountCents: amount.centavos!,
       ivaRate: IvaRate.fromJson(ivaRate.value!),
       ivaCents: amounts.ivaCents,
-      isrWithheldCents: withheld.isrWithheldCents == 0
-          ? null
-          : withheld.isrWithheldCents,
-      ivaWithheldCents: withheld.ivaWithheldCents == 0
-          ? null
-          : withheld.ivaWithheldCents,
       invoicedOn: accrual ? bookingDay : otherDay,
       collectedOn: accrual ? otherDay : bookingDay,
       platformActivity: platformActivity,
@@ -67,20 +65,27 @@ extension IncomeFormRequest on IncomeFormModel {
   /// where an optional field was cleared. Empty when nothing changed.
   Map<String, Object?> toPatch(Income stored) {
     final wanted = toCreate();
+    // A legacy income (no facts stored yet) sends its facts only once the
+    // user changes them: the backfill (WH-08) migrates the rest.
+    final sendsFacts = stored.counterpartyKind != null || facts.isDirty;
     final desired = <String, Object?>{
       'regime_code': wanted.regimeCode,
-      // ignore: deprecated_member_use_from_same_package, deprecated until WH-11 (ADR-0008).
-      'counterparty_type': wanted.counterpartyType.json,
       'amount_cents': wanted.amountCents,
       'iva_rate': wanted.ivaRate.json,
       'iva_cents': wanted.ivaCents,
-      'isr_withheld_cents': wanted.isrWithheldCents ?? 0,
-      'iva_withheld_cents': wanted.ivaWithheldCents ?? 0,
       'invoiced_on': wanted.invoicedOn,
       'collected_on': wanted.collectedOn,
       'platform_activity': wanted.platformActivity?.json,
       'cfdi_uuid': wanted.cfdiUuid,
       'description': wanted.description,
+      if (sendsFacts) ...{
+        // ignore: deprecated_member_use_from_same_package, required by 0.10.0 until WH-06 (ADR-0008).
+        'counterparty_type': wanted.counterpartyType.json,
+        'counterparty_kind': wanted.counterpartyKind?.json,
+        'operation_kind': ?wanted.operationKind?.json,
+        'residential_rent': ?wanted.residentialRent,
+        'via_platform': ?wanted.viaPlatform,
+      },
     };
     final current = stored.toJson();
     return {

@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:control_contable/api/generated/models/counterparty_type.dart';
 import 'package:control_contable/api/generated/models/income_defaults.dart';
 import 'package:control_contable/api/generated/models/platform_activity.dart';
 import 'package:control_contable/core/network/api_failure.dart';
@@ -10,13 +9,12 @@ import 'package:flutter/foundation.dart';
 /// What the defaults depend on (`getIncomeDefaults` query).
 typedef IncomeDefaultsKey = ({
   String regime,
-  CounterpartyType payer,
   String? on,
   PlatformActivity? activity,
 });
 
-/// Asks for the defaults (IVA rates, suggested withholdings) whenever the
-/// regime, the payer, the booking date or the 625 activity of [_model]
+/// Asks for the defaults (IVA rates, the facts last used in the regime)
+/// whenever the regime, the booking date or the 625 activity of [_model]
 /// changes, and hands each answer to the model. Only the latest request
 /// lands. A failure leaves the form usable without suggestions ([failed]).
 class IncomeDefaultsLoader {
@@ -36,11 +34,8 @@ class IncomeDefaultsLoader {
   final ValueNotifier<bool> failed = ValueNotifier(false);
 
   void _check() {
-    final payer = _model.payer;
-    if (payer == CounterpartyType.$unknown) return;
     final key = (
       regime: _model.regimeCode,
-      payer: payer,
       on: _model.bookingDay,
       activity: _model.platformActivity,
     );

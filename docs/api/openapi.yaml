@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Control Contable API
-  version: 0.11.1
+  version: 0.11.2
   summary: Monthly IVA and provisional ISR estimates for Mexican taxpayers.
   description: |
     Spec-first contract (single source of truth). Server stubs (oapi-codegen),
@@ -7567,7 +7567,7 @@ components:
       enum: [deductible, partially_deductible, not_deductible, isr_not_applicable]
       description: The hint shown for a category in the taxpayer's regime (after options such as 606 `blind_35`).
     ExpenseCategory:
-      x-frozen: sha256:197b555d3c257d41aef097381856540ff9cb921a7f3be71c4fe32da53d9211d8
+      x-frozen: sha256:1418d2c7e211f526560c98d901898f0f066546d21490fdab85c9e2d3cf486dea
       type: object
       required: [code, name, deductibility, default_deductible, note, legal_basis]
       properties:
@@ -7579,6 +7579,16 @@ components:
           description: The `deductible` a new expense starts with (before the CFDI and cash rules); conservative for partial cases.
         note: { type: [string, 'null'], description: es-MX note shown with the hint. }
         legal_basis: { type: [string, 'null'], description: Article-level basis (e.g. `LISR 103`). }
+        default_operation_kind:
+          $ref: '#/components/schemas/OperationKind'
+          description: >-
+            The `operation_kind` of this category (seed data in `category_regime_rules`,
+            MODULE-withholdings §2.2): what a persona moral's "Tu proveedor" question E3 starts
+            at, and what `createExpense`, `updateExpense` and `previewExpenseWithholdings` use
+            when `operation_kind` is omitted. Clients never keep their own copy of this table.
+            Optional in 0.11.2 (additive); sent once WH-03 seeds it and WH-07 serves it, when it
+            **will be required**. Absent, a client leaves E3 unselected and omits
+            `operation_kind`, so the server applies the same default.
       examples:
         - code: software
           name: Software y suscripciones
@@ -7586,8 +7596,9 @@ components:
           default_deductible: true
           note: null
           legal_basis: LISR 103
+          default_operation_kind: business_services
     ExpenseCategoryList:
-      x-frozen: sha256:5854b61862f9c8e28692416004ff4a580c7ab84b99fb6eda2b9fd3de0c459276
+      x-frozen: sha256:85bdb43cc4528448508db4b96e55c63f0921ad5d7e74e08836879589cfb8d890
       type: object
       required: [items, iva_rates_allowed, cash_payment_limit_cents, legend]
       properties:
@@ -7610,18 +7621,28 @@ components:
               default_deductible: true
               note: null
               legal_basis: LISR 103
+              default_operation_kind: business_services
+            - code: servicios_profesionales
+              name: Honorarios y servicios profesionales
+              deductibility: deductible
+              default_deductible: true
+              note: null
+              legal_basis: LISR arts. 25, 103, 115
+              default_operation_kind: professional_services
             - code: combustible
               name: Combustibles
               deductibility: deductible
               default_deductible: true
               note: Sólo deducible si lo pagas con tarjeta, transferencia o monedero, sin importar el monto
               legal_basis: LISR 27
+              default_operation_kind: business_services
             - code: restaurantes
               name: Consumo en restaurantes
               deductibility: partially_deductible
               default_deductible: false
               note: Sólo una parte es deducible
               legal_basis: LISR 28
+              default_operation_kind: business_services
           iva_rates_allowed: [rate_16, rate_8, rate_0, exempt]
           cash_payment_limit_cents: 200000
           legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.

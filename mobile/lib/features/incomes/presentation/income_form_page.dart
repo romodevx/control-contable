@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:control_contable/api/generated/models/field_error.dart' as api;
 import 'package:control_contable/api/generated/models/income.dart';
+import 'package:control_contable/api/generated/models/withholding_preview.dart';
+import 'package:control_contable/core/fiscal/withholding_preview_loader.dart';
 import 'package:control_contable/core/forms/app_form.dart';
 import 'package:control_contable/core/forms/field_error.dart';
 import 'package:control_contable/core/forms/form_leave_guard.dart';
@@ -14,9 +16,11 @@ import 'package:control_contable/features/incomes/application/income_form_reques
 import 'package:control_contable/features/incomes/application/income_records.dart';
 import 'package:control_contable/features/incomes/application/income_save.dart';
 import 'package:control_contable/features/incomes/data/incomes_repository.dart';
+import 'package:control_contable/features/incomes/domain/income_preview_query.dart';
 import 'package:control_contable/features/incomes/presentation/income_form_copy.dart';
 import 'package:control_contable/features/incomes/presentation/income_form_fields.dart';
 import 'package:control_contable/features/incomes/presentation/income_save_feedback.dart';
+import 'package:control_contable/features/incomes/presentation/income_withholding_card.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,9 +28,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// The income form of one taxpayer, new or edit (the model says which):
 /// defaults prefilled and refreshed as the context changes, *Guardar*
 /// (back to the list) and, for a new income, *Guardar y crear otro* (stay,
-/// keep the context); idempotent retries (a client id on create, a
-/// merge-patch of only the changed fields on edit), server verdicts on
-/// their fields, non-blocking warnings, the paywall on `402`.
+/// keep the context); the withholdings derived live by the server from
+/// the facts asked (read-only card, ADR-0008); idempotent retries (a
+/// client id on create, a merge-patch of only the changed fields on edit),
+/// server verdicts on their fields, non-blocking warnings, the paywall on
+/// `402`.
 class IncomeFormPage extends ConsumerStatefulWidget {
   /// The form for [taxpayerId] over the model [createModel] builds.
   const new({required this.taxpayerId, required this.createModel, super.key});
@@ -50,12 +56,25 @@ class _IncomeFormPageState extends ConsumerState<IncomeFormPage> {
         .defaults(
           taxpayerId: widget.taxpayerId,
           regime: key.regime,
-          counterparty: key.payer,
           on: key.on,
           platformActivity: key.activity,
         ),
   );
-  bool? _withholdingsOpen;
+  late final WithholdingPreviewLoader<IncomePreviewQuery> _preview =
+      WithholdingPreviewLoader(
+        source: _model,
+        query: () => _model.previewQuery,
+        initial: switch (_model.editing?.withholding) {
+          final stored? => WithholdingPreview(
+            withholding: stored,
+            warnings: const [],
+          ),
+          null => null,
+        },
+        fetch: (query) => ref
+            .read(incomesRepositoryProvider)
+            .previewWithholdings(taxpayerId: widget.taxpayerId, query: query),
+      );
   bool _moreOpen = false;
   String? _notice;
   bool _isLeaving = false;
@@ -171,16 +190,11 @@ class _IncomeFormPageState extends ConsumerState<IncomeFormPage> {
 
   @override
   void dispose() {
+    _preview.dispose();
     _defaults.dispose();
     _model.dispose();
     super.dispose();
   }
-
-  IncomeSections get _sections => incomeSections(
-    _model,
-    withholdingsOpen: _withholdingsOpen,
-    moreOpen: _moreOpen,
-  );
 
   @override
   Widget build(BuildContext context) => FormLeaveGuard(
@@ -209,10 +223,11 @@ class _IncomeFormPageState extends ConsumerState<IncomeFormPage> {
             ...incomeFormFields(
               context,
               model: _model,
-              open: _sections,
-              onToggleWithholdings: () =>
-                  setState(() => _withholdingsOpen = !_sections.withholdings),
-              onToggleMore: () => setState(() => _moreOpen = !_moreOpen),
+              card: IncomeWithholdingCard(model: _model, loader: _preview),
+              moreOpen: _moreOpen,
+              onToggleMore: () => setState(
+                () => _moreOpen = !incomeMoreOpen(_model, moreOpen: _moreOpen),
+              ),
             ),
           ],
         ),

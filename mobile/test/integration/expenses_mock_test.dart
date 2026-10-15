@@ -10,7 +10,10 @@ import 'dart:io';
 
 import 'package:control_contable/api/generated/models/expense_create.dart';
 import 'package:control_contable/api/generated/models/iva_rate.dart';
+import 'package:control_contable/api/generated/models/operation_kind.dart';
 import 'package:control_contable/api/generated/models/payment_method.dart';
+import 'package:control_contable/api/generated/models/supplier_kind.dart';
+import 'package:control_contable/api/generated/models/supplier_regime.dart';
 import 'package:control_contable/core/config/app_config.dart';
 import 'package:control_contable/core/session/refresh_token_store.dart';
 import 'package:control_contable/core/session/session.dart';
@@ -73,6 +76,14 @@ void main() {
 
         expect(catalog.legend, isNotEmpty);
         expect(catalog.ivaRatesAllowed, isNotEmpty);
+        // E3 starts at the server's category default (0.10.1).
+        expect(
+          {for (final c in catalog.items) c.code: c.defaultOperationKind},
+          containsPair(
+            'servicios_profesionales',
+            OperationKind.professionalServices,
+          ),
+        );
       });
 
       test(
@@ -97,6 +108,28 @@ void main() {
           expect(created.amountCents, isPositive);
         },
       );
+
+      test('the supplier withholding preview decodes '
+          '(US-W6)', () async {
+        final preview = await repository().previewWithholdings(
+          taxpayerId: _taxpayerId,
+          query: (
+            regime: '601',
+            on: '2026-06-15',
+            amountCents: 4000000,
+            ivaRate: IvaRate.rate16,
+            ivaCents: 640000,
+            categoryCode: 'servicios_profesionales',
+            supplierKind: SupplierKind.pfWithActivity,
+            supplierRegime: SupplierRegime.value612,
+            operationKind: OperationKind.professionalServices,
+            residentialRent: null,
+          ),
+        );
+
+        expect(preview.withholding.netCents, isPositive);
+        expect(preview.withholding.ruleIds, isNotEmpty);
+      });
 
       test('an edit is a merge-patch that may clear the override', () async {
         final updated = await repository().update(

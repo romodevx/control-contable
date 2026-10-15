@@ -24,17 +24,14 @@ extension ExpenseFormRequest on ExpenseFormModel {
     'deductible': deductible,
     if (withCfdi) 'cfdi_uuid': cfdiUuid,
     'description': description,
-    if (isMoral) ...{
-      'isr_withheld_cents': isrWithheld,
-      'iva_withheld_cents': ivaWithheld,
-    },
+    ...supplier.fieldsByPath,
   };
 
   /// The request body (call only after the form validated). The folio
-  /// travels only with a CFDI, the withholdings only for a persona moral.
+  /// travels only with a CFDI, the supplier facts only for a persona moral;
+  /// no withholding amount is ever sent (the server derives it, ADR-0008).
   ExpenseCreate toCreate() {
     final uuid = cfdiUuid.value;
-    int? withheld(int? cents) => isMoral && (cents ?? 0) > 0 ? cents : null;
     return ExpenseCreate(
       id: sessionId,
       regimeCode: regimeCode,
@@ -47,8 +44,10 @@ extension ExpenseFormRequest on ExpenseFormModel {
       hasCfdi: withCfdi,
       cfdiUuid: withCfdi && uuid.isNotEmpty ? uuid.toUpperCase() : null,
       deductible: deductibleOverride,
-      isrWithheldCents: withheld(isrWithheld.centavos),
-      ivaWithheldCents: withheld(ivaWithheld.centavos),
+      supplierKind: supplier.kind,
+      supplierRegime: supplier.regime,
+      operationKind: supplier.operation,
+      residentialRent: supplier.residentialRentSent,
       description: description.value.isEmpty ? null : description.value,
     );
   }
@@ -59,6 +58,10 @@ extension ExpenseFormRequest on ExpenseFormModel {
   /// nothing changed.
   Map<String, Object?> toPatch(Expense stored) {
     final wanted = toCreate();
+    // A legacy expense (no supplier stored yet) sends its facts only once
+    // the user changes them: the backfill (WH-08) migrates the rest.
+    final sendsFacts =
+        isMoral && (stored.supplierKind != null || supplier.isDirty);
     final desired = <String, Object?>{
       'regime_code': wanted.regimeCode,
       'category_code': wanted.categoryCode,
@@ -69,9 +72,13 @@ extension ExpenseFormRequest on ExpenseFormModel {
       'paid_on': wanted.paidOn,
       'has_cfdi': wanted.hasCfdi,
       'cfdi_uuid': wanted.cfdiUuid,
-      'isr_withheld_cents': wanted.isrWithheldCents ?? 0,
-      'iva_withheld_cents': wanted.ivaWithheldCents ?? 0,
       'description': wanted.description,
+      if (sendsFacts) ...{
+        'supplier_kind': wanted.supplierKind?.json,
+        'supplier_regime': wanted.supplierRegime?.json,
+        'operation_kind': wanted.operationKind?.json,
+        'residential_rent': ?wanted.residentialRent,
+      },
     };
     final current = stored.toJson();
     final storedOverride = stored.deductibleSource == DeductibleSource.user

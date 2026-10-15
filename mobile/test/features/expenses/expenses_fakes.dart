@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:control_contable/api/generated/models/deductibility.dart';
 import 'package:control_contable/api/generated/models/deductible_source.dart';
@@ -8,10 +9,18 @@ import 'package:control_contable/api/generated/models/expense_category_list.dart
 import 'package:control_contable/api/generated/models/expense_create.dart';
 import 'package:control_contable/api/generated/models/expense_page.dart';
 import 'package:control_contable/api/generated/models/iva_rate.dart';
+import 'package:control_contable/api/generated/models/operation_kind.dart';
 import 'package:control_contable/api/generated/models/payment_method.dart';
 import 'package:control_contable/api/generated/models/period_totals.dart';
+import 'package:control_contable/api/generated/models/supplier_kind.dart';
+import 'package:control_contable/api/generated/models/supplier_regime.dart';
 import 'package:control_contable/api/generated/models/warning.dart';
+import 'package:control_contable/api/generated/models/withholding.dart';
+import 'package:control_contable/api/generated/models/withholding_preview.dart';
 import 'package:control_contable/features/expenses/data/expenses_repository.dart';
+import 'package:control_contable/features/expenses/domain/expense_preview_query.dart';
+
+import '../../helpers/withholding_fixtures.dart';
 
 /// The taxpayer every expenses test records for.
 const String expensesTaxpayerId = '0192f0c4-7b1e-7c3a-9d2e-6f1a2b3c4d5e';
@@ -45,6 +54,11 @@ Expense expense({
   bool deductible = true,
   DeductibleSource source = DeductibleSource.categoryDefault,
   List<Warning> warnings = const [],
+  SupplierKind? supplierKind,
+  SupplierRegime? supplierRegime,
+  OperationKind? operationKind,
+  bool? residentialRent,
+  Withholding? withholding,
 }) => Expense(
   id: id ?? nextExpenseId(),
   taxpayerId: expensesTaxpayerId,
@@ -66,6 +80,11 @@ Expense expense({
   legend: expenseLegend,
   createdAt: DateTime.utc(2026, 10, 13),
   updatedAt: DateTime.utc(2026, 10, 13),
+  supplierKind: supplierKind,
+  supplierRegime: supplierRegime,
+  operationKind: operationKind,
+  residentialRent: residentialRent,
+  withholding: withholding,
 );
 
 ExpenseCategory _category(
@@ -75,6 +94,7 @@ ExpenseCategory _category(
   bool? defaultDeductible,
   String? note,
   String? basis = 'LISR 103',
+  OperationKind operation = OperationKind.businessServices,
 }) => ExpenseCategory(
   code: code,
   name: name,
@@ -83,6 +103,7 @@ ExpenseCategory _category(
       defaultDeductible ?? deductibility == Deductibility.deductible,
   note: note,
   legalBasis: basis,
+  defaultOperationKind: operation,
 );
 
 /// The catalog of a business regime (612), a sample of MODULE-expenses §2.2.
@@ -91,14 +112,29 @@ List<ExpenseCategory> businessCategories() => [
     'mercancia',
     'Mercancía y materias primas',
     Deductibility.deductible,
+    operation: OperationKind.saleOfGoods,
   ),
   _category(
     'servicios_profesionales',
     'Honorarios y servicios profesionales',
     Deductibility.deductible,
     note: 'Si eres persona moral, revisa las retenciones',
+    operation: OperationKind.professionalServices,
+  ),
+  _category(
+    'renta_local',
+    'Renta de local, oficina o bodega',
+    Deductibility.deductible,
+    note: 'Si eres persona moral, revisa las retenciones',
+    operation: OperationKind.rentRealEstate,
   ),
   _category('software', 'Software y suscripciones', Deductibility.deductible),
+  _category(
+    'fletes',
+    'Fletes y paquetería',
+    Deductibility.deductible,
+    operation: OperationKind.groundFreight,
+  ),
   _category(
     'papeleria',
     'Papelería y artículos de oficina',
@@ -202,6 +238,12 @@ class FakeExpensesRepository implements ExpensesRepository {
   /// Held open while set: a create stays in flight until completed.
   Completer<void>? createGate;
 
+  /// Every withholding preview request, in order.
+  final List<ExpensePreviewQuery> previewRequests = [];
+
+  /// The preview answered for a query (else nothing to withhold).
+  WithholdingPreview Function(ExpensePreviewQuery query)? previewAnswer;
+
   void _call(String operation, String argument) {
     calls.add('$operation:$argument');
     final failure = failNext.remove(operation) ?? failAlways[operation];
@@ -274,6 +316,10 @@ class FakeExpensesRepository implements ExpensesRepository {
       cfdiUuid: expense.cfdiUuid,
       isrWithheldCents: expense.isrWithheldCents ?? 0,
       ivaWithheldCents: expense.ivaWithheldCents ?? 0,
+      supplierKind: expense.supplierKind,
+      supplierRegime: expense.supplierRegime,
+      operationKind: expense.operationKind,
+      residentialRent: expense.residentialRent,
       description: expense.description,
       deductible: expense.deductible ?? true,
       deductibleSource: expense.deductible == null
@@ -286,6 +332,17 @@ class FakeExpensesRepository implements ExpensesRepository {
     );
     expenses.add(created);
     return created.copyWith(warnings: _takeWarnings());
+  }
+
+  @override
+  Future<WithholdingPreview> previewWithholdings({
+    required String taxpayerId,
+    required ExpensePreviewQuery query,
+  }) async {
+    previewRequests.add(query);
+    _call('preview', query.supplierKind.json!);
+    return previewAnswer?.call(query) ??
+        nothingWithheld(query.amountCents + query.ivaCents);
   }
 
   List<Warning> _takeWarnings() {
@@ -312,7 +369,10 @@ class FakeExpensesRepository implements ExpensesRepository {
     patches.add(patch);
     _call('update', expenseId);
     final index = expenses.indexWhere((e) => e.id == expenseId);
-    final merged = {...expenses[index].toJson(), ...patch};
+    // Through JSON text: nested objects (`withholding`) become maps too.
+    final stored =
+        jsonDecode(jsonEncode(expenses[index])) as Map<String, Object?>;
+    final merged = {...stored, ...patch};
     if (patch.containsKey('deductible')) {
       merged['deductible_source'] = patch['deductible'] == null
           ? DeductibleSource.categoryDefault.json
