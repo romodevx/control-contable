@@ -271,12 +271,13 @@ make mock                     # Prism mock of the contract, for the app without 
 Tracked in the [PLAN M8 follow-ups](../project-specs/PLAN-control-contable.md#m8-follow-ups).
 The ones a user or an operator can notice:
 
-- **Device walk owed** (M8-07 §5): re-run once Docker or a native PostgreSQL is available. Wipe
-  the run's own database, `apply-preset demo_full`, create a PF and a PM through the app, enter
-  records across months, open months from History and from Home's "Ver detalle", add a late record
-  and watch the marker appear and clear, switch taxpayer, a read-only account, History and engine
-  OFF, `module_incomes` / `module_expenses` OFF (F1 on device), and the TalkBack pass. iOS waits
-  for OB6.
+- **Device walk done** (2026-10-15, M8-07 report §7) on Android against a native PostgreSQL. It
+  fixed two stale screens: History's empty state did not re-read after "Registrar ingreso", and Home
+  did not re-read on return from History. Still owed: the TalkBack pass with real gestures (focus
+  return to the row after a pop could not be driven through adb) and iOS (OB6).
+- **Undo from another screen leaves it stale** (M8-07 F3): the delete toast's *Deshacer* outlives
+  the route, so restoring while History or Home is on top restores the record, but that screen
+  keeps its marks until it is pulled down. Fixing it needs an app-wide "records changed" signal.
 - Every figure is the M5 estimate, so it carries M5's limits: **no rule is CPA-verified yet**
   (M5-33).
 - A very fast return can re-read History before the fire-and-forget upsert lands; the

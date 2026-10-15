@@ -4,9 +4,9 @@
 |---|---|
 | Scope | Module M8 History (`module_history`, MODULE-history.md), as merged on `dev` through #147 (M8-06). Checks: the month list per RFC and fiscal year, the "Cambió desde que lo viste" marker only when the shown figures change, flag OFF ⇒ `404` and no entry point, read-only users and archived taxpayers, persona física and persona moral |
 | Branch | `feature/history-qa-fixes` (from `origin/dev` @ `2d760b4`), PR #149 |
-| Device walk | **BLOCKED by the environment** (§1). Nothing was wiped and nothing was created through the UI |
+| Device walk | **Done 2026-10-15** (§7) on the Android emulator against the run's own PostgreSQL and API, branch `feature/history-device-walk`. It was blocked on 2026-10-14 (§1) |
 | Automated evidence | Backend unit suite (local), backend integration + contract suites on real PostgreSQL (CI, testcontainers), the full mobile suite (local), the mobile client against the contract mock (Prism, local) |
-| Verdict | **Pass at the automated level. No app defect found.** Two coverage gaps closed with new tests (§3). The device walk is still owed (§5) |
+| Verdict | **Pass after two fixes.** The automated level passed on 2026-10-14 (§2, §3). The device walk found two stale-screen defects, both fixed with a regression test first (§7.4 F1, F2), and one more that is deferred (F3). The TalkBack focus check could not be completed with adb (§7.5) |
 
 ## 1. Environment: why the device walk is blocked
 
@@ -69,7 +69,7 @@ mutation-checked locally (it needs Docker); it ran green in CI.
   first regime loads (the new test reads it for January–March), so this is consistent, just low value.
 - `.gstack/` is git-ignored; this report was added with `git add -f` because the task asks for it in the PR.
 
-## 5. Owed (blocked by the environment)
+## 5. Owed (blocked by the environment), done on 2026-10-15 except as §7.6 says
 
 The visible walk, as M6-06 ran it, once Docker or a native PostgreSQL is available: wipe the run's own
 database, `cmd/flags apply-preset demo_full`, sign up and create a PF and a PM through the app, enter
@@ -81,3 +81,73 @@ iOS not run (OB6, as in every module QA).
 ## 6. Teardown
 
 Prism mock on `:3041` stopped by its PID. No database, container or app install was created.
+
+## 7. Device walk, 2026-10-15
+
+### 7.1 Environment
+
+Docker Desktop was still down. The run used a stack of its own, as the withholdings QA did, and shared none of it with the other agents:
+
+- A new PostgreSQL 18.6 cluster from Homebrew `postgresql@18`, with its data directory in the session scratchpad. It listened on `127.0.0.1:5495` over TCP only and held one database, `cc_histqa`. The roles came from the repo's `infra/local/postgres/bootstrap/roles.sql`, with random passwords and keys generated at run time and never written to the repo.
+- `cmd/migrate up` as `cc_owner`, then `cmd/flags apply-preset demo_full`, then `cmd/api` as `cc_app` on `:3095` (`APP_ENV=dev`; verification codes came from the dev email log).
+- The dev APK was a profile build for arm64 with `API_BASE_URL=http://10.0.2.2:3095`. It was installed on `emulator-5554` after the ANN-23 and WH-07 agents confirmed they were done with the emulator. The old install was removed first, so the app started with no session.
+- **Wipe:** the database was created empty for this run, so nothing needed wiping. Before the walk it held only the migrations' catalogs and flags.
+
+### 7.2 Created through the app (no seed, no SQL for the data under test)
+
+| Account | Taxpayer (onboarding) | Records entered in the forms |
+|---|---|---|
+| `qa-hist@…` (trial) | Ana Fisica, PF **612** from January 2026 | Incomes 30,000.00 (15 Jul), 45,000.00 (12 Aug), 20,000.00 (10 Sep) to the general public, 16 %, entered with *Guardar y crear otro* from History's empty state. Expenses: Software 5,000.00 (20 Aug) from Home and Papelería 1,000.00 (15 Oct) from History → *Ver gastos* |
+| same | Empresa QA, PM **601** from **June** 2026, coeficiente de utilidad 0.2 | Incomes 100,000.00 (invoiced 10 Jul) and 60,000.00 (invoiced 5 Sep) to a company. Prior provisional payment for June = 0 under *Datos fiscales* |
+| `qa-hist2@…` (trial) | Beto Resico, PF **626** from January 2026 | Income 40,000.00 (20 Sep), entered from History's empty state, to re-check F1 |
+
+The only SQL was operator-side: the first account's trial was moved into the past so the account became read-only, because the app cannot age a trial.
+
+### 7.3 Results (screenshots `hist-*.png` in `.gstack/qa-reports/screenshots/`, local only)
+
+| Check | Result |
+|---|---|
+| Year list, PF 612: October .. January, newest first, one row per month. The year totals (35,994.59) equal the sum of the rows. Each opened month equals the estimate screen and the dashboard trend to the centavo (July 6,455.16, August 11,144.13, September 9,761.14) | Pass (`hist-03`, `hist-06`) |
+| PM 601 from June: January–May read "Sin régimen en este mes" with no amount, June–October have figures, totals add up | Pass (`hist-14`). PM IVA 0 is correct: the incomes were invoiced and not yet collected |
+| Opening July, August and September (History rows) → "Visto el 15 oct". The current month is never marked | Pass (`hist-07`) |
+| Edit with no figure change (August income moved from the 12th to the 14th) → nothing marked | Pass (`hist-08`) |
+| Edit that moves the figures (August 45,000 → 50,000) → August **and** September marked "Cambió desde que lo viste: agregaste o cambiaste registros o datos fiscales.", because 612 is year-to-date. July and October are not marked | Pass (`hist-09`) |
+| Editing the amount back to 45,000 → both marks clear without opening either month | Pass (`hist-10`) |
+| Delete the July income → July, August and September marked. *Deshacer* restores it, and the marks clear once History is read again | Pass after a pull-to-refresh (F3) (`hist-11`..`hist-13`) |
+| A change in fiscal data (PM June prior payment = 0): July's status goes Incompleto → Completo with the same amount, so July is marked; August and September are not | Pass (`hist-16`) |
+| Opening from the estimate screen's month picker (OQ-H7) clears July | Pass |
+| Taxpayer switch PM ↔ PF: each taxpayer keeps its own rows and views, and no previous figures show | Pass |
+| Read-only account (trial ended): Home shows "Modo lectura", History is readable, and opening June marks it "Visto" | Pass (`hist-19`, `hist-20`) |
+| Archived taxpayer | Not reachable in the UI. Choosing an archived taxpayer opens its settings and never makes it active (M2 design). The API side is `TestContract_history` |
+| `module_history` OFF (real bearer, own ids): `getHistory` and `markHistoryViewed` answer `404`; so do an unknown taxpayer, a bad `fiscal_year` and a request without auth. `/v1/flags` omits it. After a relaunch Home has no "Historial", and the estimate screen still works | Pass (`hist-22`) |
+| `module_tax_engine` OFF with History ON: History is hidden (`flags list` shows `hidden`), both routes answer `404`, and there is no entry on Home | Pass (`hist-23`) |
+| `module_incomes` and `module_expenses` OFF: the figures and views are unchanged, every row says "Sin registros en este mes", the "Ver …" links are hidden, and History does **not** fall into the empty state (M8-08 F1 on device) | Pass (`hist-24`) |
+| Row semantics (uiautomator): each month is one button read as month, total, status, then marker | Pass |
+
+### 7.4 Defects
+
+| # | What the walk showed | Status |
+|---|---|---|
+| **F1** | History's empty state "Registrar ingreso" pushed the income form without reading the year again. After three incomes were saved, History still said "Aún no hay registros…" until it was pulled down (`hist-02`) | **Fixed** in `fix(mobile): re-read History after "Registrar ingreso" from the empty year`. The empty state now opens the form through the year view's own open-then-reload path. Regression test `history_screen_test.dart` "returning from \"Registrar ingreso\" reads the year again": red before the fix (one `getHistory` call), green after. Checked on the device with a new account (`hist-18`) |
+| **F2** | Home pushed History without reloading when it returned. Records saved from inside History (its empty state, or *Ver ingresos/gastos* → form) left the dashboard saying "Aún no hay ingresos…" with the trial count unspent (`hist-04`) | **Fixed** in `fix(mobile): read Home's dashboard again on return from History`. `HistoryEntryButton` takes `onReturn`, and Home invalidates `dashboardProvider` with it, as the quick actions already do. Regression test `history_flag_test.dart` "returning from History reads the dashboard again": red before (one `getDashboard` call). Checked on the device (`hist-17`) |
+| **F3** | The delete toast's *Deshacer* lives in the app-wide messenger and stays up across routes. Tapping it while History (or Home) is on top restores the record, but that screen is not read again, so the marks stay until a pull-to-refresh. The data is right | **Deferred.** The fix needs one app-wide "records changed" signal that the income and expense record services bump and that the History, dashboard and estimate providers watch. That is a cross-module design change for the mobile owner, not a QA patch. The workaround is a pull-to-refresh |
+
+### 7.5 TalkBack
+
+TalkBack (installed on the emulator) was turned on through `settings` and turned off again afterwards (`enabled_accessibility_services` back to `null`). adb's injected taps bypass touch exploration: a tap activates the row instead of focusing it, and TalkBack's speech is not logged. So the reading order was checked through the semantics tree (§7.3, last row), but **focus return to the row after a pop could not be shown**. After the back key, TalkBack focus sat on the app bar's back button (`hist-26`). Because the row never held TalkBack focus before it was opened, this is not evidence of a defect. A person still needs to do this pass with real gestures, together with the polite announcement.
+
+### 7.6 Still owed
+
+- The TalkBack pass with real gestures (§7.5), and iOS/VoiceOver (OB6).
+- F3, for the mobile owner.
+
+### 7.7 Suites (this branch)
+
+| Suite | Where | Result |
+|---|---|---|
+| `dart format`, `flutter analyze`, `flutter test` | local | Pass: 0 issues, 1384 tests, 39 skipped (mock- and golden-gated) |
+| CI required checks | PR | see the PR |
+
+### 7.8 Teardown
+
+This run stopped only what it started: the API on `:3095` (by its PID) and the PostgreSQL cluster on `:5495` (`pg_ctl stop`; its data directory was in the session scratchpad). The flags were restored with `apply-preset demo_full` before the stop. The dev app stays installed on the emulator with the two QA accounts (local data only). TalkBack is off.
