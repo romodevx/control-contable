@@ -418,7 +418,7 @@ func TestContract_incomes(t *testing.T) {
 				},
 				TableVersion: "2026.1",
 			}
-			assert.Equal(t, want, created.Withholding)
+			assert.Equal(t, &want, created.Withholding)
 
 			preview := contracttest.Op("previewIncomeWithholdings")
 			rec = serve(preview, http.MethodGet, incomesPath(incomeTaxpayerR,

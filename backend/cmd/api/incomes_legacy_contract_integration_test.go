@@ -22,7 +22,8 @@ import (
 // counterparty_type and typed amounts.
 const unbackfillSQL = `
 UPDATE incomes SET counterparty_kind = NULL, operation_kind = NULL, withholding_rule_ids = '{}',
-                   withholding_table_version = NULL, withholding_cpa_unverified = false
+                   withholding_table_version = NULL, withholding_cpa_unverified = false,
+                   withholding_isr_rate = NULL, withholding_iva_basis = NULL, withholding_withholder = NULL
 WHERE id = $1`
 
 // Contract 0.12.0 assumes no deploy order (ADR-0008 Amendment 2): an income
