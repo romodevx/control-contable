@@ -19,7 +19,7 @@ type Rule string
 // The rules enforced by Check. An empty Rule means the import is allowed.
 const (
 	RuleDomainImports          Rule = "domain-imports"
-	RuleUsecaseFrameworks      Rule = "usecase-frameworks"
+	RuleUsecaseImports         Rule = "usecase-imports"
 	RuleUsecaseOuterLayer      Rule = "usecase-outer-layer"
 	RuleUsecasePlatformAdapter Rule = "usecase-platform-adapter"
 	RuleCrossModule            Rule = "cross-module"
@@ -68,6 +68,24 @@ var domainPlatformAllowlist = []string{"money", "usertext"}
 // import (ADR-0004): pure algorithms with no I/O and no framework. Pure
 // platform packages stay stdlib-only.
 var domainExternalAllowlist = []string{"golang.org/x/text/unicode/norm"}
+
+// usecaseExternalAllowlist lists, exactly, the packages from outside this
+// module a use case may import: pure standard-library packages and the
+// reviewed third-party ones. It is an allowlist, not a framework denylist: a
+// transport, driver, SDK or OS package nobody listed (net, os/exec,
+// database/sql/driver, a new client library) is refused until someone
+// decides it belongs in a use case. This module's own packages are judged by
+// the other rules (cross-module, outer-layer, platform adapters, transitive
+// frameworks).
+var usecaseExternalAllowlist = []string{
+	// Standard library: language support, data, text and time.
+	"bytes", "cmp", "context", "crypto/sha256", "encoding/base64", "encoding/hex", "encoding/json",
+	"errors", "fmt", "io", "iter", "log/slog", "maps", "math", "math/big", "regexp", "slices",
+	"sort", "strconv", "strings", "sync", "time", "unicode", "unicode/utf8",
+	// Third-party: ids (uuid), structured concurrency (errgroup) and the
+	// NFKC normalization ADR-0004 allows the domain too.
+	"github.com/google/uuid", "golang.org/x/sync/errgroup", "golang.org/x/text/unicode/norm",
+}
 
 // platformAdapters are the platform packages that wrap a framework (the
 // database adapter and its test harness). Use cases reach them only through
@@ -147,7 +165,7 @@ func checkImport(modulePath, importer, imported string) Rule {
 	case kindKernel:
 		rule = checkKernelImport(to, imported)
 	case kindModule:
-		rule = checkModuleImport(from, to, imported)
+		rule = checkModuleImport(from, to, imported, isOutsideModule(modulePath, imported))
 	}
 	if rule == "" && isTestHarness(to) && !isTestHarness(from) {
 		return RuleTestHarness
@@ -172,7 +190,13 @@ func isTestHarness(loc location) bool {
 	return loc.kind == kindPlatform && loc.module == testHarness
 }
 
-func checkModuleImport(from, to location, imported string) Rule {
+// isOutsideModule reports a package that is not this module's (the standard
+// library or a third-party module).
+func isOutsideModule(modulePath, pkg string) bool {
+	return pkg != modulePath && !strings.HasPrefix(pkg, modulePath+"/")
+}
+
+func checkModuleImport(from, to location, imported string, outsideModule bool) Rule {
 	if from.layer == layerDomain {
 		return checkDomainImport(from, to, imported)
 	}
@@ -182,8 +206,8 @@ func checkModuleImport(from, to location, imported string) Rule {
 	if from.layer != layerUsecase {
 		return ""
 	}
-	if isFramework(imported) {
-		return RuleUsecaseFrameworks
+	if outsideModule && !slices.Contains(usecaseExternalAllowlist, imported) {
+		return RuleUsecaseImports
 	}
 	if to.kind == kindModule && to.layer != layerDomain && to.layer != layerUsecase {
 		return RuleUsecaseOuterLayer

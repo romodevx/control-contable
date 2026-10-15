@@ -9,8 +9,10 @@
 //   - domain-imports: a domain imports only the standard library (never
 //     net/http or database/sql), its own module's domain tree and the pure
 //     platform packages in domainPlatformAllowlist, and the shared kernel.
-//   - usecase-frameworks: a usecase never imports net/http, database/sql,
-//     GORM or pgx.
+//   - usecase-imports: from outside this module a usecase imports only the
+//     packages in usecaseExternalAllowlist (pure standard library, uuid,
+//     errgroup, unicode/norm). An allowlist: net/http, database/sql, GORM,
+//     pgx, net, os/exec or any new SDK are refused until listed.
 //   - usecase-outer-layer: within its module a usecase imports only domain and
 //     usecase packages (never adapter, infra or any other directory).
 //   - usecase-platform-adapter: a usecase never imports a platform adapter
