@@ -100,6 +100,8 @@ func TestPFArt152Section_AN01(t *testing.T) {
 	s := got[0]
 	assert.Equal(t, adomain.SectionPFArt152, s.Kind)
 	assert.True(t, s.InformativeIncomeOver500k)
+	assert.True(t, s.DecidesInformativeIncome)
+	assert.False(t, s.OutsideHeadline)
 	require.NotNil(t, s.Tax)
 	assert.Equal(t, ptr(money.Cents(40_000_00)), s.Tax.PersonalDeductions)
 	assert.Equal(t, money.Cents(76_365_86), s.Tax.ISR)
@@ -133,6 +135,12 @@ func TestPMSections_onlyForPersonasMorales(t *testing.T) {
 	cu, err := money.ParseRate("0.1380")
 	require.NoError(t, err)
 	assert.Equal(t, cu, *s.PMExtras.SuggestedCU)
+	assert.Equal(t, []annual.NoteCode{annual.NoteCUSuggestion}, s.Notes, "601 carries the CU note")
+	assert.Equal(t, []annual.ReasonCode{annual.ReasonPersonaMoral}, s.ObligationReasons)
+	require.Len(t, s.LineRegimes, len(s.Lines))
+	for _, r := range s.LineRegimes {
+		assert.Equal(t, fiscal.RegimeCode("601"), r, "a PM section's lines are its regime's")
+	}
 
 	pf := annual.Year{FiscalYear: 2026, PersonType: fiscal.PersonFisica, Regimes: []adomain.RegimeYear{{Regime: fiscal.RegimeRESICO, Income: 1}}}
 	got, err = reg.Compute(pf, p)
@@ -141,6 +149,8 @@ func TestPMSections_onlyForPersonasMorales(t *testing.T) {
 	assert.Equal(t, adomain.SectionPFRESICOCheck, got[0].Kind)
 	assert.Nil(t, got[0].Tax)
 	assert.NotNil(t, got[0].RESICOCheck)
+	assert.True(t, got[0].OutsideHeadline, "RESICO PF payments are definitive")
+	assert.NotEmpty(t, got[0].Explanation)
 }
 
 // The lines a PM section appends name its regime; the PF lines name the
@@ -153,9 +163,7 @@ func TestLineRegimes(t *testing.T) {
 		{Code: adomain.LineArt152Base},
 	}
 
-	got := annual.LineRegimes(adomain.SectionPFArt152, []fiscal.RegimeCode{"605", "606", "612"}, pfLines)
+	got := annual.PFLineRegimes(pfLines)
 
 	assert.Equal(t, []fiscal.RegimeCode{"612", "606", "605", ""}, got)
-	pmGot := annual.LineRegimes(adomain.SectionPM601, []fiscal.RegimeCode{"601"}, []domain.Line{{Code: pm.LineIncome}})
-	assert.Equal(t, []fiscal.RegimeCode{"601"}, pmGot)
 }

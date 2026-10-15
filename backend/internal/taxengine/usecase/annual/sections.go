@@ -9,6 +9,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/money"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain"
 	adomain "github.com/romodevx/control-contable/backend/internal/taxengine/domain/annual"
+	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/annual/explain"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/annual/pm"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/taxparams"
 )
@@ -82,8 +83,25 @@ type ComputedSection struct {
 	PMExtras      *PMExtras
 	RESICOCheck   *adomain.RESICOCheck
 	Lines         []domain.Line
+	// LineRegimes name the regime each of Lines belongs to (contract
+	// AnnualBreakdownLine.regime_code; "" for a section-wide line).
+	LineRegimes []fiscal.RegimeCode
 	// InformativeIncomeOver500k is the LISR 150 ¶3 fact pf_art152 decides.
 	InformativeIncomeOver500k bool
+	// DecidesInformativeIncome reports a section that settles
+	// InformativeIncomeOver500k itself; without one, the estimate does.
+	DecidesInformativeIncome bool
+	// OutsideHeadline keeps the section's figures out of the headline
+	// (pf_resico_check: RESICO PF payments are definitive).
+	OutsideHeadline bool
+	// Explanation is the section's own text; "" is none.
+	Explanation string
+	// Notes are the notes only this kind of section carries; the use case
+	// adds the ones any section may get.
+	Notes []NoteCode
+	// ObligationReasons, when set, explain the obligation instead of the
+	// PF reasons (a persona moral always files).
+	ObligationReasons []ReasonCode
 }
 
 // SectionStrategy computes the sections of one kind for a year: none when
@@ -163,7 +181,7 @@ func fromDomain(s adomain.Section) ComputedSection {
 	out := ComputedSection{
 		Kind: s.Kind, Regimes: s.Regimes, Status: s.Status, Obligation: s.Obligation,
 		MissingInputs: s.MissingInputs, CPATopics: s.CPATopics, Disclaimers: s.Disclaimers,
-		RESICOCheck: s.RESICOCheck, Lines: s.Lines,
+		RESICOCheck: s.RESICOCheck, Lines: s.Lines, LineRegimes: pfLineRegimes(s.Lines),
 	}
 	if s.Tax != nil {
 		deductions := s.Tax.PersonalDeductions
@@ -195,6 +213,7 @@ func (p pfArt152Section) Compute(y Year, params *taxparams.Params) ([]ComputedSe
 	}
 	out := fromDomain(got.Section)
 	out.InformativeIncomeOver500k = got.InformativeIncomeOver500k
+	out.DecidesInformativeIncome = true
 	return []ComputedSection{out}, nil
 }
 
@@ -217,7 +236,11 @@ func (p pfRESICOCheckSection) Compute(y Year, params *taxparams.Params) ([]Compu
 	if err != nil {
 		return nil, err
 	}
-	return []ComputedSection{fromDomain(got)}, nil
+	out := fromDomain(got)
+	out.OutsideHeadline = true
+	out.Explanation = explain.DisclaimerText(
+		explain.Disclaimer{Code: adomain.DisclaimerRESICOPFDefinitive}, explain.TextFacts{FiscalYear: y.FiscalYear})
+	return []ComputedSection{out}, nil
 }
 
 // pmComputer is pm.General or pm.RESICO.
@@ -231,11 +254,12 @@ type pmSection struct {
 	code     fiscal.RegimeCode
 	computer pmComputer
 	extras   func(pm.Extras) *PMExtras
+	notes    []NoteCode
 }
 
 // NewPM601Section registers pm_601 (régimen 601).
 func NewPM601Section(g pm.General) SectionStrategy {
-	return pmSection{code: "601", computer: g, extras: func(e pm.Extras) *PMExtras {
+	return pmSection{code: "601", computer: g, notes: []NoteCode{NoteCUSuggestion}, extras: func(e pm.Extras) *PMExtras {
 		ptu, cu := e.PTUToDistribute, e.SuggestedCU
 		return &PMExtras{PTUBase: e.PTUBase, PTUToDistribute: &ptu, SuggestedCU: &cu}
 	}}
@@ -271,8 +295,11 @@ func (p pmSection) Compute(y Year, params *taxparams.Params) ([]ComputedSection,
 			Payments: got.Tax.Payments, Withholdings: got.Tax.Withholdings,
 			Balance: adomain.Balance{Kind: got.Tax.Balance.Kind, Amount: got.Tax.Balance.Amount},
 		},
-		PMExtras: p.extras(got.Extras),
-		Lines:    got.Lines,
+		PMExtras:          p.extras(got.Extras),
+		Lines:             got.Lines,
+		LineRegimes:       sameRegime(p.code, len(got.Lines)),
+		Notes:             p.notes,
+		ObligationReasons: []ReasonCode{ReasonPersonaMoral},
 	}}, nil
 }
 
@@ -289,15 +316,21 @@ var regimeArgLines = []domain.LineCode{
 // salaryLines belong to the salary chapter (605).
 var salaryLines = []domain.LineCode{adomain.LineArt152Salary, adomain.LineArt152SalaryISR}
 
-// LineRegimes names the regime each line belongs to (contract
-// AnnualBreakdownLine.regime_code; "" for a section-wide line): a PM
-// section's lines are its regime's, a PF line its chapter's or payment's.
-func LineRegimes(kind adomain.SectionKind, regimes []fiscal.RegimeCode, lines []domain.Line) []fiscal.RegimeCode {
+// sameRegime are n lines of one regime: a PM section's.
+func sameRegime(code fiscal.RegimeCode, n int) []fiscal.RegimeCode {
+	out := make([]fiscal.RegimeCode, n)
+	for i := range out {
+		out[i] = code
+	}
+	return out
+}
+
+// pfLineRegimes names the regime each PF line belongs to: its chapter's or
+// payment's, "" for a section-wide line.
+func pfLineRegimes(lines []domain.Line) []fiscal.RegimeCode {
 	out := make([]fiscal.RegimeCode, len(lines))
 	for i, l := range lines {
 		switch {
-		case (kind == adomain.SectionPM601 || kind == adomain.SectionPMRESICO) && len(regimes) == 1:
-			out[i] = regimes[0]
 		case slices.Contains(regimeArgLines, l.Code) && len(l.Args) > 0:
 			out[i] = fiscal.RegimeCode(l.Args[0])
 		case slices.Contains(salaryLines, l.Code):

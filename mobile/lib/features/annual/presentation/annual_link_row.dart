@@ -29,23 +29,28 @@ class AnnualLinkRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final detail = subtitle;
+    // Its own semantics node: a lone row would otherwise merge into the
+    // card around it, and the whole card would be announced as this button.
     // Its own transparent Material: the cards it sits on paint a surface,
     // which would hide the ink of the nearest Material ancestor.
-    return Material(
-      type: MaterialType.transparency,
-      child: ListTile(
-        contentPadding: EdgeInsets.zero,
-        title: Text(title, style: text.bodyLarge),
-        subtitle: detail == null
-            ? null
-            : Text(
-                detail,
-                style: text.bodyMedium?.copyWith(
-                  color: context.tokens.colors.muted,
+    return Semantics(
+      container: true,
+      child: Material(
+        type: MaterialType.transparency,
+        child: ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(title, style: text.bodyLarge),
+          subtitle: detail == null
+              ? null
+              : Text(
+                  detail,
+                  style: text.bodyMedium?.copyWith(
+                    color: context.tokens.colors.muted,
+                  ),
                 ),
-              ),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => unawaited(context.push<void>(location)),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => unawaited(context.push<void>(location)),
+        ),
       ),
     );
   }
