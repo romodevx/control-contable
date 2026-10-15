@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Control Contable API
-  version: 0.13.0
+  version: 0.14.0
   summary: Monthly IVA and provisional ISR estimates for Mexican taxpayers.
   description: |
     Spec-first contract (single source of truth). Server stubs (oapi-codegen),
@@ -370,12 +370,22 @@ paths:
     post:
       tags: [Auth]
       operationId: logout
-      x-frozen: sha256:301257a867a314c9dab566d583aa7afc1be45ff7fcc8959a1b46f561899a2ecf
+      x-frozen: sha256:528bd1fd3fee7a711047f12039d7a82dc3d8ff4f022da315fd50ffafec3acca6
       summary: Revoke the refresh token family
       description: >-
         Revokes the family of the given refresh token (US-A2c). Idempotent: a refresh token
         that is already revoked or not the caller's also answers `204`, so another user's
         token state is never revealed. A missing or invalid bearer answers `401`.
+
+
+        **Push device (0.14.0).** The optional `device_id` is this installation's id (the
+        `registerDevice` `id`). When given, the caller's device row with that id is removed in
+        the same transaction as the revocation, so a phone that changes hands stops receiving
+        the previous user's reminders even when the app's earlier `unregisterDevice` call was
+        lost (M9 security gate F1). Another user's or an unknown id removes nothing and still
+        answers `204` (no oracle). It is not gated by `module_reminders`: removing one's own
+        device is always allowed, and with the module OFF there is nothing else to undo. A
+        malformed id is `400 validation_failed` on `device_id`.
       x-module: module_auth
       security:
         - bearerAuth: []
@@ -383,7 +393,7 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/RefreshRequest' }
+            schema: { $ref: '#/components/schemas/LogoutRequest' }
       responses:
         '204':
           description: Logged out (also when the token was already revoked or not the caller's).
@@ -6333,6 +6343,24 @@ components:
           description: The opaque refresh token from `TokenPair`. A malformed value answers `401`, not `400`.
       examples:
         - refresh_token: 0199d4a2-7c1e-7b3a-9f10-2c5e8a1b4d01.example-refresh-secret
+    LogoutRequest:
+      x-frozen: sha256:53f9f2587fe145797fd42a23e06d23daaaa524c658b420c91ccc233e75aec2bd
+      type: object
+      required: [refresh_token]
+      additionalProperties: false
+      description: >-
+        `logout`'s body: `RefreshRequest` plus the optional push `device_id` (0.14.0). Without
+        `device_id` it is exactly a `RefreshRequest`.
+      properties:
+        refresh_token:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: The opaque refresh token from `TokenPair`. A malformed value answers `401`, not `400`.
+        device_id: { $ref: '#/components/schemas/InstallationId' }
+      examples:
+        - refresh_token: 0199d4a2-7c1e-7b3a-9f10-2c5e8a1b4d01.example-refresh-secret
+          device_id: 0199d4a4-3c4d-7f5e-8a61-7c8d9e0f1a23
     TokenPair:
       x-frozen: sha256:b8d1883475a8e91a7644fa37845466380c268c0f6f27e357e6e81fe50a5e09af
       type: object

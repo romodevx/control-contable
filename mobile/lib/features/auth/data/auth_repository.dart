@@ -2,7 +2,7 @@ import 'package:control_contable/api/generated/clients/auth_client.dart';
 import 'package:control_contable/api/generated/models/auth_session.dart';
 import 'package:control_contable/api/generated/models/legal_document.dart';
 import 'package:control_contable/api/generated/models/login_request.dart';
-import 'package:control_contable/api/generated/models/refresh_request.dart';
+import 'package:control_contable/api/generated/models/logout_request.dart';
 import 'package:control_contable/api/generated/models/register_request.dart';
 import 'package:control_contable/api/generated/models/resend_verification_request.dart';
 import 'package:control_contable/api/generated/models/verify_email_request.dart';
@@ -71,7 +71,7 @@ class ApiAuthRepository implements AuthRepository {
 
   @override
   Future<void> logout(String refreshToken) => guardApi(
-    () => _client.logout(body: RefreshRequest(refreshToken: refreshToken)),
+    () => _client.logout(body: LogoutRequest(refreshToken: refreshToken)),
   );
 }
 

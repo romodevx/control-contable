@@ -163,7 +163,7 @@ class _AuthClient implements AuthClient {
   }
 
   @override
-  Future<void> logout({required RefreshRequest body}) async {
+  Future<void> logout({required LogoutRequest body}) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
