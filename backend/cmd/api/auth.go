@@ -21,6 +21,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
 	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit"
 	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit/ratelimitpg"
+	reminderstore "github.com/romodevx/control-contable/backend/internal/reminders/infra/store"
 )
 
 // signUpNoticeInterval is D3's "at most once per hour" per email for the
@@ -134,7 +135,9 @@ func newSessionHandler(txm *pgdb.TxManager, keys authCrypto, limits *ratelimitpg
 		Accounts: infra.NewAccountStore(keys.emails), Access: keys.access,
 		Rotations: limits.Bucket(usecase.RefreshFamilyPolicy), Logger: logger,
 	})
-	logout := usecase.NewLogout(usecase.LogoutDeps{Tx: txm, Tokens: tokens, Logger: logger})
+	// The push device goes with the session (M9 security gate F1): the
+	// reminders store runs in the logout's own unit of work (pgdb.Conn).
+	logout := usecase.NewLogout(usecase.LogoutDeps{Tx: txm, Tokens: tokens, Devices: reminderstore.NewDevices(), Logger: logger})
 	return authhttp.NewSessionHandler(refresh, logout)
 }
 

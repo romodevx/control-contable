@@ -224,6 +224,17 @@ void main() {
       expect(adapter.requests.single.method, 'POST');
       expect(lastBody(), {'refresh_token': 'refresh-1'});
     });
+
+    test('logout sends the push device id when given (0.14.0)', () async {
+      adapter.reply('/v1/auth/logout', (status: 204, body: null));
+
+      await repository.logout('refresh-1', deviceId: 'installation-1');
+
+      expect(lastBody(), {
+        'refresh_token': 'refresh-1',
+        'device_id': 'installation-1',
+      });
+    });
   });
   // M1-16 FU1: an answer that does not match the contract must surface as
   // the generic ApiUnexpected, never as a raw TypeError (which escaped every

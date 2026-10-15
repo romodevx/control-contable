@@ -10,8 +10,10 @@ package fcm
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -159,23 +161,13 @@ func toMessage(n usecase.PushNotification, token usecase.PushToken) *messaging.M
 	return m
 }
 
-// classifyBatch turns FCM's per-message responses into deliveries. An
-// INVALID_ARGUMENT answered for every one of several devices is the message,
-// not the tokens: it is reported as rejected so no device is deleted for it.
+// classifyBatch turns FCM's per-message responses into deliveries, in the
+// order of the targets.
 func classifyBatch(ctx context.Context, targets []usecase.PushTarget, responses []*messaging.SendResponse) []usecase.PushDelivery {
 	deliveries := make([]usecase.PushDelivery, len(targets))
-	invalidArgs := 0
 	for i, target := range targets {
 		outcome, class := classify(ctx, responses[i])
 		deliveries[i] = usecase.PushDelivery{DeviceID: target.DeviceID, Outcome: outcome, ErrorClass: class}
-		if class == classInvalidArgument {
-			invalidArgs++
-		}
-	}
-	if len(targets) > 1 && invalidArgs == len(targets) {
-		for i := range deliveries {
-			deliveries[i].Outcome = usecase.PushRejected
-		}
 	}
 	return deliveries
 }
@@ -194,7 +186,7 @@ func classify(ctx context.Context, r *messaging.SendResponse) (usecase.PushOutco
 	case messaging.IsUnregistered(err):
 		return usecase.PushTokenInvalid, classUnregistered
 	case messaging.IsInvalidArgument(err):
-		return usecase.PushTokenInvalid, classInvalidArgument
+		return invalidArgument(err), classInvalidArgument
 	case messaging.IsSenderIDMismatch(err):
 		return usecase.PushRejected, classSenderIDMismatch
 	case messaging.IsThirdPartyAuthError(err):
@@ -240,4 +232,56 @@ func httpStatus(err error) (int, bool) {
 		_ = resp.Body.Close() // a buffered copy: closing cannot fail
 	}
 	return resp.StatusCode, true
+}
+
+// fcmTokenField is the field FCM names in its google.rpc.BadRequest detail
+// when the registration token itself is what it refused.
+const fcmTokenField = "message.token"
+
+// invalidArgument attributes an INVALID_ARGUMENT (M9 security gate F2): the
+// device's token is invalid only when FCM's BadRequest detail names the
+// token field; any other field, or none, is the message, so the device is
+// kept (rejected) and an UNREGISTERED later cleans a token that is gone.
+func invalidArgument(err error) usecase.PushOutcome {
+	if refusedField(err, fcmTokenField) {
+		return usecase.PushTokenInvalid
+	}
+	return usecase.PushRejected
+}
+
+// fcmErrorBody is the part of an FCM v1 error body that names the refused
+// fields. Descriptions are never read: they may quote the input.
+type fcmErrorBody struct {
+	Error struct {
+		Details []struct {
+			FieldViolations []struct {
+				Field string `json:"field"`
+			} `json:"fieldViolations"`
+		} `json:"details"`
+	} `json:"error"`
+}
+
+// maxErrorBodyBytes bounds how much of an error body is decoded.
+const maxErrorBodyBytes = 64 << 10
+
+// refusedField reports whether FCM's answer to err names field among its
+// BadRequest field violations.
+func refusedField(err error, field string) bool {
+	resp := errorutils.HTTPResponse(err)
+	if resp == nil || resp.Body == nil {
+		return false
+	}
+	defer func() { _ = resp.Body.Close() }() // a buffered copy: closing cannot fail
+	var body fcmErrorBody
+	if json.NewDecoder(io.LimitReader(resp.Body, maxErrorBodyBytes)).Decode(&body) != nil {
+		return false
+	}
+	for _, detail := range body.Error.Details {
+		for _, violation := range detail.FieldViolations {
+			if violation.Field == field {
+				return true
+			}
+		}
+	}
+	return false
 }

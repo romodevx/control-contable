@@ -9,6 +9,7 @@ import '../models/auth_session.dart';
 import '../models/delete_account_request.dart';
 import '../models/legal_document_list.dart';
 import '../models/login_request.dart';
+import '../models/logout_request.dart';
 import '../models/refresh_request.dart';
 import '../models/register_request.dart';
 import '../models/resend_verification_request.dart';
@@ -62,8 +63,10 @@ abstract class AuthClient {
   /// Revoke the refresh token family.
   ///
   /// Revokes the family of the given refresh token (US-A2c). Idempotent: a refresh token that is already revoked or not the caller's also answers `204`, so another user's token state is never revealed. A missing or invalid bearer answers `401`.
+  ///
+  /// **Push device (0.14.0).** The optional `device_id` is this installation's id (the `registerDevice` `id`). When given, the caller's device row with that id is removed in the same transaction as the revocation, so a phone that changes hands stops receiving the previous user's reminders even when the app's earlier `unregisterDevice` call was lost (M9 security gate F1). Another user's or an unknown id removes nothing and still answers `204` (no oracle). It is not gated by `module_reminders`: removing one's own device is always allowed, and with the module OFF there is nothing else to undo. A malformed id is `400 validation_failed` on `device_id`.
   @POST('/v1/auth/logout')
-  Future<void> logout({@Body() required RefreshRequest body});
+  Future<void> logout({@Body() required LogoutRequest body});
 
   /// Current user profile
   @GET('/v1/me')

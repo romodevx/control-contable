@@ -26,12 +26,22 @@ class ReminderPushSync {
   final ErrorReporter _reporter;
 
   /// The user just signed in with `module_reminders` on: registers when
-  /// push works, the OS allows it and the user's reminders are on.
+  /// push works, the OS allows it and the user's reminders are on. A
+  /// registration still marked from before (a sign-out whose delete
+  /// failed, M9 security gate F1) is claimed for this user either way, and
+  /// removed unless this user registers (reminders off, or no OS
+  /// permission), so the previous user's reminders never reach this phone.
   Future<void> afterSignIn() => _absorbed('reminders.sync', () async {
     if (!_messaging.isAvailable) return;
-    if (await _messaging.permission() != PushPermission.granted) return;
+    final granted = await _messaging.permission() == PushPermission.granted;
+    final leftover = await _device.registeredId() != null;
+    if (!granted && !leftover) return;
     final settings = await _repository.getSettings();
-    if (settings.enabled) await _device.register();
+    if (settings.enabled && granted) {
+      await _device.register();
+    } else if (leftover) {
+      await _device.evict();
+    }
   });
 
   /// FCM rotated the token: re-registers a registered installation.

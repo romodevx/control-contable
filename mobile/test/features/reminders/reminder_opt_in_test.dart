@@ -90,12 +90,48 @@ void main() {
       expect(await store.isRegistered(), isFalse);
     });
 
-    test('another failure is thrown, and the marker still clears', () async {
+    // M9 security gate F1: a delete that may not have happened keeps the
+    // marker, so the sign-out sends the id with the logout and the next
+    // sign-in removes what is left.
+    test('another failure is thrown and the marker kept for a retry', () async {
       await device.register();
       repository.unregisterError = const ApiUnreachable();
 
       expect(await failureOf(device.unregister), isA<ApiUnreachable>());
+      expect(await store.isRegistered(), isTrue);
+
+      repository.unregisterError = null;
+      await device.unregister();
+
+      expect(repository.unregistered, [_installationId, _installationId]);
       expect(await store.isRegistered(), isFalse);
+    });
+
+    test('registeredId is the installation id only while registered', () async {
+      expect(await device.registeredId(), isNull);
+
+      await device.register();
+
+      expect(await device.registeredId(), _installationId);
+    });
+
+    test('evict claims the installation, then removes it', () async {
+      store.registered = true; // left by another user's failed sign-out
+
+      await device.evict();
+
+      expect(repository.registered.single.installationId, _installationId);
+      expect(repository.unregistered, [_installationId]);
+      expect(await store.isRegistered(), isFalse);
+    });
+
+    test('evict without a token is PushUnavailable, the marker kept', () async {
+      store.registered = true;
+      messaging.currentToken = null;
+
+      expect(await failureOf(device.evict), isA<PushUnavailable>());
+      expect(repository.unregistered, isEmpty);
+      expect(await store.isRegistered(), isTrue);
     });
   });
 
