@@ -5,28 +5,24 @@ import 'package:control_contable/core/forms/field_error.dart';
 import 'package:control_contable/core/forms/form_field_model.dart';
 import 'package:control_contable/core/records/record_month.dart';
 import 'package:control_contable/features/incomes/application/income_form_model.dart';
-import 'package:control_contable/features/incomes/domain/income_basis.dart';
 
 /// What the income form sends, and where the server's verdicts land. No
 /// withholding amount is ever sent: the server derives it from the facts
 /// (ADR-0008).
 extension IncomeFormRequest on IncomeFormModel {
   /// The fields a server path names, for `matchServerFieldErrors`.
-  Map<String, AppFormFieldModel> get fieldsByPath {
-    final accrual = basis == IncomeBasis.accrual;
-    return {
-      'amount_cents': amount,
-      'iva_cents': ivaAmount,
-      'iva_rate': ivaRate,
-      ...facts.fieldsByPath,
-      if (regimes.length > 1) 'regime_code': regime,
-      if (activities.length > 1) 'platform_activity': activity,
-      'collected_on': accrual ? otherDate : bookingDate,
-      'invoiced_on': accrual ? bookingDate : otherDate,
-      'cfdi_uuid': cfdiUuid,
-      'description': description,
-    };
-  }
+  Map<String, AppFormFieldModel> get fieldsByPath => {
+    'amount_cents': amount,
+    'iva_cents': ivaAmount,
+    'iva_rate': ivaRate,
+    ...facts.fieldsByPath,
+    if (regimes.length > 1) 'regime_code': regime,
+    if (activities.length > 1) 'platform_activity': activity,
+    'collected_on': collectedOn,
+    'invoiced_on': invoicedOn,
+    'cfdi_uuid': cfdiUuid,
+    'description': description,
+  };
 
   /// A 625 income from several activities needs one chosen: its error,
   /// shown before anything is sent.
@@ -37,9 +33,6 @@ extension IncomeFormRequest on IncomeFormModel {
 
   /// The request body (call only after the form validated).
   IncomeCreate toCreate() {
-    final accrual = basis == IncomeBasis.accrual;
-    final other = otherDate.date;
-    final otherDay = other == null ? null : businessDate(other);
     return IncomeCreate(
       id: sessionId,
       regimeCode: regimeCode,
@@ -51,8 +44,8 @@ extension IncomeFormRequest on IncomeFormModel {
       amountCents: amount.centavos!,
       ivaRate: IvaRate.fromJson(ivaRate.value!),
       ivaCents: amounts.ivaCents,
-      invoicedOn: accrual ? bookingDay : otherDay,
-      collectedOn: accrual ? otherDay : bookingDay,
+      invoicedOn: _dayOf(invoicedOn.date),
+      collectedOn: _dayOf(collectedOn.date),
       platformActivity: platformActivity,
       cfdiUuid: cfdiUuid.value.isEmpty ? null : cfdiUuid.value.toUpperCase(),
       description: description.value.isEmpty ? null : description.value,
@@ -85,4 +78,6 @@ extension IncomeFormRequest on IncomeFormModel {
         if (current[key] != value) key: value,
     };
   }
+
+  String? _dayOf(DateTime? date) => date == null ? null : businessDate(date);
 }

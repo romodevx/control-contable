@@ -25,12 +25,12 @@ bool incomeMoreOpen(IncomeFormModel model, {required bool moreOpen}) =>
     <AppFormFieldModel>[
       model.description,
       model.ivaAmount,
-      model.otherDate,
+      if (!model.isAccrual) model.invoicedOn,
       model.cfdiUuid,
       if (model.facts.viaPlatformIsSecondary) model.facts.viaPlatform,
     ].any((field) => field.error != null);
 
-/// The fields of the income page (WH-11): the date and the amount, how it
+/// The fields of the income page (WH-11): the dates and the amount, how it
 /// is taxed, then who was billed and only the follow-up questions that can
 /// change a withholding, the derived card ([card]), the regime and
 /// activity only when there is a choice, then "Más detalles". At most six
@@ -52,10 +52,7 @@ List<Widget> incomeFormFields(
     options: yesNoOptions(l10n),
   );
   return [
-    AppDateField(
-      field: model.bookingDate,
-      textInputAction: TextInputAction.next,
-    ),
+    ..._dates(model, l10n),
     Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -118,10 +115,12 @@ List<Widget> incomeFormFields(
           field: model.ivaAmount,
           textInputAction: TextInputAction.next,
         ),
-        AppDateField(
-          field: model.otherDate,
-          textInputAction: TextInputAction.next,
-        ),
+        if (!model.isAccrual)
+          AppDateField(
+            key: ObjectKey(model.invoicedOn),
+            field: model.invoicedOn,
+            textInputAction: TextInputAction.next,
+          ),
         AppTextField(
           field: model.cfdiUuid,
           keyboardType: TextInputType.visiblePassword,
@@ -134,6 +133,25 @@ List<Widget> incomeFormFields(
     ),
   ];
 }
+
+/// The booking date first (MODULE-incomes §2.2). An accrual income (its
+/// regime's served `income_basis`) books by the invoice date, and its IVA
+/// waits for the collection date (LIVA 1-B): that date shows right under
+/// it, empty until the user is paid ("Por cobrar" is a valid state).
+List<Widget> _dates(IncomeFormModel model, AppLocalizations l10n) => [
+  AppDateField(
+    key: ObjectKey(model.bookingDate),
+    field: model.bookingDate,
+    textInputAction: TextInputAction.next,
+  ),
+  if (model.isAccrual)
+    AppDateField(
+      key: ObjectKey(model.collectedOn),
+      field: model.collectedOn,
+      textInputAction: TextInputAction.next,
+      helperText: l10n.incomeCollectedOnAccrualHelp,
+    ),
+];
 
 /// The regime and the 625 activity, each only when there is a choice.
 List<Widget> _choices(IncomeFormModel model, AppLocalizations l10n) => [

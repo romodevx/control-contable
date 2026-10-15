@@ -73,7 +73,7 @@ class IncomeFormModel extends ChangeNotifier {
     this.editing,
   }) : _regimes = regimes,
        _newId = newId,
-       basis = incomeBasisOf(
+       _basis = incomeBasisOf(
          editing?.regimeCode ?? regimes.first.regimeCode,
          regimes,
        ),
@@ -91,9 +91,10 @@ class IncomeFormModel extends ChangeNotifier {
     }
     ivaRate.addListener(_recompute);
     form.addListener(_followFacts);
+    regime.addListener(_followBasis);
     // Text fields notify the form only when their error changes: the dates
     // feed the withholding preview, so each new date must reach listeners.
-    for (final date in [bookingDate, otherDate]) {
+    for (final date in [invoicedOn, collectedOn]) {
       date.text.addListener(notifyListeners);
     }
   }
@@ -110,9 +111,15 @@ class IncomeFormModel extends ChangeNotifier {
   /// Whether this form edits a stored income.
   bool get isEditing => editing != null;
 
-  /// Which date books the income: the served basis of the edited income's
-  /// regime, else of the first regime.
-  final IncomeBasis basis;
+  /// Which date books the income: the served basis of the chosen regime
+  /// (MODULE-incomes §2.2), so a taxpayer with mixed regimes gets the
+  /// dates of the income being registered.
+  IncomeBasis get basis => _basis;
+  IncomeBasis _basis;
+
+  /// Whether the income books by its invoice date (and its IVA waits for
+  /// the collection date, LIVA 1-B).
+  bool get isAccrual => _basis == IncomeBasis.accrual;
 
   final List<TaxpayerRegime> _regimes;
   final String Function() _newId;
@@ -127,8 +134,16 @@ class IncomeFormModel extends ChangeNotifier {
   /// The fields, in reading order.
   final AppFormController form = AppFormController();
 
-  /// The booking date (collection, or invoice for an accrual regime).
-  late final DateFieldController bookingDate;
+  /// The invoice date: books an accrual income (required); optional
+  /// under "Más detalles" for a cash one.
+  late final DateFieldController invoicedOn;
+
+  /// The collection date: books a cash income (required); for an accrual
+  /// one it sets the IVA month and may stay empty ("Por cobrar").
+  late final DateFieldController collectedOn;
+
+  /// The date that books the income ([basis]).
+  DateFieldController get bookingDate => isAccrual ? invoicedOn : collectedOn;
 
   /// Subtotal before IVA.
   late final MoneyFieldController amount;
@@ -151,25 +166,37 @@ class IncomeFormModel extends ChangeNotifier {
   /// IVA charged; prefilled from the rate (the rate's IVA when empty).
   late final MoneyFieldController ivaAmount;
 
-  /// The date that does not book the income.
-  late final DateFieldController otherDate;
-
   /// The CFDI's folio fiscal.
   late final AppFieldController cfdiUuid;
 
   void _build(DateTime today) {
-    final accrual = basis == IncomeBasis.accrual;
+    final accrual = isAccrual;
     final stored = editing;
     String day(String? date) =>
         date == null ? '' : formatDate(parseBusinessDate(date));
     String money(int? cents) => cents == null ? '' : formatCentavos(cents);
-    bookingDate = form.dateField(
-      label: accrual ? copy.invoicedOn : copy.collectedOn,
+    // A new income prefills only its booking date: an empty collection
+    // date on an accrual income is the valid "Por cobrar".
+    invoicedOn = DateFieldController(
+      label: copy.invoicedOn,
+      isRequired: accrual,
       keepForNext: true,
       initialText: stored == null
-          ? formatDate(today)
-          : day(accrual ? stored.invoicedOn : stored.collectedOn),
+          ? (accrual ? formatDate(today) : '')
+          : day(stored.invoicedOn),
     );
+    collectedOn = DateFieldController(
+      label: copy.collectedOn,
+      isRequired: !accrual,
+      keepForNext: true,
+      initialText: stored == null
+          ? (accrual ? '' : formatDate(today))
+          : day(stored.collectedOn),
+    );
+    // Reading order: the booking date first, then (accrual) the collection
+    // date shown under it; a cash invoice date waits in "Más detalles".
+    form.add(bookingDate);
+    if (accrual) form.add(collectedOn);
     amount = form.moneyField(
       label: copy.amount,
       initialText: money(stored?.amountCents),
@@ -214,14 +241,7 @@ class IncomeFormModel extends ChangeNotifier {
       isRequired: false,
       initialText: money(stored?.ivaCents),
     );
-    otherDate = form.dateField(
-      label: accrual ? copy.collectedOn : copy.invoicedOn,
-      isRequired: false,
-      keepForNext: true,
-      initialText: stored == null
-          ? ''
-          : day(accrual ? stored.collectedOn : stored.invoicedOn),
-    );
+    if (!accrual) form.add(invoicedOn);
     cfdiUuid = form.textField(
       label: copy.cfdiUuid,
       isRequired: false,
@@ -279,8 +299,7 @@ class IncomeFormModel extends ChangeNotifier {
   /// The withholding date: collection, else invoice (the payer withholds
   /// when it pays, MODULE-withholdings §4.1).
   String? get withholdingDay {
-    final collected = basis == IncomeBasis.accrual ? otherDate : bookingDate;
-    final date = collected.date ?? bookingDate.date;
+    final date = collectedOn.date ?? invoicedOn.date;
     return date == null ? null : businessDate(date);
   }
 
@@ -340,6 +359,28 @@ class IncomeFormModel extends ChangeNotifier {
       if (!isEditing) facts.applyLastUsed(defaults.lastUsed);
     }
     _recompute();
+  }
+
+  /// The regime changed: its dates follow its basis. A new income's
+  /// booking date the user did not type (the prefilled today) moves to the
+  /// new booking field; one they typed, or an edited income's stored one,
+  /// is copied, never lost.
+  void _followBasis() {
+    final next = incomeBasisOf(regimeCode, _regimes);
+    if (next == _basis) return;
+    final from = bookingDate;
+    _basis = next;
+    final to = bookingDate;
+    invoicedOn.isRequired = isAccrual;
+    collectedOn.isRequired = !isAccrual;
+    if (to.value.isEmpty) {
+      to.text.text = from.text.text;
+      if (!isEditing && !from.isDirty) from.text.clear();
+    }
+    // The invoice date shows first (accrual) or in "Más detalles" (cash):
+    // the error summary follows it there.
+    form.moveBefore(invoicedOn, isAccrual ? collectedOn : cfdiUuid);
+    notifyListeners();
   }
 
   /// Housing rent carries no IVA: the rate is held at exempt meanwhile.

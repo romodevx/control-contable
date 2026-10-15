@@ -1,6 +1,8 @@
 import 'package:control_contable/api/generated/models/counterparty_kind.dart';
 import 'package:control_contable/api/generated/models/error_code.dart';
+import 'package:control_contable/api/generated/models/income_basis.dart';
 import 'package:control_contable/api/generated/models/iva_rate.dart';
+import 'package:control_contable/api/generated/models/person_type.dart';
 import 'package:control_contable/api/generated/models/withholder.dart';
 import 'package:control_contable/core/access/read_only_access.dart';
 import 'package:control_contable/core/network/api_failure.dart';
@@ -18,6 +20,7 @@ import 'pump_incomes.dart';
 const _amount = 'Monto sin IVA';
 const _description = 'Descripción (opcional)';
 const _collectedOn = 'Fecha de cobro';
+const _invoicedOn = 'Fecha de factura';
 const _ivaAmount = 'IVA cobrado (opcional)';
 const _more = 'Más detalles';
 const _q1 = '¿A quién le facturaste?';
@@ -291,6 +294,45 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+  });
+
+  // MODULE-incomes §2.2 (FU1/D6): a stored date is the user's, not a
+  // prefill. Switching the regime of an edited income never erases it.
+  group('mixed regimes, edit', () {
+    testWidgets('switching an accrual income to a cash regime keeps its '
+        'stored invoice date', (tester) async {
+      harness.incomes.accrualRegimes.add('601');
+      harness.incomes.incomes.add(
+        income(
+          id: _logoId,
+          regime: '601',
+          basis: IncomeBasis.accrual,
+          invoicedOn: '2026-10-01',
+          collectedOn: null,
+        ),
+      );
+      await harness.pump(
+        tester,
+        taxpayer: taxpayer(
+          personType: PersonType.moral,
+          regimes: [
+            heldRegime('601', incomeBasis: IncomeBasis.accrual),
+            heldRegime('626'),
+          ],
+        ),
+      );
+      await tester.tap(find.text('Diseño de logotipo'));
+      await tester.pumpAndSettle();
+
+      await tapText(tester, 'Régimen 626');
+      await tapText(tester, _more);
+      expect(_textOf(tester, '$_invoicedOn (opcional)'), '01/10/2026');
+      await tapText(tester, 'Guardar');
+
+      final patch = harness.incomes.patches.single;
+      expect(patch['regime_code'], '626');
+      expect(patch.containsKey('invoiced_on'), isFalse, reason: 'kept');
     });
   });
 }

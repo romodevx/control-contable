@@ -110,8 +110,11 @@ class AppTextField extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.xs),
+            // The helper is read with the field (its hint), not as a
+            // separate node a screen reader may never reach.
             Semantics(
               label: label,
+              hint: helperText,
               child: TextField(
                 controller: field.text,
                 focusNode: field.focusNode,
@@ -135,8 +138,16 @@ class AppTextField extends StatelessWidget {
                 decoration: InputDecoration(
                   hintText: hintText,
                   prefixText: prefixText,
-                  helperText: helperText,
-                  helperMaxLines: 3,
+                  helper: helperText == null
+                      ? null
+                      : ExcludeSemantics(
+                          child: Text(
+                            helperText!,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
                   suffixIcon: suffixIcon,
                   errorText: error == null
                       ? null
