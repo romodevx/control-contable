@@ -114,9 +114,6 @@ func NewEstimator(deps EstimateDeps) (*Estimator, error) {
 	return &Estimator{deps: deps}, nil
 }
 
-// regimeRIF is the bimonthly régimen 621: its payment follows the bimester.
-const regimeRIF fiscal.RegimeCode = "621"
-
 // ledgerRecords is what one estimate reads, in one unit of work: one fiscal
 // year's rows and the previous December's expense rows (January's withheld
 // IVA credit).

@@ -41,8 +41,9 @@ const (
 	recordTimeout = 10 * time.Second
 	// maxAttempts is the last attempt a transient failure is retried at.
 	maxAttempts = 3
-	// regimeBimonthly is the 621 regime: its payment follows the bimester.
-	regimeBimonthly = "621"
+	// pushDisabledEvent is the log event an operator alert matches: the
+	// module is ON but this worker has no push sender (§2.4 step 1).
+	pushDisabledEvent = "reminders_push_disabled"
 )
 
 // The error classes the job writes (notification_log.error_class); the
@@ -98,6 +99,8 @@ type JobDeps struct {
 // concurrent use (two instances may run it at once).
 type ReminderJob struct {
 	deps JobDeps
+	// pushOffWarned makes the push-disabled warning once per process.
+	pushOffWarned sync.Once
 }
 
 // NewReminderJob validates deps and builds the job.
@@ -150,12 +153,18 @@ type runPlan struct {
 	amountsOn  bool // module_tax_engine effectively ON
 }
 
-// Run implements worker.Job. A run with module_reminders OFF does nothing.
-// It returns ctx's error when cancelled (claimed reminders stay pending for
-// the lease retry) and ErrReminderFailures when some users failed.
+// Run implements worker.Job. A run with module_reminders OFF, or on a
+// worker whose push sender is off, does nothing: no reminder is claimed, so
+// none is consumed. It returns ctx's error when cancelled (claimed
+// reminders stay pending for the lease retry) and ErrReminderFailures when
+// some users failed.
 func (j *ReminderJob) Run(ctx context.Context) error {
 	if !j.deps.Flags.Enabled(ctx, ModuleReminders) {
 		j.deps.Logger.DebugContext(ctx, "reminders skipped: module off", slog.String("job", reminderJobName))
+		return nil
+	}
+	if !pushEnabled(j.deps.Push) {
+		j.skipPushDisabled(ctx)
 		return nil
 	}
 	plan, err := j.plan(ctx)
@@ -172,6 +181,20 @@ func (j *ReminderJob) Run(ctx context.Context) error {
 		return fmt.Errorf("%w: %d", ErrReminderFailures, counts.errors)
 	}
 	return nil
+}
+
+// skipPushDisabled reports a run skipped because push is off: a warning
+// carrying pushDisabledEvent the first time, a debug line after.
+func (j *ReminderJob) skipPushDisabled(ctx context.Context) {
+	warned := false
+	j.pushOffWarned.Do(func() {
+		warned = true
+		j.deps.Logger.WarnContext(ctx, "reminders skipped: push disabled, nothing is claimed until FCM is configured",
+			slog.String("job", reminderJobName), slog.String("event", pushDisabledEvent))
+	})
+	if !warned {
+		j.deps.Logger.DebugContext(ctx, "reminders skipped: push disabled", slog.String("job", reminderJobName))
+	}
 }
 
 // plan reads the holidays and decides whether today is the due date of the
@@ -412,13 +435,14 @@ func after(a, b domain.Period) bool {
 	return a.Year() > b.Year() || (a.Year() == b.Year() && a.Month() > b.Month())
 }
 
+// onlyBimonthly is the kernel's rule (fiscal.PaysBimonthly), the one the
+// estimate's due_date reads too.
 func onlyBimonthly(held []HeldRegime) bool {
-	for _, h := range held {
-		if h.Code != regimeBimonthly {
-			return false
-		}
+	codes := make([]fiscal.RegimeCode, len(held))
+	for i, h := range held {
+		codes[i] = fiscal.RegimeCode(h.Code)
 	}
-	return len(held) > 0
+	return fiscal.PaysBimonthly(codes)
 }
 
 // notification builds the message: names in the switcher's order and,

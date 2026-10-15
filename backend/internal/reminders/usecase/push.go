@@ -157,11 +157,32 @@ func ValidatePush(n PushNotification, targets []PushTarget) error {
 	return nil
 }
 
+// PushSwitch is implemented by a PushSender that can be off for the whole
+// process (DisabledPushSender). The reminder job asks it before claiming
+// anything, so a worker without push never consumes a reminder; a sender
+// that does not implement it is taken to be on.
+type PushSwitch interface {
+	PushEnabled() bool
+}
+
+// pushEnabled reports whether s can deliver at all.
+func pushEnabled(s PushSender) bool {
+	sw, ok := s.(PushSwitch)
+	return !ok || sw.PushEnabled()
+}
+
 // DisabledPushSender is the PushSender of a worker without push configured:
-// every Send fails with ErrPushDisabled.
+// it reports itself off (PushSwitch) and every Send fails with
+// ErrPushDisabled.
 type DisabledPushSender struct{}
 
-var _ PushSender = DisabledPushSender{}
+var (
+	_ PushSender = DisabledPushSender{}
+	_ PushSwitch = DisabledPushSender{}
+)
+
+// PushEnabled implements PushSwitch: always false.
+func (DisabledPushSender) PushEnabled() bool { return false }
 
 // Send implements PushSender.
 func (DisabledPushSender) Send(context.Context, PushNotification, []PushTarget) ([]PushDelivery, error) {

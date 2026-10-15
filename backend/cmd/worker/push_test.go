@@ -18,7 +18,7 @@ import (
 const testFCMProject = "cc-worker-test"
 
 // A worker without FCM_PROJECT_ID starts with push disabled and says so; the
-// reminder job then records ErrPushDisabled instead of sending.
+// reminder job then claims nothing until push is configured.
 func TestNewPushSender_disabledWithoutProject(t *testing.T) {
 	var logs bytes.Buffer
 
