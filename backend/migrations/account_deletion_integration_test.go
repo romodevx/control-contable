@@ -54,6 +54,8 @@ func TestAccountDeletion_everyForeignKeyToUsersCascades(t *testing.T) {
 		"the M2 user-owned tables reference users directly, not only through their parent")
 	assert.Subset(t, tables, []string{"incomes", "expenses", "taxpayer_tax_inputs", "estimate_views"},
 		"the M3/M4/M5/M8 user-owned tables reference users directly, not only through their parent")
+	assert.Subset(t, tables, []string{"devices", "reminder_settings", "notification_log"},
+		"the M9 reminder tables go with the account (US-R8)")
 	assert.NotContains(t, tables, "trial_registry", "the trial registry must survive account deletion")
 }
 

@@ -177,13 +177,14 @@ WHERE r.rolname LIKE 'cc\_%' AND r.rolname <> $1
 
 // The definer's reach is exactly SELECT + DELETE on the purged tables, through policies
 // TO cc_worker_definer only; the worker and the app still cannot delete a record directly.
+// (Its read-only due_reminder_users policies, M9-02, are pinned by the reminders suite.)
 func TestPurgeSoftDeleted_NoReachBeyondThePurge(t *testing.T) {
 	db := pgtest.NewDatabase(t)
 	owner := db.Connect(t, pgtest.RoleOwner)
 
 	policies := queryStrings(t, owner, `
 SELECT tablename || ' ' || cmd FROM pg_policies
-WHERE $1 = ANY (roles) AND tablename <> 'users' ORDER BY 1`, workerDefinerRole)
+WHERE $1 = ANY (roles) AND tablename <> 'users' AND policyname LIKE '%\_purge\_%' ORDER BY 1`, workerDefinerRole)
 	var want []string
 	for _, target := range []string{
 		purgeTargetFailures, purgeTargetVerifications, purgeTargetExpenses, purgeTargetIncomes,
