@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/romodevx/control-contable/backend/internal/auth/domain"
+	"github.com/romodevx/control-contable/backend/internal/platform/access"
 	"github.com/romodevx/control-contable/backend/internal/platform/tx"
 )
 
@@ -18,20 +19,35 @@ type ProfileAccounts interface {
 	Rename(ctx context.Context, id domain.UserID, name domain.Name) error
 }
 
+// AccessViewer reads a user's access as the client sees it now
+// (access.Policy.View): the one computation every screen shares.
+type AccessViewer interface {
+	View(ctx context.Context, userID string) (access.View, error)
+}
+
 // Profile reads and edits the signed-in user's own account (US-A3).
 type Profile struct {
 	tx       tx.Manager
 	accounts ProfileAccounts
+	access   AccessViewer
 }
 
 // NewProfile returns the use case.
-func NewProfile(units tx.Manager, accounts ProfileAccounts) *Profile {
-	return &Profile{tx: units, accounts: accounts}
+func NewProfile(units tx.Manager, accounts ProfileAccounts, viewer AccessViewer) *Profile {
+	return &Profile{tx: units, accounts: accounts, access: viewer}
 }
 
-// Get returns the account of userID (getMe). A deleted account is
-// ErrAccountNotFound: its access tokens outlive it by up to 15 minutes.
-func (uc *Profile) Get(ctx context.Context, userID domain.UserID) (Account, error) {
+// Me is the signed-in user's account and access state (getMe).
+type Me struct {
+	Account Account
+	Access  access.View
+}
+
+// Me returns the account of userID and its access (getMe, MODULES.md M7:
+// the app needs it whatever module_subscriptions says). A deleted account
+// is ErrAccountNotFound, before any access read: its access tokens outlive
+// it by up to 15 minutes.
+func (uc *Profile) Me(ctx context.Context, userID domain.UserID) (Me, error) {
 	var account Account
 	err := uc.tx.ReadOnly(ctx, userID.String(), func(ctx context.Context) error {
 		var err error
@@ -39,9 +55,13 @@ func (uc *Profile) Get(ctx context.Context, userID domain.UserID) (Account, erro
 		return err
 	})
 	if err != nil {
-		return Account{}, fmt.Errorf("auth: read profile: %w", err)
+		return Me{}, fmt.Errorf("auth: read profile: %w", err)
 	}
-	return account, nil
+	view, err := uc.access.View(ctx, userID.String())
+	if err != nil {
+		return Me{}, fmt.Errorf("auth: read access: %w", err)
+	}
+	return Me{Account: account, Access: view}, nil
 }
 
 // Rename sets the display name and returns the updated account (updateMe).

@@ -112,7 +112,7 @@ response on duplicate email**; **trial starts at successful verification** (serv
 - Mobile wipes tokens from `flutter_secure_storage` even if the call fails.
 
 ### US-A3 Profile
-- `GET /v1/me` → `200 User` (id, email, name, created_at). No bearer / bad token → `401`.
+- `GET /v1/me` → `200 Me` (id, email, name, created_at, and `access`: the `AccessSummary` of `getDashboard`; contract 0.16.0). No bearer / bad token → `401`.
 - `PATCH /v1/me {name}` → `200 User`. Empty body or name > 120 → `400 validation_failed`.
   Email change is out of scope.
 

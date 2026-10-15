@@ -126,6 +126,11 @@ can run in parallel with M5/M6.
   than a field on the frozen `User` (which `login`/`verifyEmail`/`updateMe` also return, so
   every one of them would have to read the access policy). Until then the onboarding shows the paywall up
   front only after a `402` in the same session (`readOnlyAccessProvider`, mobile).
+  **Answered by contract 0.16.0 (WP4)**: `getMe` answers the new `Me` schema (every `User`
+  field plus the required `access: AccessSummary`); `User` is untouched, so `login`,
+  `verifyEmail` and `updateMe` never read the access policy (the architect's objection to a
+  field on `User`), and no extra round trip or new route is needed. The backend computes it
+  with the dashboard's code (`access.Summary.View`).
 
 ### M8 — History (`module_history`)
 - **Scope**: monthly summaries for a fiscal year; open any month's breakdown (reuses M5); a "changed since last viewed" marker.
