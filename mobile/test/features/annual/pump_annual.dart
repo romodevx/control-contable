@@ -4,6 +4,7 @@ import 'package:control_contable/api/generated/models/annual_breakdown.dart';
 import 'package:control_contable/api/generated/models/annual_computed_section_kind.dart';
 import 'package:control_contable/api/generated/models/annual_estimate.dart';
 import 'package:control_contable/api/generated/models/person_type.dart';
+import 'package:control_contable/core/access/read_only_access.dart';
 import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/links/url_opener.dart';
 import 'package:control_contable/core/router/app_router.dart';
@@ -100,6 +101,9 @@ class AnnualHarness {
   /// The annual inputs server (ANN-19..21).
   final FakeAnnualInputsRepository inputs = FakeAnnualInputsRepository();
 
+  /// Whether the session already knows the user is read-only.
+  bool readOnly = false;
+
   /// The running app's providers.
   late ProviderContainer container;
 
@@ -150,6 +154,9 @@ class AnnualHarness {
     container = ProviderScope.containerOf(
       tester.element(find.byType(MaterialApp)),
     );
+    if (readOnly) {
+      container.read(readOnlyAccessProvider.notifier).markReadOnly();
+    }
     if (location != null) {
       unawaited(container.read(appRouterProvider).push<void>(location));
       await tester.pumpAndSettle();

@@ -9,8 +9,8 @@ import 'package:flutter/material.dart';
 
 /// What an `incomplete` section is missing ("Falta:"), each input a row
 /// that opens the screen completing it, with the months concerned. An
-/// input with no screen in this app version (ANN-19..21 not shipped, or an
-/// unknown target) is still named with its months, but is not a link.
+/// input this app version cannot route (an unknown target) is still named
+/// with its months, but is not a link.
 class AnnualMissingInputs extends StatelessWidget {
   /// The [missing] inputs of [taxpayerId]'s [fiscalYear].
   const new({
