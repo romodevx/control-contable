@@ -51,6 +51,29 @@ func TestPrerequisites_declaresTheAnnualOnTheEngineAndTaxpayers(t *testing.T) {
 	assert.Equal(t, []string{"module_tax_engine"}, flags.MissingPrerequisites(graph, "module_annual", on))
 }
 
+// MODULE-reminders §3 (M9-01, contract 0.13.0): a reminder lists the user's
+// taxpayers, so module_reminders is implied OFF when module_taxpayers is
+// OFF. The engine is not a prerequisite: amounts are optional and degrade.
+func TestEffectiveModules_remindersNeedTaxpayersNotTheEngine(t *testing.T) {
+	graph := flags.Prerequisites()
+	assert.Equal(t, []string{"module_taxpayers"}, graph["module_reminders"])
+	for _, tc := range []struct {
+		name    string
+		enabled []string
+		want    []string
+	}{
+		{"all ON", []string{"module_taxpayers", "module_tax_engine", "module_reminders"},
+			[]string{"module_taxpayers", "module_tax_engine", "module_reminders"}},
+		{"engine OFF is fine", []string{"module_taxpayers", "module_reminders"},
+			[]string{"module_taxpayers", "module_reminders"}},
+		{"taxpayers OFF", []string{"module_tax_engine", "module_reminders"}, []string{}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, flags.EffectiveModules(graph, tc.enabled))
+		})
+	}
+}
+
 // ANN-22: module_annual ON with any prerequisite OFF is effectively OFF,
 // the prerequisites themselves untouched.
 func TestEffectiveModules_annualNeedsTheEngineAndTaxpayers(t *testing.T) {

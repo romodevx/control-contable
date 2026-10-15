@@ -269,7 +269,7 @@ func TestFlagGate_throughTheRealRouter(t *testing.T) {
 // P0-29 FU2: an operation of an enabled module that is not built yet answers
 // exactly like a hidden module: no panic, no 500, nothing about its schema.
 func TestNotBuilt_isHiddenEvenWithItsModuleOn(t *testing.T) {
-	svc := flags.NewService(keysReader{keys: []string{"module_auth", "module_reminders"}})
+	svc := flags.NewService(keysReader{keys: []string{"module_auth", "module_taxpayers", "module_reminders"}})
 	h := newFlaggedHandler(t, testConfig(), pingOK{}, svc)
 
 	for _, target := range []string{"/v1/reminder-settings"} {
