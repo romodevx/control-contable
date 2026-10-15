@@ -112,7 +112,8 @@ Contract choices this ADR records:
   OQ-A9); they never use a trial record slot. Delete and restore are allowed to a read-only
   user, as for records (CONTRACT.md 0.6.1: read-only never makes a delete one-way).
 - **Bounded lists.** At most 500 live personal deductions and 20 salary statements per
-  taxpayer and fiscal year (`422 limit_reached` on create), so the unpaginated lists and the
+  taxpayer and fiscal year (`422 limit_reached` on create, on an edit that moves a row to
+  another year, and on restore: Undo must not be a way past the bound), so the unpaginated lists and the
   O(rows) deduction pass stay inside the p95 < 500 ms target (§2.11).
 - **Budgets** (ADR-0005, wired by ANN-15): estimate and breakdown count in `estimate_reads`
   (+1 when the 12-month `Estimator` range runs; M5 FU5 precedent); `getFiledPayments` and

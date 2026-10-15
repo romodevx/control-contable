@@ -487,7 +487,8 @@ uses its own `AnnualBreakdownLine` (adds `regime_code` and the payment sources);
 mirrors the regimes' annual tax inputs read-only; `putAnnualInputs` is personas físicas only
 (`person_type_not_allowed`); `getFiledPayments` refuses a regime with no provisional ISR
 (`payments_not_applicable`); lists are bounded (500 deductions, 20 constancias per year,
-`limit_reached`); delete and restore stay open to a read-only user, as records.
+`limit_reached`, re-checked on restore and on an edit that moves a row to another year); delete and
+restore stay open to a read-only user, as records.
 
 ## 11. Out of scope
 
