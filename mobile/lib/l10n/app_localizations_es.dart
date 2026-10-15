@@ -2295,6 +2295,318 @@ class AppLocalizationsEs extends AppLocalizations {
   String historyMonthCurrentSpoken(String month) {
     return '$month, mes en curso';
   }
+
+  @override
+  String get annualTitle => 'Declaración anual';
+
+  @override
+  String get annualYearLabel => 'Ejercicio';
+
+  @override
+  String get annualYearHelp =>
+      'Se puede estimar desde 2026 hasta el año en curso. Hasta el 30 de abril se muestra el año anterior, que es el que se declara.';
+
+  @override
+  String get annualLoading => 'Cargando la estimación anual…';
+
+  @override
+  String get annualLoadFailed => 'No se pudo cargar la estimación anual.';
+
+  @override
+  String get annualFutureYear =>
+      'Ese año todavía no llega. Elige el año en curso o uno anterior.';
+
+  @override
+  String get annualParametersUnavailable =>
+      'No hay tarifas cargadas para ese año. Elige un año desde 2026.';
+
+  @override
+  String get annualSectionNotPresent =>
+      'Tu estimación de ese año no tiene esta sección.';
+
+  @override
+  String get annualNoTaxpayer =>
+      'Agrega un contribuyente para ver su declaración anual.';
+
+  @override
+  String annualNoSections(String year) {
+    return 'Este contribuyente no tiene regímenes en $year: no hay declaración anual que estimar.';
+  }
+
+  @override
+  String get annualBalanceACargo => 'Saldo a cargo';
+
+  @override
+  String get annualBalanceAFavor => 'Saldo a favor';
+
+  @override
+  String get annualBalanceCero => 'Sin saldo';
+
+  @override
+  String annualSpokenHeading(String year) {
+    return 'Declaración anual $year, estimación.';
+  }
+
+  @override
+  String annualSpokenBalance(String kind, String amount) {
+    return '$kind, $amount.';
+  }
+
+  @override
+  String annualSpokenDeadline(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'Vence el $dateString.';
+  }
+
+  @override
+  String get annualSpokenIncomplete => 'Incompleto.';
+
+  @override
+  String get annualSpokenInProgress => 'Año en curso.';
+
+  @override
+  String get annualYearInProgress => 'Año en curso';
+
+  @override
+  String get annualNoHeadline => 'No hay saldo que estimar este año.';
+
+  @override
+  String get annualViewBreakdown => 'Ver cómo se calculó';
+
+  @override
+  String get annualSectionPfArt152 => 'Personas físicas: declaración anual';
+
+  @override
+  String get annualSectionResico => 'RESICO: revisión informativa';
+
+  @override
+  String get annualSectionPm601 => 'Personas morales: régimen general';
+
+  @override
+  String get annualSectionPmResico => 'Personas morales: RESICO';
+
+  @override
+  String annualSectionRegimes(String codes) {
+    return 'Regímenes $codes';
+  }
+
+  @override
+  String get annualAccumulableIncome => 'Ingresos acumulables';
+
+  @override
+  String get annualPersonalDeductions => 'Deducciones personales';
+
+  @override
+  String get annualBase => 'Base gravable';
+
+  @override
+  String get annualPmBase => 'Resultado fiscal';
+
+  @override
+  String get annualIsr => 'ISR del ejercicio';
+
+  @override
+  String get annualPayments => 'Pagos provisionales';
+
+  @override
+  String get annualWithholdings => 'Retenciones de ISR';
+
+  @override
+  String get annualSalaryIsr => 'ISR retenido por sueldos';
+
+  @override
+  String annualPaymentsLine(String parts) {
+    return 'Pagos: $parts.';
+  }
+
+  @override
+  String annualPaymentsFiled(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count meses confirmados',
+      one: '1 mes confirmado',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String annualPaymentsTaxInput(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de tus datos fiscales',
+      one: '1 de tus datos fiscales',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String annualPaymentsByApp(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count estimados por la app',
+      one: '1 estimado por la app',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get annualObligated => 'Estás obligado a presentarla.';
+
+  @override
+  String get annualOptional =>
+      'No estás obligado, pero puedes presentarla para deducir tus gastos personales.';
+
+  @override
+  String get annualNotObligated => 'No estás obligado a presentarla.';
+
+  @override
+  String get annualRelieved =>
+      'No presentas declaración anual por estos ingresos.';
+
+  @override
+  String annualDeadline(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return 'Fecha límite: $dateString';
+  }
+
+  @override
+  String get annualResicoIncome => 'Ingresos cobrados del año';
+
+  @override
+  String annualResicoRate(String rate) {
+    return 'Tasa anual: $rate';
+  }
+
+  @override
+  String get annualResicoIsr => 'ISR anual (art. 113-F)';
+
+  @override
+  String get annualResicoMonthly => 'Pagos mensuales de RESICO';
+
+  @override
+  String get annualResicoWithheld => 'Retenciones de 1.25 %';
+
+  @override
+  String get annualResicoDifference => 'Diferencia informativa';
+
+  @override
+  String get annualResicoDifferenceHelp =>
+      'No es un saldo a cargo ni a favor: no se paga ni se devuelve.';
+
+  @override
+  String get annualPmExtrasTitle => 'Datos informativos';
+
+  @override
+  String get annualPtuBase => 'Base de PTU';
+
+  @override
+  String get annualPtuToDistribute => 'PTU a repartir';
+
+  @override
+  String annualSuggestedCu(String year, String cu) {
+    return 'Coeficiente de utilidad sugerido para $year: $cu';
+  }
+
+  @override
+  String get annualInputsTitle => 'Datos para tu anual';
+
+  @override
+  String get annualInputDeductions => 'Deducciones personales';
+
+  @override
+  String get annualInputSalary => 'Constancias de sueldos';
+
+  @override
+  String get annualInputFacts => 'Datos del año';
+
+  @override
+  String get annualInputPayments => 'Pagos provisionales presentados';
+
+  @override
+  String annualCountRegistered(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count registradas',
+      one: '1 registrada',
+      zero: 'Ninguna registrada',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get annualInputPending =>
+      'Esta pantalla llega en una próxima versión. Mientras tanto, la estimación usa lo que ya registraste.';
+
+  @override
+  String get annualReadOnly =>
+      'Tu periodo de prueba terminó: puedes consultar esta estimación, pero capturar o cambiar datos requiere un plan.';
+
+  @override
+  String get annualBreakdownTitle => 'Cómo se calculó';
+
+  @override
+  String annualBreakdownSubtitle(String year, String codes) {
+    return 'Ejercicio $year · Regímenes $codes';
+  }
+
+  @override
+  String get annualBreakdownNoLines => 'Esta sección no tiene desglose.';
+
+  @override
+  String get annualBreakdownLoading => 'Cargando el desglose…';
+
+  @override
+  String get annualSourceSalary => 'De tus constancias de sueldos';
+
+  @override
+  String get annualSourceDeductions => 'De tus deducciones personales';
+
+  @override
+  String get annualSourceFacts => 'Dato anual que capturaste';
+
+  @override
+  String get annualSourceFiled => 'Pago presentado';
+
+  @override
+  String get annualSourceEstimated => 'Estimado por la app';
+
+  @override
+  String get cpaTopicPlatformNondefinitiveAnnual =>
+      'la anual de plataformas sin pago definitivo';
+
+  @override
+  String get cpaTopicUmaForMinimumWage =>
+      'el uso de la UMA en lugar del salario mínimo';
+
+  @override
+  String get cpaTopicDeductionCapResicoIncome =>
+      'el tope de deducciones sin tus ingresos de RESICO';
+
+  @override
+  String get cpaTopicSalaryObligationBasis =>
+      'la obligación de declarar por sueldos de más de \$400,000';
+
+  @override
+  String get cpaTopicCuRounding => 'el redondeo del coeficiente de utilidad';
+
+  @override
+  String get cpaTopicResicoPmPtuBase =>
+      'la base de PTU en RESICO de personas morales';
+
+  @override
+  String get cpaTopicResicoPfReliefRenewal =>
+      'la renovación de la facilidad de RESICO en la RMF 2027';
+
+  @override
+  String get cpaTopicPtuRate => 'la tasa de PTU';
 }
 
 /// The translations for Spanish Castilian, as used in Mexico (`es_MX`).

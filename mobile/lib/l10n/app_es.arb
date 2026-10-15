@@ -2985,5 +2985,402 @@
         "type": "String"
       }
     }
+  },
+  "annualTitle": "Declaración anual",
+  "@annualTitle": {
+    "description": "Annual estimate screen title and its home entry."
+  },
+  "annualYearLabel": "Ejercicio",
+  "@annualYearLabel": {
+    "description": "Label of the fiscal-year picker."
+  },
+  "annualYearHelp": "Se puede estimar desde 2026 hasta el año en curso. Hasta el 30 de abril se muestra el año anterior, que es el que se declara.",
+  "@annualYearHelp": {
+    "description": "Why only these years are offered and which one opens."
+  },
+  "annualLoading": "Cargando la estimación anual…",
+  "@annualLoading": {
+    "description": "Status while the annual estimate loads."
+  },
+  "annualLoadFailed": "No se pudo cargar la estimación anual.",
+  "@annualLoadFailed": {
+    "description": "Generic annual load failure."
+  },
+  "annualFutureYear": "Ese año todavía no llega. Elige el año en curso o uno anterior.",
+  "@annualFutureYear": {
+    "description": "400 out_of_range on the fiscal year."
+  },
+  "annualParametersUnavailable": "No hay tarifas cargadas para ese año. Elige un año desde 2026.",
+  "@annualParametersUnavailable": {
+    "description": "422 parameters_unavailable."
+  },
+  "annualSectionNotPresent": "Tu estimación de ese año no tiene esta sección.",
+  "@annualSectionNotPresent": {
+    "description": "422 section_not_present on the breakdown."
+  },
+  "annualNoTaxpayer": "Agrega un contribuyente para ver su declaración anual.",
+  "@annualNoTaxpayer": {
+    "description": "No active taxpayer."
+  },
+  "annualNoSections": "Este contribuyente no tiene regímenes en {year}: no hay declaración anual que estimar.",
+  "@annualNoSections": {
+    "description": "The estimate has no section.",
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "annualBalanceACargo": "Saldo a cargo",
+  "@annualBalanceACargo": {
+    "description": "Balance kind a_cargo, in words."
+  },
+  "annualBalanceAFavor": "Saldo a favor",
+  "@annualBalanceAFavor": {
+    "description": "Balance kind a_favor, in words."
+  },
+  "annualBalanceCero": "Sin saldo",
+  "@annualBalanceCero": {
+    "description": "Balance kind cero, in words."
+  },
+  "annualSpokenHeading": "Declaración anual {year}, estimación.",
+  "@annualSpokenHeading": {
+    "description": "First sentence of the balance card for screen readers.",
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "annualSpokenBalance": "{kind}, {amount}.",
+  "@annualSpokenBalance": {
+    "description": "Balance sentence for screen readers, e.g. Saldo a favor, 9,408 pesos.",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "annualSpokenDeadline": "Vence el {date}.",
+  "@annualSpokenDeadline": {
+    "description": "Deadline sentence for screen readers.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMMd"
+      }
+    }
+  },
+  "annualSpokenIncomplete": "Incompleto.",
+  "@annualSpokenIncomplete": {
+    "description": "Incomplete sentence for screen readers."
+  },
+  "annualSpokenInProgress": "Año en curso.",
+  "@annualSpokenInProgress": {
+    "description": "Year-in-progress sentence for screen readers."
+  },
+  "annualYearInProgress": "Año en curso",
+  "@annualYearInProgress": {
+    "description": "Chip: the fiscal year has not ended."
+  },
+  "annualNoHeadline": "No hay saldo que estimar este año.",
+  "@annualNoHeadline": {
+    "description": "No section feeds the headline balance."
+  },
+  "annualViewBreakdown": "Ver cómo se calculó",
+  "@annualViewBreakdown": {
+    "description": "Opens the section breakdown."
+  },
+  "annualSectionPfArt152": "Personas físicas: declaración anual",
+  "@annualSectionPfArt152": {
+    "description": "Title of the pf_art152 section."
+  },
+  "annualSectionResico": "RESICO: revisión informativa",
+  "@annualSectionResico": {
+    "description": "Title of the pf_resico_check section."
+  },
+  "annualSectionPm601": "Personas morales: régimen general",
+  "@annualSectionPm601": {
+    "description": "Title of the pm_601 section."
+  },
+  "annualSectionPmResico": "Personas morales: RESICO",
+  "@annualSectionPmResico": {
+    "description": "Title of the pm_resico section."
+  },
+  "annualSectionRegimes": "Regímenes {codes}",
+  "@annualSectionRegimes": {
+    "description": "The regime codes a section covers.",
+    "placeholders": {
+      "codes": {
+        "type": "String"
+      }
+    }
+  },
+  "annualAccumulableIncome": "Ingresos acumulables",
+  "@annualAccumulableIncome": {
+    "description": "Annual figure."
+  },
+  "annualPersonalDeductions": "Deducciones personales",
+  "@annualPersonalDeductions": {
+    "description": "Annual figure (personas físicas)."
+  },
+  "annualBase": "Base gravable",
+  "@annualBase": {
+    "description": "Annual figure: PF base."
+  },
+  "annualPmBase": "Resultado fiscal",
+  "@annualPmBase": {
+    "description": "Annual figure: PM resultado fiscal."
+  },
+  "annualIsr": "ISR del ejercicio",
+  "@annualIsr": {
+    "description": "Annual ISR before credits."
+  },
+  "annualPayments": "Pagos provisionales",
+  "@annualPayments": {
+    "description": "Credit: provisional ISR payments."
+  },
+  "annualWithholdings": "Retenciones de ISR",
+  "@annualWithholdings": {
+    "description": "Credit: ISR withheld from the taxpayer."
+  },
+  "annualSalaryIsr": "ISR retenido por sueldos",
+  "@annualSalaryIsr": {
+    "description": "Credit: ISR withheld on salary."
+  },
+  "annualPaymentsLine": "Pagos: {parts}.",
+  "@annualPaymentsLine": {
+    "description": "Where the provisional payments come from.",
+    "placeholders": {
+      "parts": {
+        "type": "String"
+      }
+    }
+  },
+  "annualPaymentsFiled": "{count, plural, =1{1 mes confirmado} other{{count} meses confirmados}}",
+  "@annualPaymentsFiled": {
+    "description": "Months confirmed as filed.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "annualPaymentsTaxInput": "{count, plural, =1{1 de tus datos fiscales} other{{count} de tus datos fiscales}}",
+  "@annualPaymentsTaxInput": {
+    "description": "Months taken from the tax inputs.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "annualPaymentsByApp": "{count, plural, =1{1 estimado por la app} other{{count} estimados por la app}}",
+  "@annualPaymentsByApp": {
+    "description": "Months estimated by the app.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "annualObligated": "Estás obligado a presentarla.",
+  "@annualObligated": {
+    "description": "Obligation obligated."
+  },
+  "annualOptional": "No estás obligado, pero puedes presentarla para deducir tus gastos personales.",
+  "@annualOptional": {
+    "description": "Obligation optional."
+  },
+  "annualNotObligated": "No estás obligado a presentarla.",
+  "@annualNotObligated": {
+    "description": "Obligation not_obligated."
+  },
+  "annualRelieved": "No presentas declaración anual por estos ingresos.",
+  "@annualRelieved": {
+    "description": "Obligation relieved (RESICO PF)."
+  },
+  "annualDeadline": "Fecha límite: {date}",
+  "@annualDeadline": {
+    "description": "A section's own deadline.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMMd"
+      }
+    }
+  },
+  "annualResicoIncome": "Ingresos cobrados del año",
+  "@annualResicoIncome": {
+    "description": "RESICO PF check figure."
+  },
+  "annualResicoRate": "Tasa anual: {rate}",
+  "@annualResicoRate": {
+    "description": "RESICO PF annual rate.",
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "annualResicoIsr": "ISR anual (art. 113-F)",
+  "@annualResicoIsr": {
+    "description": "RESICO PF check figure."
+  },
+  "annualResicoMonthly": "Pagos mensuales de RESICO",
+  "@annualResicoMonthly": {
+    "description": "RESICO PF check figure."
+  },
+  "annualResicoWithheld": "Retenciones de 1.25 %",
+  "@annualResicoWithheld": {
+    "description": "RESICO PF check figure."
+  },
+  "annualResicoDifference": "Diferencia informativa",
+  "@annualResicoDifference": {
+    "description": "RESICO PF difference, never a balance."
+  },
+  "annualResicoDifferenceHelp": "No es un saldo a cargo ni a favor: no se paga ni se devuelve.",
+  "@annualResicoDifferenceHelp": {
+    "description": "Why the RESICO PF difference is not a balance."
+  },
+  "annualPmExtrasTitle": "Datos informativos",
+  "@annualPmExtrasTitle": {
+    "description": "PM informative figures heading."
+  },
+  "annualPtuBase": "Base de PTU",
+  "@annualPtuBase": {
+    "description": "PM informative figure."
+  },
+  "annualPtuToDistribute": "PTU a repartir",
+  "@annualPtuToDistribute": {
+    "description": "PM informative figure."
+  },
+  "annualSuggestedCu": "Coeficiente de utilidad sugerido para {year}: {cu}",
+  "@annualSuggestedCu": {
+    "description": "PM suggested coeficiente de utilidad.",
+    "placeholders": {
+      "year": {
+        "type": "String"
+      },
+      "cu": {
+        "type": "String"
+      }
+    }
+  },
+  "annualInputsTitle": "Datos para tu anual",
+  "@annualInputsTitle": {
+    "description": "Heading of the annual inputs block."
+  },
+  "annualInputDeductions": "Deducciones personales",
+  "@annualInputDeductions": {
+    "description": "Annual input: personal deductions."
+  },
+  "annualInputSalary": "Constancias de sueldos",
+  "@annualInputSalary": {
+    "description": "Annual input: salary constancias."
+  },
+  "annualInputFacts": "Datos del año",
+  "@annualInputFacts": {
+    "description": "Annual input: per-year facts."
+  },
+  "annualInputPayments": "Pagos provisionales presentados",
+  "@annualInputPayments": {
+    "description": "Annual input: filed provisional payments."
+  },
+  "annualCountRegistered": "{count, plural, =0{Ninguna registrada} =1{1 registrada} other{{count} registradas}}",
+  "@annualCountRegistered": {
+    "description": "How many deductions or constancias are registered.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "annualInputPending": "Esta pantalla llega en una próxima versión. Mientras tanto, la estimación usa lo que ya registraste.",
+  "@annualInputPending": {
+    "description": "Placeholder of an annual input screen not shipped yet."
+  },
+  "annualReadOnly": "Tu periodo de prueba terminó: puedes consultar esta estimación, pero capturar o cambiar datos requiere un plan.",
+  "@annualReadOnly": {
+    "description": "Read-only user on the annual screen."
+  },
+  "annualBreakdownTitle": "Cómo se calculó",
+  "@annualBreakdownTitle": {
+    "description": "Annual breakdown screen title."
+  },
+  "annualBreakdownSubtitle": "Ejercicio {year} · Regímenes {codes}",
+  "@annualBreakdownSubtitle": {
+    "description": "Annual breakdown header.",
+    "placeholders": {
+      "year": {
+        "type": "String"
+      },
+      "codes": {
+        "type": "String"
+      }
+    }
+  },
+  "annualBreakdownNoLines": "Esta sección no tiene desglose.",
+  "@annualBreakdownNoLines": {
+    "description": "A breakdown with no line."
+  },
+  "annualBreakdownLoading": "Cargando el desglose…",
+  "@annualBreakdownLoading": {
+    "description": "Status while the annual breakdown loads."
+  },
+  "annualSourceSalary": "De tus constancias de sueldos",
+  "@annualSourceSalary": {
+    "description": "Line source salary_statements."
+  },
+  "annualSourceDeductions": "De tus deducciones personales",
+  "@annualSourceDeductions": {
+    "description": "Line source personal_deductions."
+  },
+  "annualSourceFacts": "Dato anual que capturaste",
+  "@annualSourceFacts": {
+    "description": "Line source annual_inputs."
+  },
+  "annualSourceFiled": "Pago presentado",
+  "@annualSourceFiled": {
+    "description": "Line source filed_payment."
+  },
+  "annualSourceEstimated": "Estimado por la app",
+  "@annualSourceEstimated": {
+    "description": "Line source estimated_by_app."
+  },
+  "cpaTopicPlatformNondefinitiveAnnual": "la anual de plataformas sin pago definitivo",
+  "@cpaTopicPlatformNondefinitiveAnnual": {
+    "description": "CPA topic platform_nondefinitive_annual."
+  },
+  "cpaTopicUmaForMinimumWage": "el uso de la UMA en lugar del salario mínimo",
+  "@cpaTopicUmaForMinimumWage": {
+    "description": "CPA topic uma_for_minimum_wage."
+  },
+  "cpaTopicDeductionCapResicoIncome": "el tope de deducciones sin tus ingresos de RESICO",
+  "@cpaTopicDeductionCapResicoIncome": {
+    "description": "CPA topic deduction_cap_resico_income."
+  },
+  "cpaTopicSalaryObligationBasis": "la obligación de declarar por sueldos de más de $400,000",
+  "@cpaTopicSalaryObligationBasis": {
+    "description": "CPA topic salary_obligation_basis."
+  },
+  "cpaTopicCuRounding": "el redondeo del coeficiente de utilidad",
+  "@cpaTopicCuRounding": {
+    "description": "CPA topic cu_rounding."
+  },
+  "cpaTopicResicoPmPtuBase": "la base de PTU en RESICO de personas morales",
+  "@cpaTopicResicoPmPtuBase": {
+    "description": "CPA topic resico_pm_ptu_base."
+  },
+  "cpaTopicResicoPfReliefRenewal": "la renovación de la facilidad de RESICO en la RMF 2027",
+  "@cpaTopicResicoPfReliefRenewal": {
+    "description": "CPA topic resico_pf_relief_renewal."
+  },
+  "cpaTopicPtuRate": "la tasa de PTU",
+  "@cpaTopicPtuRate": {
+    "description": "CPA topic ptu_rate."
   }
 }

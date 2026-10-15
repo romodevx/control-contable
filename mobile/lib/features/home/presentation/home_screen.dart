@@ -1,6 +1,7 @@
 import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/flags/flag_gate.dart';
 import 'package:control_contable/core/theme/app_spacing.dart';
+import 'package:control_contable/features/annual/presentation/annual_entry_button.dart';
 import 'package:control_contable/features/auth/presentation/account_button.dart';
 import 'package:control_contable/features/auth/presentation/sign_out_button.dart';
 import 'package:control_contable/features/dashboard/presentation/dashboard_home.dart';
@@ -20,7 +21,8 @@ import 'package:flutter/material.dart';
 /// sign-out while `module_auth` is on (the router only shows home to a
 /// signed-in user then). With `module_taxpayers` on, its title is the
 /// active-taxpayer switcher and a user with no taxpayer is sent to the
-/// onboarding. With `module_history` on, its app bar opens History.
+/// onboarding. With `module_history` on, its app bar opens History; with
+/// `module_annual` on, the annual estimate.
 class HomeScreen extends StatelessWidget {
   /// Creates the screen.
   const new({super.key});
@@ -32,6 +34,7 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: ActiveTaxpayerSwitcher(fallback: Text(l10n.navHome)),
         actions: const [
+          FlagGate(module: AppModule.annual, child: AnnualEntryButton()),
           FlagGate(module: AppModule.history, child: HistoryEntryButton()),
           FlagGate(module: AppModule.auth, child: AccountButton()),
           FlagGate(module: AppModule.auth, child: SignOutButton()),

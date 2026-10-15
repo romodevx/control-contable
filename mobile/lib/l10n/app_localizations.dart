@@ -3711,6 +3711,480 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{month}, mes en curso'**
   String historyMonthCurrentSpoken(String month);
+
+  /// Annual estimate screen title and its home entry.
+  ///
+  /// In es, this message translates to:
+  /// **'Declaración anual'**
+  String get annualTitle;
+
+  /// Label of the fiscal-year picker.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejercicio'**
+  String get annualYearLabel;
+
+  /// Why only these years are offered and which one opens.
+  ///
+  /// In es, this message translates to:
+  /// **'Se puede estimar desde 2026 hasta el año en curso. Hasta el 30 de abril se muestra el año anterior, que es el que se declara.'**
+  String get annualYearHelp;
+
+  /// Status while the annual estimate loads.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando la estimación anual…'**
+  String get annualLoading;
+
+  /// Generic annual load failure.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo cargar la estimación anual.'**
+  String get annualLoadFailed;
+
+  /// 400 out_of_range on the fiscal year.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese año todavía no llega. Elige el año en curso o uno anterior.'**
+  String get annualFutureYear;
+
+  /// 422 parameters_unavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay tarifas cargadas para ese año. Elige un año desde 2026.'**
+  String get annualParametersUnavailable;
+
+  /// 422 section_not_present on the breakdown.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu estimación de ese año no tiene esta sección.'**
+  String get annualSectionNotPresent;
+
+  /// No active taxpayer.
+  ///
+  /// In es, this message translates to:
+  /// **'Agrega un contribuyente para ver su declaración anual.'**
+  String get annualNoTaxpayer;
+
+  /// The estimate has no section.
+  ///
+  /// In es, this message translates to:
+  /// **'Este contribuyente no tiene regímenes en {year}: no hay declaración anual que estimar.'**
+  String annualNoSections(String year);
+
+  /// Balance kind a_cargo, in words.
+  ///
+  /// In es, this message translates to:
+  /// **'Saldo a cargo'**
+  String get annualBalanceACargo;
+
+  /// Balance kind a_favor, in words.
+  ///
+  /// In es, this message translates to:
+  /// **'Saldo a favor'**
+  String get annualBalanceAFavor;
+
+  /// Balance kind cero, in words.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin saldo'**
+  String get annualBalanceCero;
+
+  /// First sentence of the balance card for screen readers.
+  ///
+  /// In es, this message translates to:
+  /// **'Declaración anual {year}, estimación.'**
+  String annualSpokenHeading(String year);
+
+  /// Balance sentence for screen readers, e.g. Saldo a favor, 9,408 pesos.
+  ///
+  /// In es, this message translates to:
+  /// **'{kind}, {amount}.'**
+  String annualSpokenBalance(String kind, String amount);
+
+  /// Deadline sentence for screen readers.
+  ///
+  /// In es, this message translates to:
+  /// **'Vence el {date}.'**
+  String annualSpokenDeadline(DateTime date);
+
+  /// Incomplete sentence for screen readers.
+  ///
+  /// In es, this message translates to:
+  /// **'Incompleto.'**
+  String get annualSpokenIncomplete;
+
+  /// Year-in-progress sentence for screen readers.
+  ///
+  /// In es, this message translates to:
+  /// **'Año en curso.'**
+  String get annualSpokenInProgress;
+
+  /// Chip: the fiscal year has not ended.
+  ///
+  /// In es, this message translates to:
+  /// **'Año en curso'**
+  String get annualYearInProgress;
+
+  /// No section feeds the headline balance.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay saldo que estimar este año.'**
+  String get annualNoHeadline;
+
+  /// Opens the section breakdown.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver cómo se calculó'**
+  String get annualViewBreakdown;
+
+  /// Title of the pf_art152 section.
+  ///
+  /// In es, this message translates to:
+  /// **'Personas físicas: declaración anual'**
+  String get annualSectionPfArt152;
+
+  /// Title of the pf_resico_check section.
+  ///
+  /// In es, this message translates to:
+  /// **'RESICO: revisión informativa'**
+  String get annualSectionResico;
+
+  /// Title of the pm_601 section.
+  ///
+  /// In es, this message translates to:
+  /// **'Personas morales: régimen general'**
+  String get annualSectionPm601;
+
+  /// Title of the pm_resico section.
+  ///
+  /// In es, this message translates to:
+  /// **'Personas morales: RESICO'**
+  String get annualSectionPmResico;
+
+  /// The regime codes a section covers.
+  ///
+  /// In es, this message translates to:
+  /// **'Regímenes {codes}'**
+  String annualSectionRegimes(String codes);
+
+  /// Annual figure.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresos acumulables'**
+  String get annualAccumulableIncome;
+
+  /// Annual figure (personas físicas).
+  ///
+  /// In es, this message translates to:
+  /// **'Deducciones personales'**
+  String get annualPersonalDeductions;
+
+  /// Annual figure: PF base.
+  ///
+  /// In es, this message translates to:
+  /// **'Base gravable'**
+  String get annualBase;
+
+  /// Annual figure: PM resultado fiscal.
+  ///
+  /// In es, this message translates to:
+  /// **'Resultado fiscal'**
+  String get annualPmBase;
+
+  /// Annual ISR before credits.
+  ///
+  /// In es, this message translates to:
+  /// **'ISR del ejercicio'**
+  String get annualIsr;
+
+  /// Credit: provisional ISR payments.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagos provisionales'**
+  String get annualPayments;
+
+  /// Credit: ISR withheld from the taxpayer.
+  ///
+  /// In es, this message translates to:
+  /// **'Retenciones de ISR'**
+  String get annualWithholdings;
+
+  /// Credit: ISR withheld on salary.
+  ///
+  /// In es, this message translates to:
+  /// **'ISR retenido por sueldos'**
+  String get annualSalaryIsr;
+
+  /// Where the provisional payments come from.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagos: {parts}.'**
+  String annualPaymentsLine(String parts);
+
+  /// Months confirmed as filed.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 mes confirmado} other{{count} meses confirmados}}'**
+  String annualPaymentsFiled(int count);
+
+  /// Months taken from the tax inputs.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 de tus datos fiscales} other{{count} de tus datos fiscales}}'**
+  String annualPaymentsTaxInput(int count);
+
+  /// Months estimated by the app.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 estimado por la app} other{{count} estimados por la app}}'**
+  String annualPaymentsByApp(int count);
+
+  /// Obligation obligated.
+  ///
+  /// In es, this message translates to:
+  /// **'Estás obligado a presentarla.'**
+  String get annualObligated;
+
+  /// Obligation optional.
+  ///
+  /// In es, this message translates to:
+  /// **'No estás obligado, pero puedes presentarla para deducir tus gastos personales.'**
+  String get annualOptional;
+
+  /// Obligation not_obligated.
+  ///
+  /// In es, this message translates to:
+  /// **'No estás obligado a presentarla.'**
+  String get annualNotObligated;
+
+  /// Obligation relieved (RESICO PF).
+  ///
+  /// In es, this message translates to:
+  /// **'No presentas declaración anual por estos ingresos.'**
+  String get annualRelieved;
+
+  /// A section's own deadline.
+  ///
+  /// In es, this message translates to:
+  /// **'Fecha límite: {date}'**
+  String annualDeadline(DateTime date);
+
+  /// RESICO PF check figure.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresos cobrados del año'**
+  String get annualResicoIncome;
+
+  /// RESICO PF annual rate.
+  ///
+  /// In es, this message translates to:
+  /// **'Tasa anual: {rate}'**
+  String annualResicoRate(String rate);
+
+  /// RESICO PF check figure.
+  ///
+  /// In es, this message translates to:
+  /// **'ISR anual (art. 113-F)'**
+  String get annualResicoIsr;
+
+  /// RESICO PF check figure.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagos mensuales de RESICO'**
+  String get annualResicoMonthly;
+
+  /// RESICO PF check figure.
+  ///
+  /// In es, this message translates to:
+  /// **'Retenciones de 1.25 %'**
+  String get annualResicoWithheld;
+
+  /// RESICO PF difference, never a balance.
+  ///
+  /// In es, this message translates to:
+  /// **'Diferencia informativa'**
+  String get annualResicoDifference;
+
+  /// Why the RESICO PF difference is not a balance.
+  ///
+  /// In es, this message translates to:
+  /// **'No es un saldo a cargo ni a favor: no se paga ni se devuelve.'**
+  String get annualResicoDifferenceHelp;
+
+  /// PM informative figures heading.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos informativos'**
+  String get annualPmExtrasTitle;
+
+  /// PM informative figure.
+  ///
+  /// In es, this message translates to:
+  /// **'Base de PTU'**
+  String get annualPtuBase;
+
+  /// PM informative figure.
+  ///
+  /// In es, this message translates to:
+  /// **'PTU a repartir'**
+  String get annualPtuToDistribute;
+
+  /// PM suggested coeficiente de utilidad.
+  ///
+  /// In es, this message translates to:
+  /// **'Coeficiente de utilidad sugerido para {year}: {cu}'**
+  String annualSuggestedCu(String year, String cu);
+
+  /// Heading of the annual inputs block.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos para tu anual'**
+  String get annualInputsTitle;
+
+  /// Annual input: personal deductions.
+  ///
+  /// In es, this message translates to:
+  /// **'Deducciones personales'**
+  String get annualInputDeductions;
+
+  /// Annual input: salary constancias.
+  ///
+  /// In es, this message translates to:
+  /// **'Constancias de sueldos'**
+  String get annualInputSalary;
+
+  /// Annual input: per-year facts.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos del año'**
+  String get annualInputFacts;
+
+  /// Annual input: filed provisional payments.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagos provisionales presentados'**
+  String get annualInputPayments;
+
+  /// How many deductions or constancias are registered.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{Ninguna registrada} =1{1 registrada} other{{count} registradas}}'**
+  String annualCountRegistered(int count);
+
+  /// Placeholder of an annual input screen not shipped yet.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta pantalla llega en una próxima versión. Mientras tanto, la estimación usa lo que ya registraste.'**
+  String get annualInputPending;
+
+  /// Read-only user on the annual screen.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu periodo de prueba terminó: puedes consultar esta estimación, pero capturar o cambiar datos requiere un plan.'**
+  String get annualReadOnly;
+
+  /// Annual breakdown screen title.
+  ///
+  /// In es, this message translates to:
+  /// **'Cómo se calculó'**
+  String get annualBreakdownTitle;
+
+  /// Annual breakdown header.
+  ///
+  /// In es, this message translates to:
+  /// **'Ejercicio {year} · Regímenes {codes}'**
+  String annualBreakdownSubtitle(String year, String codes);
+
+  /// A breakdown with no line.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta sección no tiene desglose.'**
+  String get annualBreakdownNoLines;
+
+  /// Status while the annual breakdown loads.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando el desglose…'**
+  String get annualBreakdownLoading;
+
+  /// Line source salary_statements.
+  ///
+  /// In es, this message translates to:
+  /// **'De tus constancias de sueldos'**
+  String get annualSourceSalary;
+
+  /// Line source personal_deductions.
+  ///
+  /// In es, this message translates to:
+  /// **'De tus deducciones personales'**
+  String get annualSourceDeductions;
+
+  /// Line source annual_inputs.
+  ///
+  /// In es, this message translates to:
+  /// **'Dato anual que capturaste'**
+  String get annualSourceFacts;
+
+  /// Line source filed_payment.
+  ///
+  /// In es, this message translates to:
+  /// **'Pago presentado'**
+  String get annualSourceFiled;
+
+  /// Line source estimated_by_app.
+  ///
+  /// In es, this message translates to:
+  /// **'Estimado por la app'**
+  String get annualSourceEstimated;
+
+  /// CPA topic platform_nondefinitive_annual.
+  ///
+  /// In es, this message translates to:
+  /// **'la anual de plataformas sin pago definitivo'**
+  String get cpaTopicPlatformNondefinitiveAnnual;
+
+  /// CPA topic uma_for_minimum_wage.
+  ///
+  /// In es, this message translates to:
+  /// **'el uso de la UMA en lugar del salario mínimo'**
+  String get cpaTopicUmaForMinimumWage;
+
+  /// CPA topic deduction_cap_resico_income.
+  ///
+  /// In es, this message translates to:
+  /// **'el tope de deducciones sin tus ingresos de RESICO'**
+  String get cpaTopicDeductionCapResicoIncome;
+
+  /// CPA topic salary_obligation_basis.
+  ///
+  /// In es, this message translates to:
+  /// **'la obligación de declarar por sueldos de más de \$400,000'**
+  String get cpaTopicSalaryObligationBasis;
+
+  /// CPA topic cu_rounding.
+  ///
+  /// In es, this message translates to:
+  /// **'el redondeo del coeficiente de utilidad'**
+  String get cpaTopicCuRounding;
+
+  /// CPA topic resico_pm_ptu_base.
+  ///
+  /// In es, this message translates to:
+  /// **'la base de PTU en RESICO de personas morales'**
+  String get cpaTopicResicoPmPtuBase;
+
+  /// CPA topic resico_pf_relief_renewal.
+  ///
+  /// In es, this message translates to:
+  /// **'la renovación de la facilidad de RESICO en la RMF 2027'**
+  String get cpaTopicResicoPfReliefRenewal;
+
+  /// CPA topic ptu_rate.
+  ///
+  /// In es, this message translates to:
+  /// **'la tasa de PTU'**
+  String get cpaTopicPtuRate;
 }
 
 class _AppLocalizationsDelegate

@@ -21,21 +21,26 @@ void main() {
     );
   });
 
-  // Contract 0.11.0 appended the annual topics (ADR-0009). Only the annual
-  // estimate sends them; on a monthly card they read as the generic topic
-  // until ANN-17 gives the annual screen its own copy.
-  test('annual CPA topics read as the generic topic', () {
-    for (final topic in [
-      CpaTopic.platformNondefinitiveAnnual,
-      CpaTopic.umaForMinimumWage,
-      CpaTopic.deductionCapResicoIncome,
-      CpaTopic.salaryObligationBasis,
-      CpaTopic.cuRounding,
-      CpaTopic.resicoPmPtuBase,
-      CpaTopic.resicoPfReliefRenewal,
-      CpaTopic.ptuRate,
-    ]) {
-      expect(cpaTopicsText(l10n, [topic]), l10n.cpaTopicOther);
+  // Contract 0.11.0 appended the annual topics (ADR-0009); the annual
+  // estimate (ANN-17) names each in plain words.
+  test('annual CPA topics have their own words', () {
+    final expected = {
+      CpaTopic.platformNondefinitiveAnnual:
+          'la anual de plataformas sin pago definitivo',
+      CpaTopic.umaForMinimumWage:
+          'el uso de la UMA en lugar del salario mínimo',
+      CpaTopic.deductionCapResicoIncome:
+          'el tope de deducciones sin tus ingresos de RESICO',
+      CpaTopic.salaryObligationBasis:
+          r'la obligación de declarar por sueldos de más de $400,000',
+      CpaTopic.cuRounding: 'el redondeo del coeficiente de utilidad',
+      CpaTopic.resicoPmPtuBase: 'la base de PTU en RESICO de personas morales',
+      CpaTopic.resicoPfReliefRenewal:
+          'la renovación de la facilidad de RESICO en la RMF 2027',
+      CpaTopic.ptuRate: 'la tasa de PTU',
+    };
+    for (final MapEntry(key: topic, value: words) in expected.entries) {
+      expect(cpaTopicsText(l10n, [topic]), words, reason: topic.json);
     }
   });
 
