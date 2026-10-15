@@ -2,6 +2,8 @@ import 'package:control_contable/features/incomes/domain/income_basis.dart';
 import 'package:control_contable/features/incomes/domain/income_math.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../taxpayers/taxpayers_fakes.dart' show heldRegime;
+
 void main() {
   test('the net is the total with IVA minus what was withheld (US-I1)', () {
     const income = IncomeAmounts(
@@ -16,16 +18,28 @@ void main() {
     expect(income.netCents, 953333);
   });
 
-  group('incomeBasisOf: which date books the income (spec §2.2)', () {
-    for (final code in ['601', '620', '622', '623', '624']) {
-      test('$code is accrual (the invoice date)', () {
-        expect(incomeBasisOf(code), IncomeBasis.accrual);
-      });
-    }
-    for (final code in ['612', '606', '625', '626', '603', '610']) {
-      test('$code is cash (the collection date)', () {
-        expect(incomeBasisOf(code), IncomeBasis.cash);
-      });
-    }
+  group('incomeBasisOf: the served income_basis of the held regime '
+      '(spec §2.2, ADR-0010)', () {
+    final held = [
+      heldRegime('601', incomeBasis: IncomeBasis.accrual),
+      heldRegime('626'),
+      heldRegime('612', incomeBasis: IncomeBasis.$unknown),
+    ];
+
+    test('accrual when the server says so (the invoice date)', () {
+      expect(incomeBasisOf('601', held), IncomeBasis.accrual);
+    });
+
+    test('cash when the server says so (the collection date)', () {
+      expect(incomeBasisOf('626', held), IncomeBasis.cash);
+    });
+
+    test('a value this app does not know reads as cash', () {
+      expect(incomeBasisOf('612', held), IncomeBasis.cash);
+    });
+
+    test('a regime the taxpayer does not hold reads as cash', () {
+      expect(incomeBasisOf('620', held), IncomeBasis.cash);
+    });
   });
 }

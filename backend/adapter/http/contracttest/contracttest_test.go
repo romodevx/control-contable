@@ -313,7 +313,7 @@ func TestValidate_checksAnAlreadyRecordedResponse(t *testing.T) {
 // next to them still fails.
 func TestServe_regimeOptionKeysAreNotUndeclared(t *testing.T) {
 	c := contracttest.Load(t)
-	regime := `{"regime_code":"612","name":"n","treatment":"full","start_period":"2026-01","end_period":null,` +
+	regime := `{"regime_code":"612","name":"n","treatment":"full","income_basis":"cash","start_period":"2026-01","end_period":null,` +
 		`"options":{"iva_fully_taxable":true,"activities":["lodging"],"mode":"blind_35"}}`
 	taxpayer := `{"id":"0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80","person_type":"fisica","display_name":"Ana",` +
 		`"rfc_masked":"PEXJ******HK8","archived_at":null,"created_at":"2026-10-13T16:05:00Z","regimes":[` + regime + `]%s}`

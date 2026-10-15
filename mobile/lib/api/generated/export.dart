@@ -25,6 +25,7 @@ export 'models/decimal_rate.dart';
 export 'models/person_type.dart';
 export 'models/iva_rate.dart';
 export 'models/treatment.dart';
+export 'models/income_basis.dart';
 export 'models/legend.dart';
 export 'models/disclaimer_code.dart';
 export 'models/disclaimer_severity.dart';

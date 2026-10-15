@@ -137,4 +137,13 @@ func TestNew_rejectsBadUserLimits(t *testing.T) {
 		_, err := router.New(fakeAPI{calls: new([]string)}, spec, opts)
 		assert.ErrorContains(t, err, `user-limited operation "login" is public`)
 	})
+	// The webhook secret authenticates RevenueCat, not a user: a per-user
+	// limit there would key every call by "" (one shared bucket).
+	t.Run("an operation secured by a non-user scheme has no user", func(t *testing.T) {
+		opts := base
+		opts.UserLimits = map[string]router.Limiter{"receiveRevenueCatWebhook": &fakeLimiter{}}
+		_, err := router.New(fakeAPI{calls: new([]string)}, spec, opts)
+		assert.ErrorContains(t, err, `user-limited operation "receiveRevenueCatWebhook"`)
+		assert.ErrorContains(t, err, router.SchemeRevenueCatWebhook)
+	})
 }

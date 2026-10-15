@@ -119,7 +119,7 @@ func TestContract_authAccount(t *testing.T) {
 			assert.Equal(t, ana.User, decodeUser(t, rec))
 		})
 
-		// Contract 0.16.0: the access the dashboard shows, from the real
+		// Contract 0.17.0: the access the dashboard shows, from the real
 		// policy over the rows sign-up wrote (a fresh 7-day trial, 5 + 5).
 		t.Run("getMe carries the caller's access", func(t *testing.T) {
 			rec := c.ServeOp(t, contracttest.Op("getMe"), env.handler, env.send(http.MethodGet, "/v1/me", "", beaToken))

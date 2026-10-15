@@ -119,13 +119,15 @@ type TaxpayerStore interface {
 	Delete(ctx context.Context, id string) (bool, error)
 }
 
-// HeldRegime is a taxpayer_regimes row with its catalog name and
-// treatment.
+// HeldRegime is a taxpayer_regimes row with its catalog name, treatment
+// and income basis.
 type HeldRegime struct {
 	TaxpayerID string
 	Code       string
 	Name       string
 	Treatment  string
+	// IncomeBasis is regimes.income_basis ("cash" or "accrual").
+	IncomeBasis string
 	// Options are canonical (validated when written).
 	Options map[string]domain.OptionValue
 	Window  domain.Window

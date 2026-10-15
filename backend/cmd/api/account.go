@@ -20,7 +20,7 @@ import (
 func newAccountHandler(txm *pgdb.TxManager, keys authCrypto, limits *ratelimitpg.Store, logger *slog.Logger) *authhttp.AccountHandler {
 	accounts := infra.NewAccountStore(keys.emails)
 	return authhttp.NewAccountHandler(authhttp.AccountUseCases{
-		// getMe carries the access the dashboard shows (contract 0.16.0), from
+		// getMe carries the access the dashboard shows (contract 0.17.0), from
 		// the same policy every module uses.
 		Profile: usecase.NewProfile(txm, accounts,
 			access.NewPolicy(txm, accessgorm.NewStore(), accessgorm.NewStore(), clock.NewSystem())),

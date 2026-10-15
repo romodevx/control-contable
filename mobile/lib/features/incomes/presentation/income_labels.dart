@@ -1,6 +1,7 @@
 import 'package:control_contable/api/generated/models/counterparty_kind.dart';
 import 'package:control_contable/api/generated/models/income.dart';
 import 'package:control_contable/api/generated/models/platform_activity.dart';
+import 'package:control_contable/api/generated/models/taxpayer_regime.dart';
 import 'package:control_contable/core/forms/choice_controllers.dart';
 import 'package:control_contable/core/records/record_month.dart';
 import 'package:control_contable/features/incomes/domain/income_basis.dart';
@@ -59,9 +60,9 @@ String activityLabel(PlatformActivity activity, AppLocalizations l10n) =>
     };
 
 /// The date that books [income] in its month (spec §2.2): the invoice date
-/// for an accrual regime, else the collection date.
-DateTime bookingDateOf(Income income) {
-  final booked = incomeBasisOf(income.regimeCode) == IncomeBasis.accrual
+/// when its regime in [held] is served as accrual, else the collection date.
+DateTime bookingDateOf(Income income, Iterable<TaxpayerRegime> held) {
+  final booked = incomeBasisOf(income.regimeCode, held) == IncomeBasis.accrual
       ? income.invoicedOn
       : income.collectedOn;
   return parseBusinessDate(booked ?? income.collectedOn ?? income.invoicedOn!);

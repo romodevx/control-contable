@@ -37,6 +37,9 @@ type ListedRegime struct {
 	PersonType domain.PersonType
 	Name       string
 	Treatment  string
+	// IncomeBasis is regimes.income_basis ("cash" or "accrual"): which
+	// date books an income of the regime (MODULE-incomes §2.2).
+	IncomeBasis string
 	// Explanation is "" when the regime has none (null).
 	Explanation    string
 	OptionDefs     []OptionDefView

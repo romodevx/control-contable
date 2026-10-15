@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Control Contable API
-  version: 0.16.0
+  version: 0.17.0
   summary: Monthly IVA and provisional ISR estimates for Mexican taxpayers.
   description: |
     Spec-first contract (single source of truth). Server stubs (oapi-codegen),
@@ -615,7 +615,7 @@ paths:
     post:
       tags: [Taxpayers]
       operationId: createTaxpayer
-      x-frozen: sha256:af3025c4a46145a86e9ff8f7ad164c94c88529c418668d6f834c14cdc496b53b
+      x-frozen: sha256:3063bf884ca64b228994f774a7ea612a43234c78fa3dbce74d0615db0cc115ef
       summary: Create a taxpayer with its regimes and options in one transaction (onboarding)
       description: >-
         Onboarding order (OD-3): person type, then RFC and display name, then regimes, then
@@ -709,6 +709,7 @@ paths:
                       - regime_code: '601'
                         name: General de Ley Personas Morales
                         treatment: full
+                        income_basis: accrual
                         options: { iva_fully_taxable: true }
                         start_period: '2026-10'
                         end_period: null
@@ -725,6 +726,7 @@ paths:
                       - regime_code: '612'
                         name: Personas Físicas con Actividades Empresariales y Profesionales
                         treatment: full
+                        income_basis: cash
                         options: { iva_fully_taxable: true }
                         start_period: '2026-01'
                         end_period: null
@@ -1013,7 +1015,7 @@ paths:
     post:
       tags: [Taxpayers]
       operationId: addTaxpayerRegime
-      x-frozen: sha256:7235ffd91972db345773b2cff01594b2c65bd77c255e38bb25bc9141bf7f22cb
+      x-frozen: sha256:96ce71cca56212d11541689e72ffff840b3f15f31ead76f3873cb1eeffbc654b
       summary: Add a regime to a taxpayer (or reopen an ended one)
       description: >-
         `start_period` defaults to the current month (America/Mexico_City); allowed
@@ -1053,6 +1055,7 @@ paths:
                     regime_code: '606'
                     name: Arrendamiento
                     treatment: full
+                    income_basis: cash
                     options: { deduction_mode: blind_35 }
                     start_period: '2026-01'
                     end_period: null
@@ -1062,6 +1065,7 @@ paths:
                     regime_code: '607'
                     name: Régimen de Enajenación o Adquisición de Bienes
                     treatment: informational
+                    income_basis: cash
                     options: {}
                     start_period: '2026-10'
                     end_period: null
@@ -6112,6 +6116,17 @@ components:
       description: >-
         Support level of a regime: `full` (estimated), `partial` (some taxes only, e.g. IVA)
         or `informational` (selectable, not estimated; carries an explanation).
+    IncomeBasis:
+      x-frozen: sha256:25757597c1bde12723379a96c3becc446bb9223f39e27fd36d19d72699e428e9
+      type: string
+      enum: [cash, accrual]
+      description: >-
+        Which date books an income of the regime for ISR (MODULE-incomes §2.2): `cash` books
+        on `collected_on`, `accrual` on `invoiced_on` (which is then required). Catalog data
+        (`regimes.income_basis`), never a switch on the regime code: `accrual` is the personas
+        morales of Título II (601, 620, 622, 623, 624); `cash` is every persona física regime,
+        RESICO PM (626), 603 and 610. IVA is always cash (LIVA 1-B) whatever the basis. Added
+        in 0.16.0 so the income form no longer mirrors the catalog in code.
     Legend:
       x-frozen: sha256:71d09177095c3074f20dc4565cec4add6cbfee2c793570c7befc34901aec86cd
       type: string
@@ -6556,18 +6571,20 @@ components:
         - code: '612'
           reason: El RESICO sustituye al régimen de actividad empresarial y profesional (art. 113-E LISR).
     Regime:
-      x-frozen: sha256:6ab8995766ac240c51a979c5cd7292039e74fffd53ccd6771980ae498e80a543
+      x-frozen: sha256:25efe4d1183880d183e81ba9468f23982d5eb383edfa71d20ec2764af1edf84a
       type: object
-      required: [code, name, person_type, treatment, explanation, option_defs, required_inputs, incompatible_with]
+      required: [code, name, person_type, treatment, income_basis, explanation, option_defs, required_inputs, incompatible_with]
       description: >-
         Catalog key is `(code, person_type)`; e.g. 626 exists as RESICO PF and RESICO PM.
-        `treatment` is the support level. `incompatible_with` is symmetric (if A lists B, B
+        `treatment` is the support level; `income_basis` is the date an income of the regime
+        books on (the single source; `TaxpayerRegime` embeds the same value). `incompatible_with` is symmetric (if A lists B, B
         lists A) and only applies to overlapping period windows; an absent pair is allowed.
       properties:
         code: { $ref: '#/components/schemas/RegimeCode' }
         name: { type: string }
         person_type: { $ref: '#/components/schemas/PersonType' }
         treatment: { $ref: '#/components/schemas/Treatment' }
+        income_basis: { $ref: '#/components/schemas/IncomeBasis' }
         explanation:
           type: [string, 'null']
           description: Plain-language explanation for a partial or informational regime; `null` for full.
@@ -6599,6 +6616,7 @@ components:
           name: Régimen Simplificado de Confianza
           person_type: fisica
           treatment: full
+          income_basis: cash
           explanation: null
           option_defs: []
           required_inputs: []
@@ -6608,7 +6626,7 @@ components:
             - code: '612'
               reason: El RESICO sustituye al régimen de actividad empresarial y profesional (art. 113-E LISR).
     RegimeList:
-      x-frozen: sha256:e929dd388229d4119fb0a60cebb1a76d36ae67fea1958524b9297ada8ffee38b
+      x-frozen: sha256:012292045d0755e9d7569e4ecbaee999476b3dafaa00238b6f0b0e53fa9244e2
       type: object
       required: [items]
       properties:
@@ -6621,6 +6639,7 @@ components:
               name: Arrendamiento
               person_type: fisica
               treatment: full
+              income_basis: cash
               explanation: null
               option_defs:
                 - key: deduction_mode
@@ -6637,6 +6656,7 @@ components:
               name: Régimen de las Actividades Empresariales con ingresos a través de Plataformas Tecnológicas
               person_type: fisica
               treatment: full
+              income_basis: cash
               explanation: null
               option_defs:
                 - key: activities
@@ -6661,6 +6681,7 @@ components:
               name: Sueldos y Salarios e Ingresos Asimilados a Salarios
               person_type: fisica
               treatment: informational
+              income_basis: cash
               explanation: Tu patrón retiene y entera el ISR; la app no estima pagos mensuales de este régimen.
               option_defs: []
               required_inputs: []
@@ -6683,17 +6704,19 @@ components:
       examples:
         - { deduction_mode: blind_35 }
     TaxpayerRegime:
-      x-frozen: sha256:e0e4054664ce458169711283e5a8235e7f34a3429dc27ab6a0f2a1a2b508ffc0
+      x-frozen: sha256:9e66338cde45fc26ba32abba33f6983e1a1e157ab2f6f3f5cb6a8b68061d4926
       type: object
-      required: [regime_code, name, treatment, options, start_period, end_period]
+      required: [regime_code, name, treatment, income_basis, options, start_period, end_period]
       description: >-
         A regime the taxpayer holds over `[start_period, end_period]` (open end while
         `end_period` is `null`). `options` always carries every option of the regime, defaults
-        included.
+        included. `name`, `treatment` and `income_basis` are the catalog's (`Regime`) for the
+        taxpayer's person type, embedded so the record forms need no catalog round-trip.
       properties:
         regime_code: { $ref: '#/components/schemas/RegimeCode' }
         name: { type: string }
         treatment: { $ref: '#/components/schemas/Treatment' }
+        income_basis: { $ref: '#/components/schemas/IncomeBasis' }
         options: { $ref: '#/components/schemas/RegimeOptions' }
         start_period: { $ref: '#/components/schemas/Period' }
         end_period:
@@ -6711,6 +6734,7 @@ components:
         - regime_code: '606'
           name: Arrendamiento
           treatment: full
+          income_basis: cash
           options: { deduction_mode: blind_35 }
           start_period: '2026-01'
           end_period: null
@@ -6817,7 +6841,7 @@ components:
         accepted with the warning `rfc_check_digit_mismatch`. Never echoed back.
       examples: [GOMA800101AB6]
     Taxpayer:
-      x-frozen: sha256:56949cfe30b6876d1531ce2581affd135bdbe304dc3afdff801ebd3de600c457
+      x-frozen: sha256:8a3a3e636fd3b1ed1341e0fc3bea588c15cfab20430107dce9363deb4b2537f6
       type: object
       required: [id, person_type, display_name, rfc_masked, regimes, archived_at, created_at]
       properties:
@@ -6853,12 +6877,14 @@ components:
             - regime_code: '606'
               name: Arrendamiento
               treatment: full
+              income_basis: cash
               options: { deduction_mode: blind_35 }
               start_period: '2026-01'
               end_period: null
             - regime_code: '625'
               name: Régimen de las Actividades Empresariales con ingresos a través de Plataformas Tecnológicas
               treatment: full
+              income_basis: cash
               options: { activities: [goods_services], definitive_option: false, rfc_given_to_platform: true }
               start_period: '2026-01'
               end_period: null
@@ -6902,7 +6928,7 @@ components:
       examples:
         - display_name: Ana (negocio)
     TaxpayerList:
-      x-frozen: sha256:6d4e7e51abe6e0a482d390d94223a28c687bcf7612e1236fe83ffa5aaca636cc
+      x-frozen: sha256:c1bd937cc911d77a85790d2fcf82a8503392ec5a18b0e3be8eb35a8d3f4575b1
       type: object
       required: [items]
       properties:
@@ -6919,6 +6945,7 @@ components:
                 - regime_code: '612'
                   name: Personas Físicas con Actividades Empresariales y Profesionales
                   treatment: full
+                  income_basis: cash
                   options: { iva_fully_taxable: true }
                   start_period: '2026-01'
                   end_period: null
@@ -6932,6 +6959,7 @@ components:
                 - regime_code: '601'
                   name: General de Ley Personas Morales
                   treatment: full
+                  income_basis: accrual
                   options: { iva_fully_taxable: true }
                   start_period: '2026-01'
                   end_period: null

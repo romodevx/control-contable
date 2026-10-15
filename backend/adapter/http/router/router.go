@@ -97,7 +97,8 @@ type Options struct {
 	ClientKey func(*http.Request) string
 	// UserLimits are per-user limits by operationId (MODULE-taxpayers
 	// S-10), keyed by the authenticated user's id. They run right after
-	// authentication, so only secured operations may have one.
+	// authentication, so only operations secured by SchemeBearer (the one
+	// scheme that authenticates a user) may have one.
 	UserLimits map[string]Limiter
 }
 
@@ -125,7 +126,7 @@ func New(si gen.StrictServerInterface, spec *openapi3.T, opts Options) (http.Han
 	if err != nil {
 		return nil, fmt.Errorf("router: %w", err)
 	}
-	if err := checkLimits(opts, declared, publicOperations(spec)); err != nil {
+	if err := checkLimits(opts, declared, operationSchemes(spec)); err != nil {
 		return nil, fmt.Errorf("router: %w", err)
 	}
 	reg := &registrar{mux: http.NewServeMux(), spec: spec, opts: opts, errs: errs, notBuilt: notBuilt}
@@ -191,19 +192,34 @@ func (g *registrar) HandleFunc(pattern string, handler func(http.ResponseWriter,
 // scheme without an authenticator would run unauthenticated: both fail New.
 func (g *registrar) authenticator(route *routers.Route) (Authenticator, error) {
 	id := route.Operation.OperationID
-	requirements := route.Spec.Security
-	if route.Operation.Security != nil {
-		requirements = *route.Operation.Security
+	scheme, ok := operationScheme(route)
+	if !ok {
+		return nil, fmt.Errorf("operation %q must declare exactly one security scheme, got %d requirement(s)", id, len(securityOf(route)))
 	}
-	if len(requirements) != 1 || len(requirements[0]) != 1 {
-		return nil, fmt.Errorf("operation %q must declare exactly one security scheme, got %d requirement(s)", id, len(requirements))
-	}
-	scheme := soleScheme(requirements[0])
 	authn, ok := g.opts.Authenticators[scheme]
 	if !ok {
 		return nil, fmt.Errorf("operation %q requires security scheme %q, which has no authenticator", id, scheme)
 	}
 	return authn, nil
+}
+
+// securityOf returns the security requirements route runs under: its own,
+// or the contract's default.
+func securityOf(route *routers.Route) openapi3.SecurityRequirements {
+	if route.Operation.Security != nil {
+		return *route.Operation.Security
+	}
+	return route.Spec.Security
+}
+
+// operationScheme returns the one security scheme route requires; ok is
+// false for a public route and for alternative or combined schemes.
+func operationScheme(route *routers.Route) (scheme string, ok bool) {
+	requirements := securityOf(route)
+	if len(requirements) != 1 || len(requirements[0]) != 1 {
+		return "", false
+	}
+	return soleScheme(requirements[0]), true
 }
 
 // soleScheme returns the scheme name of a one-scheme requirement.
@@ -282,15 +298,24 @@ func declaredOperations(spec *openapi3.T) map[string]bool {
 	return declared
 }
 
-// publicOperations returns the operationIds with no security requirement.
-func publicOperations(spec *openapi3.T) map[string]bool {
-	public := map[string]bool{}
+// operationSchemes returns how each operationId authenticates.
+func operationSchemes(spec *openapi3.T) map[string]operationSecurity {
+	out := map[string]operationSecurity{}
 	for path, item := range spec.Paths.Map() {
 		for method, op := range item.Operations() {
-			public[op.OperationID] = isPublic(&routers.Route{Spec: spec, Path: path, PathItem: item, Method: method, Operation: op})
+			route := &routers.Route{Spec: spec, Path: path, PathItem: item, Method: method, Operation: op}
+			scheme, _ := operationScheme(route)
+			out[op.OperationID] = operationSecurity{public: isPublic(route), scheme: scheme}
 		}
 	}
-	return public
+	return out
+}
+
+// operationSecurity is how one operation authenticates: public, or the one
+// scheme it requires ("" when public or ambiguous).
+type operationSecurity struct {
+	public bool
+	scheme string
 }
 
 // knownOperations returns ids as a set, failing on an id the contract does

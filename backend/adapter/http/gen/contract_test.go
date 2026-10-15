@@ -165,3 +165,63 @@ func TestOperationModulesReturnsACopy(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, gen.ModulePlatform, got)
 }
+
+// Effective security of an operation, as the router resolves it.
+const (
+	securityPublic = "public" // `security: []`, paired with x-public: true
+	securityBearer = "bearerAuth"
+)
+
+// nonBearerOperations is the exact set of operations that do not run the
+// user's bearer token: the public ones and those on another scheme. Every
+// other operation must resolve to bearerAuth (its own or the default). A
+// new public or non-user operation is a security-review decision, never an
+// accident of a missing or copied `security` block.
+var nonBearerOperations = map[string]string{
+	"getHealth":                securityPublic,
+	"listEnabledFlags":         securityPublic,
+	"register":                 securityPublic,
+	"verifyEmail":              securityPublic,
+	"resendVerification":       securityPublic,
+	"login":                    securityPublic,
+	"refreshSession":           securityPublic,
+	"listLegalDocuments":       securityPublic,
+	"receiveRevenueCatWebhook": "revenueCatWebhookSecret",
+}
+
+// TestOperationSecurityIsPinned reads each operation's effective security
+// (its own or the contract default) and pins it: public or exactly one
+// scheme, x-public if and only if public, and the non-bearer set is exactly
+// nonBearerOperations.
+func TestOperationSecurityIsPinned(t *testing.T) {
+	swagger, err := gen.GetSwagger()
+	require.NoError(t, err)
+
+	got := map[string]string{}
+	for path, item := range swagger.Paths.Map() {
+		for method, op := range item.Operations() {
+			where := method + " " + path + " (" + op.OperationID + ")"
+			public := op.Security != nil && len(*op.Security) == 0
+			assert.Equalf(t, public, op.Extensions["x-public"] == true, "%s: x-public: true if and only if security: []", where)
+			if public {
+				got[op.OperationID] = securityPublic
+				continue
+			}
+			requirements := swagger.Security
+			if op.Security != nil {
+				requirements = *op.Security
+			}
+			if !assert.Lenf(t, requirements, 1, "%s: exactly one security requirement", where) ||
+				!assert.Lenf(t, requirements[0], 1, "%s: exactly one scheme", where) {
+				continue
+			}
+			for scheme := range requirements[0] {
+				if scheme != securityBearer {
+					got[op.OperationID] = scheme
+				}
+			}
+		}
+	}
+
+	assert.Equal(t, nonBearerOperations, got, "operations that do not run the bearer token")
+}
