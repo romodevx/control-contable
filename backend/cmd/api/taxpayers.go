@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log/slog"
 
@@ -27,7 +26,7 @@ import (
 type taxpayersWiring struct {
 	env    config.Environment
 	keys   config.Taxpayers
-	pool   *sql.DB // cc_app
+	tx     *pgdb.TxManager // the shared cc_app unit of work (appTx)
 	limits *ratelimitpg.Store
 	logger *slog.Logger
 }
@@ -62,13 +61,13 @@ func newTaxpayersModule(w taxpayersWiring) (taxpayersModule, error) {
 	}, nil
 }
 
-// newTaxpayersDeps builds the taxpayers ports over a new cc_app unit of
-// work.
+// newTaxpayersDeps builds the taxpayers ports over the shared cc_app unit
+// of work.
 func newTaxpayersDeps(w taxpayersWiring) (usecase.Deps, error) {
-	txm, err := pgdb.NewTxManager(w.pool)
-	if err != nil {
-		return usecase.Deps{}, err
+	if w.tx == nil {
+		return usecase.Deps{}, fmt.Errorf("taxpayers: %w", errNoAppTx)
 	}
+	txm := w.tx
 	vault, err := newRFCVault(w)
 	if err != nil {
 		return usecase.Deps{}, err

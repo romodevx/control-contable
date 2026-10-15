@@ -9,8 +9,10 @@
 //   - domain-imports: a domain imports only the standard library (never
 //     net/http or database/sql), its own module's domain tree and the pure
 //     platform packages in domainPlatformAllowlist, and the shared kernel.
-//   - usecase-frameworks: a usecase never imports net/http, database/sql,
-//     GORM or pgx.
+//   - usecase-imports: from outside this module a usecase imports only the
+//     packages in usecaseExternalAllowlist (pure standard library, uuid,
+//     errgroup, unicode/norm). An allowlist: net/http, database/sql, GORM,
+//     pgx, net, os/exec or any new SDK are refused until listed.
 //   - usecase-outer-layer: within its module a usecase imports only domain and
 //     usecase packages (never adapter, infra or any other directory).
 //   - usecase-platform-adapter: a usecase never imports a platform adapter
@@ -39,8 +41,19 @@
 //     module's adapter layer) never imports internal/platform/tx. Use cases
 //     own units of work, so no handler can open one, least of all a
 //     tx.SystemManager transaction without a user context (P0-30 D-2).
+//   - inward-adapter: only adapters (the top-level adapter/ tree, a module's
+//     adapter layer) and cmd/ import the top-level adapter/ tree: the router,
+//     the generated server and httperr (P0-29 FU3, ADR-0011). Delivery
+//     details never flow inward, into platform, infra, use cases or
+//     migrations.
 //
 // Apart from test-harness, the composition root (cmd/) may import anything.
+//
+// platform/access is the one platform package with business rules (trial,
+// caps, entitlements), kept there as a documented shared port by ADR-0011:
+// modules consume it inside their own transactions, which a module package
+// could not offer them under cross-module. No other business logic goes
+// into platform/.
 //
 // CheckRepositories adds one rule that is not about imports (P0-30 D-3): a
 // module repository (internal/<module>/infra, non-test files) never calls

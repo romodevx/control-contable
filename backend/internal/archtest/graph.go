@@ -31,7 +31,7 @@ func newImportGraph(modulePath string, files []fileImports) *importGraph {
 // first, then, for an inner layer (domain, usecase), any framework that the
 // imported package of this module reaches through its own imports. Packages
 // outside the module are not followed (third-party internals are not ours to
-// police here; the usecase-frameworks list names the ones that matter).
+// police here; usecaseExternalAllowlist bounds what a usecase imports).
 func (g *importGraph) check(importer, imported string) Rule {
 	if rule := checkImport(g.modulePath, importer, imported); rule != "" {
 		return rule

@@ -111,9 +111,9 @@ Mobile and QA deferrals keep their own lists: [P0-31 mobile review](../reviews/P
 |---|---|---|
 | FU1 | Request-deadline middleware (about 10 s, under `WriteTimeout`); test with a hanging `tx.Manager` | M1, before the first DB-backed handler |
 | FU2 | Replace `cmd/api` `notBuilt` (nil server, 500 on a flag ON) with an explicit stub | M1, before the first preset demo |
-| FU3 | Move `internal/platform/httperr` to `adapter/http/httperr` | M1 |
-| FU4 | ADR: `platform/access` stays a documented shared-kernel port or becomes `internal/access` | M1, before M1-07 wires it |
-| FU5 | Usecase third-party imports: denylist → allowlist in `archtest` | M1 |
+| FU3 | ~~Move `internal/platform/httperr` to `adapter/http/httperr`~~ **Done** (WP4, archtest `inward-adapter`, ADR-0011) | M1 |
+| FU4 | ~~ADR: `platform/access` stays a documented shared-kernel port or becomes `internal/access`~~ **Done**: stays a documented shared port ([ADR-0011](../adr/0011-access-and-authorization.md)) | M1, before M1-07 wires it |
+| FU5 | ~~Usecase third-party imports: denylist → allowlist in `archtest`~~ **Done** (WP4, `usecase-imports`) | M1 |
 | FU6 | `flags.Service` clears `failed` after a successful load | Any (backend) |
 | FU7 | Use the generated `gen.ErrorResponse` at the edge instead of the hand-written envelope types | M1, with FU3 |
 | FU8 | `FuzzParseCents` / `FuzzParseRate` fuzz targets for `money` | Before M3 (tax engine) |
@@ -167,8 +167,8 @@ marked **pre-enable** must land before `module_auth` is ON in a shared environme
 | FU3 | One error→HTTP mapper in `authhttp` (`ErrWrongPassword`, `ErrAccountNotFound`, dead `ErrorMapper` password rules) | backend-sr | Next touch of `authhttp` |
 | FU4 | One `FailureNotice` controller + `announce` helper in `core/forms`; `SignIn` / `CompleteSignUp` use cases | frontend-sr | Before M2 forms (M2-08) |
 | FU5 | Clear the "Espera N min" notice when the wait ends; countdown on verify/register `429`; round `formatCountdown` up | frontend-sr | With FU4 |
-| FU6 | ADR on `access` package ownership (P0-29 FU4, overdue) | architect | Before M2 |
-| FU7 | Move `platform/httperr` to `adapter/http/httperr`; dedupe the 429 and invalid-input messages (P0-29 FU3) | backend-sr | M1 refactor |
+| FU6 | ~~ADR on `access` package ownership (P0-29 FU4, overdue)~~ **Done** ([ADR-0011](../adr/0011-access-and-authorization.md), proposed in WP4) | architect | Before M2 |
+| FU7 | ~~Move `platform/httperr` to `adapter/http/httperr`~~ (done in WP4); dedupe the 429 and invalid-input messages (still open) (P0-29 FU3) | backend-sr | M1 refactor |
 | FU8 | Inject one `clock.Clock` in `cmd/api/auth.go` | backend-sr | M1 refactor |
 | FU9 | FORCE RLS (with definer policy) on `trial_registry`, `email_verifications`, `email_verification_failures`, `legal_documents`, or reword MODULE-auth §6.3; fix the stale `identity.sql` comment | db-sr | M1 refactor |
 | FU10 | archtest: denylist → allowlist (P0-29 FU5) | tech-lead | M2 |

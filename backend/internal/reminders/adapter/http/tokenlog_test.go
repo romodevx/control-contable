@@ -15,12 +15,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
+	"github.com/romodevx/control-contable/backend/adapter/http/httperr"
 	"github.com/romodevx/control-contable/backend/adapter/http/middleware"
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
 	"github.com/romodevx/control-contable/backend/adapter/http/router/routertest"
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagtest"
-	"github.com/romodevx/control-contable/backend/internal/platform/httperr"
 	"github.com/romodevx/control-contable/backend/internal/platform/logging"
 	"github.com/romodevx/control-contable/backend/internal/platform/principal"
 	"github.com/romodevx/control-contable/backend/internal/platform/tx"

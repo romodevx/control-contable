@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/romodevx/control-contable/backend/adapter/http/httperr"
 	"github.com/romodevx/control-contable/backend/internal/auth/usecase"
-	"github.com/romodevx/control-contable/backend/internal/platform/httperr"
 	"github.com/romodevx/control-contable/backend/internal/platform/principal"
 )
 

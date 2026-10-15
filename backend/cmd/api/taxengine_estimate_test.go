@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -22,7 +21,7 @@ func taxPeriod(t *testing.T, raw string) taxdomain.Period {
 // The estimate needs the taxpayers module's unit of work: its profile read
 // joins the estimate's transaction only through the same manager.
 func TestNewTaxEngineModule_requiresTheSharedUnitOfWork(t *testing.T) {
-	_, err := newTaxEngineModule(taxEngineWiring{pool: &sql.DB{}, limits: &ratelimitpg.Store{}})
+	_, err := newTaxEngineModule(taxEngineWiring{limits: &ratelimitpg.Store{}})
 
 	assert.ErrorIs(t, err, errNoTaxEngineTx)
 }
@@ -30,7 +29,7 @@ func TestNewTaxEngineModule_requiresTheSharedUnitOfWork(t *testing.T) {
 // The estimate's due date needs the holidays snapshot read at boot
 // (loadHolidays): without it the boot fails, never a weekends-only date.
 func TestNewTaxEngineModule_requiresTheHolidays(t *testing.T) {
-	_, err := newTaxEngineModule(taxEngineWiring{pool: &sql.DB{}, limits: &ratelimitpg.Store{}, tx: noopTx{}, taxpayers: fakeProfiles{}})
+	_, err := newTaxEngineModule(taxEngineWiring{limits: &ratelimitpg.Store{}, tx: noopTx{}, taxpayers: fakeProfiles{}})
 
 	assert.ErrorIs(t, err, taxusecase.ErrMissingDependency)
 }

@@ -6,8 +6,8 @@ invariants callers may rely on. The authoritative detail is each package's Go do
 (`go doc ./internal/platform/<pkg>` from `backend/`). When this page and the code disagree, the
 code wins and this page has a bug.
 
-Rule (P0-29 FU4): **no new business logic goes into `platform/`**. `access` is the one exception
-and is pending an architect decision. Business concepts that several bounded contexts must agree
+Rule (P0-29 FU4): **no new business logic goes into `platform/`**. `access` is the one exception,
+kept as a documented shared port by [ADR-0011](../adr/0011-access-and-authorization.md). Business concepts that several bounded contexts must agree
 on (dates, IVA treatment, CFDI UUID, withholding shares, the domain error model) go in the fiscal
 shared kernel, `backend/internal/kernel/fiscal` ([ADR-0007](../adr/0007-fiscal-shared-kernel.md)).
 
@@ -22,7 +22,7 @@ shared kernel, `backend/internal/kernel/fiscal` ([ADR-0007](../adr/0007-fiscal-s
 | [`flags`](#flags) | Module flag service (gate + `GET /v1/flags`), admin for `cmd/flags` | router, `cmd/flags` |
 | [`access`](#access) | AccessPolicy: trial clock, trial caps, entitlements, taxpayer cap | income/expense/taxpayer use cases |
 | [`apperr`](#apperr-and-httperr) | Delivery-agnostic application error model (contract error codes) | use cases, adapters |
-| [`httperr`](#apperr-and-httperr) | HTTP status mapping and the single error envelope | HTTP adapters |
+| [`httperr`](#apperr-and-httperr) | HTTP status mapping and the single error envelope. Lives in `backend/adapter/http/httperr` since WP4 | HTTP adapters |
 | [`crypto`](#crypto) | argon2id passwords, AES-256-GCM keyring, HMAC blind indexes | auth, taxpayers |
 | [`config`](#config-logging-requestid) | Environment and secret loading, validated up front | `cmd/` |
 | [`logging`](#config-logging-requestid) | slog JSON logger with PII redaction | everything |
@@ -159,7 +159,9 @@ Rules:
   module's adapter translates them with an `apperr.Mapper`.
 - `httperr.Status` maps codes to HTTP statuses. `httperr.Write` writes the **single error
   envelope** (`ErrorResponse`) with the request id. Contract tests guard it against the schema.
-  P0-29 FU3 moves the package to `adapter/http/httperr`.
+  The package is `adapter/http/httperr` (P0-29 FU3, done in WP4). The archtest rule
+  `inward-adapter` keeps it, and the rest of the `adapter/` tree, out of every package except
+  adapters and `cmd/`.
 
 ## crypto
 

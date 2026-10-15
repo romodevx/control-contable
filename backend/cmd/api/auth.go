@@ -34,7 +34,8 @@ type authWiring struct {
 	keys config.Auth
 	// outbox seals the queued auth emails; the worker opens them with the same key.
 	outbox config.AuthOutbox
-	pool   *sql.DB // cc_app
+	pool   *sql.DB         // cc_app, for the shared rate-limit store
+	tx     *pgdb.TxManager // the shared cc_app unit of work (appTx)
 	logger *slog.Logger
 	now    func() time.Time
 	// argon2 overrides the password hashing cost (tests); zero means
@@ -57,13 +58,13 @@ type authModule struct {
 	limits *ratelimitpg.Store
 }
 
-// newAuthModule wires the auth use cases (M1-05, M1-07) over the cc_app pool
-// and the access-token authenticator.
+// newAuthModule wires the auth use cases (M1-05, M1-07) over the shared
+// cc_app unit of work and the access-token authenticator.
 func newAuthModule(w authWiring) (authModule, error) {
-	txm, err := pgdb.NewTxManager(w.pool)
-	if err != nil {
-		return authModule{}, err
+	if w.tx == nil {
+		return authModule{}, fmt.Errorf("auth: %w", errNoAppTx)
 	}
+	txm := w.tx
 	keys, err := newAuthCrypto(w)
 	if err != nil {
 		return authModule{}, err

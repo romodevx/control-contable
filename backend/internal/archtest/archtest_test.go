@@ -39,11 +39,22 @@ func TestCheckImport(t *testing.T) {
 		{"usecase may not import the test harness", "internal/ledger/usecase", "internal/platform/pgtest", RuleUsecasePlatformAdapter},
 		{"usecase may not import a platform adapter subpackage", "internal/ledger/usecase", "internal/platform/pgdb/x", RuleUsecasePlatformAdapter},
 		{"infra may import the postgres adapter", "internal/ledger/infra", "internal/platform/pgdb", ""},
-		{"usecase may import neutral third-party", "internal/ledger/usecase", "github.com/google/uuid", ""},
-		{"usecase may not import net/http", "internal/ledger/usecase", "net/http", RuleUsecaseFrameworks},
-		{"usecase may not import database/sql", "internal/ledger/usecase", "database/sql", RuleUsecaseFrameworks},
-		{"usecase may not import gorm", "internal/ledger/usecase", "gorm.io/driver/postgres", RuleUsecaseFrameworks},
-		{"usecase may not import pgx", "internal/ledger/usecase", "github.com/jackc/pgx/v5", RuleUsecaseFrameworks},
+		{"usecase may import allow-listed third-party", "internal/ledger/usecase", "github.com/google/uuid", ""},
+		{"usecase may import errgroup", "internal/ledger/usecase", "golang.org/x/sync/errgroup", ""},
+		{"usecase may import allow-listed stdlib", "internal/ledger/usecase", "log/slog", ""},
+		// An allowlist, not a framework denylist: a transport, driver or SDK
+		// nobody listed is refused until someone decides it belongs here.
+		{"usecase may not import an unlisted third-party", "internal/ledger/usecase", "github.com/redis/go-redis/v9", RuleUsecaseImports},
+		{"usecase may not import an unlisted look-alike", "internal/ledger/usecase", "github.com/google/uuidx", RuleUsecaseImports},
+		{"usecase may not import the rest of x/sync", "internal/ledger/usecase", "golang.org/x/sync/semaphore", RuleUsecaseImports},
+		{"usecase may not import os/exec", "internal/ledger/usecase", "os/exec", RuleUsecaseImports},
+		{"usecase may not import net", "internal/ledger/usecase", "net", RuleUsecaseImports},
+		{"usecase may not import net/http/httptest", "internal/ledger/usecase", "net/http/httptest", RuleUsecaseImports},
+		{"usecase may not import a database driver", "internal/ledger/usecase", "database/sql/driver", RuleUsecaseImports},
+		{"usecase may not import net/http", "internal/ledger/usecase", "net/http", RuleUsecaseImports},
+		{"usecase may not import database/sql", "internal/ledger/usecase", "database/sql", RuleUsecaseImports},
+		{"usecase may not import gorm", "internal/ledger/usecase", "gorm.io/driver/postgres", RuleUsecaseImports},
+		{"usecase may not import pgx", "internal/ledger/usecase", "github.com/jackc/pgx/v5", RuleUsecaseImports},
 		{"usecase may not import its infra", "internal/ledger/usecase", "internal/ledger/infra", RuleUsecaseOuterLayer},
 		{"usecase may not import its adapter", "internal/ledger/usecase", "internal/ledger/adapter/http", RuleUsecaseOuterLayer},
 		{"usecase may not import another module", "internal/ledger/usecase", "internal/billing/usecase", RuleCrossModule},
@@ -95,6 +106,17 @@ func TestCheckImport(t *testing.T) {
 		{"module adapter may import its usecase", "internal/ledger/adapter/http", "internal/ledger/usecase", ""},
 		{"infra may import the unit-of-work port", "internal/ledger/infra", "internal/platform/tx", ""},
 		{"composition root may import the unit-of-work port", "cmd/api", "internal/platform/tx", ""},
+		// P0-29 FU3: the HTTP delivery tree (adapter/..., httperr included)
+		// is for adapters and cmd/ only; nothing inward of an adapter sees it.
+		{"module adapter may import the HTTP error writer", "internal/ledger/adapter/http", "adapter/http/httperr", ""},
+		{"top-level adapter may import the HTTP error writer", "adapter/http/router", "adapter/http/httperr", ""},
+		{"composition root may import the HTTP error writer", "cmd/api", "adapter/http/httperr", ""},
+		{"platform may not import the HTTP delivery tree", "internal/platform/ratelimit", "adapter/http/httperr", RuleInwardAdapter},
+		{"infra may not import the HTTP delivery tree", "internal/ledger/infra", "adapter/http/gen", RuleInwardAdapter},
+		{"usecase may not import the HTTP delivery tree", "internal/ledger/usecase", "adapter/http/httperr", RuleInwardAdapter},
+		{"domain may not import the HTTP delivery tree", "internal/ledger/domain", "adapter/http/httperr", RuleDomainImports},
+		{"kernel may not import the HTTP delivery tree", "internal/kernel/fiscal", "adapter/http/httperr", RuleKernelImports},
+		{"migrations may not import the HTTP delivery tree", "migrations", "adapter/http/httperr", RuleInwardAdapter},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -104,9 +126,9 @@ func TestCheckImport(t *testing.T) {
 	}
 }
 
-// qualify prefixes repo-relative "internal/..." paths with the fixture module path.
+// qualify prefixes repo-relative "internal/..." and "adapter/..." paths with the fixture module path.
 func qualify(path string) string {
-	if !strings.HasPrefix(path, "internal/") {
+	if !strings.HasPrefix(path, "internal/") && !strings.HasPrefix(path, "adapter/") {
 		return path
 	}
 	return fixtureModule + "/" + path
@@ -124,8 +146,8 @@ func TestCheckFixtureReportsEveryViolation(t *testing.T) {
 		{File: "internal/ledger/infra/repo.go", Imported: "example.com/fx/internal/billing/usecase", Rule: RuleCrossModule},
 		{File: "internal/ledger/usecase/post.go", Imported: "example.com/fx/internal/billing/domain", Rule: RuleCrossModule},
 		{File: "internal/ledger/usecase/post.go", Imported: "example.com/fx/internal/ledger/infra", Rule: RuleUsecaseOuterLayer},
-		{File: "internal/ledger/usecase/post.go", Imported: "gorm.io/gorm", Rule: RuleUsecaseFrameworks},
-		{File: "internal/ledger/usecase/post.go", Imported: "net/http", Rule: RuleUsecaseFrameworks},
+		{File: "internal/ledger/usecase/post.go", Imported: "gorm.io/gorm", Rule: RuleUsecaseImports},
+		{File: "internal/ledger/usecase/post.go", Imported: "net/http", Rule: RuleUsecaseImports},
 		{File: "internal/platform/money/money.go", Imported: "example.com/fx/internal/ledger/domain", Rule: RulePlatformModules},
 		{File: "internal/platform/money/money.go", Imported: "gorm.io/gorm", Rule: RulePurePlatformImports},
 	}
@@ -141,7 +163,9 @@ func TestCheckReportsFrameworksReachedThroughModulePackages(t *testing.T) {
 
 	const usecase = "internal/ledger/usecase/post.go"
 	want := []Violation{
-		{File: usecase, Imported: "example.com/fx/adapter/http/router", Rule: RuleInnerTransitiveFramework},
+		// The adapter/ tree is refused per import (inward-adapter) before the
+		// transitive walk runs.
+		{File: usecase, Imported: "example.com/fx/adapter/http/router", Rule: RuleInwardAdapter},
 		{File: usecase, Imported: "example.com/fx/internal/platform/flags/flagsgorm", Rule: RuleInnerTransitiveFramework},
 		{File: usecase, Imported: "example.com/fx/internal/platform/ports", Rule: RuleInnerTransitiveFramework},
 	}

@@ -4,8 +4,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/romodevx/control-contable/backend/adapter/http/httperr"
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
-	"github.com/romodevx/control-contable/backend/internal/platform/httperr"
 )
 
 const invalidInputMessage = "One or more fields are invalid."

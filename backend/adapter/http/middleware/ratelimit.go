@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/romodevx/control-contable/backend/adapter/http/httperr"
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
-	"github.com/romodevx/control-contable/backend/internal/platform/httperr"
 	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit"
 )
 

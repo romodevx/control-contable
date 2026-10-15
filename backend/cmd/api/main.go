@@ -105,47 +105,56 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err != nil {
 		return err
 	}
-	auth, err := newAuthModule(authWiring{keys: authKeys, outbox: outboxKeys, pool: pool, logger: logger, now: time.Now})
+	// appTx is the one cc_app unit of work every module shares: a port that
+	// joins its caller's transaction (CheckRegime, the access policy, the
+	// estimate's profile read) works only through the same manager
+	// (tx.ErrForeignTransaction otherwise). TestCompositionRoot_opensOneAppUnitOfWork
+	// keeps it the only one.
+	appTx, err := pgdb.NewTxManager(pool)
 	if err != nil {
 		return err
 	}
-	records, err := newRecordModules(recordWiring{env: cfg.Env, keys: taxpayerKeys, pool: pool, auth: auth, logger: logger})
+	auth, err := newAuthModule(authWiring{keys: authKeys, outbox: outboxKeys, pool: pool, tx: appTx, logger: logger, now: time.Now})
 	if err != nil {
 		return err
 	}
-	holidays, err := loadHolidaySnapshots(ctx, pool)
+	records, err := newRecordModules(recordWiring{env: cfg.Env, keys: taxpayerKeys, tx: appTx, auth: auth, logger: logger})
+	if err != nil {
+		return err
+	}
+	holidays, err := loadHolidaySnapshots(ctx, appTx)
 	if err != nil {
 		return err
 	}
 	taxEngine, err := newTaxEngineModule(taxEngineWiring{
-		pool: pool, limits: auth.limits, logger: logger,
-		tx: records.taxpayers.tx, taxpayers: records.taxpayers.queries, holidays: holidays.taxEngine,
+		limits: auth.limits, logger: logger,
+		tx: appTx, taxpayers: records.taxpayers.queries, holidays: holidays.taxEngine,
 	})
 	if err != nil {
 		return err
 	}
 	dashboard, err := newDashboardModule(dashboardWiring{
-		tx: records.taxpayers.tx, flags: flagSvc, taxpayers: records.taxpayers.queries, estimator: taxEngine.estimator,
+		tx: appTx, flags: flagSvc, taxpayers: records.taxpayers.queries, estimator: taxEngine.estimator,
 		limits: auth.limits,
 	})
 	if err != nil {
 		return err
 	}
 	history, err := newHistoryModule(historyWiring{
-		tx: records.taxpayers.tx, flags: flagSvc, estimator: taxEngine.estimator, limits: auth.limits,
+		tx: appTx, flags: flagSvc, estimator: taxEngine.estimator, limits: auth.limits,
 	})
 	if err != nil {
 		return err
 	}
 	annual, err := newAnnualModule(annualWiring{
-		tx: records.taxpayers.tx, taxpayers: records.taxpayers.queries, estimator: taxEngine.estimator,
+		tx: appTx, taxpayers: records.taxpayers.queries, estimator: taxEngine.estimator,
 		holidays: taxEngine.holidays, limits: auth.limits, logger: logger,
 	})
 	if err != nil {
 		return err
 	}
 	reminders, err := newRemindersModule(remindersWiring{
-		env: cfg.Env, keys: reminderKeys, tx: records.taxpayers.tx, holidays: holidays.reminders, limits: auth.limits, logger: logger,
+		env: cfg.Env, keys: reminderKeys, tx: appTx, holidays: holidays.reminders, limits: auth.limits, logger: logger,
 	})
 	if err != nil {
 		return err
@@ -177,12 +186,15 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	return serve(ctx, newServer(handler, cfg.HTTPAddr, logger), ln, logger)
 }
 
+// errNoAppTx reports module wiring without the shared cc_app unit of work.
+var errNoAppTx = errors.New("the shared cc_app unit of work is required")
+
 // recordWiring is what the record modules (taxpayers, incomes, expenses)
 // need from the composition root.
 type recordWiring struct {
 	env    config.Environment
 	keys   config.Taxpayers
-	pool   *sql.DB // cc_app
+	tx     *pgdb.TxManager // the shared cc_app unit of work (appTx)
 	auth   authModule
 	logger *slog.Logger
 	// incomesClock and expensesClock are the record rules' clocks; nil is
@@ -204,7 +216,7 @@ type recordModules struct {
 // regime checks join it, and the taxpayers record lookup reads the
 // expenses inside the taxpayers' own.
 func newRecordModules(w recordWiring) (recordModules, error) {
-	taxpayers, err := newTaxpayersModule(taxpayersWiring{env: w.env, keys: w.keys, pool: w.pool, limits: w.auth.limits, logger: w.logger})
+	taxpayers, err := newTaxpayersModule(taxpayersWiring{env: w.env, keys: w.keys, tx: w.tx, limits: w.auth.limits, logger: w.logger})
 	if err != nil {
 		return recordModules{}, err
 	}

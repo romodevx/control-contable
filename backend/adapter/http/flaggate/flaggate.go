@@ -16,8 +16,8 @@ import (
 	"net/http"
 
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
+	"github.com/romodevx/control-contable/backend/adapter/http/httperr"
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
-	"github.com/romodevx/control-contable/backend/internal/platform/httperr"
 )
 
 const notFoundMessage = "Not found."

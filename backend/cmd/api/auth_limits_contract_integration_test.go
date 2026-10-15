@@ -131,7 +131,7 @@ func TestContract_authLoginLimits(t *testing.T) {
 	t.Run("the email's budget is shared by every API instance", func(t *testing.T) {
 		env := newLimitsEnv(t)
 		auth, err := newAuthModule(authWiring{
-			keys: testAuthKeys(), outbox: testOutboxKeys(), pool: env.app, logger: logging.New(&syncBuffer{}, nil),
+			keys: testAuthKeys(), outbox: testOutboxKeys(), pool: env.app, tx: newAppTx(t, env.app), logger: logging.New(&syncBuffer{}, nil),
 			now: time.Now, argon2: fastArgon2,
 		})
 		require.NoError(t, err)

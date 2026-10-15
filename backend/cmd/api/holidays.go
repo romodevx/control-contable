@@ -2,12 +2,10 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
-	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
 	"github.com/romodevx/control-contable/backend/internal/platform/tx"
 	remindersholidays "github.com/romodevx/control-contable/backend/internal/reminders/infra/holidays"
 	taxholidays "github.com/romodevx/control-contable/backend/internal/taxengine/infra/holidays"
@@ -64,12 +62,9 @@ type holidaySnapshots struct {
 	reminders holidaySnapshot
 }
 
-// loadHolidaySnapshots reads the holidays at boot over pool (cc_app).
-func loadHolidaySnapshots(ctx context.Context, pool *sql.DB) (holidaySnapshots, error) {
-	system, err := pgdb.NewTxManager(pool)
-	if err != nil {
-		return holidaySnapshots{}, err
-	}
+// loadHolidaySnapshots reads the holidays at boot through the shared cc_app
+// unit of work (its system transactions).
+func loadHolidaySnapshots(ctx context.Context, system tx.SystemManager) (holidaySnapshots, error) {
 	taxEngine, err := loadHolidays(ctx, system, taxholidays.NewReader())
 	if err != nil {
 		return holidaySnapshots{}, fmt.Errorf("taxengine: %w", err)
