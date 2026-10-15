@@ -41,8 +41,6 @@ const (
 	recordTimeout = 10 * time.Second
 	// maxAttempts is the last attempt a transient failure is retried at.
 	maxAttempts = 3
-	// regimeBimonthly is the 621 regime: its payment follows the bimester.
-	regimeBimonthly = "621"
 	// pushDisabledEvent is the log event an operator alert matches: the
 	// module is ON but this worker has no push sender (§2.4 step 1).
 	pushDisabledEvent = "reminders_push_disabled"
@@ -437,13 +435,14 @@ func after(a, b domain.Period) bool {
 	return a.Year() > b.Year() || (a.Year() == b.Year() && a.Month() > b.Month())
 }
 
+// onlyBimonthly is the kernel's rule (fiscal.PaysBimonthly), the one the
+// estimate's due_date reads too.
 func onlyBimonthly(held []HeldRegime) bool {
-	for _, h := range held {
-		if h.Code != regimeBimonthly {
-			return false
-		}
+	codes := make([]fiscal.RegimeCode, len(held))
+	for i, h := range held {
+		codes[i] = fiscal.RegimeCode(h.Code)
 	}
-	return len(held) > 0
+	return fiscal.PaysBimonthly(codes)
 }
 
 // notification builds the message: names in the switcher's order and,
