@@ -62,7 +62,7 @@ const (
 // domainPlatformAllowlist lists the pure platform packages a domain may import.
 // They are held to the domain's own import rule, so the domain cannot reach a
 // framework through them.
-var domainPlatformAllowlist = []string{"money"}
+var domainPlatformAllowlist = []string{"money", "usertext"}
 
 // domainExternalAllowlist lists the exact non-stdlib packages a domain may
 // import (ADR-0004): pure algorithms with no I/O and no framework. Pure
