@@ -179,8 +179,8 @@ marked **pre-enable** must land before `module_auth` is ON in a shared environme
 | #40, OB10 | Consents are those of the first registrant, not re-affirmed at verify | backend-sr + legal | With OB10 |
 | #47 FU1, G-1 | `rate_limit_take` returns a wait ≤ 0 under a concurrent reset (`greatest(…, 1 µs)`) | db-sr | M9 |
 | #47 FU2 | `rate_limit_take` returns NULL if the purge deletes the row mid-call | db-sr | M9 |
-| #33, #44 | Purge dead refresh-token families + `(absolute_expires_at)` index | db-sr | M9 |
-| #34 | Purge `email_verification_failures` and `rate_limit_buckets` past their windows | db-sr | M9 |
+| #33, #44 | ~~Purge dead refresh-token families + `(absolute_expires_at)` index~~ done in M9-08 (expired or revoked families; slid-out families go at their absolute expiry) | db-sr | M9 |
+| #34 | Purge `email_verification_failures` (done in M9-08, with expired `email_verifications`) and `rate_limit_buckets` past their windows (open: ships with #47 FU2) | db-sr | M9 |
 | #41 | Suspension revokes refresh families; operator suspend path (definer function) | db-sr + backend-sr | Before any suspend feature |
 | #41 #3 | Router authenticates each operation with its declared security scheme (webhook) | backend-sr | Before M7-05 |
 | P0-30 D-6, G-3 | `Cache-Control: no-store` on error responses | backend-sr | Next platform touch |
@@ -505,7 +505,7 @@ M9-07 (FCM) and M9-09 (Flutter push) are built against fakes; live verification 
 | M9-05 | Devices + reminder settings use cases and handlers, contract tests, flag ON/OFF | backend-sr | M9-02, M1-07 | 3.5 | — | `feature/reminders-settings` | — | [ ] |
 | M9-06 | Reminder job: due users, per-user tx, `notification_log` exactly-once, bounded errgroup, optional amounts when module_tax_engine ON | backend-sr | P0-27, M9-04, M9-05, M5-22 | 4.5 | — | `feature/reminders-worker` | — | [ ] |
 | M9-07 | FCM sender adapter (Firebase Admin) + UNREGISTERED cleanup, fake in tests | backend-sr | P0-08 | 2.5 | PG-M79 | `feature/reminders-fcm` | OB9 (live check only) | [ ] |
-| M9-08 | Soft-delete purge job (30 days) via `purge_soft_deleted` definer fn (runs regardless of reminder flag) | db-sr | P0-27, M3-02, M4-03, ANN-03 (must also purge `personal_deductions`, ANN-25) | 2 | — | `feature/records-purge-job` | — | [ ] |
+| M9-08 | Soft-delete purge job (30 days) via `purge_soft_deleted` definer fn (runs regardless of reminder flag) | db-sr | P0-27, M3-02, M4-03, ANN-03 (must also purge `personal_deductions`, ANN-25) | 2 | — | `feature/records-purge-job` | — | [[x] |
 | M9-09 | Flutter push: firebase_messaging, permission prompt, device registration | frontend-sr | M9-01, M1-12 | 3.5 | — | `feature/reminders-mobile-push` | OB9, OB7 | [ ] |
 | M9-10 | Flutter reminder settings screen | frontend-sr | M9-09 | 3 | — | `feature/reminders-mobile-settings` | — | [ ] |
 | M9-11 | Register flag `module_reminders` + preset `demo_full` | backend-sr | M9-06, M9-07, M9-10 | 0.5 | — | `feature/reminders-flag` | — | [ ] |
@@ -574,7 +574,7 @@ tax engine's preconditions ([module page](../modules/annual.md#flags-prerequisit
 | ID | Item | Owner | Target |
 |---|---|---|---|
 | ANN-27 | **CPA sign-off** of the annual goldens and ⚠️ topics; un-skip AN-04 / AN-07 PTU or record decisions | qa-sr, owner + CPA | OB5 |
-| SEC FU1 | M9-08 purge job must cover soft-deleted `personal_deductions` (LFPDPPP retention); ANN-03 added to M9-08's deps | db-sr | With M9-08 |
+| SEC FU1 | ~~M9-08 purge job must cover soft-deleted `personal_deductions` (LFPDPPP retention); ANN-03 added to M9-08's deps~~ done in M9-08 | db-sr | With M9-08 |
 | SEC FU2 | Guard test: every `x-module: module_annual` operation has a budget in `annualhttp.UserLimits` (as the taxpayers and expenses `limits_test.go` do) | backend-sr | Next annual HTTP change |
 | SEC FU3 | Reject Unicode format characters (Cf: bidi override, zero-width) in `student_label` / `employer_label` (`validLabel`; DB CHECK too) — Low, display spoofing of the user's own data | backend-sr + db-sr | Next annual inputs change |
 | TL FU1 | Deadline per section kind lives in `explain.sectionDeadlines`: the strategy returns its deadline kind, or a test that every computed kind has one | backend-sr | Next annual strategy |
