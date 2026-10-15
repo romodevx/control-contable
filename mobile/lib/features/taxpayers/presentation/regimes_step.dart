@@ -25,9 +25,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// grouped by what the app can do with them, each group explained in
 /// plain words, with the mandatory legend. Multi-select for a persona
 /// física, single-select for a persona moral or when adding one regime
-/// (regimes already held are not offered again). Then the month the
-/// regimes start in: this month by default, back to January 2026 for a
-/// user who starts using the app mid-year (M5-29 QA D2).
+/// (regimes already held are not offered again). The month the regimes
+/// start in is asked first, above the list, so it is never missed: this
+/// month by default (the server's default), back to January 2026 for a
+/// user who starts using the app mid-year (M5-29 QA D2, #152 QA O1).
 class RegimesStep extends ConsumerWidget {
   /// The step of [flow].
   const new({required this.flow, super.key});
@@ -197,9 +198,11 @@ class _RegimesFormState extends State<_RegimesForm> {
             ),
             if (notice != null)
               FormNotice(message: describeNotice(notice, l10n)),
+            // The month goes first: below a long catalog it was missed and
+            // the current-month default was sent unseen (#152 QA O1).
+            _StartPeriodField(flow: _flow),
             const EstimateLegend(),
             RegimeList(catalog: widget.catalog, selection: _selection),
-            _StartPeriodField(flow: _flow),
           ],
         );
       },
@@ -211,7 +214,8 @@ class _RegimesFormState extends State<_RegimesForm> {
 /// range), with an always-visible hint: records and estimates exist only
 /// from that month, so a user who already paid taxes earlier picks the
 /// month they started. One month for every regime of the step. Re-adding
-/// an ended regime asks nothing: it reopens from its original start.
+/// an ended regime asks nothing: it reopens from its original start, said
+/// in the field's place and room.
 class _StartPeriodField extends StatelessWidget {
   const new({required this.flow});
 
@@ -221,14 +225,31 @@ class _StartPeriodField extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final months = MaterialLocalizations.of(context);
+    final picker = _picker(context);
     final reopenedStart = flow.reopenedStartPeriod;
-    if (reopenedStart != null) {
-      return Text(
-        l10n.addRegimeReopensFrom(
-          months.formatMonthYear(periodMonth(reopenedStart)),
+    if (reopenedStart == null) return picker;
+    // The field sits above the regime list: the note takes its room (the
+    // hidden picker keeps it) so the list never jumps under the finger
+    // that just picked the ended regime.
+    return Stack(
+      children: [
+        ExcludeFocus(
+          child: ExcludeSemantics(
+            child: IgnorePointer(child: Opacity(opacity: 0, child: picker)),
+          ),
         ),
-      );
-    }
+        Text(
+          l10n.addRegimeReopensFrom(
+            months.formatMonthYear(periodMonth(reopenedStart)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _picker(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final months = MaterialLocalizations.of(context);
     final label = flow.singleRegime
         ? l10n.onboardingStartPeriodLabelSingle
         : l10n.onboardingStartPeriodLabelMany;

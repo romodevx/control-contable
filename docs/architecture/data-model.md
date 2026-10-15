@@ -25,7 +25,9 @@
 - **Deletion**:
   - `ON DELETE CASCADE` from `users` for account deletion (US-A4).
   - Soft delete (`deleted_at`) on incomes, expenses and personal_deductions supports Undo. The worker purges
-    soft-deleted rows after 30 days *(owner: retention policy, PRD §8)*.
+    soft-deleted rows after 30 days *(owner: retention policy, PRD §8)*, together with dead auth state
+    (refresh-token families expired or revoked over 24 h ago, sign-ups expired over 24 h ago, ended
+    verification-failure windows): `purge_soft_deleted`, M9-08, [runbook](../runbooks/records-purge.md).
 
 ## ERD
 
@@ -442,7 +444,7 @@ against `entitlements.ends_at`.
 | `cc_webhook` | INSERT/UPDATE `revenuecat_events`; DML on `subscriptions`, `entitlements` (subject to RLS) | Webhook handler (separate pool) |
 | `cc_worker` | EXECUTE `due_reminder_users()`, `purge_soft_deleted()`; DML on reminder tables (subject to RLS). Withholdings backfill (WH-08, `20261018100000`): EXECUTE `withholding_backfill_users()` (user ids only); SELECT own `taxpayers` (profile columns, never the RFC ciphertext), `taxpayer_regimes`, `incomes`, `expenses`; SELECT the catalogs; UPDATE own `incomes` / `expenses` facts and derived withholding columns only | Worker, `cmd/backfill-withholdings` |
 | `cc_auth_definer` | **NOLOGIN, NOBYPASSRLS.** Owns the auth definer functions; column grants + policies scoped to the email HMAC bound by the running function (`app.auth_email_hash`). `cc_owner` is a member `WITH INHERIT FALSE, SET TRUE` (ownership transfer only) | Auth definer functions (M1-03) |
-| `cc_worker_definer` | **NOLOGIN, NOBYPASSRLS.** Owns the worker's cross-user definer functions (`withholding_backfill_users()`, WH-08); one policy shows `users(id)` only. `cc_owner` is a member `WITH INHERIT FALSE, SET TRUE` | Worker definer functions |
+| `cc_worker_definer` | **NOLOGIN, NOBYPASSRLS.** Owns the worker's cross-user definer functions (`withholding_backfill_users()`, WH-08; `purge_soft_deleted(integer)`, M9-08); one policy shows `users(id)` only; the M9-08 policies (SELECT + DELETE) match only rows past the purge cutoffs on `incomes`, `expenses`, `personal_deductions`, `refresh_tokens`, `email_verifications`, `email_verification_failures`. `cc_owner` is a member `WITH INHERIT FALSE, SET TRUE` | Worker definer functions |
 
 `SECURITY DEFINER` functions (`SET search_path = pg_catalog, public, pg_temp`, every
 reference schema-qualified, narrow return types) are the only ways to read across users.
@@ -453,7 +455,10 @@ EXECUTE goes to `cc_app` only.
 - `auth_lookup_credentials(email_hash)` returns `(id, password_hash, status)` and is used
   by login only.
 - `due_reminder_users(ts)` returns user ids only.
-- `purge_soft_deleted(before)` returns a count.
+- `purge_soft_deleted(batch_size)` (M9-08, owner `cc_worker_definer`, EXECUTE `cc_worker`)
+  deletes up to `batch_size` rows per target past its cutoff, which the function computes
+  itself (records 30 days after soft delete, dead auth state after 24 h), and returns one
+  `(target, purged)` count per target.
 - `trial_registry_check_and_insert(email_hash)` returns true on an email's first trial
   only, ever (the registry survives account deletion).
 - `email_verification_upsert(email_hash, code_hash, pending, expires_at)` (expiry within

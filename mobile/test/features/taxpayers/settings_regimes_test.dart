@@ -252,18 +252,52 @@ void main() {
       );
       await pumpSettings(tester, of: withEnded);
       await tapText(tester, 'Agregar régimen');
+      final semantics = tester.ensureSemantics();
       await _pick(tester, '605');
+      final reopens = find.text(
+        'Lo reactivamos desde febrero de 2026, el mes en que empezó.',
+      );
+      await tester.ensureVisible(reopens);
+      await tester.pumpAndSettle();
 
-      expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+      expect(reopens, findsOneWidget);
+      // The picker only keeps the field's room: it can't be reached.
+      expect(
+        find.byType(DropdownButtonFormField<String>).hitTestable(),
+        findsNothing,
+      );
+      expect(find.bySemanticsLabel(RegExp('^¿Desde qué mes')), findsNothing);
+      semantics.dispose();
+      await tapText(tester, 'Agregar régimen');
+
+      expect(harness.repository.addedStarts, [null]);
+    });
+
+    testWidgets('picking an ended regime does not move the list under the '
+        'finger: its reopen note keeps the room of the month field '
+        '(#159 review)', (tester) async {
+      final withEnded = taxpayer(
+        regimes: [
+          heldRegime('612'),
+          heldRegime('606', startPeriod: '2026-02', endPeriod: '2026-06'),
+        ],
+      );
+      await pumpSettings(tester, of: withEnded);
+      await tapText(tester, 'Agregar régimen');
+      await tester.ensureVisible(_catalogRow('606'));
+      await tester.pumpAndSettle();
+      final before = tester.getRect(_catalogRow('606')).top;
+
+      await tester.tap(_catalogRow('606'));
+      await tester.pumpAndSettle();
+
+      expect(tester.getRect(_catalogRow('606')).top, before);
       expect(
         find.text(
           'Lo reactivamos desde febrero de 2026, el mes en que empezó.',
         ),
         findsOneWidget,
       );
-      await tapText(tester, 'Agregar régimen');
-
-      expect(harness.repository.addedStarts, [null]);
     });
 
     testWidgets('this month is left to the server', (tester) async {
