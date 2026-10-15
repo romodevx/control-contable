@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Control Contable API
-  version: 0.12.0
+  version: 0.13.0
   summary: Monthly IVA and provisional ISR estimates for Mexican taxpayers.
   description: |
     Spec-first contract (single source of truth). Server stubs (oapi-codegen),
@@ -21,6 +21,8 @@ info:
       returns the existing resource (idempotent against double submit).
       Reusing an `id` with a different body, or an `id` that already exists outside
       the caller's scope, answers `409 conflict` (never reveals the other row).
+      The one exception is `registerDevice`: its `id` is an installation id, upserted
+      and claimed, never a `409`.
 
     Status: DRAFT 0.1.0 (Phase 2 Design). Regime-specific shapes (regime options,
     tax-input keys, breakdown concepts) are generic until
@@ -5022,116 +5024,290 @@ paths:
         '500': { $ref: '#/components/responses/RecordInternalError' }
 
   # ---------------------------------------------------------------- M9 Reminders
+  # MODULE-reminders §10 (M9-01, 0.13.0). Every operation: `module_reminders`, which
+  # requires `module_taxpayers` (OFF or implied OFF → `404` before any input check);
+  # no `402` (account preferences, not records: MODULE-reminders §4).
   /v1/devices:
     post:
       tags: [Reminders]
       operationId: registerDevice
-      summary: Register or refresh a push token
+      x-frozen: sha256:8c74984aa165e611e34d05724611b60773bf021a5cda10826564abb55f4bc5a0
+      summary: Register or refresh this installation's push token
+      description: >-
+        The app calls it after the OS notification permission is granted, after every login
+        and whenever FCM rotates the token (MODULE-reminders §2.3). `id` is the
+        **installation id**: a UUIDv7 the app generates once per install and keeps. It is not
+        a record id, so the API-wide "same `id`, different body → `409`" rule does **not**
+        apply: this operation never answers `409`.
+
+
+        **Upsert with claim.** Same caller and same `id` → the token, `app_version` and
+        `last_seen_at` are refreshed, `200`. Anything else → `201`: the row is written for the
+        caller and, in the same transaction, every other row holding this `id` or this token
+        is removed, whoever owns it (another user after a shared phone changed hands, or the
+        caller's own stale installation after a reinstall). A push token therefore reaches
+        exactly one user. The answer is the same whether or not the token had another owner
+        (no oracle). A user keeps at most 10 devices: an 11th evicts the least recently seen.
+
+
+        **Token.** `push_token` is write-only: stored encrypted, looked up by a keyed HMAC,
+        never logged and never returned (`Device` has no token).
+
+
+        **Access.** Allowed for a read-only user (an account preference, not a record: no
+        `402`, no trial slot). Per-user budget `devices_writes`, 30 per hour (burst 10,
+        ADR-0005), shared with `unregisterDevice`; spent → `429 rate_limited` with
+        `Retry-After`.
       x-module: module_reminders
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/DeviceCreate' }
       responses:
-        '201':
-          description: Registered.
-          headers:
-            Cache-Control: { $ref: '#/components/headers/NoStore' }
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Device' }
         '200':
-          description: Already registered; refreshed.
+          description: This installation was already registered by the caller; token and `last_seen_at` refreshed.
           headers:
             Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Device' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+              example:
+                id: 0199d4a4-3c4d-7f5e-8a61-7c8d9e0f1a23
+                platform: ios
+                app_version: 1.2.0
+                created_at: '2026-10-13T16:10:00Z'
+                last_seen_at: '2026-10-15T15:02:00Z'
+        '201':
+          description: Registered for the caller (new installation, or claimed from another row).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Device' }
+        '400': { $ref: '#/components/responses/RemindersBadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404': { $ref: '#/components/responses/RemindersNotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
   /v1/devices/{deviceId}:
     parameters:
-      - name: deviceId
-        in: path
-        required: true
-        schema: { $ref: '#/components/schemas/Uuid' }
+      - $ref: '#/components/parameters/DeviceId'
     delete:
       tags: [Reminders]
       operationId: unregisterDevice
-      summary: Remove a push token (logout / opt-out)
+      x-frozen: sha256:7fe523409c8f24128723022a246797bb221c40de83ba0ec7525f31594ce62636
+      summary: Remove this installation's push token (logout, opt-out)
+      description: >-
+        The app calls it on logout (before revoking the session) and when the user turns
+        reminders off. Removes the caller's row; the token stops receiving reminders at once.
+        Another user's or an unknown installation id answers `404` (RLS), so does a second
+        call: the app treats `404` as done. Best effort: a missed call is covered by the
+        claim on the next `registerDevice` and by the FCM `UNREGISTERED` cleanup of the
+        reminder job. Account deletion removes every device (cascade).
+
+
+        **Access.** Allowed for a read-only user. Budget `devices_writes` (shared with
+        `registerDevice`); spent → `429` with `Retry-After`.
       x-module: module_reminders
+      security:
+        - bearerAuth: []
       responses:
         '204':
           description: Removed.
           headers:
             Cache-Control: { $ref: '#/components/headers/NoStore' }
+        '400': { $ref: '#/components/responses/RemindersBadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404': { $ref: '#/components/responses/RemindersNotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
   /v1/reminder-settings:
     get:
       tags: [Reminders]
       operationId: getReminderSettings
-      summary: Reminder preferences (defaults if never set)
+      x-frozen: sha256:20b6635859da1ed3059bd40b1edb6a1ddc29bfc34159eb0e9d49d6905bf571bb
+      summary: The caller's reminder preferences (defaults if never saved)
+      description: >-
+        A user who never saved answers the defaults (`enabled: false`, `early_day: 14`,
+        `on_due_date: true`, `send_time: 10:00`, `show_amounts: false`) and no row is created
+        by the read (MODULE-reminders §2.2).
+
+
+        **Access.** Allowed for a read-only user. No per-user budget of its own (a one-row
+        read); the edge limiter bounds it like every route, so `429` with `Retry-After` is
+        still possible.
       x-module: module_reminders
+      security:
+        - bearerAuth: []
       responses:
         '200':
-          description: Settings.
+          description: The saved settings, or the defaults.
           headers:
             Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ReminderSettings' }
+              examples:
+                neverSaved:
+                  summary: First visit, nothing saved yet (the defaults)
+                  value: { enabled: false, early_day: 14, on_due_date: true, send_time: '10:00', show_amounts: false }
+                saved:
+                  summary: Opted in, no early reminder, amounts shown
+                  value: { enabled: true, early_day: null, on_due_date: true, send_time: '08:30', show_amounts: true }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404': { $ref: '#/components/responses/RemindersNotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
     put:
       tags: [Reminders]
       operationId: putReminderSettings
-      summary: Replace reminder preferences
+      x-frozen: sha256:95676c4ae7991b53b963caaf68a13c4ec26118766bbf4d2dfbfa78b7aa2f80fd
+      summary: Replace the caller's reminder preferences
+      description: >-
+        Replaces the whole object (every field required, `additionalProperties: false`): an
+        omitted `early_day` is `400 required`, never read as `null` or as the default 14. Last
+        write wins; the same body again answers `200` unchanged. Saving never resends a
+        reminder: the reminder log already holds what was sent (MODULE-reminders §2.2, §2.4).
+        `enabled: true` needs a registered device to deliver anything, but saving does not
+        check for one (the app registers the device first).
+
+
+        **Access.** Allowed for a read-only user (no `402`). Per-user budget
+        `reminder_settings_writes`, 60 per hour (burst 20, ADR-0005); spent → `429
+        rate_limited` with `Retry-After`.
+
+
+        `FieldError.code` values are the JSON Schema keywords (`required`, `minimum`,
+        `maximum`, `pattern`, `type`, `additionalProperties`). `422 business_rule_violation`
+        details: `body` → `no_reminder_selected` (`enabled: true` with `early_day: null` and
+        `on_due_date: false`: it would be on and send nothing).
       x-module: module_reminders
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/ReminderSettings' }
+            examples:
+              optIn:
+                summary: Opt in with the defaults
+                value: { enabled: true, early_day: 14, on_due_date: true, send_time: '10:00', show_amounts: false }
+              noEarlyReminder:
+                summary: Only the due-date reminder
+                value: { enabled: true, early_day: null, on_due_date: true, send_time: '10:00', show_amounts: false }
       responses:
         '200':
-          description: Saved.
+          description: Saved; the settings as stored.
           headers:
             Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ReminderSettings' }
-        '400': { $ref: '#/components/responses/BadRequest' }
+        '400': { $ref: '#/components/responses/RemindersBadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404': { $ref: '#/components/responses/RemindersNotFound' }
+        '422':
+          description: >-
+            Well-formed but selects no reminder: `enabled: true` with `early_day: null` and
+            `on_due_date: false` (`no_reminder_selected` on `body`).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: business_rule_violation
+                  message: Choose at least one reminder.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: body, code: no_reminder_selected, message: Elige al menos un recordatorio o desactívalos. }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
   /v1/tax-calendar:
     get:
       tags: [Reminders]
       operationId: getTaxCalendar
-      summary: Monthly due dates for a year (day 17 moved past weekends/holidays)
+      x-frozen: sha256:bd31773a50d4f1e6846ea7a468872ff3e0bcd366f1c7947fe08cefdf452eddbe
+      summary: Monthly due dates of a year's periods (day 17 moved past weekends and holidays)
+      description: >-
+        One entry per **period** `year-01` .. `year-12`, in order, so December's entry is due
+        in January of `year + 1` (MODULE-reminders §2.1). Due date = day 17 of the month after
+        the period; on a Saturday, Sunday or a seeded holiday that moves due dates it moves to
+        the next day that is none of those (CFF art. 12 ¶1, ¶5). Not applied: RFC-digit grace
+        days, SAT vacation periods and the Friday extension (a Friday day 17 is kept,
+        OQ-R1), hence `subject_to_confirmation: true` on every entry while OQ-R1 is open. The
+        calendar is the same for every user and does not depend on the caller's taxpayers: a
+        bimonthly (621) period is due on the entry of the bimester's second month. It is the
+        same rule the estimates' `due_date` uses (fiscal shared kernel, ADR-0007 Amendment 1).
+
+
+        **Coverage.** Only years whose holidays are seeded are answered; `year` unseeded →
+        `422 calendar_unavailable`. When `year` is seeded and `year + 1` is not, December's
+        entry is computed with weekends only (already `subject_to_confirmation`).
+
+
+        **Caching.** The `200` is `Cache-Control: private, max-age=3600`, the second exception
+        to `no-store`: the same public data for every user, behind authentication, so only the
+        app's own cache may keep it, for an hour (a holiday correction shows within that
+        window). Errors are `no-store`.
+
+
+        **Access.** Allowed for a read-only user. Per-user budget `tax_calendar_reads`, 120 per
+        hour (burst 60, ADR-0005); spent → `429 rate_limited` with `Retry-After`.
+
+
+        `FieldError.code` values are the JSON Schema keywords on `year` (`required`, `type`,
+        `minimum`, `maximum`). `422 business_rule_violation` details: `year` →
+        `calendar_unavailable`.
       x-module: module_reminders
+      security:
+        - bearerAuth: []
       parameters:
         - name: year
           in: query
           required: true
+          description: The year of the **periods** listed (December's entry is due in `year + 1`).
           schema: { $ref: '#/components/schemas/FiscalYear' }
       responses:
         '200':
-          description: Calendar.
+          description: The year's 12 entries.
+          headers:
+            Cache-Control:
+              description: >-
+                Only the app's own (private) cache may keep the calendar, for one hour (RFC 9111
+                §5.2.2.7): the same data for everyone, behind authentication, changed only when
+                operations seed or correct holidays.
+              required: true
+              schema: { type: string, const: 'private, max-age=3600' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaxCalendar' }
+        '400': { $ref: '#/components/responses/RemindersBadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/RemindersNotFound' }
+        '422':
+          description: >-
+            The year's holidays are not seeded, so its due dates cannot be computed
+            (`calendar_unavailable` on `year`). Operations seed each next year in December,
+            after the RMF.
           headers:
             Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/TaxCalendar' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: business_rule_violation
+                  message: The tax calendar for that year is not available yet.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: year, code: calendar_unavailable, message: Aún no tenemos el calendario de ese año. }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/InternalError' }
 
 components:
@@ -5267,17 +5443,24 @@ components:
       in: path
       required: true
       schema: { $ref: '#/components/schemas/Uuid' }
+    DeviceId:
+      name: deviceId
+      in: path
+      required: true
+      description: The installation id the device was registered with.
+      schema: { $ref: '#/components/schemas/InstallationId' }
   headers:
     NoStore:
-      x-frozen: sha256:54eb73c86a25f912c1a1c22a4e6556ebc433a024e2a0e05d9c262e1ac8247077
+      x-frozen: sha256:0530116a71f1a7e1677714f7f4bccf9b237be49c34116dac1156e46b381943c5
       description: >-
         Every response of the API, success or error, carries `Cache-Control: no-store` (RFC 9111
         section 5.2.2.5; RFC 6749 section 5.1): tokens, account data, taxpayer and financial
         records, estimates and error envelopes are never kept by any cache (S-11; M3/M4
         security gate G-1). One edge middleware writes it, so it is also on a `404` written
-        before routing (module OFF, unknown route), a `401`, a `429` and a `500`. The only
-        exception is the public `200` of `listLegalDocuments` (`public, max-age=300`); an error
-        is always `no-store`.
+        before routing (module OFF, unknown route), a `401`, a `429` and a `500`. Two
+        exceptions, both a `200` of data that is the same for everyone: the public
+        `listLegalDocuments` (`public, max-age=300`) and the authenticated `getTaxCalendar`
+        (`private, max-age=3600`, 0.13.0). An error is always `no-store`.
       required: true
       schema: { type: string, const: no-store }
     WWWAuthenticate:
@@ -5802,6 +5985,60 @@ components:
             foreignId:
               value:
                 error: { code: conflict, message: The request conflicts with the current state., request_id: req_01J9Z6Q4X8 }
+    # M9 reminder errors. `422`s are inline on their operation (one detail code each).
+    RemindersBadRequest:
+      x-frozen: sha256:5b3fa4123f071c29fd25a2e1b14ba86b83b124f3cbd4bb9bcff33be158fc0971
+      description: >-
+        Input does not match the contract (the operation's body, `deviceId` or `year`): a
+        malformed body, an unknown or missing field (`early_day` included), a bad `platform`
+        or `push_token`, `early_day` outside 1..16, `send_time` not `HH:MM`, a malformed
+        `deviceId`, or a missing or out-of-range `year`.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            earlyDayMissing:
+              summary: PUT without `early_day` (the whole object is required)
+              value:
+                error:
+                  code: validation_failed
+                  message: One or more fields are invalid.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: early_day, code: required, message: Indica el día del recordatorio anticipado o null. }
+            sendTimeMalformed:
+              value:
+                error:
+                  code: validation_failed
+                  message: One or more fields are invalid.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: send_time, code: pattern, message: Usa el formato HH:MM. }
+            yearMissing:
+              value:
+                error:
+                  code: validation_failed
+                  message: One or more fields are invalid.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: year, code: required, message: Indica el año. }
+    RemindersNotFound:
+      x-frozen: sha256:6d3191472c3129b658a2ee1d54baf2cf5dfad184361f14abdb855f935b229485
+      description: >-
+        `module_reminders` is effectively OFF (`module_reminders` or `module_taxpayers`
+        disabled), which answers `404` before any input check, a malformed request included
+        (indistinguishable on purpose); or, for `unregisterDevice`, the device does not exist,
+        was already removed or belongs to another user. With the module ON a malformed input
+        is `400`.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            error: { code: not_found, message: Not found., request_id: req_01J9Z6Q4X8 }
   schemas:
     # ------------------------------------------------------------ primitives
     Uuid:
@@ -9870,69 +10107,174 @@ components:
             - { month: 9, amount_cents: 520000 }
 
     # ------------------------------------------------------------ reminders
+    InstallationId:
+      x-frozen: sha256:59d2d01f3870644cdff3bdc0e3dcb60db79ee79a2df105a55b00213bb9c1f226
+      type: string
+      format: uuid
+      description: >-
+        The app's installation id: a UUIDv7 generated once per install and kept, so one
+        installation is one device row (MODULE-reminders §2.3). Not a record id.
+      examples: [0199d4a4-3c4d-7f5e-8a61-7c8d9e0f1a23]
+    DevicePlatform:
+      x-frozen: sha256:65cdb906243e73d1a0fb60a6dce652833d531e091f5ed9e770303c27e6b9ade3
+      type: string
+      enum: [ios, android]
     DeviceCreate:
+      x-frozen: sha256:174f40907ce0f709b60eaf96c8bc9084bf8fe4b5e39f2c04292c0fee29f60cbd
       type: object
       required: [id, platform, push_token]
+      additionalProperties: false
+      description: >-
+        Body of `registerDevice`. Closed: an unknown field is `400 additionalProperties`.
       properties:
-        id: { $ref: '#/components/schemas/Uuid' }
-        platform: { type: string, enum: [ios, android] }
-        push_token: { type: string, minLength: 1, maxLength: 4096 }
-        app_version: { type: string, maxLength: 32 }
+        id: { $ref: '#/components/schemas/InstallationId' }
+        platform: { $ref: '#/components/schemas/DevicePlatform' }
+        push_token:
+          type: string
+          writeOnly: true
+          minLength: 1
+          maxLength: 4096
+          pattern: '^[!-~]+$'
+          description: >-
+            The FCM registration token (APNs goes through FCM). Printable ASCII, no spaces.
+            Write-only: encrypted at rest, never logged, never returned.
+        app_version:
+          type: string
+          minLength: 1
+          maxLength: 32
+          pattern: '^[0-9A-Za-z.+-]+$'
+          description: The app's version string, for support; optional.
       examples:
         - id: 0199d4a4-3c4d-7f5e-8a61-7c8d9e0f1a23
           platform: ios
           push_token: example-fcm-registration-token
-          app_version: 1.0.0
+          app_version: 1.2.0
     Device:
+      x-frozen: sha256:b2a3e02974e2aea3c86700458ea5fbd39b63830f7efb13b4373c57179515fb43
       type: object
-      required: [id, platform, created_at]
+      required: [id, platform, app_version, created_at, last_seen_at]
+      description: A registered installation. Never carries the push token.
       properties:
-        id: { $ref: '#/components/schemas/Uuid' }
-        platform: { type: string, enum: [ios, android] }
+        id: { $ref: '#/components/schemas/InstallationId' }
+        platform: { $ref: '#/components/schemas/DevicePlatform' }
+        app_version: { type: [string, 'null'], maxLength: 32 }
         created_at: { type: string, format: date-time }
+        last_seen_at:
+          type: string
+          format: date-time
+          description: Last `registerDevice` of this installation; the 11th device evicts the oldest.
       examples:
         - id: 0199d4a4-3c4d-7f5e-8a61-7c8d9e0f1a23
           platform: ios
-          created_at: '2026-10-13T16:10:00Z'
+          app_version: 1.2.0
+          created_at: '2026-10-15T15:02:00Z'
+          last_seen_at: '2026-10-15T15:02:00Z'
     ReminderSettings:
+      x-frozen: sha256:e60ff4e3fe4bbccf0d948d30e68b5c724319e1afd2c759324dd1c54cf244626a
       type: object
-      required: [enabled, on_due_date, send_time, show_amounts]
+      required: [enabled, early_day, on_due_date, send_time, show_amounts]
+      additionalProperties: false
+      description: >-
+        The caller's reminder preferences (MODULE-reminders §2.2), the body of both
+        `getReminderSettings` and `putReminderSettings`. Every field is required, `early_day`
+        included (nullable): PUT replaces the whole object, so nothing is defaulted from an
+        omission. Defaults, answered by GET until the first save: `enabled: false`,
+        `early_day: 14`, `on_due_date: true`, `send_time: 10:00`, `show_amounts: false`.
       properties:
-        enabled: { type: boolean, default: false }
+        enabled:
+          type: boolean
+          description: Opt-in. The app asks for the OS notification permission before sending `true`.
         early_day:
           type: [integer, 'null']
           minimum: 1
           maximum: 16
-          default: 14
-          description: Day of month for the early reminder; null disables it.
-        on_due_date: { type: boolean, default: true }
+          description: >-
+            Day of the due month for the early reminder (nominal calendar day, sent even on a
+            weekend); `null` = no early reminder.
+        on_due_date:
+          type: boolean
+          description: Remind on the due date itself (after any weekend or holiday move).
         send_time:
           type: string
           pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
-          default: '10:00'
-          description: Local time, America/Mexico_City.
-        show_amounts: { type: boolean, default: false, description: Lock-screen privacy opt-in. }
+          description: >-
+            `HH:MM`, America/Mexico_City (every user, no per-user zone); delivered within one
+            reminder-job tick (5 minutes).
+        show_amounts:
+          type: boolean
+          description: >-
+            Show each taxpayer's estimated amount in the notification. Privacy opt-in: the OS
+            shows it on the lock screen. Without it, or with `module_tax_engine` OFF, the
+            notification lists names only.
       examples:
         - { enabled: true, early_day: 14, on_due_date: true, send_time: '10:00', show_amounts: false }
+    TaxObligation:
+      type: string
+      enum: [monthly_isr_iva]
+      description: >-
+        Append-only (like `ErrorCode`, not frozen). v1 lists only `monthly_isr_iva`, the
+        monthly provisional ISR and definitive IVA payment due on day 17. Clients skip an
+        entry whose obligation they do not know.
+    TaxCalendarMovedReason:
+      x-frozen: sha256:83fc247bef6c9635f6469d36988ffaba26a8212823109678076db22b2f364a90
+      type: string
+      enum: [weekend, holiday]
+      description: >-
+        Why the nominal date (day 17) is not the due date: `weekend` when day 17 is a Saturday
+        or Sunday, `holiday` when it is a holiday that moves due dates. The days skipped after
+        it may be of either kind.
     TaxCalendarEntry:
+      x-frozen: sha256:64eae4cb59b079362ec9bfc03d88049a31027dbc15c14b6d0642a166061c5056
       type: object
-      required: [period, obligation, nominal_due_date, due_date]
+      required: [period, obligation, nominal_due_date, due_date, moved_reason, subject_to_confirmation]
       properties:
         period: { $ref: '#/components/schemas/Period' }
-        obligation: { type: string, enum: [monthly_isr_iva] }
-        nominal_due_date: { type: string, format: date }
-        due_date: { type: string, format: date }
-        moved_reason: { type: [string, 'null'], enum: [weekend, holiday, null] }
+        obligation: { $ref: '#/components/schemas/TaxObligation' }
+        nominal_due_date:
+          type: string
+          format: date
+          description: Day 17 of the month after `period`.
+        due_date:
+          type: string
+          format: date
+          description: The nominal date moved to the next business day when needed.
+        moved_reason:
+          oneOf:
+            - $ref: '#/components/schemas/TaxCalendarMovedReason'
+            - type: 'null'
+          description: '`null` when `due_date` equals `nominal_due_date`.'
+        subject_to_confirmation:
+          type: boolean
+          description: >-
+            `true` while the date rule awaits CPA confirmation (OQ-R1, the CFF 12 ¶5 Friday
+            extension is not applied): today every entry. The app shows "sujeto a
+            confirmación".
+      examples:
+        - { period: '2026-09', obligation: monthly_isr_iva, nominal_due_date: '2026-10-17', due_date: '2026-10-19', moved_reason: weekend, subject_to_confirmation: true }
     TaxCalendar:
+      x-frozen: sha256:6c89f86e10af5fd825b457dc79acd26253de808518a9a9247bfb8268cac33ad5
       type: object
       required: [year, entries]
       properties:
         year: { $ref: '#/components/schemas/FiscalYear' }
         entries:
           type: array
+          minItems: 12
+          maxItems: 12
+          description: Periods `year-01` .. `year-12`, in order.
           items: { $ref: '#/components/schemas/TaxCalendarEntry' }
       examples:
         - year: 2026
           entries:
-            - { period: '2026-01', obligation: monthly_isr_iva, nominal_due_date: '2026-02-17', due_date: '2026-02-17', moved_reason: null }
-            - { period: '2026-04', obligation: monthly_isr_iva, nominal_due_date: '2026-05-17', due_date: '2026-05-18', moved_reason: weekend }
+            - { period: '2026-01', obligation: monthly_isr_iva, nominal_due_date: '2026-02-17', due_date: '2026-02-17', moved_reason: null, subject_to_confirmation: true }
+            - { period: '2026-02', obligation: monthly_isr_iva, nominal_due_date: '2026-03-17', due_date: '2026-03-17', moved_reason: null, subject_to_confirmation: true }
+            - { period: '2026-03', obligation: monthly_isr_iva, nominal_due_date: '2026-04-17', due_date: '2026-04-17', moved_reason: null, subject_to_confirmation: true }
+            - { period: '2026-04', obligation: monthly_isr_iva, nominal_due_date: '2026-05-17', due_date: '2026-05-18', moved_reason: weekend, subject_to_confirmation: true }
+            - { period: '2026-05', obligation: monthly_isr_iva, nominal_due_date: '2026-06-17', due_date: '2026-06-17', moved_reason: null, subject_to_confirmation: true }
+            - { period: '2026-06', obligation: monthly_isr_iva, nominal_due_date: '2026-07-17', due_date: '2026-07-17', moved_reason: null, subject_to_confirmation: true }
+            - { period: '2026-07', obligation: monthly_isr_iva, nominal_due_date: '2026-08-17', due_date: '2026-08-17', moved_reason: null, subject_to_confirmation: true }
+            - { period: '2026-08', obligation: monthly_isr_iva, nominal_due_date: '2026-09-17', due_date: '2026-09-17', moved_reason: null, subject_to_confirmation: true }
+            - { period: '2026-09', obligation: monthly_isr_iva, nominal_due_date: '2026-10-17', due_date: '2026-10-19', moved_reason: weekend, subject_to_confirmation: true }
+            - { period: '2026-10', obligation: monthly_isr_iva, nominal_due_date: '2026-11-17', due_date: '2026-11-17', moved_reason: null, subject_to_confirmation: true }
+            - { period: '2026-11', obligation: monthly_isr_iva, nominal_due_date: '2026-12-17', due_date: '2026-12-17', moved_reason: null, subject_to_confirmation: true }
+            - { period: '2026-12', obligation: monthly_isr_iva, nominal_due_date: '2027-01-17', due_date: '2027-01-18', moved_reason: weekend, subject_to_confirmation: true }

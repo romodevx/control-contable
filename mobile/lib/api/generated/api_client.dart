@@ -16,7 +16,7 @@ import 'clients/history_client.dart';
 import 'clients/annual_client.dart';
 import 'clients/reminders_client.dart';
 
-/// Control Contable API `v0.12.0`.
+/// Control Contable API `v0.13.0`.
 ///
 /// Monthly IVA and provisional ISR estimates for Mexican taxpayers.
 ///
@@ -37,6 +37,8 @@ import 'clients/reminders_client.dart';
 ///   returns the existing resource (idempotent against double submit).
 ///   Reusing an `id` with a different body, or an `id` that already exists outside.
 ///   the caller's scope, answers `409 conflict` (never reveals the other row).
+///   The one exception is `registerDevice`: its `id` is an installation id, upserted.
+///   and claimed, never a `409`.
 ///
 /// Status: DRAFT 0.1.0 (Phase 2 Design). Regime-specific shapes (regime options,.
 /// tax-input keys, breakdown concepts) are generic until.
@@ -48,7 +50,7 @@ class ApiClient {
   final Dio _dio;
   final String? _baseUrl;
 
-  static String get version => '0.12.0';
+  static String get version => '0.13.0';
 
   PlatformClient? _platform;
   AuthClient? _auth;

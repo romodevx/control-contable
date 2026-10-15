@@ -14,6 +14,8 @@ part 'tax_calendar.g.dart';
 abstract class TaxCalendar with _$TaxCalendar {
   const factory TaxCalendar({
     required FiscalYear year,
+
+    /// Periods `year-01` .. `year-12`, in order.
     required List<TaxCalendarEntry> entries,
   }) = _TaxCalendar;
 

@@ -8,11 +8,11 @@ part of 'reminder_settings.dart';
 
 _ReminderSettings _$ReminderSettingsFromJson(Map<String, dynamic> json) =>
     _ReminderSettings(
-      enabled: json['enabled'] as bool? ?? false,
-      earlyDay: (json['early_day'] as num?)?.toInt() ?? 14,
-      onDueDate: json['on_due_date'] as bool? ?? true,
-      sendTime: json['send_time'] as String? ?? '10:00',
-      showAmounts: json['show_amounts'] as bool? ?? false,
+      enabled: json['enabled'] as bool,
+      earlyDay: (json['early_day'] as num?)?.toInt(),
+      onDueDate: json['on_due_date'] as bool,
+      sendTime: json['send_time'] as String,
+      showAmounts: json['show_amounts'] as bool,
     );
 
 Map<String, dynamic> _$ReminderSettingsToJson(_ReminderSettings instance) =>

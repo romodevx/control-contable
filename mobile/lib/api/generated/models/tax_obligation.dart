@@ -4,19 +4,18 @@
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+/// Append-only (like `ErrorCode`, not frozen). v1 lists only `monthly_isr_iva`, the monthly provisional ISR and definitive IVA payment due on day 17. Clients skip an entry whose obligation they do not know.
 @JsonEnum()
-enum DeviceCreatePlatform {
-  @JsonValue('ios')
-  ios('ios'),
-  @JsonValue('android')
-  android('android'),
+enum TaxObligation {
+  @JsonValue('monthly_isr_iva')
+  monthlyIsrIva('monthly_isr_iva'),
 
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);
 
-  const DeviceCreatePlatform(this.json);
+  const TaxObligation(this.json);
 
-  factory DeviceCreatePlatform.fromJson(String json) =>
+  factory TaxObligation.fromJson(String json) =>
       values.firstWhere((e) => e.json == json, orElse: () => $unknown);
 
   final String? json;
@@ -25,6 +24,6 @@ enum DeviceCreatePlatform {
   String toString() => json?.toString() ?? super.toString();
 
   /// Returns all defined enum values excluding the $unknown value.
-  static List<DeviceCreatePlatform> get $valuesDefined =>
+  static List<TaxObligation> get $valuesDefined =>
       values.where((value) => value != $unknown).toList();
 }

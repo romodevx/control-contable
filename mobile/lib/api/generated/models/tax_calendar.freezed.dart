@@ -16,7 +16,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TaxCalendar {
 
- FiscalYear get year; List<TaxCalendarEntry> get entries;
+ FiscalYear get year;/// Periods `year-01` .. `year-12`, in order.
+ List<TaxCalendarEntry> get entries;
 /// Create a copy of TaxCalendar
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -220,7 +221,9 @@ class _TaxCalendar implements TaxCalendar {
   factory _TaxCalendar.fromJson(Map<String, dynamic> json) => _$TaxCalendarFromJson(json);
 
 @override final  FiscalYear year;
+/// Periods `year-01` .. `year-12`, in order.
  final  List<TaxCalendarEntry> _entries;
+/// Periods `year-01` .. `year-12`, in order.
 @override List<TaxCalendarEntry> get entries {
   if (_entries is EqualUnmodifiableListView) return _entries;
   // ignore: implicit_dynamic_type
