@@ -27,3 +27,9 @@ func EditableColumnNames() []string {
 
 // LedgerRange exposes the paid_on range [from, until) a LedgerQuery reads.
 func LedgerRange(q LedgerQuery) (from, until string, err error) { return q.dates() }
+
+// ExpenseRow and RowWithholding expose the read of a stored derivation.
+type ExpenseRow = expenseRow
+
+// RowWithholding is expenseRow.withholding.
+var RowWithholding = expenseRow.withholding
