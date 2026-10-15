@@ -89,6 +89,22 @@ func (v *RFCVault) Open(ciphertext []byte, binding usecase.RowBinding) (domain.R
 	return rfc, nil
 }
 
+// Reseal moves an rfc_encrypted value of the row binding names to the
+// keyring's active key (ADR-0012 key re-seal job); the RFC never leaves the
+// keyring. It fails like Open: crypto.ErrDecrypt for another row's value,
+// crypto.ErrUnknownKeyID when the sealing key is no longer held.
+func (v *RFCVault) Reseal(ciphertext []byte, binding usecase.RowBinding) ([]byte, error) {
+	taxpayerID, userID, err := bindingIDs(binding)
+	if err != nil {
+		return nil, err
+	}
+	resealed, err := v.keyring.Reseal(ciphertext, rowAAD(taxpayerID, userID))
+	if err != nil {
+		return nil, fmt.Errorf("taxpayers infra: reseal rfc: %w", err)
+	}
+	return resealed, nil
+}
+
 // Format redacts the vault for every fmt verb.
 func (RFCVault) Format(f fmt.State, _ rune) { _, _ = io.WriteString(f, redacted) }
 

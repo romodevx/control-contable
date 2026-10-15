@@ -86,6 +86,21 @@ func (v *Vault) Open(ciphertext []byte, b usecase.TokenBinding) (domain.PushToke
 	return token, nil
 }
 
+// Reseal moves a token_ciphertext of the row b names to the keyring's
+// active key (ADR-0012 key re-seal job); the token never leaves the
+// keyring. It fails like Open.
+func (v *Vault) Reseal(ciphertext []byte, b usecase.TokenBinding) ([]byte, error) {
+	aad, err := rowAAD(b)
+	if err != nil {
+		return nil, err
+	}
+	resealed, err := v.keyring.Reseal(ciphertext, aad)
+	if err != nil {
+		return nil, fmt.Errorf("reminders pushtoken: reseal: %w", err)
+	}
+	return resealed, nil
+}
+
 // Format redacts the vault for every fmt verb.
 func (Vault) Format(f fmt.State, _ rune) { _, _ = io.WriteString(f, redacted) }
 
