@@ -5,7 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// This installation's push identity on the device: the installation id
 /// (`DeviceCreate.id`, a UUIDv7 made once per install) and whether it is
-/// registered. Neither is secret: the token itself is never stored here.
+/// registered. Neither is secret; the push credential is never kept here
+/// (plain preferences hold no credential, M1-12).
 abstract interface class InstallationStore {
   /// The installation id; made and kept on first use.
   Future<String> installationId();
@@ -25,10 +26,12 @@ const String deviceRegisteredKey = 'push_device_registered';
 
 /// [InstallationStore] over the platform preferences.
 class PreferencesInstallationStore implements InstallationStore {
-  /// The store over [_preferences]; new ids are stamped with [_clock].
-  new(this._preferences, this._clock);
+  /// The store over [_open]'s preferences, opened on first use (never at
+  /// boot); new ids are stamped with [_clock].
+  new(this._open, this._clock);
 
-  final SharedPreferencesAsync _preferences;
+  final SharedPreferencesAsync Function() _open;
+  late final SharedPreferencesAsync _preferences = _open();
   final Clock _clock;
 
   @override
@@ -74,7 +77,7 @@ class InMemoryInstallationStore implements InstallationStore {
 /// The device's installation store. Tests override it.
 final installationStoreProvider = Provider<InstallationStore>(
   (ref) => PreferencesInstallationStore(
-    SharedPreferencesAsync(),
+    SharedPreferencesAsync.new,
     ref.watch(clockProvider),
   ),
   name: 'installationStoreProvider',

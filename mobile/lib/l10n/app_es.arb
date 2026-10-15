@@ -3982,5 +3982,155 @@
   "annualFactsMoralNote": "Las personas morales sólo capturan los datos de sus regímenes.",
   "@annualFactsMoralNote": {
     "description": "PM note over the read-only list."
+  },
+  "remindersTitle": "Recordatorios",
+  "@remindersTitle": {
+    "description": "Reminders screen title and Home entry tooltip."
+  },
+  "remindersLoading": "Cargando sus recordatorios…",
+  "@remindersLoading": {
+    "description": "Settings loading."
+  },
+  "remindersLoadFailed": "No se pudieron cargar sus recordatorios.",
+  "@remindersLoadFailed": {
+    "description": "Settings read failed."
+  },
+  "remindersEnabledLabel": "Recibir recordatorios de pago",
+  "@remindersEnabledLabel": {
+    "description": "Master opt-in switch."
+  },
+  "remindersEnabledHelp": "Un aviso antes de cada fecha de pago mensual estimada, con la lista de sus contribuyentes.",
+  "@remindersEnabledHelp": {
+    "description": "Under the master switch."
+  },
+  "remindersUnavailable": "Notificaciones no disponibles en esta versión de la app.",
+  "@remindersUnavailable": {
+    "description": "Push not configured in this build (no Firebase)."
+  },
+  "remindersDenied": "Las notificaciones están bloqueadas para Control Contable. Permítalas en los ajustes del sistema para recibir recordatorios.",
+  "@remindersDenied": {
+    "description": "OS permission denied."
+  },
+  "remindersOpenSystemSettings": "Abrir ajustes del sistema",
+  "@remindersOpenSystemSettings": {
+    "description": "Opens the OS notification settings."
+  },
+  "remindersTurnOnFailed": "No se pudieron activar los recordatorios. Inténtelo de nuevo.",
+  "@remindersTurnOnFailed": {
+    "description": "Registration or save failed while turning on."
+  },
+  "remindersTurnOffFailed": "No se pudieron desactivar los recordatorios. Inténtelo de nuevo.",
+  "@remindersTurnOffFailed": {
+    "description": "Save failed while turning off."
+  },
+  "remindersEarlyDayLabel": "Recordatorio anticipado",
+  "@remindersEarlyDayLabel": {
+    "description": "Early reminder day select label."
+  },
+  "remindersEarlyDayNone": "Sin recordatorio anticipado",
+  "@remindersEarlyDayNone": {
+    "description": "Early reminder off option."
+  },
+  "remindersEarlyDayOption": "El día {day} del mes de pago",
+  "@remindersEarlyDayOption": {
+    "description": "Early reminder day option.",
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "remindersOnDueDateLabel": "Avisarme el día del vencimiento",
+  "@remindersOnDueDateLabel": {
+    "description": "Due-date reminder switch."
+  },
+  "remindersSendTimeLabel": "Hora del aviso",
+  "@remindersSendTimeLabel": {
+    "description": "Send time field label."
+  },
+  "remindersSendTimeValue": "{time} (hora del centro de México)",
+  "@remindersSendTimeValue": {
+    "description": "Send time value.",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "remindersSendTimeChange": "Cambiar",
+  "@remindersSendTimeChange": {
+    "description": "Send time change action."
+  },
+  "remindersShowAmountsLabel": "Mostrar montos en las notificaciones (se verán en la pantalla de bloqueo)",
+  "@remindersShowAmountsLabel": {
+    "description": "Amounts opt-in; the label carries its consequence (MODULE-reminders §2.5)."
+  },
+  "remindersPrivacyNote": "Las notificaciones se ven en la pantalla de bloqueo. Muestran los nombres de sus contribuyentes, nunca su RFC; los montos sólo si usted lo elige.",
+  "@remindersPrivacyNote": {
+    "description": "Lock-screen privacy explanation."
+  },
+  "remindersSave": "Guardar cambios",
+  "@remindersSave": {
+    "description": "Saves the reminder details."
+  },
+  "remindersSaved": "Cambios guardados.",
+  "@remindersSaved": {
+    "description": "Save confirmation."
+  },
+  "remindersSaveFailed": "No se pudieron guardar los cambios. Inténtelo de nuevo.",
+  "@remindersSaveFailed": {
+    "description": "Save failed."
+  },
+  "remindersNoneSelected": "Elija al menos un recordatorio: el anticipado o el del día del vencimiento.",
+  "@remindersNoneSelected": {
+    "description": "Submit error: enabled with nothing to send."
+  },
+  "remindersUpcomingTitle": "Próximos vencimientos",
+  "@remindersUpcomingTitle": {
+    "description": "Upcoming due dates heading."
+  },
+  "remindersUpcomingLoading": "Cargando fechas…",
+  "@remindersUpcomingLoading": {
+    "description": "Calendar loading."
+  },
+  "remindersUpcomingFailed": "No se pudieron cargar las fechas.",
+  "@remindersUpcomingFailed": {
+    "description": "Calendar read failed."
+  },
+  "remindersUpcomingEmpty": "Sin fechas disponibles por ahora.",
+  "@remindersUpcomingEmpty": {
+    "description": "No calendar entries ahead."
+  },
+  "remindersUpcomingDate": "{date}",
+  "@remindersUpcomingDate": {
+    "description": "A due date, weekday included.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMMEEEEd"
+      }
+    }
+  },
+  "remindersUpcomingPeriod": "Pago mensual de {month}",
+  "@remindersUpcomingPeriod": {
+    "description": "The period an entry pays.",
+    "placeholders": {
+      "month": {
+        "type": "DateTime",
+        "format": "yMMMM"
+      }
+    }
+  },
+  "remindersMovedWeekend": "Se recorre por fin de semana",
+  "@remindersMovedWeekend": {
+    "description": "Due date moved past a weekend."
+  },
+  "remindersMovedHoliday": "Se recorre por día inhábil",
+  "@remindersMovedHoliday": {
+    "description": "Due date moved past a holiday."
+  },
+  "remindersSubjectToConfirmation": "Fechas sujetas a confirmación.",
+  "@remindersSubjectToConfirmation": {
+    "description": "OQ-R1 note under the list."
   }
 }

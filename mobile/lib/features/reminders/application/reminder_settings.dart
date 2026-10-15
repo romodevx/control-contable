@@ -1,4 +1,5 @@
 import 'package:control_contable/api/generated/models/reminder_settings.dart';
+import 'package:control_contable/core/diagnostics/error_reporter.dart';
 import 'package:control_contable/features/reminders/application/push_device.dart';
 import 'package:control_contable/features/reminders/application/push_messaging.dart';
 import 'package:control_contable/features/reminders/data/reminders_repository.dart';
@@ -40,11 +41,15 @@ class ReminderSettingsNotifier extends AsyncNotifier<ReminderSettings> {
     return TurnOnOutcome.enabled;
   }
 
-  /// Opt-out: saves disabled, then removes the device (best effort; a
-  /// failure is thrown after the save went through).
+  /// Opt-out: saves disabled (throws when that fails), then removes the
+  /// device, best effort: with reminders off nothing is sent to it anyway.
   Future<void> turnOff() async {
     await save(state.requireValue.copyWith(enabled: false));
-    await ref.read(pushDeviceProvider).unregister();
+    try {
+      await ref.read(pushDeviceProvider).unregister();
+    } on Exception catch (error) {
+      ref.read(errorReporterProvider).report('reminders.unregister', error);
+    }
   }
 
   /// Replaces the whole object with [settings].
@@ -76,3 +81,12 @@ reminderSettingsProvider =
     );
 
 Duration? _noAutomaticRetry(int retryCount, Object error) => null;
+
+/// The OS notification permission, read without prompting; re-read when
+/// the app resumes (the user may come back from the system settings).
+final FutureProvider<PushPermission> pushPermissionProvider =
+    FutureProvider.autoDispose<PushPermission>(
+      (ref) => ref.read(pushMessagingProvider).permission(),
+      name: 'pushPermissionProvider',
+      retry: _noAutomaticRetry,
+    );

@@ -4953,6 +4953,198 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Las personas morales sólo capturan los datos de sus regímenes.'**
   String get annualFactsMoralNote;
+
+  /// Reminders screen title and Home entry tooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Recordatorios'**
+  String get remindersTitle;
+
+  /// Settings loading.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando sus recordatorios…'**
+  String get remindersLoading;
+
+  /// Settings read failed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar sus recordatorios.'**
+  String get remindersLoadFailed;
+
+  /// Master opt-in switch.
+  ///
+  /// In es, this message translates to:
+  /// **'Recibir recordatorios de pago'**
+  String get remindersEnabledLabel;
+
+  /// Under the master switch.
+  ///
+  /// In es, this message translates to:
+  /// **'Un aviso antes de cada fecha de pago mensual estimada, con la lista de sus contribuyentes.'**
+  String get remindersEnabledHelp;
+
+  /// Push not configured in this build (no Firebase).
+  ///
+  /// In es, this message translates to:
+  /// **'Notificaciones no disponibles en esta versión de la app.'**
+  String get remindersUnavailable;
+
+  /// OS permission denied.
+  ///
+  /// In es, this message translates to:
+  /// **'Las notificaciones están bloqueadas para Control Contable. Permítalas en los ajustes del sistema para recibir recordatorios.'**
+  String get remindersDenied;
+
+  /// Opens the OS notification settings.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir ajustes del sistema'**
+  String get remindersOpenSystemSettings;
+
+  /// Registration or save failed while turning on.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron activar los recordatorios. Inténtelo de nuevo.'**
+  String get remindersTurnOnFailed;
+
+  /// Save failed while turning off.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron desactivar los recordatorios. Inténtelo de nuevo.'**
+  String get remindersTurnOffFailed;
+
+  /// Early reminder day select label.
+  ///
+  /// In es, this message translates to:
+  /// **'Recordatorio anticipado'**
+  String get remindersEarlyDayLabel;
+
+  /// Early reminder off option.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin recordatorio anticipado'**
+  String get remindersEarlyDayNone;
+
+  /// Early reminder day option.
+  ///
+  /// In es, this message translates to:
+  /// **'El día {day} del mes de pago'**
+  String remindersEarlyDayOption(int day);
+
+  /// Due-date reminder switch.
+  ///
+  /// In es, this message translates to:
+  /// **'Avisarme el día del vencimiento'**
+  String get remindersOnDueDateLabel;
+
+  /// Send time field label.
+  ///
+  /// In es, this message translates to:
+  /// **'Hora del aviso'**
+  String get remindersSendTimeLabel;
+
+  /// Send time value.
+  ///
+  /// In es, this message translates to:
+  /// **'{time} (hora del centro de México)'**
+  String remindersSendTimeValue(String time);
+
+  /// Send time change action.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar'**
+  String get remindersSendTimeChange;
+
+  /// Amounts opt-in; the label carries its consequence (MODULE-reminders §2.5).
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar montos en las notificaciones (se verán en la pantalla de bloqueo)'**
+  String get remindersShowAmountsLabel;
+
+  /// Lock-screen privacy explanation.
+  ///
+  /// In es, this message translates to:
+  /// **'Las notificaciones se ven en la pantalla de bloqueo. Muestran los nombres de sus contribuyentes, nunca su RFC; los montos sólo si usted lo elige.'**
+  String get remindersPrivacyNote;
+
+  /// Saves the reminder details.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar cambios'**
+  String get remindersSave;
+
+  /// Save confirmation.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambios guardados.'**
+  String get remindersSaved;
+
+  /// Save failed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron guardar los cambios. Inténtelo de nuevo.'**
+  String get remindersSaveFailed;
+
+  /// Submit error: enabled with nothing to send.
+  ///
+  /// In es, this message translates to:
+  /// **'Elija al menos un recordatorio: el anticipado o el del día del vencimiento.'**
+  String get remindersNoneSelected;
+
+  /// Upcoming due dates heading.
+  ///
+  /// In es, this message translates to:
+  /// **'Próximos vencimientos'**
+  String get remindersUpcomingTitle;
+
+  /// Calendar loading.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando fechas…'**
+  String get remindersUpcomingLoading;
+
+  /// Calendar read failed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar las fechas.'**
+  String get remindersUpcomingFailed;
+
+  /// No calendar entries ahead.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin fechas disponibles por ahora.'**
+  String get remindersUpcomingEmpty;
+
+  /// A due date, weekday included.
+  ///
+  /// In es, this message translates to:
+  /// **'{date}'**
+  String remindersUpcomingDate(DateTime date);
+
+  /// The period an entry pays.
+  ///
+  /// In es, this message translates to:
+  /// **'Pago mensual de {month}'**
+  String remindersUpcomingPeriod(DateTime month);
+
+  /// Due date moved past a weekend.
+  ///
+  /// In es, this message translates to:
+  /// **'Se recorre por fin de semana'**
+  String get remindersMovedWeekend;
+
+  /// Due date moved past a holiday.
+  ///
+  /// In es, this message translates to:
+  /// **'Se recorre por día inhábil'**
+  String get remindersMovedHoliday;
+
+  /// OQ-R1 note under the list.
+  ///
+  /// In es, this message translates to:
+  /// **'Fechas sujetas a confirmación.'**
+  String get remindersSubjectToConfirmation;
 }
 
 class _AppLocalizationsDelegate

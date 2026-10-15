@@ -3,6 +3,7 @@ import 'package:control_contable/core/session/forget_toasts_on_sign_out.dart';
 import 'package:control_contable/core/session/session.dart';
 import 'package:control_contable/core/theme/app_theme.dart';
 import 'package:control_contable/core/theme/design_direction.dart';
+import 'package:control_contable/features/reminders/presentation/reminder_push_listener.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,7 +25,7 @@ class ControlContableApp extends ConsumerWidget {
     return MaterialApp.router(
       builder: (context, child) => ForgetToastsOnSignOut(
         session: session,
-        child: child ?? const SizedBox.shrink(),
+        child: ReminderPushListener(child: child ?? const SizedBox.shrink()),
       ),
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,

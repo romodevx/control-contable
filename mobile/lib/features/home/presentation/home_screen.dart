@@ -8,6 +8,7 @@ import 'package:control_contable/features/dashboard/presentation/dashboard_home.
 import 'package:control_contable/features/expenses/presentation/expenses_entry_button.dart';
 import 'package:control_contable/features/history/presentation/history_entry_button.dart';
 import 'package:control_contable/features/incomes/presentation/incomes_entry_button.dart';
+import 'package:control_contable/features/reminders/presentation/reminders_entry_button.dart';
 import 'package:control_contable/features/tax_engine/presentation/open_estimate_button.dart';
 import 'package:control_contable/features/taxpayers/presentation/add_taxpayer_button.dart';
 import 'package:control_contable/features/taxpayers/presentation/no_regime_prompt.dart';
@@ -36,6 +37,7 @@ class HomeScreen extends StatelessWidget {
         actions: const [
           FlagGate(module: AppModule.annual, child: AnnualEntryButton()),
           FlagGate(module: AppModule.history, child: HistoryEntryButton()),
+          FlagGate(module: AppModule.reminders, child: RemindersEntryButton()),
           FlagGate(module: AppModule.auth, child: AccountButton()),
           FlagGate(module: AppModule.auth, child: SignOutButton()),
         ],
