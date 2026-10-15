@@ -6,7 +6,7 @@
 | Spec | [MODULE-auth.md](../project-specs/MODULE-auth.md) |
 | Contract | [`docs/api/openapi.yaml`](../api/openapi.yaml), tag `Auth`, `x-module: module_auth` |
 | Gates | [M1-16 tech lead](../reviews/M1-16-tech-lead-gate.md) PASS, [M1-17 security](../reviews/M1-17-security-gate.md) PASS |
-| Operations | [Auth runbook](../runbooks/auth.md) |
+| Operations | [Auth runbook](../runbooks/auth.md) · [encryption key rotation](../runbooks/key-rotation.md) |
 | Code | `backend/internal/auth/` (domain, usecase, infra, adapter/http), `mobile/lib/features/auth/`, `mobile/lib/core/session/` |
 
 ## What it does
