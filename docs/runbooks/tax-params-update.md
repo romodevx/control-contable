@@ -11,7 +11,7 @@ ships them. It also covers a mid-year correction (`v<N+1>.yaml`).
 | Schema and selection rules | [tax-params-schema.md](../architecture/tax-params-schema.md), [ADR-0002 §3](../adr/0002-tax-engine.md#3-versioned-parameters-data-not-code) |
 | Precedent | M5-04 (2026 transcription, PR #73), [M5-06 verification](../reviews/M5-06-params-verification.md) (822 fields, 0 mismatches) |
 | Gate | [M5-31 §5 P-9](../reviews/M5-31-security-gate.md#5-preconditions-to-enable-module_tax_engine-in-staging-or-production): before January of a year, a reviewed set for that year, or the provisional banner accepted by the owner |
-| Calendar | Open the task in **mid-November** (LIF), transcribe in the **last week of December** (Anexo 8, decrees), finish in the **second week of January** (UMA) |
+| Calendar | Open the task in **mid-November** (LIF), transcribe in the **last week of December** (Anexo 8, decrees), finish in the **second week of January** (UMA). Same window: next year's holidays for the due-date rule (§11) |
 
 Commands below run from the repository root unless they start with `cd backend`.
 
@@ -300,6 +300,7 @@ Copy into the PR description and tick each line.
 - [ ] `make -C backend check`, `make -C backend test-integration`, `make contract-lint`, `make api-error-tables-check` green; CI required checks green
 - [ ] Tech-lead review; security gate for the deploy (REL-09)
 - [ ] Deployed: the parameters are embedded (`go:embed`), so a new API build is the release. After the deploy, an estimate for January of the new year shows the new parameter set in the breakdown header and no `provisional_parameters` warning (unless §6 chose a provisional file)
+- [ ] Holidays of the new year seeded (§11), in its own migration PR
 - [ ] Module page and this runbook updated if anything here was wrong (stale docs are bugs)
 
 ## 10. Rollback
@@ -308,3 +309,15 @@ A wrong value is fixed **forward** with `v<N+1>.yaml` (the highest version wins)
 version stays in the repository as history. If a deploy must be undone before the fix, roll
 back the API build: the previous build embeds the previous sets, and the year falls back
 to the provisional state of §1.
+
+## 11. Holidays for the next year (`module_reminders`)
+
+The day-17 due date moves past weekends and the days in the `holidays` table, for every estimate's
+`due_date`, the annual deadlines, History, the tax calendar and the reminders. It is not part of
+the parameter files: it is a migration of its own. A year that is not seeded is computed
+**weekends-only** and alerts (`event=reminders_calendar_unseeded`); the tax calendar answers
+`422 calendar_unavailable` for it. Seeded today: 2026, 2027.
+
+Seed year N+1 every December, before the 20th: the full procedure (CFF art. 12 ¶1 days, RMF rule
+2.1.6 Holy Thursday/Friday, the migration, the tests, the API restart) is
+[reminders runbook §6](reminders.md#6-every-december-seed-next-years-holidays).
