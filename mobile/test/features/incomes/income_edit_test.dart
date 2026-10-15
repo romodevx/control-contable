@@ -83,6 +83,24 @@ void main() {
       expect(_textOf(tester, _description), 'Diseño de logotipo');
     });
 
+    testWidgets('a record the server has not derived yet (withholding null) '
+        'opens prefilled and asks for its derivation', (tester) async {
+      harness.incomes.incomes.add(
+        income(id: _logoId, isrWithheldCents: 100000, derived: false),
+      );
+      await harness.pump(tester, taxpayer: anaOneRegime);
+      await tester.tap(find.text('Diseño de logotipo'));
+      await tester.pumpAndSettle();
+      await settlePreview(tester);
+
+      expect(find.text('Editar ingreso'), findsOneWidget);
+      expect(chosenIn(tester, _q1), CounterpartyKind.pm.json);
+      expect(
+        harness.incomes.previewRequests.single.counterpartyKind,
+        CounterpartyKind.pm,
+      );
+    });
+
     testWidgets('changing who was billed re-derives it and sends the new '
         'facts (US-W9)', (tester) async {
       await openEdit(tester);

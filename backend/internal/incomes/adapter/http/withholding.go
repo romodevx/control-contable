@@ -24,10 +24,27 @@ type explained struct {
 	activity    domain.PlatformActivity
 }
 
-// errNotDerived reports a record or a preview without a derivation: an
-// income stored before WH-06 that the WH-08 backfill has not derived, or a
-// use case fault. Either way a server fault, never a client error.
-var errNotDerived = errors.New("incomes http: income without a derivation")
+// errNotDerived reports a preview without a derivation: a use case fault,
+// never a client error.
+var errNotDerived = errors.New("incomes http: preview without a derivation")
+
+// errNoFacts reports an income served without its facts: the use case fills
+// a legacy income's, so this is a fault, never a client error.
+var errNoFacts = errors.New("incomes http: income without facts")
+
+// storedWithholding is a stored income's Withholding, nil (JSON null) for an
+// income stored before WH-06 that the WH-08 backfill or an edit has not
+// derived yet (0.12.0, ADR-0008 Amendment 2): served, never a 500.
+func storedWithholding(w fiscal.WithholdingRecord, e explained) (*gen.Withholding, error) {
+	if !w.Derived() {
+		return nil, nil
+	}
+	out, err := toWithholding(w, e)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
 
 // toWithholding is the contract Withholding of a stored or previewed
 // derivation (ADR-0008). The explanations come from the kernel.

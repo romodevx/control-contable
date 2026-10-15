@@ -41,7 +41,9 @@ Withholding _nothingWithheld(int netCents) => withholding(
 
 /// An income as the server answers it: by default billed to a persona
 /// moral, with nothing withheld (the derivation the facts carry is the
-/// caller's when it matters).
+/// caller's when it matters). `derived: false` is a record stored before
+/// automatic derivation that the server has not derived yet (`withholding:
+/// null`, contract 0.12.0).
 Income income({
   String? id,
   String regime = '612',
@@ -60,6 +62,7 @@ Income income({
   bool residentialRent = false,
   bool viaPlatform = false,
   Withholding? withholding,
+  bool derived = true,
 }) => Income(
   id: id ?? nextIncomeId(),
   taxpayerId: incomesTaxpayerId,
@@ -83,11 +86,12 @@ Income income({
   operationKind: operationKind,
   residentialRent: residentialRent,
   viaPlatform: viaPlatform,
-  withholding:
-      withholding ??
-      _nothingWithheld(
-        amountCents + ivaCents - isrWithheldCents - ivaWithheldCents,
-      ),
+  withholding: !derived
+      ? null
+      : withholding ??
+            _nothingWithheld(
+              amountCents + ivaCents - isrWithheldCents - ivaWithheldCents,
+            ),
 );
 
 /// The withholding facts of the last income in a regime

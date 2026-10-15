@@ -198,9 +198,10 @@ func toDefaultsQuery(req gen.GetIncomeDefaultsRequestObject) usecase.DefaultsQue
 
 // toIncome maps a stored income with the write's warnings (none on reads).
 // Its ids and dates come from the database's own types, so a value that
-// fails to parse is a server fault (500), never a client error. So is a
-// record the WH-08 backfill has not derived: the contract requires its
-// facts and withholding (0.12.0, ADR-0008 amendment).
+// fails to parse is a server fault (500), never a client error. So is an
+// income without facts: the use case fills a legacy one's (0.12.0,
+// ADR-0008 Amendment 2). A legacy income not derived yet has a null
+// withholding.
 func toIncome(i usecase.Income, warnings []domain.Warning) (gen.Income, error) {
 	id, err := uuid.Parse(i.ID)
 	if err != nil {
@@ -219,9 +220,9 @@ func toIncome(i usecase.Income, warnings []domain.Warning) (gen.Income, error) {
 		return gen.Income{}, fmt.Errorf("incomes http: collected_on of %s: %w", i.ID, err)
 	}
 	if i.Counterparty == "" || i.Operation == "" {
-		return gen.Income{}, fmt.Errorf("incomes http: facts of %s: %w", i.ID, errNotDerived)
+		return gen.Income{}, fmt.Errorf("incomes http: facts of %s: %w", i.ID, errNoFacts)
 	}
-	withholding, err := toWithholding(i.Withholding, explained{
+	withholding, err := storedWithholding(i.Withholding, explained{
 		amount: i.Amount, iva: i.IVA, receptor: i.Counterparty, activity: i.PlatformActivity,
 	})
 	if err != nil {

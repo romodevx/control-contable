@@ -13,10 +13,23 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/money"
 )
 
-// errNotDerived reports a record or a preview without a derivation: an
-// expense stored before WH-07 that the WH-08 backfill has not derived, or
-// a use case fault. Either way a server fault, never a client error.
-var errNotDerived = fmt.Errorf("expenses http: expense without a derivation: %w", fiscal.ErrInvalidParameter)
+// errNotDerived reports a preview without a derivation, or a derivation
+// naming an unknown withholder: a server fault, never a client error.
+var errNotDerived = fmt.Errorf("expenses http: without a derivation: %w", fiscal.ErrInvalidParameter)
+
+// storedWithholding is a stored expense's Withholding, nil (JSON null) for
+// an expense stored before WH-07 that the WH-08 backfill or an edit has not
+// derived yet (0.12.0, ADR-0008 Amendment 2): served, never a 500.
+func storedWithholding(w fiscal.WithholdingRecord, subtotal, iva money.Cents, due fiscal.Date) (*gen.Withholding, error) {
+	if !w.Derived() {
+		return nil, nil
+	}
+	out, err := toWithholding(w, subtotal, iva, due)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
 
 // supplierOf maps the contract's optional supplier facts.
 func supplierOf(kind *gen.SupplierKind, regime *gen.SupplierRegime, operation *gen.OperationKind, residential *bool) domain.Supplier {

@@ -219,7 +219,7 @@ func toExpense(e usecase.Expense) (gen.Expense, error) {
 	if err != nil {
 		return gen.Expense{}, fmt.Errorf("expenses http: paid_on of %s: %w", e.ID, err)
 	}
-	withholding, err := toWithholding(e.Withholding, e.Amount, e.IVA, e.RemitDueOn)
+	withholding, err := storedWithholding(e.Withholding, e.Amount, e.IVA, e.RemitDueOn)
 	if err != nil {
 		return gen.Expense{}, fmt.Errorf("expenses http: withholding of %s: %w", e.ID, err)
 	}
