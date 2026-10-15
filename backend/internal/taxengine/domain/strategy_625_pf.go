@@ -155,7 +155,7 @@ func (s Strategy625PF) Estimate(in Input, p *taxparams.Params) (RegimeEstimate, 
 	if err := platformISR(l, &est, month, in, p, definitive); err != nil {
 		return RegimeEstimate{}, fmt.Errorf("625 ISR: %w", err)
 	}
-	iva, err := platformIVA(l, month, in.Options, definitive)
+	iva, err := platformIVA(l, monthIVA(in), definitive)
 	if err != nil {
 		return RegimeEstimate{}, fmt.Errorf("625: %w", err)
 	}
@@ -252,15 +252,18 @@ func platformISR(l *Ledger, est *RegimeEstimate, month MonthSums, in Input, p *t
 
 // platformIVA computes the month's IVA. Under the definitive option the
 // platform's withholding settles the IVA left on its sales (18-M ⚠️), and
-// the creditable IVA is not taken: it is shown as an info line instead.
-func platformIVA(l *Ledger, month MonthSums, o Options, definitive bool) (IVAResult, error) {
-	in := IVAInput{Sums: month, Options: o}
+// the creditable IVA, both parts, is not taken: it is shown as an info line
+// instead.
+func platformIVA(l *Ledger, in IVAInput, definitive bool) (IVAResult, error) {
 	if !definitive {
 		return ComputeIVA(l, in)
 	}
-	notCredited := month.Expenses.CreditableIVAPaid
-	in.Sums.Expenses.CreditableIVAPaid = 0
-	in.Definitive = platformDefinitiveIVA(platformRFCGiven(o))
+	notCredited, err := in.Sums.Expenses.CreditableIVAPaid.Add(in.WithheldPriorMonth)
+	if err != nil {
+		return IVAResult{}, err
+	}
+	in.Sums.Expenses.CreditableIVAPaid, in.WithheldPriorMonth = 0, 0
+	in.Definitive = platformDefinitiveIVA(platformRFCGiven(in.Options))
 	result, err := ComputeIVA(l, in)
 	if err != nil {
 		return IVAResult{}, err

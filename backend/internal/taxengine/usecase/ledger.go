@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
@@ -51,6 +52,31 @@ func YearSumsByRegime(q LedgerQuery, incomes []IncomeMonthSums, expenses []Expen
 		months[key] = sums
 	}
 	return foldYears(q.Through, months)
+}
+
+// WithPriorDecember adds to years the withheld creditable IVA of the
+// previous fiscal year's December rows, which January credits (LIVA 5 fr.
+// IV); a regime with no row in q's year gets zero sums for January..q.Through
+// carrying it. It fails with domain.ErrInvalidMonth for a row that is not
+// that December or a regime repeated (a reader bug).
+func WithPriorDecember(q LedgerQuery, years map[fiscal.RegimeCode]domain.YearSums, december []ExpenseMonthSums) (map[fiscal.RegimeCode]domain.YearSums, error) {
+	out := maps.Clone(years)
+	seen := map[fiscal.RegimeCode]bool{}
+	for _, r := range december {
+		if r.Year != q.FiscalYear-1 || r.Month != time.December || seen[r.Regime] {
+			return nil, fmt.Errorf("previous December row %s/%d-%d for %d: %w", r.Regime, r.Year, r.Month, q.FiscalYear, domain.ErrInvalidMonth)
+		}
+		seen[r.Regime] = true
+		sums, ok := out[r.Regime]
+		if !ok {
+			var err error
+			if sums, err = domain.NewYearSums(q.Through); err != nil {
+				return nil, err
+			}
+		}
+		out[r.Regime] = sums.WithPriorDecember(r.Sums.CreditableIVAWithheld)
+	}
+	return out, nil
 }
 
 // claim records key as read, refusing a month outside January..through or

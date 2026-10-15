@@ -1,0 +1,25 @@
+# golden: hand-authored from docs/project-specs/MODULE-withholdings.md §4.1 (626 PF row; research withholdings-matrix-2026.md §6 A4). Never generated or rewritten by a tool.
+# RESICO PF, March 2026: 20,000.00 collected, all billed to a company that
+# withheld 1.25 % = 250.00 (LISR 113-J). 20,000 <= 25,000 -> 1.00 % = 200.00.
+# The withholding exceeds the month's ISR by 50.00: the month shows 0.00 to
+# pay and the 50.00 goes to the annual return, which subtracts the 113-J
+# withholdings again (LISR 113-F). Whether the excess also carries to later
+# months is not in the law (A4 ⚠️): the line is marked for the CPA.
+id: PF-626-WH-A4-01
+source: spec:module-withholdings-4.1
+input:
+  regime: "626"
+  person_type: fisica
+  period: "2026-03"
+  months:
+    - {month: 3, income: {cash: "20000.00", isr_withheld: {by_moral: "250.00"}}}
+expected:
+  status: complete
+  taxes: [isr]
+  isr: "0.00"
+  lines:
+    - {tax: isr, code: isr.income_month, op: input, amount: "20000.00"}
+    - {tax: isr, code: isr.resico_rate, op: multiply, amount: "200.00"}
+    - {tax: isr, code: isr.withheld_by_moral, op: subtract, amount: "250.00"}
+    - {tax: isr, code: isr.resico_excess_to_annual, op: add, amount: "50.00"}
+    - {tax: isr, code: isr.payable, op: result, amount: "0.00"}

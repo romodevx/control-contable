@@ -116,7 +116,7 @@ func (s RentPFStrategy) Estimate(in Input, p *taxparams.Params) (RegimeEstimate,
 	if err != nil {
 		return RegimeEstimate{}, fmt.Errorf("606 ISR: %w", err)
 	}
-	iva, err := ComputeIVA(l, IVAInput{Sums: month, Options: in.Options})
+	iva, err := ComputeIVA(l, monthIVA(in))
 	if err != nil {
 		return RegimeEstimate{}, fmt.Errorf("606: %w", err)
 	}

@@ -11,8 +11,8 @@ import (
 const OptionIVAFullyTaxable OptionKey = "iva_fully_taxable"
 
 // The line codes ComputeIVA appends, in this order; a zero optional line
-// (8 %, 0 %, exempt, definitive exclusion, platform withholding, to remit)
-// is left out.
+// (8 %, 0 %, exempt, definitive exclusion, withheld IVA of the month
+// before, platform withholding, to remit) is left out.
 const (
 	LineIVAChargedRate16      LineCode = "iva.charged.rate_16"
 	LineIVAChargedRate8       LineCode = "iva.charged.rate_8"
@@ -21,10 +21,13 @@ const (
 	LineIVACharged            LineCode = "iva.charged"
 	LineIVADefinitiveExcluded LineCode = "iva.definitive_excluded"
 	LineIVACreditable         LineCode = "iva.creditable"
-	LineIVAWithheldByMoral    LineCode = "iva.withheld.moral"
-	LineIVAWithheldByPlatform LineCode = "iva.withheld.platform"
-	LineIVANet                LineCode = "iva.regime_net"
-	LineIVAWithheldToRemit    LineCode = "withholding.iva_to_remit"
+	// LineIVACreditableWithheldPriorMonth is the IVA withheld from suppliers
+	// the month before, credited this month (LIVA 5 fr. IV).
+	LineIVACreditableWithheldPriorMonth LineCode = "iva.creditable.withheld_prior_month"
+	LineIVAWithheldByMoral              LineCode = "iva.withheld.moral"
+	LineIVAWithheldByPlatform           LineCode = "iva.withheld.platform"
+	LineIVANet                          LineCode = "iva.regime_net"
+	LineIVAWithheldToRemit              LineCode = "withholding.iva_to_remit"
 )
 
 // DefinitiveIVARule is the 625 hook (LIVA 18-L, 18-M ⚠️): given the
@@ -37,6 +40,12 @@ type DefinitiveIVARule func(IncomeSums) (money.Cents, error)
 type IVAInput struct {
 	Sums    MonthSums // this regime, the period's month only (IVA is never YTD, LIVA 5-D)
 	Options Options   // reads OptionIVAFullyTaxable
+	// WithheldPriorMonth is the creditable IVA the taxpayer withheld from
+	// its suppliers the month before (YearSums.CreditableWithheldPriorMonth):
+	// remitted with that month's return, it is credited in this one (LIVA 5
+	// fr. IV). Sums.Expenses.CreditableIVAWithheld, this month's, waits for
+	// the next month.
+	WithheldPriorMonth money.Cents
 	// Definitive is the 625 definitive-option rule; nil for every other
 	// regime and for 625 without the option.
 	Definitive DefinitiveIVARule
@@ -50,7 +59,8 @@ type IVAResult struct {
 	// alone: the regime's contribution to the consolidated IVA.
 	Net money.Cents
 	// WithheldToRemit is the IVA the taxpayer withheld from its suppliers:
-	// remitted in full apart from its own IVA and not credited (OQ-T6 b).
+	// remitted in full apart from its own IVA, never netted against it, and
+	// credited only the month after (LIVA 5 fr. IV).
 	WithheldToRemit money.Cents
 	Disclaimers     []DisclaimerCode
 	CPATopics       []CPATopic
@@ -84,6 +94,7 @@ var (
 		{Law: "LIVA", Article: "18-L"}, {Law: "LIVA", Article: "18-M", Note: "retención definitiva"},
 	}
 	basisCreditable = []Citation{{Law: "LIVA", Article: "5", Note: "fracciones I a V"}}
+	basisWithheldIn = []Citation{{Law: "LIVA", Article: "5", Note: "fracción IV"}}
 	basisByMoral    = []Citation{{Law: "LIVA", Article: "1-A"}, {Law: "RLIVA", Article: "3", Note: "fracción I"}}
 	basisByPlatform = []Citation{{Law: "LIVA", Article: "18-J", Note: "fracción II, inciso a)"}}
 	basisNet        = []Citation{{Law: "LIVA", Article: "5-D", Note: "pago mensual, no acumulado"}}
@@ -93,9 +104,12 @@ var (
 // ComputeIVA computes one regime's monthly IVA components through l, so
 // the lines are the trace (§2.5, §2.6): the IVA charged and collected by
 // rate (16 %, border 8 %, 0 % and exempt shown as bases), minus a 625
-// definitive exclusion, minus the creditable IVA paid, minus the IVA
-// withheld from the taxpayer; then the IVA it withheld from suppliers, to
-// remit apart.
+// definitive exclusion, minus the creditable IVA paid, minus the IVA it
+// withheld from suppliers the month before (LIVA 5 fr. IV: credited in the
+// return after the one that remitted it, assuming it was remitted on time,
+// a CPA topic), minus the IVA withheld from the taxpayer; then the IVA it
+// withheld from suppliers this month, to remit apart. Components'
+// CreditablePaid is both creditable parts.
 //
 // Every figure is the records' own: rates and withholdings are never
 // recomputed (§2.4). The creditable IVA is what the expenses module already
@@ -112,7 +126,8 @@ func ComputeIVA(l *Ledger, in IVAInput) (IVAResult, error) {
 	}
 	t := ivaTrace{l: l}
 	t.charged(in.Sums.Income.ByRate)
-	net := t.net(components, in.Sums.Income.IVAWithheld)
+	net := t.net(components, ivaCredits{paid: in.Sums.Expenses.CreditableIVAPaid, withheldIn: in.WithheldPriorMonth},
+		in.Sums.Income.IVAWithheld)
 	t.toRemit(in.Sums.Expenses.IVAWithheldToRemit)
 	if t.err == nil {
 		t.err = l.err
@@ -124,13 +139,23 @@ func ComputeIVA(l *Ledger, in IVAInput) (IVAResult, error) {
 	result := IVAResult{
 		Components: components, Net: net.Round(), WithheldToRemit: in.Sums.Expenses.IVAWithheldToRemit,
 	}
-	if mixedActivity(in) {
+	if mixedActivity(in, components.CreditablePaid) {
 		result.Disclaimers = []DisclaimerCode{DisclaimerIVAMixedActivity}
 	}
 	if components.DefinitiveExcluded > 0 {
-		result.CPATopics = []CPATopic{TopicPlatformDefinitiveIVA}
+		result.CPATopics = append(result.CPATopics, TopicPlatformDefinitiveIVA)
+	}
+	if in.WithheldPriorMonth != 0 {
+		result.CPATopics = append(result.CPATopics, TopicWithheldIVACreditTiming)
 	}
 	return result, nil
+}
+
+// monthIVA is the IVA input of in's period month: its sums and the IVA it
+// withheld from suppliers the month before (LIVA 5 fr. IV).
+func monthIVA(in Input) IVAInput {
+	n := in.Period.Month()
+	return IVAInput{Sums: in.Sums.Month(n), Options: in.Options, WithheldPriorMonth: in.Sums.CreditableWithheldPriorMonth(n)}
 }
 
 // ivaComponents sums the components and applies the definitive rule.
@@ -148,8 +173,12 @@ func ivaComponents(in IVAInput) (IVAComponents, error) {
 	if err != nil {
 		return IVAComponents{}, err
 	}
+	creditable, err := in.Sums.Expenses.CreditableIVAPaid.Add(in.WithheldPriorMonth)
+	if err != nil {
+		return IVAComponents{}, err
+	}
 	return IVAComponents{
-		ChargedCollected: charged, CreditablePaid: in.Sums.Expenses.CreditableIVAPaid,
+		ChargedCollected: charged, CreditablePaid: creditable,
 		WithheldFromTaxpayer: withheld, DefinitiveExcluded: excluded,
 	}, nil
 }
@@ -170,8 +199,8 @@ func definitiveExclusion(rule DefinitiveIVARule, income IncomeSums, charged mone
 
 // mixedActivity reports creditable IVA taken in full although the regime
 // has exempt acts: the option says so, or the month has exempt collections.
-func mixedActivity(in IVAInput) bool {
-	if in.Sums.Expenses.CreditableIVAPaid <= 0 {
+func mixedActivity(in IVAInput, creditable money.Cents) bool {
+	if creditable <= 0 {
 		return false
 	}
 	fully, set := in.Options.Bool(OptionIVAFullyTaxable)
@@ -213,14 +242,25 @@ func (t *ivaTrace) charged(r IVAByRate) {
 	t.l.Result(ivaStep(LineIVACharged, SourceComputed(), basisCharged))
 }
 
+// ivaCredits are the two parts of the creditable IVA: the month's paid
+// part and the IVA withheld from suppliers the month before.
+type ivaCredits struct {
+	paid, withheldIn money.Cents
+}
+
 // net traces charged − excluded − creditable − withheld and returns it.
-func (t *ivaTrace) net(c IVAComponents, withheld Withheld) money.Exact {
+func (t *ivaTrace) net(c IVAComponents, credits ivaCredits, withheld Withheld) money.Exact {
 	if c.DefinitiveExcluded != 0 {
 		s := ivaStep(LineIVADefinitiveExcluded, SourceComputed(), basisExclude)
 		s.NeedsCPAReview = true
 		t.l.Subtract(s, t.exact(c.DefinitiveExcluded))
 	}
-	t.l.Subtract(ivaStep(LineIVACreditable, SourceRecords(), basisCreditable), t.exact(c.CreditablePaid))
+	t.l.Subtract(ivaStep(LineIVACreditable, SourceRecords(), basisCreditable), t.exact(credits.paid))
+	if credits.withheldIn != 0 {
+		s := ivaStep(LineIVACreditableWithheldPriorMonth, SourceRecords(), basisWithheldIn)
+		s.NeedsCPAReview = true // assumes the withholding was remitted on time (OQ-W4)
+		t.l.Subtract(s, t.exact(credits.withheldIn))
+	}
 	t.l.Subtract(ivaStep(LineIVAWithheldByMoral, SourceRecords(), basisByMoral), t.exact(withheld.ByMoral))
 	if withheld.ByPlatform != 0 {
 		t.l.Subtract(ivaStep(LineIVAWithheldByPlatform, SourceRecords(), basisByPlatform), t.exact(withheld.ByPlatform))

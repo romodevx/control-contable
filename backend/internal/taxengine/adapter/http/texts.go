@@ -43,6 +43,7 @@ var topicPhrases = map[domain.CPATopic]string{
 	domain.TopicPlatformDefinitiveIVA:       "el IVA definitivo de plataformas",
 	domain.TopicCrossRegimeIVANetting:       "compensación del IVA entre regímenes",
 	domain.TopicRESICOPMInterestWithholding: "la retención por intereses en RESICO de personas morales",
+	domain.TopicWithheldIVACreditTiming:     "acreditar el mes siguiente el IVA que retuviste a tus proveedores",
 }
 
 // disclaimerFacts are what the variable disclaimer texts read.
@@ -168,13 +169,15 @@ var concepts = map[domain.LabelKey]conceptFunc{
 	domain.LabelRoundingAdjustment: fixed("Ajuste por redondeo"),
 
 	// IVA of one regime (ComputeIVA) and the taxpayer's (ConsolidateIVA).
-	"iva.charged.rate_16":           fixed("IVA trasladado cobrado al 16 %"),
-	"iva.charged.rate_8":            fixed("IVA trasladado cobrado al 8 % (región fronteriza)"),
-	"iva.base.rate_0":               fixed("Cobros a la tasa del 0 %"),
-	"iva.base.exempt":               fixed("Cobros exentos de IVA"),
-	"iva.charged":                   fixed("IVA trasladado cobrado"),
-	"iva.definitive_excluded":       fixed("IVA que la plataforma retuvo como pago definitivo"),
-	"iva.creditable":                fixed("IVA acreditable pagado"),
+	"iva.charged.rate_16":     fixed("IVA trasladado cobrado al 16 %"),
+	"iva.charged.rate_8":      fixed("IVA trasladado cobrado al 8 % (región fronteriza)"),
+	"iva.base.rate_0":         fixed("Cobros a la tasa del 0 %"),
+	"iva.base.exempt":         fixed("Cobros exentos de IVA"),
+	"iva.charged":             fixed("IVA trasladado cobrado"),
+	"iva.definitive_excluded": fixed("IVA que la plataforma retuvo como pago definitivo"),
+	"iva.creditable":          fixed("IVA acreditable pagado"),
+	"iva.creditable.withheld_prior_month": fixed(
+		"IVA retenido el mes pasado (acreditable este mes; supone que enteraste la retención a tiempo)"),
 	"iva.withheld.moral":            fixed("IVA que te retuvieron personas morales"),
 	"iva.withheld.platform":         fixed("IVA que te retuvieron las plataformas"),
 	"iva.regime_net":                fixed("IVA de este régimen"),
@@ -182,7 +185,7 @@ var concepts = map[domain.LabelKey]conceptFunc{
 	"iva.rif_bimester":              ranged("IVA del bimestre", "IVA del bimestre"),
 	"iva.total.charged":             fixed("IVA trasladado cobrado (todos tus regímenes)"),
 	"iva.total.definitive_excluded": fixed("IVA retenido como pago definitivo (todos tus regímenes)"),
-	"iva.total.creditable":          fixed("IVA acreditable pagado (todos tus regímenes)"),
+	"iva.total.creditable":          fixed("IVA acreditable (todos tus regímenes)"),
 	"iva.total.withheld":            fixed("IVA que te retuvieron (todos tus regímenes)"),
 	"iva.consolidated":              fixed("IVA a cargo del mes (todos tus regímenes)"),
 	"iva.previous_in_favor":         fixed("Saldo a favor de IVA del mes anterior (no se aplica en esta estimación)"),
@@ -221,6 +224,8 @@ var concepts = map[domain.LabelKey]conceptFunc{
 	// 626 PF.
 	"isr.income_month": fixed("Ingresos cobrados del mes"),
 	"isr.resico_rate":  resicoRate,
+	"isr.resico_excess_to_annual": fixed(
+		"Retención mayor al ISR del mes: este mes pagas $0 y el resto queda a favor en tu declaración anual"),
 
 	// 601 PM.
 	"isr.coeficiente":       fixed("Utilidad estimada con el coeficiente de utilidad"),

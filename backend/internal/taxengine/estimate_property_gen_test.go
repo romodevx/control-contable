@@ -327,13 +327,19 @@ func (g propGen) expense(r propRegime) domain.ExpenseSums {
 		CashOverLimitPaid: g.amount(share(ceiling, 2)),
 	}
 	e.IVAPaid.Rate16 = domain.RateSums{Base: deductible, IVA: share(deductible, 16)}
-	e.CreditableIVAPaid = share(e.IVAPaid.Rate16.IVA, 50+g.rng.Int64N(51))
+	creditable := 50 + g.rng.Int64N(51) // percent of the IVA that is creditable
+	e.CreditableIVAPaid = share(e.IVAPaid.Rate16.IVA, creditable)
 	if r.code == fiscal.RegimeRent && g.rng.IntN(3) == 0 {
 		e.PredialPaid = g.amount(5_000 * propPeso)
 	}
 	if r.person == fiscal.PersonMoral && g.rng.IntN(5) < 2 {
 		e.ISRWithheldToRemit = g.amount(share(ceiling, 2))
-		e.IVAWithheldToRemit = g.amount(share(ceiling, 2))
+		e.IVAWithheldToRemit = min(g.amount(share(ceiling, 2)), e.IVAPaid.Rate16.IVA)
+		// WH-09: the same creditable share applies to both parts (OQ-W5);
+		// the paid part is credited this month, the withheld part the next
+		// (LIVA 5 fr. IV).
+		e.CreditableIVAPaid = share(e.IVAPaid.Rate16.IVA-e.IVAWithheldToRemit, creditable)
+		e.CreditableIVAWithheld = share(e.IVAWithheldToRemit, creditable)
 	}
 	return e
 }

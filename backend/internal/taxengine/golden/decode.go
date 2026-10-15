@@ -88,14 +88,17 @@ type withheldDoc struct {
 }
 
 type expensesDoc struct {
-	DeductiblePaid     centsText `yaml:"deductible_paid"`
-	NonDeductiblePaid  centsText `yaml:"non_deductible_paid"`
-	CashOverLimitPaid  centsText `yaml:"cash_over_limit_paid"`
-	IVAPaid            byRateDoc `yaml:"iva_paid"`
-	CreditableIVAPaid  centsText `yaml:"creditable_iva_paid"`
-	PredialPaid        centsText `yaml:"predial_paid"`
-	ISRWithheldToRemit centsText `yaml:"isr_withheld_to_remit"`
-	IVAWithheldToRemit centsText `yaml:"iva_withheld_to_remit"`
+	DeductiblePaid    centsText `yaml:"deductible_paid"`
+	NonDeductiblePaid centsText `yaml:"non_deductible_paid"`
+	CashOverLimitPaid centsText `yaml:"cash_over_limit_paid"`
+	IVAPaid           byRateDoc `yaml:"iva_paid"`
+	CreditableIVAPaid centsText `yaml:"creditable_iva_paid"`
+	// CreditableIVAWithheld is the month's withheld creditable IVA, which
+	// the next month credits (LIVA 5 fr. IV).
+	CreditableIVAWithheld centsText `yaml:"creditable_iva_withheld"`
+	PredialPaid           centsText `yaml:"predial_paid"`
+	ISRWithheldToRemit    centsText `yaml:"isr_withheld_to_remit"`
+	IVAWithheldToRemit    centsText `yaml:"iva_withheld_to_remit"`
 }
 
 type taxInputDoc struct {
@@ -331,14 +334,15 @@ func (cv *converter) sums(through time.Month, docs []monthDoc) domain.YearSums {
 				IVAWithheld: withheld(m.Income.IVAWithheld), ISRWithheld: withheld(m.Income.ISRWithheld),
 			},
 			Expenses: domain.ExpenseSums{
-				DeductiblePaid:     m.Expenses.DeductiblePaid.cents,
-				NonDeductiblePaid:  m.Expenses.NonDeductiblePaid.cents,
-				CashOverLimitPaid:  m.Expenses.CashOverLimitPaid.cents,
-				IVAPaid:            byRate(m.Expenses.IVAPaid),
-				CreditableIVAPaid:  m.Expenses.CreditableIVAPaid.cents,
-				PredialPaid:        m.Expenses.PredialPaid.cents,
-				ISRWithheldToRemit: m.Expenses.ISRWithheldToRemit.cents,
-				IVAWithheldToRemit: m.Expenses.IVAWithheldToRemit.cents,
+				DeductiblePaid:        m.Expenses.DeductiblePaid.cents,
+				NonDeductiblePaid:     m.Expenses.NonDeductiblePaid.cents,
+				CashOverLimitPaid:     m.Expenses.CashOverLimitPaid.cents,
+				IVAPaid:               byRate(m.Expenses.IVAPaid),
+				CreditableIVAPaid:     m.Expenses.CreditableIVAPaid.cents,
+				CreditableIVAWithheld: m.Expenses.CreditableIVAWithheld.cents,
+				PredialPaid:           m.Expenses.PredialPaid.cents,
+				ISRWithheldToRemit:    m.Expenses.ISRWithheldToRemit.cents,
+				IVAWithheldToRemit:    m.Expenses.IVAWithheldToRemit.cents,
 			},
 		}})
 	}

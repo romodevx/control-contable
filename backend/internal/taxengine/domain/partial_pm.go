@@ -10,7 +10,7 @@ import "fmt"
 func partialPMEstimate(key StrategyKey, in Input) (RegimeEstimate, error) {
 	l := NewLedger()
 	month := in.Sums.Month(in.Period.Month())
-	iva, err := ComputeIVA(l, IVAInput{Sums: month, Options: in.Options})
+	iva, err := ComputeIVA(l, monthIVA(in))
 	if err != nil {
 		return RegimeEstimate{}, fmt.Errorf("%s %s: %w", key, in.Period, err)
 	}

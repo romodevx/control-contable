@@ -157,7 +157,7 @@ func (s RESICOPMStrategy) estimate(in Input, p *taxparams.Params) (RegimeEstimat
 		est.Disclaimers = append(est.Disclaimers, DisclaimerDeductibilityClaimed)
 	}
 	month := in.Sums.Month(n)
-	est, err = t.addIVA(est, IVAInput{Sums: month, Options: in.Options})
+	est, err = t.addIVA(est, monthIVA(in))
 	if err != nil {
 		return RegimeEstimate{}, err
 	}
