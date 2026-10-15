@@ -30,7 +30,7 @@ func (uc *Incomes) Get(ctx context.Context, userID, rawTaxpayerID, rawIncomeID s
 	}
 	var out Income
 	err = uc.deps.Tx.ReadOnly(ctx, userID, func(ctx context.Context) error {
-		stored, err := uc.findLive(ctx, taxpayerID, id, LockNone)
+		stored, err := uc.findLive(ctx, userID, taxpayerID, id, LockNone)
 		out = toIncome(stored)
 		return err
 	})
@@ -54,7 +54,8 @@ func (uc *Incomes) List(ctx context.Context, userID string, q ListQuery) (Page, 
 	}
 	var page Page
 	err = uc.deps.Tx.ReadOnly(ctx, userID, func(ctx context.Context) error {
-		if _, err := uc.deps.Taxpayers.Profile(ctx, userID, taxpayerID); err != nil {
+		profile, err := uc.deps.Taxpayers.Profile(ctx, userID, taxpayerID)
+		if err != nil {
 			return err
 		}
 		rows, err := uc.deps.Store.List(ctx, filter, after, limit+1)
@@ -72,6 +73,9 @@ func (uc *Incomes) List(ctx context.Context, userID string, q ListQuery) (Page, 
 		}
 		page.Items = make([]Income, len(rows))
 		for i, row := range rows {
+			if row, err = factsFor(row, profile.PersonType); err != nil {
+				return err
+			}
 			page.Items[i] = toIncome(row)
 		}
 		return nil
@@ -91,7 +95,7 @@ func (uc *Incomes) Delete(ctx context.Context, userID, rawTaxpayerID, rawIncomeI
 		return err
 	}
 	err = uc.deps.Tx.ReadWrite(ctx, userID, func(ctx context.Context) error {
-		stored, err := uc.findOwned(ctx, taxpayerID, id)
+		stored, err := uc.findOwned(ctx, userID, taxpayerID, id)
 		if err != nil {
 			return err
 		}
@@ -122,7 +126,7 @@ func (uc *Incomes) Restore(ctx context.Context, userID, rawTaxpayerID, rawIncome
 	}
 	var res WriteResult
 	err = uc.deps.Tx.ReadWrite(ctx, userID, func(ctx context.Context) error {
-		stored, err := uc.findOwned(ctx, taxpayerID, id)
+		stored, err := uc.findOwned(ctx, userID, taxpayerID, id)
 		if err != nil {
 			return err
 		}
@@ -173,12 +177,9 @@ func (uc *Incomes) restore(ctx context.Context, userID string, stored StoredInco
 // rederive derives the restored income's withholding again with today's
 // table and the taxpayer's current 625 options, stores it, and returns its
 // warnings (ADR-0008: create, update and restore derive). A record stored
-// before WH-06 has no facts to derive from and keeps its amounts until the
-// WH-08 backfill.
+// before WH-06 derives on the facts a read serves (withFacts), as the WH-08
+// backfill would.
 func (uc *Incomes) rederive(ctx context.Context, userID string, stored StoredIncome) ([]domain.Warning, error) {
-	if stored.Counterparty == "" {
-		return nil, nil
-	}
 	profile, err := uc.deps.Taxpayers.Profile(ctx, userID, stored.TaxpayerID)
 	if err != nil {
 		return nil, err
@@ -201,23 +202,29 @@ func (uc *Incomes) rederive(ctx context.Context, userID string, stored StoredInc
 	return domain.WarningsOf(derivation), nil
 }
 
-// findOwned locks the caller's income of the taxpayer, deleted or not; any
-// other id is 404.
-func (uc *Incomes) findOwned(ctx context.Context, taxpayerID, id string) (StoredIncome, error) {
+// findOwned locks the caller's income of the taxpayer, deleted or not, with
+// its facts (withFacts); any other id is 404.
+func (uc *Incomes) findOwned(ctx context.Context, userID, taxpayerID, id string) (StoredIncome, error) {
 	stored, err := uc.deps.Store.Find(ctx, id, LockUpdate)
 	if errors.Is(err, ErrIncomeNotFound) || (err == nil && stored.TaxpayerID != taxpayerID) {
 		return StoredIncome{}, incomeNotFound()
 	}
-	return stored, err
+	if err != nil {
+		return StoredIncome{}, err
+	}
+	return uc.withFacts(ctx, userID, stored)
 }
 
 // findLive is findOwned for a live income: a deleted one is 404.
-func (uc *Incomes) findLive(ctx context.Context, taxpayerID, id string, lock Lock) (StoredIncome, error) {
+func (uc *Incomes) findLive(ctx context.Context, userID, taxpayerID, id string, lock Lock) (StoredIncome, error) {
 	stored, err := uc.deps.Store.Find(ctx, id, lock)
 	if errors.Is(err, ErrIncomeNotFound) || (err == nil && (stored.TaxpayerID != taxpayerID || stored.Deleted)) {
 		return StoredIncome{}, incomeNotFound()
 	}
-	return stored, err
+	if err != nil {
+		return StoredIncome{}, err
+	}
+	return uc.withFacts(ctx, userID, stored)
 }
 
 // ensureNotArchived refuses a write on an archived taxpayer (422); an

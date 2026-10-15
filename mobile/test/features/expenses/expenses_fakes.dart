@@ -57,7 +57,7 @@ Expense expense({
   SupplierKind? supplierKind,
   SupplierRegime? supplierRegime,
   OperationKind? operationKind,
-  bool? residentialRent,
+  bool residentialRent = false,
   Withholding? withholding,
 }) => Expense(
   id: id ?? nextExpenseId(),
@@ -84,7 +84,21 @@ Expense expense({
   supplierRegime: supplierRegime,
   operationKind: operationKind,
   residentialRent: residentialRent,
-  withholding: withholding,
+  withholding:
+      withholding ??
+      _nothingWithheld(
+        amountCents + ivaCents - isrWithheldCents - ivaWithheldCents,
+      ),
+);
+
+/// The derivation of an expense nobody withholds on (a persona física
+/// taxpayer): ISR-0, IVA-1.
+Withholding _nothingWithheld(int netCents) => withholding(
+  netCents: netCents,
+  explanations: const {
+    'ISR-0': 'No retienes ISR en esta operación.',
+    'IVA-1': 'Tampoco retienes IVA en esta operación.',
+  },
 );
 
 ExpenseCategory _category(
@@ -314,12 +328,13 @@ class FakeExpensesRepository implements ExpensesRepository {
       paidOn: expense.paidOn,
       hasCfdi: expense.hasCfdi,
       cfdiUuid: expense.cfdiUuid,
-      isrWithheldCents: expense.isrWithheldCents ?? 0,
-      ivaWithheldCents: expense.ivaWithheldCents ?? 0,
+      isrWithheldCents: 0,
+      ivaWithheldCents: 0,
+      withholding: _nothingWithheld(expense.amountCents + expense.ivaCents),
       supplierKind: expense.supplierKind,
       supplierRegime: expense.supplierRegime,
       operationKind: expense.operationKind,
-      residentialRent: expense.residentialRent,
+      residentialRent: expense.residentialRent ?? false,
       description: expense.description,
       deductible: expense.deductible ?? true,
       deductibleSource: expense.deductible == null

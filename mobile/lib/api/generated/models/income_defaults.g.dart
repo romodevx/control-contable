@@ -12,16 +12,12 @@ _IncomeDefaults _$IncomeDefaultsFromJson(Map<String, dynamic> json) =>
           .map((e) => IvaRate.fromJson(e as String))
           .toList(),
       suggestedIvaRate: IvaRate.fromJson(json['suggested_iva_rate'] as String),
-      isrWithholdingAllowed: json['isr_withholding_allowed'] as bool,
-      isrWithholdingRate: json['isr_withholding_rate'] as String?,
-      ivaWithholdingAllowed: json['iva_withholding_allowed'] as bool,
-      ivaWithholdingRate: json['iva_withholding_rate'] as String?,
+      lastUsed: IncomeLastUsed.fromJson(
+        json['last_used'] as Map<String, dynamic>,
+      ),
       platformActivity: json['platform_activity'] == null
           ? null
           : PlatformActivity.fromJson(json['platform_activity'] as String),
-      lastUsed: json['last_used'] == null
-          ? null
-          : IncomeLastUsed.fromJson(json['last_used'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$IncomeDefaultsToJson(_IncomeDefaults instance) =>
@@ -30,12 +26,8 @@ Map<String, dynamic> _$IncomeDefaultsToJson(_IncomeDefaults instance) =>
           .map((e) => _$IvaRateEnumMap[e]!)
           .toList(),
       'suggested_iva_rate': _$IvaRateEnumMap[instance.suggestedIvaRate]!,
-      'isr_withholding_allowed': instance.isrWithholdingAllowed,
-      'isr_withholding_rate': instance.isrWithholdingRate,
-      'iva_withholding_allowed': instance.ivaWithholdingAllowed,
-      'iva_withholding_rate': instance.ivaWithholdingRate,
+      'last_used': instance.lastUsed,
       'platform_activity': _$PlatformActivityEnumMap[instance.platformActivity],
-      'last_used': ?instance.lastUsed,
     };
 
 const _$IvaRateEnumMap = {

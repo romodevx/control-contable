@@ -7,7 +7,6 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'business_date.dart';
 import 'cfdi_uuid.dart';
 import 'counterparty_kind.dart';
-import 'counterparty_type.dart';
 import 'iva_rate.dart';
 import 'non_negative_cents.dart';
 import 'operation_kind.dart';
@@ -19,14 +18,11 @@ import 'regime_code.dart';
 part 'income_update.freezed.dart';
 part 'income_update.g.dart';
 
-/// Merge-patch on top-level fields: absent = unchanged, `null` clears a nullable field. `id` is immutable and not accepted. Any change re-derives the withholding (ADR-0008). Since 0.11.3 (WH-06) `isr_withheld_cents` / `iva_withheld_cents` with any value answer `400 additionalProperties` and `counterparty_type` is ignored (see `IncomeCreate`).
+/// Merge-patch on top-level fields: absent = unchanged, `null` clears a nullable field. `id` is immutable and not accepted. Any change re-derives the withholding (ADR-0008).
 @Freezed()
 abstract class IncomeUpdate with _$IncomeUpdate {
   const factory IncomeUpdate({
     @JsonKey(includeIfNull: false, name: 'regime_code') RegimeCode? regimeCode,
-    @JsonKey(includeIfNull: false, name: 'counterparty_type')
-    @Deprecated('This is marked as deprecated')
-    CounterpartyType? counterpartyType,
     @JsonKey(includeIfNull: false, name: 'counterparty_kind')
     CounterpartyKind? counterpartyKind,
     @JsonKey(includeIfNull: false, name: 'operation_kind')
@@ -39,14 +35,6 @@ abstract class IncomeUpdate with _$IncomeUpdate {
     @JsonKey(includeIfNull: false, name: 'iva_rate') IvaRate? ivaRate,
     @JsonKey(includeIfNull: false, name: 'iva_cents')
     NonNegativeCents? ivaCents,
-
-    /// Retired by WH-06 (0.11.3). Any value answers `400 additionalProperties`.
-    @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')
-    NonNegativeCents? isrWithheldCents,
-
-    /// Retired by WH-06 (0.11.3). Any value answers `400 additionalProperties`.
-    @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')
-    NonNegativeCents? ivaWithheldCents,
     @JsonKey(includeIfNull: false, name: 'invoiced_on')
     BusinessDate? invoicedOn,
     @JsonKey(includeIfNull: false, name: 'collected_on')

@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:control_contable/api/generated/api_client.dart';
 import 'package:control_contable/api/generated/models/counterparty_kind.dart';
-import 'package:control_contable/api/generated/models/counterparty_type.dart';
 import 'package:control_contable/api/generated/models/income_create.dart';
 import 'package:control_contable/api/generated/models/iva_rate.dart';
 import 'package:control_contable/api/generated/models/operation_kind.dart';
@@ -23,12 +22,31 @@ const Map<String, Object?> _income = {
   'id': _incomeId,
   'taxpayer_id': _taxpayerId,
   'regime_code': '612',
-  'counterparty_type': 'persona_moral',
+  'counterparty_kind': 'pm',
+  'operation_kind': 'professional_services',
+  'residential_rent': false,
+  'via_platform': false,
   'amount_cents': 1000000,
   'iva_rate': 'rate_16',
   'iva_cents': 160000,
   'isr_withheld_cents': 100000,
   'iva_withheld_cents': 106667,
+  'withholding': {
+    'isr_cents': 100000,
+    'iva_cents': 106667,
+    'isr_rate': '0.10',
+    'iva_basis': 'two_thirds_of_iva',
+    'withholder': 'counterparty',
+    'net_cents': 953333,
+    'remit_due_on': null,
+    'rule_ids': ['ISR-5', 'IVA-6'],
+    'explanations': [
+      {'rule_id': 'ISR-5', 'text': 'La empresa te retiene 10 % de ISR.'},
+      {'rule_id': 'IVA-6', 'text': 'Y 2/3 del IVA.'},
+    ],
+    'table_version': '2026.1',
+    'cpa_unverified': false,
+  },
   'invoiced_on': null,
   'collected_on': '2026-10-05',
   'platform_activity': null,
@@ -74,10 +92,6 @@ void main() {
           body: {
             'iva_rates_allowed': ['rate_16', 'rate_0', 'exempt'],
             'suggested_iva_rate': 'rate_16',
-            'isr_withholding_allowed': true,
-            'isr_withholding_rate': '0.04',
-            'iva_withholding_allowed': true,
-            'iva_withholding_rate': '0.5',
             'platform_activity': 'lodging',
             'last_used': {
               'counterparty_kind': null,
@@ -150,11 +164,10 @@ void main() {
       income: const IncomeCreate(
         id: _incomeId,
         regimeCode: '612',
-        counterpartyType: CounterpartyType.personaMoral,
+        counterpartyKind: CounterpartyKind.pm,
         amountCents: 1000000,
         ivaRate: IvaRate.rate16,
         ivaCents: 160000,
-        isrWithheldCents: 100000,
         collectedOn: '2026-10-05',
       ),
     );
@@ -163,11 +176,10 @@ void main() {
     expect(jsonDecode(jsonEncode(adapter.requests.single.data)), {
       'id': _incomeId,
       'regime_code': '612',
-      'counterparty_type': 'persona_moral',
+      'counterparty_kind': 'pm',
       'amount_cents': 1000000,
       'iva_rate': 'rate_16',
       'iva_cents': 160000,
-      'isr_withheld_cents': 100000,
       'collected_on': '2026-10-05',
     });
     expect(created.warnings.single.code, WarningCode.duplicateCfdiUuid);
@@ -184,14 +196,12 @@ void main() {
 
     expect(adapter.requests.single.uri.queryParameters, {
       'regime': '625',
-      // Still required by 0.10.0 (deprecated; WH-06 removes it).
-      'counterparty_type': 'persona_fisica',
       'on': '2026-10-13',
       'platform_activity': 'lodging',
     });
     expect(defaults.ivaRatesAllowed, isNot(contains(IvaRate.rate8)));
-    expect(defaults.lastUsed?.counterpartyKind, isNull);
-    expect(defaults.lastUsed?.viaPlatform, isTrue);
+    expect(defaults.lastUsed.counterpartyKind, isNull);
+    expect(defaults.lastUsed.viaPlatform, isTrue);
   });
 
   test('the withholding preview sends the facts and nothing else (no '
@@ -314,7 +324,7 @@ void main() {
         taxpayerId: _taxpayerId,
         income: const IncomeCreate(
           regimeCode: '612',
-          counterpartyType: CounterpartyType.personaFisica,
+          counterpartyKind: CounterpartyKind.pfWithActivity,
           amountCents: 100,
           ivaRate: IvaRate.exempt,
           ivaCents: 0,

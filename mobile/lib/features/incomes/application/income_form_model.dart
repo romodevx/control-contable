@@ -328,9 +328,7 @@ class IncomeFormModel extends ChangeNotifier {
               !defaults.ivaRatesAllowed.contains(chosen))) {
         _suggestions.suggestRate(ivaRate, defaults.suggestedIvaRate);
       }
-      if (defaults.lastUsed case final lastUsed? when !isEditing) {
-        facts.applyLastUsed(lastUsed);
-      }
+      if (!isEditing) facts.applyLastUsed(defaults.lastUsed);
     }
     _recompute();
   }

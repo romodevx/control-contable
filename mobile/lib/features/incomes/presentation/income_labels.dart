@@ -1,5 +1,4 @@
 import 'package:control_contable/api/generated/models/counterparty_kind.dart';
-import 'package:control_contable/api/generated/models/counterparty_type.dart';
 import 'package:control_contable/api/generated/models/income.dart';
 import 'package:control_contable/api/generated/models/platform_activity.dart';
 import 'package:control_contable/core/forms/choice_controllers.dart';
@@ -7,15 +6,22 @@ import 'package:control_contable/core/records/record_month.dart';
 import 'package:control_contable/features/incomes/domain/income_basis.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 
-/// Who paid, as the user reads it.
-String counterpartyLabel(CounterpartyType type, AppLocalizations l10n) =>
-    switch (type) {
-      CounterpartyType.personaFisica => l10n.counterpartyPersonaFisica,
-      CounterpartyType.personaMoral => l10n.counterpartyPersonaMoral,
-      CounterpartyType.publicoGeneral => l10n.counterpartyPublicoGeneral,
-      CounterpartyType.plataforma => l10n.counterpartyPlataforma,
-      CounterpartyType.$unknown => l10n.incomeErrorInvalid,
-    };
+/// Who paid [income], in a list row's few words: the platform it was
+/// collected through, else who was billed (a government withholds like a
+/// persona moral; anyone without a business, here or abroad, is the
+/// public).
+String counterpartyLabel(Income income, AppLocalizations l10n) {
+  if (income.viaPlatform) return l10n.counterpartyPlataforma;
+  return switch (income.counterpartyKind) {
+    CounterpartyKind.pm ||
+    CounterpartyKind.govFederal ||
+    CounterpartyKind.govStateMunicipal => l10n.counterpartyPersonaMoral,
+    CounterpartyKind.pfWithActivity => l10n.counterpartyPersonaFisica,
+    CounterpartyKind.pfNoActivityOrPublic ||
+    CounterpartyKind.foreign ||
+    CounterpartyKind.$unknown => l10n.counterpartyPublicoGeneral,
+  };
+}
 
 /// Who was billed (Q1), as the user reads it.
 String counterpartyKindLabel(CounterpartyKind kind, AppLocalizations l10n) =>

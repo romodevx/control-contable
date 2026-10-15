@@ -10,22 +10,20 @@ import (
 
 // Contract field names, as violations and warnings report them.
 const (
-	FieldCategoryCode     = "category_code"
-	FieldAmountCents      = "amount_cents"
-	FieldIVARate          = "iva_rate"
-	FieldIVACents         = "iva_cents"
-	FieldPaymentMethod    = "payment_method"
-	FieldPaidOn           = "paid_on"
-	FieldHasCFDI          = "has_cfdi"
-	FieldCFDIUUID         = "cfdi_uuid"
-	FieldDeductible       = "deductible"
-	FieldISRWithheldCents = "isr_withheld_cents"
-	FieldIVAWithheldCents = "iva_withheld_cents"
-	FieldSupplierKind     = "supplier_kind"
-	FieldSupplierRegime   = "supplier_regime"
-	FieldOperationKind    = "operation_kind"
-	FieldResidentialRent  = "residential_rent"
-	FieldWithholding      = "withholding"
+	FieldCategoryCode    = "category_code"
+	FieldAmountCents     = "amount_cents"
+	FieldIVARate         = "iva_rate"
+	FieldIVACents        = "iva_cents"
+	FieldPaymentMethod   = "payment_method"
+	FieldPaidOn          = "paid_on"
+	FieldHasCFDI         = "has_cfdi"
+	FieldCFDIUUID        = "cfdi_uuid"
+	FieldDeductible      = "deductible"
+	FieldSupplierKind    = "supplier_kind"
+	FieldSupplierRegime  = "supplier_regime"
+	FieldOperationKind   = "operation_kind"
+	FieldResidentialRent = "residential_rent"
+	FieldWithholding     = "withholding"
 )
 
 // WarningCode is a non-blocking notice (contract Warning.code,

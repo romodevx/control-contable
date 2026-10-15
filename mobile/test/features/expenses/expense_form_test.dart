@@ -301,7 +301,11 @@ void main() {
       expect(body.hasCfdi, isTrue);
       expect(body.deductible, isNull);
       expect(body.cfdiUuid, isNull);
-      expect(body.isrWithheldCents, isNull);
+      expect(
+        body.toJson().keys,
+        isNot(contains('isr_withheld_cents')),
+        reason: 'derived by the server (ADR-0008)',
+      );
       expect(harness.location, ExpensesRoutes.list);
       expect(find.text('Gasto guardado'), findsOneWidget);
     });

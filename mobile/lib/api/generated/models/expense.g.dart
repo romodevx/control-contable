@@ -18,8 +18,21 @@ _Expense _$ExpenseFromJson(Map<String, dynamic> json) => _Expense(
   paidOn: json['paid_on'] as String,
   hasCfdi: json['has_cfdi'] as bool,
   cfdiUuid: json['cfdi_uuid'] as String?,
+  supplierKind: json['supplier_kind'] == null
+      ? null
+      : SupplierKind.fromJson(json['supplier_kind'] as String),
+  supplierRegime: json['supplier_regime'] == null
+      ? null
+      : SupplierRegime.fromJson(json['supplier_regime'] as String),
+  operationKind: json['operation_kind'] == null
+      ? null
+      : OperationKind.fromJson(json['operation_kind'] as String),
+  residentialRent: json['residential_rent'] as bool,
   isrWithheldCents: (json['isr_withheld_cents'] as num).toInt(),
   ivaWithheldCents: (json['iva_withheld_cents'] as num).toInt(),
+  withholding: json['withholding'] == null
+      ? null
+      : Withholding.fromJson(json['withholding'] as Map<String, dynamic>),
   description: json['description'] as String?,
   deductible: json['deductible'] as bool,
   deductibleSource: DeductibleSource.fromJson(
@@ -31,19 +44,6 @@ _Expense _$ExpenseFromJson(Map<String, dynamic> json) => _Expense(
   legend: json['legend'] as String,
   createdAt: DateTime.parse(json['created_at'] as String),
   updatedAt: DateTime.parse(json['updated_at'] as String),
-  supplierKind: json['supplier_kind'] == null
-      ? null
-      : SupplierKind.fromJson(json['supplier_kind'] as String),
-  supplierRegime: json['supplier_regime'] == null
-      ? null
-      : SupplierRegime.fromJson(json['supplier_regime'] as String),
-  operationKind: json['operation_kind'] == null
-      ? null
-      : OperationKind.fromJson(json['operation_kind'] as String),
-  residentialRent: json['residential_rent'] as bool?,
-  withholding: json['withholding'] == null
-      ? null
-      : Withholding.fromJson(json['withholding'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$ExpenseToJson(_Expense instance) => <String, dynamic>{
@@ -58,8 +58,13 @@ Map<String, dynamic> _$ExpenseToJson(_Expense instance) => <String, dynamic>{
   'paid_on': instance.paidOn,
   'has_cfdi': instance.hasCfdi,
   'cfdi_uuid': instance.cfdiUuid,
+  'supplier_kind': _$SupplierKindEnumMap[instance.supplierKind],
+  'supplier_regime': _$SupplierRegimeEnumMap[instance.supplierRegime],
+  'operation_kind': _$OperationKindEnumMap[instance.operationKind],
+  'residential_rent': instance.residentialRent,
   'isr_withheld_cents': instance.isrWithheldCents,
   'iva_withheld_cents': instance.ivaWithheldCents,
+  'withholding': instance.withholding,
   'description': ?instance.description,
   'deductible': instance.deductible,
   'deductible_source': _$DeductibleSourceEnumMap[instance.deductibleSource]!,
@@ -67,11 +72,6 @@ Map<String, dynamic> _$ExpenseToJson(_Expense instance) => <String, dynamic>{
   'legend': instance.legend,
   'created_at': instance.createdAt.toIso8601String(),
   'updated_at': instance.updatedAt.toIso8601String(),
-  'supplier_kind': ?_$SupplierKindEnumMap[instance.supplierKind],
-  'supplier_regime': ?_$SupplierRegimeEnumMap[instance.supplierRegime],
-  'operation_kind': ?_$OperationKindEnumMap[instance.operationKind],
-  'residential_rent': ?instance.residentialRent,
-  'withholding': ?instance.withholding,
 };
 
 const _$IvaRateEnumMap = {
@@ -91,12 +91,6 @@ const _$PaymentMethodEnumMap = {
   PaymentMethod.eWallet: 'e_wallet',
   PaymentMethod.other: 'other',
   PaymentMethod.$unknown: r'$unknown',
-};
-
-const _$DeductibleSourceEnumMap = {
-  DeductibleSource.categoryDefault: 'category_default',
-  DeductibleSource.user: 'user',
-  DeductibleSource.$unknown: r'$unknown',
 };
 
 const _$SupplierKindEnumMap = {
@@ -127,4 +121,10 @@ const _$OperationKindEnumMap = {
   OperationKind.scrap: 'scrap',
   OperationKind.other: 'other',
   OperationKind.$unknown: r'$unknown',
+};
+
+const _$DeductibleSourceEnumMap = {
+  DeductibleSource.categoryDefault: 'category_default',
+  DeductibleSource.user: 'user',
+  DeductibleSource.$unknown: r'$unknown',
 };

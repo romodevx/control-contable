@@ -103,10 +103,7 @@ type Income struct {
 	// Withholding is the stored derivation; not Derived() on a record
 	// stored before WH-06 (until the WH-08 backfill).
 	Withholding fiscal.WithholdingRecord
-	// CounterpartyType is the deprecated counterparty_type column, served
-	// until WH-11 / WH-08 remove it.
-	CounterpartyType domain.Counterparty
-	BookedOn         fiscal.Date
+	BookedOn    fiscal.Date
 	// PendingCollection is "Por cobrar": no collection date yet. Only an
 	// accrual income can lack it (a cash income books on it).
 	PendingCollection bool
@@ -117,7 +114,7 @@ type Income struct {
 func toIncome(s StoredIncome) Income {
 	return Income{
 		ID: s.ID, TaxpayerID: s.TaxpayerID, Fields: s.Fields, Withholding: s.Withholding,
-		CounterpartyType: s.CounterpartyType, BookedOn: s.BookedOn,
+		BookedOn:          s.BookedOn,
 		PendingCollection: s.Dates.CollectedOn.IsZero(), CreatedAt: s.CreatedAt, UpdatedAt: s.UpdatedAt,
 	}
 }
