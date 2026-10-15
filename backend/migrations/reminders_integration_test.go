@@ -303,8 +303,9 @@ WHERE $1 = ANY (roles) AND tablename = 'devices' ORDER BY 1`, authDefinerRole))
 SELECT c.relname || ' ' || a.privilege_type
 FROM pg_class c CROSS JOIN LATERAL aclexplode(c.relacl) a
 WHERE c.relname IN ('devices', 'reminder_settings', 'notification_log', 'taxpayers')
-  AND a.grantee = $1::regrole AND a.privilege_type <> 'SELECT'`, workerDefinerRole),
-		"the worker definer only reads")
+  AND a.grantee = $1::regrole AND a.privilege_type <> 'SELECT'
+  AND NOT (c.relname = 'notification_log' AND a.privilege_type = 'DELETE')`, workerDefinerRole),
+		"the worker definer only reads (the log's DELETE is the 13-month purge's, M9-06)")
 	assert.Empty(t, queryStrings(t, owner, `
 SELECT c.relname FROM pg_class c CROSS JOIN LATERAL aclexplode(c.relacl) a
 WHERE c.relname IN ('reminder_settings', 'notification_log') AND a.grantee = $1::regrole`, authDefinerRole),

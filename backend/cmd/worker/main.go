@@ -5,9 +5,12 @@
 // dedicated connection) until SIGINT/SIGTERM. Shutdown cancels the running
 // jobs, waits for them and then resigns, so a standby takes over at once.
 //
-// Jobs: the records purge (M9-08, every hour, whatever the module flags say).
-// M9 adds the reminders; their push sender (M9-07) is built at startup from
-// FCM_PROJECT_ID / FCM_CREDENTIALS_JSON, disabled when no project is set. Every job runs its database work through tx.Manager's
+// Jobs: the records purge (M9-08, every hour, whatever the module flags say)
+// and the reminders (M9-06, every 5 minutes, a no-op while module_reminders
+// is OFF), which open the push tokens with the API's PUSH_TOKEN_* keys and
+// send through the push sender (M9-07) built at startup from FCM_PROJECT_ID /
+// FCM_CREDENTIALS_JSON, disabled when no project is set. Every job runs its
+// database work through tx.Manager's
 // System unit of work (no user context; SECURITY DEFINER functions such as
 // due_reminder_users) or a per-user unit of work.
 package main
@@ -25,6 +28,7 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" database/sql driver
 
+	"github.com/romodevx/control-contable/backend/internal/platform/clock"
 	"github.com/romodevx/control-contable/backend/internal/platform/config"
 	"github.com/romodevx/control-contable/backend/internal/platform/logging"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
@@ -56,6 +60,10 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err != nil {
 		return err
 	}
+	keys, err := config.LoadReminders(ctx, lookup, config.NewEnvSecrets(lookup), cfg.Env, config.Auth{}, config.Taxpayers{})
+	if err != nil {
+		return err
+	}
 	logger := logging.New(logOut, cfg.LogLevel)
 	push, err := newPushSender(ctx, cfg.Push, logger)
 	if err != nil {
@@ -69,7 +77,7 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err := guardRuntimeRole(ctx, cfg.Env, pool); err != nil {
 		return err
 	}
-	reg, err := newRegistry(pool, logger, push)
+	reg, err := newRegistry(pool, logger, push, keys)
 	if err != nil {
 		return err
 	}
@@ -87,8 +95,10 @@ const recordsPurgeTimeout = 10 * time.Minute
 // newRegistry registers the production jobs over pool (cc_worker). Module jobs
 // check their flag on every run and skip while the module is OFF
 // (feature_flags is readable by cc_worker); the records purge never does.
-// push is the reminders' sender (M9-07), for the reminder job (M9-06).
-func newRegistry(pool *sql.DB, logger *slog.Logger, push reminders.PushSender) (*worker.Registry, error) {
+// push is the reminders' sender (M9-07) and keys the push token keys the API
+// seals with, for the reminder job (M9-06). In dev without keys the job is
+// not registered (logged); outside dev config requires them.
+func newRegistry(pool *sql.DB, logger *slog.Logger, push reminders.PushSender, keys config.Reminders) (*worker.Registry, error) {
 	units, err := pgdb.NewTxManager(pool)
 	if err != nil {
 		return nil, err
@@ -102,6 +112,17 @@ func newRegistry(pool *sql.DB, logger *slog.Logger, push reminders.PushSender) (
 	}
 	reg := &worker.Registry{}
 	if err := reg.Register(purge, recordsPurgeTimeout); err != nil {
+		return nil, err
+	}
+	if !hasReminderKeys(keys) {
+		logger.Warn("reminders disabled", slog.String("reason", "PUSH_TOKEN_ENC_KEY / PUSH_TOKEN_INDEX_PEPPER are not set"))
+		return reg, nil
+	}
+	job, err := newReminderJob(pool, units, logger, push, keys, clock.NewSystem())
+	if err != nil {
+		return nil, err
+	}
+	if err := reg.Register(job, remindersTimeout); err != nil {
 		return nil, err
 	}
 	return reg, nil

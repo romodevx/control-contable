@@ -413,7 +413,7 @@ func TestTaxInputs_NoAccessBeyondTheGrants(t *testing.T) {
 		{pgtest.RoleApp, "CREATE OR REPLACE FUNCTION public.taxpayer_tax_inputs_derive_kind() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN RETURN NEW; END'"},
 		{pgtest.RoleApp, "UPDATE regimes SET required_inputs = '[]'"},
 		{pgtest.RoleWebhook, "SELECT 1 FROM taxpayer_tax_inputs"},
-		{pgtest.RoleWorker, "SELECT 1 FROM taxpayer_tax_inputs"},
+		{pgtest.RoleWorker, "UPDATE taxpayer_tax_inputs SET value_cents = 1"}, // reads since M9-06, never writes
 	}
 	for _, d := range denied {
 		t.Run(string(d.role)+": "+d.query, func(t *testing.T) {

@@ -1,4 +1,4 @@
-package main
+package estimates
 
 import (
 	"context"
@@ -8,26 +8,26 @@ import (
 	taxusecase "github.com/romodevx/control-contable/backend/internal/taxengine/usecase"
 )
 
-// expenseSumsReader is the expenses module's aggregate reader
+// ExpenseSumsReader is the expenses module's aggregate reader
 // (expensesinfra.LedgerReader).
-type expenseSumsReader interface {
+type ExpenseSumsReader interface {
 	ExpenseSums(ctx context.Context, q expensesinfra.LedgerQuery) ([]expensesinfra.ExpenseMonthSums, error)
 }
 
-// expenseLedger adapts the expenses aggregate reader to the tax engine's
+// ExpenseLedger adapts the expenses aggregate reader to the tax engine's
 // ExpenseLedgerReader port (M4-08). Modules never import each other
 // (ADR-0001), so the composition root, the one place that sees both,
 // translates the row types; M5-22 wires it into the estimate use case.
-type expenseLedger struct{ reader expenseSumsReader }
+type ExpenseLedger struct{ reader ExpenseSumsReader }
 
-var _ taxusecase.ExpenseLedgerReader = expenseLedger{}
+var _ taxusecase.ExpenseLedgerReader = ExpenseLedger{}
 
-// newExpenseLedger adapts reader.
-func newExpenseLedger(reader expenseSumsReader) expenseLedger { return expenseLedger{reader: reader} }
+// NewExpenseLedger adapts reader.
+func NewExpenseLedger(reader ExpenseSumsReader) ExpenseLedger { return ExpenseLedger{reader: reader} }
 
 // ExpenseSums implements taxusecase.ExpenseLedgerReader on the unit of work
 // in ctx.
-func (l expenseLedger) ExpenseSums(ctx context.Context, q taxusecase.LedgerQuery) ([]taxusecase.ExpenseMonthSums, error) {
+func (l ExpenseLedger) ExpenseSums(ctx context.Context, q taxusecase.LedgerQuery) ([]taxusecase.ExpenseMonthSums, error) {
 	rows, err := l.reader.ExpenseSums(ctx, expensesinfra.LedgerQuery{
 		TaxpayerID: q.TaxpayerID, FirstYear: q.FirstYear, FiscalYear: q.FiscalYear, Through: q.Through,
 		PriorDecember: q.PriorDecember,

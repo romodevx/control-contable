@@ -6,8 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
-	expensesinfra "github.com/romodevx/control-contable/backend/internal/expenses/infra"
-	incomesinfra "github.com/romodevx/control-contable/backend/internal/incomes/infra"
+	"github.com/romodevx/control-contable/backend/cmd/internal/estimates"
 	"github.com/romodevx/control-contable/backend/internal/platform/access"
 	"github.com/romodevx/control-contable/backend/internal/platform/access/accessgorm"
 	"github.com/romodevx/control-contable/backend/internal/platform/clock"
@@ -115,12 +114,9 @@ func newAnnualEstimator(w annualWiring, now clock.Clock) (*usecaseannual.Estimat
 	}
 	store := annualinputs.NewStore()
 	return usecaseannual.NewEstimator(usecaseannual.EstimateDeps{ // a missing port fails the boot
-		Tx:       w.tx,
-		Profiles: estimateProfiles{reader: w.taxpayers},
-		Ledger: taxLedger{
-			incomeLedger:  newIncomeLedger(incomesinfra.NewLedgerReader()),
-			expenseLedger: newExpenseLedger(expensesinfra.NewLedgerReader()),
-		},
+		Tx:                w.tx,
+		Profiles:          estimates.NewProfiles(w.taxpayers),
+		Ledger:            estimates.NewLedger(),
 		TaxInputs:         taxinputs.NewStore(),
 		YearInputs:        store,
 		Filed:             store,
