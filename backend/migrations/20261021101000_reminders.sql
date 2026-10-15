@@ -220,7 +220,8 @@ CREATE TABLE notification_log (
   CONSTRAINT notification_log_attempts_range CHECK (attempts BETWEEN 1 AND 3),
   -- sent <=> sent_at, and a send reached at least one device.
   CONSTRAINT notification_log_sent_at_iff_sent CHECK ((status = 'sent') = (sent_at IS NOT NULL)),
-  CONSTRAINT notification_log_sent_reached_a_device CHECK (status <> 'sent' OR devices_ok >= 1),
+  -- coalesce: a NULL count would make the CHECK pass (NULL is not false).
+  CONSTRAINT notification_log_sent_reached_a_device CHECK (status <> 'sent' OR coalesce(devices_ok, 0) >= 1),
   CONSTRAINT notification_log_device_counts_range CHECK (
     coalesce(devices_ok, 0) BETWEEN 0 AND 500 AND coalesce(devices_failed, 0) BETWEEN 0 AND 500),
   -- A machine class (unavailable, deadline, expired, ...), never a message or a token.
