@@ -1,6 +1,10 @@
 package usecase
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/romodevx/control-contable/backend/internal/platform/usertext"
+)
 
 // Use case errors. Stores return the ones that describe stored state; the
 // use cases return every client-facing failure as an *apperr.Error whose
@@ -64,6 +68,7 @@ const (
 	DetailRequired              = "required"
 	DetailOutOfRange            = "out_of_range"
 	DetailInvalid               = "invalid"
+	DetailInvisibleCharacters   = usertext.DetailInvisibleCharacters
 	DetailConfirmRequired       = "confirm_required"
 	DetailIncompatible          = "incompatible"
 	DetailTaxpayerArchived      = "taxpayer_archived"

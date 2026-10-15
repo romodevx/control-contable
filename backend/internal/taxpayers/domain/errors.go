@@ -47,6 +47,10 @@ const (
 	// trimming, longer than 80 characters or not printable text
 	// (validation_failed).
 	ErrInvalidDisplayName Error = "taxpayers: invalid display name"
+	// ErrDisplayNameInvisible reports a display name holding an invisible
+	// character: control, format (zero width, bidi) or line separator
+	// (usertext; validation_failed).
+	ErrDisplayNameInvisible Error = "taxpayers: display name has invisible characters"
 )
 
 // OptionError ties an option error to the key it concerns, so the adapter
