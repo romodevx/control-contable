@@ -199,7 +199,9 @@ WHERE c.relname = 'notification_log' AND a.grantee = $1::regrole ORDER BY 1`, wo
 	assert.False(t, cutoffDefiner, "the cutoff helper is SECURITY INVOKER")
 	assert.Equal(t, []string{workerDefinerRole}, queryStrings(t, owner, `
 SELECT r.rolname FROM pg_roles r
-WHERE r.rolname LIKE 'cc\_%' AND has_function_privilege(r.oid, 'purge_notification_log_cutoff()', 'EXECUTE') ORDER BY 1`))
+WHERE r.rolname LIKE 'cc\_%' AND r.rolname <> 'cc_owner'
+  AND has_function_privilege(r.oid, 'purge_notification_log_cutoff()', 'EXECUTE') ORDER BY 1`),
+		"besides its owner (cc_owner, like the M9-08 cutoffs), only the definer runs it")
 
 	for _, role := range []pgtest.Role{pgtest.RoleApp, pgtest.RoleWorker} {
 		_, err := db.Connect(t, role).ExecContext(t.Context(), "DELETE FROM notification_log")
