@@ -180,6 +180,17 @@ class ExpenseSupplierFacts {
     _suggest(residentialRent, no);
   }
 
+  /// A stored expense without an operation (written before WH-07, not
+  /// backfilled yet) shows [category]'s default as unchanged: the server
+  /// derives with that same default while `operation_kind` is omitted, so
+  /// showing it is not an edit, and a change of category still moves it.
+  void showServerDefault(ExpenseCategory? category) {
+    final operation = category?.defaultOperationKind;
+    if (!isMoral || operation == null || operationKind.value != null) return;
+    _suggest(operationKind, operation.json);
+    operationKind.markPristine();
+  }
+
   /// Moves [field] to [value] unless the user answered it.
   void _suggest(ChoiceFieldController field, String? value) {
     final current = field.value;
