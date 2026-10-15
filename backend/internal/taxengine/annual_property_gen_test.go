@@ -253,12 +253,6 @@ func (g annGen) statement() annual.SalaryStatement {
 	}
 }
 
-var annCategories = []annual.Category{
-	annual.CategoryMedical, annual.CategoryMedicalDisability, annual.CategoryFuneral, annual.CategoryDonation,
-	annual.CategoryMortgageRealInterest, annual.CategoryRetirementContribution, annual.CategoryHealthInsurance,
-	annual.CategorySchoolTransport, annual.CategoryLocalPayrollTax, annual.CategoryTuition,
-}
-
 var annLevels = []annual.TuitionLevel{
 	annual.LevelPreescolar, annual.LevelPrimaria, annual.LevelSecundaria, annual.LevelProfesionalTecnico, annual.LevelBachillerato,
 }
@@ -269,9 +263,9 @@ func annPick[T any](rng *rand.Rand, xs []T) T { return xs[rng.IntN(len(xs))] }
 // in cash now and then (then ineligible when the category forbids it).
 func (g annGen) deduction() annual.Deduction {
 	d := annual.Deduction{
-		Category: annPick(g.rng, annCategories), Amount: 1 + g.amount(150_000*propPeso),
+		Category: annPick(g.rng, annual.Categories()), Amount: 1 + g.amount(150_000*propPeso),
 		PaymentMethod: annPick(g.rng, []annual.PaymentMethod{annual.PaymentElectronic, annual.PaymentElectronic, annual.PaymentCash}),
-		Beneficiary:   annPick(g.rng, []annual.Beneficiary{annual.BeneficiarySelf, annual.BeneficiarySpouse, annual.BeneficiaryDescendant}),
+		Beneficiary:   annPick(g.rng, annBeneficiaries),
 	}
 	switch d.Category {
 	case annual.CategoryDonation:
