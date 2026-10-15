@@ -91,22 +91,3 @@ func TestTaxpayerStatus(t *testing.T) {
 		assert.Equal(t, tc.want, domain.TaxpayerStatus(tc.regimes), "%v", tc.regimes)
 	}
 }
-
-// OQ-D6: whole days left, rounded up, at least 1 while the trial runs.
-func TestTrialDaysLeft(t *testing.T) {
-	ends := time.Date(2026, time.October, 20, 16, 0, 0, 0, time.UTC)
-	for _, tc := range []struct {
-		left time.Duration
-		want int
-	}{
-		{7 * 24 * time.Hour, 7},
-		{3*24*time.Hour - time.Second, 3},
-		{2*24*time.Hour + time.Second, 3},
-		{time.Hour, 1},
-		{time.Nanosecond, 1},
-		{0, 1},
-		{-time.Hour, 1},
-	} {
-		assert.Equal(t, tc.want, domain.TrialDaysLeft(ends.Add(-tc.left), ends), "%s left", tc.left)
-	}
-}

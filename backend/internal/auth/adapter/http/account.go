@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/romodevx/control-contable/backend/adapter/http/accesshttp"
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
 	"github.com/romodevx/control-contable/backend/internal/auth/domain"
 	"github.com/romodevx/control-contable/backend/internal/auth/usecase"
@@ -21,9 +22,10 @@ const (
 	legalDocumentsCacheControl = "public, max-age=300"
 )
 
-// ProfileEditor reads and renames the signed-in account (usecase.Profile).
+// ProfileEditor reads (with its access) and renames the signed-in account
+// (usecase.Profile).
 type ProfileEditor interface {
-	Get(ctx context.Context, userID domain.UserID) (usecase.Account, error)
+	Me(ctx context.Context, userID domain.UserID) (usecase.Me, error)
 	Rename(ctx context.Context, userID domain.UserID, name string) (usecase.Account, error)
 }
 
@@ -68,20 +70,30 @@ func NewAccountHandler(uc AccountUseCases) *AccountHandler {
 // authenticated user (the router's authenticator always sets one).
 var errNoPrincipal = fmt.Errorf("%w: no principal in the request context", usecase.ErrInvalidAccessToken)
 
-// GetMe implements gen.StrictServerInterface (GET /v1/me).
+// GetMe implements gen.StrictServerInterface (GET /v1/me): the profile and
+// the caller's access, presented like every other AccessSummary.
 func (h *AccountHandler) GetMe(ctx context.Context, _ gen.GetMeRequestObject) (gen.GetMeResponseObject, error) {
 	userID, err := caller(ctx)
 	if err != nil {
 		return gen.GetMe401JSONResponse{UnauthorizedJSONResponse: unauthorized(ctx)}, nil
 	}
-	account, err := h.profile.Get(ctx, userID)
+	me, err := h.profile.Me(ctx, userID)
 	if errors.Is(err, usecase.ErrAccountNotFound) {
 		return gen.GetMe401JSONResponse{UnauthorizedJSONResponse: unauthorized(ctx)}, nil
 	}
 	if err != nil {
 		return nil, toAppError(err)
 	}
-	return gen.GetMe200JSONResponse{Body: toUser(account)}, nil
+	return gen.GetMe200JSONResponse{Body: toMe(me)}, nil
+}
+
+// toMe is toUser's fields plus the access (contract Me, a superset of User).
+func toMe(me usecase.Me) gen.Me {
+	user := toUser(me.Account)
+	return gen.Me{
+		Id: user.Id, Email: user.Email, Name: user.Name, CreatedAt: user.CreatedAt,
+		Access: accesshttp.Summary(me.Access),
+	}
 }
 
 // UpdateMe implements gen.StrictServerInterface (PATCH /v1/me). The contract

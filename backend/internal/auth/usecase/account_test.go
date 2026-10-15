@@ -12,6 +12,7 @@ import (
 
 	"github.com/romodevx/control-contable/backend/internal/auth/domain"
 	"github.com/romodevx/control-contable/backend/internal/auth/usecase"
+	"github.com/romodevx/control-contable/backend/internal/platform/access"
 	"github.com/romodevx/control-contable/backend/internal/platform/tx"
 )
 
@@ -109,34 +110,59 @@ func (f *fakeProfiles) Delete(_ context.Context, id domain.UserID, passwordHash 
 	return true, nil
 }
 
-func TestProfile_get(t *testing.T) {
-	t.Run("reads the account read-only as the caller", func(t *testing.T) {
-		accounts, units := newFakeProfiles(t), &uow{}
-		uc := usecase.NewProfile(units, accounts)
+// fakeAccessView is the access policy's client view of one user.
+type fakeAccessView struct {
+	view  access.View
+	err   error
+	asked []string // the user ids View was asked for
+}
 
-		got, err := uc.Get(t.Context(), accounts.account.ID)
+func (f *fakeAccessView) View(_ context.Context, userID string) (access.View, error) {
+	f.asked = append(f.asked, userID)
+	return f.view, f.err
+}
+
+func TestProfile_me(t *testing.T) {
+	t.Run("reads the account read-only as the caller, then the caller's access", func(t *testing.T) {
+		accounts, units := newFakeProfiles(t), &uow{}
+		days, left := 3, 2
+		viewer := &fakeAccessView{view: access.View{Level: access.LevelTrial, TrialDaysLeft: &days, IncomesRemaining: &left}}
+		uc := usecase.NewProfile(units, accounts, viewer)
+
+		got, err := uc.Me(t.Context(), accounts.account.ID)
 
 		require.NoError(t, err)
-		assert.Equal(t, accounts.account, got)
+		assert.Equal(t, usecase.Me{Account: accounts.account, Access: viewer.view}, got)
 		assert.Equal(t, []string{"ro:" + newUserID}, units.units)
+		assert.Equal(t, []string{newUserID}, viewer.asked, "the principal's own access, nobody else's")
 	})
 
-	t.Run("a deleted account is ErrAccountNotFound", func(t *testing.T) {
-		accounts := newFakeProfiles(t)
+	t.Run("a deleted account is ErrAccountNotFound and reads no access", func(t *testing.T) {
+		accounts, viewer := newFakeProfiles(t), &fakeAccessView{}
 		accounts.exists = false
 
-		_, err := usecase.NewProfile(&uow{}, accounts).Get(t.Context(), accounts.account.ID)
+		_, err := usecase.NewProfile(&uow{}, accounts, viewer).Me(t.Context(), accounts.account.ID)
 
 		assert.ErrorIs(t, err, usecase.ErrAccountNotFound)
+		assert.Empty(t, viewer.asked)
 	})
 
 	t.Run("an infrastructure failure is wrapped", func(t *testing.T) {
 		accounts := newFakeProfiles(t)
 		accounts.err = errDB
 
-		_, err := usecase.NewProfile(&uow{}, accounts).Get(t.Context(), accounts.account.ID)
+		_, err := usecase.NewProfile(&uow{}, accounts, &fakeAccessView{}).Me(t.Context(), accounts.account.ID)
 
 		assert.ErrorIs(t, err, errDB)
+		assert.NotErrorIs(t, err, usecase.ErrAccountNotFound)
+	})
+
+	t.Run("an access failure is wrapped, never a profile without access", func(t *testing.T) {
+		accounts := newFakeProfiles(t)
+
+		_, err := usecase.NewProfile(&uow{}, accounts, &fakeAccessView{err: access.ErrUsageMissing}).Me(t.Context(), accounts.account.ID)
+
+		assert.ErrorIs(t, err, access.ErrUsageMissing)
 		assert.NotErrorIs(t, err, usecase.ErrAccountNotFound)
 	})
 }
@@ -144,7 +170,7 @@ func TestProfile_get(t *testing.T) {
 func TestProfile_rename(t *testing.T) {
 	t.Run("stores the normalized name and returns the account", func(t *testing.T) {
 		accounts, units := newFakeProfiles(t), &uow{}
-		uc := usecase.NewProfile(units, accounts)
+		uc := usecase.NewProfile(units, accounts, &fakeAccessView{})
 
 		got, err := uc.Rename(t.Context(), accounts.account.ID, "  Ana Gómez de la Torre ")
 
@@ -167,7 +193,7 @@ func TestProfile_rename(t *testing.T) {
 		t.Run("a "+name+" name is refused and opens no unit of work", func(t *testing.T) {
 			accounts, units := newFakeProfiles(t), &uow{}
 
-			_, err := usecase.NewProfile(units, accounts).Rename(t.Context(), accounts.account.ID, tt.raw)
+			_, err := usecase.NewProfile(units, accounts, &fakeAccessView{}).Rename(t.Context(), accounts.account.ID, tt.raw)
 
 			assert.ErrorIs(t, err, tt.want)
 			assert.Empty(t, units.units)
@@ -179,7 +205,7 @@ func TestProfile_rename(t *testing.T) {
 		accounts := newFakeProfiles(t)
 		accounts.exists = false
 
-		_, err := usecase.NewProfile(&uow{}, accounts).Rename(t.Context(), accounts.account.ID, "Ana")
+		_, err := usecase.NewProfile(&uow{}, accounts, &fakeAccessView{}).Rename(t.Context(), accounts.account.ID, "Ana")
 
 		assert.ErrorIs(t, err, usecase.ErrAccountNotFound)
 	})

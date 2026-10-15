@@ -352,10 +352,14 @@ func newHandler(cfg config.Config, d deps) (http.Handler, error) {
 	routes, err := router.New(server, spec, router.Options{
 		// The flag service answers the effective state: a module whose
 		// prerequisite is OFF is OFF (flags.Prerequisites).
-		Flags:    d.flags,
-		Authn:    d.auth.authn, // bearer EdDSA access tokens (M1-07)
-		Logger:   d.logger,
-		NotBuilt: notBuiltOperations(),
+		Flags: d.flags,
+		// One authenticator per contract security scheme: the bearer EdDSA
+		// access tokens (M1-07). The RevenueCat webhook secret joins when M7
+		// builds receiveRevenueCatWebhook; until then it is not built and
+		// answered before authentication.
+		Authenticators: map[string]router.Authenticator{router.SchemeBearer: d.auth.authn},
+		Logger:         d.logger,
+		NotBuilt:       notBuiltOperations(),
 		// Per-client limits of each auth operation, after the flag gate
 		// (MODULE-auth §5), keyed like the edge limiter.
 		OperationLimits: d.auth.clientLimits,

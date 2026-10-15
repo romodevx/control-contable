@@ -10,6 +10,7 @@ import '../models/delete_account_request.dart';
 import '../models/legal_document_list.dart';
 import '../models/login_request.dart';
 import '../models/logout_request.dart';
+import '../models/me.dart';
 import '../models/refresh_request.dart';
 import '../models/register_request.dart';
 import '../models/resend_verification_request.dart';
@@ -68,9 +69,11 @@ abstract class AuthClient {
   @POST('/v1/auth/logout')
   Future<void> logout({@Body() required LogoutRequest body});
 
-  /// Current user profile
+  /// Current user profile and access state.
+  ///
+  /// The signed-in user's profile plus `access`, the same `AccessSummary` `getDashboard` sends (one server computation, server clock): the app reads it before a create wizard and for the subscription status, whatever `module_subscriptions` says (MODULES.md M7-01). Open to read-only users (no `402`).
   @GET('/v1/me')
-  Future<User> getMe();
+  Future<Me> getMe();
 
   /// Update profile (name only; email change is out of scope)
   @PATCH('/v1/me')

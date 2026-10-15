@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:control_contable/api/generated/api_client.dart';
+import 'package:control_contable/api/generated/models/access_level.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/features/auth/data/profile_repository.dart';
 import 'package:dio/dio.dart';
@@ -14,6 +15,13 @@ const Map<String, Object?> _user = {
   'email': 'ana.gomez@example.mx',
   'name': 'Ana Gómez Ruiz',
   'created_at': '2026-10-13T16:00:00Z',
+  'access': {
+    'access': 'trial',
+    'trial_ends_at': '2026-10-20T16:00:00Z',
+    'trial_days_left': 3,
+    'incomes_remaining': 2,
+    'expenses_remaining': 5,
+  },
 };
 
 void main() {
@@ -31,12 +39,16 @@ void main() {
       jsonDecode(jsonEncode(adapter.requests.last.data))
           as Map<String, Object?>;
 
-  test('getMe reads the profile', () async {
-    final user = await repository.getMe();
+  test('getMe reads the profile and the access state', () async {
+    final me = await repository.getMe();
 
     expect(adapter.requests.single.method, 'GET');
-    expect(user.email, 'ana.gomez@example.mx');
-    expect(user.name, 'Ana Gómez Ruiz');
+    expect(me.email, 'ana.gomez@example.mx');
+    expect(me.name, 'Ana Gómez Ruiz');
+    expect(me.access.access, AccessLevel.trial);
+    expect(me.access.trialDaysLeft, 3);
+    expect(me.access.incomesRemaining, 2);
+    expect(me.access.expensesRemaining, 5);
   });
 
   test('updateName patches only the name', () async {

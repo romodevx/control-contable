@@ -119,6 +119,20 @@ func TestContract_authAccount(t *testing.T) {
 			assert.Equal(t, ana.User, decodeUser(t, rec))
 		})
 
+		// Contract 0.17.0: the access the dashboard shows, from the real
+		// policy over the rows sign-up wrote (a fresh 7-day trial, 5 + 5).
+		t.Run("getMe carries the caller's access", func(t *testing.T) {
+			rec := c.ServeOp(t, contracttest.Op("getMe"), env.handler, env.send(http.MethodGet, "/v1/me", "", beaToken))
+			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+			var me gen.Me
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &me))
+			assert.Equal(t, gen.Trial, me.Access.Access)
+			assert.NotNil(t, me.Access.TrialEndsAt)
+			assert.Equal(t, new(7), me.Access.TrialDaysLeft)
+			assert.Equal(t, new(5), me.Access.IncomesRemaining)
+			assert.Equal(t, new(5), me.Access.ExpensesRemaining)
+		})
+
 		t.Run("getMe without a bearer is the generic 401", func(t *testing.T) {
 			rec := c.ServeOp(t, contracttest.Op("getMe"), env.handler, env.send(http.MethodGet, "/v1/me", "", ""))
 			require.Equal(t, http.StatusUnauthorized, rec.Code)

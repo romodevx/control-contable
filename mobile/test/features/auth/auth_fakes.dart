@@ -1,8 +1,11 @@
 import 'dart:async';
 
+import 'package:control_contable/api/generated/models/access_level.dart';
+import 'package:control_contable/api/generated/models/access_summary.dart';
 import 'package:control_contable/api/generated/models/auth_session.dart';
 import 'package:control_contable/api/generated/models/legal_document.dart';
 import 'package:control_contable/api/generated/models/legal_document_kind.dart';
+import 'package:control_contable/api/generated/models/me.dart';
 import 'package:control_contable/api/generated/models/register_request.dart';
 import 'package:control_contable/api/generated/models/token_pair.dart';
 import 'package:control_contable/api/generated/models/user.dart';
@@ -127,11 +130,21 @@ final User sampleUser = User(
   createdAt: DateTime.utc(2026, 10, 13),
 );
 
+/// The access `GET /v1/me` carries by default: a fresh trial.
+final AccessSummary sampleAccess = AccessSummary(
+  access: AccessLevel.trial,
+  trialEndsAt: DateTime.utc(2026, 10, 20),
+  trialDaysLeft: 7,
+  incomesRemaining: 5,
+  expensesRemaining: 5,
+);
+
 /// A [ProfileRepository] scripted per test, like [FakeAuthRepository]. The
 /// calls are recorded in [calls] in order (`getMe`, `updateName`,
 /// `deleteAccount`).
 class FakeProfileRepository implements ProfileRepository {
   User user = sampleUser;
+  AccessSummary access = sampleAccess;
   final List<String> calls = [];
 
   Exception? getMeError;
@@ -146,11 +159,17 @@ class FakeProfileRepository implements ProfileRepository {
   Completer<void>? deleteGate;
 
   @override
-  Future<User> getMe() async {
+  Future<Me> getMe() async {
     calls.add('getMe');
     await getMeGate?.future;
     if (getMeError case final error?) throw error;
-    return user;
+    return Me(
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      createdAt: user.createdAt,
+      access: access,
+    );
   }
 
   @override

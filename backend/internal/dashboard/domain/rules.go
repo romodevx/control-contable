@@ -63,16 +63,3 @@ func TaxpayerStatus(regimes []Status) Status {
 	}
 	return StatusComplete
 }
-
-// day is one trial day: the trial lasts 168 hours (access.TrialDuration).
-const day = 24 * time.Hour
-
-// TrialDaysLeft is the whole days left before endsAt, rounded up and at
-// least 1 (contract AccessSummary.trial_days_left, OQ-D6). The caller asks
-// only while the trial runs (now < endsAt); the floor keeps a clock skew
-// from ever showing 0 days.
-func TrialDaysLeft(now, endsAt time.Time) int {
-	left := endsAt.Sub(now)
-	days := int((left + day - 1) / day)
-	return max(days, 1)
-}

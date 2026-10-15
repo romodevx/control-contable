@@ -17,6 +17,7 @@ import (
 	"github.com/romodevx/control-contable/backend/adapter/http/flagshttp"
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
+	"github.com/romodevx/control-contable/backend/adapter/http/router/routertest"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagtest"
 	"github.com/romodevx/control-contable/backend/internal/platform/requestid"
@@ -54,9 +55,9 @@ func get(t *testing.T, lister flagshttp.Lister) *httptest.ResponseRecorder {
 	spec, err := gen.GetSpec()
 	require.NoError(t, err)
 	h, err := router.New(server{Handler: flagshttp.New(lister, nil)}, spec, router.Options{
-		Flags:  flagtest.Static{}, // every module OFF: /v1/flags is platform
-		Authn:  passThrough{},     // GET /v1/flags is public
-		Logger: slog.New(slog.DiscardHandler),
+		Flags:          flagtest.Static{},                        // every module OFF: /v1/flags is platform
+		Authenticators: routertest.Authenticators(passThrough{}), // GET /v1/flags is public
+		Logger:         slog.New(slog.DiscardHandler),
 	})
 	require.NoError(t, err)
 	req := httptest.NewRequest(http.MethodGet, "/v1/flags", nil)

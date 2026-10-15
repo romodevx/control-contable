@@ -56,9 +56,9 @@ func principalKey(r *http.Request) string {
 
 // checkLimits fails on limits the router could not apply: an operation the
 // contract does not declare (a typo would leave it unlimited), client
-// limits with no way to key the client, or a user limit on a public
-// operation (no user to key it by).
-func checkLimits(opts Options, declared, public map[string]bool) error {
+// limits with no way to key the client, or a user limit on an operation
+// that authenticates no user (public, or a non-bearer scheme).
+func checkLimits(opts Options, declared map[string]bool, security map[string]operationSecurity) error {
 	var errs []error
 	if len(opts.OperationLimits) > 0 && opts.ClientKey == nil {
 		errs = append(errs, errors.New("OperationLimits need a ClientKey"))
@@ -72,8 +72,10 @@ func checkLimits(opts Options, declared, public map[string]bool) error {
 		switch {
 		case !declared[id]:
 			errs = append(errs, fmt.Errorf("user-limited operation %q is not in the contract", id))
-		case public[id]:
+		case security[id].public:
 			errs = append(errs, fmt.Errorf("user-limited operation %q is public: it has no user to key by", id))
+		case security[id].scheme != SchemeBearer:
+			errs = append(errs, fmt.Errorf("user-limited operation %q is secured by %q, which authenticates no user to key by", id, security[id].scheme))
 		}
 	}
 	return errors.Join(errs...)
