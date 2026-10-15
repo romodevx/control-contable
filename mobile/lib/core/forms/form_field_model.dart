@@ -22,6 +22,19 @@ abstract class AppFormFieldModel extends ChangeNotifier {
   final FocusNode focusNode = FocusNode();
 
   FieldError? _error;
+  bool _isActive = true;
+
+  /// Whether the field is part of the form now. A field another choice
+  /// hides (a donation's donee when the category is not a donation) is
+  /// inactive: never validated, never showing an error.
+  bool get isActive => _isActive;
+
+  set isActive(bool value) {
+    if (value == _isActive) return;
+    _isActive = value;
+    if (!value) _error = null;
+    notifyListeners();
+  }
 
   /// The error the user sees, if any.
   FieldError? get error => _error;
@@ -31,7 +44,7 @@ abstract class AppFormFieldModel extends ChangeNotifier {
 
   /// Shows any error the value has now; `true` when it has none.
   bool validateForSubmit() {
-    setError(check());
+    setError(_isActive ? check() : null);
     return _error == null;
   }
 

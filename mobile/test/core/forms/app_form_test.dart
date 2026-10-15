@@ -313,4 +313,29 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('fitContent: a short form takes only its height (a sheet)', (
+    tester,
+  ) async {
+    await pumpForm(
+      tester,
+      Align(
+        alignment: Alignment.bottomCenter,
+        child: AppForm(
+          controller: form,
+          onSave: () async => saves++,
+          fitContent: true,
+          children: [
+            AppMoneyField(field: amount, textInputAction: TextInputAction.done),
+          ],
+        ),
+      ),
+    );
+
+    final height = tester.getSize(find.byType(AppForm)).height;
+    expect(height, lessThan(tester.view.physicalSize.height / 2));
+    await tester.tap(primary());
+    await tester.pumpAndSettle();
+    expect(find.text(_missing), findsWidgets);
+  });
 }

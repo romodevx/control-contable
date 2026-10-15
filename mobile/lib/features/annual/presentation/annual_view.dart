@@ -7,6 +7,7 @@ import 'package:control_contable/api/generated/models/person_type.dart';
 import 'package:control_contable/core/theme/app_spacing.dart';
 import 'package:control_contable/core/widgets/estimate_legend.dart';
 import 'package:control_contable/features/annual/presentation/annual_headline_card.dart';
+import 'package:control_contable/features/annual/presentation/annual_inputs_block.dart';
 import 'package:control_contable/features/annual/presentation/annual_section_card.dart';
 import 'package:control_contable/features/tax_engine/presentation/estimate_notices.dart';
 import 'package:control_contable/features/tax_engine/presentation/estimate_states.dart';
@@ -15,9 +16,8 @@ import 'package:flutter/material.dart';
 
 /// A loaded annual estimate, in the reading order of MODULE-annual §7: the
 /// strong CPA banner above every figure, the mandatory legend right above
-/// the headline balance, the warnings, one card per section, then the
-/// informational disclaimers. "Datos para tu anual" (§8) arrives with its
-/// screens (ANN-19..21): a row may never open a dead end.
+/// the headline balance, the warnings, "Datos para tu anual" (§8), one
+/// card per section, then the informational disclaimers.
 class AnnualView extends StatelessWidget {
   /// Shows [estimate].
   const new({required this.estimate, super.key});
@@ -62,6 +62,10 @@ class AnnualView extends StatelessWidget {
       ),
       for (final disclaimer in _bySeverity(DisclaimerSeverity.warning))
         DisclaimerWarning(key: _keyOf(disclaimer), disclaimer: disclaimer),
+      AnnualInputsBlock(
+        key: const ValueKey('annual-inputs'),
+        estimate: estimate,
+      ),
       for (final section in estimate.sections)
         AnnualSectionCard(
           key: ValueKey(

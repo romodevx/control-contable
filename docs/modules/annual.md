@@ -53,6 +53,24 @@
   gate runs AN-01..AN-08 through the use case. Nothing in the monthly engine imports the
   annual packages (`TestMonthlyEngineNeverImportsTheAnnual`).
 
+## Mobile input screens (ANN-19..21)
+
+Reached from "Datos para tu anual" on the annual screen and from each "Falta" link of an
+`incomplete` section (`/anual/{taxpayerId}/{ejercicio}/…`, routes registered only while
+`module_annual` is on). Containers follow `ui-forms-and-modals.md` by field count:
+
+| Screen | Location | Container |
+|---|---|---|
+| Personal deductions: groups per category, registered vs applied (`pf_art152` `personal_deductions_cents`) and the breakdown's "Tope aplicado" lines; delete + persistent Undo (restore) | `…/deducciones` | list |
+| New personal deduction: category first, then only its fields (cash toggle where cash is not deductible, beneficiary + UMA attestation, donee, tuition student/level/scholarship, optional CFDI folio) | `…/deducciones/nueva` | own screen (up to 7 fields) |
+| Salary constancias: year totals, one row per employer (tap to edit), delete after a confirmation (hard delete); no employer RFC | `…/constancias` | sheet (≤ 6 fields) |
+| Filed payments of one regime: 12 inline rows prefilled with the app's estimate ("Estimado por la app — confírmalo"), "Confirmar todos" | `…/pagos/{regimeCode}` | inline rows |
+| Year facts (PF): prior-year income (empty = unknown), other exempt income, employer notice; the regimes' losses, PTU paid and depreciation read-only with a link to their tax-inputs form | `…/datos` | own screen |
+
+Writes never use a trial slot; a `402` opens the paywall and marks the session read-only,
+after which the add/save actions show the paywall without calling the server (UX only).
+Delete and restore stay available to a read-only user.
+
 ## Errors
 
 Every error uses the single envelope `ErrorResponse`. `details[].code` carries the rule
