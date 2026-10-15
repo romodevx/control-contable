@@ -37,7 +37,7 @@ func TestRegister_anEmailOutOfBudgetIs429BeforeAnyWork(t *testing.T) {
 			require.ErrorAs(t, err, &limited, "the same answer for every kind of address")
 			assert.Equal(t, time.Minute, limited.RetryAfter)
 			assert.Zero(t, e.system.calls, "no database work")
-			assert.Empty(t, e.sender.sent, "nothing sent")
+			assert.Empty(t, e.outbox.queued, "nothing sent")
 		})
 	}
 }
@@ -62,31 +62,31 @@ func TestRegister_aLimiterThatCannotDecideFailsClosed(t *testing.T) {
 
 	require.ErrorIs(t, err, errDB)
 	assert.Zero(t, e.system.calls)
-	assert.Empty(t, e.sender.sent)
+	assert.Empty(t, e.outbox.queued)
 }
 
 // US-A1c: the resend limit is silent, like its cooldown: the same success,
 // no database work, nothing sent.
 func TestResendVerification_anEmailOutOfBudgetIsSilent(t *testing.T) {
-	signUps, sender, system := &fakeSignUps{resendOutcome: usecase.CodeResent}, &fakeSender{}, &fakeSystem{}
+	signUps, outbox, system := &fakeSignUps{resendOutcome: usecase.CodeResent}, &fakeOutbox{}, &fakeSystem{}
 	emails := &fakeLimiter{limit: 0}
 
-	err := newLimitedResend(signUps, sender, system, emails).Execute(t.Context(), validEmail)
+	err := newLimitedResend(signUps, outbox, system, emails).Execute(t.Context(), validEmail)
 
 	require.NoError(t, err)
 	assert.Equal(t, []string{hexOf(emailHashOf(normalEmail))}, emails.taken())
 	assert.Zero(t, system.calls)
 	assert.Empty(t, signUps.resends)
-	assert.Empty(t, sender.sent)
+	assert.Empty(t, outbox.queued)
 }
 
 func TestResendVerification_aLimiterThatCannotDecideFailsClosed(t *testing.T) {
-	signUps, sender, system := &fakeSignUps{resendOutcome: usecase.CodeResent}, &fakeSender{}, &fakeSystem{}
+	signUps, outbox, system := &fakeSignUps{resendOutcome: usecase.CodeResent}, &fakeOutbox{}, &fakeSystem{}
 
-	err := newLimitedResend(signUps, sender, system, &fakeLimiter{err: errDB}).Execute(t.Context(), validEmail)
+	err := newLimitedResend(signUps, outbox, system, &fakeLimiter{err: errDB}).Execute(t.Context(), validEmail)
 
 	require.ErrorIs(t, err, errDB)
-	assert.Empty(t, sender.sent)
+	assert.Empty(t, outbox.queued)
 }
 
 // A use case with no limit wired is a wiring error, never a silent default.
