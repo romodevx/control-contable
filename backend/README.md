@@ -62,6 +62,13 @@ reads `APP_ENV`, `LOG_LEVEL` and the `DATABASE_URL` secret, logged in as **`cc_w
 applies the same startup role check as the API (outside dev it refuses to start as an owner,
 SUPERUSER or BYPASSRLS role, or when the role cannot be verified).
 
+- **Push (reminders, M9-07)**: `FCM_PROJECT_ID` (plain variable) turns the FCM sender on;
+  unset, the worker logs `push disabled` and the reminder job sends nothing. With a project,
+  the service account key is read from the `FCM_CREDENTIALS_JSON` secret (secret manager in
+  shared environments, never the repository); without it the runtime's Application Default
+  Credentials are used. Credentials that cannot be used stop the worker at startup. Whether
+  `module_reminders` is ON is read by the job on every run, not at startup.
+
 - **Leader election**: every instance campaigns at start and every 10 s with
   `pg_try_advisory_lock(pgdb.WorkerLeaderLockKey)` on a connection it reserves from its pool
   while it leads. The leader re-verifies the lock in `pg_locks` on each heartbeat; a dead
