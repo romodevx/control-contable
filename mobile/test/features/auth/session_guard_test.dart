@@ -37,7 +37,7 @@ void main() {
 
   GoRouter router() => harness.container.read(appRouterProvider);
 
-  Finder signOut() => find.widgetWithText(TextButton, _signOut);
+  Finder signOut() => find.byTooltip(_signOut);
 
   group('redirect guards (module_auth on)', () {
     testWidgets('signed out: a module location goes to login, then back', (

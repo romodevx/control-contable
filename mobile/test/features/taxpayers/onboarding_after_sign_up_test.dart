@@ -85,7 +85,7 @@ void main() {
       harness.router.pop();
       await tester.pumpAndSettle();
       taxpayers.signedOut = true;
-      await tester.tap(find.text('Cerrar sesión'));
+      await tester.tap(find.byTooltip('Cerrar sesión'));
       await tester.pumpAndSettle();
       expect(harness.tokens.token, isNull, reason: 'signed out');
       taxpayers.signedOut = false;
