@@ -82,7 +82,7 @@ func toPatch(body *gen.IncomeUpdate) (usecase.Patch, error) {
 	}
 	p.InvoicedOn, p.CollectedOn = invoiced, collected
 	p.Regime = convert(body.RegimeCode, func(s string) fiscal.RegimeCode { return fiscal.RegimeCode(s) })
-	p.Counterparty = convert(body.CounterpartyType, func(c gen.CounterpartyType) domain.Counterparty { return domain.Counterparty(c) })
+	p.Counterparty = convert(body.CounterpartyType, func(c gen.CounterpartyType) domain.Counterparty { return domain.Counterparty(c) }) //nolint:staticcheck // SA1019: deprecated field read until WH-06 (ADR-0008)
 	p.Amount = convert(body.AmountCents, toCents)
 	p.IVARate = convert(body.IvaRate, func(r gen.IvaRate) fiscal.IVARate { return fiscal.IVARate(r) })
 	p.IVA = convert(body.IvaCents, toCents)
@@ -220,7 +220,7 @@ func toIncome(i usecase.Income, warnings []domain.Warning) (gen.Income, error) {
 	}
 	return gen.Income{
 		Id: id, TaxpayerId: taxpayerID, RegimeCode: string(i.Regime),
-		CounterpartyType: gen.CounterpartyType(i.Counterparty), AmountCents: int64(i.Amount),
+		CounterpartyType: gen.CounterpartyType(i.Counterparty), AmountCents: int64(i.Amount), //nolint:staticcheck // SA1019: deprecated field served until WH-06 (ADR-0008)
 		IvaRate: gen.IvaRate(i.IVARate), IvaCents: int64(i.IVA),
 		IsrWithheldCents: int64(i.Withheld.ISR), IvaWithheldCents: int64(i.Withheld.IVA),
 		InvoicedOn: invoiced, CollectedOn: collected, PendingCollection: i.PendingCollection,
@@ -283,8 +283,8 @@ func toDefaults(d usecase.Defaults) gen.IncomeDefaults {
 	}
 	return gen.IncomeDefaults{
 		IvaRatesAllowed: rates, SuggestedIvaRate: gen.IvaRate(d.SuggestedIVARate),
-		IsrWithholdingAllowed: d.ISR.Allowed, IsrWithholdingRate: decimalRate(d.ISR.Suggested),
-		IvaWithholdingAllowed: d.IVA.Allowed, IvaWithholdingRate: decimalRate(d.IVA.Suggested),
+		IsrWithholdingAllowed: d.ISR.Allowed, IsrWithholdingRate: decimalRate(d.ISR.Suggested), //nolint:staticcheck // SA1019: deprecated field served until WH-06 (ADR-0008)
+		IvaWithholdingAllowed: d.IVA.Allowed, IvaWithholdingRate: decimalRate(d.IVA.Suggested), //nolint:staticcheck // SA1019: deprecated field served until WH-06 (ADR-0008)
 		PlatformActivity: nullableActivity(d.PlatformActivity),
 	}
 }

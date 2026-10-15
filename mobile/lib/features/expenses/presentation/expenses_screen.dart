@@ -22,8 +22,12 @@ import 'package:go_router/go_router.dart';
 /// The active taxpayer's expenses, one month at a time (M4-09): month
 /// switcher, regime filter, the legend, totals, rows with delete + Undo.
 class ExpensesScreen extends ConsumerWidget {
-  /// Creates the screen.
-  const new({super.key});
+  /// Creates the screen, opened on [initialPeriod] (`YYYY-MM`) when it
+  /// names a month up to the current one, else on the current month.
+  const new({this.initialPeriod, super.key});
+
+  /// The month to open on, as the location carries it (unchecked).
+  final String? initialPeriod;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -44,6 +48,7 @@ class ExpensesScreen extends ConsumerWidget {
         AsyncData(value: final Taxpayer taxpayer) => _MonthView(
           key: ValueKey(taxpayer.id),
           taxpayer: taxpayer,
+          initialPeriod: initialPeriod,
         ),
         AsyncData() => Padding(
           padding: const EdgeInsets.all(AppSpacing.gutter),
@@ -74,16 +79,20 @@ void openExpenseForm(BuildContext context) =>
 
 /// One month of [taxpayer]'s expenses, with its month and regime choice.
 class _MonthView extends ConsumerStatefulWidget {
-  const new({required this.taxpayer, super.key});
+  const new({required this.taxpayer, this.initialPeriod, super.key});
 
   final Taxpayer taxpayer;
+  final String? initialPeriod;
 
   @override
   ConsumerState<_MonthView> createState() => _MonthViewState();
 }
 
 class _MonthViewState extends ConsumerState<_MonthView> {
-  late RecordMonth _month = RecordMonth.current(ref.read(clockProvider)());
+  late RecordMonth _month = RecordMonth.opening(
+    widget.initialPeriod,
+    ref.read(clockProvider)(),
+  );
   String? _regime;
 
   List<ChoiceOption> get _regimeOptions => [

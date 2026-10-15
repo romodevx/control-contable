@@ -34,6 +34,11 @@ const (
 	ErrInvalidBasis Error = "taxparams: invalid legal basis"
 	// ErrRateOutOfRange reports a rate outside [0, 1].
 	ErrRateOutOfRange Error = "taxparams: rate outside [0, 1]"
+	// ErrCountNotPositive reports a count below 1: every count the law
+	// states (UMA multiples) is a positive whole number.
+	ErrCountNotPositive Error = "taxparams: count not positive"
+	// ErrMissingDate reports a date value without its day.
+	ErrMissingDate Error = "taxparams: date value without a date"
 	// ErrNegativeMoney reports a negative amount or fixed fee.
 	ErrNegativeMoney Error = "taxparams: negative amount"
 	// ErrInvalidTable reports a table without rows, a first row not starting

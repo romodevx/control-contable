@@ -84,7 +84,7 @@ var (
 	basisDonations  = []domain.Citation{{Law: lawLISR, Article: articleTop, Note: "fracción III, 7 % de los ingresos acumulables del año anterior"}}
 	basisGovernment = []domain.Citation{{Law: lawLISR, Article: articleTop, Note: "fracción III, donativos a la Federación, entidades y municipios hasta 4 %"}}
 	basisRetirement = []domain.Citation{{Law: lawLISR, Article: articleTop, Note: "fracción V, 10 % de los ingresos acumulables hasta 5 UMA anuales"}}
-	basisTuition    = []domain.Citation{{Law: lawDecree, Article: "1.8 a 1.10", Note: "límite anual por alumno y nivel educativo"}}
+	basisTuition    = []domain.Citation{{Law: lawDecree, Article: "1.10", Note: "límite anual por alumno y nivel educativo"}}
 	basisGlobal     = []domain.Citation{{Law: lawLISR, Article: articleTop, Note: "último párrafo, mínimo entre 5 UMA anuales y 15 % de los ingresos totales"}}
 	basisUnverified = basisDonations
 )
@@ -95,5 +95,5 @@ var cashBasis = map[Category][]domain.Citation{
 	CategoryMedical:           {{Law: lawLISR, Article: articleTop, Note: "fracción I, pago con medios electrónicos"}},
 	CategoryMedicalDisability: {{Law: lawLISR, Article: articleTop, Note: "fracción I, pago con medios electrónicos"}},
 	CategorySchoolTransport:   {{Law: lawLISR, Article: articleTop, Note: "fracción VII, pago con medios electrónicos"}},
-	CategoryTuition:           {{Law: lawDecree, Article: "1.8", Note: "pago con medios electrónicos"}},
+	CategoryTuition:           {{Law: lawDecree, Article: "1.9", Note: "pago con cheque, transferencia o tarjeta"}},
 }

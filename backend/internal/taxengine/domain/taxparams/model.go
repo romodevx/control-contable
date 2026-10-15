@@ -27,6 +27,12 @@ const (
 	KindMoney
 	// KindFlag is a boolean switch (e.g. rounding.payment_whole_pesos).
 	KindFlag
+	// KindCount is a positive whole number the law states as one, e.g. the
+	// "cinco veces el valor anual de la UMA" of LISR 151: never a rate or an
+	// amount computed from it.
+	KindCount
+	// KindDate is a calendar day, e.g. the deadline of an annual return.
+	KindDate
 )
 
 func (k ValueKind) String() string {
@@ -37,6 +43,10 @@ func (k ValueKind) String() string {
 		return "money"
 	case KindFlag:
 		return "flag"
+	case KindCount:
+		return "count"
+	case KindDate:
+		return "date"
 	}
 	return unknownKind
 }
@@ -87,6 +97,8 @@ type Value struct {
 	Rate     money.Rate
 	Money    money.Cents
 	Flag     bool
+	Count    int64
+	Date     fiscal.Date
 	Validity Validity
 	Basis    []Citation
 }

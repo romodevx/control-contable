@@ -55,6 +55,14 @@ func TestLoadSyntheticFixtures(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, rounding)
 
+	umas, err := p.Count("deduction.personal.global_cap_umas", date(t, "2026-12-31"))
+	require.NoError(t, err)
+	assert.Equal(t, int64(5), umas)
+
+	deadline, err := p.Date("annual.deadline.pf", date(t, "2026-12-31"))
+	require.NoError(t, err)
+	assert.Equal(t, "2027-04-30", deadline.String())
+
 	tariff, err := p.Table("isr.art96.monthly", date(t, "2026-03-31"))
 	require.NoError(t, err)
 	assert.Equal(t, taxparams.TableMarginal, tariff.Kind)
@@ -131,6 +139,13 @@ func TestLoadRejects(t *testing.T) {
 `, ``)), params.ErrValueKind},
 		{"value with two kinds", one("2026/v1.yaml", replace(`rate: "0.08"`, `rate: "0.08"
     money: "1.00"`)), params.ErrValueKind},
+		{"value with a count and a date", one("2026/v1.yaml", replace("count: 5\n", "count: 5\n    date: 2027-04-30\n")), params.ErrValueKind},
+		{"count quoted", one("2026/v1.yaml", replace("count: 5", `count: "5"`)), params.ErrInvalidCount},
+		{"count with decimals", one("2026/v1.yaml", replace("count: 5", "count: 5.0")), params.ErrInvalidCount},
+		{"count as a list", one("2026/v1.yaml", replace("count: 5", "count: [5]")), params.ErrInvalidCount},
+		{"count beyond int64", one("2026/v1.yaml", replace("count: 5", "count: 9223372036854775808")), params.ErrInvalidCount},
+		{"count of zero", one("2026/v1.yaml", replace("count: 5", "count: 0")), taxparams.ErrCountNotPositive},
+		{"date value not a calendar day", one("2026/v1.yaml", replace("date: 2027-04-30", "date: 2027-04-31")), params.ErrInvalidDate},
 		{"marginal row without fixed_fee", one("2026/v1.yaml", replace(`lower: "100.01", fixed_fee: "2.00", rate: "0.1"`, `lower: "100.01", rate: "0.1"`)), params.ErrMissingFixedFee},
 		{"unknown table kind", one("2026/v1.yaml", replace("kind: flat", "kind: progressive")), params.ErrTableKind},
 		{"date that is not a calendar day", one("2026/v1.yaml", replace("valid_to: 2026-01-31", "valid_to: 2026-02-30")), params.ErrInvalidDate},

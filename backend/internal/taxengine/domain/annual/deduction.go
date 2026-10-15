@@ -111,7 +111,7 @@ const (
 // Valid reports a spec donee type.
 func (d DoneeType) Valid() bool { return d == DoneeAuthorized || d == DoneeGovernment }
 
-// TuitionLevel is a school level of the colegiaturas decree (art. 1.9).
+// TuitionLevel is a school level of the colegiaturas decree (art. 1.10 table).
 type TuitionLevel string
 
 // The tuition levels.

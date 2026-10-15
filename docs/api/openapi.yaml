@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Control Contable API
-  version: 0.9.1
+  version: 0.10.1
   summary: Monthly IVA and provisional ISR estimates for Mexican taxpayers.
   description: |
     Spec-first contract (single source of truth). Server stubs (oapi-codegen),
@@ -1301,7 +1301,7 @@ paths:
     post:
       tags: [Incomes]
       operationId: createIncome
-      x-frozen: sha256:c1f40de906026d296240969ef21607965114d1d20731b3e56bd9876f16170e8e
+      x-frozen: sha256:0c6ff1a0d075386a3fd18127fc18a534dcc0dfd38d6c2857602d31ff64a055c9
       summary: Record an income (idempotent client id; trial cap enforced)
       description: >-
         Records an income of the active taxpayer. Amounts are MXN centavos (`int64`), the
@@ -1345,16 +1345,31 @@ paths:
         with IVA > 0, or more than 100 centavos away from `amount_cents × rate`);
         `isr_withheld_cents` / `iva_withheld_cents` → `withholding_not_applicable` (the
         person type, regime and `counterparty_type` allow no such withholding),
-        `withholding_exceeds_base` (ISR above `amount_cents`, IVA above `iva_cents`);
-        `platform_activity` → `activity_not_held` (not among the taxpayer's 625 activities).
+        `withholding_exceeds_base` (ISR above `amount_cents`, IVA above `iva_cents`), both
+        retired by WH-06; `platform_activity` → `activity_not_held` (not among the taxpayer's
+        625 activities); `iva_rate` → `residential_rent_exempt` (`residential_rent: true` with
+        a rate other than `exempt`). `via_platform: true` outside 625 and persona moral
+        regimes → `400` `not_for_regime`.
 
 
-        Success bodies carry non-blocking `warnings` (MODULE-incomes §2.8):
-        `duplicate_cfdi_uuid` on `cfdi_uuid` (another live income of the taxpayer has the
-        same folio fiscal: legit for partial collections) and `withholding_differs_from_rate`
-        on `isr_withheld_cents` / `iva_withheld_cents` (the CFDI wins); `provisional_parameters`
-        on `collected_on` / `invoiced_on` (the date reads a provisional parameter set, see
-        `WarningCode`). Messages never carry amounts, descriptions or UUIDs.
+        **Withholdings are derived (ADR-0008, MODULE-withholdings §3).** The server derives
+        ISR and IVA withheld from the taxpayer's person type and regime, `counterparty_kind`,
+        `operation_kind`, `residential_rent`, `via_platform` and the amounts, stores them with
+        the rule ids and `table_version`, and returns them read-only in `withholding` (mirrored
+        in `isr_withheld_cents` / `iva_withheld_cents`). There is no manual override.
+        **Transition:** until WH-06 lands the server still stores the typed amounts of the
+        deprecated fields and omits `withholding`; WH-06 removes the deprecated fields
+        (contract step, 0.10.x).
+
+
+        Success bodies carry non-blocking `warnings` (MODULE-incomes §2.8, MODULE-withholdings
+        §6): `duplicate_cfdi_uuid` on `cfdi_uuid` (another live income of the taxpayer has the
+        same folio fiscal: legit for partial collections); `provisional_parameters` on
+        `collected_on` / `invoiced_on` (the date reads a provisional parameter set, see
+        `WarningCode`); `withholding_cpa_unverified` on `withholding`;
+        `foreign_counterparty_not_supported` on `counterparty_kind`.
+        `withholding_differs_from_rate` (on the typed amounts) is sent only until WH-06.
+        Messages never carry amounts, descriptions or UUIDs.
       x-module: module_incomes
       security:
         - bearerAuth: []
@@ -1365,16 +1380,16 @@ paths:
             schema: { $ref: '#/components/schemas/IncomeCreate' }
             examples:
               professionalFees:
-                summary: 612 fees paid by a persona moral (ISR 10 %, IVA 2/3 withheld)
+                summary: 612 fees billed to a persona moral (ISR 10 %, IVA 2/3 derived)
                 value:
                   id: 0199d4a3-1a2b-7d3c-8e4f-5a6b7c8d9e01
                   regime_code: '612'
                   counterparty_type: persona_moral
+                  counterparty_kind: pm
+                  operation_kind: professional_services
                   amount_cents: 1000000
                   iva_rate: rate_16
                   iva_cents: 160000
-                  isr_withheld_cents: 100000
-                  iva_withheld_cents: 106667
                   invoiced_on: '2026-09-05'
                   collected_on: '2026-09-10'
                   cfdi_uuid: 6F3B2C1D-8A4E-4B7F-9C2D-1E5A7B9C3D4F
@@ -1385,33 +1400,131 @@ paths:
                   id: 0199d4a3-3c4d-7f5e-a061-7c8d9e0f1a23
                   regime_code: '601'
                   counterparty_type: persona_moral
+                  counterparty_kind: pm
                   amount_cents: 4500000
                   iva_rate: rate_16
                   iva_cents: 720000
                   invoiced_on: '2026-09-05'
                   collected_on: null
                   description: Consultoría de procesos, septiembre
+              resicoToCompany:
+                summary: 626 RESICO services billed to a persona moral (US-W1, WH-01)
+                value:
+                  id: 0199d4a3-8192-7ea3-b5b6-2b3c4d5e6f78
+                  regime_code: '626'
+                  counterparty_type: persona_moral
+                  counterparty_kind: pm
+                  operation_kind: professional_services
+                  amount_cents: 10000000
+                  iva_rate: rate_16
+                  iva_cents: 1600000
+                  collected_on: '2026-07-10'
               platformLodging:
                 summary: 625 lodging through a platform (activity defaulted when the taxpayer holds one)
                 value:
                   id: 0199d4a3-4d5e-7a6f-b172-8d9e0f1a2b34
                   regime_code: '625'
                   counterparty_type: plataforma
+                  counterparty_kind: pm
+                  via_platform: true
                   amount_cents: 1500000
                   iva_rate: rate_16
                   iva_cents: 240000
-                  isr_withheld_cents: 60000
-                  iva_withheld_cents: 120000
                   collected_on: '2026-09-20'
       responses:
         '201':
-          description: Created (with `warnings` when the folio fiscal repeats or a withholding differs from the suggested rate).
+          description: Created, with the derived `withholding` (and `warnings` when the folio fiscal repeats or a ⚠️ rule matched).
           headers:
             Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Income' }
               examples:
+                resicoToCompany:
+                  summary: US-W1 (WH-01) — ISR 1.25 % and IVA 2/3 derived, net 104,083.33
+                  value:
+                    id: 0199d4a3-8192-7ea3-b5b6-2b3c4d5e6f78
+                    taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                    regime_code: '626'
+                    counterparty_type: persona_moral
+                    counterparty_kind: pm
+                    operation_kind: professional_services
+                    residential_rent: false
+                    via_platform: false
+                    amount_cents: 10000000
+                    iva_rate: rate_16
+                    iva_cents: 1600000
+                    isr_withheld_cents: 125000
+                    iva_withheld_cents: 1066667
+                    withholding:
+                      isr_cents: 125000
+                      iva_cents: 1066667
+                      isr_rate: '0.0125'
+                      iva_basis: two_thirds_of_iva
+                      withholder: counterparty
+                      net_cents: 10408333
+                      remit_due_on: null
+                      rule_ids: [ISR-4, IVA-6]
+                      explanations:
+                        - rule_id: ISR-4
+                          text: La empresa te retiene 1.25 % de ISR porque estás en RESICO (LISR art. 113-J).
+                        - rule_id: IVA-6
+                          text: Y 2/3 del IVA por servicios de persona física (LIVA art. 1-A, RLIVA art. 3).
+                      table_version: '2026.1'
+                      cpa_unverified: false
+                    invoiced_on: null
+                    collected_on: '2026-07-10'
+                    platform_activity: null
+                    cfdi_uuid: null
+                    description: null
+                    pending_collection: false
+                    warnings: []
+                    created_at: '2026-07-10T17:00:00Z'
+                    updated_at: '2026-07-10T17:00:00Z'
+                govFederalUnverified:
+                  summary: US-W5 (WH-12) — 612 fees to the federal government, ⚠️ CPA-unverified
+                  value:
+                    id: 0199d4a3-92a3-7fb4-86c7-3c4d5e6f7a89
+                    taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                    regime_code: '612'
+                    counterparty_type: persona_moral
+                    counterparty_kind: gov_federal
+                    operation_kind: professional_services
+                    residential_rent: false
+                    via_platform: false
+                    amount_cents: 3000000
+                    iva_rate: rate_16
+                    iva_cents: 480000
+                    isr_withheld_cents: 300000
+                    iva_withheld_cents: 320000
+                    withholding:
+                      isr_cents: 300000
+                      iva_cents: 320000
+                      isr_rate: '0.10'
+                      iva_basis: two_thirds_of_iva
+                      withholder: counterparty
+                      net_cents: 2860000
+                      remit_due_on: null
+                      rule_ids: [ISR-5, IVA-7]
+                      explanations:
+                        - rule_id: ISR-5
+                          text: El gobierno federal te retiene 10 % de ISR por honorarios (LISR art. 106).
+                        - rule_id: IVA-7
+                          text: Y 2/3 del IVA (LIVA art. 3; criterio pendiente de confirmar con un contador).
+                      table_version: '2026.1'
+                      cpa_unverified: true
+                    invoiced_on: null
+                    collected_on: '2026-09-18'
+                    platform_activity: null
+                    cfdi_uuid: null
+                    description: null
+                    pending_collection: false
+                    warnings:
+                      - code: withholding_cpa_unverified
+                        field: withholding
+                        message: Esta retención aún no la confirma un contador. Úsala como aproximado.
+                    created_at: '2026-09-18T16:00:00Z'
+                    updated_at: '2026-09-18T16:00:00Z'
                 created:
                   value:
                     id: 0199d4a3-1a2b-7d3c-8e4f-5a6b7c8d9e01
@@ -1557,7 +1670,7 @@ paths:
     get:
       tags: [Incomes]
       operationId: getIncomeDefaults
-      x-frozen: sha256:42cb1a68528fd38cab949c06d972d422907a9db8c809dc59ddab4c6533bbfbc8
+      x-frozen: sha256:256de17b2fe9ed9e298a25cdd4c1b9a59af62860852cd7b2e90d0e5a113de084
       summary: IVA rates and suggested withholding rates for a new income (prefills the form)
       description: >-
         Resolved from the rate catalog (`RateCatalog`, dated parameter data) for the
@@ -1573,6 +1686,12 @@ paths:
         and stays `null` when there are several and none is sent. Reads are allowed for a
         read-only user and for an archived taxpayer. `regime` must be held by the taxpayer
         on `on` (`422 regime_not_active`).
+
+
+        **0.10.0 (ADR-0008):** `last_used` carries the withholding facts to preselect
+        (MODULE-withholdings §2.1). The `*_withholding_*` fields and the `counterparty_type`
+        parameter are deprecated; WH-06 removes them (the derived figures come from
+        `previewIncomeWithholdings`).
       x-module: module_incomes
       security:
         - bearerAuth: []
@@ -1584,6 +1703,9 @@ paths:
         - name: counterparty_type
           in: query
           required: true
+          deprecated: true
+          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
+          description: Deprecated in 0.10.0; removed by WH-06 (ADR-0008).
           schema: { $ref: '#/components/schemas/CounterpartyType' }
         - $ref: '#/components/parameters/OnDate'
         - name: platform_activity
@@ -1674,6 +1796,154 @@ paths:
                         - { field: platform_activity, code: activity_not_held, message: No registraste esta actividad en el régimen 625. }
         '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/RecordInternalError' }
+  /v1/taxpayers/{taxpayerId}/incomes/withholding-preview:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+    get:
+      tags: [Incomes]
+      operationId: previewIncomeWithholdings
+      x-frozen: sha256:ba7396ad2852eb4c6c3ce0373b300786d714e5c56153f640ca8f67bc3a4aa9af
+      summary: Derive the withholdings of an income without storing it (live card of the form)
+      description: >-
+        Runs the same derivation `createIncome` stores (ADR-0008, MODULE-withholdings §3) on the
+        facts in the query and stores nothing; the form calls it debounced as the user types
+        (§2.3). Same validation as `createIncome` for the fields it takes: `400` for malformed
+        or out-of-range input (`on` before 2026-01-01 or after today → `out_of_range`;
+        `via_platform: true` outside 625 and persona moral regimes or `platform_activity`
+        outside 625 → `not_for_regime`), `422` for `regime_not_active`,
+        `rate_not_valid_on_date`, `iva_amount_mismatch`, `residential_rent_exempt`,
+        `activity_not_held`. `on` is the income's withholding date (`collected_on`, else
+        `invoiced_on`; default today, America/Mexico_City): it picks the dated rates. Reads
+        are allowed for a read-only user and an archived taxpayer (no `402`). Per-user budget
+        `withholding_previews`, 1200 per hour (burst 1200, ADR-0005), shared with
+        `previewExpenseWithholdings` and separate from the record budgets; spent → `429
+        rate_limited` with `Retry-After`. The query carries amounts, never a name, an RFC or a
+        description; the server does not log it.
+      x-module: module_incomes
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PreviewRegime'
+        - $ref: '#/components/parameters/OnDate'
+        - $ref: '#/components/parameters/PreviewAmountCents'
+        - $ref: '#/components/parameters/PreviewIvaRate'
+        - $ref: '#/components/parameters/PreviewIvaCents'
+        - name: counterparty_kind
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/CounterpartyKind' }
+        - $ref: '#/components/parameters/PreviewOperationKind'
+        - $ref: '#/components/parameters/PreviewResidentialRent'
+        - name: via_platform
+          in: query
+          required: false
+          description: Default `true` in 625, `false` otherwise.
+          schema: { type: boolean }
+        - name: platform_activity
+          in: query
+          required: false
+          description: 625 only; defaults to the taxpayer's only activity.
+          schema: { $ref: '#/components/schemas/PlatformActivity' }
+      responses:
+        '200':
+          description: The derived withholding and its warnings; nothing stored.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WithholdingPreview' }
+              examples:
+                resicoToCompany:
+                  summary: US-W1 (WH-01) — 626 RESICO services to a persona moral
+                  value:
+                    withholding:
+                      isr_cents: 125000
+                      iva_cents: 1066667
+                      isr_rate: '0.0125'
+                      iva_basis: two_thirds_of_iva
+                      withholder: counterparty
+                      net_cents: 10408333
+                      remit_due_on: null
+                      rule_ids: [ISR-4, IVA-6]
+                      explanations:
+                        - rule_id: ISR-4
+                          text: La empresa te retiene 1.25 % de ISR porque estás en RESICO (LISR art. 113-J).
+                        - rule_id: IVA-6
+                          text: Y 2/3 del IVA por servicios de persona física (LIVA art. 1-A, RLIVA art. 3).
+                      table_version: '2026.1'
+                      cpa_unverified: false
+                    warnings: []
+                noOneWithholds:
+                  summary: US-W2 (WH-10) — 612 fees to the general public
+                  value:
+                    withholding:
+                      isr_cents: 0
+                      iva_cents: 0
+                      isr_rate: '0'
+                      iva_basis: none
+                      withholder: none
+                      net_cents: 580000
+                      remit_due_on: null
+                      rule_ids: [ISR-0, IVA-0]
+                      explanations:
+                        - rule_id: ISR-0
+                          text: Nadie te retiene ISR cuando le facturas a una persona sin negocio o al público en general.
+                        - rule_id: IVA-0
+                          text: Tampoco te retienen IVA en esta operación.
+                      table_version: '2026.1'
+                      cpa_unverified: false
+                    warnings: []
+                platformGoods:
+                  summary: US-W4 (WH-09) — 625 goods sold via a platform, RFC given
+                  value:
+                    withholding:
+                      isr_cents: 25000
+                      iva_cents: 80000
+                      isr_rate: '0.025'
+                      iva_basis: half_of_iva
+                      withholder: platform
+                      net_cents: 1055000
+                      remit_due_on: null
+                      rule_ids: [ISR-3, IVA-3]
+                      explanations:
+                        - rule_id: ISR-3
+                          text: La plataforma te retiene 2.5 % de ISR por venta de bienes y servicios (LISR art. 113-A).
+                        - rule_id: IVA-3
+                          text: Y la mitad del IVA (LIVA art. 18-J).
+                      table_version: '2026.1'
+                      cpa_unverified: false
+                    warnings: []
+        '400':
+          description: >-
+            Input does not match the contract: a missing or malformed parameter, `on` out of
+            range (`out_of_range`), or a fact the regime cannot have (`not_for_regime`).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                missingCounterparty:
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: counterparty_kind, code: required, message: Indica a quién le facturaste. }
+                viaPlatformNotForRegime:
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: via_platform, code: not_for_regime, message: Este régimen no cobra a través de plataformas. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/RecordNotFound' }
+        '422': { $ref: '#/components/responses/IncomeRuleViolation' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
   /v1/taxpayers/{taxpayerId}/incomes/{incomeId}:
     parameters:
       - $ref: '#/components/parameters/TaxpayerId'
@@ -1705,7 +1975,7 @@ paths:
     patch:
       tags: [Incomes]
       operationId: updateIncome
-      x-frozen: sha256:677c27bb3d010f06529c210739ca7162c96c8fbd7a20e44fb371821df5d8c3fe
+      x-frozen: sha256:cff26c8bf0e5bf43301647325e3589014933d98f33f2a71612b0626623ecb995
       summary: Edit an income (merge-patch; null clears a nullable field)
       description: >-
         Partial update with merge-patch semantics on top-level fields: an absent field is
@@ -1714,8 +1984,10 @@ paths:
         (`additionalProperties`). Every rule of `createIncome` is re-run on the merged income,
         with the same `details[].code` values and `warnings`; moving it to another
         `regime_code` re-checks the regime window. Setting `collected_on` on an accrual income
-        clears `pending_collection`. A read-only user gets `402`; an archived taxpayer
-        `422 taxpayer_archived`. Last write wins (no ETag in v1).
+        clears `pending_collection`. Any change re-derives `withholding` from the merged facts
+        (ADR-0008; e.g. `counterparty_kind: pf_with_activity` zeroes it, US-W9). A read-only
+        user gets `402`; an archived taxpayer `422 taxpayer_archived`. Last write wins (no ETag
+        in v1).
       x-module: module_incomes
       security:
         - bearerAuth: []
@@ -1732,6 +2004,9 @@ paths:
                 value: { collected_on: '2026-10-02' }
               clearUuid:
                 value: { cfdi_uuid: null }
+              changeCounterparty:
+                summary: US-W9 — billed to a persona física with activity instead (withholding re-derived to 0)
+                value: { counterparty_type: persona_fisica, counterparty_kind: pf_with_activity }
       responses:
         '200':
           description: Updated (with `warnings` as on create).
@@ -1791,7 +2066,7 @@ paths:
     post:
       tags: [Incomes]
       operationId: restoreIncome
-      x-frozen: sha256:7cedebf6a7b4a7114a46b2e1b9fc26fdb5470372f6d3837289a8d819107f66a3
+      x-frozen: sha256:a89fa910de8faf1e0952d4ea58ea5cf6f3101e05b17b5b8ec44dc1750594b8c6
       summary: Undo a delete (never consumes a trial slot)
       description: >-
         Clears `deleted_at`. **Never consumes a trial slot**: the slot was used once at
@@ -1801,7 +2076,8 @@ paths:
         (`422 regime_not_active` when the regime no longer covers the income's dates); an
         archived taxpayer answers `422 taxpayer_archived`. Restoring a live income answers
         `200` unchanged; a purged one, or another user's, `404`. `warnings` are computed as on
-        create.
+        create. A restored income whose `withholding.table_version` is older than the current
+        table is re-derived (ADR-0008), like the backfill would.
       x-module: module_incomes
       security:
         - bearerAuth: []
@@ -1913,7 +2189,7 @@ paths:
     post:
       tags: [Expenses]
       operationId: createExpense
-      x-frozen: sha256:24efbc0179a4d374517ef183a77fd462fef177a81a2805c5cf2a1a3046c459fc
+      x-frozen: sha256:4dcd1f275a997fa10cbdeeb4d9adf179c65f0e4159747db7a7b6be0c19ed5730
       summary: Record an expense (idempotent client id; trial cap enforced)
       description: >-
         Records an expense of the active taxpayer. Idempotency, order of checks, regime
@@ -1938,7 +2214,22 @@ paths:
         `taxpayerId` → `taxpayer_archived`; `iva_rate` → `rate_not_valid_on_date`;
         `iva_cents` → `iva_amount_mismatch`; `isr_withheld_cents` / `iva_withheld_cents` →
         `withholding_not_applicable` (only a persona moral withholds from its suppliers),
-        `withholding_exceeds_base`.
+        `withholding_exceeds_base`, both retired by WH-07; `supplier_kind` /
+        `supplier_regime` / `operation_kind` / `residential_rent` → `supplier_not_applicable`
+        (a persona física taxpayer, or `supplier_regime` without `supplier_kind:
+        pf_with_activity`); `iva_rate` → `residential_rent_exempt`. Once WH-07 lands a persona
+        moral without `supplier_kind` answers `400` `required` on it.
+
+
+        **Withholdings are derived (ADR-0008, MODULE-withholdings §2.2, §3).** For a persona
+        moral the server derives what it must withhold from the supplier and remit (ISR and
+        IVA), stores it with the rule ids and `table_version`, and returns it read-only in
+        `withholding` (`withholder: you`, `remit_due_on` the 17th of the next month);
+        `deductible` keeps the category rule, and the deduction is conditioned on the
+        remittance (warning `deduction_requires_remittance`). A persona física taxpayer always
+        gets a zero `withholding` with `withholder: none`. **Transition:** until WH-07 lands the
+        server still stores the typed amounts of the deprecated fields and omits
+        `withholding`; WH-07 removes them (contract step, 0.10.x).
 
 
         Success bodies carry non-blocking `warnings`: `cash_over_threshold` on
@@ -1947,7 +2238,9 @@ paths:
         `duplicate_cfdi_uuid` on `cfdi_uuid`, `iva_not_creditable_cash_payment` on
         `payment_method` (a cash payment over the limit claimed as deductible: the claim
         stands for ISR, its IVA is not creditable, LIVA 5 fr. II ⚠️; added in 0.6.0,
-        append-only).
+        append-only); since 0.10.0 `deduction_requires_remittance` and
+        `withholding_cpa_unverified` on `withholding`, `supplier_regime_unknown` on
+        `supplier_regime`, `foreign_counterparty_not_supported` on `supplier_kind`.
       x-module: module_expenses
       security:
         - bearerAuth: []
@@ -1984,29 +2277,76 @@ paths:
                   paid_on: '2026-09-15'
                   has_cfdi: true
               moralFeesWithholding:
-                summary: 601 professional fees with ISR and IVA withheld from the supplier
+                summary: US-W6 (WH-11) — a 601 pays a 612 consultant; ISR and IVA withholdings derived
                 value:
                   id: 0199d4a3-7081-7d92-a4a5-1a2b3c4d5e67
                   regime_code: '601'
                   category_code: servicios_profesionales
-                  amount_cents: 1000000
+                  amount_cents: 4000000
                   iva_rate: rate_16
-                  iva_cents: 160000
+                  iva_cents: 640000
                   payment_method: transfer
-                  paid_on: '2026-09-30'
+                  paid_on: '2026-06-15'
                   has_cfdi: true
-                  isr_withheld_cents: 100000
-                  iva_withheld_cents: 106667
+                  supplier_kind: pf_with_activity
+                  supplier_regime: '612'
+                  operation_kind: professional_services
                   description: Honorarios de auditoría
       responses:
         '201':
-          description: Created (with `warnings` for non-deductibility risks or a repeated folio fiscal).
+          description: Created, with the derived `withholding` (and `warnings` for non-deductibility risks, a repeated folio fiscal or a withholding to remit).
           headers:
             Cache-Control: { $ref: '#/components/headers/NoStore' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Expense' }
               examples:
+                moralFeesWithholding:
+                  summary: US-W6 (WH-11) — withhold ISR 4,000.00 and IVA 4,266.67, remit by 2026-07-17
+                  value:
+                    id: 0199d4a3-7081-7d92-a4a5-1a2b3c4d5e67
+                    taxpayer_id: 0199d4a2-9a10-7d55-b2c3-4d5e6f7a8b91
+                    regime_code: '601'
+                    category_code: servicios_profesionales
+                    amount_cents: 4000000
+                    iva_rate: rate_16
+                    iva_cents: 640000
+                    payment_method: transfer
+                    paid_on: '2026-06-15'
+                    has_cfdi: true
+                    cfdi_uuid: null
+                    supplier_kind: pf_with_activity
+                    supplier_regime: '612'
+                    operation_kind: professional_services
+                    residential_rent: false
+                    isr_withheld_cents: 400000
+                    iva_withheld_cents: 426667
+                    withholding:
+                      isr_cents: 400000
+                      iva_cents: 426667
+                      isr_rate: '0.10'
+                      iva_basis: two_thirds_of_iva
+                      withholder: you
+                      net_cents: 3813333
+                      remit_due_on: '2026-07-17'
+                      rule_ids: [ISR-5, IVA-6]
+                      explanations:
+                        - rule_id: ISR-5
+                          text: Debes retener 10 % de ISR por honorarios de persona física (LISR art. 106).
+                        - rule_id: IVA-6
+                          text: Y 2/3 del IVA por servicios de persona física (LIVA art. 1-A, RLIVA art. 3).
+                      table_version: '2026.1'
+                      cpa_unverified: false
+                    description: Honorarios de auditoría
+                    deductible: true
+                    deductible_source: category_default
+                    warnings:
+                      - code: deduction_requires_remittance
+                        field: withholding
+                        message: Este gasto solo es deducible si enteras las retenciones a más tardar el 17 de julio.
+                    legend: Esto es un aproximado. No todos los gastos aplican para tu giro comercial.
+                    created_at: '2026-06-15T18:00:00Z'
+                    updated_at: '2026-06-15T18:00:00Z'
                 deductible:
                   value:
                     id: 0199d4a3-2b3c-7e4d-9f50-6b7c8d9e0f12
@@ -2139,6 +2479,166 @@ paths:
         '422': { $ref: '#/components/responses/ExpenseRuleViolation' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/RecordInternalError' }
+  /v1/taxpayers/{taxpayerId}/expenses/withholding-preview:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+    get:
+      tags: [Expenses]
+      operationId: previewExpenseWithholdings
+      x-frozen: sha256:dafd3a08d87a758465be9ead7a3e50bbae41df5e642e9548f49219bd0a1c34ce
+      summary: Derive what a persona moral must withhold from a supplier, without storing (live card)
+      description: >-
+        Runs the derivation `createExpense` stores (ADR-0008, MODULE-withholdings §2.2, §3) on the
+        facts in the query and stores nothing; the "Tu proveedor" card calls it debounced
+        (§2.3). Persona moral taxpayers only: for a persona física any supplier parameter
+        answers `422` `supplier_not_applicable` (the form has no such section). `on` is the
+        payment date (default today): it picks the dated rates and `remit_due_on`.
+        `operation_kind` omitted → the default of `category_code`. Same validation and codes
+        as `createExpense` for the fields it takes (`400`: malformed, `out_of_range`,
+        `unknown_category`; `422`: `regime_not_active`, `rate_not_valid_on_date`,
+        `iva_amount_mismatch`, `residential_rent_exempt`, `supplier_not_applicable`). Reads are
+        allowed for a read-only user and an archived taxpayer (no `402`). Budget
+        `withholding_previews` (1200 per hour per user, shared with
+        `previewIncomeWithholdings`); spent → `429 rate_limited` with `Retry-After`.
+      x-module: module_expenses
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PreviewRegime'
+        - $ref: '#/components/parameters/OnDate'
+        - $ref: '#/components/parameters/PreviewAmountCents'
+        - $ref: '#/components/parameters/PreviewIvaRate'
+        - $ref: '#/components/parameters/PreviewIvaCents'
+        - name: category_code
+          in: query
+          required: true
+          description: A code of `listExpenseCategories`; gives the default `operation_kind`.
+          schema: { type: string, minLength: 1, maxLength: 40 }
+        - name: supplier_kind
+          in: query
+          required: false
+          description: Required for a persona moral (`400 required`); refused for a persona física.
+          schema: { $ref: '#/components/schemas/SupplierKind' }
+        - name: supplier_regime
+          in: query
+          required: false
+          description: Only with `supplier_kind=pf_with_activity`; omitted → `unknown`.
+          schema: { $ref: '#/components/schemas/SupplierRegime' }
+        - $ref: '#/components/parameters/PreviewOperationKind'
+        - $ref: '#/components/parameters/PreviewResidentialRent'
+      responses:
+        '200':
+          description: The derived withholding and its warnings; nothing stored.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WithholdingPreview' }
+              examples:
+                moralFeesWithholding:
+                  summary: US-W6 (WH-11) — a 601 pays a 612 consultant 40,000.00 + IVA
+                  value:
+                    withholding:
+                      isr_cents: 400000
+                      iva_cents: 426667
+                      isr_rate: '0.10'
+                      iva_basis: two_thirds_of_iva
+                      withholder: you
+                      net_cents: 3813333
+                      remit_due_on: '2026-07-17'
+                      rule_ids: [ISR-5, IVA-6]
+                      explanations:
+                        - rule_id: ISR-5
+                          text: Debes retener 10 % de ISR por honorarios de persona física (LISR art. 106).
+                        - rule_id: IVA-6
+                          text: Y 2/3 del IVA por servicios de persona física (LIVA art. 1-A, RLIVA art. 3).
+                      table_version: '2026.1'
+                      cpa_unverified: false
+                    warnings:
+                      - code: deduction_requires_remittance
+                        field: withholding
+                        message: Este gasto solo es deducible si enteras las retenciones a más tardar el 17 de julio.
+                freightFromCompany:
+                  summary: WH-06 — a persona moral carrier; IVA withheld 4 % of the price
+                  value:
+                    withholding:
+                      isr_cents: 0
+                      iva_cents: 40000
+                      isr_rate: '0'
+                      iva_basis: four_percent_of_price
+                      withholder: you
+                      net_cents: 1120000
+                      remit_due_on: '2026-10-17'
+                      rule_ids: [ISR-2, IVA-4]
+                      explanations:
+                        - rule_id: ISR-2
+                          text: No retienes ISR a una persona moral.
+                        - rule_id: IVA-4
+                          text: Debes retener 4 % del precio por flete de mercancía por carretera (LIVA art. 1-A, RLIVA art. 3).
+                      table_version: '2026.1'
+                      cpa_unverified: false
+                    warnings:
+                      - code: deduction_requires_remittance
+                        field: withholding
+                        message: Este gasto solo es deducible si enteras las retenciones a más tardar el 17 de octubre.
+                regimeUnknown:
+                  summary: Persona física supplier, regime "No sé" (derived as 612, warned)
+                  value:
+                    withholding:
+                      isr_cents: 400000
+                      iva_cents: 426667
+                      isr_rate: '0.10'
+                      iva_basis: two_thirds_of_iva
+                      withholder: you
+                      net_cents: 3813333
+                      remit_due_on: '2026-07-17'
+                      rule_ids: [ISR-5, IVA-6]
+                      explanations:
+                        - rule_id: ISR-5
+                          text: Debes retener 10 % de ISR por honorarios de persona física (LISR art. 106).
+                        - rule_id: IVA-6
+                          text: Y 2/3 del IVA por servicios de persona física (LIVA art. 1-A, RLIVA art. 3).
+                      table_version: '2026.1'
+                      cpa_unverified: false
+                    warnings:
+                      - code: supplier_regime_unknown
+                        field: supplier_regime
+                        message: Revisa el régimen en la factura de tu proveedor; cambia la retención.
+                      - code: deduction_requires_remittance
+                        field: withholding
+                        message: Este gasto solo es deducible si enteras las retenciones a más tardar el 17 de julio.
+        '400':
+          description: >-
+            Input does not match the contract: a missing or malformed parameter, `on` out of
+            range (`out_of_range`), an unknown category (`unknown_category`), or a persona moral
+            without `supplier_kind` (`required`).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                missingSupplierKind:
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: supplier_kind, code: required, message: Indica quién te vendió o te dio el servicio. }
+                unknownCategory:
+                  value:
+                    error:
+                      code: validation_failed
+                      message: One or more fields are invalid.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: category_code, code: unknown_category, message: Elige una categoría de la lista. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/RecordNotFound' }
+        '422': { $ref: '#/components/responses/ExpenseRuleViolation' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
   /v1/taxpayers/{taxpayerId}/expenses/{expenseId}:
     parameters:
       - $ref: '#/components/parameters/TaxpayerId'
@@ -2170,7 +2670,7 @@ paths:
     patch:
       tags: [Expenses]
       operationId: updateExpense
-      x-frozen: sha256:51457aca7251f1665bb1ec28335c3d35dd2aa1fdc8d6ae3e2833a85441e791b8
+      x-frozen: sha256:2f3aa58b2b0e3e561602bb524c7069edd93c6cd702033db019cac3ddcc578fa8
       summary: Edit an expense (merge-patch; null clears a nullable field or the override)
       description: >-
         Merge-patch on top-level fields as `updateIncome`: absent is unchanged, `null` clears
@@ -2178,7 +2678,8 @@ paths:
         default applies again). Without an override the default `deductible` is recomputed
         when the category, regime, payment method, amounts, `has_cfdi` or `paid_on` change;
         an override is kept as is. Every rule of `createExpense` is re-run on the merged
-        expense with the same `details[].code` values and `warnings`. A read-only user gets
+        expense with the same `details[].code` values and `warnings`, and `withholding` is
+        re-derived (ADR-0008). A read-only user gets
         `402`; an archived taxpayer `422 taxpayer_archived`.
       x-module: module_expenses
       security:
@@ -2255,14 +2756,15 @@ paths:
     post:
       tags: [Expenses]
       operationId: restoreExpense
-      x-frozen: sha256:42d3e633e71eb891a52a9f212d7e15df31aac0408c4c0d1c07a73012bb572f4c
+      x-frozen: sha256:c8c2b1c28f7bfe1b730290a0478994cbaa56e703d36ed324528427201601ec73
       summary: Undo a delete (never consumes a trial slot)
       description: >-
         As `restoreIncome`: clears `deleted_at` without consuming a trial slot (Undo works at
         5/5), allowed for a read-only user (never `402`, 0.6.1), regime window re-checked
         (`422 regime_not_active`), archived taxpayer `422 taxpayer_archived`, a live expense
         `200` unchanged, a purged one or another user's `404`. `deductible` is not recomputed;
-        `warnings` are computed as on create.
+        `warnings` are computed as on create; a `withholding` derived by an older
+        `table_version` is re-derived (ADR-0008).
       x-module: module_expenses
       security:
         - bearerAuth: []
@@ -3626,6 +4128,42 @@ components:
         Date the dated parameters are read on (America/Mexico_City); defaults to today.
         `2026-01-01` (the first fiscal year with a tax parameter set) … today (`out_of_range`).
       schema: { type: string, format: date }
+    # Shared query parameters of the two withholding previews (ADR-0008).
+    PreviewRegime:
+      name: regime
+      in: query
+      required: true
+      description: The record's `regime_code`; must be held by the taxpayer on `on` (`422 regime_not_active`).
+      schema: { $ref: '#/components/schemas/RegimeCode' }
+    PreviewAmountCents:
+      name: amount_cents
+      in: query
+      required: true
+      description: Subtotal before IVA, MXN centavos (as `amount_cents` of the record).
+      schema: { $ref: '#/components/schemas/PositiveCents' }
+    PreviewIvaRate:
+      name: iva_rate
+      in: query
+      required: true
+      schema: { $ref: '#/components/schemas/IvaRate' }
+    PreviewIvaCents:
+      name: iva_cents
+      in: query
+      required: true
+      description: The IVA of the record, the base of the IVA shares (same tolerance rule as the record).
+      schema: { $ref: '#/components/schemas/NonNegativeCents' }
+    PreviewOperationKind:
+      name: operation_kind
+      in: query
+      required: false
+      description: Omitted → the default the matching create would store.
+      schema: { $ref: '#/components/schemas/OperationKind' }
+    PreviewResidentialRent:
+      name: residential_rent
+      in: query
+      required: false
+      description: Default `false`; `true` requires `iva_rate=exempt` (`422 residential_rent_exempt`).
+      schema: { type: boolean }
 
   headers:
     NoStore:
@@ -3812,10 +4350,12 @@ components:
                   details:
                     - { field: taxpayerId, code: taxpayer_archived, message: Desarchiva al contribuyente primero. }
     IncomeRuleViolation:
-      x-frozen: sha256:59b33ab310352b4d3b7d6b0056e97f9a1c1573d54f51a1433a7734b4c01f5e72
+      x-frozen: sha256:954d42efac186995b1ac869807399df3369c8df19abb9c3bed0b5c939a0e47db
       description: >-
         Well-formed but violates an income rule: regime window, archived taxpayer, IVA rate
         or amount, withholdings, 625 activity (`details[].code`: see `createIncome`).
+        `withholding_not_applicable` and `withholding_exceeds_base` are retired by WH-06 (no
+        typed amount is left to check); `residential_rent_exempt` is new in 0.10.0.
       headers:
         Cache-Control: { $ref: '#/components/headers/NoStore' }
       content:
@@ -3854,6 +4394,15 @@ components:
                   request_id: req_01J9Z6Q4X8
                   details:
                     - { field: isr_withheld_cents, code: withholding_not_applicable, message: Una persona física no te retiene ISR. }
+            residentialRentExempt:
+              summary: Housing rent with an IVA rate other than exempt
+              value:
+                error:
+                  code: business_rule_violation
+                  message: Housing rent is exempt from IVA.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: iva_rate, code: residential_rent_exempt, message: La renta de vivienda no lleva IVA. }
             activityNotHeld:
               value:
                 error:
@@ -3871,10 +4420,13 @@ components:
                   details:
                     - { field: taxpayerId, code: taxpayer_archived, message: Desarchiva al contribuyente primero. }
     ExpenseRuleViolation:
-      x-frozen: sha256:a39c2c488a6a6649515f9eafcdca38d48cb67a522851e74759959433d97b06b3
+      x-frozen: sha256:f3550e695ac17561e2f9724df58ef83b5b2d537c83d3258f49014adaa475f4ea
       description: >-
         Well-formed but violates an expense rule: regime window, archived taxpayer, IVA rate
-        or amount, withholdings (`details[].code`: see `createExpense`).
+        or amount, withholdings, supplier facts (`details[].code`: see `createExpense`).
+        `withholding_not_applicable` and `withholding_exceeds_base` are retired by WH-07 (no
+        typed amount is left to check); `supplier_not_applicable` and `residential_rent_exempt`
+        are new in 0.10.0.
       headers:
         Cache-Control: { $ref: '#/components/headers/NoStore' }
       content:
@@ -3905,6 +4457,24 @@ components:
                   request_id: req_01J9Z6Q4X8
                   details:
                     - { field: iva_withheld_cents, code: withholding_exceeds_base, message: La retención de IVA no puede ser mayor que el IVA. }
+            supplierNotApplicable:
+              summary: A persona física taxpayer describes its supplier (only a persona moral withholds)
+              value:
+                error:
+                  code: business_rule_violation
+                  message: Supplier details apply only to a persona moral.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: supplier_kind, code: supplier_not_applicable, message: Como persona física no retienes a tus proveedores. }
+            residentialRentExempt:
+              summary: Housing rent with an IVA rate other than exempt
+              value:
+                error:
+                  code: business_rule_violation
+                  message: Housing rent is exempt from IVA.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: iva_rate, code: residential_rent_exempt, message: La renta de vivienda no lleva IVA. }
             taxpayerArchived:
               value:
                 error:
@@ -4651,6 +5221,13 @@ components:
         stands for ISR, its IVA is not creditable, LIVA 5 fr. II ⚠️; 0.6.0);
         `provisional_parameters` on `paid_on` (the payment date's fiscal year has no published
         tax parameters yet, so the IVA and cash rules used the previous year's; M4-05).
+        Withholdings (MODULE-withholdings §6, ADR-0008; 0.10.0): `withholding_cpa_unverified` on
+        `withholding` (a ⚠️ rule a CPA has not confirmed matched); `foreign_counterparty_not_supported`
+        on `counterparty_kind` (incomes) or `supplier_kind` (expenses); `supplier_regime_unknown`
+        on `supplier_regime` (derived as 612); `deduction_requires_remittance` on `withholding`
+        (an expense with a withholding above 0 is deductible only if it is remitted by the 17th
+        of the next month). `withholding_differs_from_rate` is **retired**: WH-06 stops sending
+        it, and it stays in the list because the list is append-only.
       enum:
         - rfc_check_digit_mismatch
         - regime_combination_needs_cpa_review
@@ -4662,6 +5239,10 @@ components:
         - category_not_deductible
         - iva_not_creditable_cash_payment
         - provisional_parameters
+        - withholding_cpa_unverified
+        - foreign_counterparty_not_supported
+        - supplier_regime_unknown
+        - deduction_requires_remittance
     RfcInput:
       x-frozen: sha256:fd37fdbdaecba3f8606df31b502d5391862219c4ff10dd2a013a199cf66b6c4c
       type: string
@@ -4823,13 +5404,241 @@ components:
         (`getTaxpayerEstimate`).
       examples: ['2026-09-10']
     CounterpartyType:
-      x-frozen: sha256:cc26c1afe13bbd539a2abfec079d0b5f3376a9939475bcc8251de9ab9f2837c3
+      x-frozen: sha256:72a87f097acbb3f963c1c6a1c21c0b14ee23359f92328b3d27aac2dedc27c4a1
       type: string
+      deprecated: true
+      x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
       enum: [persona_fisica, persona_moral, publico_general, plataforma]
       description: >-
-        Who paid the income. Decides which withholdings may exist (MODULE-incomes §2.6):
-        persona física and público en general never withhold; a persona moral withholds from a
-        física in 612/606/626; a platform withholds in 625 and from a persona moral.
+        **Deprecated in 0.10.0** (ADR-0008): replaced by `CounterpartyKind` plus `via_platform`.
+        Removed from requests, responses and `getIncomeDefaults` by WH-06 (the contract step,
+        0.10.x). Until then it is who paid the income (MODULE-incomes §2.6): persona física and
+        público en general never withhold; a persona moral withholds from a física in
+        612/606/626; a platform withholds in 625 and from a persona moral.
+    CounterpartyKind:
+      x-frozen: sha256:433b4468f211c06d296a8427c56e8efee1c6c682f7e2dd460d36c1d1da5e8e54
+      type: string
+      enum: [pm, pf_with_activity, pf_no_activity_or_public, gov_federal, gov_state_municipal, foreign]
+      description: >-
+        "¿A quién le facturaste?" (MODULE-withholdings §2.1 Q1): `pm` a persona moral,
+        `pf_with_activity` a persona física with a business or profession,
+        `pf_no_activity_or_public` a persona física without activity or the general public,
+        `gov_federal` the federal government or a federal body, `gov_state_municipal` a state or
+        municipal government, `foreign` someone abroad (derives zero and warns
+        `foreign_counterparty_not_supported`). The payer's regime is never asked: it cannot
+        change the result (OQ-W1).
+      examples: [pm]
+    OperationKind:
+      x-frozen: sha256:4d78480ae0ede98cb3157dd1eeb98c08d94d0ccaf38867834390a1cbbdecbf4f
+      type: string
+      enum:
+        - professional_services
+        - business_services
+        - rent_real_estate
+        - rent_movable
+        - sale_of_goods
+        - ground_freight
+        - commission
+        - scrap
+        - other
+      description: >-
+        What was sold or which service was given (MODULE-withholdings §2.1 Q2, §2.2 E3).
+        `rent_real_estate` is the one that asks `residential_rent`; `ground_freight` is road
+        freight of goods (IVA withheld 4 % of the price); `scrap` is desperdicios y reciclables
+        (IVA withheld 100 %); `other` never withholds IVA. There is no subcontracting value: LIVA
+        1-A fr. IV (6 %) was repealed in 2021 (owner decision 4). A platform sale is not an
+        operation kind on the wire: it is `via_platform: true`.
+      examples: [professional_services]
+    SupplierKind:
+      x-frozen: sha256:667df6e4f6e57528fe7ec3220ecc9ba2b24521e0a380310c5a1ed9f75acf4982
+      type: string
+      enum: [pm, pf_with_activity, foreign]
+      description: >-
+        "¿Quién te vendió o te dio el servicio?" (MODULE-withholdings §2.2 E1), only when the
+        taxpayer is a persona moral. `foreign` derives zero and warns
+        `foreign_counterparty_not_supported`.
+      examples: [pf_with_activity]
+    SupplierRegime:
+      x-frozen: sha256:f2eea0d359656a175c51309105af2c04fd9975ede944b1da5209f7c5ada4a26c
+      type: string
+      enum: ['612', '606', '626', '625', '621', unknown]
+      description: >-
+        Regime of a persona física supplier as printed on its CFDI (MODULE-withholdings §2.2
+        E2), only with `supplier_kind: pf_with_activity`. `unknown` ("No sé") derives as 612 and
+        warns `supplier_regime_unknown` (612 fees withhold 10 % ISR, RESICO 1.25 %).
+      examples: ['612']
+    WithholdingRuleId:
+      x-frozen: sha256:2173a30721280f9d106aed92979b97e8f37259c60bf4f2e0c9e95a2ef1b76089
+      type: string
+      pattern: '^(ISR-[0-9]{1,2}|IVA-([0-9]{1,2}|NONE))$'
+      description: >-
+        A rule of the withholdings decision table (docs/research/withholdings-matrix-2026.md
+        §4.2), `ISR-n` or `IVA-n`, or `IVA-NONE`: the table's preamble, the operation charges
+        no IVA to withhold (`rate_0`, `exempt` or residential rent). An identifier only:
+        clients show `Withholding.explanations`, never a rule table of their own.
+      examples: [ISR-4]
+    WithholdingBasis:
+      x-frozen: sha256:be533ec58dc224efad7abde47db2fd54041fd90a053a7a94d7122af5a14cad80
+      type: string
+      enum: [none, two_thirds_of_iva, half_of_iva, all_of_iva, four_percent_of_price]
+      description: >-
+        How the IVA withholding was computed: a share of the IVA charged (2/3, 1/2, all) or 4 %
+        of the subtotal (road freight); `none` when no IVA is withheld.
+    Withholder:
+      x-frozen: sha256:46583fa2f1fa154e0d008683bbc7f373a8a0c2474007bd61469b34d3f806a0d8
+      type: string
+      enum: [counterparty, you, platform, none]
+      description: >-
+        Who withholds: `counterparty` (the payer of an income), `you` (the taxpayer, a persona
+        moral paying a supplier, who must remit it), `platform` (625, and platform sales of a
+        persona moral) or `none`.
+    WithholdingExplanation:
+      x-frozen: sha256:cd2600dcc45bfc387e06daf346e14a82d206af9812318e66176952f08c8009cd
+      type: object
+      required: [rule_id, text]
+      properties:
+        rule_id: { $ref: '#/components/schemas/WithholdingRuleId' }
+        text:
+          type: string
+          description: >-
+            One plain-words line for a matched rule, with its legal basis (es-MX), written by
+            the server from the decision table. Safe to show; never an RFC, a name or a
+            description.
+      examples:
+        - rule_id: ISR-4
+          text: La empresa te retiene 1.25 % de ISR porque estás en RESICO (LISR art. 113-J).
+    Withholding:
+      x-frozen: sha256:a6de646fe15289d67f7ed8612c5fd27d21a04a35297574c04decabb220168058
+      type: object
+      required:
+        - isr_cents
+        - iva_cents
+        - isr_rate
+        - iva_basis
+        - withholder
+        - net_cents
+        - remit_due_on
+        - rule_ids
+        - explanations
+        - table_version
+        - cpa_unverified
+      description: >-
+        **Derived, never entered** (ADR-0008, MODULE-withholdings §3). The server computes it
+        with the kernel's decision table from the facts of the record (person type and regime
+        of the taxpayer, `counterparty_kind` or the supplier fields, `operation_kind`,
+        `residential_rent`, `via_platform`, amounts, dates) and stores it with the
+        `table_version` that produced it. No request accepts it. `isr_cents` and `iva_cents`
+        are the record's `isr_withheld_cents` / `iva_withheld_cents`. Amounts:
+        `isr_cents = round(amount_cents × isr_rate)`; `iva_cents` is the `iva_basis` share of
+        the record's IVA, or 4 % of `amount_cents`; one rounding to the centavo, half away from
+        zero. `net_cents` = subtotal + IVA − both withholdings: what the taxpayer receives
+        (income) or pays the supplier (expense).
+      properties:
+        isr_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        iva_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        isr_rate:
+          $ref: '#/components/schemas/DecimalRate'
+          description: Fraction of `amount_cents` (RESICO `0.0125`, fees and rent `0.10`); `'0'` when no ISR is withheld.
+        iva_basis: { $ref: '#/components/schemas/WithholdingBasis' }
+        withholder: { $ref: '#/components/schemas/Withholder' }
+        net_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        remit_due_on:
+          type: [string, 'null']
+          format: date
+          description: >-
+            Expenses with `withholder: you` and an amount above 0: the 17th of the month after
+            `paid_on`, when the taxpayer must remit both withholdings (never netted against
+            IVA). `null` otherwise.
+        rule_ids:
+          type: array
+          maxItems: 4
+          items: { $ref: '#/components/schemas/WithholdingRuleId' }
+        explanations:
+          type: array
+          maxItems: 4
+          description: One line per entry of `rule_ids`, same order.
+          items: { $ref: '#/components/schemas/WithholdingExplanation' }
+        table_version:
+          type: string
+          pattern: '^[0-9]{4}\.[0-9]{1,3}$'
+          description: >-
+            Version of the decision table and rates that produced the figures (e.g. `2026.1`).
+            A CPA answer or a new year's rates bumps it, and `cmd/backfill-withholdings`
+            re-derives older records (MODULE-withholdings §5.3).
+        cpa_unverified:
+          type: boolean
+          description: A ⚠️ rule a CPA has not confirmed matched (warning `withholding_cpa_unverified`).
+      examples:
+        - isr_cents: 125000
+          iva_cents: 1066667
+          isr_rate: '0.0125'
+          iva_basis: two_thirds_of_iva
+          withholder: counterparty
+          net_cents: 10408333
+          remit_due_on: null
+          rule_ids: [ISR-4, IVA-6]
+          explanations:
+            - rule_id: ISR-4
+              text: La empresa te retiene 1.25 % de ISR porque estás en RESICO (LISR art. 113-J).
+            - rule_id: IVA-6
+              text: Y 2/3 del IVA por servicios de persona física (LIVA art. 1-A, RLIVA art. 3).
+          table_version: '2026.1'
+          cpa_unverified: false
+    WithholdingPreview:
+      x-frozen: sha256:91695366d3aac745a44c2689ab69b7653a60d644af6acebe2e7b84ede1ac91a5
+      type: object
+      required: [withholding, warnings]
+      description: >-
+        What the matching create would derive for the same facts; nothing is stored. `warnings`
+        holds the withholding warnings only: `withholding_cpa_unverified`,
+        `foreign_counterparty_not_supported`, `supplier_regime_unknown`,
+        `deduction_requires_remittance`.
+      properties:
+        withholding: { $ref: '#/components/schemas/Withholding' }
+        warnings:
+          type: array
+          items: { $ref: '#/components/schemas/Warning' }
+      examples:
+        - withholding:
+            isr_cents: 125000
+            iva_cents: 1066667
+            isr_rate: '0.0125'
+            iva_basis: two_thirds_of_iva
+            withholder: counterparty
+            net_cents: 10408333
+            remit_due_on: null
+            rule_ids: [ISR-4, IVA-6]
+            explanations:
+              - rule_id: ISR-4
+                text: La empresa te retiene 1.25 % de ISR porque estás en RESICO (LISR art. 113-J).
+              - rule_id: IVA-6
+                text: Y 2/3 del IVA por servicios de persona física (LIVA art. 1-A, RLIVA art. 3).
+            table_version: '2026.1'
+            cpa_unverified: false
+          warnings: []
+    IncomeLastUsed:
+      x-frozen: sha256:cc9502522283923ebd08439e23d48e85b7bc918772b640b1a6305cbc4de9536c
+      type: object
+      required: [counterparty_kind, operation_kind, residential_rent, via_platform]
+      description: >-
+        The withholding facts of the taxpayer's last income in this regime, so the form
+        preselects them (MODULE-withholdings §2.1). `counterparty_kind` is `null` the first time
+        (no preselection, OQ-W2); `operation_kind` then falls back to the regime default (612
+        and 626 PF `professional_services`, 606 `rent_real_estate`, 621 `sale_of_goods`, any
+        persona moral `business_services`); `via_platform` starts `true` in 625.
+      properties:
+        counterparty_kind:
+          oneOf:
+            - $ref: '#/components/schemas/CounterpartyKind'
+            - type: 'null'
+        operation_kind: { $ref: '#/components/schemas/OperationKind' }
+        residential_rent: { type: boolean }
+        via_platform: { type: boolean }
+      examples:
+        - counterparty_kind: null
+          operation_kind: professional_services
+          residential_rent: false
+          via_platform: false
     PlatformActivity:
       x-frozen: sha256:203687d195665cc438340652fff2dd2cf418e2e279db366e2f86a83f55fe13f9
       type: string
@@ -4869,20 +5678,46 @@ components:
           isr_withheld_cents: 100000
           iva_withheld_cents: 106667
     IncomeCreate:
-      x-frozen: sha256:383dc48ba95b27bf4e81d3f1f39b4cd69d067e442769882c28593be22dcbd885
+      x-frozen: sha256:e0ff1f603de41f4d2e3120b48d3417a770f4f9d60466eae9916e5d18b08be6da
       type: object
       required: [regime_code, counterparty_type, amount_cents, iva_rate, iva_cents]
       additionalProperties: false
       description: >-
         `user_id` comes from the session and `taxpayer_id` from the path, never from the body.
         The date the regime's basis needs is required by the server: `collected_on` (cash
-        regimes) or `invoiced_on` (accrual regimes).
+        regimes) or `invoiced_on` (accrual regimes). Withholdings are **derived** from
+        `counterparty_kind`, `operation_kind`, `residential_rent` and `via_platform`
+        (ADR-0008); no request carries an amount. **Transition (0.10.0 → WH-06):** the deprecated
+        `counterparty_type`, `isr_withheld_cents` and `iva_withheld_cents` are still read until
+        WH-06 lands; WH-06 removes them (sending them then answers `400 additionalProperties`)
+        and makes `counterparty_kind` required. New clients send both `counterparty_type` and
+        `counterparty_kind` meanwhile and never the typed amounts.
       properties:
         id:
           $ref: '#/components/schemas/Uuid'
           description: Client-generated idempotency key (UUIDv7 recommended), once per form session.
         regime_code: { $ref: '#/components/schemas/RegimeCode' }
         counterparty_type: { $ref: '#/components/schemas/CounterpartyType' }
+        counterparty_kind:
+          $ref: '#/components/schemas/CounterpartyKind'
+          description: Required once WH-06 lands (`required` on `counterparty_kind`).
+        operation_kind:
+          $ref: '#/components/schemas/OperationKind'
+          description: >-
+            Asked only when the payer can withhold (`pm`, `gov_*`, not via a platform); omitted
+            → the last value used in this regime, else the regime default (`IncomeLastUsed`).
+        residential_rent:
+          type: boolean
+          description: >-
+            Housing rent (`rent_real_estate` only; default `false`). `true` requires
+            `iva_rate: exempt` and `iva_cents: 0` (LIVA 20 fr. II), else `422`
+            `residential_rent_exempt` on `iva_rate`.
+        via_platform:
+          type: boolean
+          description: >-
+            Collected through a digital platform (default `true` in 625, `false` otherwise).
+            Allowed for 625 and persona moral regimes; `true` on any other regime answers `400`
+            `not_for_regime`.
         amount_cents:
           $ref: '#/components/schemas/PositiveCents'
           description: Subtotal before IVA, MXN centavos.
@@ -4892,10 +5727,14 @@ components:
           description: IVA charged; `0` for `rate_0`/`exempt`, else within 100 centavos of `amount_cents × rate`.
         isr_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
-          description: ISR withheld by the payer (default 0); at most `amount_cents`.
+          deprecated: true
+          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
+          description: Deprecated in 0.10.0, removed by WH-06 (ADR-0008). ISR withheld by the payer (default 0); at most `amount_cents`.
         iva_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
-          description: IVA withheld by the payer (default 0); at most `iva_cents`.
+          deprecated: true
+          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
+          description: Deprecated in 0.10.0, removed by WH-06 (ADR-0008). IVA withheld by the payer (default 0); at most `iva_cents`.
         invoiced_on:
           oneOf:
             - $ref: '#/components/schemas/BusinessDate'
@@ -4917,30 +5756,44 @@ components:
         - id: 0199d4a3-1a2b-7d3c-8e4f-5a6b7c8d9e01
           regime_code: '612'
           counterparty_type: persona_moral
+          counterparty_kind: pm
+          operation_kind: professional_services
           amount_cents: 1000000
           iva_rate: rate_16
           iva_cents: 160000
-          isr_withheld_cents: 100000
-          iva_withheld_cents: 106667
           invoiced_on: '2026-09-05'
           collected_on: '2026-09-10'
           description: Diseño de logotipo
     IncomeUpdate:
-      x-frozen: sha256:acdfef9fa3eb0e622889e5a6aa482eda08c694b7272c22572e452c3d92bc7715
+      x-frozen: sha256:8bf82fecd070d946d4c29edbdf3c6adc579dd7cbb312411347046e4e84110b9c
       type: object
       minProperties: 1
       additionalProperties: false
       description: >-
         Merge-patch on top-level fields: absent = unchanged, `null` clears a nullable field.
-        `id` is immutable and not accepted.
+        `id` is immutable and not accepted. Any change re-derives the withholding (ADR-0008).
+        The deprecated `counterparty_type`, `isr_withheld_cents` and `iva_withheld_cents` are
+        removed by WH-06 (see `IncomeCreate`).
       properties:
         regime_code: { $ref: '#/components/schemas/RegimeCode' }
         counterparty_type: { $ref: '#/components/schemas/CounterpartyType' }
+        counterparty_kind: { $ref: '#/components/schemas/CounterpartyKind' }
+        operation_kind: { $ref: '#/components/schemas/OperationKind' }
+        residential_rent: { type: boolean }
+        via_platform: { type: boolean }
         amount_cents: { $ref: '#/components/schemas/PositiveCents' }
         iva_rate: { $ref: '#/components/schemas/IvaRate' }
         iva_cents: { $ref: '#/components/schemas/NonNegativeCents' }
-        isr_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
-        iva_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        isr_withheld_cents:
+          $ref: '#/components/schemas/NonNegativeCents'
+          deprecated: true
+          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
+          description: Deprecated in 0.10.0, removed by WH-06 (ADR-0008).
+        iva_withheld_cents:
+          $ref: '#/components/schemas/NonNegativeCents'
+          deprecated: true
+          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
+          description: Deprecated in 0.10.0, removed by WH-06 (ADR-0008).
         invoiced_on:
           oneOf:
             - $ref: '#/components/schemas/BusinessDate'
@@ -4961,7 +5814,7 @@ components:
       examples:
         - description: Diseño de logotipo y manual de marca
     Income:
-      x-frozen: sha256:37f75e22683edb0616f859ce6312a535d731826d29150c16021e06d067eb4dbe
+      x-frozen: sha256:5bb6dd5a53ad07210828ad20b8ef3030c847c708e3609942a098ceee8bcfa4ef
       type: object
       required:
         - id
@@ -4987,11 +5840,26 @@ components:
         taxpayer_id: { $ref: '#/components/schemas/Uuid' }
         regime_code: { $ref: '#/components/schemas/RegimeCode' }
         counterparty_type: { $ref: '#/components/schemas/CounterpartyType' }
+        counterparty_kind:
+          $ref: '#/components/schemas/CounterpartyKind'
+          description: Who was billed. Present on every income once WH-06 lands (then required).
+        operation_kind:
+          $ref: '#/components/schemas/OperationKind'
+          description: As sent, or the default stored when the question was hidden. Required once WH-06 lands.
+        residential_rent: { type: boolean, description: Required once WH-06 lands. }
+        via_platform: { type: boolean, description: Required once WH-06 lands. }
         amount_cents: { $ref: '#/components/schemas/PositiveCents' }
         iva_rate: { $ref: '#/components/schemas/IvaRate' }
         iva_cents: { $ref: '#/components/schemas/NonNegativeCents' }
-        isr_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
-        iva_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        isr_withheld_cents:
+          $ref: '#/components/schemas/NonNegativeCents'
+          description: Read-only mirror of `withholding.isr_cents` (kept for list totals and the estimate).
+        iva_withheld_cents:
+          $ref: '#/components/schemas/NonNegativeCents'
+          description: Read-only mirror of `withholding.iva_cents` (kept for list totals and the estimate).
+        withholding:
+          $ref: '#/components/schemas/Withholding'
+          description: The derived withholding (read-only). Required once WH-06 lands.
         invoiced_on:
           oneOf:
             - $ref: '#/components/schemas/BusinessDate'
@@ -5016,8 +5884,11 @@ components:
           type: array
           description: >-
             Non-blocking notices computed on writes (create, update, restore), never stored;
-            `[]` on reads. Codes: `duplicate_cfdi_uuid` (`cfdi_uuid`),
-            `withholding_differs_from_rate` (`isr_withheld_cents`, `iva_withheld_cents`).
+            `[]` on reads. Codes: `duplicate_cfdi_uuid` (`cfdi_uuid`), `provisional_parameters`
+            (`collected_on` / `invoiced_on`), `withholding_cpa_unverified` (`withholding`),
+            `foreign_counterparty_not_supported` (`counterparty_kind`).
+            `withholding_differs_from_rate` is retired: WH-06 stops sending it (no typed amount
+            is left to compare).
           items: { $ref: '#/components/schemas/Warning' }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
@@ -5026,11 +5897,31 @@ components:
           taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
           regime_code: '612'
           counterparty_type: persona_moral
+          counterparty_kind: pm
+          operation_kind: professional_services
+          residential_rent: false
+          via_platform: false
           amount_cents: 1000000
           iva_rate: rate_16
           iva_cents: 160000
           isr_withheld_cents: 100000
           iva_withheld_cents: 106667
+          withholding:
+            isr_cents: 100000
+            iva_cents: 106667
+            isr_rate: '0.10'
+            iva_basis: two_thirds_of_iva
+            withholder: counterparty
+            net_cents: 953333
+            remit_due_on: null
+            rule_ids: [ISR-5, IVA-6]
+            explanations:
+              - rule_id: ISR-5
+                text: La empresa te retiene 10 % de ISR por honorarios (LISR art. 106).
+              - rule_id: IVA-6
+                text: Y 2/3 del IVA por servicios de persona física (LIVA art. 1-A, RLIVA art. 3).
+            table_version: '2026.1'
+            cpa_unverified: false
           invoiced_on: '2026-09-05'
           collected_on: '2026-09-10'
           platform_activity: null
@@ -5080,7 +5971,7 @@ components:
             isr_withheld_cents: 0
             iva_withheld_cents: 0
     IncomeDefaults:
-      x-frozen: sha256:64ba9114468e2b716933ede0c51169433f9fe2f9a6ac0211aadbe26ed96e7d67
+      x-frozen: sha256:cd7b8f14aa6e2bfdb86fea5628181de78fc9b3b9b00079e0b62684a8ce4c8303
       type: object
       required:
         - iva_rates_allowed
@@ -5090,24 +5981,40 @@ components:
         - iva_withholding_allowed
         - iva_withholding_rate
         - platform_activity
-      description: Form prefill from the rate catalog (UX only; the server re-validates every write).
+      description: >-
+        Form prefill from the rate catalog (UX only; the server re-validates every write).
+        The four `*_withholding_*` fields are **deprecated in 0.10.0** and removed by WH-06
+        (ADR-0008): withholdings are derived, so there is no rate to suggest; the form shows
+        `previewIncomeWithholdings` instead. `last_used` replaces them (required once WH-06
+        lands).
       properties:
         iva_rates_allowed:
           type: array
           minItems: 1
           items: { $ref: '#/components/schemas/IvaRate' }
         suggested_iva_rate: { $ref: '#/components/schemas/IvaRate' }
-        isr_withholding_allowed: { type: boolean }
+        last_used: { $ref: '#/components/schemas/IncomeLastUsed' }
+        isr_withholding_allowed:
+          type: boolean
+          deprecated: true
+          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
         isr_withholding_rate:
           oneOf:
             - $ref: '#/components/schemas/DecimalRate'
             - type: 'null'
+          deprecated: true
+          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
           description: Fraction of `amount_cents`; `null` when not allowed or when there is no suggestion.
-        iva_withholding_allowed: { type: boolean }
+        iva_withholding_allowed:
+          type: boolean
+          deprecated: true
+          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
         iva_withholding_rate:
           oneOf:
             - $ref: '#/components/schemas/DecimalRate'
             - type: 'null'
+          deprecated: true
+          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
           description: Fraction of `iva_cents` (2/3 = `0.666667`); `null` when not allowed or when there is no suggestion.
         platform_activity:
           oneOf:
@@ -5117,6 +6024,11 @@ components:
       examples:
         - iva_rates_allowed: [rate_16, rate_8, rate_0, exempt]
           suggested_iva_rate: rate_16
+          last_used:
+            counterparty_kind: pm
+            operation_kind: professional_services
+            residential_rent: false
+            via_platform: false
           isr_withholding_allowed: true
           isr_withholding_rate: '0.10'
           iva_withholding_allowed: true
@@ -5133,11 +6045,20 @@ components:
       enum: [category_default, user]
       description: '`user` when the user overrode `deductible`; `category_default` otherwise.'
     ExpenseCreate:
-      x-frozen: sha256:5d0accbd8e6f251839d9d338ad804c591473850c207aa2cd68201b281d818aeb
+      x-frozen: sha256:abdb7c42240455b610d487d92a59b24482a00a592f46b4e65d72011992aeee6d
       type: object
       required: [regime_code, category_code, amount_cents, iva_rate, iva_cents, payment_method, paid_on, has_cfdi]
       additionalProperties: false
-      description: '`user_id` comes from the session and `taxpayer_id` from the path, never from the body.'
+      description: >-
+        `user_id` comes from the session and `taxpayer_id` from the path, never from the body.
+        Withholdings are **derived** (ADR-0008): a persona moral taxpayer describes its supplier
+        (`supplier_kind`, required for it once WH-07 lands; `supplier_regime`;
+        `operation_kind`, defaulting to the category's; `residential_rent`) and the server
+        derives what it must withhold and remit. A persona física never withholds from a
+        domestic supplier: any supplier field answers `422` `supplier_not_applicable`.
+        **Transition (0.10.0 → WH-07):** the deprecated `isr_withheld_cents` and
+        `iva_withheld_cents` are still read until WH-07 lands; WH-07 removes them (sending them
+        then answers `400 additionalProperties`). New clients never send them.
       properties:
         id:
           $ref: '#/components/schemas/Uuid'
@@ -5168,12 +6089,33 @@ components:
         deductible:
           type: [boolean, 'null']
           description: The user's override; omitted or `null` uses the default.
+        supplier_kind:
+          $ref: '#/components/schemas/SupplierKind'
+          description: Persona moral taxpayers only; required for them once WH-07 lands.
+        supplier_regime:
+          $ref: '#/components/schemas/SupplierRegime'
+          description: >-
+            Only with `supplier_kind: pf_with_activity` (omitted → `unknown`); with any other
+            kind it answers `422` `supplier_not_applicable`.
+        operation_kind:
+          $ref: '#/components/schemas/OperationKind'
+          description: Persona moral taxpayers only; omitted → the category's default operation.
+        residential_rent:
+          type: boolean
+          description: >-
+            Persona moral taxpayers only, `rent_real_estate` only (default `false`). `true`
+            requires `iva_rate: exempt` and `iva_cents: 0`, else `422`
+            `residential_rent_exempt` on `iva_rate`.
         isr_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
-          description: ISR the taxpayer (a persona moral) withheld from the supplier (default 0); at most `amount_cents`.
+          deprecated: true
+          x-deprecated-reason: Removed by WH-07 (ADR-0008); withholdings are derived.
+          description: Deprecated in 0.10.0, removed by WH-07 (ADR-0008). ISR the taxpayer (a persona moral) withheld from the supplier (default 0); at most `amount_cents`.
         iva_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
-          description: IVA the taxpayer (a persona moral) withheld from the supplier (LIVA 1-A, default 0); at most `iva_cents`.
+          deprecated: true
+          x-deprecated-reason: Removed by WH-07 (ADR-0008); withholdings are derived.
+          description: Deprecated in 0.10.0, removed by WH-07 (ADR-0008). IVA the taxpayer (a persona moral) withheld from the supplier (LIVA 1-A, default 0); at most `iva_cents`.
         description: { $ref: '#/components/schemas/RecordDescription' }
       examples:
         - id: 0199d4a3-2b3c-7e4d-9f50-6b7c8d9e0f12
@@ -5187,13 +6129,16 @@ components:
           has_cfdi: true
           description: Suscripción anual de diseño
     ExpenseUpdate:
-      x-frozen: sha256:7d5b1c67a4426ddbc30c18dbc233c9da147838cf02ddfb9c98bfaee69c0791b2
+      x-frozen: sha256:6f3eb359cc2ebe504ca5d8425afd55de071f66122e4582be84f8c440ae6d92ff
       type: object
       minProperties: 1
       additionalProperties: false
       description: >-
         Merge-patch on top-level fields: absent = unchanged, `null` clears `cfdi_uuid`,
-        `description` or the `deductible` override. `id` is immutable and not accepted.
+        `description` or the `deductible` override. `id` is immutable and not accepted. Any
+        change re-derives the withholding (ADR-0008); moving `supplier_kind` away from
+        `pf_with_activity` clears `supplier_regime`. The deprecated `isr_withheld_cents` and
+        `iva_withheld_cents` are removed by WH-07 (see `ExpenseCreate`).
       properties:
         regime_code: { $ref: '#/components/schemas/RegimeCode' }
         category_code: { type: string, minLength: 1, maxLength: 40 }
@@ -5208,13 +6153,25 @@ components:
             - $ref: '#/components/schemas/CfdiUuid'
             - type: 'null'
         deductible: { type: [boolean, 'null'] }
-        isr_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
-        iva_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        supplier_kind: { $ref: '#/components/schemas/SupplierKind' }
+        supplier_regime: { $ref: '#/components/schemas/SupplierRegime' }
+        operation_kind: { $ref: '#/components/schemas/OperationKind' }
+        residential_rent: { type: boolean }
+        isr_withheld_cents:
+          $ref: '#/components/schemas/NonNegativeCents'
+          deprecated: true
+          x-deprecated-reason: Removed by WH-07 (ADR-0008); withholdings are derived.
+          description: Deprecated in 0.10.0, removed by WH-07 (ADR-0008).
+        iva_withheld_cents:
+          $ref: '#/components/schemas/NonNegativeCents'
+          deprecated: true
+          x-deprecated-reason: Removed by WH-07 (ADR-0008); withholdings are derived.
+          description: Deprecated in 0.10.0, removed by WH-07 (ADR-0008).
         description: { $ref: '#/components/schemas/RecordDescription' }
       examples:
         - deductible: true
     Expense:
-      x-frozen: sha256:283327ec5ff4bb4aad8f57d69e551591ed5c0873e6d590b7f043dd799112d3f6
+      x-frozen: sha256:6ee03e5ae65e4b63c2498704999ab4eb89831f828c485dd8b5ed24823cc0372e
       type: object
       required:
         - id
@@ -5252,8 +6209,33 @@ components:
           oneOf:
             - $ref: '#/components/schemas/CfdiUuid'
             - type: 'null'
-        isr_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
-        iva_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        supplier_kind:
+          oneOf:
+            - $ref: '#/components/schemas/SupplierKind'
+            - type: 'null'
+          description: '`null` for a persona física taxpayer. Required (nullable) once WH-07 lands.'
+        supplier_regime:
+          oneOf:
+            - $ref: '#/components/schemas/SupplierRegime'
+            - type: 'null'
+          description: '`null` unless `supplier_kind: pf_with_activity`. Required (nullable) once WH-07 lands.'
+        operation_kind:
+          oneOf:
+            - $ref: '#/components/schemas/OperationKind'
+            - type: 'null'
+          description: '`null` for a persona física taxpayer. Required (nullable) once WH-07 lands.'
+        residential_rent: { type: boolean, description: Required once WH-07 lands. }
+        isr_withheld_cents:
+          $ref: '#/components/schemas/NonNegativeCents'
+          description: Read-only mirror of `withholding.isr_cents` (kept for list totals and the estimate).
+        iva_withheld_cents:
+          $ref: '#/components/schemas/NonNegativeCents'
+          description: Read-only mirror of `withholding.iva_cents` (kept for list totals and the estimate).
+        withholding:
+          $ref: '#/components/schemas/Withholding'
+          description: >-
+            The derived withholding (read-only); all zero with `withholder: none` for a persona
+            física taxpayer. Required once WH-07 lands.
         description: { $ref: '#/components/schemas/RecordDescription' }
         deductible:
           type: boolean
@@ -5266,7 +6248,10 @@ components:
             `[]` on reads. Codes (append-only): `cash_over_threshold` (`payment_method`),
             `no_cfdi` (`has_cfdi`), `not_isr_deductible_in_regime` and
             `category_not_deductible` (`deductible`), `duplicate_cfdi_uuid` (`cfdi_uuid`),
-            `iva_not_creditable_cash_payment` (`payment_method`).
+            `iva_not_creditable_cash_payment` (`payment_method`), `provisional_parameters`
+            (`paid_on`), `deduction_requires_remittance` (`withholding`),
+            `withholding_cpa_unverified` (`withholding`), `supplier_regime_unknown`
+            (`supplier_regime`), `foreign_counterparty_not_supported` (`supplier_kind`).
           items: { $ref: '#/components/schemas/Warning' }
         legend: { $ref: '#/components/schemas/Legend' }
         created_at: { type: string, format: date-time }
@@ -5445,13 +6430,18 @@ components:
         `rif_bimonthly_iva` (621 IVA by bimester, OQ-T7), `platform_definitive_iva` (625
         definitive option with IVA), `cross_regime_iva_netting` (two or more regimes
         contribute IVA, OQ-T2), `resico_pm_interest_withholding` (626 PM with interest
-        withholding).
+        withholding), `withholding_rule_unverified` (a line fed by records whose derived
+        withholding matched a ⚠️ rule, MODULE-withholdings §6), `withheld_iva_credit_timing`
+        (IVA withheld from suppliers credited the month after, assuming timely remittance,
+        LIVA 5 fr. IV; 0.10.0).
       enum:
         - rif_reduction
         - rif_bimonthly_iva
         - platform_definitive_iva
         - cross_regime_iva_netting
         - resico_pm_interest_withholding
+        - withholding_rule_unverified
+        - withheld_iva_credit_timing
     MissingInput:
       x-frozen: sha256:0e1eec1b32b5e51bd57737e253711409c2e2329d30c73f767f733d714d353eb0
       type: object
@@ -5628,7 +6618,7 @@ components:
         opaque to the client). Bumped whenever an engine change can move a figure.
       examples: [1.0.1]
     TaxpayerEstimate:
-      x-frozen: sha256:0067f33e6c52f8b4607a98beb0bf6e3918fc3baa147df8a09ccdd83012e9ed58
+      x-frozen: sha256:ff5ba58fae04f0c2c251a231368cc9fabd2c365dd94e6ce8387d323ace4647ba
       type: object
       required: [taxpayer_id, period, due_date, legend, disclaimers, regimes, totals, parameter_set, records_fingerprint, figures_fingerprint, engine_version]
       description: >-
@@ -5655,7 +6645,7 @@ components:
         figures_fingerprint:
           $ref: '#/components/schemas/FiguresFingerprint'
           description: >-
-            Hash of the figures shown (M8-01; required since M8-03, 0.9.1, a response
+            Hash of the figures shown (M8-01; required since M8-03, 0.10.1, a response
             narrowing). The app posts it, with `records_fingerprint`, `engine_version` and
             `parameter_set`, to `markHistoryViewed`.
         engine_version: { $ref: '#/components/schemas/EngineVersion' }

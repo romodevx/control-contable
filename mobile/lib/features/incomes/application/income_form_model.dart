@@ -184,6 +184,7 @@ class IncomeFormModel extends ChangeNotifier {
       ChoiceFieldController(
         label: copy.counterparty,
         keepForNext: true,
+        // ignore: deprecated_member_use_from_same_package, deprecated until WH-11 (ADR-0008).
         initialValue: (stored?.counterpartyType ?? payer).json,
       ),
     );
@@ -289,7 +290,9 @@ class IncomeFormModel extends ChangeNotifier {
   bool get withholdingsApply {
     final known = _defaults;
     return known == null ||
+        // ignore: deprecated_member_use_from_same_package, deprecated until WH-11 (ADR-0008).
         known.isrWithholdingAllowed ||
+        // ignore: deprecated_member_use_from_same_package, deprecated until WH-11 (ADR-0008).
         known.ivaWithholdingAllowed;
   }
 

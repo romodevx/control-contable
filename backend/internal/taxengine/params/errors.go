@@ -21,8 +21,11 @@ const (
 	// string: an unquoted number would decode as a binary float first.
 	ErrInexactNumber Error = "params: decimal must be a quoted string"
 	// ErrValueKind reports a value with none, or more than one, of rate,
-	// money and flag.
-	ErrValueKind Error = "params: value needs exactly one of rate, money, flag"
+	// money, flag, count and date.
+	ErrValueKind Error = "params: value needs exactly one of rate, money, flag, count, date"
+	// ErrInvalidCount reports a count that is not a plain YAML integer
+	// (quoted, decimal, or beyond int64).
+	ErrInvalidCount Error = "params: count must be an unquoted integer"
 	// ErrMissingFixedFee reports a marginal tariff row without fixed_fee.
 	// Every published marginal row states its cuota fija (0.00 on the first
 	// row), so an omitted one is a transcription slip, never a silent zero.

@@ -5,6 +5,10 @@ import 'package:control_contable/api/generated/models/taxpayer_estimate.dart';
 /// The taxpayer every estimate fixture belongs to.
 const String fixtureTaxpayerId = '0192f0c4-7b1e-7c3a-9d2e-6f1a2b3c4d5e';
 
+/// The figures fingerprint every estimate fixture carries (M8-01).
+const String fixtureFiguresFingerprint =
+    'f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1';
+
 /// The mandatory legend as the server sends it.
 const String legendText =
     'Esto es un aproximado. No todos los gastos aplican para tu giro '
@@ -96,6 +100,7 @@ Map<String, Object?> estimateJson({
   int isrCents = 15096,
   int withholdingsToRemitCents = 0,
   int? totalPayableCents,
+  String? figuresFingerprint = fixtureFiguresFingerprint,
 }) => {
   'taxpayer_id': fixtureTaxpayerId,
   'period': period,
@@ -127,6 +132,7 @@ Map<String, Object?> estimateJson({
   'figures_fingerprint':
       'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc202603',
   'engine_version': '1.0.0',
+  'figures_fingerprint': ?figuresFingerprint,
 };
 
 /// TX-612-TOTAL-01 as the wire sends it.

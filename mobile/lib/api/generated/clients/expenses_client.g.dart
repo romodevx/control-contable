@@ -126,6 +126,57 @@ class _ExpensesClient implements ExpensesClient {
   }
 
   @override
+  Future<WithholdingPreview> previewExpenseWithholdings({
+    required String taxpayerId,
+    required String regime,
+    required int amountCents,
+    required IvaRate ivaRate,
+    required int ivaCents,
+    required String categoryCode,
+    String? onValue,
+    SupplierKind? supplierKind,
+    SupplierRegime? supplierRegime,
+    OperationKind? operationKind,
+    bool? residentialRent,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{
+      r'regime': regime,
+      r'amount_cents': amountCents,
+      r'iva_rate': ivaRate,
+      r'iva_cents': ivaCents,
+      r'category_code': categoryCode,
+      r'on': onValue,
+      r'supplier_kind': supplierKind,
+      r'supplier_regime': supplierRegime,
+      r'operation_kind': operationKind,
+      r'residential_rent': residentialRent,
+    };
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<WithholdingPreview>(
+      Options(method: 'GET', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/v1/taxpayers/${taxpayerId}/expenses/withholding-preview',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, Object?>>(_options);
+    late WithholdingPreview _value;
+    try {
+      _value = WithholdingPreview.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
   Future<Expense> getExpense({
     required String taxpayerId,
     required String expenseId,

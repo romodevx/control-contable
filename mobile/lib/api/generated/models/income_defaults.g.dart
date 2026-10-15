@@ -19,6 +19,9 @@ _IncomeDefaults _$IncomeDefaultsFromJson(Map<String, dynamic> json) =>
       platformActivity: json['platform_activity'] == null
           ? null
           : PlatformActivity.fromJson(json['platform_activity'] as String),
+      lastUsed: json['last_used'] == null
+          ? null
+          : IncomeLastUsed.fromJson(json['last_used'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$IncomeDefaultsToJson(_IncomeDefaults instance) =>
@@ -32,6 +35,7 @@ Map<String, dynamic> _$IncomeDefaultsToJson(_IncomeDefaults instance) =>
       'iva_withholding_allowed': instance.ivaWithholdingAllowed,
       'iva_withholding_rate': instance.ivaWithholdingRate,
       'platform_activity': _$PlatformActivityEnumMap[instance.platformActivity],
+      'last_used': ?instance.lastUsed,
     };
 
 const _$IvaRateEnumMap = {

@@ -43,7 +43,7 @@ sources:                    # at least one; every value and table cites one
 
 values:                     # dated scalars; a key may repeat with non-overlapping ranges
   - key: iva.rate.border_8
-    rate: "0.08"            # exactly one of rate | money | flag
+    rate: "0.08"            # exactly one of rate | money | flag | count | date
     valid_from: 2026-01-01
     valid_to: 2026-12-31    # inclusive; omit for "until a later entry replaces it"
     basis: [{source: dof-2025-12-31, article: "Art. 2"}]
@@ -55,6 +55,15 @@ values:                     # dated scalars; a key may repeat with non-overlappi
   - key: rounding.payment_whole_pesos
     flag: false
     valid_from: 2026-01-01
+    basis: [...]
+  - key: deduction.personal.global_cap_umas
+    count: 5                # unquoted integer >= 1, a multiple the law states ("cinco veces")
+    valid_from: 2026-01-01
+    basis: [...]
+  - key: annual.deadline.pf
+    date: 2027-04-30        # a calendar day, e.g. the fiscal year's annual-return deadline
+    valid_from: 2026-01-01
+    valid_to: 2026-12-31
     basis: [...]
 
 tables:                     # tariffs, verbatim as published
@@ -85,7 +94,8 @@ tables:                     # tariffs, verbatim as published
 |---|---|---|
 | `rate`, row `rate` | **quoted** decimal fraction, at most 6 decimals (`"0.16"`) | `money.Rate` (10^-6, exact) |
 | `money`, `lower`, `upper`, `fixed_fee` | **quoted** pesos, at most 2 decimals (`"844.59"`) | `money.Cents` (int64) |
-| dates | `YYYY-MM-DD`, plain or quoted; anything else is `ErrInvalidDate` (loader) | `fiscal.Date` from the shared kernel (ADR-0007): calendar day, no time zone |
+| `count` | **unquoted** YAML integer (`5`); quoted, decimal or beyond int64 is `ErrInvalidCount` (loader) | `int64`, at least 1 |
+| dates (including a `date` value) | `YYYY-MM-DD`, plain or quoted; anything else is `ErrInvalidDate` (loader) | `fiscal.Date` from the shared kernel (ADR-0007): calendar day, no time zone |
 | `key` | dotted lower-case segments `[a-z0-9_]`, at least two | `taxparams.Key`; the kernel's `fiscal.RateKey` constants use the same spelling and are tested to load |
 
 An unquoted number (`rate: 0.08`, `money: 100`) is rejected (`ErrInexactNumber`). YAML would read it
@@ -106,7 +116,8 @@ its path (`values[3] uma.monthly: ...`, `tables[5] isr.art106.accumulated rows[2
 | Key syntax | `ErrInvalidKey` |
 | `valid_from` present; `valid_to` absent or >= `valid_from` | `ErrInvalidValidity` |
 | Every value and table has a basis; each citation has an article and a known source id | `ErrInvalidBasis` |
-| A value has exactly one of rate, money, flag | `ErrValueKind` (loader) |
+| A value has exactly one of rate, money, flag, count, date | `ErrValueKind` (loader) |
+| A count is at least 1; a date value has its day | `ErrCountNotPositive`, `ErrMissingDate` |
 | Table kind is `marginal` or `flat` | `ErrTableKind` (loader) |
 | One key keeps one kind (rate vs money, value vs table, marginal vs flat) | `ErrKindConflict` |
 | Rates in [0, 1], including tariff rates | `ErrRateOutOfRange` |

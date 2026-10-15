@@ -6,9 +6,11 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'business_date.dart';
 import 'cfdi_uuid.dart';
+import 'counterparty_kind.dart';
 import 'counterparty_type.dart';
 import 'iva_rate.dart';
 import 'non_negative_cents.dart';
+import 'operation_kind.dart';
 import 'platform_activity.dart';
 import 'positive_cents.dart';
 import 'record_description.dart';
@@ -17,20 +19,32 @@ import 'regime_code.dart';
 part 'income_update.freezed.dart';
 part 'income_update.g.dart';
 
-/// Merge-patch on top-level fields: absent = unchanged, `null` clears a nullable field. `id` is immutable and not accepted.
+/// Merge-patch on top-level fields: absent = unchanged, `null` clears a nullable field. `id` is immutable and not accepted. Any change re-derives the withholding (ADR-0008). The deprecated `counterparty_type`, `isr_withheld_cents` and `iva_withheld_cents` are removed by WH-06 (see `IncomeCreate`).
 @Freezed()
 abstract class IncomeUpdate with _$IncomeUpdate {
   const factory IncomeUpdate({
     @JsonKey(includeIfNull: false, name: 'regime_code') RegimeCode? regimeCode,
     @JsonKey(includeIfNull: false, name: 'counterparty_type')
+    @Deprecated('This is marked as deprecated')
     CounterpartyType? counterpartyType,
+    @JsonKey(includeIfNull: false, name: 'counterparty_kind')
+    CounterpartyKind? counterpartyKind,
+    @JsonKey(includeIfNull: false, name: 'operation_kind')
+    OperationKind? operationKind,
+    @JsonKey(includeIfNull: false, name: 'residential_rent')
+    bool? residentialRent,
+    @JsonKey(includeIfNull: false, name: 'via_platform') bool? viaPlatform,
     @JsonKey(includeIfNull: false, name: 'amount_cents')
     PositiveCents? amountCents,
     @JsonKey(includeIfNull: false, name: 'iva_rate') IvaRate? ivaRate,
     @JsonKey(includeIfNull: false, name: 'iva_cents')
     NonNegativeCents? ivaCents,
+
+    /// Deprecated in 0.10.0, removed by WH-06 (ADR-0008).
     @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')
     NonNegativeCents? isrWithheldCents,
+
+    /// Deprecated in 0.10.0, removed by WH-06 (ADR-0008).
     @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')
     NonNegativeCents? ivaWithheldCents,
     @JsonKey(includeIfNull: false, name: 'invoiced_on')

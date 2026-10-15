@@ -144,6 +144,18 @@ func (p *Params) Flag(key Key, d fiscal.Date) (bool, error) {
 	return val.Flag, err
 }
 
+// Count returns the whole number key holds on d.
+func (p *Params) Count(key Key, d fiscal.Date) (int64, error) {
+	val, err := p.typedValue(key, KindCount, d)
+	return val.Count, err
+}
+
+// Date returns the calendar day key holds on d.
+func (p *Params) Date(key Key, d fiscal.Date) (fiscal.Date, error) {
+	val, err := p.typedValue(key, KindDate, d)
+	return val.Date, err
+}
+
 func (p *Params) typedValue(key Key, kind ValueKind, d fiscal.Date) (Value, error) {
 	s, err := p.shapeOf(key)
 	if err != nil {
@@ -230,6 +242,12 @@ func RequireMoney(key Key) Requirement { return Requirement{key: key, want: shap
 
 // RequireFlag requires key to be a flag.
 func RequireFlag(key Key) Requirement { return Requirement{key: key, want: shape{value: KindFlag}} }
+
+// RequireCount requires key to be a whole number.
+func RequireCount(key Key) Requirement { return Requirement{key: key, want: shape{value: KindCount}} }
+
+// RequireDate requires key to be a calendar day.
+func RequireDate(key Key) Requirement { return Requirement{key: key, want: shape{value: KindDate}} }
 
 // RequireTable requires key to be a plain table.
 func RequireTable(key Key) Requirement { return Requirement{key: key} }

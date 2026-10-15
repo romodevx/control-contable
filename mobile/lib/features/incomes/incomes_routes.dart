@@ -1,5 +1,6 @@
 import 'package:control_contable/api/generated/models/income.dart';
 import 'package:control_contable/core/flags/app_module.dart';
+import 'package:control_contable/core/records/record_month.dart';
 import 'package:control_contable/core/router/feature_module.dart';
 import 'package:control_contable/features/incomes/presentation/income_edit_screen.dart';
 import 'package:control_contable/features/incomes/presentation/income_form_screen.dart';
@@ -11,6 +12,10 @@ import 'package:go_router/go_router.dart';
 abstract final class IncomesRoutes {
   /// The month list (M3-08).
   static const list = '/ingresos';
+
+  /// The month list opened on [period] (`YYYY-MM`; History, US-H6).
+  static String listOf(String period) =>
+      Uri(path: list, queryParameters: {recordMonthQuery: period}).toString();
 
   /// The new-income page (M3-09).
   static const create = '/ingresos/nuevo';
@@ -27,7 +32,9 @@ final FeatureModule incomesFeature = FeatureModule(
   routes: [
     GoRoute(
       path: IncomesRoutes.list,
-      builder: (context, state) => const IncomesScreen(),
+      builder: (context, state) => IncomesScreen(
+        initialPeriod: state.uri.queryParameters[recordMonthQuery],
+      ),
       routes: [
         GoRoute(
           path: 'nuevo',

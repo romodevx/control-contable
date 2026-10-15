@@ -84,7 +84,7 @@ func TestGolden_pm601IVAEnteredThroughTheAPI(t *testing.T) {
 	require.NoError(t, json.Unmarshal(breakdown.Body.Bytes(), &lines))
 	withholdings := map[string]gen.MoneyCents{}
 	for _, l := range lines.Lines {
-		if l.Tax == gen.Withholding {
+		if l.Tax == gen.BreakdownLineTaxWithholding {
 			withholdings[l.Concept] = l.AmountCents
 		}
 	}

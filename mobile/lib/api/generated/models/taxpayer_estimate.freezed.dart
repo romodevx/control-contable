@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TaxpayerEstimate {
 
-@JsonKey(name: 'taxpayer_id') Uuid get taxpayerId; Period get period;@JsonKey(name: 'due_date') String get dueDate; Legend get legend; List<Disclaimer> get disclaimers; List<RegimeEstimate> get regimes; EstimateTotals get totals;@JsonKey(name: 'parameter_set') ParameterSetRef get parameterSet;@JsonKey(name: 'records_fingerprint') RecordsFingerprint get recordsFingerprint;/// Hash of the figures shown (M8-01; required since M8-03, 0.9.1, a response narrowing). The app posts it, with `records_fingerprint`, `engine_version` and `parameter_set`, to `markHistoryViewed`.
+@JsonKey(name: 'taxpayer_id') Uuid get taxpayerId; Period get period;@JsonKey(name: 'due_date') String get dueDate; Legend get legend; List<Disclaimer> get disclaimers; List<RegimeEstimate> get regimes; EstimateTotals get totals;@JsonKey(name: 'parameter_set') ParameterSetRef get parameterSet;@JsonKey(name: 'records_fingerprint') RecordsFingerprint get recordsFingerprint;/// Hash of the figures shown (M8-01; required since M8-03, 0.10.1, a response narrowing). The app posts it, with `records_fingerprint`, `engine_version` and `parameter_set`, to `markHistoryViewed`.
 @JsonKey(name: 'figures_fingerprint') FiguresFingerprint get figuresFingerprint;@JsonKey(name: 'engine_version') EngineVersion get engineVersion;
 /// Create a copy of TaxpayerEstimate
 /// with the given fields replaced by the non-null parameter values.
@@ -268,7 +268,7 @@ class _TaxpayerEstimate implements TaxpayerEstimate {
 @override final  EstimateTotals totals;
 @override@JsonKey(name: 'parameter_set') final  ParameterSetRef parameterSet;
 @override@JsonKey(name: 'records_fingerprint') final  RecordsFingerprint recordsFingerprint;
-/// Hash of the figures shown (M8-01; required since M8-03, 0.9.1, a response narrowing). The app posts it, with `records_fingerprint`, `engine_version` and `parameter_set`, to `markHistoryViewed`.
+/// Hash of the figures shown (M8-01; required since M8-03, 0.10.1, a response narrowing). The app posts it, with `records_fingerprint`, `engine_version` and `parameter_set`, to `markHistoryViewed`.
 @override@JsonKey(name: 'figures_fingerprint') final  FiguresFingerprint figuresFingerprint;
 @override@JsonKey(name: 'engine_version') final  EngineVersion engineVersion;
 

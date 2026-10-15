@@ -287,6 +287,13 @@ The estimate adds `needs_cpa_review` on the lines fed by records with `withholdi
 
 ## 7. Contract changes (architect, WH-02; **breaking** → `0.8.0 → 0.9.0` + ADR-0008)
 
+> **As implemented by WH-02 ([ADR-0008](../adr/0008-withholdings-are-derived.md)):** the version
+> is **0.10.0** (0.9.0 went to the M8 history contract). The break is applied in two steps: 0.10.0
+> adds the new fields and deprecates the old ones, and WH-06 / WH-07 remove them (0.10.x).
+> Item 4 is **two operations**, `previewIncomeWithholdings` and `previewExpenseWithholdings`
+> (one per module flag, with a shared `withholding_previews` budget), not one `side=`
+> parameter.
+
 1. `IncomeCreate`/`IncomeUpdate`: **remove** `isr_withheld_cents`, `iva_withheld_cents` (a client
    sending them gets `400 additionalProperties`); replace `counterparty_type` with
    `counterparty_kind` (required); add `operation_kind`, `residential_rent`, `via_platform`.

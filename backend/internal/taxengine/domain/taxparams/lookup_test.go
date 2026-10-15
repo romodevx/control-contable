@@ -64,6 +64,20 @@ func TestTypedValueLookups(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, flag)
 
+	umas, err := p.Count(keyCapUMAs, march)
+	require.NoError(t, err)
+	assert.Equal(t, int64(5), umas)
+
+	deadline, err := p.Date(keyDeadline, march)
+	require.NoError(t, err)
+	assert.Equal(t, "2027-04-30", deadline.String())
+
+	_, err = p.Count(keyUMA, march)
+	require.ErrorIs(t, err, taxparams.ErrKindMismatch)
+	_, err = p.Date(keyCapUMAs, march)
+	require.ErrorIs(t, err, taxparams.ErrKindMismatch)
+	_, err = p.Date(keyDeadline, mustDate(t, "2027-01-01"))
+	require.ErrorIs(t, err, taxparams.ErrNotInForce)
 	_, err = p.Rate(keyUMA, march)
 	require.ErrorIs(t, err, taxparams.ErrKindMismatch)
 	_, err = p.Money(keyBorderRate, march)
@@ -164,6 +178,8 @@ func TestRequire(t *testing.T) {
 		taxparams.RequireTable(keyMonthly),
 		taxparams.RequireTable(keyBrackets),
 		taxparams.RequireMonthlyTables(keyAccum),
+		taxparams.RequireCount(keyCapUMAs),
+		taxparams.RequireDate(keyDeadline),
 	))
 
 	err := p.Require(
@@ -172,10 +188,12 @@ func TestRequire(t *testing.T) {
 		taxparams.RequireTable(keyAccum),
 		taxparams.RequireMonthlyTables(keyMonthly),
 		taxparams.RequireFlag(keyBorderRate),
+		taxparams.RequireCount(keyDeadline),
+		taxparams.RequireDate(keyCapUMAs),
 	)
 	require.ErrorIs(t, err, taxparams.ErrKindMismatch)
 	require.ErrorIs(t, err, taxparams.ErrUnknownKey)
-	for _, key := range []string{"uma.monthly", "uma.daily", "isr.art106.accumulated", "isr.art96.monthly", "iva.rate.border_8"} {
+	for _, key := range []string{"uma.monthly", "uma.daily", "isr.art106.accumulated", "isr.art96.monthly", "iva.rate.border_8", "annual.deadline.pf", "deduction.cap_umas"} {
 		assert.Contains(t, err.Error(), key)
 	}
 }
@@ -184,6 +202,8 @@ func TestKindStrings(t *testing.T) {
 	assert.Equal(t, "rate", taxparams.KindRate.String())
 	assert.Equal(t, "money", taxparams.KindMoney.String())
 	assert.Equal(t, "flag", taxparams.KindFlag.String())
+	assert.Equal(t, "count", taxparams.KindCount.String())
+	assert.Equal(t, "date", taxparams.KindDate.String())
 	assert.Equal(t, "unknown", taxparams.ValueKind(0).String())
 	assert.Equal(t, "marginal", taxparams.TableMarginal.String())
 	assert.Equal(t, "flat", taxparams.TableFlat.String())

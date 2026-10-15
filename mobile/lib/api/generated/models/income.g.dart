@@ -31,6 +31,17 @@ _Income _$IncomeFromJson(Map<String, dynamic> json) => _Income(
       .toList(),
   createdAt: DateTime.parse(json['created_at'] as String),
   updatedAt: DateTime.parse(json['updated_at'] as String),
+  counterpartyKind: json['counterparty_kind'] == null
+      ? null
+      : CounterpartyKind.fromJson(json['counterparty_kind'] as String),
+  operationKind: json['operation_kind'] == null
+      ? null
+      : OperationKind.fromJson(json['operation_kind'] as String),
+  residentialRent: json['residential_rent'] as bool?,
+  viaPlatform: json['via_platform'] as bool?,
+  withholding: json['withholding'] == null
+      ? null
+      : Withholding.fromJson(json['withholding'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$IncomeToJson(_Income instance) => <String, dynamic>{
@@ -52,6 +63,11 @@ Map<String, dynamic> _$IncomeToJson(_Income instance) => <String, dynamic>{
   'warnings': instance.warnings,
   'created_at': instance.createdAt.toIso8601String(),
   'updated_at': instance.updatedAt.toIso8601String(),
+  'counterparty_kind': ?_$CounterpartyKindEnumMap[instance.counterpartyKind],
+  'operation_kind': ?_$OperationKindEnumMap[instance.operationKind],
+  'residential_rent': ?instance.residentialRent,
+  'via_platform': ?instance.viaPlatform,
+  'withholding': ?instance.withholding,
 };
 
 const _$CounterpartyTypeEnumMap = {
@@ -75,4 +91,27 @@ const _$PlatformActivityEnumMap = {
   PlatformActivity.lodging: 'lodging',
   PlatformActivity.goodsServices: 'goods_services',
   PlatformActivity.$unknown: r'$unknown',
+};
+
+const _$CounterpartyKindEnumMap = {
+  CounterpartyKind.pm: 'pm',
+  CounterpartyKind.pfWithActivity: 'pf_with_activity',
+  CounterpartyKind.pfNoActivityOrPublic: 'pf_no_activity_or_public',
+  CounterpartyKind.govFederal: 'gov_federal',
+  CounterpartyKind.govStateMunicipal: 'gov_state_municipal',
+  CounterpartyKind.foreign: 'foreign',
+  CounterpartyKind.$unknown: r'$unknown',
+};
+
+const _$OperationKindEnumMap = {
+  OperationKind.professionalServices: 'professional_services',
+  OperationKind.businessServices: 'business_services',
+  OperationKind.rentRealEstate: 'rent_real_estate',
+  OperationKind.rentMovable: 'rent_movable',
+  OperationKind.saleOfGoods: 'sale_of_goods',
+  OperationKind.groundFreight: 'ground_freight',
+  OperationKind.commission: 'commission',
+  OperationKind.scrap: 'scrap',
+  OperationKind.other: 'other',
+  OperationKind.$unknown: r'$unknown',
 };
