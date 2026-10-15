@@ -43,6 +43,36 @@ void main() {
     });
   });
 
+  group('requiredness that follows another choice', () {
+    test('turning optional clears a shown "missing" error', () async {
+      final collected = form.dateField(label: 'Fecha de cobro');
+      await form.submit(() async {});
+      expect(collected.error, isA<MissingValue>());
+      var notified = 0;
+      collected.addListener(() => notified++);
+
+      collected.isRequired = false;
+
+      expect(collected.isRequired, isFalse);
+      expect(collected.error, isNull);
+      expect(notified, 1, reason: 'the label mark changes');
+      var saved = false;
+      await form.submit(() async => saved = true);
+      expect(saved, isTrue);
+    });
+
+    test('turning required shows nothing until the next submit', () async {
+      final invoiced = form.dateField(
+        label: 'Fecha de factura',
+        isRequired: false,
+      )..isRequired = true;
+
+      expect(invoiced.error, isNull);
+      await form.submit(() async {});
+      expect(invoiced.error, isA<MissingValue>());
+    });
+  });
+
   group('validation policy (ui-forms-and-modals.md)', () {
     test('a required-but-empty field shows nothing until submit', () async {
       final name = form.textField(label: 'Nombre')..handleBlur();

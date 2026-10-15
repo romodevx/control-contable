@@ -7,13 +7,27 @@ import 'package:flutter/widgets.dart';
 /// Created through `AppFormController`, which owns and disposes it.
 abstract class AppFormFieldModel extends ChangeNotifier {
   /// A field labeled [label].
-  new({required this.label, this.isRequired = true, this.keepForNext = false});
+  new({required this.label, bool isRequired = true, this.keepForNext = false})
+    : _isRequired = isRequired;
 
   /// The visible label, also used by the error summary.
   final String label;
 
+  bool _isRequired;
+
   /// Whether an empty value is an error.
-  final bool isRequired;
+  bool get isRequired => _isRequired;
+
+  /// Another choice can make the field required or optional (an income's
+  /// dates follow its regime). A shown error is re-checked, so a
+  /// "missing" error goes once the field turns optional; a field turning
+  /// required shows nothing until the next submit.
+  set isRequired(bool value) {
+    if (value == _isRequired) return;
+    _isRequired = value;
+    if (_error != null) _error = check();
+    notifyListeners();
+  }
 
   /// Whether the value survives "Guardar y crear otro".
   final bool keepForNext;
