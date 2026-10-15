@@ -26,11 +26,23 @@ type Section struct {
 	// Tax is the balance of a section that has one; nil for an
 	// informational section.
 	Tax *Tax
-	// Difference is the pf_resico_check informative difference (113-F
-	// annual tax minus monthly payments and withholdings); nil otherwise,
-	// and nil when no 113-F rate applies.
-	Difference *money.Cents
-	Lines      []domain.Line
+	// RESICOCheck is the pf_resico_check reconciliation; nil otherwise,
+	// and nil when no 113-F rate applies (income above the table).
+	RESICOCheck *RESICOCheck
+	Lines       []domain.Line
+}
+
+// RESICOCheck is the LISR 113-F informative reconciliation (contract
+// ResicoPfCheck): Income x Rate = AnnualISR, less the monthly Payments and
+// the 1.25 % Withheld, is the Difference. Each figure is rounded once; the
+// Difference is never payable nor refundable (RMF 2026 rule 3.13.7).
+type RESICOCheck struct {
+	Income     money.Cents
+	Rate       money.Rate
+	AnnualISR  money.Cents
+	Payments   money.Cents
+	Withheld   money.Cents
+	Difference money.Cents
 }
 
 // Tax is a section's figures, each rounded once to the centavo.

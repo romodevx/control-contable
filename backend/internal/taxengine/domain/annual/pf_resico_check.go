@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
-	"github.com/romodevx/control-contable/backend/internal/platform/money"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/taxparams"
 )
@@ -107,7 +106,7 @@ func (PFRESICOCheck) compute(in PFYear, payments PaymentsReader, p *taxparams.Pa
 		s.Disclaimers = append(s.Disclaimers, DisclaimerPaymentsEstimated)
 	}
 	t := newAnnualTrace()
-	s.Difference, err = t.resicoDifference(y, table, paid)
+	s.RESICOCheck, err = t.resicoDifference(y, table, paid)
 	if err != nil {
 		return Section{}, err
 	}
@@ -119,8 +118,13 @@ func (PFRESICOCheck) compute(in PFYear, payments PaymentsReader, p *taxparams.Pa
 }
 
 // resicoDifference traces income × rate − payments − withheld. Above the
-// table there is no 113-F rate: an info line and no difference.
-func (t *annualTrace) resicoDifference(y RegimeYear, table taxparams.Table, paid regimePayments) (*money.Cents, error) {
+// table there is no 113-F rate: an info line and no reconciliation. Without
+// income the rate is the first row's and nothing is multiplied.
+func (t *annualTrace) resicoDifference(y RegimeYear, table taxparams.Table, paid regimePayments) (*RESICOCheck, error) {
+	if len(table.Rows) == 0 {
+		return nil, fmt.Errorf("%s: no rows: %w", table.Key, taxparams.ErrInvalidTable)
+	}
+	check := RESICOCheck{Income: y.Income, Rate: table.Rows[0].Rate, Withheld: y.ISRWithheld}
 	income := t.exact(y.Income)
 	t.l.Input(annualStep(LineRESICOCheckIncome, "annual_resico_income", domain.SourceRecords(), basisRESICOIncome, string(y.Regime)), income)
 	if income > 0 {
@@ -133,11 +137,13 @@ func (t *annualTrace) resicoDifference(y RegimeYear, table taxparams.Table, paid
 			return nil, err
 		}
 		t.l.Scale(annualStep(LineRESICOCheckRate, "annual_resico_rate", domain.SourceParams(paramRESICOPFAnnual), basisRESICORate, strconv.Itoa(b.Number)), b.Row.Rate)
+		check.Rate = b.Row.Rate
+		check.AnnualISR = t.l.Running().Round()
 	}
-	t.subtractPayments(paid.groups, LineRESICOCheckPayments, "annual_resico_payments", basisRESICOPayments)
+	check.Payments = t.subtractPayments(paid.groups, LineRESICOCheckPayments, "annual_resico_payments", basisRESICOPayments)
 	if y.ISRWithheld > 0 {
 		t.l.Subtract(annualStep(LineRESICOCheckWithheld, "annual_resico_withheld", domain.SourceRecords(), basisRESICOWithheld, string(y.Regime)), t.exact(y.ISRWithheld))
 	}
-	difference := t.l.Result(annualStep(LineRESICOCheckDifference, "annual_resico_difference", domain.SourceComputed(), basisRESICODifference)).Round()
-	return &difference, t.err
+	check.Difference = t.l.Result(annualStep(LineRESICOCheckDifference, "annual_resico_difference", domain.SourceComputed(), basisRESICODifference)).Round()
+	return &check, t.err
 }

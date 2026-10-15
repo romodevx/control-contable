@@ -79,6 +79,28 @@ func (p Payment) validate() error {
 	return nil
 }
 
+// oneSourcePerMonth rejects payments the port did not resolve by
+// precedence: a month credited twice, or a year total (month 0) beside
+// monthly payments, would be credited twice. O(n) over 13 slots.
+func oneSourcePerMonth(payments []Payment) error {
+	var seen [lastMonth + 1]bool
+	yearTotal, monthly := false, false
+	for _, p := range payments {
+		if p.Month < 0 || p.Month > lastMonth {
+			continue // Payment.validate reports it
+		}
+		if seen[p.Month] {
+			return fmt.Errorf("payment month %d credited twice: %w", p.Month, ErrInvalidYear)
+		}
+		seen[p.Month] = true
+		yearTotal, monthly = yearTotal || p.Month == 0, monthly || p.Month > 0
+	}
+	if yearTotal && monthly {
+		return fmt.Errorf("a year total beside monthly payments: %w", ErrInvalidYear)
+	}
+	return nil
+}
+
 // paymentGroup is one regime's payments of one source: a breakdown line.
 type paymentGroup struct {
 	regime fiscal.RegimeCode
@@ -100,6 +122,9 @@ func readPayments(r PaymentsReader, fiscalYear int, regime fiscal.RegimeCode) (r
 	payments, err := r.ProvisionalPayments(regime)
 	if err != nil {
 		return regimePayments{}, fmt.Errorf("annual: provisional payments %s: %w", regime, err)
+	}
+	if err := oneSourcePerMonth(payments); err != nil {
+		return regimePayments{}, fmt.Errorf("annual: %s: %w", regime, err)
 	}
 	var out regimePayments
 	for _, source := range paymentPrecedence {

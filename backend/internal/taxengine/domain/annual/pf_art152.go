@@ -399,7 +399,9 @@ func (r *art152Run) personalDeductions(c Calculator, accumulable money.Cents) er
 		r.topics = append(r.topics, TopicDeductionCapRESICOIncome)
 	}
 	r.tax.PersonalDeductions = got.Applied
-	r.tax.Base = r.l.Result(annualStep(LineArt152Base, "annual_base", domain.SourceComputed(), basisBase)).Round()
+	// The trace keeps the signed base; the figure is floored (contract
+	// AnnualTax.base_cents: PF base ≤ 0 → 0, LISR 152).
+	r.tax.Base = max(0, r.l.Result(annualStep(LineArt152Base, "annual_base", domain.SourceComputed(), basisBase)).Round())
 	return r.err
 }
 
