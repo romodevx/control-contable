@@ -59,7 +59,7 @@ func TestEstimateJanuaryCreditsThePreviousDecembersWithheldIVA(t *testing.T) {
 	assert.Equal(t, money.Cents(5333_33), jan.CreditableWithheldPriorMonth(time.January))
 	assert.Equal(t, money.Cents(1_00), jan.Month(time.January).Expenses.CreditableIVAWithheld, "January's own waits for February")
 	assert.Equal(t, money.Cents(1000_00), jan.Month(time.January).Expenses.DeductiblePaid, "December never enters 2027's sums")
-	assert.Equal(t, usecase.RecordTotals{ExpensesPaid: 1000_00}, got.Records, "the records are January's only")
+	assert.Equal(t, usecase.RecordTotals{ExpensesPaid: 1000_00, HasExpenses: true}, got.Records, "the records are January's only")
 
 	want := usecase.LedgerQuery{TaxpayerID: taxpayerA, FiscalYear: 2027, Through: time.January}
 	assert.Equal(t, []usecase.LedgerQuery{want}, f.ledger.queries, "incomes read the fiscal year only")
@@ -71,10 +71,11 @@ func TestEstimateJanuaryCreditsThePreviousDecembersWithheldIVA(t *testing.T) {
 func TestEstimateJanuaryCreditsDecemberWithoutJanuaryRecords(t *testing.T) {
 	f, s601 := whFixture(whWithheld(2026, time.December, 400_00))
 
-	_, err := f.estimator(s601).EstimateMonth(t.Context(), userA, taxpayerA, "2027-01")
+	got, err := f.estimator(s601).EstimateMonth(t.Context(), userA, taxpayerA, "2027-01")
 
 	require.NoError(t, err)
 	assert.Equal(t, money.Cents(400_00), lastRun(t, s601, "2027-01").Sums.CreditableWithheldPriorMonth(time.January))
+	assert.Equal(t, usecase.RecordTotals{}, got.Records, "December's row is no January record (History's has_records)")
 }
 
 // 2026 is the first fiscal year with parameters, and no record is dated
