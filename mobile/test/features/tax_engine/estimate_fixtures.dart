@@ -5,7 +5,8 @@ import 'package:control_contable/api/generated/models/taxpayer_estimate.dart';
 /// The taxpayer every estimate fixture belongs to.
 const String fixtureTaxpayerId = '0192f0c4-7b1e-7c3a-9d2e-6f1a2b3c4d5e';
 
-/// The figures fingerprint every estimate fixture carries (M8-01).
+/// The figures fingerprint every estimate fixture carries (required since
+/// M8-03, contract 0.10.1).
 const String fixtureFiguresFingerprint =
     'f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1';
 
@@ -100,7 +101,7 @@ Map<String, Object?> estimateJson({
   int isrCents = 15096,
   int withholdingsToRemitCents = 0,
   int? totalPayableCents,
-  String? figuresFingerprint = fixtureFiguresFingerprint,
+  String figuresFingerprint = fixtureFiguresFingerprint,
 }) => {
   'taxpayer_id': fixtureTaxpayerId,
   'period': period,
@@ -129,10 +130,8 @@ Map<String, Object?> estimateJson({
   'parameter_set': {'fiscal_year': 2026, 'version': 1},
   'records_fingerprint':
       '3f6c2a9e8d7b1c4f5a0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a',
-  'figures_fingerprint':
-      'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc202603',
   'engine_version': '1.0.0',
-  'figures_fingerprint': ?figuresFingerprint,
+  'figures_fingerprint': figuresFingerprint,
 };
 
 /// TX-612-TOTAL-01 as the wire sends it.
