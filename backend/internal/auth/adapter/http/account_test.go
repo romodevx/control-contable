@@ -9,10 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/romodevx/control-contable/backend/adapter/http/accesshttp"
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
 	authhttp "github.com/romodevx/control-contable/backend/internal/auth/adapter/http"
 	"github.com/romodevx/control-contable/backend/internal/auth/domain"
 	"github.com/romodevx/control-contable/backend/internal/auth/usecase"
+	"github.com/romodevx/control-contable/backend/internal/platform/access"
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
 	"github.com/romodevx/control-contable/backend/internal/platform/principal"
 	"github.com/romodevx/control-contable/backend/internal/platform/requestid"
@@ -24,12 +26,16 @@ type fakeProfile struct {
 	gotID   domain.UserID
 	gotName string
 	account usecase.Account
+	access  access.View
 	err     error
 }
 
-func (f *fakeProfile) Get(_ context.Context, id domain.UserID) (usecase.Account, error) {
+func (f *fakeProfile) Me(_ context.Context, id domain.UserID) (usecase.Me, error) {
 	f.gotID = id
-	return f.account, f.err
+	if f.err != nil {
+		return usecase.Me{}, f.err
+	}
+	return usecase.Me{Account: f.account, Access: f.access}, nil
 }
 
 func (f *fakeProfile) Rename(_ context.Context, id domain.UserID, name string) (usecase.Account, error) {
@@ -107,6 +113,36 @@ func TestGetMe_answersTheCallersProfile(t *testing.T) {
 	assert.Equal(t, "Ana Gómez", *got.Body.Name)
 	assert.Equal(t, time.UTC, got.Body.CreatedAt.Location())
 	assert.Equal(t, userIDText, f.profile.gotID.String(), "the principal's user, nothing from the request")
+}
+
+// getMe carries the caller's access, presented exactly as getDashboard's
+// (accesshttp.Summary), whatever module_subscriptions says.
+func TestGetMe_carriesTheCallersAccess(t *testing.T) {
+	ends := time.Date(2026, 10, 20, 10, 0, 0, 0, time.FixedZone("CST", -6*3600))
+	days, incomes, expenses := 3, 2, 5
+	tests := []struct {
+		name string
+		view access.View
+	}{
+		{name: "trial", view: access.View{
+			Level: access.LevelTrial, TrialEndsAt: &ends, TrialDaysLeft: &days, IncomesRemaining: &incomes, ExpensesRemaining: &expenses,
+		}},
+		{name: "read only", view: access.View{Level: access.LevelReadOnly, IncomesRemaining: new(int), ExpensesRemaining: new(int)}},
+		{name: "pro", view: access.View{Level: access.LevelPro}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newAccountFixture(t)
+			f.profile.access = tt.view
+
+			resp, err := f.handler.GetMe(signedIn(t), gen.GetMeRequestObject{})
+
+			require.NoError(t, err)
+			got, ok := resp.(gen.GetMe200JSONResponse)
+			require.True(t, ok, "%T", resp)
+			assert.Equal(t, accesshttp.Summary(tt.view), got.Body.Access)
+		})
+	}
 }
 
 func TestGetMe_aNamelessAccountHasANullName(t *testing.T) {

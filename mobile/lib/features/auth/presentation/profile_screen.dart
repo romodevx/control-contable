@@ -19,7 +19,7 @@ class ProfileScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.accountTitle)),
       body: switch (profile) {
-        AsyncData(:final value) => ProfileForm(user: value),
+        AsyncData(:final value) => ProfileForm(user: value.profile),
         AsyncError() => _Padded(
           LoadFailed(
             message: l10n.accountLoadFailed,

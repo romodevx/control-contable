@@ -1,5 +1,6 @@
 import 'package:control_contable/api/generated/clients/auth_client.dart';
 import 'package:control_contable/api/generated/models/delete_account_request.dart';
+import 'package:control_contable/api/generated/models/me.dart';
 import 'package:control_contable/api/generated/models/user.dart';
 import 'package:control_contable/api/generated/models/user_update.dart';
 import 'package:control_contable/core/network/api_client_provider.dart';
@@ -9,8 +10,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// The signed-in user's own account (`/v1/me`). Every method throws an
 /// `ApiFailure` when the server refuses or cannot be reached.
 abstract interface class ProfileRepository {
-  /// The profile (`GET /v1/me`).
-  Future<User> getMe();
+  /// The profile and the access state (`GET /v1/me`): the server's
+  /// `AccessSummary`, the same one the Home shows.
+  Future<Me> getMe();
 
   /// Renames the user (`PATCH /v1/me`); the email cannot change.
   Future<User> updateName(String name);
@@ -29,7 +31,7 @@ class ApiProfileRepository implements ProfileRepository {
   final AuthClient _client;
 
   @override
-  Future<User> getMe() => guardApi(_client.getMe);
+  Future<Me> getMe() => guardApi(_client.getMe);
 
   @override
   Future<User> updateName(String name) =>

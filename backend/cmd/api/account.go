@@ -6,6 +6,9 @@ import (
 	authhttp "github.com/romodevx/control-contable/backend/internal/auth/adapter/http"
 	"github.com/romodevx/control-contable/backend/internal/auth/infra"
 	"github.com/romodevx/control-contable/backend/internal/auth/usecase"
+	"github.com/romodevx/control-contable/backend/internal/platform/access"
+	"github.com/romodevx/control-contable/backend/internal/platform/access/accessgorm"
+	"github.com/romodevx/control-contable/backend/internal/platform/clock"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
 	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit/ratelimitpg"
 )
@@ -17,7 +20,10 @@ import (
 func newAccountHandler(txm *pgdb.TxManager, keys authCrypto, limits *ratelimitpg.Store, logger *slog.Logger) *authhttp.AccountHandler {
 	accounts := infra.NewAccountStore(keys.emails)
 	return authhttp.NewAccountHandler(authhttp.AccountUseCases{
-		Profile: usecase.NewProfile(txm, accounts),
+		// getMe carries the access the dashboard shows (contract 0.17.0), from
+		// the same policy every module uses.
+		Profile: usecase.NewProfile(txm, accounts,
+			access.NewPolicy(txm, accessgorm.NewStore(), accessgorm.NewStore(), clock.NewSystem())),
 		Delete: usecase.NewDeleteAccount(usecase.DeleteAccountDeps{
 			Tx: txm, Passwords: keys.passwords, Accounts: accounts,
 			Attempts: limits.Bucket(usecase.DeleteAttemptsPolicy), Logger: logger,

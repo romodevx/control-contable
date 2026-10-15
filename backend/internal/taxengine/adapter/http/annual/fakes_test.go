@@ -14,6 +14,7 @@ import (
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
 	"github.com/romodevx/control-contable/backend/adapter/http/middleware"
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
+	"github.com/romodevx/control-contable/backend/adapter/http/router/routertest"
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
 	"github.com/romodevx/control-contable/backend/internal/platform/clock"
@@ -77,7 +78,7 @@ func newHarness(t *testing.T, deps annualhttp.Deps, flags flagtest.Static, limit
 	require.NoError(t, err)
 	h := &harness{}
 	routes, err := router.New(server{Handler: annualhttp.NewHandler(deps)}, spec, router.Options{
-		Flags: flags, Authn: principalAuthn{}, Logger: logging.New(&h.logs, nil), UserLimits: limits,
+		Flags: flags, Authenticators: routertest.Authenticators(principalAuthn{}), Logger: logging.New(&h.logs, nil), UserLimits: limits,
 	})
 	require.NoError(t, err)
 	h.handler = middleware.Chain(routes, middleware.NoStore)

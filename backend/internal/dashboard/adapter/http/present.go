@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
-	"time"
 
+	"github.com/romodevx/control-contable/backend/adapter/http/accesshttp"
+	"github.com/romodevx/control-contable/backend/adapter/http/gen"
 	"github.com/romodevx/control-contable/backend/internal/dashboard/usecase"
 	"github.com/romodevx/control-contable/backend/internal/platform/money"
 )
@@ -35,22 +36,14 @@ type trendPointJSON struct {
 	Tax          *trendTaxJSON `json:"tax"`
 }
 
-type accessJSON struct {
-	Access            string  `json:"access"`
-	TrialEndsAt       *string `json:"trial_ends_at"`
-	TrialDaysLeft     *int    `json:"trial_days_left"`
-	IncomesRemaining  *int    `json:"incomes_remaining"`
-	ExpensesRemaining *int    `json:"expenses_remaining"`
-}
-
 type dashboardJSON[D any] struct {
-	TaxpayerID string           `json:"taxpayer_id"`
-	Period     string           `json:"period"`
-	IsEmpty    bool             `json:"is_empty"`
-	Month      monthJSON        `json:"month"`
-	Estimate   *D               `json:"estimate"`
-	Trend      []trendPointJSON `json:"trend"`
-	Access     accessJSON       `json:"access"`
+	TaxpayerID string            `json:"taxpayer_id"`
+	Period     string            `json:"period"`
+	IsEmpty    bool              `json:"is_empty"`
+	Month      monthJSON         `json:"month"`
+	Estimate   *D                `json:"estimate"`
+	Trend      []trendPointJSON  `json:"trend"`
+	Access     gen.AccessSummary `json:"access"`
 	// Legend is present if and only if Estimate is (contract Dashboard).
 	Legend string `json:"legend,omitempty"`
 }
@@ -69,7 +62,7 @@ func toDashboard[D any](d usecase.Dashboard[D]) dashboardJSON[D] {
 		Month:      monthJSON{IncomeCents: centsOf(d.Current.Income), ExpenseCents: centsOf(d.Current.Expense)},
 		Estimate:   d.Estimate,
 		Trend:      trend,
-		Access:     toAccess(d.Access),
+		Access:     accesshttp.Summary(d.Access),
 		Legend:     d.Legend,
 	}
 }
@@ -94,18 +87,6 @@ func toTrendTax(t *usecase.TrendTax) *trendTaxJSON {
 		IVAOutcome:               string(t.IVAOutcome),
 		Status:                   string(t.Status),
 	}
-}
-
-func toAccess(a usecase.AccessSummary) accessJSON {
-	out := accessJSON{
-		Access: string(a.Level), TrialDaysLeft: a.TrialDaysLeft,
-		IncomesRemaining: a.IncomesRemaining, ExpensesRemaining: a.ExpensesRemaining,
-	}
-	if a.TrialEndsAt != nil {
-		ends := a.TrialEndsAt.UTC().Format(time.RFC3339)
-		out.TrialEndsAt = &ends
-	}
-	return out
 }
 
 // okResponse is the 200 JSON body of getDashboard. Its Cache-Control:

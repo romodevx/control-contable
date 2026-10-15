@@ -175,24 +175,24 @@ func TestGetAccessSummary(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
 		summary access.Summary
-		want    usecase.AccessSummary
+		want    access.View
 	}{
 		{
 			name: "trial",
 			summary: access.Summary{
 				Status: access.Status{Level: access.LevelTrial, TrialEndsAt: ends}, Usage: access.Usage{Incomes: 3, Expenses: 0},
 			},
-			want: usecase.AccessSummary{
+			want: access.View{
 				Level: access.LevelTrial, TrialEndsAt: &ends, TrialDaysLeft: intPtr(4), IncomesRemaining: intPtr(2), ExpensesRemaining: intPtr(5),
 			},
 		},
 		{
 			name:    "read only: counters 0, no trial fields",
 			summary: access.Summary{Status: access.Status{Level: access.LevelReadOnly, TrialEndsAt: ends.AddDate(0, 0, -30)}},
-			want:    usecase.AccessSummary{Level: access.LevelReadOnly, IncomesRemaining: intPtr(0), ExpensesRemaining: intPtr(0)},
+			want:    access.View{Level: access.LevelReadOnly, IncomesRemaining: intPtr(0), ExpensesRemaining: intPtr(0)},
 		},
-		{name: "pro", summary: access.Summary{Status: access.Status{Level: access.LevelPro}}, want: usecase.AccessSummary{Level: access.LevelPro}},
-		{name: "comp", summary: access.Summary{Status: access.Status{Level: access.LevelComp}}, want: usecase.AccessSummary{Level: access.LevelComp}},
+		{name: "pro", summary: access.Summary{Status: access.Status{Level: access.LevelPro}}, want: access.View{Level: access.LevelPro}},
+		{name: "comp", summary: access.Summary{Status: access.Status{Level: access.LevelComp}}, want: access.View{Level: access.LevelComp}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture()
