@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Flag | `module_reminders` (OFF by default; implied OFF when `module_taxpayers` is OFF) |
+| Flag | `module_reminders` (OFF by default, seeded by the baseline migration; implied OFF when `module_taxpayers` is OFF). Preset: `demo_full` only (OQ-R8, M9-11). The worker's reminder job is a no-op while it is effectively OFF; the platform purge runs whatever it says |
 | Spec | [MODULE-reminders.md](../project-specs/MODULE-reminders.md) |
 | Contract | [`docs/api/openapi.yaml`](../api/openapi.yaml), tag `Reminders`, `x-module: module_reminders` (frozen by M9-01, 0.13.0) |
 | Status | Contract frozen; `getTaxCalendar` built (M9-04); devices and settings built (M9-05; push token keys `PUSH_TOKEN_ENC_KEY` / `PUSH_TOKEN_INDEX_PEPPER`); the job in progress (PLAN M9-06..M9-14). The full page lands with the module docs task (M9-15) |

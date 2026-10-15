@@ -510,7 +510,7 @@ M9-07 (FCM) and M9-09 (Flutter push) are built against fakes; live verification 
 | M9-08 | Soft-delete purge job (30 days) via `purge_soft_deleted` definer fn (runs regardless of reminder flag) | db-sr | P0-27, M3-02, M4-03, ANN-03 (must also purge `personal_deductions`, ANN-25) | 2 | — | `feature/records-purge-job` | — | [x] |
 | M9-09 | Flutter push: firebase_messaging (guarded init, "no disponible" without config), permission prompt on opt-in, device registration (sign-in, token refresh, logout), deep link; `PushToken` redaction guard | frontend-sr | M9-01, M1-12 | 3.5 | — | `feature/reminders-mobile` | OB9 (live check only), OB7 | [x] |
 | M9-10 | Flutter reminder settings screen + upcoming due dates | frontend-sr | M9-09 | 3 | — | `feature/reminders-mobile` | — | [x] |
-| M9-11 | Register flag `module_reminders` + preset `demo_full` | backend-sr | M9-06, M9-07, M9-10 | 0.5 | — | `feature/reminders-flag` | — | [ ] |
+| M9-11 | Register flag `module_reminders` + preset `demo_full` (seeded by the baseline: no migration) | backend-sr | M9-06, M9-07, M9-10 | 0.5 | — | `feature/reminders-flag` | — | [x] |
 | M9-12 | QA M9 on real devices (push on iOS and Android, holiday shift, exactly-once) | qa-sr | M9-11, M9-08 | 3 | — | `feature/reminders-qa-fixes` | OB6, OB7, OB9 | [ ] |
 | M9-13 | Tech-lead gate M9 | tech-lead | M9-12 | 1.5 | — | (PR review) | — | [ ] |
 | M9-14 | Security gate M9 (lock-screen amounts opt-in, token claim) | security | M9-12 | 1.5 | — | (PR review) | — | [ ] |
