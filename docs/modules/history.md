@@ -4,7 +4,7 @@
 |---|---|
 | Flag | `module_history` (OFF by default; requires `module_tax_engine`, and through it `module_taxpayers`. `module_incomes` / `module_expenses` are **not** prerequisites) |
 | Spec | [MODULE-history.md](../project-specs/MODULE-history.md) |
-| Contract | [`docs/api/openapi.yaml`](../api/openapi.yaml), tag `History`, `x-module: module_history` (frozen by M8-01 in 0.9.0; `TaxpayerEstimate.figures_fingerprint` required since 0.9.1, M8-03) |
+| Contract | [`docs/api/openapi.yaml`](../api/openapi.yaml), tag `History`, `x-module: module_history` (frozen by M8-01 in 0.9.0; `TaxpayerEstimate.figures_fingerprint` required since 0.11.1, M8-03) |
 | Design | [ADR-0002 Amendment 2](../adr/0002-tax-engine.md) (`FiguresFingerprint`, scheme `figures/1`) |
 | Gates | M8-08 tech lead **PASS** and M8-09 security **PASS** (both recorded on [PR #149](https://github.com/romodevx/control-contable/pull/149)); [M8-07 QA](../../.gstack/qa-reports/qa-report-history-2026-10-14.md) pass at the automated level, **device walk owed** |
 | Code | `backend/internal/history/` (`domain`, `usecase`, `adapter/http`, `infra`), `backend/cmd/api/history.go` (adapter over the tax engine's `EstimateRange`), `backend/migrations/20261014180000_estimate_views.sql`, `mobile/lib/features/history/`. M8 owns **one table** (`estimate_views`) and **no tax math** |

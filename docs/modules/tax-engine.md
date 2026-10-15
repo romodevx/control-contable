@@ -168,8 +168,8 @@ to remit 10,333.33 = **166,333.33**.
 `records_fingerprint` with the aggregated inputs and the parameter set. M8 marks a month
 "changed since viewed" only when its `figures_fingerprint` (the displayed figures, ADR-0002
 Amendment 2) moves; the version and parameter set only name the cause
-([history](history.md#the-cambió-desde-que-lo-viste-marker)). It moves whenever a strategy changes a figure for the same input; two
-tests pin it, one to the strategy list and one to a digest of every golden figure. The log
+([history](history.md#the-cambió-desde-que-lo-viste-marker)). The engine version moves whenever
+a strategy changes a figure for the same input; two tests pin it, one to the strategy list and one to a digest of every golden figure. The log
 of versions is in [ADR-0002](../adr/0002-tax-engine.md#engine-version-log):
 
 | Version | Date | Change |
