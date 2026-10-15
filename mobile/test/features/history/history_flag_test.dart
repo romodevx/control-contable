@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:control_contable/core/fiscal/tax_data_revision.dart';
 import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/router/app_router.dart';
 import 'package:control_contable/features/history/history_routes.dart';
@@ -43,6 +44,36 @@ void main() {
 
     expect(find.byKey(const ValueKey('dashboard-hero')), findsOneWidget);
     expect(historyEntry(), findsOneWidget);
+  });
+
+  // Device walk 2026-10-15 (F2): records saved from inside History (its
+  // "Registrar ingreso", "Ver ingresos" → edit) left Home's dashboard
+  // stale ("Aún no hay ingresos…", the trial count unspent) on return.
+  // The record writes bump the tax-data revision (tax_data_revision_test).
+  testWidgets('a write made over History reads the dashboard again', (
+    tester,
+  ) async {
+    await harness.pump(tester, modules: {...homeModules, AppModule.history});
+    expect(harness.repository.calls, hasLength(1));
+
+    await tester.tap(historyEntry());
+    await tester.pumpAndSettle();
+    harness.container.read(taxDataRevisionProvider.notifier).bump();
+    await harness.back(tester);
+
+    expect(harness.repository.calls, hasLength(2));
+  });
+
+  testWidgets('History opened and closed without a write reads nothing', (
+    tester,
+  ) async {
+    await harness.pump(tester, modules: {...homeModules, AppModule.history});
+
+    await tester.tap(historyEntry());
+    await tester.pumpAndSettle();
+    await harness.back(tester);
+
+    expect(harness.repository.calls, hasLength(1));
   });
 
   // M8-07 QA: the entry lives in Home's app bar, so it must follow

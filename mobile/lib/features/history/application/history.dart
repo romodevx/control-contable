@@ -1,4 +1,5 @@
 import 'package:control_contable/api/generated/models/history_year.dart';
+import 'package:control_contable/core/fiscal/tax_data_revision.dart';
 import 'package:control_contable/features/history/data/history_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -12,12 +13,15 @@ typedef HistoryQuery = ({String taxpayerId, int fiscalYear});
 /// retry, never an automatic one.
 final FutureProviderFamily<HistoryYear, HistoryQuery> historyYearProvider =
     FutureProvider.autoDispose.family<HistoryYear, HistoryQuery>(
-      (ref, query) => ref
-          .read(historyRepositoryProvider)
-          .getHistory(
-            taxpayerId: query.taxpayerId,
-            fiscalYear: query.fiscalYear,
-          ),
+      (ref, query) {
+        ref.watch(taxDataRevisionProvider);
+        return ref
+            .read(historyRepositoryProvider)
+            .getHistory(
+              taxpayerId: query.taxpayerId,
+              fiscalYear: query.fiscalYear,
+            );
+      },
       name: 'historyYearProvider',
       retry: _noAutomaticRetry,
     );

@@ -1,4 +1,5 @@
 import 'package:control_contable/api/generated/models/breakdown.dart';
+import 'package:control_contable/core/fiscal/tax_data_revision.dart';
 import 'package:control_contable/features/tax_engine/data/tax_engine_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -11,13 +12,16 @@ typedef BreakdownQuery = ({String taxpayerId, String period, String regime});
 /// automatic retry.
 final FutureProviderFamily<Breakdown, BreakdownQuery> breakdownProvider =
     FutureProvider.autoDispose.family<Breakdown, BreakdownQuery>(
-      (ref, query) => ref
-          .read(taxEngineRepositoryProvider)
-          .getBreakdown(
-            taxpayerId: query.taxpayerId,
-            period: query.period,
-            regime: query.regime,
-          ),
+      (ref, query) {
+        ref.watch(taxDataRevisionProvider);
+        return ref
+            .read(taxEngineRepositoryProvider)
+            .getBreakdown(
+              taxpayerId: query.taxpayerId,
+              period: query.period,
+              regime: query.regime,
+            );
+      },
       name: 'breakdownProvider',
       retry: _noAutomaticRetry,
     );

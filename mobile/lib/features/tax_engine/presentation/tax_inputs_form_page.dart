@@ -2,12 +2,11 @@ import 'dart:async';
 
 import 'package:control_contable/api/generated/models/tax_inputs.dart';
 import 'package:control_contable/core/access/read_only_access.dart';
+import 'package:control_contable/core/fiscal/tax_data_revision.dart';
 import 'package:control_contable/core/forms/app_form.dart';
 import 'package:control_contable/core/forms/form_leave_guard.dart';
 import 'package:control_contable/core/forms/form_notice.dart';
 import 'package:control_contable/core/time/clock.dart';
-import 'package:control_contable/features/tax_engine/application/breakdown.dart';
-import 'package:control_contable/features/tax_engine/application/estimate.dart';
 import 'package:control_contable/features/tax_engine/application/tax_inputs.dart';
 import 'package:control_contable/features/tax_engine/application/tax_inputs_form_model.dart';
 import 'package:control_contable/features/tax_engine/data/tax_engine_repository.dart';
@@ -121,12 +120,11 @@ class _TaxInputsFormPageState extends ConsumerState<TaxInputsFormPage> {
     });
   }
 
-  /// Every estimate and breakdown on the stack reads again with the new
-  /// inputs; then back to where the form was opened from.
+  /// Every figure derived from the inputs (the estimates and breakdowns on
+  /// the stack, History, Home) reads again; then back to where the form
+  /// was opened from.
   void _afterSave() {
-    ref
-      ..invalidate(estimateProvider)
-      ..invalidate(breakdownProvider);
+    ref.read(taxDataRevisionProvider.notifier).bump();
     showTaxInputsSavedToast(context);
     _leave();
   }

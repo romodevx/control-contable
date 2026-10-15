@@ -4,11 +4,13 @@ import 'package:control_contable/api/generated/models/history_year.dart';
 import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/features/history/presentation/history_screen.dart';
+import 'package:control_contable/features/incomes/application/income_records.dart';
 import 'package:control_contable/features/taxpayers/application/active_taxpayer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../incomes/incomes_fakes.dart';
 import '../tax_engine/estimate_fixtures.dart';
 import '../taxpayers/taxpayers_fakes.dart';
 import 'history_fixtures.dart';
@@ -656,6 +658,56 @@ void main() {
       await tester.tap(find.text('Registrar ingreso'));
       await tester.pumpAndSettle();
       expect(harness.location, '/ingresos/nuevo');
+    });
+
+    // Device walk 2026-10-15: the empty state's "Registrar ingreso" pushed
+    // the income form without re-reading the year, so after saving
+    // incomes and coming back History still said "Aún no hay registros".
+    testWidgets('returning from "Registrar ingreso" reads the year again', (
+      tester,
+    ) async {
+      _tall(tester);
+      await harness.pump(
+        tester,
+        reply: _year([
+          historyMonthJson(
+            '2026-03',
+            isCurrent: true,
+            hasRecords: false,
+            tax: historyTaxJson(isr: 0, iva: 0, ivaOutcome: 'zero'),
+          ),
+          historyMonthJson('2026-02', hasRecords: false, tax: null),
+        ]),
+      );
+
+      await tester.tap(find.text('Registrar ingreso'));
+      await tester.pumpAndSettle();
+      harness.repository.fallback = _year([
+        historyMonthJson('2026-03', isCurrent: true),
+        historyMonthJson('2026-02'),
+      ]);
+      await harness.back(tester);
+
+      expect(harness.repository.calls, hasLength(2));
+      expect(find.byKey(const ValueKey('history-empty')), findsNothing);
+      expect(_row('2026-02'), findsOneWidget);
+    });
+
+    // Device walk 2026-10-15 (F3): the delete toast lives in the app-wide
+    // messenger, so its *Deshacer* can run while History is on top. The
+    // restored record must show without a pull-to-refresh.
+    testWidgets('an Undo run while History is open reads the year again', (
+      tester,
+    ) async {
+      await harness.pump(tester);
+      expect(harness.repository.calls, hasLength(1));
+
+      final deleted = income();
+      harness.incomes.incomes.add(deleted);
+      await harness.container.read(incomeRecordsProvider).restore([deleted]);
+      await tester.pumpAndSettle();
+
+      expect(harness.repository.calls, hasLength(2));
     });
 
     testWidgets('switching taxpayer never shows the previous figures', (
