@@ -60,3 +60,11 @@ the day a regime's basis changes (the migration comment already requires re-deri
   `incomes.booked_on`); the app follows without a release.
 - `TaxpayerRegime` grows by one short string per held regime (at most 16 per taxpayer).
 - The income form layout is unchanged by this ADR; only where the basis comes from.
+- Rollout order: the backend (0.16.0) deploys before an app built on this client. The
+  generated `TaxpayerRegime` and `Regime` require the field, so a 0.16.0 app against a
+  0.15.0 server fails to parse every taxpayer; an older app against the new server is
+  unaffected (it ignores the member).
+- Three spellings of the closed enum (the `regimes_income_basis_valid` CHECK, the incomes
+  domain `IncomeBasis`, the contract `IncomeBasis`) are pinned together:
+  the domain parses the column, and `TestIncomeBasisMatchesTheIncomesDomain` (cmd/api)
+  fails when the contract and the domain disagree.
