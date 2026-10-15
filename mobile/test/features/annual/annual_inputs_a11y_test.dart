@@ -1,4 +1,5 @@
 import 'package:control_contable/features/annual/annual_routes.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../tax_engine/estimate_fixtures.dart' show fixtureTaxpayerId;
@@ -7,6 +8,9 @@ import 'pump_annual_inputs.dart';
 
 /// ANN-19..21 screens meet the tap-target, label and contrast guidelines
 /// and survive 200 % text without overflow.
+/// A small phone, where 200 % text has the least room.
+const Size _phone = Size(360, 740);
+
 void main() {
   final screens = {
     'deductions': AnnualRoutes.personalDeductions(fixtureTaxpayerId, 2026),
@@ -25,6 +29,10 @@ void main() {
 
   for (final MapEntry(key: name, value: location) in screens.entries) {
     testWidgets('$name: guidelines and 200 % text', (tester) async {
+      tester.view
+        ..physicalSize = _phone
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
       final semantics = tester.ensureSemantics();
       final harness = AnnualInputsHarness();
       harness.inputs
@@ -45,6 +53,10 @@ void main() {
   }
 
   testWidgets('constancia sheet: guidelines and 200 % text', (tester) async {
+    tester.view
+      ..physicalSize = _phone
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     final semantics = tester.ensureSemantics();
     final harness = AnnualInputsHarness();
     await harness.pump(
