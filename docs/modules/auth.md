@@ -41,14 +41,17 @@ sequenceDiagram
     actor U as Person (app)
     participant API as API (module_auth)
     participant DB as PostgreSQL (RLS)
+    participant W as Worker (auth_email_delivery)
     participant M as EmailSender
 
     U->>API: GET /v1/legal/documents
     API-->>U: 200 current versions (terms, privacy notice)
     U->>API: POST /v1/auth/register {email, accepted_documents}
-    API->>DB: pending sign-up (no password, no name) via definer fn
-    API->>M: 6-digit code (dev: API log)
-    API-->>U: 202 verification_sent (same body for new, pending or verified email)
+    API->>DB: one tx: pending sign-up (no password, no name) + sealed email in auth_email_outbox
+    API-->>U: 202 verification_sent (same body and same work for new, pending or verified email)
+    W->>DB: claim due emails (SKIP LOCKED, leased)
+    W->>M: 6-digit code, or the D3 notice (dev: worker log)
+    W->>DB: delete the row (or schedule its retry)
     U->>API: POST /v1/auth/verify-email {email, code, password, name?}
     API->>DB: one tx: user + consents + trial (if email never had one), pending row consumed
     API-->>U: 201 AuthSession {user, tokens}
@@ -68,9 +71,10 @@ sequenceDiagram
 
 ### Try it locally
 
-These requests were run against `make -C backend api` with `module_auth` ON
-(`make -C backend flags ARGS="enable module_auth"`). The dev email adapter writes the code to
-the API log, with the address redacted.
+These requests were run against `make -C backend api` and `make -C backend worker` with
+`module_auth` ON (`make -C backend flags ARGS="enable module_auth"`). The API only queues the
+email; the worker delivers it within ~5 s, and in dev its email adapter writes the code to the
+**worker** log, with the address redacted.
 
 ```sh
 API=http://localhost:3000
@@ -86,7 +90,7 @@ DOCS=$(curl -s "$API/v1/legal/documents" \
 curl -s -X POST "$API/v1/auth/register" -H 'Content-Type: application/json' \
   -d "{\"email\":\"$EMAIL\",\"accepted_documents\":$DOCS}"
 
-# 3. Read the code from the API log line "dev email: verification code" (field verification_code).
+# 3. Read the code from the worker log line "dev email: verification code" (field verification_code).
 CODE=123456
 
 # 4. Verify: 201 {"user":{...},"tokens":{...}}. The password is chosen here (D8).

@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/romodevx/control-contable/backend/internal/platform/config"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagtest"
 	"github.com/romodevx/control-contable/backend/internal/platform/logging"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgtest"
@@ -50,7 +51,10 @@ func TestWorkerJobs_remindersFollowTheFlagThePurgeAlwaysRuns(t *testing.T) {
 			seedExpiredLog(t, workerDB, owner)
 			sender := &pushtest.Sender{}
 
-			jobs, err := newJobs(workerDB, logging.New(&bytes.Buffer{}, nil), sender, keys, reminderDay)
+			jobs, err := newJobs(jobWiring{
+				pool: workerDB, logger: logging.New(&bytes.Buffer{}, nil), push: sender,
+				reminderKeys: keys, outbox: testOutboxKeys(t), env: config.EnvDev, now: reminderDay,
+			})
 			require.NoError(t, err)
 
 			var names []string
@@ -58,7 +62,7 @@ func TestWorkerJobs_remindersFollowTheFlagThePurgeAlwaysRuns(t *testing.T) {
 				names = append(names, j.job.Name())
 				require.NoError(t, j.job.Run(t.Context()), j.job.Name())
 			}
-			assert.Equal(t, []string{"records_purge", "reminders"}, names)
+			assert.Equal(t, []string{"records_purge", "auth_email_delivery", "reminders"}, names)
 			assert.Len(t, sender.Sends(), tc.sends, "push sends")
 			assert.Equal(t, tc.sends, countLog(t, workerDB, reminderPeriod), "reminder log rows written")
 			assert.Zero(t, countLog(t, workerDB, expiredPeriod), "the purge deleted the expired row")

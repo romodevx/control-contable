@@ -5,8 +5,10 @@
 // dedicated connection) until SIGINT/SIGTERM. Shutdown cancels the running
 // jobs, waits for them and then resigns, so a standby takes over at once.
 //
-// Jobs: the records purge (M9-08, every hour, whatever the module flags say)
-// and the reminders (M9-06, every 5 minutes, a no-op while module_reminders
+// Jobs: the records purge (M9-08, every hour, whatever the module flags say),
+// the auth email delivery (every 5 seconds: the emails register and resend
+// queue, opened with the API's AUTH_OUTBOX_KEY and sent through the dev log
+// sender until a provider is chosen) and the reminders (M9-06, every 5 minutes, a no-op while module_reminders
 // is OFF), which open the push tokens with the API's PUSH_TOKEN_* keys and
 // send through the push sender (M9-07) built at startup from FCM_PROJECT_ID /
 // FCM_CREDENTIALS_JSON, disabled when no project is set. Every job runs its
@@ -28,8 +30,11 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" database/sql driver
 
+	authinfra "github.com/romodevx/control-contable/backend/internal/auth/infra"
+	authusecase "github.com/romodevx/control-contable/backend/internal/auth/usecase"
 	"github.com/romodevx/control-contable/backend/internal/platform/clock"
 	"github.com/romodevx/control-contable/backend/internal/platform/config"
+	"github.com/romodevx/control-contable/backend/internal/platform/crypto"
 	"github.com/romodevx/control-contable/backend/internal/platform/logging"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
 	"github.com/romodevx/control-contable/backend/internal/platform/worker"
@@ -64,6 +69,10 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err != nil {
 		return err
 	}
+	outbox, err := config.LoadAuthOutbox(ctx, lookup, config.NewEnvSecrets(lookup), config.Auth{})
+	if err != nil {
+		return err
+	}
 	logger := logging.New(logOut, cfg.LogLevel)
 	push, err := newPushSender(ctx, cfg.Push, logger)
 	if err != nil {
@@ -77,7 +86,9 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err := guardRuntimeRole(ctx, cfg.Env, pool); err != nil {
 		return err
 	}
-	reg, err := newRegistry(pool, logger, push, keys)
+	reg, err := newRegistry(jobWiring{
+		pool: pool, logger: logger, push: push, reminderKeys: keys, outbox: outbox, env: cfg.Env, now: clock.NewSystem(),
+	})
 	if err != nil {
 		return err
 	}
@@ -98,10 +109,25 @@ type scheduledJob struct {
 	timeout time.Duration
 }
 
-// newRegistry registers the production jobs (newJobs) over pool (cc_worker),
-// on the system clock.
-func newRegistry(pool *sql.DB, logger *slog.Logger, push reminders.PushSender, keys config.Reminders) (*worker.Registry, error) {
-	jobs, err := newJobs(pool, logger, push, keys, clock.NewSystem())
+// jobWiring is what the production jobs need from the composition root.
+type jobWiring struct {
+	pool   *sql.DB // cc_worker
+	logger *slog.Logger
+	// push is the reminders' sender (M9-07).
+	push reminders.PushSender
+	// reminderKeys are the push token keys the API seals with (M9-06).
+	reminderKeys config.Reminders
+	// outbox is the key the API seals the queued auth emails with.
+	outbox config.AuthOutbox
+	// env decides whether the dev log sender reveals codes (dev only).
+	env config.Environment
+	// now is the reminder job's and its estimate's clock.
+	now clock.Clock
+}
+
+// newRegistry registers the production jobs (newJobs).
+func newRegistry(w jobWiring) (*worker.Registry, error) {
+	jobs, err := newJobs(w)
 	if err != nil {
 		return nil, err
 	}
@@ -114,35 +140,57 @@ func newRegistry(pool *sql.DB, logger *slog.Logger, push reminders.PushSender, k
 	return reg, nil
 }
 
-// newJobs builds the production jobs over pool (cc_worker), in registration
-// order. Module jobs check their flag on every run and skip while the module
-// is effectively OFF (feature_flags is readable by cc_worker); the records
-// purge never does (MODULE-reminders §3). push is the reminders' sender
-// (M9-07) and keys the push token keys the API seals with, for the reminder
-// job (M9-06); now is its clock. In dev without keys the reminder job is not
-// built (logged); outside dev config requires them.
-func newJobs(pool *sql.DB, logger *slog.Logger, push reminders.PushSender, keys config.Reminders, now clock.Clock) ([]scheduledJob, error) {
-	units, err := pgdb.NewTxManager(pool)
+// newJobs builds the production jobs over w.pool (cc_worker), in
+// registration order. Module jobs check their flag on every run and skip
+// while the module is effectively OFF (feature_flags is readable by
+// cc_worker); the records purge and the auth email delivery never do
+// (MODULE-reminders §3; an email queued before module_auth went OFF is still
+// delivered). In dev without push token keys the reminder job is not built
+// (logged); outside dev config requires them.
+func newJobs(w jobWiring) ([]scheduledJob, error) {
+	units, err := pgdb.NewTxManager(w.pool)
 	if err != nil {
 		return nil, err
 	}
 	purge, err := retention.NewPurgeJob(retention.PurgeDeps{
-		System: units, Purger: retentioninfra.NewPurger(), Logger: logger,
+		System: units, Purger: retentioninfra.NewPurger(), Logger: w.logger,
 		BatchSize: retention.DefaultBatchSize, MaxBatches: retention.DefaultMaxBatches,
 	})
 	if err != nil {
 		return nil, err
 	}
-	jobs := []scheduledJob{{job: purge, timeout: recordsPurgeTimeout}}
-	if !hasReminderKeys(keys) {
-		logger.Warn("reminders disabled", slog.String("reason", "PUSH_TOKEN_ENC_KEY / PUSH_TOKEN_INDEX_PEPPER are not set"))
+	delivery, err := newEmailDeliveryJob(units, w)
+	if err != nil {
+		return nil, err
+	}
+	jobs := []scheduledJob{
+		{job: purge, timeout: recordsPurgeTimeout},
+		{job: delivery, timeout: authusecase.DeliveryRunTimeout},
+	}
+	if !hasReminderKeys(w.reminderKeys) {
+		w.logger.Warn("reminders disabled", slog.String("reason", "PUSH_TOKEN_ENC_KEY / PUSH_TOKEN_INDEX_PEPPER are not set"))
 		return jobs, nil
 	}
-	job, err := newReminderJob(pool, units, logger, push, keys, now)
+	job, err := newReminderJob(w.pool, units, w.logger, w.push, w.reminderKeys, w.now)
 	if err != nil {
 		return nil, err
 	}
 	return append(jobs, scheduledJob{job: job, timeout: remindersTimeout}), nil
+}
+
+// newEmailDeliveryJob wires the auth email delivery: the outbox opened with
+// the API's key and the provider-agnostic sender (the dev log sender until a
+// provider is chosen, OB2: it reveals codes in dev only).
+func newEmailDeliveryJob(units *pgdb.TxManager, w jobWiring) (*authusecase.EmailDeliveryJob, error) {
+	keyID := crypto.KeyID(w.outbox.KeyID) // #nosec G115 -- config bounds it to [1, crypto.MaxKeyID]
+	keyring, err := crypto.NewKeyring(keyID, map[crypto.KeyID][]byte{keyID: w.outbox.Key.RevealBytes()})
+	if err != nil {
+		return nil, fmt.Errorf("auth email delivery: outbox keyring: %w", err)
+	}
+	return authusecase.NewEmailDeliveryJob(authusecase.DeliveryDeps{
+		System: units, Queue: authinfra.NewOutbox(keyring), Sender: authinfra.NewLogSender(w.logger, w.env),
+		Logger: w.logger, BatchSize: authusecase.DefaultDeliveryBatch, MaxBatches: authusecase.DefaultDeliveryBatches,
+	})
 }
 
 // newRunner builds the Runner over pool (cc_worker); the leader lock is held

@@ -1,10 +1,8 @@
 package usecase
 
 import (
-	"context"
 	"fmt"
 	"io"
-	"log/slog"
 
 	"github.com/romodevx/control-contable/backend/internal/auth/domain"
 )
@@ -31,24 +29,4 @@ func hashEmail(index EmailIndex, email domain.Email) ([]byte, error) {
 		return nil, fmt.Errorf("auth: email index: %w", err)
 	}
 	return h, nil
-}
-
-// mailer sends the auth emails. A delivery failure never changes the HTTP
-// answer (that would be an oracle, MODULE-auth §4): it is logged, without the
-// address or the code, and the user can ask for a resend.
-type mailer struct {
-	sender EmailSender
-	logger *slog.Logger
-}
-
-func (m mailer) sendCode(ctx context.Context, to domain.Email, code domain.VerificationCode) {
-	if err := m.sender.SendVerificationCode(ctx, to, code); err != nil {
-		m.logger.WarnContext(ctx, "verification email not sent", slog.Any("error", err))
-	}
-}
-
-func (m mailer) sendNotice(ctx context.Context, to domain.Email) {
-	if err := m.sender.SendSignUpAttemptNotice(ctx, to); err != nil {
-		m.logger.WarnContext(ctx, "sign-up attempt notice not sent", slog.Any("error", err))
-	}
 }

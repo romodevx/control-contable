@@ -20,19 +20,19 @@ type ResendDeps struct {
 	Index   EmailIndex
 	Codes   CodeHasher
 	SignUps CodeResender
-	Email   EmailSender
+	// Outbox queues the new code in the resend's unit of work.
+	Outbox EmailOutbox
 	// Emails is register's per-email budget (D7: one budget for both).
 	// Required. Out of budget, resend stays silent like its cooldown.
 	Emails RateLimiter
 	Logger *slog.Logger
 }
 
-// ResendVerification emails a new code for a live pending sign-up (US-A1c,
+// ResendVerification queues a new code for a live pending sign-up (US-A1c,
 // D2). It succeeds the same way whether a code was sent or not: no pending
 // sign-up, an expired one, a verified email and the 60 s cooldown are silent.
 type ResendVerification struct {
-	deps   ResendDeps
-	mailer mailer
+	deps ResendDeps
 }
 
 // NewResendVerification builds the use case. It panics without deps.Emails.
@@ -40,7 +40,7 @@ func NewResendVerification(deps ResendDeps) *ResendVerification {
 	if deps.Emails == nil {
 		panic("auth: NewResendVerification needs an Emails RateLimiter")
 	}
-	return &ResendVerification{deps: deps, mailer: mailer{sender: deps.Email, logger: deps.Logger}}
+	return &ResendVerification{deps: deps}
 }
 
 // Execute resends the code. Only a malformed email (domain.ErrInvalidEmail)
@@ -65,17 +65,15 @@ func (uc *ResendVerification) Execute(ctx context.Context, rawEmail string) erro
 	if err != nil {
 		return err
 	}
-	expiresAt := uc.deps.Clock.Now().Add(CodeTTL)
-	var outcome CodeOutcome
-	err = uc.deps.System.System(ctx, func(ctx context.Context) error {
-		outcome, err = uc.deps.SignUps.Resend(ctx, emailHash, issued.hash, expiresAt)
-		return err
+	now := uc.deps.Clock.Now()
+	return uc.deps.System.System(ctx, func(ctx context.Context) error {
+		outcome, err := uc.deps.SignUps.Resend(ctx, emailHash, issued.hash, now.Add(CodeTTL))
+		if err != nil {
+			return fmt.Errorf("auth: resend code: %w", err)
+		}
+		if outcome == CodeUnchanged {
+			return nil
+		}
+		return enqueue(ctx, uc.deps.Outbox, OutboundEmail{Kind: EmailVerificationCode, To: email, Code: issued.code}, now)
 	})
-	if err != nil {
-		return fmt.Errorf("auth: resend code: %w", err)
-	}
-	if outcome != CodeUnchanged {
-		uc.mailer.sendCode(ctx, email, issued.code)
-	}
-	return nil
 }

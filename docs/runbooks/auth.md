@@ -226,15 +226,19 @@ Then run the migrations as `cc_owner`, and check the runtime role with
 verified by whoever flips the flag and recorded in the deploy PR. Source:
 [M1-17 §5](../reviews/M1-17-security-gate.md#5-preconditions-to-enable-module_auth-in-staging-or-production).
 
-- [ ] **P-1 Real email provider, asynchronous.** The M1-06 adapter sits behind an outbox: the
-      request path never waits on the provider and its answer never changes when the provider
-      fails. Re-run the register/resend timing probe against staging: medians within noise.
+- [ ] **P-1 Real email provider, asynchronous.** The outbox is in place (migration
+      `20261023100000_auth_email_outbox`, §7): register and resend only queue the email and the
+      worker's `auth_email_delivery` job sends it, so the request path never waits on the
+      provider and its answer never changes when the provider fails. Still open: the provider
+      adapter behind `EmailSender` (owner decision OB2), a worker running in the environment,
+      and a re-run of the register/resend timing probe against staging (medians within noise).
 - [ ] **P-2 `cc_auth_definer` exists** (§5) before the M1 migrations run, and
       `check-runtime-role.sql` passes for `cc_app`.
 - [ ] **P-3 `APP_ENV` is not `dev`** (in `dev` the verification codes are logged), and
       `TRUSTED_PROXY_HOPS` equals the real number of proxies appending to `X-Forwarded-For`.
 - [ ] **P-4 Keys from Secret Manager**: `AUTH_EMAIL_PEPPER`, `AUTH_EMAIL_KEY`,
-      `AUTH_CODE_KEY`, `AUTH_ACCESS_TOKEN_KEY` and `DATABASE_URL` are injected at runtime,
+      `AUTH_CODE_KEY`, `AUTH_ACCESS_TOKEN_KEY`, `AUTH_OUTBOX_KEY` (the API **and** the
+      worker, same value) and `DATABASE_URL` are injected at runtime,
       distinct per environment, never the local values, and never plain text in the image
       or service YAML. Run the key rotation (§1) once in staging.
 - [ ] **P-5 Legal documents reviewed by a lawyer** (OB10): real URLs and versions in
@@ -250,3 +254,36 @@ verified by whoever flips the flag and recorded in the deploy PR. Source:
 
 Then flip it with the environment's flag tooling (`cmd/flags` as `cc_owner`, credentials from
 Secret Manager). Check that `GET /v1/flags` lists `module_auth` within 5 s.
+
+## 7. Auth email outbox (`auth_email_delivery`)
+
+Register and resend never send an email themselves: in the request's own transaction they
+queue it in `auth_email_outbox` and answer. The worker job `auth_email_delivery` (every 5 s on
+the leader worker) claims due rows, sends them through `EmailSender` and deletes each one.
+
+| Item | Value |
+|---|---|
+| Row | One sealed payload (AES-256-GCM under `AUTH_OUTBOX_KEY`, the row id as additional data): kind, address and code. The database never sees which kind a row is, nor an email hash |
+| Access | `ENABLE` + `FORCE` RLS. `cc_app` may only run `auth_email_outbox_enqueue`; `cc_worker` only `auth_email_outbox_claim` / `_finish` / `_retry` (definer functions owned by `cc_auth_definer`) |
+| Life | Deleted on delivery, on the last failed attempt, and at expiry (the code's 15 min): by the claim on every run and by the records purge |
+| Retries | 5 attempts at most; 30 s, 1 min, 2 min, 4 min between them |
+| Split brain | A claim leases rows for 2 min under a token (`FOR UPDATE SKIP LOCKED`); finish and retry are compare-and-set on it. A run lasts at most 5 s, far inside its lease |
+| Logs | `"msg":"auth email delivery finished"` with counts only: `delivered`, `retried`, `dropped`, `lost` (a claim another run took after its lease). Never an address, a code or a kind |
+| Keys | `AUTH_OUTBOX_KEY` (32 bytes, hex) and `AUTH_OUTBOX_KEY_ID` (default 1), required by the API and the worker in every environment, dev included. Locally, `make init-env` generates `CC_AUTH_OUTBOX_KEY`; an older `infra/local/.env` needs the line added by hand |
+
+"A user got no code": check the worker is up and leading (`"msg":"worker started"`), then the
+delivery counts. Many `retried` / `dropped` mean the provider is failing; a row that never opens
+(`auth email dropped: unreadable payload`) means the API and the worker hold different
+`AUTH_OUTBOX_KEY` values. The user asks for a resend once the worker is fixed: queued codes expire
+with the code, so nothing old is sent late.
+
+Queue depth, without reading any payload (as `cc_owner`, FORCE RLS lifted in a transaction that
+is rolled back):
+
+```sql
+BEGIN;
+ALTER TABLE auth_email_outbox NO FORCE ROW LEVEL SECURITY;
+SELECT count(*) AS queued, count(*) FILTER (WHERE attempts > 0) AS retried,
+       min(created_at) AS oldest FROM auth_email_outbox;
+ROLLBACK;
+```
