@@ -128,8 +128,7 @@ func TestContract_expenseWithholdings(t *testing.T) {
 			rec := serve(create, http.MethodPost, expensesPath(withholdingTaxpayerPM), usW6Body(t, clientExpenseID(1), nil), ana)
 			require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 			e := decodeExpense(t, rec)
-			require.NotNil(t, e.Withholding)
-			w := *e.Withholding
+			w := e.Withholding
 			assert.EqualValues(t, 400000, w.IsrCents)
 			assert.EqualValues(t, 426667, w.IvaCents)
 			assert.Equal(t, "0.1", w.IsrRate)
@@ -161,7 +160,6 @@ func TestContract_expenseWithholdings(t *testing.T) {
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			e := decodeExpense(t, rec)
 			assert.Nil(t, e.SupplierRegime, "moving off pf_with_activity clears the regime")
-			require.NotNil(t, e.Withholding)
 			assert.EqualValues(t, 0, e.Withholding.IsrCents+e.Withholding.IvaCents)
 			assert.Nil(t, e.Withholding.RemitDueOn)
 			assert.Empty(t, e.Warnings)

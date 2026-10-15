@@ -6,7 +6,6 @@ import (
 
 	"github.com/romodevx/control-contable/backend/internal/incomes/domain"
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
-	"github.com/romodevx/control-contable/backend/internal/platform/money"
 )
 
 // Query parameter names getIncomeDefaults reports.
@@ -18,48 +17,30 @@ const (
 // ivaTreatments are the contract's IvaRate values in contract order.
 var ivaTreatments = []fiscal.IVARate{fiscal.IVARate16, fiscal.IVARate8, fiscal.IVARate0, fiscal.IVAExempt}
 
-// DefaultsQuery is getIncomeDefaults: the path's taxpayer, the regime and
-// counterparty, the day ("YYYY-MM-DD"; "" is today) and the 625 activity
-// (empty: the taxpayer's only one, if any).
+// DefaultsQuery is getIncomeDefaults: the path's taxpayer, the regime, the
+// day ("YYYY-MM-DD"; "" is today) and the 625 activity (empty: the
+// taxpayer's only one, if any).
 type DefaultsQuery struct {
 	TaxpayerID       string
 	Regime           fiscal.RegimeCode
-	Counterparty     domain.Counterparty
 	On               string
 	PlatformActivity domain.PlatformActivity
 }
 
-// SuggestedRate is a suggested fraction; Known is false when there is no
-// suggestion (the contract's null).
-type SuggestedRate struct {
-	Rate  money.Rate
-	Known bool
-}
-
-// WithholdingDefault is whether a tax may be withheld and its suggested
-// rate. An allowed withholding may have no suggestion.
-type WithholdingDefault struct {
-	Allowed   bool
-	Suggested SuggestedRate
-}
-
 // Defaults is the income form's prefill (contract IncomeDefaults): the IVA
-// rates valid on the day, the suggested one, the withholdings (ISR as a
-// fraction of the amount, IVA of the IVA) and the resolved 625 activity.
+// rates valid on the day, the suggested one, the resolved 625 activity and
+// the withholding facts to preselect. Withholdings are derived (ADR-0008),
+// so there is no withholding rate to suggest.
 type Defaults struct {
 	IVARatesAllowed  []fiscal.IVARate
 	SuggestedIVARate fiscal.IVARate
-	// ISR and IVA are the deprecated suggestions (ADR-0008), served for the
-	// shipped form until WH-11.
-	ISR              WithholdingDefault
-	IVA              WithholdingDefault
 	PlatformActivity domain.PlatformActivity
 	LastUsed         LastFacts
 }
 
 // Defaults answers getIncomeDefaults (MODULE-incomes OQ-7): the dated rates
-// of the catalog for the taxpayer's person type, the regime and its 625
-// options, the counterparty and the day. A read: allowed for a read-only
+// of the catalog for the regime, its 625 activities and the day, and the
+// last-used withholding facts. A read: allowed for a read-only
 // user and an archived taxpayer. The regime must be held on the day (422
 // regime_not_active), read from the profile's windows: a read-only unit of
 // work takes no lock.
@@ -82,7 +63,7 @@ func (uc *Incomes) Defaults(ctx context.Context, userID string, q DefaultsQuery)
 		if !ok {
 			return regimeNotHeldOn(fieldRegime)
 		}
-		if out, err = uc.defaults(profile, held, q, on); err != nil {
+		if out, err = uc.defaults(held, q, on); err != nil {
 			return err
 		}
 		out.LastUsed, err = uc.lastUsed(ctx, taxpayerID, profile.PersonType, held.Code)
@@ -116,9 +97,6 @@ func (uc *Incomes) defaultsDay(q DefaultsQuery) (fiscal.Date, error) {
 	var vs fiscal.Violations
 	if q.Regime == "" {
 		vs.Add(fieldRegime, fiscal.ErrRequired)
-	}
-	if !q.Counterparty.Valid() {
-		vs.Add(domain.FieldCounterpartyType, fiscal.ErrInvalid)
 	}
 	switch {
 	case q.PlatformActivity == "":
@@ -157,31 +135,18 @@ func (uc *Incomes) parseDefaultsDay(raw string, today fiscal.Date) (fiscal.Date,
 }
 
 // defaults resolves the prefill for a held regime on a valid day.
-func (uc *Incomes) defaults(profile TaxpayerProfile, held RegimeProfile, q DefaultsQuery, on fiscal.Date) (Defaults, error) {
+func (uc *Incomes) defaults(held RegimeProfile, q DefaultsQuery, on fiscal.Date) (Defaults, error) {
 	activity, err := defaultActivity(held, q.PlatformActivity)
 	if err != nil {
 		return Defaults{}, err
 	}
-	payee := domain.Payee{
-		PersonType: profile.PersonType, Regime: held.Code,
-		PlatformActivities: held.PlatformActivities, RFCGivenToPlatform: held.RFCGivenToPlatform,
-	}
-	policy := domain.PolicyFor(payee, q.Counterparty, policyActivity(held, activity))
-	isr := WithholdingDefault{Allowed: policy.ISR.Allowed}
-	if activity != "" || held.Code != fiscal.RegimePlatforms {
-		isr.Suggested = uc.suggestedRate(policy.ISR.Key, on)
-	}
 	allowed := uc.allowedIVARates(on)
-	return Defaults{
-		IVARatesAllowed: allowed, SuggestedIVARate: suggestedIVARate(allowed),
-		ISR: isr, IVA: WithholdingDefault{Allowed: policy.IVA.Allowed, Suggested: shareRate(policy.IVA.Share)},
-		PlatformActivity: activity,
-	}, nil
+	return Defaults{IVARatesAllowed: allowed, SuggestedIVARate: suggestedIVARate(allowed), PlatformActivity: activity}, nil
 }
 
-// defaultActivity is the 625 activity the ISR suggestion is for: the chosen
-// one, which the taxpayer must hold (422 activity_not_held), else the only
-// one held, else none.
+// defaultActivity is the 625 activity to preselect: the chosen one, which
+// the taxpayer must hold (422 activity_not_held), else the only one held,
+// else none.
 func defaultActivity(held RegimeProfile, chosen domain.PlatformActivity) (domain.PlatformActivity, error) {
 	if held.Code != fiscal.RegimePlatforms {
 		return "", nil
@@ -198,26 +163,6 @@ func defaultActivity(held RegimeProfile, chosen domain.PlatformActivity) (domain
 		return held.PlatformActivities[0], nil
 	}
 	return "", nil
-}
-
-// policyActivity is the activity whose policy decides what is allowed.
-// With several activities and none chosen, any held one does: the activity
-// only changes the ISR rate, which then has no suggestion.
-func policyActivity(held RegimeProfile, activity domain.PlatformActivity) domain.PlatformActivity {
-	if activity == "" && len(held.PlatformActivities) > 0 {
-		return held.PlatformActivities[0]
-	}
-	return activity
-}
-
-// suggestedRate is the catalog rate of key on day on; no key, or no rate
-// in force that day, is no suggestion.
-func (uc *Incomes) suggestedRate(key fiscal.RateKey, on fiscal.Date) SuggestedRate {
-	if key == "" {
-		return SuggestedRate{}
-	}
-	r, ok := uc.deps.Rates.Rate(key, on)
-	return SuggestedRate{Rate: r, Known: ok}
 }
 
 // allowedIVARates are the treatments fiscal.CheckIVA accepts on day on.
@@ -238,16 +183,6 @@ func suggestedIVARate(allowed []fiscal.IVARate) fiscal.IVARate {
 		return fiscal.IVARate16
 	}
 	return allowed[0]
-}
-
-// shareRate is a legal share as a Rate rounded half up to its six decimals
-// (2/3 is 0.666667); the zero Share is no suggestion.
-func shareRate(s fiscal.Share) SuggestedRate {
-	if s.IsZero() {
-		return SuggestedRate{}
-	}
-	scaled := (2*s.Num*money.RateScale + s.Den) / (2 * s.Den)
-	return SuggestedRate{Rate: money.Rate(scaled), Known: true}
 }
 
 // holding returns the regime the profile holds in period.

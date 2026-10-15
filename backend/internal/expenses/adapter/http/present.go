@@ -42,9 +42,6 @@ func toCreateInput(userID, taxpayerID string, body *gen.ExpenseCreate) (usecase.
 	if body == nil {
 		return in, nil
 	}
-	if err := rejectTypedWithholdings(body.IsrWithheldCents, body.IvaWithheldCents); err != nil {
-		return usecase.CreateInput{}, err
-	}
 	paidOn, err := toDate(body.PaidOn)
 	if err != nil {
 		return usecase.CreateInput{}, err
@@ -79,9 +76,6 @@ func toPatch(body *gen.ExpenseUpdate) (usecase.Patch, error) {
 	var p usecase.Patch
 	if body == nil {
 		return p, nil
-	}
-	if err := rejectTypedWithholdings(body.IsrWithheldCents, body.IvaWithheldCents); err != nil {
-		return usecase.Patch{}, err
 	}
 	if body.PaidOn != nil {
 		d, err := toDate(*body.PaidOn)
@@ -237,7 +231,7 @@ func toExpense(e usecase.Expense) (gen.Expense, error) {
 		CfdiUuid:         nullableText(e.CFDIUUID.String()),
 		IsrWithheldCents: int64(e.Withholding.ISR), IvaWithheldCents: int64(e.Withholding.IVA),
 		SupplierKind: kind, SupplierRegime: regime, OperationKind: operation,
-		ResidentialRent: &e.Supplier.ResidentialRent, Withholding: withholding,
+		ResidentialRent: e.Supplier.ResidentialRent, Withholding: withholding,
 		Description: nullableText(e.Description), Deductible: e.Deductible,
 		DeductibleSource: gen.DeductibleSource(e.Source), Warnings: toWarnings(e.Warnings),
 		Legend: gen.Legend(e.Legend), CreatedAt: e.CreatedAt, UpdatedAt: e.UpdatedAt,

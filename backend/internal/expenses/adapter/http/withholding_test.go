@@ -1,6 +1,7 @@
 package expenseshttp_test
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -83,52 +84,34 @@ func TestGetExpense_personaFisicaWithholdsNothing(t *testing.T) {
 	assert.Equal(t, "none", withholding["withholder"])
 	assert.Nil(t, withholding["remit_due_on"])
 	assert.InDelta(t, 58000, withholding["net_cents"], 0)
-	assert.NotContains(t, body, "supplier_kind")
-}
-
-// A record stored before WH-07 has no derivation: withholding is absent
-// until the WH-08 backfill.
-func TestGetExpense_legacyRecordHasNoWithholding(t *testing.T) {
-	e := sample(t)
-	e.Withholding = fiscal.WithholdingRecord{Withholdings: fiscal.Withholdings{ISR: 100}}
-	fake := &fakeExpenses{expense: e}
-
-	res, err := expenseshttp.NewHandler(fake).GetExpense(authed(t), gen.GetExpenseRequestObject{
-		TaxpayerId: uid(taxpayerID), ExpenseId: uid(expenseID),
-	})
-
-	require.NoError(t, err)
-	body := encode(t, res.(gen.GetExpense200JSONResponse).Body)
-	assert.NotContains(t, body, "withholding")
-	assert.InDelta(t, 100, body["isr_withheld_cents"], 0)
-}
-
-// US-W8: a typed amount, whatever its value, is the 400 a schema without
-// the field answers; the use case is never reached.
-func TestTypedWithholdingsAre400(t *testing.T) {
-	zero, some := int64(0), int64(1_000_00)
-	fake := &fakeExpenses{}
-	h := expenseshttp.NewHandler(fake)
-
-	_, createErr := h.CreateExpense(authed(t), gen.CreateExpenseRequestObject{
-		TaxpayerId: uid(taxpayerID), Body: &gen.ExpenseCreate{IsrWithheldCents: &zero, IvaWithheldCents: &some},
-	})
-	_, updateErr := h.UpdateExpense(authed(t), gen.UpdateExpenseRequestObject{
-		TaxpayerId: uid(taxpayerID), ExpenseId: uid(expenseID), Body: &gen.ExpenseUpdate{IvaWithheldCents: &zero},
-	})
-
-	for name, err := range map[string]error{"create": createErr, "update": updateErr} {
-		appErr, ok := err.(*apperr.Error) //nolint:errorlint // the adapter returns the *apperr.Error itself
-		require.True(t, ok, "%s: %T", name, err)
-		assert.Equal(t, apperr.CodeValidationFailed, appErr.Code, name)
-		for _, f := range appErr.Fields {
-			assert.Equal(t, "additionalProperties", f.Code, name)
-		}
+	for _, fact := range []string{"supplier_kind", "supplier_regime", "operation_kind"} {
+		require.Contains(t, body, fact, "required (nullable) since 0.12.0 (WH-12)")
+		assert.Nil(t, body[fact])
 	}
-	createFields := createErr.(*apperr.Error).Fields //nolint:errorlint // as above
-	assert.Equal(t, []string{"isr_withheld_cents", "iva_withheld_cents"}, []string{createFields[0].Field, createFields[1].Field})
-	assert.Equal(t, usecase.CreateInput{}, fake.create)
-	assert.Equal(t, usecase.UpdateInput{}, fake.update)
+	assert.Equal(t, false, body["residential_rent"])
+}
+
+// An expense the WH-08 backfill has not derived yet lacks the withholding
+// the contract requires since 0.12.0 (WH-12): showing it would break the
+// contract, so it is a server fault (500), never a partial body.
+func TestGetExpense_underivedRecordIsAServerFault(t *testing.T) {
+	for name, record := range map[string]fiscal.WithholdingRecord{
+		"no derivation":      {Withholdings: fiscal.Withholdings{ISR: 100}},
+		"unknown withholder": {RuleIDs: []fiscal.RuleID{fiscal.RuleISR0, fiscal.RuleIVA1}, TableVersion: fiscal.WithholdingTableVersion, Withholder: "nobody"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := sample(t)
+			e.Withholding = record
+
+			_, err := expenseshttp.NewHandler(&fakeExpenses{expense: e}).GetExpense(authed(t), gen.GetExpenseRequestObject{
+				TaxpayerId: uid(taxpayerID), ExpenseId: uid(expenseID),
+			})
+
+			require.Error(t, err)
+			_, isClient := errors.AsType[*apperr.Error](err)
+			assert.False(t, isClient)
+		})
+	}
 }
 
 func TestPreviewExpenseWithholdings_mapsTheQueryAndTheResult(t *testing.T) {

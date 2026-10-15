@@ -42,7 +42,7 @@ func clientIncomeID(n int) string { return fmt.Sprintf("0199d4a3-0000-7000-8000-
 var incomeOps = []struct{ method, target, body string }{
 	{http.MethodGet, incomesPath(incomeTaxpayerA, "?period=2026-09"), ""},
 	{http.MethodPost, incomesPath(incomeTaxpayerA), `{}`},
-	{http.MethodGet, incomesPath(incomeTaxpayerA, "/defaults?regime=612&counterparty_type=persona_moral"), ""},
+	{http.MethodGet, incomesPath(incomeTaxpayerA, "/defaults?regime=612"), ""},
 	{http.MethodGet, incomesPath(incomeTaxpayerA, "/", clientIncomeID(1)), ""},
 	{http.MethodPatch, incomesPath(incomeTaxpayerA, "/", clientIncomeID(1)), `{"description":"x"}`},
 	{http.MethodDelete, incomesPath(incomeTaxpayerA, "/", clientIncomeID(1)), ""},
@@ -56,13 +56,12 @@ func incomesPath(taxpayerID string, rest ...string) string {
 
 // incomeJSON is a create body: US-I1, 10,000.00 + IVA of professional
 // services from a 612 física to a persona moral; the server derives ISR
-// 1,000.00 and IVA 1,066.67 (ADR-0008). counterparty_type is still required
-// by the 0.10.1 schema and ignored. fields override or add
-// top-level members ("-name" drops one).
+// 1,000.00 and IVA 1,066.67 (ADR-0008). fields override or add top-level
+// members ("-name" drops one).
 func incomeJSON(t *testing.T, id string, fields map[string]any) string {
 	t.Helper()
 	body := map[string]any{
-		"regime_code": "612", "counterparty_type": "persona_moral", "counterparty_kind": "pm",
+		"regime_code": "612", "counterparty_kind": "pm",
 		"operation_kind": "professional_services", "amount_cents": 1000000, "iva_rate": "rate_16", "iva_cents": 160000,
 		"invoiced_on": "2026-09-05", "collected_on": "2026-09-10",
 	}
@@ -155,47 +154,38 @@ func TestContract_incomes(t *testing.T) {
 
 		t.Run("getIncomeDefaults: rates from the catalog; 400, 422, 404", func(t *testing.T) {
 			target := incomesPath(incomeTaxpayerA, "/defaults")
-			rec := serve(defaults, http.MethodGet, target+"?regime=612&counterparty_type=persona_moral&on=2026-09-12", "", ana)
+			rec := serve(defaults, http.MethodGet, target+"?regime=612&on=2026-09-12", "", ana)
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
 			var body gen.IncomeDefaults
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 			assert.Equal(t, []gen.IvaRate{"rate_16", "rate_8", "rate_0", "exempt"}, body.IvaRatesAllowed)
 			assert.Equal(t, gen.IvaRate("rate_16"), body.SuggestedIvaRate)
-			assert.True(t, body.IsrWithholdingAllowed) //nolint:staticcheck // SA1019: deprecated field tested until WH-11 (ADR-0008)
-			require.NotNil(t, body.LastUsed, "always sent since 0.10.1")
 			assert.Nil(t, body.LastUsed.CounterpartyKind, "no preselection the first time (OQ-W2)")
 			assert.Equal(t, gen.OperationKind("professional_services"), body.LastUsed.OperationKind, "612's default")
-			require.NotNil(t, body.IsrWithholdingRate)
-			assert.Equal(t, "0.1", *body.IsrWithholdingRate, "LISR 106: 10 %")
-			require.NotNil(t, body.IvaWithholdingRate)
-			assert.Equal(t, "0.666667", *body.IvaWithholdingRate, "RLIVA 3: 2/3 of the IVA")
 			assert.Nil(t, body.PlatformActivity)
+			assert.NotContains(t, rec.Body.String(), "withholding_rate", "removed in 0.12.0 (WH-11)")
 
-			rec = serve(defaults, http.MethodGet, target+"?regime=625&counterparty_type=plataforma&on=2026-09-12", "", ana)
+			rec = serve(defaults, http.MethodGet, target+"?regime=625&on=2026-09-12", "", ana)
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 			require.NotNil(t, body.PlatformActivity)
 			assert.Equal(t, gen.PlatformActivity("lodging"), *body.PlatformActivity, "the only activity is the default")
-			assert.Equal(t, "0.04", *body.IsrWithholdingRate)
-			assert.Equal(t, "0.5", *body.IvaWithholdingRate)
+			assert.True(t, body.LastUsed.ViaPlatform, "625 starts via a platform")
 
-			rec = serve(defaults, http.MethodGet, target+"?regime=612&counterparty_type=publico_general", "", ana)
+			rec = serve(defaults, http.MethodGet, target+"?regime=612", "", ana)
 			require.Equal(t, http.StatusOK, rec.Code, "on defaults to today: %s", rec.Body.String())
-			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
-			assert.False(t, body.IsrWithholdingAllowed) //nolint:staticcheck // SA1019: deprecated field tested until WH-11 (ADR-0008)
-			assert.Nil(t, body.IsrWithholdingRate)
 
 			refusals := []struct {
 				query   string
 				status  int
 				details []string
 			}{
-				{"?regime=626&counterparty_type=persona_moral", http.StatusUnprocessableEntity, []string{"regime/regime_not_active"}},
-				{"?regime=612&counterparty_type=persona_moral&on=2025-06-01", http.StatusBadRequest, []string{"on/out_of_range"}},
-				{"?regime=612&counterparty_type=persona_moral&platform_activity=lodging", http.StatusBadRequest,
+				{"?regime=626", http.StatusUnprocessableEntity, []string{"regime/regime_not_active"}},
+				{"?regime=612&on=2025-06-01", http.StatusBadRequest, []string{"on/out_of_range"}},
+				{"?regime=612&platform_activity=lodging", http.StatusBadRequest,
 					[]string{"platform_activity/not_for_regime"}},
-				{"?regime=625&counterparty_type=plataforma&platform_activity=goods_services", http.StatusUnprocessableEntity,
+				{"?regime=625&platform_activity=goods_services", http.StatusUnprocessableEntity,
 					[]string{"platform_activity/activity_not_held"}},
 			}
 			for _, r := range refusals {
@@ -203,12 +193,12 @@ func TestContract_incomes(t *testing.T) {
 				require.Equal(t, r.status, rec.Code, "%s: %s", r.query, rec.Body.String())
 				assert.Equal(t, r.details, details(t, rec), r.query)
 			}
-			rec = serve(defaults, http.MethodGet, target+"?counterparty_type=persona_moral", "", ana)
+			rec = serve(defaults, http.MethodGet, target, "", ana)
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
 			assert.Contains(t, details(t, rec), "regime/required")
-			rec = serve(defaults, http.MethodGet, target+"?regime=612&counterparty_type=persona_moral", "", bea)
+			rec = serve(defaults, http.MethodGet, target+"?regime=612", "", bea)
 			assert.Equal(t, http.StatusNotFound, rec.Code, "SE-3: another user's taxpayer")
-			rec = serve(defaults, http.MethodGet, target+"?regime=612&counterparty_type=persona_moral", "", "")
+			rec = serve(defaults, http.MethodGet, target+"?regime=612", "", "")
 			assert.Equal(t, http.StatusUnauthorized, rec.Code)
 		})
 
@@ -219,7 +209,6 @@ func TestContract_incomes(t *testing.T) {
 			assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
 			created := decodeIncome(t, rec)
 			assert.Equal(t, clientIncomeID(1), created.Id.String())
-			require.NotNil(t, created.Withholding, "derived and stored (ADR-0008)")
 			assert.EqualValues(t, 100000, created.Withholding.IsrCents)
 			assert.EqualValues(t, 106667, created.Withholding.IvaCents)
 			assert.EqualValues(t, 100000, created.IsrWithheldCents, "the read-only mirror")
@@ -259,7 +248,6 @@ func TestContract_incomes(t *testing.T) {
 			i := decodeIncome(t, rec)
 			assert.ElementsMatch(t, []string{"withholding_cpa_unverified@withholding", "duplicate_cfdi_uuid@cfdi_uuid"},
 				incomeWarnings(i))
-			require.NotNil(t, i.Withholding)
 			assert.True(t, i.Withholding.CpaUnverified, "US-W5: the federal government's 2/3 is ⚠️ A1, A2")
 			for _, w := range i.Warnings {
 				assert.NotEmpty(t, w.Message)
@@ -309,8 +297,9 @@ func TestContract_incomes(t *testing.T) {
 				assert.ElementsMatch(t, r.details, details(t, rec), r.name)
 			}
 
-			rec := serve(create, http.MethodPost, incomesPath(incomeTaxpayerA), incomeJSON(t, "", map[string]any{"-counterparty_type": nil}), ana)
-			assert.Equal(t, http.StatusBadRequest, rec.Code, "the contract's required counterparty_type")
+			rec := serve(create, http.MethodPost, incomesPath(incomeTaxpayerA), incomeJSON(t, "", map[string]any{"counterparty_type": "persona_moral"}), ana)
+			require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+			assert.Equal(t, []string{"counterparty_type/additionalProperties"}, details(t, rec), "removed in 0.12.0 (WH-11)")
 			rec = serve(create, http.MethodPost, incomesPath(incomeTaxpayerA), incomeJSON(t, "", map[string]any{"amount_cents": 0}), ana)
 			assert.Equal(t, http.StatusBadRequest, rec.Code, "minimum: 1 at the edge")
 			rec = serve(create, http.MethodPost, incomesPath(incomeTaxpayerA), incomeJSON(t, "", map[string]any{"user_id": actors.anaID}), ana)
@@ -404,11 +393,9 @@ func TestContract_incomes(t *testing.T) {
 			rec = serve(update, http.MethodPatch, target, `{"counterparty_kind":"pf_with_activity"}`, ana)
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			i = decodeIncome(t, rec)
-			require.NotNil(t, i.Withholding)
 			assert.EqualValues(t, 0, i.Withholding.IsrCents, "US-W9: an edit re-derives")
 			assert.EqualValues(t, 0, i.IvaWithheldCents)
 			assert.EqualValues(t, 1160000, i.Withholding.NetCents)
-			assert.Equal(t, gen.CounterpartyType("persona_fisica"), i.CounterpartyType, "the deprecated mirror") //nolint:staticcheck // SA1019: the mirror is served until WH-11 (ADR-0008)
 			rec = serve(update, http.MethodPatch, target, `{"counterparty_kind":"pm"}`, ana)
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		})
@@ -431,8 +418,7 @@ func TestContract_incomes(t *testing.T) {
 				},
 				TableVersion: "2026.1",
 			}
-			require.NotNil(t, created.Withholding)
-			assert.Equal(t, want, *created.Withholding)
+			assert.Equal(t, want, created.Withholding)
 
 			preview := contracttest.Op("previewIncomeWithholdings")
 			rec = serve(preview, http.MethodGet, incomesPath(incomeTaxpayerR,
@@ -524,7 +510,7 @@ func TestContract_incomes(t *testing.T) {
 			assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
 			rec = serve(list, http.MethodGet, incomesPath(incomeTaxpayerA, "?period=2026-09"), "", ana)
 			assert.Equal(t, http.StatusOK, rec.Code)
-			rec = serve(defaults, http.MethodGet, incomesPath(incomeTaxpayerA, "/defaults?regime=612&counterparty_type=persona_moral"), "", ana)
+			rec = serve(defaults, http.MethodGet, incomesPath(incomeTaxpayerA, "/defaults?regime=612"), "", ana)
 			assert.Equal(t, http.StatusOK, rec.Code)
 		})
 	})
@@ -581,7 +567,7 @@ func TestContract_incomesTrialCapAndReadOnly(t *testing.T) {
 	rec = c.ServeOp(t, contracttest.Op("getIncome"), env.handler, env.send(http.MethodGet, incomesPath(incomeTaxpayerA, "/", clientIncomeID(1)), "", token))
 	assert.Equal(t, http.StatusOK, rec.Code)
 	rec = c.ServeOp(t, contracttest.Op("getIncomeDefaults"), env.handler,
-		env.send(http.MethodGet, incomesPath(incomeTaxpayerA, "/defaults?regime=612&counterparty_type=persona_moral"), "", token))
+		env.send(http.MethodGet, incomesPath(incomeTaxpayerA, "/defaults?regime=612"), "", token))
 	assert.Equal(t, http.StatusOK, rec.Code)
 	rec = c.ServeOp(t, create, env.handler, env.send(http.MethodPost, incomesPath(incomeTaxpayerB), incomeJSON(t, "", nil), actors.bea))
 	assert.Equal(t, http.StatusCreated, rec.Code, "Bea's trial is her own")

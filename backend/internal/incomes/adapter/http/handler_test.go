@@ -133,8 +133,7 @@ func sample(t *testing.T) usecase.Income {
 			IVABasis: fiscal.IVABasisTwoThirds, Withholder: fiscal.WithholderReceptor,
 			RuleIDs: []fiscal.RuleID{fiscal.RuleISR5, fiscal.RuleIVA6}, TableVersion: "2026.1",
 		},
-		CounterpartyType: domain.CounterpartyMoral,
-		BookedOn:         day(t, "2026-09-10"), CreatedAt: stamp, UpdatedAt: stamp.Add(time.Hour),
+		BookedOn: day(t, "2026-09-10"), CreatedAt: stamp, UpdatedAt: stamp.Add(time.Hour),
 	}
 }
 
@@ -161,8 +160,8 @@ func TestCreateIncome_mapsTheRequestAndAnswers201(t *testing.T) {
 	resp, err := h.CreateIncome(authed(t), gen.CreateIncomeRequestObject{
 		TaxpayerId: uid(taxpayerID),
 		Body: &gen.IncomeCreate{
-			Id: &id, RegimeCode: "612", CounterpartyType: "persona_moral", AmountCents: 10_000_00,
-			CounterpartyKind: &kind, OperationKind: &operation, ViaPlatform: &via,
+			Id: &id, RegimeCode: "612", AmountCents: 10_000_00,
+			CounterpartyKind: kind, OperationKind: &operation, ViaPlatform: &via,
 			IvaRate: "rate_16", IvaCents: 1_600_00,
 			InvoicedOn: &invoiced, CollectedOn: &collected, CfdiUuid: &folioLower, Description: &description,
 		},
@@ -183,7 +182,7 @@ func TestCreateIncome_mapsTheRequestAndAnswers201(t *testing.T) {
 	require.True(t, ok, "%T", resp)
 	body := encode(t, created.Body)
 	assert.Equal(t, map[string]any{
-		"id": incomeID, "taxpayer_id": taxpayerID, "regime_code": "612", "counterparty_type": "persona_moral",
+		"id": incomeID, "taxpayer_id": taxpayerID, "regime_code": "612",
 		"counterparty_kind": "pm", "operation_kind": "professional_services", "residential_rent": false,
 		"via_platform": false,
 		"withholding": map[string]any{
@@ -217,14 +216,14 @@ func TestCreateIncome_idempotentRetryAnswers200AndOptionalsAbsent(t *testing.T) 
 	resp, err := h.CreateIncome(authed(t), gen.CreateIncomeRequestObject{
 		TaxpayerId: uid(taxpayerID),
 		Body: &gen.IncomeCreate{
-			RegimeCode: "625", CounterpartyType: "plataforma", AmountCents: 100, IvaRate: "exempt",
+			RegimeCode: "625", CounterpartyKind: "pm", AmountCents: 100, IvaRate: "exempt",
 		},
 	})
 
 	require.NoError(t, err)
 	assert.Equal(t, usecase.CreateInput{TaxpayerID: taxpayerID, Income: usecase.IncomeInput{
-		Regime: "625", Amount: 100, IVARate: fiscal.IVAExempt,
-	}}, fake.create, "no id: the server generates one; absent fields are zero; counterparty_type is ignored")
+		Regime: "625", Counterparty: fiscal.ReceptorPM, Amount: 100, IVARate: fiscal.IVAExempt,
+	}}, fake.create, "no id: the server generates one; absent fields are zero")
 	retried, ok := resp.(gen.CreateIncome200JSONResponse)
 	require.True(t, ok, "%T", resp)
 	body := encode(t, retried.Body)
@@ -311,14 +310,14 @@ func TestHandler_passesUseCaseErrorsThrough(t *testing.T) {
 func TestUpdateIncome_mergePatch(t *testing.T) {
 	fake := &fakeIncomes{result: usecase.WriteResult{Income: sample(t)}}
 	h := incomeshttp.NewHandler(fake)
-	regime, counterparty, rateValue := "601", gen.CounterpartyType("persona_moral"), gen.IvaRate("rate_8") //nolint:staticcheck // SA1019: the ignored deprecated member, tested until WH-11 (ADR-0008)
+	regime, rateValue := "601", gen.IvaRate("rate_8")
 	kind, operation, residential, via := gen.CounterpartyKind("gov_federal"), gen.OperationKind("scrap"), true, false
 	amount, iva := int64(2), int64(3)
 
 	resp, err := h.UpdateIncome(authed(t), gen.UpdateIncomeRequestObject{
 		TaxpayerId: uid(taxpayerID), IncomeId: uid(incomeID),
 		Body: &gen.IncomeUpdate{
-			RegimeCode: &regime, CounterpartyType: &counterparty, AmountCents: &amount, IvaRate: &rateValue,
+			RegimeCode: &regime, AmountCents: &amount, IvaRate: &rateValue,
 			CounterpartyKind: &kind, OperationKind: &operation, ResidentialRent: &residential, ViaPlatform: &via,
 			IvaCents:         &iva,
 			InvoicedOn:       nullable.NewNullableWithValue(genDate(2026, time.September, 1)),
@@ -440,8 +439,6 @@ func TestListIncomes_lastPageAndDefaults(t *testing.T) {
 func TestGetIncomeDefaults(t *testing.T) {
 	fake := &fakeIncomes{prefill: usecase.Defaults{
 		IVARatesAllowed: []fiscal.IVARate{fiscal.IVARate16, fiscal.IVARate0, fiscal.IVAExempt}, SuggestedIVARate: fiscal.IVARate16,
-		ISR:              usecase.WithholdingDefault{Allowed: true, Suggested: usecase.SuggestedRate{Rate: rate(t, "0.04"), Known: true}},
-		IVA:              usecase.WithholdingDefault{Allowed: true, Suggested: usecase.SuggestedRate{Rate: rate(t, "0.666667"), Known: true}},
 		PlatformActivity: domain.ActivityLodging,
 		LastUsed:         usecase.LastFacts{Operation: fiscal.OperationOther, ViaPlatform: true},
 	}}
@@ -450,21 +447,19 @@ func TestGetIncomeDefaults(t *testing.T) {
 
 	resp, err := h.GetIncomeDefaults(authed(t), gen.GetIncomeDefaultsRequestObject{
 		TaxpayerId: uid(taxpayerID),
-		Params:     gen.GetIncomeDefaultsParams{Regime: "625", CounterpartyType: "plataforma", On: &on, PlatformActivity: &activity},
+		Params:     gen.GetIncomeDefaultsParams{Regime: "625", On: &on, PlatformActivity: &activity},
 	})
 
 	require.NoError(t, err)
 	assert.Equal(t, callerID, fake.userID)
 	assert.Equal(t, usecase.DefaultsQuery{
-		TaxpayerID: taxpayerID, Regime: "625", Counterparty: domain.CounterpartyPlatform, On: "2026-09-12",
+		TaxpayerID: taxpayerID, Regime: "625", On: "2026-09-12",
 		PlatformActivity: domain.ActivityLodging,
 	}, fake.defaults)
 	got, ok := resp.(gen.GetIncomeDefaults200JSONResponse)
 	require.True(t, ok, "%T", resp)
 	assert.Equal(t, map[string]any{
 		"iva_rates_allowed": []any{"rate_16", "rate_0", "exempt"}, "suggested_iva_rate": "rate_16",
-		"isr_withholding_allowed": true, "isr_withholding_rate": "0.04",
-		"iva_withholding_allowed": true, "iva_withholding_rate": "0.666667",
 		"platform_activity": "lodging",
 		"last_used": map[string]any{
 			"counterparty_kind": nil, "operation_kind": "other", "residential_rent": false, "via_platform": true,
@@ -472,25 +467,19 @@ func TestGetIncomeDefaults(t *testing.T) {
 	}, encode(t, got.Body), "no counterparty preselected the first time (OQ-W2)")
 }
 
-func TestGetIncomeDefaults_noSuggestionsAndToday(t *testing.T) {
-	fake := &fakeIncomes{prefill: usecase.Defaults{
-		IVARatesAllowed: []fiscal.IVARate{fiscal.IVARate16}, SuggestedIVARate: fiscal.IVARate16,
-		ISR: usecase.WithholdingDefault{Allowed: true},
-	}}
+func TestGetIncomeDefaults_today(t *testing.T) {
+	fake := &fakeIncomes{prefill: usecase.Defaults{IVARatesAllowed: []fiscal.IVARate{fiscal.IVARate16}, SuggestedIVARate: fiscal.IVARate16}}
 	h := incomeshttp.NewHandler(fake)
 
 	resp, err := h.GetIncomeDefaults(authed(t), gen.GetIncomeDefaultsRequestObject{
-		TaxpayerId: uid(taxpayerID), Params: gen.GetIncomeDefaultsParams{Regime: "612", CounterpartyType: "persona_fisica"},
+		TaxpayerId: uid(taxpayerID), Params: gen.GetIncomeDefaultsParams{Regime: "612"},
 	})
 
 	require.NoError(t, err)
 	assert.Empty(t, fake.defaults.On, "on defaults to today in the use case")
 	assert.Empty(t, fake.defaults.PlatformActivity)
 	body := encode(t, resp.(gen.GetIncomeDefaults200JSONResponse).Body)
-	assert.Equal(t, true, body["isr_withholding_allowed"])
-	assert.Nil(t, body["isr_withholding_rate"], "allowed without a suggestion")
-	assert.Equal(t, false, body["iva_withholding_allowed"])
-	assert.Nil(t, body["iva_withholding_rate"])
+	assert.NotContains(t, body, "isr_withholding_rate", "removed in 0.12.0 (WH-11)")
 	assert.Nil(t, body["platform_activity"])
 }
 
@@ -584,51 +573,29 @@ func TestUnpresentableIncomeIsAServerFault(t *testing.T) {
 	}
 }
 
-// US-W8 / ADR-0008 amendment: a typed amount, whatever its value, is the
-// 400 a schema without the member gives; nothing reaches the use case.
-func TestWrites_refuseTypedWithholdings(t *testing.T) {
-	zero, some := int64(0), int64(5)
-	fake := &fakeIncomes{}
-	h := incomeshttp.NewHandler(fake)
+// An income the WH-08 backfill has not derived yet lacks the facts and the
+// withholding the contract requires since 0.12.0 (WH-11): showing it would
+// break the contract, so it is a server fault (500), never a partial body.
+func TestGetIncome_underivedRecordIsAServerFault(t *testing.T) {
+	for name, legacy := range map[string]func(*usecase.Income){
+		"no withholding": func(i *usecase.Income) {
+			i.Withholding = fiscal.WithholdingRecord{Withholdings: fiscal.Withholdings{ISR: 1, IVA: 2}}
+		},
+		"no counterparty": func(i *usecase.Income) { i.Counterparty = "" },
+		"no operation":    func(i *usecase.Income) { i.Operation = "" },
+	} {
+		t.Run(name, func(t *testing.T) {
+			income := sample(t)
+			legacy(&income)
+			h := incomeshttp.NewHandler(&fakeIncomes{income: income})
 
-	_, err := h.CreateIncome(authed(t), gen.CreateIncomeRequestObject{
-		TaxpayerId: uid(taxpayerID), Body: &gen.IncomeCreate{IsrWithheldCents: &zero, IvaWithheldCents: &some},
-	})
-	app, ok := errors.AsType[*apperr.Error](err)
-	require.True(t, ok, "%v", err)
-	assert.Equal(t, apperr.CodeValidationFailed, app.Code)
-	require.Len(t, app.Fields, 2)
-	assert.Equal(t, "isr_withheld_cents", app.Fields[0].Field)
-	assert.Equal(t, "additionalProperties", app.Fields[0].Code)
-	assert.Equal(t, "iva_withheld_cents", app.Fields[1].Field)
+			_, err := h.GetIncome(authed(t), gen.GetIncomeRequestObject{TaxpayerId: uid(taxpayerID), IncomeId: uid(incomeID)})
 
-	_, err = h.UpdateIncome(authed(t), gen.UpdateIncomeRequestObject{
-		TaxpayerId: uid(taxpayerID), IncomeId: uid(incomeID), Body: &gen.IncomeUpdate{IvaWithheldCents: &zero},
-	})
-	app, ok = errors.AsType[*apperr.Error](err)
-	require.True(t, ok, "%v", err)
-	assert.Equal(t, []apperr.FieldError{{Field: "iva_withheld_cents", Code: "additionalProperties",
-		Message: "Withholdings are derived by the server; do not send this field."}}, app.Fields)
-	assert.Empty(t, fake.userID, "no use case ran")
-}
-
-// An income stored before WH-06 (until the WH-08 backfill) has no facts and
-// no withholding: both are absent, the mirrors stay.
-func TestGetIncome_legacyRecord(t *testing.T) {
-	legacy := sample(t)
-	legacy.Counterparty, legacy.Operation = "", ""
-	legacy.Withholding = fiscal.WithholdingRecord{Withholdings: fiscal.Withholdings{ISR: 1, IVA: 2}}
-	h := incomeshttp.NewHandler(&fakeIncomes{income: legacy})
-
-	resp, err := h.GetIncome(authed(t), gen.GetIncomeRequestObject{TaxpayerId: uid(taxpayerID), IncomeId: uid(incomeID)})
-
-	require.NoError(t, err)
-	body := encode(t, resp.(gen.GetIncome200JSONResponse).Body)
-	assert.NotContains(t, body, "withholding")
-	assert.NotContains(t, body, "counterparty_kind")
-	assert.NotContains(t, body, "operation_kind")
-	assert.Equal(t, float64(1), body["isr_withheld_cents"])
-	assert.Equal(t, "persona_moral", body["counterparty_type"])
+			require.Error(t, err)
+			_, isClient := errors.AsType[*apperr.Error](err)
+			assert.False(t, isClient)
+		})
+	}
 }
 
 func TestPreviewIncomeWithholdings(t *testing.T) {

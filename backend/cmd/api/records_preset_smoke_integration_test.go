@@ -46,7 +46,7 @@ type recordProbe struct{ op, method, suffix, body string }
 func incomeProbes() []recordProbe {
 	return []recordProbe{
 		{"listIncomes", http.MethodGet, "/incomes?period=2026-09", ""},
-		{"getIncomeDefaults", http.MethodGet, "/incomes/defaults?regime=612&counterparty_type=persona_moral", ""},
+		{"getIncomeDefaults", http.MethodGet, "/incomes/defaults?regime=612", ""},
 		{"createIncome", http.MethodPost, "/incomes", `{}`},
 		{"getIncome", http.MethodGet, "/incomes/" + smokeIncomeID, ""},
 		{"updateIncome", http.MethodPatch, "/incomes/" + smokeIncomeID, `{"description":"Smoke"}`},

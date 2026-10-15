@@ -375,7 +375,6 @@ func TestCreate_PlatformActivityDefaultsAndReplays(t *testing.T) {
 	assert.True(t, got.Income.ViaPlatform, "625 sells via a platform by default")
 	assert.Equal(t, fiscal.OperationOther, got.Income.Operation, "the hidden question's default")
 	assert.Equal(t, fiscal.Withholdings{ISR: 600_00, IVA: 1_200_00}, got.Income.Withholding.Withholdings, "PF-625-02: 4 %, half the IVA")
-	assert.Equal(t, domain.CounterpartyPlatform, got.Income.CounterpartyType, "the deprecated mirror")
 
 	again, err := h.uc.Create(t.Context(), userA, create(incomeID, platformA, in))
 	require.NoError(t, err)
@@ -484,7 +483,6 @@ func TestCreate_DerivesAndStoresTheWithholding(t *testing.T) {
 	net, err := got.Income.Withholding.Net(got.Income.Amount, got.Income.IVA)
 	require.NoError(t, err)
 	assert.EqualValues(t, 104_083_33, net)
-	assert.Equal(t, domain.CounterpartyMoral, got.Income.CounterpartyType)
 	assert.Equal(t, got.Income.Withholding, h.store.rows[incomeID].Withholding, "stored, not derived on read")
 }
 

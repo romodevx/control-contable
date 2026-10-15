@@ -131,7 +131,6 @@ func TestUpdate_EveryFieldPatches(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, fiscal.ReceptorPFNoActivityOrPublic, got.Income.Counterparty)
 	assert.Equal(t, fiscal.OperationSaleOfGoods, got.Income.Operation)
-	assert.Equal(t, domain.CounterpartyPublic, got.Income.CounterpartyType)
 	assert.Equal(t, fiscal.IVAExempt, got.Income.IVARate)
 	assert.Equal(t, "2026-09-30", got.Income.BookedOn.String())
 	assert.Equal(t, "Venta", got.Income.Description)
@@ -146,7 +145,6 @@ func TestUpdate_ChangingTheCounterpartyReDerives(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, fiscal.Withholdings{}, got.Income.Withholding.Withholdings)
 	assert.Equal(t, []fiscal.RuleID{fiscal.RuleISR0, fiscal.RuleIVA1}, got.Income.Withholding.RuleIDs)
-	assert.Equal(t, domain.CounterpartyFisica, got.Income.CounterpartyType)
 }
 
 // An income stored before WH-06 has no facts: an edit must answer who was

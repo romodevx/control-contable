@@ -7,9 +7,9 @@
 //   - IncomeBasis.DateFor: which date each tax uses. ISR follows the
 //     regime's basis (accrual → invoiced_on, cash → collected_on); IVA is
 //     always cash (LIVA 1-B).
-//   - PolicyFor and WithholdingPolicy.Suggest: which withholdings a
-//     counterparty may make for a regime and person type, and the suggested
-//     amounts (ISR at a dated catalog rate, IVA as a legal share of the IVA).
+//   - The withholding facts (counterparty kind, operation, housing rent,
+//     via a platform) the kernel's fiscal.DeriveWithholdings reads; the
+//     withholding itself is derived, never entered (ADR-0008).
 //
 // The concepts incomes shares with expenses and the tax engine (Date, the
 // CFDI UUID, the IVA treatment and its ±IVATolerance check, the withholding

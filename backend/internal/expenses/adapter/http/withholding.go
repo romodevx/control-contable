@@ -1,7 +1,6 @@
 package expenseshttp
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -11,38 +10,13 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/expenses/domain"
 	"github.com/romodevx/control-contable/backend/internal/expenses/usecase"
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
-	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
 	"github.com/romodevx/control-contable/backend/internal/platform/money"
 )
 
-// codeAdditionalProperties is the detail a field the schema does not accept
-// gets: the router's code for an unknown property. The typed withholding
-// amounts answer it while they still sit in the schema for the shipped
-// Dart forms (0.10.1, ADR-0008 amendment).
-const codeAdditionalProperties = "additionalProperties"
-
-// errRetiredField is the cause of a retired request field.
-var errRetiredField = errors.New("expenses http: retired request field")
-
-// rejectTypedWithholdings refuses a body that carries the retired typed
-// amounts, whatever their value: withholdings are derived (ADR-0008, US-W8).
-func rejectTypedWithholdings(isr, iva *int64) error {
-	var fields []apperr.FieldError
-	if isr != nil {
-		fields = append(fields, retired(domain.FieldISRWithheldCents))
-	}
-	if iva != nil {
-		fields = append(fields, retired(domain.FieldIVAWithheldCents))
-	}
-	if len(fields) == 0 {
-		return nil
-	}
-	return apperr.Wrap(errRetiredField, apperr.CodeValidationFailed, msgInvalidInput).WithFields(fields...)
-}
-
-func retired(field string) apperr.FieldError {
-	return apperr.FieldError{Field: field, Code: codeAdditionalProperties, Message: msgFieldInvalid}
-}
+// errNotDerived reports a record or a preview without a derivation: an
+// expense stored before WH-07 that the WH-08 backfill has not derived, or
+// a use case fault. Either way a server fault, never a client error.
+var errNotDerived = fmt.Errorf("expenses http: expense without a derivation: %w", fiscal.ErrInvalidParameter)
 
 // supplierOf maps the contract's optional supplier facts.
 func supplierOf(kind *gen.SupplierKind, regime *gen.SupplierRegime, operation *gen.OperationKind, residential *bool) domain.Supplier {
@@ -69,20 +43,20 @@ var withholders = map[fiscal.Withholder]gen.Withholder{
 	fiscal.WithholderNone:     gen.WithholderNone,
 }
 
-// toWithholding is the contract's Withholding of a stored derivation, or
-// nil for a record stored before WH-07 (the WH-08 backfill derives it).
-func toWithholding(w fiscal.WithholdingRecord, subtotal, iva money.Cents, due fiscal.Date) (*gen.Withholding, error) {
+// toWithholding is the contract's Withholding of a stored or previewed
+// derivation (ADR-0008); errNotDerived without one (0.12.0 requires it).
+func toWithholding(w fiscal.WithholdingRecord, subtotal, iva money.Cents, due fiscal.Date) (gen.Withholding, error) {
 	withholder, known := withholders[w.Withholder]
 	if !w.Derived() || !known {
-		return nil, nil
+		return gen.Withholding{}, errNotDerived
 	}
 	net, err := w.Net(subtotal, iva)
 	if err != nil {
-		return nil, err
+		return gen.Withholding{}, err
 	}
 	remit, err := contractDate(due)
 	if err != nil {
-		return nil, err
+		return gen.Withholding{}, err
 	}
 	ids := make([]gen.WithholdingRuleId, 0, len(w.RuleIDs))
 	for _, id := range w.RuleIDs {
@@ -96,7 +70,7 @@ func toWithholding(w fiscal.WithholdingRecord, subtotal, iva money.Cents, due fi
 	for _, l := range lines {
 		explanations = append(explanations, gen.WithholdingExplanation{RuleId: string(l.RuleID), Text: l.Text})
 	}
-	return &gen.Withholding{
+	return gen.Withholding{
 		IsrCents: int64(w.ISR), IvaCents: int64(w.IVA), IsrRate: w.ISRRate.String(),
 		IvaBasis: gen.WithholdingBasis(w.IVABasis), Withholder: withholder, NetCents: int64(net),
 		RemitDueOn: remit, RuleIds: ids, Explanations: explanations, TableVersion: w.TableVersion,
@@ -156,10 +130,7 @@ func toPreviewInput(userID string, req gen.PreviewExpenseWithholdingsRequestObje
 func toPreview(p usecase.Preview) (gen.WithholdingPreview, error) {
 	w, err := toWithholding(p.Withholding, p.Subtotal, p.IVA, p.RemitDueOn)
 	if err != nil {
-		return gen.WithholdingPreview{}, err
+		return gen.WithholdingPreview{}, fmt.Errorf("expenses http: preview: %w", err)
 	}
-	if w == nil {
-		return gen.WithholdingPreview{}, fmt.Errorf("expenses http: preview without a derivation: %w", fiscal.ErrInvalidParameter)
-	}
-	return gen.WithholdingPreview{Withholding: *w, Warnings: toWarnings(p.Warnings)}, nil
+	return gen.WithholdingPreview{Withholding: w, Warnings: toWarnings(p.Warnings)}, nil
 }
