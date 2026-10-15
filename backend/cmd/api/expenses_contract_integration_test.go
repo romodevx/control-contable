@@ -248,8 +248,10 @@ func TestContract_expenses(t *testing.T) {
 					http.StatusBadRequest, []string{"cfdi_uuid/has_cfdi_mismatch"}},
 				{"a regime the taxpayer does not hold", expenseJSON(t, "", map[string]any{"regime_code": "626"}),
 					http.StatusUnprocessableEntity, []string{"regime_code/regime_not_active"}},
-				{"a física withholding", expenseJSON(t, "", map[string]any{"isr_withheld_cents": 1000}),
-					http.StatusUnprocessableEntity, []string{"isr_withheld_cents/withholding_not_applicable"}},
+				{"US-W8: a typed withholding", expenseJSON(t, "", map[string]any{"isr_withheld_cents": 1000}),
+					http.StatusBadRequest, []string{"isr_withheld_cents/additionalProperties"}},
+				{"US-W7: a física names a supplier", expenseJSON(t, "", map[string]any{"supplier_kind": "pm"}),
+					http.StatusUnprocessableEntity, []string{"supplier_kind/supplier_not_applicable"}},
 			}
 			for _, r := range refusals {
 				rec := serve(create, http.MethodPost, expensesPath(expenseTaxpayerA), r.body, ana)

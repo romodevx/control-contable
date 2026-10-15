@@ -53,13 +53,18 @@ func TestGolden_pm601IVAEnteredThroughTheAPI(t *testing.T) {
 		"isr_withheld_cents": 0, "iva_withheld_cents": 0,
 		"invoiced_on": "2026-06-10", "collected_on": "2026-06-20",
 	}))
+	// Since WH-07 the server derives the fees' withholdings from the
+	// supplier (a 612 lawyer: ISR 10 %, 2/3 of the IVA) and credits only the
+	// IVA paid in June (8,000.00 − 5,333.33); the withheld part is credited
+	// in July (MODULE-withholdings §4.2, WH-09). The golden's 200,000.00 is
+	// the paid part, so the merchandise brings the paid IVA to it.
 	post(expensesPath(taxpayer), expenseJSON(t, "", map[string]any{
 		"regime_code": "601", "category_code": "servicios_profesionales", "amount_cents": 5_000_000, "iva_cents": 800_000,
-		"isr_withheld_cents": 500_000, "iva_withheld_cents": 533_333, "paid_on": "2026-06-15",
+		"supplier_kind": "pf_with_activity", "supplier_regime": "612", "paid_on": "2026-06-15",
 	}))
 	post(expensesPath(taxpayer), expenseJSON(t, "", map[string]any{
-		"regime_code": "601", "category_code": "mercancia", "amount_cents": 120_000_000, "iva_cents": 19_200_000,
-		"paid_on": "2026-06-15",
+		"regime_code": "601", "category_code": "mercancia", "amount_cents": 123_333_331, "iva_cents": 19_733_333,
+		"supplier_kind": "pm", "paid_on": "2026-06-15",
 	}))
 	inputs := env.do(env.send(http.MethodPut, taxInputsTarget(taxpayer, "601", 2026), pm601IVAInputs, token))
 	require.Equal(t, http.StatusOK, inputs.Code, inputs.Body.String())

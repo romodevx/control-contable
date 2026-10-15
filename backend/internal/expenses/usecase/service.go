@@ -33,7 +33,10 @@ type Deps struct {
 	Expenses   ExpenseStore
 	Categories CategoryCatalog
 	Parameters Parameters
-	Clock      clock.Clock
+	// Withholdings are the kernel's dated withholding rates
+	// (fiscal.DeriveWithholdings, ADR-0008).
+	Withholdings fiscal.WithholdingCatalog
+	Clock        clock.Clock
 	// NewID generates an expense id when the client sends none; nil means
 	// uuid v7 (data-model: time-ordered keys).
 	NewID func() (string, error)
@@ -143,7 +146,8 @@ func view(e StoredExpense, warnings []domain.Warning) Expense {
 	return Expense{
 		ID: e.ID, TaxpayerID: e.TaxpayerID, Regime: e.Regime, Category: e.Category,
 		Amount: e.Amount, IVARate: e.IVARate, IVA: e.IVA, PaymentMethod: e.PaymentMethod, PaidOn: e.PaidOn,
-		HasCFDI: e.HasCFDI, CFDIUUID: e.CFDIUUID, Withheld: e.Withheld, Description: e.Description,
+		HasCFDI: e.HasCFDI, CFDIUUID: e.CFDIUUID, Supplier: e.Supplier, Withholding: e.Withholding,
+		RemitDueOn: domain.RemittanceDue(e.Withholding, e.PaidOn), Description: e.Description,
 		Deductible: e.Deductible, Source: source, Warnings: warnings, Legend: domain.Legend,
 		CreatedAt: e.CreatedAt, UpdatedAt: e.UpdatedAt,
 	}

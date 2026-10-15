@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/romodevx/control-contable/backend/internal/expenses/domain"
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
 )
@@ -72,17 +73,17 @@ const (
 
 // detailMessages are the field messages of each details[].code.
 var detailMessages = map[string]string{
-	fiscal.ErrRequired.Detail():                 "This field is required.",
-	fiscal.ErrInvalid.Detail():                  msgFieldInvalid,
-	fiscal.ErrMustBePositive.Detail():           "This amount must be greater than zero.",
-	fiscal.ErrOutOfRange.Detail():               "This value is out of range.",
-	fiscal.ErrRateNotValidOnDate.Detail():       "This IVA rate is not valid on the payment date.",
-	fiscal.ErrIVAAmountMismatch.Detail():        "The IVA does not match the rate.",
-	fiscal.ErrWithholdingNotApplicable.Detail(): "Only a persona moral withholds from its suppliers.",
-	fiscal.ErrWithholdingExceedsBase.Detail():   "The withholding exceeds its base.",
-	"unknown_category":                          "This category does not exist.",
-	"has_cfdi_mismatch":                         "A folio fiscal needs has_cfdi to be true.",
-	DetailTooLong:                               "This text is too long.",
+	fiscal.ErrRequired.Detail():              "This field is required.",
+	fiscal.ErrInvalid.Detail():               msgFieldInvalid,
+	fiscal.ErrMustBePositive.Detail():        "This amount must be greater than zero.",
+	fiscal.ErrOutOfRange.Detail():            "This value is out of range.",
+	fiscal.ErrRateNotValidOnDate.Detail():    "This IVA rate is not valid on the payment date.",
+	fiscal.ErrIVAAmountMismatch.Detail():     "The IVA does not match the rate.",
+	domain.ErrSupplierNotApplicable.Detail(): "Only a persona moral withholds from its suppliers.",
+	domain.ErrResidentialRentExempt.Detail(): "Housing rent is exempt from IVA.",
+	"unknown_category":                       "This category does not exist.",
+	"has_cfdi_mismatch":                      "A folio fiscal needs has_cfdi to be true.",
+	DetailTooLong:                            "This text is too long.",
 }
 
 func detailMessage(code string) string {

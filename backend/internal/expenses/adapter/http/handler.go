@@ -28,6 +28,7 @@ type ExpenseManager interface {
 	Delete(ctx context.Context, userID, taxpayerID, expenseID string) error
 	Restore(ctx context.Context, userID, taxpayerID, expenseID string) (usecase.Expense, error)
 	Categories(ctx context.Context, in usecase.CategoriesInput) (usecase.CategoryList, error)
+	Preview(ctx context.Context, in usecase.PreviewInput) (usecase.Preview, error)
 }
 
 // Handler implements the module_expenses operations of
@@ -66,6 +67,26 @@ func (h *Handler) ListExpenseCategories(ctx context.Context, req gen.ListExpense
 	return gen.ListExpenseCategories200JSONResponse{
 		Body: toCategoryList(list),
 	}, nil
+}
+
+// PreviewExpenseWithholdings implements gen.StrictServerInterface
+// (GET /v1/taxpayers/{taxpayerId}/expenses/withholding-preview): what the
+// matching create would derive, nothing stored (ADR-0008 §4). The query
+// carries amounts only; nothing of it is logged.
+func (h *Handler) PreviewExpenseWithholdings(ctx context.Context, req gen.PreviewExpenseWithholdingsRequestObject) (gen.PreviewExpenseWithholdingsResponseObject, error) {
+	userID, ok := caller(ctx)
+	if !ok {
+		return gen.PreviewExpenseWithholdings401JSONResponse{UnauthorizedJSONResponse: unauthorized(ctx)}, nil
+	}
+	preview, err := h.expenses.Preview(ctx, toPreviewInput(userID, req))
+	if err != nil {
+		return nil, err
+	}
+	body, err := toPreview(preview)
+	if err != nil {
+		return nil, err
+	}
+	return gen.PreviewExpenseWithholdings200JSONResponse{Body: body}, nil
 }
 
 // ListExpenses implements gen.StrictServerInterface

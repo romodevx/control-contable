@@ -66,6 +66,9 @@ func (u *Expenses) restore(ctx context.Context, userID string, e StoredExpense, 
 	if err != nil {
 		return Expense{}, err
 	}
+	if _, err := u.deps.Expenses.Update(ctx, stored(e, e.Regime, draftOf(e), e.Description, v.assessment)); err != nil {
+		return Expense{}, err
+	}
 	saved, err := u.deps.Expenses.SetDeleted(ctx, e.ID, false)
 	if err != nil {
 		return Expense{}, err

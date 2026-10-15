@@ -157,12 +157,14 @@ func TestWithholdingSuggestionsThroughTheAdapter(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, fiscal.Suggestion{Cents: 125_00, Known: true}, got.ISR)
 
-	rent, err := expenses.SuggestWithholdings(expenses.CategoryRent, expenses.Payer{PersonType: fiscal.PersonMoral}, amount, iva, on, c)
+	// Expenses derive what a persona moral withholds (WH-07): a 606
+	// landlord's rent, through the adapter's kernel view.
+	rent, err := fiscal.DeriveWithholdings(fiscal.WithholdingInput{
+		EmisorPersona: fiscal.PersonFisica, EmisorRegime: fiscal.RegimeRent, Receptor: fiscal.ReceptorPM,
+		Operation: fiscal.OperationRentRealEstate, Subtotal: amount, IVA: iva, IVARate: fiscal.IVARate16, On: on,
+	}, c.Withholdings())
 	require.NoError(t, err)
-	assert.Equal(t, fiscal.Suggested{
-		ISR: fiscal.Suggestion{Cents: 1_000_00, Known: true},
-		IVA: fiscal.Suggestion{Cents: 1_066_67, Known: true},
-	}, rent)
+	assert.Equal(t, fiscal.Withholdings{ISR: 1_000_00, IVA: 1_066_67}, rent.Withholdings)
 }
 
 func TestCashPaymentLimit(t *testing.T) {

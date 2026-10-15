@@ -54,6 +54,10 @@ func (stubExpenseUseCases) Categories(context.Context, expusecase.CategoriesInpu
 	return expusecase.CategoryList{}, errStubExpenses
 }
 
+func (stubExpenseUseCases) Preview(context.Context, expusecase.PreviewInput) (expusecase.Preview, error) {
+	return expusecase.Preview{}, errStubExpenses
+}
+
 // stubExpensesModule has stub use cases and no write budget.
 func stubExpensesModule() expensesModule {
 	return expensesModule{handler: expenseshttp.NewHandler(stubExpenseUseCases{})}

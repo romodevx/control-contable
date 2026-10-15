@@ -53,7 +53,7 @@ func (u *Expenses) judge(ctx context.Context, s subject) (verdict, error) {
 	if err != nil {
 		return verdict{}, err
 	}
-	assessment, err := domain.Assess(s.draft, u.payerOf(s), rule, today, u.deps.Parameters)
+	assessment, err := domain.Assess(s.draft, u.payerOf(s), rule, today, u.deps.Parameters, u.deps.Withholdings)
 	if len(extra) > 0 {
 		return verdict{}, mergeValidation(extra, err)
 	}
@@ -157,9 +157,9 @@ func assessError(err error) error {
 func stored(e StoredExpense, regime fiscal.RegimeCode, d domain.Draft, description string, a domain.Assessment) StoredExpense {
 	e.Regime, e.Category, e.Amount, e.IVARate, e.IVA = regime, d.Category, d.Amount, d.IVARate, d.IVA
 	e.PaymentMethod, e.PaidOn, e.HasCFDI, e.CFDIUUID = d.PaymentMethod, d.PaidOn, d.HasCFDI, d.CFDIUUID
-	e.Withheld, e.Description = d.Withheld, description
+	e.Supplier, e.Withholding, e.Description = a.Supplier, a.Withholding, description
 	e.Deductible, e.Overridden = a.Deductible, a.Source == domain.SourceUser
-	e.CashOverLimit, e.CreditableIVA = a.CashOverLimit, a.CreditableIVA
+	e.CashOverLimit, e.CreditableIVA, e.CreditableIVAWithheld = a.CashOverLimit, a.CreditableIVA, a.CreditableIVAWithheld
 	return e
 }
 
@@ -168,7 +168,7 @@ func stored(e StoredExpense, regime fiscal.RegimeCode, d domain.Draft, descripti
 func draftOf(e StoredExpense) domain.Draft {
 	return domain.Draft{
 		Category: e.Category, Amount: e.Amount, IVARate: e.IVARate, IVA: e.IVA, PaymentMethod: e.PaymentMethod,
-		PaidOn: e.PaidOn, HasCFDI: e.HasCFDI, CFDIUUID: e.CFDIUUID, Deductible: overrideOf(e), Withheld: e.Withheld,
+		PaidOn: e.PaidOn, HasCFDI: e.HasCFDI, CFDIUUID: e.CFDIUUID, Deductible: overrideOf(e), Supplier: e.Supplier,
 	}
 }
 

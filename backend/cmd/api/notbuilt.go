@@ -86,8 +86,3 @@ func (notBuilt) ReceiveRevenueCatWebhook(context.Context, gen.ReceiveRevenueCatW
 func (notBuilt) PreviewIncomeWithholdings(context.Context, gen.PreviewIncomeWithholdingsRequestObject) (gen.PreviewIncomeWithholdingsResponseObject, error) {
 	return nil, errNotBuilt
 }
-
-// PreviewExpenseWithholdings is built by WH-07 (ADR-0008), as PreviewIncomeWithholdings.
-func (notBuilt) PreviewExpenseWithholdings(context.Context, gen.PreviewExpenseWithholdingsRequestObject) (gen.PreviewExpenseWithholdingsResponseObject, error) {
-	return nil, errNotBuilt
-}

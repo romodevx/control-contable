@@ -312,7 +312,9 @@ func TestCreate_BusinessRulesAre422(t *testing.T) {
 		detail string
 	}{
 		{"iva mismatch", func(in *usecase.CreateInput) { in.Draft.IVA = 70_00 }, "iva_cents", "iva_amount_mismatch"},
-		{"física withholds", func(in *usecase.CreateInput) { in.Draft.Withheld.ISR = 50_00 }, "isr_withheld_cents", "withholding_not_applicable"},
+		{"US-W7: a física names a supplier", func(in *usecase.CreateInput) {
+			in.Draft.Supplier = domain.Supplier{Kind: domain.SupplierPM}
+		}, "supplier_kind", "supplier_not_applicable"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -326,20 +328,6 @@ func TestCreate_BusinessRulesAre422(t *testing.T) {
 			assert.Empty(t, h.access.reserved)
 		})
 	}
-}
-
-func TestCreate_MoralMayWithholdFromItsSupplier(t *testing.T) {
-	h := newHarness(t)
-	in := createInput(t, expense1)
-	in.TaxpayerID, in.Regime = taxpayerM, "601"
-	in.Draft.Category = "servicios_profesionales"
-	in.Draft.Amount, in.Draft.IVA = 10_000_00, 1_600_00
-	in.Draft.Withheld = fiscal.Withholdings{ISR: 1_000_00, IVA: 1_066_67}
-
-	got, err := h.uc.Create(t.Context(), in)
-
-	require.NoError(t, err)
-	assert.Equal(t, fiscal.Withholdings{ISR: 1_000_00, IVA: 1_066_67}, got.Expense.Withheld)
 }
 
 func TestCreate_CategoryRulesPerRegime(t *testing.T) {

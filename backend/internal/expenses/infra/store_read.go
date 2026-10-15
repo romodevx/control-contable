@@ -66,7 +66,7 @@ func (Store) List(ctx context.Context, q usecase.ListQuery) ([]usecase.StoredExp
 		query = query.Where("(paid_on, id) < (?::date, ?::uuid)", q.After.PaidOn.String(), q.After.ID)
 	}
 	var rows []expenseRow
-	if err := query.Order("paid_on DESC, id DESC").Limit(q.Limit).Find(&rows).Error; err != nil {
+	if err := query.Select(columns).Order("paid_on DESC, id DESC").Limit(q.Limit).Find(&rows).Error; err != nil {
 		return nil, translate("list expenses", err)
 	}
 	out := make([]usecase.StoredExpense, 0, len(rows))

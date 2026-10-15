@@ -35,6 +35,7 @@ type ruleRow struct {
 	CashPaymentRule   string  `gorm:"column:cash_payment_rule"`
 	Note              *string `gorm:"column:note"`
 	LegalBasis        string  `gorm:"column:legal_basis"`
+	DefaultOperation  *string `gorm:"column:default_operation_kind"`
 }
 
 func (r ruleRow) toEntry() (usecase.CategoryEntry, error) {
@@ -46,6 +47,7 @@ func (r ruleRow) toEntry() (usecase.CategoryEntry, error) {
 		Rule: domain.CategoryRule{
 			Category: domain.CategoryCode(r.Code), Deductibility: deductibility, DefaultDeductible: r.DefaultDeductible,
 			IVACreditable: r.IVACreditable, ElectronicPaymentOnly: r.CashPaymentRule == cashAnyPayment,
+			DefaultOperation: fiscal.OperationKind(deref(r.DefaultOperation)),
 		},
 		Name: r.Name, LegalBasis: r.LegalBasis,
 	}
@@ -59,7 +61,8 @@ func (r ruleRow) toEntry() (usecase.CategoryEntry, error) {
 // order, over the (regime_code, person_type, category_code) primary key.
 func rules(db *gorm.DB, regime fiscal.RegimeCode, person fiscal.PersonType) *gorm.DB {
 	return db.Table("category_regime_rules AS r").
-		Select("c.code, c.name, r.deductibility, r.default_deductible, r.iva_creditable_default, r.cash_payment_rule, r.note, r.legal_basis").
+		Select("c.code, c.name, r.deductibility, r.default_deductible, r.iva_creditable_default, r.cash_payment_rule, r.note, r.legal_basis, "+
+			"r.default_operation_kind").
 		Joins("JOIN expense_categories AS c ON c.code = r.category_code").
 		Where("r.regime_code = ? AND r.person_type = ?", string(regime), string(person)).
 		Order("c.sort_order")

@@ -10,4 +10,11 @@ var (
 	ErrUnknownCategory = fiscal.ValidationError("unknown_category")
 	// ErrHasCFDIMismatch: a cfdi_uuid sent with has_cfdi = false.
 	ErrHasCFDIMismatch = fiscal.ValidationError("has_cfdi_mismatch")
+	// ErrSupplierNotApplicable: a supplier fact from a persona física
+	// taxpayer (she never withholds, WM F1, F2), or a supplier regime
+	// without supplier_kind pf_with_activity.
+	ErrSupplierNotApplicable = fiscal.BusinessRuleError("supplier_not_applicable")
+	// ErrResidentialRentExempt: housing rent with an IVA rate other than
+	// exempt (LIVA 20 fr. II); the server never changes the rate itself.
+	ErrResidentialRentExempt = fiscal.BusinessRuleError("residential_rent_exempt")
 )
