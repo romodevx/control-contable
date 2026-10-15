@@ -181,7 +181,7 @@ func toTaxpayer(t usecase.Taxpayer) (gen.Taxpayer, error) {
 
 func toTaxpayerRegime(r usecase.TaxpayerRegime) gen.TaxpayerRegime {
 	out := gen.TaxpayerRegime{
-		RegimeCode: r.Code, Name: r.Name, Treatment: gen.Treatment(r.Treatment),
+		RegimeCode: r.Code, Name: r.Name, Treatment: gen.Treatment(r.Treatment), IncomeBasis: gen.IncomeBasis(r.IncomeBasis),
 		Options: toOptions(r.Options), StartPeriod: r.Window.Start.String(), Warnings: toWarnings(r.Warnings),
 	}
 	if !r.Window.IsOpen() {
@@ -209,7 +209,8 @@ func toRegimeList(entries []usecase.CatalogEntry) gen.RegimeList {
 		pending := toLinks(e.ReviewPendingWith)
 		regime := gen.Regime{
 			Code: e.Code, Name: e.Name, PersonType: gen.PersonType(e.PersonType), Treatment: gen.Treatment(e.Treatment),
-			OptionDefs: toOptionDefs(e.OptionDefs), RequiredInputs: toTaxInputDefs(e.RequiredInputs),
+			IncomeBasis: gen.IncomeBasis(e.IncomeBasis),
+			OptionDefs:  toOptionDefs(e.OptionDefs), RequiredInputs: toTaxInputDefs(e.RequiredInputs),
 			IncompatibleWith: toLinks(e.IncompatibleWith), ReviewPendingWith: &pending,
 		}
 		if e.Explanation != "" {

@@ -73,7 +73,10 @@ class IncomeFormModel extends ChangeNotifier {
     this.editing,
   }) : _regimes = regimes,
        _newId = newId,
-       basis = incomeBasisOf(editing?.regimeCode ?? regimes.first.regimeCode),
+       basis = incomeBasisOf(
+         editing?.regimeCode ?? regimes.first.regimeCode,
+         regimes,
+       ),
        _sessionId = newId() {
     _build(today);
     _suggestions = IncomeSuggestions(amount: amount, ivaAmount: ivaAmount);
@@ -107,7 +110,8 @@ class IncomeFormModel extends ChangeNotifier {
   /// Whether this form edits a stored income.
   bool get isEditing => editing != null;
 
-  /// Which date books the income (from the first regime).
+  /// Which date books the income: the served basis of the edited income's
+  /// regime, else of the first regime.
   final IncomeBasis basis;
 
   final List<TaxpayerRegime> _regimes;

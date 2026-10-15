@@ -11,6 +11,7 @@ _Regime _$RegimeFromJson(Map<String, dynamic> json) => _Regime(
   name: json['name'] as String,
   personType: PersonType.fromJson(json['person_type'] as String),
   treatment: Treatment.fromJson(json['treatment'] as String),
+  incomeBasis: IncomeBasis.fromJson(json['income_basis'] as String),
   explanation: json['explanation'] as String?,
   optionDefs: (json['option_defs'] as List<dynamic>)
       .map((e) => RegimeOptionDef.fromJson(e as Map<String, dynamic>))
@@ -31,6 +32,7 @@ Map<String, dynamic> _$RegimeToJson(_Regime instance) => <String, dynamic>{
   'name': instance.name,
   'person_type': _$PersonTypeEnumMap[instance.personType]!,
   'treatment': _$TreatmentEnumMap[instance.treatment]!,
+  'income_basis': _$IncomeBasisEnumMap[instance.incomeBasis]!,
   'explanation': instance.explanation,
   'option_defs': instance.optionDefs,
   'required_inputs': instance.requiredInputs,
@@ -49,4 +51,10 @@ const _$TreatmentEnumMap = {
   Treatment.partial: 'partial',
   Treatment.informational: 'informational',
   Treatment.$unknown: r'$unknown',
+};
+
+const _$IncomeBasisEnumMap = {
+  IncomeBasis.cash: 'cash',
+  IncomeBasis.accrual: 'accrual',
+  IncomeBasis.$unknown: r'$unknown',
 };

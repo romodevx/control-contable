@@ -28,6 +28,7 @@ func TestAddRegime_Adds(t *testing.T) {
 	assert.Equal(t, "606", got.Code)
 	assert.Equal(t, "Regime 606", got.Name)
 	assert.Equal(t, "full", got.Treatment)
+	assert.Equal(t, "cash", got.IncomeBasis, "the held regime's catalog basis")
 	assert.Equal(t, window(t, "2026-03", ""), got.Window)
 	assert.Equal(t, map[string]domain.OptionValue{"deduction_mode": domain.StringOption("blind_35")}, got.Options)
 	assert.Empty(t, got.Warnings)

@@ -36,6 +36,7 @@ const Map<String, Object?> _regimes = {
       'name': 'Arrendamiento',
       'person_type': 'fisica',
       'treatment': 'full',
+      'income_basis': 'cash',
       'explanation': null,
       'option_defs': [
         {
@@ -197,6 +198,7 @@ void main() {
       'regime_code': '606',
       'name': 'Arrendamiento',
       'treatment': 'full',
+      'income_basis': 'cash',
       'options': {'deduction_mode': 'actual'},
       'start_period': '2026-01',
       'end_period': null,
