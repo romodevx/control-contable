@@ -120,24 +120,27 @@ func (r expenseRow) toStored() (usecase.StoredExpense, error) {
 }
 
 // withholding reads the stored derivation. The typed amounts of a record
-// written before WH-07 have no table version: they come back underived.
+// written before WH-07 have no table version: they come back underived. So
+// does a row with a version but without the detail columns (the CHECKs
+// allow it; no writer stores it), as incomes reads it: the API serves
+// `withholding: null`, never a half derivation or a 500.
 func (r expenseRow) withholding() (fiscal.WithholdingRecord, error) {
 	w := fiscal.WithholdingRecord{
 		Withholdings: fiscal.Withholdings{ISR: money.Cents(r.ISRWithheldCents), IVA: money.Cents(r.IVAWithheldCents)},
-		TableVersion: deref(r.TableVersion), CPAUnverified: r.CPAUnverified,
-		IVABasis: fiscal.IVABasis(deref(r.IVABasis)), Withholder: fiscal.Withholder(deref(r.Withholder)),
 	}
+	if r.TableVersion == nil || r.ISRRate == nil {
+		return w, nil
+	}
+	rate, err := money.ParseRate(*r.ISRRate)
+	if err != nil {
+		return fiscal.WithholdingRecord{}, fmt.Errorf("expenses infra: withholding_isr_rate of %s: %w", r.ID, err)
+	}
+	w.ISRRate, w.TableVersion, w.CPAUnverified = rate, *r.TableVersion, r.CPAUnverified
+	w.IVABasis, w.Withholder = fiscal.IVABasis(deref(r.IVABasis)), fiscal.Withholder(deref(r.Withholder))
 	for id := range strings.SplitSeq(r.RuleIDs, ruleIDSeparator) {
 		if id != "" {
 			w.RuleIDs = append(w.RuleIDs, fiscal.RuleID(id))
 		}
-	}
-	if r.ISRRate != nil {
-		rate, err := money.ParseRate(*r.ISRRate)
-		if err != nil {
-			return fiscal.WithholdingRecord{}, fmt.Errorf("expenses infra: withholding_isr_rate of %s: %w", r.ID, err)
-		}
-		w.ISRRate = rate
 	}
 	return w, nil
 }
