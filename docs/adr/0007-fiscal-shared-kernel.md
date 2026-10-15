@@ -4,6 +4,7 @@
 |---|---|
 | Status | ACCEPTED (tech-lead review of PR #67, M3-03 / M4-04) |
 | Date | 2026-10-13 |
+| Amended | 2026-10-15 by M9-01: the due-date rule joins the kernel ([Amendment 1](#amendment-1-m9-01-2026-10-15-the-due-date-rule)); implemented by M9-04 |
 | Related | [ADR-0001](0001-stack.md) Dependency Rule, [ADR-0002](0002-tax-engine.md) §3–§4, [MODULE-incomes](../project-specs/MODULE-incomes.md) §2.5, [MODULE-expenses](../project-specs/MODULE-expenses.md) §2, P0-29 FU4, `backend/internal/archtest` |
 | Owner | tech-lead / architect |
 
@@ -80,3 +81,60 @@ a small model that several bounded contexts agree to share and change together.
   module.
 - Modules are still vertical slices. Disabling or removing one module does not touch the
   kernel or the other modules.
+
+## Amendment 1 (M9-01, 2026-10-15): the due-date rule
+
+**Context.** The rule "day 17 of the following month, moved past weekends and holidays (CFF
+art. 12 ¶1, ¶5)" lives in two copies inside `internal/taxengine`: `usecase/duedate.go` (the
+monthly `due_date`, with the 621 bimester offset) and `usecase/annual/estimate.go`
+`businessDay` (the annual deadlines). Both ask a `HolidayCalendar` port that the composition
+root answers with `noHolidays` (the M5 "holiday gap", PLAN #98 FU2). M9 adds two more readers
+in another bounded context: `getTaxCalendar` and the reminder job (MODULE-reminders §2.1).
+The estimate shown on Home, the History row, the calendar entry and the push notification
+must name the **same** date: a user told "vence el lunes 19" by one screen and "sábado 17" by
+another stops trusting both. That passes this ADR's test: more than one bounded context reads
+it, and they must agree.
+
+**Options.**
+
+1. *Reminders call the tax engine for dates.* Breaks `cross-module` (archtest): reminders would
+   import taxengine, and disabling `module_tax_engine` would break the calendar, which the
+   spec keeps working without it (MODULE-reminders §3).
+2. *A third copy in reminders.* Every holiday or Friday-extension decision (OQ-R1) would have
+   to land in three places; a drift is a wrong date on a lock screen.
+3. *`platform/calendar`.* `platform/` takes no business rules (P0-29 FU4); CFF art. 12 is one.
+4. ***Kernel functions, data through a value (chosen).***
+
+**Decision.** Item 3 of the Decision gains the due-date rule, as pure functions with no I/O and
+no `time.Now`:
+
+- `HolidaySet`: an immutable value built from the `holidays` rows (`moves_due_date = true`) of
+  the seeded years, with `Covers(year) bool`. Outside a covered year it answers weekends only;
+  the caller decides whether that is acceptable (the calendar endpoint answers `422
+  calendar_unavailable` for an unseeded `year`; the December entry and the reminder job fall
+  back to weekends only and emit `reminders_calendar_unseeded`).
+- `NextBusinessDay(d Date, h HolidaySet) (Date, MovedReason, error)`: the CFF 12 move, bounded
+  (today's `maxDueShift` 14 → error). `MovedReason` is `weekend` | `holiday` | none, the
+  contract's `TaxCalendarMovedReason`. Used by the monthly and the annual deadline.
+- `MonthlyDueDate(p Period, bimonthly bool, h HolidaySet) (nominal, due Date, MovedReason,
+  error)`: day 17 of the month after `p` (after the bimester when `bimonthly`), then
+  `NextBusinessDay`.
+
+The `holidays` table (M9-03) is read by an adapter in each consumer that builds a `HolidaySet`
+(ports stay consumer-side, Decision item 6); the kernel never reads it. `noHolidays` and both
+taxengine copies are deleted by M9-04, with an archtest/grep guard failing on `time.Saturday`
+outside the kernel. Not in the kernel: the push sender port, the reminder job and the
+`notification_log` (only reminders reads them; the FCM sender port is declared in the
+reminders module, ADR-0001 Firebase Admin row).
+
+**Complexity.** `HolidaySet` is a hash set of dates: membership O(1). `NextBusinessDay` scans
+at most `maxDueShift` days, so a calendar of 12 entries is O(12 · 14) set lookups, constant in
+practice; building the set is O(rows), about 10 per seeded year.
+
+**Consequences.** A golden table pins the rule: the 24 periods 2025-12..2027-11 (every due date
+in the seeded years, research §A.4.1) plus the annual deadlines of fiscal years 2025 and 2026.
+No 2026–2027 date changes when `noHolidays` is replaced (no day 17 meets a holiday in those
+years), so the estimate goldens and `EngineVersion` stay as they are; if any estimate golden
+changes, M9-04 bumps `EngineVersion` per the engine version policy. The Friday extension
+(OQ-R1) stays out until a CPA confirms; adding it is a change to this one function and every
+reader follows. Contract 0.13.0 marks every calendar entry `subject_to_confirmation` meanwhile.
