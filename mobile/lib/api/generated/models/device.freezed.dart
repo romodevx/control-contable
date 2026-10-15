@@ -16,7 +16,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Device {
 
- Uuid get id; DevicePlatform get platform;@JsonKey(name: 'created_at') DateTime get createdAt;
+ InstallationId get id; DevicePlatform get platform;@JsonKey(includeIfNull: true, name: 'app_version') String? get appVersion;@JsonKey(name: 'created_at') DateTime get createdAt;/// Last `registerDevice` of this installation; the 11th device evicts the oldest.
+@JsonKey(name: 'last_seen_at') DateTime get lastSeenAt;
 /// Create a copy of Device
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +31,20 @@ $DeviceCopyWith<Device> get copyWith => _$DeviceCopyWithImpl<Device>(this as Dev
 @override
 bool operator ==(Object other) {
   final _this = this as Device;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Device&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.platform, _this.platform) || other.platform == _this.platform)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Device&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.platform, _this.platform) || other.platform == _this.platform)&&(identical(other.appVersion, _this.appVersion) || other.appVersion == _this.appVersion)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt)&&(identical(other.lastSeenAt, _this.lastSeenAt) || other.lastSeenAt == _this.lastSeenAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Device;
-  return Object.hash(runtimeType,_this.id,_this.platform,_this.createdAt);
+  return Object.hash(runtimeType,_this.id,_this.platform,_this.appVersion,_this.createdAt,_this.lastSeenAt);
 }
 
 @override
 String toString() {
   final _this = this as Device;
-  return 'Device(id: ${_this.id}, platform: ${_this.platform}, createdAt: ${_this.createdAt})';
+  return 'Device(id: ${_this.id}, platform: ${_this.platform}, appVersion: ${_this.appVersion}, createdAt: ${_this.createdAt}, lastSeenAt: ${_this.lastSeenAt})';
 }
 
 
@@ -54,7 +55,7 @@ abstract mixin class $DeviceCopyWith<$Res>  {
   factory $DeviceCopyWith(Device value, $Res Function(Device) _then) = _$DeviceCopyWithImpl;
 @useResult
 $Res call({
- Uuid id, DevicePlatform platform,@JsonKey(name: 'created_at') DateTime createdAt
+ InstallationId id, DevicePlatform platform,@JsonKey(includeIfNull: true, name: 'app_version') String? appVersion,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'last_seen_at') DateTime lastSeenAt
 });
 
 
@@ -71,11 +72,13 @@ class _$DeviceCopyWithImpl<$Res>
 
 /// Create a copy of Device
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? platform = null,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? platform = null,Object? appVersion = freezed,Object? createdAt = null,Object? lastSeenAt = null,}) {
   return _then(Device(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as Uuid,platform: null == platform ? _self.platform : platform // ignore: cast_nullable_to_non_nullable
-as DevicePlatform,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as InstallationId,platform: null == platform ? _self.platform : platform // ignore: cast_nullable_to_non_nullable
+as DevicePlatform,appVersion: freezed == appVersion ? _self.appVersion : appVersion // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime,lastSeenAt: null == lastSeenAt ? _self.lastSeenAt : lastSeenAt // ignore: cast_nullable_to_non_nullable
 as DateTime,
   ));
 }
@@ -161,10 +164,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Uuid id,  DevicePlatform platform, @JsonKey(name: 'created_at')  DateTime createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( InstallationId id,  DevicePlatform platform, @JsonKey(includeIfNull: true, name: 'app_version')  String? appVersion, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'last_seen_at')  DateTime lastSeenAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Device() when $default != null:
-return $default(_that.id,_that.platform,_that.createdAt);case _:
+return $default(_that.id,_that.platform,_that.appVersion,_that.createdAt,_that.lastSeenAt);case _:
   return orElse();
 
 }
@@ -182,10 +185,10 @@ return $default(_that.id,_that.platform,_that.createdAt);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Uuid id,  DevicePlatform platform, @JsonKey(name: 'created_at')  DateTime createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( InstallationId id,  DevicePlatform platform, @JsonKey(includeIfNull: true, name: 'app_version')  String? appVersion, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'last_seen_at')  DateTime lastSeenAt)  $default,) {final _that = this;
 switch (_that) {
 case _Device():
-return $default(_that.id,_that.platform,_that.createdAt);case _:
+return $default(_that.id,_that.platform,_that.appVersion,_that.createdAt,_that.lastSeenAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -202,10 +205,10 @@ return $default(_that.id,_that.platform,_that.createdAt);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Uuid id,  DevicePlatform platform, @JsonKey(name: 'created_at')  DateTime createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( InstallationId id,  DevicePlatform platform, @JsonKey(includeIfNull: true, name: 'app_version')  String? appVersion, @JsonKey(name: 'created_at')  DateTime createdAt, @JsonKey(name: 'last_seen_at')  DateTime lastSeenAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Device() when $default != null:
-return $default(_that.id,_that.platform,_that.createdAt);case _:
+return $default(_that.id,_that.platform,_that.appVersion,_that.createdAt,_that.lastSeenAt);case _:
   return null;
 
 }
@@ -217,12 +220,15 @@ return $default(_that.id,_that.platform,_that.createdAt);case _:
 @JsonSerializable()
 
 class _Device implements Device {
-  const _Device({required this.id, required this.platform, @JsonKey(name: 'created_at') required this.createdAt});
+  const _Device({required this.id, required this.platform, @JsonKey(includeIfNull: true, name: 'app_version') required this.appVersion, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'last_seen_at') required this.lastSeenAt});
   factory _Device.fromJson(Map<String, dynamic> json) => _$DeviceFromJson(json);
 
-@override final  Uuid id;
+@override final  InstallationId id;
 @override final  DevicePlatform platform;
+@override@JsonKey(includeIfNull: true, name: 'app_version') final  String? appVersion;
 @override@JsonKey(name: 'created_at') final  DateTime createdAt;
+/// Last `registerDevice` of this installation; the 11th device evicts the oldest.
+@override@JsonKey(name: 'last_seen_at') final  DateTime lastSeenAt;
 
 /// Create a copy of Device
 /// with the given fields replaced by the non-null parameter values.
@@ -237,18 +243,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Device&&(identical(other.id, id) || other.id == id)&&(identical(other.platform, platform) || other.platform == platform)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Device&&(identical(other.id, id) || other.id == id)&&(identical(other.platform, platform) || other.platform == platform)&&(identical(other.appVersion, appVersion) || other.appVersion == appVersion)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.lastSeenAt, lastSeenAt) || other.lastSeenAt == lastSeenAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,platform,createdAt);
+    return Object.hash(runtimeType,id,platform,appVersion,createdAt,lastSeenAt);
 }
 
 @override
 String toString() {
-    return 'Device(id: $id, platform: $platform, createdAt: $createdAt)';
+    return 'Device(id: $id, platform: $platform, appVersion: $appVersion, createdAt: $createdAt, lastSeenAt: $lastSeenAt)';
 }
 
 
@@ -259,7 +265,7 @@ abstract mixin class _$DeviceCopyWith<$Res> implements $DeviceCopyWith<$Res> {
   factory _$DeviceCopyWith(_Device value, $Res Function(_Device) _then) = __$DeviceCopyWithImpl;
 @override @useResult
 $Res call({
- Uuid id, DevicePlatform platform,@JsonKey(name: 'created_at') DateTime createdAt
+ InstallationId id, DevicePlatform platform,@JsonKey(includeIfNull: true, name: 'app_version') String? appVersion,@JsonKey(name: 'created_at') DateTime createdAt,@JsonKey(name: 'last_seen_at') DateTime lastSeenAt
 });
 
 
@@ -276,11 +282,13 @@ class __$DeviceCopyWithImpl<$Res>
 
 /// Create a copy of Device
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? platform = null,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? platform = null,Object? appVersion = freezed,Object? createdAt = null,Object? lastSeenAt = null,}) {
   return _then(_Device(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as Uuid,platform: null == platform ? _self.platform : platform // ignore: cast_nullable_to_non_nullable
-as DevicePlatform,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as InstallationId,platform: null == platform ? _self.platform : platform // ignore: cast_nullable_to_non_nullable
+as DevicePlatform,appVersion: freezed == appVersion ? _self.appVersion : appVersion // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime,lastSeenAt: null == lastSeenAt ? _self.lastSeenAt : lastSeenAt // ignore: cast_nullable_to_non_nullable
 as DateTime,
   ));
 }

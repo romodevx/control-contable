@@ -69,13 +69,29 @@ void main() {
     expect(body.containsKey('invoiced_on'), isFalse);
   });
 
-  // A nullable field with a contract default is generated as required, so
-  // `null` stays on the wire: PUT /v1/reminder-settings turns the early
-  // reminder off with `early_day: null`.
-  test('a nullable field with a default keeps an explicit null', () {
-    final body = wire(const ReminderSettings(earlyDay: null));
+  // A required nullable field keeps `null` on the wire: PUT
+  // /v1/reminder-settings replaces the whole object, so the early reminder is
+  // turned off with an explicit `early_day: null` and an omission is a 400
+  // (contract 0.13.0, MODULE-reminders §10 item 3).
+  test('a required nullable field keeps an explicit null', () {
+    final body = wire(
+      const ReminderSettings(
+        enabled: true,
+        earlyDay: null,
+        onDueDate: true,
+        sendTime: '10:00',
+        showAmounts: false,
+      ),
+    );
 
     expect(body.containsKey('early_day'), isTrue);
     expect(body['early_day'], isNull);
+    expect(body.keys, {
+      'enabled',
+      'early_day',
+      'on_due_date',
+      'send_time',
+      'show_amounts',
+    });
   });
 }

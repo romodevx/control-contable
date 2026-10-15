@@ -16,7 +16,9 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$DeviceCreate {
 
- Uuid get id; DeviceCreatePlatform get platform;@JsonKey(name: 'push_token') String get pushToken;@JsonKey(includeIfNull: false, name: 'app_version') String? get appVersion;
+ InstallationId get id; DevicePlatform get platform;/// The FCM registration token (APNs goes through FCM). Printable ASCII, no spaces. Write-only: encrypted at rest, never logged, never returned.
+@JsonKey(name: 'push_token') String get pushToken;/// The app's version string, for support; optional.
+@JsonKey(includeIfNull: false, name: 'app_version') String? get appVersion;
 /// Create a copy of DeviceCreate
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -54,7 +56,7 @@ abstract mixin class $DeviceCreateCopyWith<$Res>  {
   factory $DeviceCreateCopyWith(DeviceCreate value, $Res Function(DeviceCreate) _then) = _$DeviceCreateCopyWithImpl;
 @useResult
 $Res call({
- Uuid id, DeviceCreatePlatform platform,@JsonKey(name: 'push_token') String pushToken,@JsonKey(includeIfNull: false, name: 'app_version') String? appVersion
+ InstallationId id, DevicePlatform platform,@JsonKey(name: 'push_token') String pushToken,@JsonKey(includeIfNull: false, name: 'app_version') String? appVersion
 });
 
 
@@ -74,8 +76,8 @@ class _$DeviceCreateCopyWithImpl<$Res>
 @pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? platform = null,Object? pushToken = null,Object? appVersion = freezed,}) {
   return _then(DeviceCreate(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as Uuid,platform: null == platform ? _self.platform : platform // ignore: cast_nullable_to_non_nullable
-as DeviceCreatePlatform,pushToken: null == pushToken ? _self.pushToken : pushToken // ignore: cast_nullable_to_non_nullable
+as InstallationId,platform: null == platform ? _self.platform : platform // ignore: cast_nullable_to_non_nullable
+as DevicePlatform,pushToken: null == pushToken ? _self.pushToken : pushToken // ignore: cast_nullable_to_non_nullable
 as String,appVersion: freezed == appVersion ? _self.appVersion : appVersion // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
@@ -162,7 +164,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Uuid id,  DeviceCreatePlatform platform, @JsonKey(name: 'push_token')  String pushToken, @JsonKey(includeIfNull: false, name: 'app_version')  String? appVersion)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( InstallationId id,  DevicePlatform platform, @JsonKey(name: 'push_token')  String pushToken, @JsonKey(includeIfNull: false, name: 'app_version')  String? appVersion)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _DeviceCreate() when $default != null:
 return $default(_that.id,_that.platform,_that.pushToken,_that.appVersion);case _:
@@ -183,7 +185,7 @@ return $default(_that.id,_that.platform,_that.pushToken,_that.appVersion);case _
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Uuid id,  DeviceCreatePlatform platform, @JsonKey(name: 'push_token')  String pushToken, @JsonKey(includeIfNull: false, name: 'app_version')  String? appVersion)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( InstallationId id,  DevicePlatform platform, @JsonKey(name: 'push_token')  String pushToken, @JsonKey(includeIfNull: false, name: 'app_version')  String? appVersion)  $default,) {final _that = this;
 switch (_that) {
 case _DeviceCreate():
 return $default(_that.id,_that.platform,_that.pushToken,_that.appVersion);case _:
@@ -203,7 +205,7 @@ return $default(_that.id,_that.platform,_that.pushToken,_that.appVersion);case _
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Uuid id,  DeviceCreatePlatform platform, @JsonKey(name: 'push_token')  String pushToken, @JsonKey(includeIfNull: false, name: 'app_version')  String? appVersion)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( InstallationId id,  DevicePlatform platform, @JsonKey(name: 'push_token')  String pushToken, @JsonKey(includeIfNull: false, name: 'app_version')  String? appVersion)?  $default,) {final _that = this;
 switch (_that) {
 case _DeviceCreate() when $default != null:
 return $default(_that.id,_that.platform,_that.pushToken,_that.appVersion);case _:
@@ -221,9 +223,11 @@ class _DeviceCreate implements DeviceCreate {
   const _DeviceCreate({required this.id, required this.platform, @JsonKey(name: 'push_token') required this.pushToken, @JsonKey(includeIfNull: false, name: 'app_version') this.appVersion});
   factory _DeviceCreate.fromJson(Map<String, dynamic> json) => _$DeviceCreateFromJson(json);
 
-@override final  Uuid id;
-@override final  DeviceCreatePlatform platform;
+@override final  InstallationId id;
+@override final  DevicePlatform platform;
+/// The FCM registration token (APNs goes through FCM). Printable ASCII, no spaces. Write-only: encrypted at rest, never logged, never returned.
 @override@JsonKey(name: 'push_token') final  String pushToken;
+/// The app's version string, for support; optional.
 @override@JsonKey(includeIfNull: false, name: 'app_version') final  String? appVersion;
 
 /// Create a copy of DeviceCreate
@@ -261,7 +265,7 @@ abstract mixin class _$DeviceCreateCopyWith<$Res> implements $DeviceCreateCopyWi
   factory _$DeviceCreateCopyWith(_DeviceCreate value, $Res Function(_DeviceCreate) _then) = __$DeviceCreateCopyWithImpl;
 @override @useResult
 $Res call({
- Uuid id, DeviceCreatePlatform platform,@JsonKey(name: 'push_token') String pushToken,@JsonKey(includeIfNull: false, name: 'app_version') String? appVersion
+ InstallationId id, DevicePlatform platform,@JsonKey(name: 'push_token') String pushToken,@JsonKey(includeIfNull: false, name: 'app_version') String? appVersion
 });
 
 
@@ -281,8 +285,8 @@ class __$DeviceCreateCopyWithImpl<$Res>
 @override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? platform = null,Object? pushToken = null,Object? appVersion = freezed,}) {
   return _then(_DeviceCreate(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as Uuid,platform: null == platform ? _self.platform : platform // ignore: cast_nullable_to_non_nullable
-as DeviceCreatePlatform,pushToken: null == pushToken ? _self.pushToken : pushToken // ignore: cast_nullable_to_non_nullable
+as InstallationId,platform: null == platform ? _self.platform : platform // ignore: cast_nullable_to_non_nullable
+as DevicePlatform,pushToken: null == pushToken ? _self.pushToken : pushToken // ignore: cast_nullable_to_non_nullable
 as String,appVersion: freezed == appVersion ? _self.appVersion : appVersion // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
