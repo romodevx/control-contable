@@ -272,12 +272,13 @@ Tracked in the [PLAN M8 follow-ups](../project-specs/PLAN-control-contable.md#m8
 The ones a user or an operator can notice:
 
 - **Device walk done** (2026-10-15, M8-07 report §7) on Android against a native PostgreSQL. It
-  fixed two stale screens: History's empty state did not re-read after "Registrar ingreso", and Home
-  did not re-read on return from History. Still owed: the TalkBack pass with real gestures (focus
+  found three stale screens (History's empty state after "Registrar ingreso", Home after records saved
+  from History, and an Undo run from another screen), all fixed. Still owed: the TalkBack pass with real gestures (focus
   return to the row after a pop could not be driven through adb) and iOS (OB6).
-- **Undo from another screen leaves it stale** (M8-07 F3): the delete toast's *Deshacer* outlives
-  the route, so restoring while History or Home is on top restores the record, but that screen
-  keeps its marks until it is pulled down. Fixing it needs an app-wide "records changed" signal.
+- **Freshness after a write** (M8-07 F2, F3): every income or expense write (its Undo from the
+  app-wide toast included) and every fiscal-data save bumps one app-wide tax-data revision, and
+  History, Home, the estimate and the breakdown read again from it, whichever screen is on top.
+  The annual estimate does not follow it yet.
 - Every figure is the M5 estimate, so it carries M5's limits: **no rule is CPA-verified yet**
   (M5-33).
 - A very fast return can re-read History before the fire-and-forget upsert lands; the

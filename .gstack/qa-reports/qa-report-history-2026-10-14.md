@@ -6,7 +6,7 @@
 | Branch | `feature/history-qa-fixes` (from `origin/dev` @ `2d760b4`), PR #149 |
 | Device walk | **Done 2026-10-15** (§7) on the Android emulator against the run's own PostgreSQL and API, branch `feature/history-device-walk`. It was blocked on 2026-10-14 (§1) |
 | Automated evidence | Backend unit suite (local), backend integration + contract suites on real PostgreSQL (CI, testcontainers), the full mobile suite (local), the mobile client against the contract mock (Prism, local) |
-| Verdict | **Pass after two fixes.** The automated level passed on 2026-10-14 (§2, §3). The device walk found two stale-screen defects, both fixed with a regression test first (§7.4 F1, F2), and one more that is deferred (F3). The TalkBack focus check could not be completed with adb (§7.5) |
+| Verdict | **Pass after two fixes.** The automated level passed on 2026-10-14 (§2, §3). The device walk found two stale-screen defects, both fixed with a regression test first (§7.4 F1, F2), and a third (F3) fixed in the tech-lead review through one tax-data revision signal that also replaced F2's per-screen reload. The TalkBack focus check could not be completed with adb (§7.5) |
 
 ## 1. Environment: why the device walk is blocked
 
@@ -129,8 +129,8 @@ The only SQL was operator-side: the first account's trial was moved into the pas
 | # | What the walk showed | Status |
 |---|---|---|
 | **F1** | History's empty state "Registrar ingreso" pushed the income form without reading the year again. After three incomes were saved, History still said "Aún no hay registros…" until it was pulled down (`hist-02`) | **Fixed** in `fix(mobile): re-read History after "Registrar ingreso" from the empty year`. The empty state now opens the form through the year view's own open-then-reload path. Regression test `history_screen_test.dart` "returning from \"Registrar ingreso\" reads the year again": red before the fix (one `getHistory` call), green after. Checked on the device with a new account (`hist-18`) |
-| **F2** | Home pushed History without reloading when it returned. Records saved from inside History (its empty state, or *Ver ingresos/gastos* → form) left the dashboard saying "Aún no hay ingresos…" with the trial count unspent (`hist-04`) | **Fixed** in `fix(mobile): read Home's dashboard again on return from History`. `HistoryEntryButton` takes `onReturn`, and Home invalidates `dashboardProvider` with it, as the quick actions already do. Regression test `history_flag_test.dart` "returning from History reads the dashboard again": red before (one `getDashboard` call). Checked on the device (`hist-17`) |
-| **F3** | The delete toast's *Deshacer* lives in the app-wide messenger and stays up across routes. Tapping it while History (or Home) is on top restores the record, but that screen is not read again, so the marks stay until a pull-to-refresh. The data is right | **Deferred.** The fix needs one app-wide "records changed" signal that the income and expense record services bump and that the History, dashboard and estimate providers watch. That is a cross-module design change for the mobile owner, not a QA patch. The workaround is a pull-to-refresh |
+| **F2** | Home pushed History without reloading when it returned. Records saved from inside History (its empty state, or *Ver ingresos/gastos* → form) left the dashboard saying "Aún no hay ingresos…" with the trial count unspent (`hist-04`) | **Fixed** first in `fix(mobile): read Home's dashboard again on return from History` (an `onReturn` reload on Home's History button, checked on the device, `hist-17`). The tech-lead review replaced that per-screen reload with the single path of F3 below: History's links are writes, so the writes move the signal and Home reads again only when something changed. Regression test `history_flag_test.dart` "a write made over History reads the dashboard again", plus "History opened and closed without a write reads nothing" |
+| **F3** | The delete toast's *Deshacer* lives in the app-wide messenger and stays up across routes. Tapping it while History (or Home) is on top restores the record, but that screen is not read again, so the marks stay until a pull-to-refresh. The data is right | **Fixed** in the tech-lead review (`fix(mobile): one tax-data revision re-reads every derived figure`). `taxDataRevisionProvider` (`core/fiscal`) is bumped by every income and expense write (create, edit, delete, Undo) and by the fiscal-data save; `historyYearProvider`, `dashboardProvider`, `estimateProvider` and `breakdownProvider` watch it. Regression tests first: `tax_data_revision_test.dart` (red: revision 0, 4 reads instead of 8) and `history_screen_test.dart` "an Undo run while History is open reads the year again" (red: one `getHistory` call). Not yet re-checked on the device |
 
 ### 7.5 TalkBack
 
@@ -139,7 +139,7 @@ TalkBack (installed on the emulator) was turned on through `settings` and turned
 ### 7.6 Still owed
 
 - The TalkBack pass with real gestures (§7.5), and iOS/VoiceOver (OB6).
-- F3, for the mobile owner.
+- A device re-check of F2/F3 on the revision signal (the widget tests cover it).
 
 ### 7.7 Suites (this branch)
 
