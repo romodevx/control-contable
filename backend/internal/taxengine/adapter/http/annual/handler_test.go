@@ -326,6 +326,22 @@ func TestFiledPayments(t *testing.T) {
 	assert.Equal(t, []string{"get|" + userA + "|" + fisicaID + "|612", "put|" + userA + "|" + fisicaID + "|612"}, w.filed.calls)
 }
 
+// A put whose estimate_reads budget is spent is refused before the write:
+// a 429 never follows a committed (and audited) replace of the months.
+func TestPutFiledPayments_rangeBudgetSpentRefusesBeforeTheWrite(t *testing.T) {
+	c := contracttest.Load(t)
+	w := newWorld(t)
+	w.rng.allowed = false
+	h := newHarness(t, w.deps, annualOn, nil)
+	target := "/v1/taxpayers/" + fisicaID + "/regimes/612/filed-payments/2026"
+
+	rec := c.ServeOp(t, contracttest.Op("putFiledPayments"), h.handler,
+		request(http.MethodPut, target, `{"months":[{"month":3,"amount_cents":200000}]}`))
+
+	assert.Equal(t, http.StatusTooManyRequests, rec.Code, rec.Body.String())
+	assert.Empty(t, w.filed.calls, "nothing was written")
+}
+
 // The input operations conform to the contract and pass the principal,
 // the path ids and the merge-patch null through.
 func TestInputOperations(t *testing.T) {

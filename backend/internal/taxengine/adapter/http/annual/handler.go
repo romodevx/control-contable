@@ -142,12 +142,16 @@ func (h *Handler) GetFiledPayments(ctx context.Context, req gen.GetFiledPayments
 	if err != nil {
 		return nil, err
 	}
-	body, wait, limited, err := h.filedBody(ctx, userID, fr, view)
+	wait, limited, err := h.spendRange(ctx, userID, true)
 	switch {
 	case err != nil:
 		return nil, err
 	case limited:
 		return gen.GetFiledPayments429JSONResponse{TooManyRequestsJSONResponse: tooMany(ctx, wait)}, nil
+	}
+	body, err := h.filedBody(ctx, userID, fr, view)
+	if err != nil {
+		return nil, err
 	}
 	return gen.GetFiledPayments200JSONResponse{Body: body}, nil
 }
@@ -165,35 +169,37 @@ func (h *Handler) PutFiledPayments(ctx context.Context, req gen.PutFiledPayments
 	for _, m := range req.Body.Months {
 		entries = append(entries, usecaseannual.FiledEntry{Month: m.Month, Amount: cents(m.AmountCents)})
 	}
-	fr := usecaseannual.FiledRequest{TaxpayerID: req.TaxpayerId.String(), RegimeCode: req.RegimeCode, FiscalYear: req.FiscalYear}
-	view, err := h.deps.Filed.Put(ctx, userID, fr, entries)
-	if err != nil {
-		return nil, err
-	}
-	body, wait, limited, err := h.filedBody(ctx, userID, fr, view)
+	// The range's extra read is spent before the write: a 429 never
+	// follows a committed replace of the months.
+	wait, limited, err := h.spendRange(ctx, userID, true)
 	switch {
 	case err != nil:
 		return nil, err
 	case limited:
 		return gen.PutFiledPayments429JSONResponse{TooManyRequestsJSONResponse: tooMany(ctx, wait)}, nil
 	}
+	fr := usecaseannual.FiledRequest{TaxpayerID: req.TaxpayerId.String(), RegimeCode: req.RegimeCode, FiscalYear: req.FiscalYear}
+	view, err := h.deps.Filed.Put(ctx, userID, fr, entries)
+	if err != nil {
+		return nil, err
+	}
+	body, err := h.filedBody(ctx, userID, fr, view)
+	if err != nil {
+		return nil, err
+	}
 	return gen.PutFiledPayments200JSONResponse{Body: body}, nil
 }
 
 // filedBody joins the stored months with the estimate's columns; reading
-// them runs the range, which spends one more estimate read.
+// them runs the range, whose extra estimate read the caller has spent.
 func (h *Handler) filedBody(ctx context.Context, userID string, fr usecaseannual.FiledRequest, view usecaseannual.FiledView) (
-	gen.FiledPayments, time.Duration, bool, error,
+	gen.FiledPayments, error,
 ) {
 	payments, err := h.deps.Estimates.Payments(ctx, userID, fr.TaxpayerID, view.Regime, view.FiscalYear)
 	if err != nil {
-		return gen.FiledPayments{}, 0, false, err
+		return gen.FiledPayments{}, err
 	}
-	wait, limited, err := h.spendRange(ctx, userID, true)
-	if err != nil || limited {
-		return gen.FiledPayments{}, wait, limited, err
-	}
-	return toFiled(view, payments), 0, false, nil
+	return toFiled(view, payments), nil
 }
 
 // spendRange takes the extra estimate read of a range; limited reports a
