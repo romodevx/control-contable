@@ -179,5 +179,5 @@ func TestTaxpayersCrypto_neverEphemeralOutsideDev(t *testing.T) {
 	_, err := newRFCVault(w)
 
 	require.Error(t, err)
-	assert.True(t, errors.Is(err, errMissingRFCKeys), err.Error())
+	assert.True(t, errors.Is(err, errMissingKey), err.Error())
 }

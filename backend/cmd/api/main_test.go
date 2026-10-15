@@ -126,7 +126,10 @@ func newHandlerWithAll(t *testing.T, cfg config.Config, db health.Pinger, f flag
 	reminders := stubRemindersModule()
 	if taxEngine.holidays != nil && auth.limits != nil { // the real module over the boot snapshot (contract tests)
 		var err error
-		reminders, err = newRemindersModule(remindersWiring{holidays: taxEngine.holidays, limits: auth.limits, logger: logger})
+		reminders, err = newRemindersModule(remindersWiring{
+			env: config.EnvDev, keys: testReminderKeys(), tx: records.taxpayers.tx,
+			holidays: taxEngine.holidays, limits: auth.limits, logger: logger,
+		})
 		require.NoError(t, err)
 	}
 	h, err := newHandler(cfg, deps{logger: logger, db: db, flags: f, auth: auth, taxpayers: records.taxpayers,
@@ -275,10 +278,10 @@ func TestFlagGate_throughTheRealRouter(t *testing.T) {
 // P0-29 FU2: an operation of an enabled module that is not built yet answers
 // exactly like a hidden module: no panic, no 500, nothing about its schema.
 func TestNotBuilt_isHiddenEvenWithItsModuleOn(t *testing.T) {
-	svc := flags.NewService(keysReader{keys: []string{"module_auth", "module_taxpayers", "module_reminders"}})
+	svc := flags.NewService(keysReader{keys: []string{"module_auth", "module_subscriptions"}})
 	h := newFlaggedHandler(t, testConfig(), pingOK{}, svc)
 
-	for _, target := range []string{"/v1/reminder-settings"} {
+	for _, target := range []string{"/v1/subscription"} {
 		req, rec := get(h, target)
 		flagtest.AssertHidden(t, rec)
 		conforms(t, req, rec)
@@ -409,10 +412,10 @@ func TestRun_reportsMalformedDatabaseURL(t *testing.T) {
 
 // Outside dev a role that cannot be verified is refused: the process does not start.
 func TestRun_refusesToStartWhenTheRuntimeRoleCannotBeVerified(t *testing.T) {
-	env := withTaxpayersKeys(withAuthKeys(map[string]string{ //nolint:gosec // G101: fake password of a test fixture; the port is closed.
+	env := withReminderKeys(withTaxpayersKeys(withAuthKeys(map[string]string{ //nolint:gosec // G101: fake password of a test fixture; the port is closed.
 		"APP_ENV": "staging", "TRUSTED_PROXY_HOPS": "0",
 		"DATABASE_URL": "postgres://cc_app:s3cr3t-pw@127.0.0.1:1/control_contable?sslmode=disable&connect_timeout=1",
-	}))
+	})))
 	err := run(context.Background(), func(k string) (string, bool) { v, ok := env[k]; return v, ok }, io.Discard)
 
 	require.Error(t, err)

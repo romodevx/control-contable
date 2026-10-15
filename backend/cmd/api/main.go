@@ -81,6 +81,10 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err != nil {
 		return err
 	}
+	reminderKeys, err := config.LoadReminders(ctx, lookup, secrets, cfg.Env, authKeys, taxpayerKeys)
+	if err != nil {
+		return err
+	}
 	logger := logging.New(logOut, cfg.LogLevel)
 	// The runtime pool (cc_app). Opening does not connect: once started, an
 	// unreachable database makes every flagged module OFF (fail closed) and
@@ -136,7 +140,9 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err != nil {
 		return err
 	}
-	reminders, err := newRemindersModule(remindersWiring{holidays: holidays.reminders, limits: auth.limits, logger: logger})
+	reminders, err := newRemindersModule(remindersWiring{
+		env: cfg.Env, keys: reminderKeys, tx: records.taxpayers.tx, holidays: holidays.reminders, limits: auth.limits, logger: logger,
+	})
 	if err != nil {
 		return err
 	}
