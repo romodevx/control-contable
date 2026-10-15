@@ -67,7 +67,9 @@ func keyring(t *testing.T, active crypto.KeyVersion, retired ...crypto.KeyVersio
 }
 
 // aad binds a test value to its target and row; the stores never see it.
-func aad(target string, ref usecase.Ref) []byte { return []byte(target + ":" + ref.ID + ":" + ref.UserID) }
+func aad(target string, ref usecase.Ref) []byte {
+	return []byte(target + ":" + ref.ID + ":" + ref.UserID)
+}
 
 type sealer struct {
 	target  string

@@ -2,6 +2,7 @@ package infra_test
 
 import (
 	"crypto/rand"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,60 +13,77 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/taxpayers/usecase"
 )
 
-// rotationVaults are the vaults of an RFC key rotation over random keys:
-// before (old key only), during (new active, old retired), after (new only).
-func rotationVaults(t *testing.T) (before, during, after *infra.RFCVault) {
+// rfcRotation is an RFC key rotation over random keys.
+type rfcRotation struct {
+	before *infra.RFCVault    // old key only
+	during *infra.RFCResealer // new key active, old retired; no pepper needed
+	after  *infra.RFCVault    // new key only
+	// tooEarly re-seals with the new key only: the old one was dropped first.
+	tooEarly *infra.RFCResealer
+}
+
+func newRFCRotation(t *testing.T) rfcRotation {
 	t.Helper()
-	key := func() crypto.KeyVersion {
-		k := make([]byte, crypto.KeySize)
-		_, err := rand.Read(k)
+	random := func(n int) []byte {
+		b := make([]byte, n)
+		_, err := rand.Read(b)
 		require.NoError(t, err)
-		return crypto.KeyVersion{Key: k}
+		return b
 	}
-	old, next := key(), key()
-	old.ID, next.ID = 3, 4
-	pepper := make([]byte, crypto.MinPepperSize)
-	_, err := rand.Read(pepper)
+	old := crypto.KeyVersion{ID: 3, Key: random(crypto.KeySize)}
+	next := crypto.KeyVersion{ID: 4, Key: random(crypto.KeySize)}
+	index, err := crypto.NewRFCIndex(random(crypto.MinPepperSize))
 	require.NoError(t, err)
-	index, err := crypto.NewRFCIndex(pepper)
-	require.NoError(t, err)
-	vault := func(active crypto.KeyVersion, retired ...crypto.KeyVersion) *infra.RFCVault {
+	keyring := func(active crypto.KeyVersion, retired ...crypto.KeyVersion) *crypto.Keyring {
 		kr, err := crypto.NewRotatingKeyring(active, retired...)
 		require.NoError(t, err)
-		return infra.NewRFCVault(kr, index)
+		return kr
 	}
-	return vault(old), vault(next, old), vault(next)
+	return rfcRotation{
+		before:   infra.NewRFCVault(keyring(old), index),
+		during:   infra.NewRFCResealer(keyring(next, old)),
+		after:    infra.NewRFCVault(keyring(next), index),
+		tooEarly: infra.NewRFCResealer(keyring(next)),
+	}
 }
 
 // ADR-0012: the re-seal job moves an RFC to the active key under the same
 // row binding; the new key alone then opens it.
-func TestRFCVault_ResealMovesTheRFCToTheActiveKey(t *testing.T) {
-	before, during, after := rotationVaults(t)
+func TestRFCResealer_MovesTheRFCToTheActiveKey(t *testing.T) {
+	r := newRFCRotation(t)
 	own := usecase.RowBinding{TaxpayerID: vaultTaxpayer1, UserID: vaultUserA}
-	sealed, err := before.Seal(mustRFC(t, "PEXJ900215HK9"), own)
+	sealed, err := r.before.Seal(mustRFC(t, "PEXJ900215HK9"), own)
 	require.NoError(t, err)
 
-	resealed, err := during.Reseal(sealed.Ciphertext, own)
+	resealed, err := r.during.Reseal(sealed.Ciphertext, own)
 
 	require.NoError(t, err)
 	keyID, err := crypto.KeyIDOf(resealed)
 	require.NoError(t, err)
 	assert.Equal(t, crypto.KeyID(4), keyID)
-	opened, err := after.Open(resealed, own)
+	assert.Equal(t, crypto.KeyID(4), r.during.ActiveKeyID())
+	opened, err := r.after.Open(resealed, own)
 	require.NoError(t, err)
 	assert.Equal(t, "PEXJ900215HK9", opened.String())
 }
 
-func TestRFCVault_ResealFailsClosed(t *testing.T) {
-	before, during, after := rotationVaults(t)
+func TestRFCResealer_FailsClosed(t *testing.T) {
+	r := newRFCRotation(t)
 	own := usecase.RowBinding{TaxpayerID: vaultTaxpayer1, UserID: vaultUserA}
-	sealed, err := before.Seal(mustRFC(t, "PEXJ900215HK9"), own)
+	sealed, err := r.before.Seal(mustRFC(t, "PEXJ900215HK9"), own)
 	require.NoError(t, err)
 
-	_, err = during.Reseal(sealed.Ciphertext, usecase.RowBinding{TaxpayerID: vaultTaxpayer2, UserID: vaultUserA})
+	_, err = r.during.Reseal(sealed.Ciphertext, usecase.RowBinding{TaxpayerID: vaultTaxpayer2, UserID: vaultUserA})
 	require.ErrorIs(t, err, crypto.ErrDecrypt, "another row's binding")
-	_, err = after.Reseal(sealed.Ciphertext, own)
+	_, err = r.tooEarly.Reseal(sealed.Ciphertext, own)
 	require.ErrorIs(t, err, crypto.ErrUnknownKeyID, "the old key was dropped too early")
-	_, err = during.Reseal(sealed.Ciphertext, usecase.RowBinding{TaxpayerID: "not-a-uuid", UserID: vaultUserA})
+	_, err = r.during.Reseal(sealed.Ciphertext, usecase.RowBinding{TaxpayerID: "not-a-uuid", UserID: vaultUserA})
 	require.Error(t, err)
+}
+
+func TestRFCResealer_NeverPrintsKeyMaterial(t *testing.T) {
+	r := newRFCRotation(t)
+
+	assert.Equal(t, "REDACTED", fmt.Sprintf("%v", r.during))
+	assert.Equal(t, "REDACTED", fmt.Sprintf("%+v", *r.during))
 }

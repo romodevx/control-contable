@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
+	"github.com/romodevx/control-contable/backend/cmd/internal/sealing"
 	authhttp "github.com/romodevx/control-contable/backend/internal/auth/adapter/http"
 	"github.com/romodevx/control-contable/backend/internal/auth/domain"
 	"github.com/romodevx/control-contable/backend/internal/auth/infra"
@@ -197,8 +198,7 @@ func newAuthCrypto(w authWiring) (authCrypto, error) {
 	if c.index, err = crypto.NewEmailIndex(w.keys.EmailPepper.RevealBytes()); err != nil {
 		return authCrypto{}, fmt.Errorf("auth: email index: %w", err)
 	}
-	keyID := crypto.KeyID(w.keys.EmailKeyID) // #nosec G115 -- config bounds it to [1, crypto.MaxKeyID]
-	if c.emails, err = crypto.NewKeyring(keyID, map[crypto.KeyID][]byte{keyID: w.keys.EmailKey.RevealBytes()}); err != nil {
+	if c.emails, err = sealing.Keyring(w.keys.EmailKeyID, w.keys.EmailKey.RevealBytes(), w.keys.EmailPrevious); err != nil {
 		return authCrypto{}, fmt.Errorf("auth: email keyring: %w", err)
 	}
 	params := w.argon2
@@ -219,12 +219,21 @@ func newAuthCrypto(w authWiring) (authCrypto, error) {
 
 // newOutbox is the auth email outbox sealed with cfg's key.
 func newOutbox(cfg config.AuthOutbox) (*infra.Outbox, error) {
-	keyID := crypto.KeyID(cfg.KeyID) // #nosec G115 -- config bounds it to [1, crypto.MaxKeyID]
-	keyring, err := crypto.NewKeyring(keyID, map[crypto.KeyID][]byte{keyID: cfg.Key.RevealBytes()})
+	keyring, err := outboxKeyring(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return infra.NewOutbox(keyring), nil
+}
+
+// outboxKeyring seals with cfg's key and, during a rotation (ADR-0012),
+// still opens what its previous key sealed until the outbox drains.
+func outboxKeyring(cfg config.AuthOutbox) (*crypto.Keyring, error) {
+	keyring, err := sealing.Keyring(cfg.KeyID, cfg.Key.RevealBytes(), cfg.Previous)
 	if err != nil {
 		return nil, fmt.Errorf("auth: outbox keyring: %w", err)
 	}
-	return infra.NewOutbox(keyring), nil
+	return keyring, nil
 }
 
 // newUserID draws a UUIDv7: time-ordered, so new users append to the users

@@ -257,25 +257,43 @@ func (j *ResealJob) resealRow(ctx context.Context, c Column, ref Ref, res *colum
 	return nil
 }
 
-// report logs one line of counts: per column what this run did and how many
-// rows are still on an old key, and the whole key_usage histogram. It warns
-// when a row could not be opened: an operator must look at it.
+// Log messages: the readiness figures are read from these lines (log-based
+// metrics). Target names are attribute values, never keys: the platform
+// logger redacts every attribute whose key mentions an email, a token or an
+// RFC, which would hide the counts.
+const (
+	msgColumn   = "key reseal column"
+	msgUsage    = "key usage"
+	msgFinished = "key reseal finished"
+)
+
+// report logs counts only: one line per column this job holds (what this run
+// did and rows_on_old_keys, the readiness figure), one per key_usage row
+// (every target, held or not) and a closing line with the totals. A column
+// with unreadable rows is a warning: an operator must look at it.
 func (j *ResealJob) report(ctx context.Context, results []columnResult, usage []Usage) {
-	level := slog.LevelInfo
-	columns := make([]any, 0, len(results))
+	var resealed, unreadable int
+	var onOldKeys int64
 	for _, r := range results {
+		level := slog.LevelInfo
 		if r.unreadable > 0 {
 			level = slog.LevelWarn
 		}
-		columns = append(columns, slog.Group(r.target,
-			slog.Int("active_key_id", int(r.active)),
+		old := rowsOnOldKeys(usage, r.target, r.active)
+		j.deps.Logger.Log(ctx, level, msgColumn,
+			slog.String("column", r.target), slog.Int("active_key_id", int(r.active)),
 			slog.Int("resealed", r.resealed), slog.Int("skipped", r.skipped),
 			slog.Int("unreadable", r.unreadable), slog.Bool("more", r.more),
-			slog.Int64("rows_on_old_keys", rowsOnOldKeys(usage, r.target, r.active)),
-		))
+			slog.Int64("rows_on_old_keys", old))
+		resealed, unreadable, onOldKeys = resealed+r.resealed, unreadable+r.unreadable, onOldKeys+old
 	}
-	j.deps.Logger.Log(ctx, level, "key reseal finished",
-		slog.Group("columns", columns...), slog.Group("key_usage", usageAttrs(usage)...))
+	for _, u := range usage {
+		j.deps.Logger.LogAttrs(ctx, slog.LevelInfo, msgUsage,
+			slog.String("target", u.Target), slog.Int("version", u.Version), slog.Int64("rows", u.Rows))
+	}
+	j.deps.Logger.LogAttrs(ctx, slog.LevelInfo, msgFinished,
+		slog.Int("columns", len(results)), slog.Int("resealed", resealed),
+		slog.Int("unreadable", unreadable), slog.Int64("rows_on_old_keys", onOldKeys))
 }
 
 // rowsOnOldKeys sums target's rows on any key but active.
@@ -287,21 +305,4 @@ func rowsOnOldKeys(usage []Usage, target string, active crypto.KeyID) int64 {
 		}
 	}
 	return n
-}
-
-// usageAttrs groups key_usage per target: {"users.email_hash": {"v1": 12}}.
-func usageAttrs(usage []Usage) []any {
-	byTarget := map[string][]any{}
-	var order []string
-	for _, u := range usage {
-		if _, ok := byTarget[u.Target]; !ok {
-			order = append(order, u.Target)
-		}
-		byTarget[u.Target] = append(byTarget[u.Target], slog.Int64(fmt.Sprintf("v%d", u.Version), u.Rows))
-	}
-	attrs := make([]any, 0, len(order))
-	for _, target := range order {
-		attrs = append(attrs, slog.Group(target, byTarget[target]...))
-	}
-	return attrs
 }

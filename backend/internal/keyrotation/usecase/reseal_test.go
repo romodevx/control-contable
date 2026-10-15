@@ -17,10 +17,11 @@ import (
 
 	"github.com/romodevx/control-contable/backend/internal/keyrotation/usecase"
 	"github.com/romodevx/control-contable/backend/internal/platform/crypto"
+	"github.com/romodevx/control-contable/backend/internal/platform/logging"
 )
 
 const (
-	target  = "fake.ciphertext"
+	target  = "devices.token_ciphertext" // a real name: "token" is a redacted key part
 	userOne = "00000000-0000-4000-8000-000000000001"
 	userTwo = "00000000-0000-4000-8000-000000000002"
 )
@@ -62,35 +63,46 @@ func (h *harness) jobWith(t *testing.T, kr *crypto.Keyring, batch, maxBatches in
 	job, err := usecase.NewResealJob(usecase.ResealDeps{
 		Tx: h.units, System: h.units, Usage: h.usage,
 		Columns:   []usecase.Column{{Target: target, Store: h.store, Sealer: sealer{kr}}},
-		Logger:    slog.New(slog.NewJSONHandler(h.logs, nil)),
+		Logger:    logging.New(h.logs, nil), // the production redacting handler
 		BatchSize: batch, MaxBatches: maxBatches,
 	})
 	require.NoError(t, err)
 	return job
 }
 
-// finished decodes the last "key reseal finished" line.
-func (h *harness) finished(t *testing.T) map[string]any {
+// lines decodes every log line with msg.
+func (h *harness) lines(t *testing.T, msg string) []map[string]any {
 	t.Helper()
-	var last map[string]any
+	var out []map[string]any
 	for line := range strings.Lines(h.logs.String()) {
 		var entry map[string]any
 		require.NoError(t, json.Unmarshal([]byte(line), &entry))
-		if entry["msg"] == "key reseal finished" {
+		if entry["msg"] == msg {
+			out = append(out, entry)
+		}
+	}
+	return out
+}
+
+// finished is the last "key reseal finished" line.
+func (h *harness) finished(t *testing.T) map[string]any {
+	t.Helper()
+	all := h.lines(t, "key reseal finished")
+	require.NotEmpty(t, all, "no finished line in %s", h.logs)
+	return all[len(all)-1]
+}
+
+// column is the last "key reseal column" line of target.
+func (h *harness) column(t *testing.T) map[string]any {
+	t.Helper()
+	var last map[string]any
+	for _, entry := range h.lines(t, "key reseal column") {
+		if entry["column"] == target {
 			last = entry
 		}
 	}
-	require.NotNil(t, last, "no finished line in %s", h.logs)
+	require.NotNil(t, last, "no column line in %s", h.logs)
 	return last
-}
-
-func columnLog(t *testing.T, entry map[string]any) map[string]any {
-	t.Helper()
-	columns, ok := entry["columns"].(map[string]any)
-	require.True(t, ok, "columns group: %v", entry)
-	col, ok := columns[target].(map[string]any)
-	require.True(t, ok, "column group: %v", columns)
-	return col
 }
 
 func TestNewResealJob_validates(t *testing.T) {
@@ -164,7 +176,7 @@ func TestResealJob_movesEveryRowToTheActiveKeyInItsOwnersUnitOfWork(t *testing.T
 		require.NoError(t, err)
 		assert.Equal(t, "plaintext-of-"+id, string(plain))
 	}
-	col := columnLog(t, h.finished(t))
+	col := h.column(t)
 	assert.EqualValues(t, 5, col["resealed"])
 	assert.EqualValues(t, 0, col["rows_on_old_keys"])
 	assert.Equal(t, false, col["more"])
@@ -181,7 +193,7 @@ func TestResealJob_secondRunIsANoOp(t *testing.T) {
 
 	assert.Empty(t, h.store.replaced)
 	assert.Equal(t, before, h.store.keyIDs(t))
-	assert.EqualValues(t, 0, columnLog(t, h.finished(t))["resealed"])
+	assert.EqualValues(t, 0, h.column(t)["resealed"])
 }
 
 // A run cut by MaxBatches leaves the rest for the next run, which picks up
@@ -191,7 +203,7 @@ func TestResealJob_resumesAcrossRuns(t *testing.T) {
 	job := h.job(t, 2, 1)
 
 	require.NoError(t, job.Run(t.Context()))
-	first := columnLog(t, h.finished(t))
+	first := h.column(t)
 	assert.EqualValues(t, 2, first["resealed"])
 	assert.Equal(t, true, first["more"])
 	assert.EqualValues(t, 3, first["rows_on_old_keys"])
@@ -199,7 +211,7 @@ func TestResealJob_resumesAcrossRuns(t *testing.T) {
 	require.NoError(t, job.Run(t.Context()))
 	require.NoError(t, job.Run(t.Context()))
 
-	last := columnLog(t, h.finished(t))
+	last := h.column(t)
 	assert.EqualValues(t, 0, last["rows_on_old_keys"])
 	assert.Equal(t, false, last["more"])
 	assert.Len(t, h.store.replaced, 5, "every row re-sealed exactly once")
@@ -245,7 +257,7 @@ func TestResealJob_countsUnreadableRowsAndGoesOn(t *testing.T) {
 	assert.Equal(t, activeKeyID, ids[rowID(1)])
 	assert.Equal(t, foreignKey, ids[rowID(7)])
 	assert.Equal(t, oldKeyID, ids[rowID(8)])
-	col := columnLog(t, h.finished(t))
+	col := h.column(t)
 	assert.EqualValues(t, 2, col["resealed"])
 	assert.EqualValues(t, 2, col["unreadable"])
 	assert.EqualValues(t, 2, col["rows_on_old_keys"])
@@ -268,7 +280,7 @@ func TestResealJob_skipsRowsAlreadyOnTheActiveKeyOrGone(t *testing.T) {
 	require.NoError(t, h.job(t, usecase.DefaultBatchSize, usecase.DefaultMaxBatches).Run(t.Context()))
 
 	assert.Empty(t, h.store.replaced)
-	col := columnLog(t, h.finished(t))
+	col := h.column(t)
 	assert.EqualValues(t, 0, col["resealed"])
 	assert.EqualValues(t, 2, col["skipped"])
 }
@@ -331,21 +343,40 @@ func TestResealJob_storeErrorsStopTheRun(t *testing.T) {
 	})
 }
 
-// The readiness line reports every target key_usage returns, columns the
+// The readiness lines report every target key_usage returns, columns the
 // job does not hold included (a worker without the RFC key still reports
-// how many RFCs are on each key), and nothing but counts.
+// how many RFCs are on each key), and nothing but counts. They go through
+// the production logger: target names that mention an email, a token or an
+// RFC must not redact the counts.
 func TestResealJob_logsCountsOnly(t *testing.T) {
 	h := newHarness(t, 2)
-	h.usage.extra = []usecase.Usage{{Target: "taxpayers.rfc_encrypted", Version: 1, Rows: 4}, {Target: "taxpayers.rfc_hash", Version: 1, Rows: 4}}
+	h.usage.extra = []usecase.Usage{
+		{Target: "taxpayers.rfc_encrypted", Version: 1, Rows: 4}, {Target: "users.email_hash", Version: 1, Rows: 3},
+	}
 
 	require.NoError(t, h.job(t, 1, usecase.DefaultMaxBatches).Run(t.Context()))
 
-	entry := h.finished(t)
-	usage, ok := entry["key_usage"].(map[string]any)
-	require.True(t, ok, "%v", entry)
-	assert.Equal(t, map[string]any{"v1": float64(4)}, usage["taxpayers.rfc_encrypted"])
-	assert.Equal(t, map[string]any{"v2": float64(2)}, usage[target])
+	type usageLine struct {
+		Target  string
+		Version float64
+		Rows    float64
+	}
+	var usage []usageLine
+	for _, entry := range h.lines(t, "key usage") {
+		usage = append(usage, usageLine{entry["target"].(string), entry["version"].(float64), entry["rows"].(float64)})
+	}
+	assert.ElementsMatch(t, []usageLine{
+		{target, float64(activeKeyID), 2}, {"taxpayers.rfc_encrypted", 1, 4}, {"users.email_hash", 1, 3},
+	}, usage)
+	col := h.column(t)
+	assert.EqualValues(t, 2, col["resealed"])
+	assert.EqualValues(t, activeKeyID, col["active_key_id"])
+	finished := h.finished(t)
+	assert.EqualValues(t, 1, finished["columns"])
+	assert.EqualValues(t, 2, finished["resealed"])
+	assert.EqualValues(t, 0, finished["rows_on_old_keys"])
 	logs := h.logs.String()
+	assert.NotContains(t, logs, logging.Redacted, "no count is redacted")
 	for id, r := range h.store.rows {
 		assert.NotContains(t, logs, id)
 		assert.NotContains(t, logs, r.userID)

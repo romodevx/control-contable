@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/romodevx/control-contable/backend/cmd/internal/estimates"
+	"github.com/romodevx/control-contable/backend/cmd/internal/sealing"
 	"github.com/romodevx/control-contable/backend/internal/platform/clock"
 	"github.com/romodevx/control-contable/backend/internal/platform/config"
 	"github.com/romodevx/control-contable/backend/internal/platform/crypto"
@@ -79,18 +80,25 @@ func newReminderJob(pool *sql.DB, units *pgdb.TxManager, logger *slog.Logger, pu
 	})
 }
 
-// newTokenVault opens the tokens the API sealed (same keys, M9-05 N1).
+// newTokenVault opens the tokens the API sealed (same keys, M9-05 N1), with
+// the previous key too while a rotation is in flight (ADR-0012).
 func newTokenVault(keys config.Reminders) (*pushtoken.Vault, error) {
-	keyID := crypto.KeyID(keys.PushTokenKeyID) // #nosec G115 -- config bounds it to [1, crypto.MaxKeyID]
-	keyring, err := crypto.NewKeyring(keyID, map[crypto.KeyID][]byte{keyID: keys.PushTokenKey.RevealBytes()})
+	_, vault, err := newTokenKeyringAndVault(keys)
+	return vault, err
+}
+
+// newTokenKeyringAndVault is newTokenVault with its keyring, which the key
+// re-seal job needs for the active key id.
+func newTokenKeyringAndVault(keys config.Reminders) (*crypto.Keyring, *pushtoken.Vault, error) {
+	keyring, err := sealing.Keyring(keys.PushTokenKeyID, keys.PushTokenKey.RevealBytes(), keys.PushTokenPrevious)
 	if err != nil {
-		return nil, fmt.Errorf("reminders: push token keyring: %w", err)
+		return nil, nil, fmt.Errorf("reminders: push token keyring: %w", err)
 	}
 	index, err := crypto.NewTokenIndex(keys.PushTokenIndexPepper.RevealBytes())
 	if err != nil {
-		return nil, fmt.Errorf("reminders: push token index: %w", err)
+		return nil, nil, fmt.Errorf("reminders: push token index: %w", err)
 	}
-	return pushtoken.NewVault(keyring, index), nil
+	return keyring, pushtoken.NewVault(keyring, index), nil
 }
 
 // collapseKey derives the collapse-id HMAC key from pepper.

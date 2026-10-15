@@ -89,21 +89,42 @@ func (v *RFCVault) Open(ciphertext []byte, binding usecase.RowBinding) (domain.R
 	return rfc, nil
 }
 
+// RFCResealer moves rfc_encrypted values to its keyring's active key under
+// the same row binding as RFCVault (ADR-0012 key re-seal job). It holds no
+// index pepper: a re-seal never touches rfc_hash. It is safe for concurrent
+// use.
+type RFCResealer struct {
+	keyring *crypto.Keyring
+}
+
+// NewRFCResealer returns a re-sealer over keyring (active key plus the
+// retired ones it still opens).
+func NewRFCResealer(keyring *crypto.Keyring) *RFCResealer { return &RFCResealer{keyring: keyring} }
+
+// ActiveKeyID is the key every value ends on.
+func (r *RFCResealer) ActiveKeyID() crypto.KeyID { return r.keyring.ActiveKeyID() }
+
 // Reseal moves an rfc_encrypted value of the row binding names to the
-// keyring's active key (ADR-0012 key re-seal job); the RFC never leaves the
-// keyring. It fails like Open: crypto.ErrDecrypt for another row's value,
+// active key; the RFC never leaves the keyring. It fails like
+// RFCVault.Open: crypto.ErrDecrypt for another row's value,
 // crypto.ErrUnknownKeyID when the sealing key is no longer held.
-func (v *RFCVault) Reseal(ciphertext []byte, binding usecase.RowBinding) ([]byte, error) {
+func (r *RFCResealer) Reseal(ciphertext []byte, binding usecase.RowBinding) ([]byte, error) {
 	taxpayerID, userID, err := bindingIDs(binding)
 	if err != nil {
 		return nil, err
 	}
-	resealed, err := v.keyring.Reseal(ciphertext, rowAAD(taxpayerID, userID))
+	resealed, err := r.keyring.Reseal(ciphertext, rowAAD(taxpayerID, userID))
 	if err != nil {
 		return nil, fmt.Errorf("taxpayers infra: reseal rfc: %w", err)
 	}
 	return resealed, nil
 }
+
+// Format redacts the re-sealer for every fmt verb.
+func (RFCResealer) Format(f fmt.State, _ rune) { _, _ = io.WriteString(f, redacted) }
+
+// LogValue redacts the re-sealer in slog.
+func (RFCResealer) LogValue() slog.Value { return slog.StringValue(redacted) }
 
 // Format redacts the vault for every fmt verb.
 func (RFCVault) Format(f fmt.State, _ rune) { _, _ = io.WriteString(f, redacted) }

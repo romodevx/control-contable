@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	authusecase "github.com/romodevx/control-contable/backend/internal/auth/usecase"
+	keyrotation "github.com/romodevx/control-contable/backend/internal/keyrotation/usecase"
 	"github.com/romodevx/control-contable/backend/internal/platform/clock"
 	"github.com/romodevx/control-contable/backend/internal/platform/config"
 	"github.com/romodevx/control-contable/backend/internal/platform/logging"
@@ -97,7 +98,7 @@ func TestNewRegistry_registersThePurgeAndTheAuthEmailDelivery(t *testing.T) {
 	reg, err := newRegistry(testWiring(t, config.Reminders{}))
 
 	require.NoError(t, err)
-	assert.Equal(t, []string{"records_purge", "auth_email_delivery"}, reg.Names(), "dev without push token keys: no reminder job")
+	assert.Equal(t, []string{"records_purge", "auth_email_delivery", "key_reseal"}, reg.Names(), "dev without push token keys: no reminder job")
 }
 
 // With the push token keys (required outside dev) the reminder job (M9-06)
@@ -106,7 +107,7 @@ func TestNewRegistry_registersTheReminders(t *testing.T) {
 	reg, err := newRegistry(testWiring(t, testReminderKeys(t)))
 
 	require.NoError(t, err)
-	assert.Equal(t, []string{"records_purge", "auth_email_delivery", "reminders"}, reg.Names())
+	assert.Equal(t, []string{"records_purge", "auth_email_delivery", "reminders", "key_reseal"}, reg.Names())
 }
 
 // newJobs pairs each production job with its own per-run timeout (M9-11
@@ -123,6 +124,7 @@ func TestNewJobs_pairsEachJobWithItsTimeout(t *testing.T) {
 		"records_purge":       recordsPurgeTimeout,
 		"auth_email_delivery": authusecase.DeliveryRunTimeout,
 		"reminders":           remindersTimeout,
+		"key_reseal":          keyrotation.RunTimeout,
 	}, got)
 }
 

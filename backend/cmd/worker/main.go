@@ -11,7 +11,9 @@
 // sender until a provider is chosen) and the reminders (M9-06, every 5 minutes, a no-op while module_reminders
 // is OFF), which open the push tokens with the API's PUSH_TOKEN_* keys and
 // send through the push sender (M9-07) built at startup from FCM_PROJECT_ID /
-// FCM_CREDENTIALS_JSON, disabled when no project is set. Every job runs its
+// FCM_CREDENTIALS_JSON, disabled when no project is set, and the key re-seal
+// (ADR-0012, every 15 minutes), which moves sealed columns to their active
+// key and reports how many rows are still on an old one. Every job runs its
 // database work through tx.Manager's
 // System unit of work (no user context; SECURITY DEFINER functions such as
 // due_reminder_users) or a per-user unit of work.
@@ -30,11 +32,12 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" database/sql driver
 
+	"github.com/romodevx/control-contable/backend/cmd/internal/sealing"
 	authinfra "github.com/romodevx/control-contable/backend/internal/auth/infra"
 	authusecase "github.com/romodevx/control-contable/backend/internal/auth/usecase"
+	keyrotation "github.com/romodevx/control-contable/backend/internal/keyrotation/usecase"
 	"github.com/romodevx/control-contable/backend/internal/platform/clock"
 	"github.com/romodevx/control-contable/backend/internal/platform/config"
-	"github.com/romodevx/control-contable/backend/internal/platform/crypto"
 	"github.com/romodevx/control-contable/backend/internal/platform/logging"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
 	"github.com/romodevx/control-contable/backend/internal/platform/worker"
@@ -73,6 +76,10 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err != nil {
 		return err
 	}
+	resealKeys, err := config.LoadResealKeys(ctx, lookup, config.NewEnvSecrets(lookup))
+	if err != nil {
+		return err
+	}
 	logger := logging.New(logOut, cfg.LogLevel)
 	push, err := newPushSender(ctx, cfg.Push, logger)
 	if err != nil {
@@ -87,7 +94,8 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 		return err
 	}
 	reg, err := newRegistry(jobWiring{
-		pool: pool, logger: logger, push: push, reminderKeys: keys, outbox: outbox, env: cfg.Env, now: clock.NewSystem(),
+		pool: pool, logger: logger, push: push, reminderKeys: keys, outbox: outbox, resealKeys: resealKeys,
+		env: cfg.Env, now: clock.NewSystem(),
 	})
 	if err != nil {
 		return err
@@ -119,6 +127,9 @@ type jobWiring struct {
 	reminderKeys config.Reminders
 	// outbox is the key the API seals the queued auth emails with.
 	outbox config.AuthOutbox
+	// resealKeys are the RFC and email keys, given to the worker only for a
+	// key rotation (ADR-0012); zero ones are not re-sealed.
+	resealKeys config.ResealKeys
 	// env decides whether the dev log sender reveals codes (dev only).
 	env config.Environment
 	// now is the reminder job's and its estimate's clock.
@@ -167,23 +178,27 @@ func newJobs(w jobWiring) ([]scheduledJob, error) {
 		{job: purge, timeout: recordsPurgeTimeout},
 		{job: delivery, timeout: authusecase.DeliveryRunTimeout},
 	}
-	if !hasReminderKeys(w.reminderKeys) {
+	if hasReminderKeys(w.reminderKeys) {
+		job, err := newReminderJob(w.pool, units, w.logger, w.push, w.reminderKeys, w.now)
+		if err != nil {
+			return nil, err
+		}
+		jobs = append(jobs, scheduledJob{job: job, timeout: remindersTimeout})
+	} else {
 		w.logger.Warn("reminders disabled", slog.String("reason", "PUSH_TOKEN_ENC_KEY / PUSH_TOKEN_INDEX_PEPPER are not set"))
-		return jobs, nil
 	}
-	job, err := newReminderJob(w.pool, units, w.logger, w.push, w.reminderKeys, w.now)
+	reseal, err := newKeyResealJob(units, w)
 	if err != nil {
 		return nil, err
 	}
-	return append(jobs, scheduledJob{job: job, timeout: remindersTimeout}), nil
+	return append(jobs, scheduledJob{job: reseal, timeout: keyrotation.RunTimeout}), nil
 }
 
 // newEmailDeliveryJob wires the auth email delivery: the outbox opened with
 // the API's key and the provider-agnostic sender (the dev log sender until a
 // provider is chosen, OB2: it reveals codes in dev only).
 func newEmailDeliveryJob(units *pgdb.TxManager, w jobWiring) (*authusecase.EmailDeliveryJob, error) {
-	keyID := crypto.KeyID(w.outbox.KeyID) // #nosec G115 -- config bounds it to [1, crypto.MaxKeyID]
-	keyring, err := crypto.NewKeyring(keyID, map[crypto.KeyID][]byte{keyID: w.outbox.Key.RevealBytes()})
+	keyring, err := sealing.Keyring(w.outbox.KeyID, w.outbox.Key.RevealBytes(), w.outbox.Previous)
 	if err != nil {
 		return nil, fmt.Errorf("auth email delivery: outbox keyring: %w", err)
 	}
