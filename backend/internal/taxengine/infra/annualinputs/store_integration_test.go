@@ -289,7 +289,7 @@ func TestSalary_RoundTripAndMoveYear(t *testing.T) {
 	next := e.salary(time.Date(2027, time.March, 1, 12, 0, 0, 0, clock.Location()))
 	moved, err := next.Update(t.Context(), userA, fisicaA, statementID2,
 		annual.SalaryPatch{FiscalYear: ptr(2027), EmployerLabel: annual.Value("Segundo empleo"), LeftBeforeYearEnd: ptr(true)})
-	require.NoError(t, err, "cc_app may move fiscal_year (20261017100000)")
+	require.NoError(t, err, "cc_app may move fiscal_year (20261017102000)")
 	assert.Equal(t, 2027, moved.Statement.FiscalYear)
 	assert.Equal(t, "Segundo empleo", moved.Statement.EmployerLabel)
 
