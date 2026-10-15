@@ -71,8 +71,8 @@ type pendingRow struct{ ID, UserID string }
 
 func pendingRows(t *testing.T, worker *sql.DB, fn string, active int, after any, limit int) []pendingRow {
 	t.Helper()
-	rows, err := worker.QueryContext(t.Context(),
-		"SELECT id::text, user_id::text FROM "+fn+"($1::smallint, $2::uuid, $3)", active, after, limit)
+	query := "SELECT id::text, user_id::text FROM " + pgtest.QuoteIdent(fn) + "($1::smallint, $2::uuid, $3)" //nolint:gosec // G202: the function name is quoted by QuoteIdent
+	rows, err := worker.QueryContext(t.Context(), query, active, after, limit)
 	require.NoError(t, err)
 	defer func() { _ = rows.Close() }()
 	var out []pendingRow
@@ -111,7 +111,8 @@ func TestKeyReseal_PendingFunctionsRefuseBadArguments(t *testing.T) {
 	f := seedResealFixture(t)
 	for _, fn := range []string{"reseal_pending_taxpayers", "reseal_pending_users", "reseal_pending_devices"} {
 		for _, args := range [][]any{{resealActiveKey, 0}, {resealActiveKey, resealMaxLimit + 1}, {0, 1}, {nil, 1}, {resealActiveKey, nil}} {
-			_, err := f.worker.ExecContext(t.Context(), "SELECT * FROM "+fn+"($1::smallint, NULL, $2::integer)", args...)
+			//nolint:gosec // G202: the function name is quoted by QuoteIdent
+			_, err := f.worker.ExecContext(t.Context(), "SELECT * FROM "+pgtest.QuoteIdent(fn)+"($1::smallint, NULL, $2::integer)", args...)
 			requireSQLState(t, err, sqlstateRaiseException)
 		}
 	}
