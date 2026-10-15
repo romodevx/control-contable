@@ -306,7 +306,13 @@ func TestDeductions_FieldRules(t *testing.T) {
 		}, []string{"scholarship_cents/invalid"}},
 		{"blank label", func() annual.DeductionInput { in := tuition(clientID); in.StudentLabel = ptr("   "); return in }, []string{"student_label/invalid"}},
 		{"untrimmed label", func() annual.DeductionInput { in := tuition(clientID); in.StudentLabel = ptr(" Hija"); return in }, []string{"student_label/invalid"}},
-		{"control character", func() annual.DeductionInput { in := tuition(clientID); in.StudentLabel = ptr("Hi\u0007ja"); return in }, []string{"student_label/invalid"}},
+		{"control character", func() annual.DeductionInput { in := tuition(clientID); in.StudentLabel = ptr("Hi\u0007ja"); return in }, []string{"student_label/invisible_characters"}},
+		{"BOM", func() annual.DeductionInput { in := tuition(clientID); in.StudentLabel = ptr("\ufeffHija"); return in }, []string{"student_label/invisible_characters"}},
+		{"bidi isolate", func() annual.DeductionInput {
+			in := tuition(clientID)
+			in.StudentLabel = ptr("Hija\u2066menor")
+			return in
+		}, []string{"student_label/invisible_characters"}},
 		{"label over 40 characters", func() annual.DeductionInput { in := tuition(clientID); in.StudentLabel = &longLabel; return in }, []string{"student_label/invalid"}},
 		{"label not UTF-8", func() annual.DeductionInput { in := tuition(clientID); in.StudentLabel = ptr("\xff"); return in }, []string{"student_label/invalid"}},
 		{"folio format", func() annual.DeductionInput { in := medical(clientID); in.CFDIUUID = ptr("not-a-folio"); return in }, []string{"cfdi_uuid/invalid"}},

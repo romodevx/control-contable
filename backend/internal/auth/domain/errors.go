@@ -32,9 +32,13 @@ const (
 	ErrInvalidVerificationCode Error = "auth: invalid verification code"
 	// ErrRandomSource reports a failure of the injected entropy source.
 	ErrRandomSource Error = "auth: random source failed"
-	// ErrInvalidName reports a display name that is blank, too long, not
-	// valid UTF-8 or holds control characters.
+	// ErrInvalidName reports a display name that is blank, too long or not
+	// valid UTF-8.
 	ErrInvalidName Error = "auth: invalid name"
+	// ErrNameInvisible reports a display name holding an invisible
+	// character: control, format (zero width, bidi) or line separator
+	// (usertext).
+	ErrNameInvisible Error = "auth: name has invisible characters"
 	// ErrDocumentMissing reports an acceptance without the terms or without
 	// a privacy notice.
 	ErrDocumentMissing Error = "auth: a required legal document was not accepted"

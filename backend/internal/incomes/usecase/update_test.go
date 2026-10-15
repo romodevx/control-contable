@@ -104,6 +104,8 @@ func TestUpdate_Refusals(t *testing.T) {
 			code: apperr.CodeBusinessRuleViolation, field: []string{"iva_cents", "iva_amount_mismatch"}},
 		{name: "description too long", taxpayer: taxpayerA, id: incomeID, patch: usecase.Patch{Description: ptr(strings.Repeat("x", 201))},
 			code: apperr.CodeValidationFailed, field: []string{"description", "too_long"}},
+		{name: "description holding a BOM", taxpayer: taxpayerA, id: incomeID, patch: usecase.Patch{Description: ptr("\ufeffpago")},
+			code: apperr.CodeValidationFailed, field: []string{"description", "invisible_characters"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

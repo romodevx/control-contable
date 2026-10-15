@@ -8,6 +8,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/auth/domain"
 	"github.com/romodevx/control-contable/backend/internal/auth/usecase"
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
+	"github.com/romodevx/control-contable/backend/internal/platform/usertext"
 )
 
 // Client-safe messages. They never echo the input or name internals.
@@ -20,9 +21,11 @@ const (
 	msgPasswordCommon    = "This password is too common. Choose a different one."
 	msgPasswordPolicy    = "Use at least 12 characters that are not a common or leaked password." //nolint:gosec // G101: a name or message, not a credential
 	msgInvalidName       = "Enter a name of 1 to 120 characters."
+	msgNameInvisible     = "Remove invisible or formatting characters from the name."
 	msgDocuments         = "Accept the current privacy notice and terms."
 	msgInvalidCode       = "Enter the 6-digit code from the email."
 	msgCodeRejected      = "The code is invalid or has expired."
+	msgInvalidDeviceID   = "Enter a valid installation id."
 	// msgSessionEnded is the one answer to a refresh token that cannot be
 	// used, whatever the reason (the contract's refreshSession 401 example).
 	msgSessionEnded = "Your session has ended. Sign in again."
@@ -45,6 +48,7 @@ var ErrorMapper = apperr.NewMapper(
 	apperr.Rule{Target: domain.ErrPasswordMalformed, Code: apperr.CodeValidationFailed, Message: msgPasswordMalformed},
 	apperr.Rule{Target: domain.ErrPasswordCommon, Code: apperr.CodeValidationFailed, Message: msgPasswordCommon},
 	apperr.Rule{Target: domain.ErrInvalidName, Code: apperr.CodeValidationFailed, Message: msgInvalidName},
+	apperr.Rule{Target: domain.ErrNameInvisible, Code: apperr.CodeValidationFailed, Message: msgNameInvisible},
 	apperr.Rule{Target: domain.ErrDocumentMissing, Code: apperr.CodeValidationFailed, Message: msgDocuments},
 	apperr.Rule{Target: domain.ErrDocumentDuplicate, Code: apperr.CodeValidationFailed, Message: msgDocuments},
 	apperr.Rule{Target: domain.ErrDocumentUnknown, Code: apperr.CodeValidationFailed, Message: msgDocuments},
@@ -76,10 +80,12 @@ var fieldRules = []fieldRule{
 	{domain.ErrPasswordMalformed, "password", "password_policy", msgPasswordPolicy},
 	{domain.ErrPasswordCommon, "password", "password_policy", msgPasswordPolicy},
 	{domain.ErrInvalidName, "name", "invalid_name", msgInvalidName},
+	{domain.ErrNameInvisible, "name", usertext.DetailInvisibleCharacters, msgNameInvisible},
 	{domain.ErrDocumentNotCurrent, "accepted_documents", "document_version_not_current", msgDocuments},
 	{domain.ErrDocumentMissing, "accepted_documents", "document_missing", msgDocuments},
 	{domain.ErrDocumentDuplicate, "accepted_documents", "document_duplicate", msgDocuments},
 	{domain.ErrDocumentUnknown, "accepted_documents", "document_unknown", msgDocuments},
+	{usecase.ErrInvalidDeviceID, "device_id", "format", msgInvalidDeviceID},
 }
 
 // toAppError translates a use case error for the router: a field error

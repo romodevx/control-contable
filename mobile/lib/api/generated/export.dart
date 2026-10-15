@@ -42,6 +42,7 @@ export 'models/verify_email_request.dart';
 export 'models/resend_verification_request.dart';
 export 'models/login_request.dart';
 export 'models/refresh_request.dart';
+export 'models/logout_request.dart';
 export 'models/token_pair.dart';
 export 'models/auth_session.dart';
 export 'models/user.dart';

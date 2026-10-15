@@ -58,7 +58,11 @@ func (h *SessionHandler) Logout(ctx context.Context, req gen.LogoutRequestObject
 	if err != nil {
 		return gen.Logout401JSONResponse{UnauthorizedJSONResponse: unauthorized(ctx)}, nil
 	}
-	err = h.logout.Execute(ctx, usecase.LogoutInput{UserID: userID, RefreshToken: req.Body.RefreshToken})
+	in := usecase.LogoutInput{UserID: userID, RefreshToken: req.Body.RefreshToken}
+	if req.Body.DeviceId != nil {
+		in.DeviceID = req.Body.DeviceId.String()
+	}
+	err = h.logout.Execute(ctx, in)
 	if errors.Is(err, usecase.ErrTokenMalformed) || errors.Is(err, usecase.ErrInvalidAccessToken) {
 		return gen.Logout401JSONResponse{UnauthorizedJSONResponse: unauthorized(ctx)}, nil
 	}

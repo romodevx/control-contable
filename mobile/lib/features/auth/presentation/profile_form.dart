@@ -20,9 +20,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// `UserUpdate.name` length limit.
 const int _nameMaxLength = 120;
 
-/// Server `FieldError.code` of an empty name.
-const String _tooShortCode = 'minLength';
-
 /// The account screen's content for [user]: the name (the one editable
 /// field), the email (read-only), the legal documents and the deletion.
 class ProfileForm extends ConsumerStatefulWidget {
@@ -83,9 +80,7 @@ class _ProfileFormState extends ConsumerState<ProfileForm> {
     final (:matched, :unmatched) = matchServerFieldErrors(
       details,
       fieldsByPath: {'name': _name},
-      describe: (detail) => detail.code == _tooShortCode
-          ? const MissingValue()
-          : CustomFieldError(l10n.authNameTooLong),
+      describe: (detail) => describeProfileNameDetail(detail, l10n),
     );
     if (!mounted) return;
     _form.showServerErrors(matched);

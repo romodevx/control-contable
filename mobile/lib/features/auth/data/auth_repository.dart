@@ -2,7 +2,7 @@ import 'package:control_contable/api/generated/clients/auth_client.dart';
 import 'package:control_contable/api/generated/models/auth_session.dart';
 import 'package:control_contable/api/generated/models/legal_document.dart';
 import 'package:control_contable/api/generated/models/login_request.dart';
-import 'package:control_contable/api/generated/models/refresh_request.dart';
+import 'package:control_contable/api/generated/models/logout_request.dart';
 import 'package:control_contable/api/generated/models/register_request.dart';
 import 'package:control_contable/api/generated/models/resend_verification_request.dart';
 import 'package:control_contable/api/generated/models/verify_email_request.dart';
@@ -29,8 +29,10 @@ abstract interface class AuthRepository {
   /// sign-up all fail with the same `ApiUnauthorized`.
   Future<AuthSession> login({required String email, required String password});
 
-  /// Revokes the family of [refreshToken] on the server (idempotent).
-  Future<void> logout(String refreshToken);
+  /// Revokes the family of [refreshToken] on the server (idempotent) and,
+  /// in the same transaction, removes this installation's push device
+  /// [deviceId] when given (only the caller's; 0.14.0).
+  Future<void> logout(String refreshToken, {String? deviceId});
 }
 
 /// [AuthRepository] over the generated auth client.
@@ -70,8 +72,10 @@ class ApiAuthRepository implements AuthRepository {
   );
 
   @override
-  Future<void> logout(String refreshToken) => guardApi(
-    () => _client.logout(body: RefreshRequest(refreshToken: refreshToken)),
+  Future<void> logout(String refreshToken, {String? deviceId}) => guardApi(
+    () => _client.logout(
+      body: LogoutRequest(refreshToken: refreshToken, deviceId: deviceId),
+    ),
   );
 }
 

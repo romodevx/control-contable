@@ -119,6 +119,13 @@ type Message struct {
 // maxListed is how many taxpayers a notification names before "y N más".
 const maxListed = 3
 
+// MaxListedNameRunes caps a listed name, in characters: the contract's
+// display_name maxLength. A longer name is cut and ends in nameEllipsis, so
+// the payload stays bounded whatever reaches the job (M9 security gate F2).
+const MaxListedNameRunes = 80
+
+const nameEllipsis = "…"
+
 const (
 	titleDue      = "Hoy vence tu pago mensual estimado"
 	titleEarlyFmt = "Tu pago mensual estimado vence el %s"
@@ -161,7 +168,7 @@ func title(kind Kind, due time.Time) (string, error) {
 }
 
 func body(in MessageInput) string {
-	named := in.Taxpayers[:min(len(in.Taxpayers), maxListed)]
+	named := capNames(in.Taxpayers[:min(len(in.Taxpayers), maxListed)])
 	rest := len(in.Taxpayers) - len(named)
 	if !anyAmount(named) {
 		names := make([]string, len(named))
@@ -175,6 +182,24 @@ func body(in MessageInput) string {
 		items[i] = amountItem(t)
 	}
 	return withRest(strings.Join(items, " · "), rest) + amountsSuffix
+}
+
+// capNames copies ts with every name cut to MaxListedNameRunes.
+func capNames(ts []Listed) []Listed {
+	capped := make([]Listed, len(ts))
+	for i, t := range ts {
+		t.Name = capName(t.Name)
+		capped[i] = t
+	}
+	return capped
+}
+
+func capName(name string) string {
+	runes := []rune(name)
+	if len(runes) <= MaxListedNameRunes {
+		return name
+	}
+	return string(runes[:MaxListedNameRunes-1]) + nameEllipsis
 }
 
 func anyAmount(ts []Listed) bool {

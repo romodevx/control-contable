@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Control Contable API
-  version: 0.13.0
+  version: 0.15.0
   summary: Monthly IVA and provisional ISR estimates for Mexican taxpayers.
   description: |
     Spec-first contract (single source of truth). Server stubs (oapi-codegen),
@@ -370,12 +370,22 @@ paths:
     post:
       tags: [Auth]
       operationId: logout
-      x-frozen: sha256:301257a867a314c9dab566d583aa7afc1be45ff7fcc8959a1b46f561899a2ecf
+      x-frozen: sha256:528bd1fd3fee7a711047f12039d7a82dc3d8ff4f022da315fd50ffafec3acca6
       summary: Revoke the refresh token family
       description: >-
         Revokes the family of the given refresh token (US-A2c). Idempotent: a refresh token
         that is already revoked or not the caller's also answers `204`, so another user's
         token state is never revealed. A missing or invalid bearer answers `401`.
+
+
+        **Push device (0.14.0).** The optional `device_id` is this installation's id (the
+        `registerDevice` `id`). When given, the caller's device row with that id is removed in
+        the same transaction as the revocation, so a phone that changes hands stops receiving
+        the previous user's reminders even when the app's earlier `unregisterDevice` call was
+        lost (M9 security gate F1). Another user's or an unknown id removes nothing and still
+        answers `204` (no oracle). It is not gated by `module_reminders`: removing one's own
+        device is always allowed, and with the module OFF there is nothing else to undo. A
+        malformed id is `400 validation_failed` on `device_id`.
       x-module: module_auth
       security:
         - bearerAuth: []
@@ -383,7 +393,7 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/RefreshRequest' }
+            schema: { $ref: '#/components/schemas/LogoutRequest' }
       responses:
         '204':
           description: Logged out (also when the token was already revoked or not the caller's).
@@ -6282,7 +6292,7 @@ components:
       examples:
         - status: verification_sent
     VerifyEmailRequest:
-      x-frozen: sha256:7e8f356efba1abf886669add85205441432ac94514d8e8fa347374605f81b451
+      x-frozen: sha256:686b42a52f41af1895a07689f8b74392da4b421c5b13c58565fd8acb5ad09134
       type: object
       required: [email, code, password]
       additionalProperties: false
@@ -6294,7 +6304,7 @@ components:
           minLength: 12
           maxLength: 128
           description: The new account's password (D8). 12-128 characters; the breached/common-password check (offline list, D5) runs server-side.
-        name: { type: string, minLength: 1, maxLength: 120 }
+        name: { type: string, minLength: 1, maxLength: 120, description: 'Trimmed and NFC-normalized; no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators; a zero-width joiner inside an emoji sequence is allowed): `400 validation_failed`, field code `invisible_characters`.' }
       examples:
         - email: ana.gomez@example.mx
           code: '482913'
@@ -6333,6 +6343,24 @@ components:
           description: The opaque refresh token from `TokenPair`. A malformed value answers `401`, not `400`.
       examples:
         - refresh_token: 0199d4a2-7c1e-7b3a-9f10-2c5e8a1b4d01.example-refresh-secret
+    LogoutRequest:
+      x-frozen: sha256:53f9f2587fe145797fd42a23e06d23daaaa524c658b420c91ccc233e75aec2bd
+      type: object
+      required: [refresh_token]
+      additionalProperties: false
+      description: >-
+        `logout`'s body: `RefreshRequest` plus the optional push `device_id` (0.14.0). Without
+        `device_id` it is exactly a `RefreshRequest`.
+      properties:
+        refresh_token:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: The opaque refresh token from `TokenPair`. A malformed value answers `401`, not `400`.
+        device_id: { $ref: '#/components/schemas/InstallationId' }
+      examples:
+        - refresh_token: 0199d4a2-7c1e-7b3a-9f10-2c5e8a1b4d01.example-refresh-secret
+          device_id: 0199d4a4-3c4d-7f5e-8a61-7c8d9e0f1a23
     TokenPair:
       x-frozen: sha256:b8d1883475a8e91a7644fa37845466380c268c0f6f27e357e6e81fe50a5e09af
       type: object
@@ -6388,12 +6416,12 @@ components:
           name: Ana Gómez Ruiz
           created_at: '2026-10-13T16:00:00Z'
     UserUpdate:
-      x-frozen: sha256:bf94938d30f177509883fc4b8985c6481c40bfa3dc07e43281a9e080cf6ecc41
+      x-frozen: sha256:88c23714e33ab8165f1fd348139b8b7d273607f6571047a7199869188e6c370f
       type: object
       minProperties: 1
       additionalProperties: false
       properties:
-        name: { type: string, minLength: 1, maxLength: 120 }
+        name: { type: string, minLength: 1, maxLength: 120, description: 'Trimmed and NFC-normalized; no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators; a zero-width joiner inside an emoji sequence is allowed): `400 validation_failed`, field code `invisible_characters`.' }
       examples:
         - name: Ana Gómez de la Torre
     DeleteAccountRequest:
@@ -6812,7 +6840,7 @@ components:
           archived_at: null
           created_at: '2026-10-13T16:05:00Z'
     TaxpayerCreate:
-      x-frozen: sha256:8a383124069d2ae913c3ba8dea5cae752e986c3be12762529f0aca11e047ec7a
+      x-frozen: sha256:1081c81037427430775b018aa632ff4cd1e1a36e3d4aa1daeba25936b3b859ea
       type: object
       required: [person_type, rfc, display_name, regimes]
       additionalProperties: false
@@ -6822,7 +6850,7 @@ components:
           description: Optional client-generated id (idempotent retries).
         person_type: { $ref: '#/components/schemas/PersonType' }
         rfc: { $ref: '#/components/schemas/RfcInput' }
-        display_name: { type: string, minLength: 1, maxLength: 80, description: 'Trimmed and NFC-normalized.' }
+        display_name: { type: string, minLength: 1, maxLength: 80, description: 'Trimmed and NFC-normalized; no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators; a zero-width joiner inside an emoji sequence is allowed): `400 validation_failed`, field code `invisible_characters`.' }
         regimes:
           type: array
           minItems: 1
@@ -6838,13 +6866,13 @@ components:
               options: { deduction_mode: blind_35 }
               start_period: '2026-01'
     TaxpayerUpdate:
-      x-frozen: sha256:3a26eed74b7b3f1fa119b89b594b9c7ca810f1de32992568b3b046a90eda4274
+      x-frozen: sha256:000d3393686a810062f912118ea73d3d6bc89d6a3b346d85689932225afc0cf6
       type: object
       minProperties: 1
       additionalProperties: false
       description: Person type is immutable. `rfc` corrects a mistyped RFC of the same person type (OQ-1).
       properties:
-        display_name: { type: string, minLength: 1, maxLength: 80 }
+        display_name: { type: string, minLength: 1, maxLength: 80, description: 'Trimmed and NFC-normalized; no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators; a zero-width joiner inside an emoji sequence is allowed): `400 validation_failed`, field code `invisible_characters`.' }
         rfc: { $ref: '#/components/schemas/RfcInput' }
       examples:
         - display_name: Ana (negocio)
@@ -7151,10 +7179,10 @@ components:
         `duplicate_cfdi_uuid` (partial collections, OQ-9). Never logged or echoed in errors.
       examples: [6F3B2C1D-8A4E-4B7F-9C2D-1E5A7B9C3D4F]
     RecordDescription:
-      x-frozen: sha256:346e2d060d76f54d2e89ee1bcae89bb03efd7f654c44e991912800b17a0f2056
+      x-frozen: sha256:a58327b9e85c7a6ea012b188c0b4d081b82e81b0cf51ac1fda0e3316b4b64cc9
       type: [string, 'null']
       maxLength: 200
-      description: Free text, trimmed and NFC-normalized; empty becomes `null`. Never logged (may name a client).
+      description: 'Free text, trimmed and NFC-normalized; empty becomes `null`; no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators; a zero-width joiner inside an emoji sequence is allowed): `400 validation_failed`, field code `invisible_characters`. Never logged (may name a client).'
     PeriodTotals:
       x-frozen: sha256:256a926c73a1824ecc7c666f225f72054dc1a1befdceaed4c90ef675e370c661
       type: object
@@ -9549,13 +9577,13 @@ components:
       examples:
         - { prior_year_accumulable_income_cents: 68000000, other_exempt_income_cents: 0, told_employer_will_file: false }
     EmployerLabel:
-      x-frozen: sha256:bc92a6988dc951993bb37a24b707c23de2f0d3fde8cdb2350ca8cbf61d69c8b0
+      x-frozen: sha256:03bf1bd93857a6ced96c15cbdc9d7e92ae7747af61ac810af36d21dca092b109
       type: string
       minLength: 1
       maxLength: 60
       description: >-
         Optional alias of the employer ("Empleo principal"); never an RFC or a legal name
-        requirement. Trimmed, no control characters, stored NFC (ADR-0004); never logged.
+        requirement. Trimmed, stored NFC (ADR-0004); no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators; a zero-width joiner inside an emoji sequence is allowed): `400 validation_failed`, field code `invisible_characters`. Never logged.
       examples: [Empleo principal]
     SalaryStatement:
       x-frozen: sha256:058869e367fea172f7d6935f33d7226a3e3cf9fdf84a4d8fada740812a3d4ae5
@@ -9753,13 +9781,13 @@ components:
       enum: [preescolar, primaria, secundaria, profesional_tecnico, bachillerato]
       description: '`tuition` only; the cap of the highest level the student had in the year applies.'
     StudentLabel:
-      x-frozen: sha256:ac7f6902b98d76dbb49c4de456a14a72181781f362421c7e6f6048a3dab6ab74
+      x-frozen: sha256:01a9cdb353e4d8d69c5f621aed013868c809096ed67fe87b4fbaceb6a8fcf16e
       type: string
       minLength: 1
       maxLength: 40
       description: >-
         Alias of the student the tuition cap is counted per ("Hija menor"); no full name
-        needed. Trimmed, no control characters, stored NFC (ADR-0004); never logged.
+        needed. Trimmed, stored NFC (ADR-0004); no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators; a zero-width joiner inside an emoji sequence is allowed): `400 validation_failed`, field code `invisible_characters`. Never logged.
       examples: [Hija menor]
     DeductionExclusion:
       x-frozen: sha256:019b2318f3203194ee224d707225867aab1d426700cbf650d945773ecd195c03

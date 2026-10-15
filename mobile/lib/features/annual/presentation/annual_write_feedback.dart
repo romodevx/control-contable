@@ -68,6 +68,7 @@ FieldError describeAnnualDetail(
   'parameters_unavailable' => l10n.annualParametersUnavailable,
   'regime_not_active' => l10n.annualWriteRegimeNotActive,
   'invalid' => l10n.annualWriteInvalidText,
+  invisibleCharactersCode => l10n.fieldInvisibleCharacters,
   _ => l10n.annualWriteFailed,
 });
 

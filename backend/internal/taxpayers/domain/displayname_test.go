@@ -15,24 +15,27 @@ func TestNewDisplayName(t *testing.T) {
 		name    string
 		raw     string
 		want    string
-		wantErr bool
+		wantErr error
 	}{
 		{name: "plain", raw: "Ana (personal)", want: "Ana (personal)"},
 		{name: "trimmed", raw: "  Ana  ", want: "Ana"},
 		{name: "tabs and newlines trimmed", raw: "\tAna\n", want: "Ana"},
 		{name: "composed to NFC", raw: "José", want: "José"},
 		{name: "80 characters (runes, not bytes)", raw: strings.Repeat("ñ", 80), want: strings.Repeat("ñ", 80)},
-		{name: "81 characters", raw: strings.Repeat("a", 81), wantErr: true},
-		{name: "empty", raw: "", wantErr: true},
-		{name: "blank", raw: "   ", wantErr: true},
-		{name: "invalid utf-8", raw: "Ana\xff", wantErr: true},
-		{name: "control character inside", raw: "Ana\x00B", wantErr: true},
+		{name: "81 characters", raw: strings.Repeat("a", 81), wantErr: domain.ErrInvalidDisplayName},
+		{name: "empty", raw: "", wantErr: domain.ErrInvalidDisplayName},
+		{name: "blank", raw: "   ", wantErr: domain.ErrInvalidDisplayName},
+		{name: "invalid utf-8", raw: "Ana\xff", wantErr: domain.ErrInvalidDisplayName},
+		{name: "control character inside", raw: "Ana\x00B", wantErr: domain.ErrDisplayNameInvisible},
+		{name: "bidi override inside", raw: "Ana\u202eB", wantErr: domain.ErrDisplayNameInvisible},
+		{name: "zero-width space inside", raw: "Ana\u200bB", wantErr: domain.ErrDisplayNameInvisible},
+		{name: "only a BOM", raw: "\ufeff", wantErr: domain.ErrDisplayNameInvisible},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := domain.NewDisplayName(tt.raw)
-			if tt.wantErr {
-				require.ErrorIs(t, err, domain.ErrInvalidDisplayName)
+			if tt.wantErr != nil {
+				require.ErrorIs(t, err, tt.wantErr)
 				assert.True(t, got.IsZero())
 				return
 			}

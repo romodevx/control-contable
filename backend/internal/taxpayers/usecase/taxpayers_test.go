@@ -158,6 +158,11 @@ func TestCreate_RejectsAnInvalidDisplayNameAndPersonType(t *testing.T) {
 	requireAppErr(t, err, apperr.CodeValidationFailed, domain.ErrInvalidDisplayName, [2]string{"display_name", usecase.DetailInvalid})
 
 	in = fisicaInput()
+	in.DisplayName = "Ana\u200b(personal)"
+	_, err = h.taxpayers.Create(t.Context(), userA, in)
+	requireAppErr(t, err, apperr.CodeValidationFailed, domain.ErrDisplayNameInvisible, [2]string{"display_name", "invisible_characters"})
+
+	in = fisicaInput()
 	in.PersonType = "extranjero"
 	_, err = h.taxpayers.Create(t.Context(), userA, in)
 	requireAppErr(t, err, apperr.CodeValidationFailed, domain.ErrInvalidPersonType, [2]string{"person_type", usecase.DetailInvalid})
@@ -524,7 +529,7 @@ func TestUpdate_RFCCorrectionWithAMismatchedCheckDigitWarns(t *testing.T) {
 
 func TestUpdate_Refusals(t *testing.T) {
 	const id, archived, theirs = "0199d4a2-0000-7000-8000-0000000000a1", "0199d4a2-0000-7000-8000-0000000000a2", "0199d4a2-0000-7000-8000-0000000000b1"
-	name, empty, moralRFC, dupRFC := "Otro", " ", rfcMoral, rfcFisicaOther
+	name, empty, spoofed, moralRFC, dupRFC := "Otro", " ", "Otro\u202eB", rfcMoral, rfcFisicaOther
 	tests := []struct {
 		name     string
 		readOnly bool
@@ -540,6 +545,8 @@ func TestUpdate_Refusals(t *testing.T) {
 		{"another user's taxpayer", false, theirs, usecase.UpdateInput{DisplayName: &name}, apperr.CodeNotFound, usecase.ErrTaxpayerNotFound, nil},
 		{"blank name", false, id, usecase.UpdateInput{DisplayName: &empty}, apperr.CodeValidationFailed, domain.ErrInvalidDisplayName,
 			[][2]string{{"display_name", usecase.DetailInvalid}}},
+		{"name with a bidi override", false, id, usecase.UpdateInput{DisplayName: &spoofed}, apperr.CodeValidationFailed, domain.ErrDisplayNameInvisible,
+			[][2]string{{"display_name", "invisible_characters"}}},
 		{"RFC of the other person type", false, id, usecase.UpdateInput{RFC: &moralRFC}, apperr.CodeValidationFailed, domain.ErrPersonTypeMismatch,
 			[][2]string{{"rfc", usecase.DetailRFCLengthMismatch}}},
 		{"RFC already registered", false, id, usecase.UpdateInput{RFC: &dupRFC}, apperr.CodeRFCAlreadyRegistered, usecase.ErrRFCAlreadyRegistered, nil},

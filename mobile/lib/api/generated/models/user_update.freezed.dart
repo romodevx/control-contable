@@ -16,6 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$UserUpdate {
 
+/// Trimmed and NFC-normalized; no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators; a zero-width joiner inside an emoji sequence is allowed): `400 validation_failed`, field code `invisible_characters`.
 @JsonKey(includeIfNull: false) String? get name;
 /// Create a copy of UserUpdate
 /// with the given fields replaced by the non-null parameter values.
@@ -218,6 +219,7 @@ class _UserUpdate implements UserUpdate {
   const _UserUpdate({@JsonKey(includeIfNull: false) this.name});
   factory _UserUpdate.fromJson(Map<String, dynamic> json) => _$UserUpdateFromJson(json);
 
+/// Trimmed and NFC-normalized; no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators; a zero-width joiner inside an emoji sequence is allowed): `400 validation_failed`, field code `invisible_characters`.
 @override@JsonKey(includeIfNull: false) final  String? name;
 
 /// Create a copy of UserUpdate

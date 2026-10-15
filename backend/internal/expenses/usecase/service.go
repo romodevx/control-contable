@@ -15,6 +15,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/clock"
 	"github.com/romodevx/control-contable/backend/internal/platform/tx"
+	"github.com/romodevx/control-contable/backend/internal/platform/usertext"
 )
 
 // maxDescriptionLength is the contract's RecordDescription maxLength, in
@@ -97,17 +98,25 @@ func (u *Expenses) audit(ctx context.Context, event, userID, taxpayerID, expense
 }
 
 // normalizeDescription trims and NFC-normalizes free text; "" is no
-// description. Longer than the contract allows is a 400.
+// description. Longer than the contract allows, or holding an invisible
+// character, is a 400.
 func normalizeDescription(raw string) (string, error) {
 	text := norm.NFC.String(strings.TrimSpace(raw))
-	if utf8.RuneCountInString(text) > maxDescriptionLength {
+	switch {
+	case utf8.RuneCountInString(text) > maxDescriptionLength:
 		return "", violationsError(fiscal.Violations{{Field: fieldDescription, Err: errTooLong}})
+	case usertext.HasInvisible(text):
+		return "", violationsError(fiscal.Violations{{Field: fieldDescription, Err: errInvisible}})
 	}
 	return text, nil
 }
 
-// errTooLong is the too_long detail of a free-text field.
-var errTooLong = fiscal.ValidationError(DetailTooLong)
+// errTooLong and errInvisible are the too_long and invisible_characters
+// details of a free-text field.
+var (
+	errTooLong   = fiscal.ValidationError(DetailTooLong)
+	errInvisible = fiscal.ValidationError(DetailInvisible)
+)
 
 // profile reads the path's taxpayer; a malformed id is the same 404 as an
 // unknown one.

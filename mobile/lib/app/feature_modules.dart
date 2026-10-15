@@ -33,7 +33,9 @@ final List<FeatureModule> appFeatureModules = [
 /// root: an estimate shown tells History, which marks the month viewed
 /// (M8, only while `module_history` is on); signing out first removes this
 /// device's push registration (M9-09, only while `module_reminders` is on;
-/// a no-op when never registered).
+/// a no-op when never registered), and a registration that may survive
+/// that (a failed delete, or the module OFF) goes with the session on the
+/// server (`logout`'s `device_id`, M9 security gate F1).
 final List<Override> appFeatureWiring = [
   estimateRenderedListenerProvider.overrideWith(
     (ref) => HistoryViewMarker(ref).onEstimateRendered,
@@ -45,5 +47,9 @@ final List<Override> appFeatureWiring = [
         await ref.read(pushDeviceProvider).unregister();
       },
     ],
+  ),
+  signOutDeviceIdProvider.overrideWith(
+    (ref) =>
+        () => ref.read(pushDeviceProvider).registeredId(),
   ),
 ];

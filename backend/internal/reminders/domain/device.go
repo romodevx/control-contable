@@ -52,7 +52,7 @@ func ParsePlatform(raw string) (Platform, error) {
 }
 
 // PushToken is an FCM registration token (§2.3). It is a secret of the
-// installation: every fmt verb and slog render it redacted, and only the
+// installation: every fmt verb, slog and JSON render it redacted, and only the
 // sealer reads it, through Reveal.
 type PushToken struct {
 	value string
@@ -83,6 +83,9 @@ func (PushToken) Format(f fmt.State, _ rune) { _, _ = io.WriteString(f, redacted
 
 // LogValue redacts the token in slog.
 func (PushToken) LogValue() slog.Value { return slog.StringValue(redacted) }
+
+// MarshalJSON redacts the token in JSON, as usecase.PushToken does.
+func (PushToken) MarshalJSON() ([]byte, error) { return []byte(`"` + redacted + `"`), nil }
 
 // ParseAppVersion validates the optional app version: 1-MaxAppVersionLength
 // characters of [0-9A-Za-z.+-].

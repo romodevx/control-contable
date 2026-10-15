@@ -6,6 +6,7 @@ import 'package:control_contable/api/generated/models/tax_input_value.dart';
 import 'package:control_contable/api/generated/models/warning.dart';
 import 'package:control_contable/api/generated/models/warning_code.dart';
 import 'package:control_contable/core/network/api_failure.dart';
+import 'package:control_contable/features/taxpayers/application/onboarding_failures.dart';
 import 'package:control_contable/features/taxpayers/application/onboarding_flow.dart';
 import 'package:control_contable/features/taxpayers/domain/rfc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -374,9 +375,29 @@ void main() {
       await flow.submitRegimes([_byCode(fisicaCatalog, '626')]);
 
       expect(flow.step, OnboardingStep.identity);
-      expect(flow.displayNameRejected, isTrue);
+      expect(flow.displayNameRejection, DisplayNameRejection.length);
       expect(flow.rfcRejection, isNull);
     });
+
+    test(
+      '400 display_name/invisible_characters: back to the name, told why',
+      () async {
+        fillIdentity();
+        repository.createAnswers.add(
+          ApiValidationFailure([
+            detail('display_name', 'invisible_characters'),
+          ]),
+        );
+
+        await flow.submitRegimes([_byCode(fisicaCatalog, '626')]);
+
+        expect(flow.step, OnboardingStep.identity);
+        expect(
+          flow.displayNameRejection,
+          DisplayNameRejection.invisibleCharacters,
+        );
+      },
+    );
 
     test(
       '400 on an option: back to that regime page, the option marked',

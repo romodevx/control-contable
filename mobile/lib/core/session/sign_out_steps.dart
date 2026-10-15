@@ -12,3 +12,16 @@ final signOutStepsProvider = Provider<List<SignOutStep>>(
   (ref) => const [],
   name: 'signOutStepsProvider',
 );
+
+/// This installation's push device id for the server to remove with the
+/// session (`logout`'s `device_id`, M9 security gate F1), or null for
+/// none. A failure is reported and the sign-out goes on without it.
+typedef SignOutDeviceId = Future<String?> Function();
+
+/// The device id lookup, wired at the app root by the slice that owns push
+/// so `auth` never imports it. None by default.
+final signOutDeviceIdProvider = Provider<SignOutDeviceId>(
+  (ref) =>
+      () async => null,
+  name: 'signOutDeviceIdProvider',
+);
