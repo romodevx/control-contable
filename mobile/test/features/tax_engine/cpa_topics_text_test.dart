@@ -21,6 +21,24 @@ void main() {
     );
   });
 
+  // Contract 0.11.0 appended the annual topics (ADR-0009). Only the annual
+  // estimate sends them; on a monthly card they read as the generic topic
+  // until ANN-17 gives the annual screen its own copy.
+  test('annual CPA topics read as the generic topic', () {
+    for (final topic in [
+      CpaTopic.platformNondefinitiveAnnual,
+      CpaTopic.umaForMinimumWage,
+      CpaTopic.deductionCapResicoIncome,
+      CpaTopic.salaryObligationBasis,
+      CpaTopic.cuRounding,
+      CpaTopic.resicoPmPtuBase,
+      CpaTopic.resicoPfReliefRenewal,
+      CpaTopic.ptuRate,
+    ]) {
+      expect(cpaTopicsText(l10n, [topic]), l10n.cpaTopicOther);
+    }
+  });
+
   test('each topic is named once', () {
     expect(
       cpaTopicsText(l10n, [

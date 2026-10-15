@@ -130,6 +130,7 @@ func estimateNet(t *testing.T) usecase.TaxpayerEstimate {
 		},
 		ParameterSet:       taxparams.SetID{FiscalYear: 2026, Version: 1},
 		RecordsFingerprint: "5e2a8c1f4b7d0e3a6c9f2b5e8d1a4c7f0b3e6a9d2c5f8b1e4a7d0c3f6b9e2a5d",
+		FiguresFingerprint: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee202603",
 		EngineVersion:      exampleEngineVersion,
 	}
 }

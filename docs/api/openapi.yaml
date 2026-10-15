@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Control Contable API
-  version: 0.10.0
+  version: 0.11.1
   summary: Monthly IVA and provisional ISR estimates for Mexican taxpayers.
   description: |
     Spec-first contract (single source of truth). Server stubs (oapi-codegen),
@@ -52,6 +52,8 @@ tags:
     description: M7 `module_subscriptions` - RevenueCat.
   - name: History
     description: M8 `module_history`.
+  - name: Annual
+    description: '`module_annual` - annual return estimate, its inputs (salary statements, personal deductions, filed payments). Requires `module_tax_engine` and `module_taxpayers`.'
   - name: Reminders
     description: M9 `module_reminders` - devices, settings, tax calendar.
 
@@ -2791,7 +2793,7 @@ paths:
     get:
       tags: [TaxEngine]
       operationId: getTaxpayerEstimate
-      x-frozen: sha256:48ad5deca4348a78105c0081d26a26199f3835673b99184b9444ea43f5cb24ca
+      x-frozen: sha256:0bef646e31e50ae467f1c16217213a46bdc9ec5957b15e3530b31bc611481b6f
       summary: Monthly IVA + provisional ISR estimate of one month, per regime and total
       description: >-
         Informational estimate for the taxpayer and `period`, derived from the current
@@ -2887,6 +2889,7 @@ paths:
                       total_payable_rounded_cents: 228429
                     parameter_set: { fiscal_year: 2026, version: 1 }
                     records_fingerprint: 3f6c2a9e8d7b1c4f5a0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a
+                    figures_fingerprint: cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc202603
                     engine_version: 1.0.0
                 incomplete612:
                   summary: Same month without the January and February prior payments (TX-612-INC-01)
@@ -2932,6 +2935,7 @@ paths:
                       total_payable_rounded_cents: 628429
                     parameter_set: { fiscal_year: 2026, version: 1 }
                     records_fingerprint: 9b1d4e7a2c5f8e0b3d6a9c2f5e8b1d4a7c0f3e6b9d2a5c8f1e4b7d0a3c6f9e2b
+                    figures_fingerprint: dddddddddddddddddddddddddddddddddddddddddddddddddddddddddd202603
                     engine_version: 1.0.0
                 crossRegimeIva:
                   summary: 612 + 606 PF, IVA netted across regimes, pending CPA (TX-NET-01)
@@ -2990,6 +2994,7 @@ paths:
                       total_payable_rounded_cents: 35096
                     parameter_set: { fiscal_year: 2026, version: 1 }
                     records_fingerprint: 5e2a8c1f4b7d0e3a6c9f2b5e8d1a4c7f0b3e6a9d2c5f8b1e4a7d0c3f6b9e2a5d
+                    figures_fingerprint: eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee202603
                     engine_version: 1.0.0
         '400': { $ref: '#/components/responses/TaxEngineBadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -3347,7 +3352,7 @@ paths:
     get:
       tags: [Dashboard]
       operationId: getDashboard
-      x-frozen: sha256:c6e4c22519dfe074bcb8144c7be95f2f54dfe2c3e110ad57161b0ce227e649de
+      x-frozen: sha256:0683221f723dac529931502814655e28b00748d2d11a6ceb6fa3ad0947f6fca7
       summary: Home of one taxpayer - this month's estimate, income vs expense, trend and access
       description: >-
         Read-only Home for the taxpayer, derived on every read (no cache, ADR-0002 §5).
@@ -3454,6 +3459,7 @@ paths:
                         total_payable_rounded_cents: 228429
                       parameter_set: { fiscal_year: 2026, version: 1 }
                       records_fingerprint: 3f6c2a9e8d7b1c4f5a0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a
+                      figures_fingerprint: cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc202610
                       engine_version: 1.0.0
                     trend:
                       - period: '2026-01'
@@ -3535,6 +3541,7 @@ paths:
                         total_payable_rounded_cents: 0
                       parameter_set: { fiscal_year: 2026, version: 1 }
                       records_fingerprint: 0a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9
+                      figures_fingerprint: ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff202610
                       engine_version: 1.0.0
                     trend:
                       - period: '2026-01'
@@ -3937,6 +3944,1031 @@ paths:
         '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/RecordInternalError' }
 
+  # ---------------------------------------------------------------- Annual
+  # Frozen at ANN-02 (docs/project-specs/MODULE-annual.md §10, OQ-A1..OQ-A9 DECIDED;
+  # ADR-0009). `module_annual` requires `module_tax_engine` and `module_taxpayers`.
+  /v1/taxpayers/{taxpayerId}/annual-estimates/{fiscalYear}:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+      - $ref: '#/components/parameters/FiscalYearPath'
+    get:
+      tags: [Annual]
+      operationId: getAnnualEstimate
+      x-frozen: sha256:e7b9e026bda2aea190b5a26d20cfc253ea09be005fea54c4579b3f76bf5c45ce
+      summary: Annual return estimate (declaración anual) of one taxpayer and fiscal year
+      description: >-
+        Roughly how much the taxpayer will owe, or get back, in the annual return of
+        `fiscalYear`, and by when. Derived from the current records, annual inputs and tax
+        inputs on every read, never stored (ADR-0002 §5, ADR-0009); same inputs, parameters
+        and engine version → byte-identical JSON. It never files and never changes a monthly
+        figure.
+
+
+        **Sections** (MODULE-annual §2.2, fixed order `pf_art152`, `pf_resico_check`,
+        `pm_601`, `pm_resico`, then one `explanation` per other regime held in the year, in
+        catalog order). A persona física's 605, 606, 612 and 625 non-definitive incomes are
+        aggregated in **one** `pf_art152` section (LISR 152); RESICO PF (626) is an
+        informative 113-F check that never has a payable or refundable balance (rule 3.13.7);
+        PM 601 and RESICO PM are estimated per regime; every other regime is an `explanation`
+        section with its deadline and no figure. A regime counts when its window intersects
+        the fiscal year, archived regimes included for their active months.
+        `headline_sections` names the sections whose `tax.balance` is the headline: PF the
+        `pf_art152` section, PM its 601 / RESICO PM sections (each shown on its own, never
+        netted); informational sections never feed it.
+
+
+        **Status per section** (precedence `informational` > `incomplete` > `complete`):
+        `incomplete` is computed with the documented fallback and lists `missing_inputs`
+        (whose `target` is the screen the "Completa tus datos" CTA opens). A month with no
+        filed payment uses the app's own monthly estimate (`payments_estimated` disclaimer),
+        which is **not** missing unless that month's estimate was itself incomplete.
+
+
+        **Year in progress.** When `fiscalYear` is the current year (America/Mexico_City),
+        `year_status` is `in_progress`, every figure uses the records through `data_through`
+        (the last closed month, `null` in January) and the `year_in_progress` disclaimer is
+        present; December is never extrapolated (OQ-A3).
+
+
+        `legend` is the mandatory constant; the client renders the server field. Rules a CPA
+        has not validated still run with their documented default, set `cpa_review_pending`,
+        list `cpa_topics` and add the `cpa_review_pending` disclaimer (severity `strong`).
+        Reads are allowed for a read-only user and for an archived taxpayer (no `402`).
+        Budget: `estimate_reads` (ADR-0005), one read plus one more when the 12-month
+        estimate range is needed for default payments; spent → `429` with `Retry-After`.
+
+
+        `FieldError.code` values beyond JSON Schema keywords: `fiscalYear` → `out_of_range`
+        (a year after the current one). `422 business_rule_violation` details: `fiscalYear`
+        → `parameters_unavailable` (before 2026, the first fiscal year with transcribed
+        parameters).
+      x-module: module_annual
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Annual estimate (always carries the annual legend and its disclaimers).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnnualEstimate' }
+              examples:
+                pfRefundAN01:
+                  summary: PF 612 only, closed year 2026, medical deduction, saldo a favor (AN-01)
+                  value:
+                    taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                    fiscal_year: 2026
+                    person_type: fisica
+                    legend: Esto es un aproximado; tu contador te dará las cifras reales.
+                    disclaimers:
+                      - code: annual_estimate
+                        severity: info
+                        text: Estimación informativa de la declaración anual 2026. No sustituye la declaración que presenta tu contador ante el SAT. Basada en LISR arts. 9, 109, 113-F, 150–152, Anexo 8 RMF 2026 y RMF 2026.
+                      - code: deductions_as_entered
+                        severity: info
+                        text: Tomamos tus deducciones personales como las registraste; el SAT las valida con tus CFDI.
+                      - code: informative_income
+                        severity: info
+                        text: Además debes informar en tu anual préstamos, donativos, herencias y premios que recibiste (LISR 150).
+                      - code: no_annual_iva
+                        severity: info
+                        text: 'El IVA no tiene declaración anual: se paga mes con mes.'
+                      - code: rmf_2027_pending
+                        severity: info
+                        text: Las facilidades para la anual 2026 (pago en parcialidades, exenciones, RESICO) se publican en la RMF 2027; pueden cambiar.
+                    year_status: closed
+                    data_through: '2026-12'
+                    deadline: '2027-04-30'
+                    headline_sections: [pf_art152]
+                    sections:
+                      - kind: pf_art152
+                        regimes: ['612']
+                        status: complete
+                        missing_inputs: []
+                        obligation: obligated
+                        obligation_reasons: [Tuviste ingresos por actividad empresarial o profesional.]
+                        deadline: '2027-04-30'
+                        tax:
+                          accumulable_income_cents: 50000000
+                          personal_deductions_cents: 4000000
+                          base_cents: 46000000
+                          isr_cents: 7636586
+                          credits:
+                            payments_cents: 5577386
+                            withholdings_cents: 3000000
+                            salary_isr_cents: 0
+                            total_cents: 8577386
+                            payment_sources: { filed_months: 12, tax_input_months: 0, estimated_by_app_months: 0 }
+                          balance: { kind: a_favor, amount_cents: 940800 }
+                        pm_extras: null
+                        resico_check: null
+                        explanation: null
+                        notes: []
+                        cpa_review_pending: false
+                        cpa_topics: []
+                        parameter_set: { fiscal_year: 2026, version: 1 }
+                    informative_income_over_500k: true
+                    parameter_set: { fiscal_year: 2026, version: 1 }
+                    engine_version: 1.1.0
+                pfInProgress:
+                  summary: Same 612 taxpayer viewed on 2026-10-15, year in progress, three payments estimated by the app
+                  value:
+                    taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                    fiscal_year: 2026
+                    person_type: fisica
+                    legend: Esto es un aproximado; tu contador te dará las cifras reales.
+                    disclaimers:
+                      - code: annual_estimate
+                        severity: info
+                        text: Estimación informativa de la declaración anual 2026. No sustituye la declaración que presenta tu contador ante el SAT. Basada en LISR arts. 9, 109, 113-F, 150–152, Anexo 8 RMF 2026 y RMF 2026.
+                      - code: payments_estimated
+                        severity: warning
+                        text: Usamos lo que la app estimó para 3 meses; confírmalo con tus acuses para un resultado más preciso.
+                      - code: year_in_progress
+                        severity: warning
+                        text: 'El año aún no termina: calculamos con tus registros hasta septiembre de 2026.'
+                      - code: deductions_as_entered
+                        severity: info
+                        text: Tomamos tus deducciones personales como las registraste; el SAT las valida con tus CFDI.
+                      - code: informative_income
+                        severity: info
+                        text: Además debes informar en tu anual préstamos, donativos, herencias y premios que recibiste (LISR 150).
+                      - code: no_annual_iva
+                        severity: info
+                        text: 'El IVA no tiene declaración anual: se paga mes con mes.'
+                      - code: rmf_2027_pending
+                        severity: info
+                        text: Las facilidades para la anual 2026 (pago en parcialidades, exenciones, RESICO) se publican en la RMF 2027; pueden cambiar.
+                    year_status: in_progress
+                    data_through: '2026-09'
+                    deadline: '2027-04-30'
+                    headline_sections: [pf_art152]
+                    sections:
+                      - kind: pf_art152
+                        regimes: ['612']
+                        status: complete
+                        missing_inputs: []
+                        obligation: obligated
+                        obligation_reasons: [Tuviste ingresos por actividad empresarial o profesional.]
+                        deadline: '2027-04-30'
+                        tax:
+                          accumulable_income_cents: 37500000
+                          personal_deductions_cents: 4000000
+                          base_cents: 33500000
+                          isr_cents: 4889591
+                          credits:
+                            payments_cents: 4560000
+                            withholdings_cents: 2250000
+                            salary_isr_cents: 0
+                            total_cents: 6810000
+                            payment_sources: { filed_months: 6, tax_input_months: 0, estimated_by_app_months: 3 }
+                          balance: { kind: a_favor, amount_cents: 1920409 }
+                        pm_extras: null
+                        resico_check: null
+                        explanation: null
+                        notes:
+                          - { code: refund_only_paid, text: Solo se devuelve lo efectivamente pagado o retenido. }
+                          - { code: refund_needs_efirma, text: Para solicitar la devolución necesitas e.firma. }
+                        cpa_review_pending: false
+                        cpa_topics: []
+                        parameter_set: { fiscal_year: 2026, version: 1 }
+                    informative_income_over_500k: true
+                    parameter_set: { fiscal_year: 2026, version: 1 }
+                    engine_version: 1.1.0
+                resicoPfAN03:
+                  summary: PF in RESICO (626) only, informative 113-F check, no balance (AN-03 case a)
+                  value:
+                    taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a81
+                    fiscal_year: 2026
+                    person_type: fisica
+                    legend: Esto es un aproximado; tu contador te dará las cifras reales.
+                    disclaimers:
+                      - code: annual_estimate
+                        severity: info
+                        text: Estimación informativa de la declaración anual 2026. No sustituye la declaración que presenta tu contador ante el SAT. Basada en LISR arts. 9, 109, 113-F, 150–152, Anexo 8 RMF 2026 y RMF 2026.
+                      - code: cpa_review_pending
+                        severity: strong
+                        text: 'Este cálculo usa reglas que un contador aún no valida: renovación de la facilidad de RESICO en la RMF 2027.'
+                      - code: no_annual_iva
+                        severity: info
+                        text: 'El IVA no tiene declaración anual: se paga mes con mes.'
+                      - code: resico_pf_definitive
+                        severity: info
+                        text: Tus pagos mensuales de RESICO son definitivos; no presentas anual por estos ingresos (regla 3.13.7 RMF 2026).
+                      - code: rmf_2027_pending
+                        severity: info
+                        text: Las facilidades para la anual 2026 (pago en parcialidades, exenciones, RESICO) se publican en la RMF 2027; pueden cambiar.
+                    year_status: closed
+                    data_through: '2026-12'
+                    deadline: null
+                    headline_sections: []
+                    sections:
+                      - kind: pf_resico_check
+                        regimes: ['626']
+                        status: informational
+                        missing_inputs: []
+                        obligation: relieved
+                        obligation_reasons: []
+                        deadline: null
+                        tax: null
+                        pm_extras: null
+                        resico_check:
+                          income_cents: 48000000
+                          rate: '0.0110'
+                          annual_isr_cents: 528000
+                          monthly_payments_cents: 660000
+                          withheld_cents: 0
+                          difference_cents: -132000
+                        explanation: Tus pagos mensuales de RESICO son definitivos; no presentas anual por estos ingresos (regla 3.13.7 RMF 2026).
+                        notes: []
+                        cpa_review_pending: true
+                        cpa_topics: [resico_pf_relief_renewal]
+                        parameter_set: { fiscal_year: 2026, version: 1 }
+                    informative_income_over_500k: false
+                    parameter_set: { fiscal_year: 2026, version: 1 }
+                    engine_version: 1.1.0
+                pm601AN06:
+                  summary: PM 601, losses and PTU paid as tax inputs, saldo a cargo, PTU and suggested CU (AN-06)
+                  value:
+                    taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a82
+                    fiscal_year: 2026
+                    person_type: moral
+                    legend: Esto es un aproximado; tu contador te dará las cifras reales.
+                    disclaimers:
+                      - code: annual_estimate
+                        severity: info
+                        text: Estimación informativa de la declaración anual 2026. No sustituye la declaración que presenta tu contador ante el SAT. Basada en LISR arts. 9, 109, 113-F, 150–152, Anexo 8 RMF 2026 y RMF 2026.
+                      - code: cpa_review_pending
+                        severity: strong
+                        text: 'Este cálculo usa reglas que un contador aún no valida: redondeo del coeficiente de utilidad, tasa de PTU.'
+                      - code: inflation_adjustment_excluded
+                        severity: info
+                        text: 'No incluimos el ajuste anual por inflación ni actualizamos pérdidas: pídeselos a tu contador.'
+                      - code: no_annual_iva
+                        severity: info
+                        text: 'El IVA no tiene declaración anual: se paga mes con mes.'
+                      - code: rmf_2027_pending
+                        severity: info
+                        text: Las facilidades para la anual 2026 (pago en parcialidades, exenciones, RESICO) se publican en la RMF 2027; pueden cambiar.
+                    year_status: closed
+                    data_through: '2026-12'
+                    deadline: '2027-03-31'
+                    headline_sections: [pm_601]
+                    sections:
+                      - kind: pm_601
+                        regimes: ['601']
+                        status: complete
+                        missing_inputs: []
+                        obligation: obligated
+                        obligation_reasons: []
+                        deadline: '2027-03-31'
+                        tax:
+                          accumulable_income_cents: 1000000000
+                          personal_deductions_cents: null
+                          base_cents: 118000000
+                          isr_cents: 35400000
+                          credits:
+                            payments_cents: 33000000
+                            withholdings_cents: 200000
+                            salary_isr_cents: 0
+                            total_cents: 33200000
+                            payment_sources: { filed_months: 12, tax_input_months: 0, estimated_by_app_months: 0 }
+                          balance: { kind: a_cargo, amount_cents: 2200000 }
+                        pm_extras:
+                          ptu_base_cents: 150000000
+                          ptu_to_distribute_cents: 15000000
+                          suggested_cu_next_year: '0.1380'
+                        resico_check: null
+                        explanation: null
+                        notes:
+                          - { code: cu_suggestion, text: Sugerido para tus pagos de 2027; confírmalo con tu contador. }
+                        cpa_review_pending: true
+                        cpa_topics: [cu_rounding, ptu_rate]
+                        parameter_set: { fiscal_year: 2026, version: 1 }
+                    informative_income_over_500k: false
+                    parameter_set: { fiscal_year: 2026, version: 1 }
+                    engine_version: 1.1.0
+        '400': { $ref: '#/components/responses/AnnualBadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/AnnualNotFound' }
+        '422': { $ref: '#/components/responses/AnnualParametersUnavailable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
+  /v1/taxpayers/{taxpayerId}/annual-estimates/{fiscalYear}/breakdown:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+      - $ref: '#/components/parameters/FiscalYearPath'
+    get:
+      tags: [Annual]
+      operationId: getAnnualBreakdown
+      x-frozen: sha256:5b701301ecd0ab10c75083ff2891daf57677aa1cfbf0e0bac9abaa59f6cdca0d
+      summary: Step-by-step computation of one annual section, with legal basis
+      description: >-
+        The computation trace of `section` in `fiscalYear` (ADR-0002 §1: strategies compute
+        only by appending lines, so the explanation cannot drift from the math). `fiscalYear`
+        follows the rules of `getAnnualEstimate`. `lines` are in `seq` order; every line
+        except `info` and `rounding_adjustment` cites at least one legal basis, and `source`
+        says where its figure comes from (each provisional payment line is `filed_payment`,
+        `tax_input:prior_provisional_payments` or `estimated_by_app`, §2.5). Every cap that
+        binds is an `info` line "Tope aplicado: {concepto}, de {x} a {y}"; every excluded
+        deduction (cash in a restricted category, donations without the prior year's
+        income) is an `info` line too. One `rounding_adjustment` line reconciles displayed
+        lines with a rounded result, never a hidden centavo. `disclaimers` are the estimate's
+        disclaimers that bear on this section, same order. Reads are allowed for a read-only
+        user and an archived taxpayer. Budget: `estimate_reads`, as `getAnnualEstimate`.
+
+
+        `FieldError.code` values beyond JSON Schema keywords: `fiscalYear` → `out_of_range`
+        (a future year). `422 business_rule_violation` details: `fiscalYear` →
+        `parameters_unavailable` (before 2026); `section` → `section_not_present` (the
+        estimate of that year has no such section).
+      x-module: module_annual
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: section
+          in: query
+          required: true
+          description: A computed section kind of the estimate (`explanation` sections have no trace).
+          schema: { $ref: '#/components/schemas/AnnualComputedSectionKind' }
+      responses:
+        '200':
+          description: Breakdown of the section (always carries the annual legend and its disclaimers).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnnualBreakdown' }
+        '400': { $ref: '#/components/responses/AnnualBadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/AnnualNotFound' }
+        '422':
+          description: >-
+            The fiscal year is before 2026 (`parameters_unavailable`), or the estimate of that
+            year has no such section (`section_not_present`).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                sectionNotPresent:
+                  value:
+                    error:
+                      code: business_rule_violation
+                      message: The annual estimate has no such section.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: section, code: section_not_present, message: Tu estimación anual no tiene esta sección. }
+                parametersUnavailable:
+                  value:
+                    error:
+                      code: business_rule_violation
+                      message: There are no tax parameters for that fiscal year.
+                      request_id: req_01J9Z6Q4X8
+                      details:
+                        - { field: fiscalYear, code: parameters_unavailable, message: Sólo podemos estimar desde 2026. }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
+  /v1/taxpayers/{taxpayerId}/annual-inputs/{fiscalYear}:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+      - $ref: '#/components/parameters/FiscalYearPath'
+    get:
+      tags: [Annual]
+      operationId: getAnnualInputs
+      x-frozen: sha256:3a084316d8465e8fe906f9653da4456a44a7f5f4418fc05d79928a6f2d64e55f
+      summary: Per-year annual facts of a taxpayer, plus the annual tax inputs of its regimes (read-only)
+      description: >-
+        The taxpayer's annual facts for `fiscalYear` (MODULE-annual §2.6) and, read-only,
+        the annual-relevant M5 tax inputs of every regime held in that year
+        (`regime_tax_inputs`: `prior_year_losses`, `ptu_paid`, `annual_depreciation`,
+        `interest_withholding`, as the regime's catalog defines them). Those stay owned by
+        `getTaxInputs` / `putTaxInputs` (one source per fact, ADR-0009); the app links each
+        to that screen. A year with nothing saved answers the defaults with `updated_at:
+        null`. Reads are allowed for a read-only user and an archived taxpayer. Budget:
+        `annual_reads` (600 per hour, ADR-0005).
+
+
+        `FieldError.code` values beyond JSON Schema keywords: `fiscalYear` → `out_of_range`
+        (a future year). `422 business_rule_violation` details: `fiscalYear` →
+        `parameters_unavailable` (before 2026).
+      x-module: module_annual
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Annual inputs.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnnualInputs' }
+        '400': { $ref: '#/components/responses/AnnualBadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/AnnualNotFound' }
+        '422': { $ref: '#/components/responses/AnnualParametersUnavailable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
+    put:
+      tags: [Annual]
+      operationId: putAnnualInputs
+      x-frozen: sha256:b9f0de2edcd7f7e1b4479841203cc6fdf578dab397191e69b4dbd2b601200900
+      summary: Replace the per-year annual facts of a persona física
+      description: >-
+        Replaces the taxpayer's annual facts for `fiscalYear` (idempotent: the same body
+        twice leaves the same state). `prior_year_accumulable_income_cents: null` means
+        unknown, not zero: donations are then excluded and the section is `incomplete`
+        (OQ-A5). The regime tax inputs are not written here (`putTaxInputs`).
+
+
+        **Order of checks:** schema (`400`) → read-only access (`402`, OQ-A9) → archived
+        taxpayer, person type and fiscal year (`422`) → upsert. Never uses a trial record
+        slot. Budget: `annual_writes` (300 per hour, ADR-0005). Audited as
+        `annual_inputs.updated` with user, taxpayer and fiscal year only, never the values.
+
+
+        `FieldError.code` values beyond JSON Schema keywords: `fiscalYear` → `out_of_range`
+        (a future year). `422 business_rule_violation` details: `taxpayerId` →
+        `taxpayer_archived` or `person_type_not_allowed` (a persona moral: these facts are
+        personas físicas' only); `fiscalYear` → `parameters_unavailable`.
+      x-module: module_annual
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnnualInputsUpdate' }
+      responses:
+        '200':
+          description: Saved; the stored inputs.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AnnualInputs' }
+        '400': { $ref: '#/components/responses/AnnualBadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/RecordReadOnly' }
+        '404': { $ref: '#/components/responses/AnnualNotFound' }
+        '422': { $ref: '#/components/responses/AnnualRuleViolation' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
+  /v1/taxpayers/{taxpayerId}/salary-statements:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+    get:
+      tags: [Annual]
+      operationId: listSalaryStatements
+      x-frozen: sha256:20e2da45caf499c1b0d7e0929bc77d43339ee01c1167f9704456593fee7b07ce
+      summary: Salary constancias (605) of one fiscal year, with totals
+      description: >-
+        Every salary constancia of the taxpayer for `fiscal_year` (at most 20, so no
+        pagination), ordered by `created_at`, then `id`. `totals` sum them. A persona moral
+        answers `items: []`. Reads are allowed for a read-only user and an archived
+        taxpayer. Budget: `annual_reads`.
+
+
+        `FieldError.code` values beyond JSON Schema keywords: `fiscal_year` → `out_of_range`
+        (a future year). `422 business_rule_violation` details: `fiscal_year` →
+        `parameters_unavailable` (before 2026).
+      x-module: module_annual
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/FiscalYearQuery'
+      responses:
+        '200':
+          description: The year's constancias.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalaryStatementList' }
+        '400': { $ref: '#/components/responses/AnnualBadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/AnnualNotFound' }
+        '422': { $ref: '#/components/responses/AnnualParametersUnavailable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
+    post:
+      tags: [Annual]
+      operationId: createSalaryStatement
+      x-frozen: sha256:dec81c549618675fb0cb9ec3fccc4b49ba7613d3cf5c7ae4f6ed6fa155fae280
+      summary: Record a salary constancia (idempotent client id)
+      description: >-
+        Records one employer's constancia de sueldos for a fiscal year, as its totals
+        (accumulable, exempt, ISR withheld). The app never recomputes art. 93 exemptions or
+        the employment subsidy, and no employer RFC is taken (`employer_label` is an
+        optional alias). Allowed for any persona física, also without regime 605 (OQ-A2):
+        then the warning `salary_regime_not_held` on `fiscal_year` suggests adding it.
+
+
+        **Idempotency (double submit)** as `createIncome`: the client sends a UUID `id`
+        once per form session; a retry with the same fields → `200` with the stored row; the
+        same `id` with other fields or another taxpayer → `409` (`id` / `id_reused`); an `id`
+        of another user → `409` with no `details`.
+
+
+        **Order of checks:** schema (`400`) → idempotency (`200`/`409`) → read-only access
+        (`402`, OQ-A9; never a trial slot) → archived taxpayer, person type, fiscal year,
+        list bound (`422`) → insert. Budget: `annual_writes`. Figures and labels are never
+        logged.
+
+
+        `FieldError.code` values beyond JSON Schema keywords: `fiscal_year` → `out_of_range`
+        (a future year); `employer_label` → `invalid` (blank, untrimmed or control
+        characters; stored NFC, ADR-0004). `422 business_rule_violation` details:
+        `taxpayerId` → `taxpayer_archived` or `person_type_not_allowed`; `fiscal_year` →
+        `parameters_unavailable`; `body` → `limit_reached` (20 constancias in that year).
+      x-module: module_annual
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalaryStatementCreate' }
+            examples:
+              mainEmployer:
+                summary: First of two simultaneous employers (AN-05)
+                value:
+                  id: 0199d4b0-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                  fiscal_year: 2026
+                  employer_label: Empleo principal
+                  accumulable_cents: 30000000
+                  exempt_cents: 0
+                  isr_withheld_cents: 4000000
+                  simultaneous: true
+      responses:
+        '201':
+          description: Created.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalaryStatement' }
+        '200':
+          description: Idempotent retry; the caller already owns this constancia with the same fields.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalaryStatement' }
+        '400': { $ref: '#/components/responses/AnnualBadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/RecordReadOnly' }
+        '404': { $ref: '#/components/responses/AnnualNotFound' }
+        '409': { $ref: '#/components/responses/AnnualIdConflict' }
+        '422': { $ref: '#/components/responses/AnnualRuleViolation' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
+  /v1/taxpayers/{taxpayerId}/salary-statements/{statementId}:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+      - $ref: '#/components/parameters/StatementId'
+    patch:
+      tags: [Annual]
+      operationId: updateSalaryStatement
+      x-frozen: sha256:614ab84c1b3586411fcdc74080af244494465f2000143bd9312a0d2e7c3ecdcd
+      summary: Edit a salary constancia (merge-patch; null clears the label)
+      description: >-
+        Merge-patch on top-level fields: absent = unchanged, `employer_label: null` clears
+        it. `id` cannot be sent. Every rule of `createSalaryStatement` is re-run on the
+        merged row, with the same codes and warnings; moving `fiscal_year` applies that
+        year's list bound (`422 limit_reached`; the row itself is not counted twice). A read-only user gets `402`; an
+        archived taxpayer `422 taxpayer_archived`. Last write wins. Budget: `annual_writes`.
+      x-module: module_annual
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalaryStatementUpdate' }
+            examples:
+              leftEarly:
+                summary: The employee left before December (obligation test)
+                value: { left_before_year_end: true }
+      responses:
+        '200':
+          description: Updated.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalaryStatement' }
+        '400': { $ref: '#/components/responses/AnnualBadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/RecordReadOnly' }
+        '404': { $ref: '#/components/responses/AnnualNotFound' }
+        '422': { $ref: '#/components/responses/AnnualRuleViolation' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
+    delete:
+      tags: [Annual]
+      operationId: deleteSalaryStatement
+      x-frozen: sha256:24b91dfbc2a76bb2b6641fd87e1960f9afdd65a62d8dfe9c570a8122702fe946
+      summary: Delete a salary constancia
+      description: >-
+        Deletes the constancia (hard delete; the client confirms first, it cannot be
+        undone). Deleting an unknown or already deleted constancia answers `404`. Allowed
+        for a read-only user (removing their own data, as records). An archived taxpayer
+        answers `422 taxpayer_archived`. Budget: `annual_writes`.
+      x-module: module_annual
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Deleted.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+        '400': { $ref: '#/components/responses/AnnualBadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/AnnualNotFound' }
+        '422': { $ref: '#/components/responses/RecordTaxpayerArchived' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
+  /v1/taxpayers/{taxpayerId}/personal-deductions:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+    get:
+      tags: [Annual]
+      operationId: listPersonalDeductions
+      x-frozen: sha256:ecb3135a6bc3dd20b98ec1b61e7411936a0a485e4aa6c255c402cdbd082de142
+      summary: Live personal deductions of one fiscal year, with registered totals per category
+      description: >-
+        Live (not deleted) personal deductions whose `paid_on` falls in `fiscal_year`
+        (at most 500, so no pagination), ordered by category (the `DeductionCategory`
+        order), then `paid_on` descending, then `id`. `category` narrows items and totals.
+        `totals` are the **registered** amounts per category (rows excluded for cash
+        included); the **applied** amounts after caps are in the annual estimate's
+        breakdown. A persona moral answers `items: []`. `warnings` is always `[]` here.
+        Reads are allowed for a read-only user and an archived taxpayer. Budget:
+        `annual_reads`.
+
+
+        `FieldError.code` values beyond JSON Schema keywords: `fiscal_year` → `out_of_range`
+        (a future year). `422 business_rule_violation` details: `fiscal_year` →
+        `parameters_unavailable` (before 2026).
+      x-module: module_annual
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/FiscalYearQuery'
+        - name: category
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/DeductionCategory' }
+      responses:
+        '200':
+          description: The year's personal deductions.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PersonalDeductionList' }
+        '400': { $ref: '#/components/responses/AnnualBadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/AnnualNotFound' }
+        '422': { $ref: '#/components/responses/AnnualParametersUnavailable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
+    post:
+      tags: [Annual]
+      operationId: createPersonalDeduction
+      x-frozen: sha256:ae408e47f914faa98979a188893d15d3763a89df6077a9de7614ee4ac7754fd2
+      summary: Record a personal deduction (idempotent client id)
+      description: >-
+        Records one personal deduction of a persona física (LISR 151 fr. I–VIII and the
+        colegiaturas decree). The fiscal year is the year of `paid_on`. Category-specific
+        fields: `donee_type` is required for `donation` and must be absent or `null`
+        otherwise; `student_label`, `tuition_level` and `scholarship_cents` are required for
+        `tuition` and absent or `null` otherwise. `cash` is accepted and stored, and for
+        `medical`, `medical_disability`, `school_transport` and `tuition` it is **not
+        deductible**: the row is saved with `excluded: cash_not_deductible` and the warning
+        `cash_not_deductible` on `payment_method`, and the estimate shows it excluded. A
+        `beneficiary` other than `self` means the user attested that the dependant's income
+        is below one UMA anual (the form's checkbox; not verified ⚠️). `cfdi_uuid` is
+        format-checked only and never sent to the SAT.
+
+
+        **Idempotency (double submit)** as `createIncome`: retry with the same `id` and
+        fields → `200`; the same `id` with other fields, another taxpayer or a deleted row
+        → `409` (`id` / `id_reused`); an `id` of another user → `409` with no `details`.
+
+
+        **Order of checks:** schema (`400`) → idempotency (`200`/`409`) → read-only access
+        (`402`, OQ-A9; never a trial slot) → archived taxpayer, person type, list bound
+        (`422`) → field rules (`400`) → insert. Budget: `annual_writes`. Amounts, labels and
+        the beneficiary are never logged.
+
+
+        `FieldError.code` values beyond JSON Schema keywords: `paid_on` → `out_of_range`
+        (before 2026-01-01 or after today, America/Mexico_City, as `BusinessDate`);
+        `donee_type`, `student_label`, `tuition_level`, `scholarship_cents` → `required`
+        (missing for their category) or `not_applicable` (sent for another category);
+        `student_label` → `invalid` (blank, untrimmed or control characters; stored NFC).
+        `422 business_rule_violation` details: `taxpayerId` → `taxpayer_archived` or
+        `person_type_not_allowed`; `body` → `limit_reached` (500 live deductions in that
+        year).
+      x-module: module_annual
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PersonalDeductionCreate' }
+            examples:
+              medicalAN01:
+                summary: Electronic medical expense (AN-01)
+                value:
+                  id: 0199d4b1-2b3c-7d4e-8f5a-6b7c8d9e0f01
+                  category: medical
+                  amount_cents: 4000000
+                  paid_on: '2026-06-12'
+                  payment_method: electronic
+                  beneficiary: self
+              tuitionAN02:
+                summary: Primaria tuition of one child (AN-02), capped at 12,900.00 in the estimate
+                value:
+                  id: 0199d4b1-2b3c-7d4e-8f5a-6b7c8d9e0f02
+                  category: tuition
+                  amount_cents: 3000000
+                  paid_on: '2026-08-20'
+                  payment_method: electronic
+                  beneficiary: descendant
+                  student_label: Hija menor
+                  tuition_level: primaria
+                  scholarship_cents: 0
+              donationGovernment:
+                summary: Donation to a government donee
+                value:
+                  id: 0199d4b1-2b3c-7d4e-8f5a-6b7c8d9e0f03
+                  category: donation
+                  amount_cents: 500000
+                  paid_on: '2026-07-03'
+                  payment_method: electronic
+                  beneficiary: self
+                  donee_type: government
+      responses:
+        '201':
+          description: Created (`warnings` lists `cash_not_deductible` when it applies).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PersonalDeduction' }
+              examples:
+                cashMedical:
+                  summary: A medical expense paid in cash is stored but not deductible (US-A10)
+                  value:
+                    id: 0199d4b1-2b3c-7d4e-8f5a-6b7c8d9e0f04
+                    taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+                    fiscal_year: 2026
+                    category: medical
+                    amount_cents: 120000
+                    paid_on: '2026-09-02'
+                    payment_method: cash
+                    beneficiary: self
+                    donee_type: null
+                    student_label: null
+                    tuition_level: null
+                    scholarship_cents: null
+                    cfdi_uuid: null
+                    excluded: cash_not_deductible
+                    warnings:
+                      - code: cash_not_deductible
+                        field: payment_method
+                        message: En efectivo no es deducible; págalo con tarjeta o transferencia para poder deducirlo.
+                    created_at: '2026-09-02T18:30:00Z'
+                    updated_at: '2026-09-02T18:30:00Z'
+        '200':
+          description: Idempotent retry; the caller already owns this deduction with the same fields.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PersonalDeduction' }
+        '400': { $ref: '#/components/responses/AnnualBadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/RecordReadOnly' }
+        '404': { $ref: '#/components/responses/AnnualNotFound' }
+        '409': { $ref: '#/components/responses/AnnualIdConflict' }
+        '422': { $ref: '#/components/responses/AnnualRuleViolation' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
+  /v1/taxpayers/{taxpayerId}/personal-deductions/{deductionId}:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+      - $ref: '#/components/parameters/DeductionId'
+    patch:
+      tags: [Annual]
+      operationId: updatePersonalDeduction
+      x-frozen: sha256:fc842fe65b6f85c4ae9ed338a2f5096b29e0435c68bc293dbc18650335bcddd6
+      summary: Edit a personal deduction (merge-patch; null clears a nullable field)
+      description: >-
+        Merge-patch on top-level fields: absent = unchanged, `null` clears a nullable one
+        (`donee_type`, `student_label`, `tuition_level`, `scholarship_cents`, `cfdi_uuid`).
+        `id` cannot be sent. Every rule of `createPersonalDeduction` is re-run on the merged
+        row (changing `category` must also send or clear its category fields), with the same
+        codes and `warnings`; moving `paid_on` to another year moves the row to that fiscal
+        year, whose list bound applies (`422 limit_reached`; the row itself is not counted
+        twice). A deleted row answers `404`. A read-only user gets `402`; an archived taxpayer
+        `422 taxpayer_archived`. Last write wins. Budget: `annual_writes`.
+      x-module: module_annual
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PersonalDeductionUpdate' }
+            examples:
+              paidElectronically:
+                summary: Correct the payment method of the cash medical expense
+                value: { payment_method: electronic }
+      responses:
+        '200':
+          description: Updated (with `warnings` as on create).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PersonalDeduction' }
+        '400': { $ref: '#/components/responses/AnnualBadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/RecordReadOnly' }
+        '404': { $ref: '#/components/responses/AnnualNotFound' }
+        '422': { $ref: '#/components/responses/AnnualRuleViolation' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
+    delete:
+      tags: [Annual]
+      operationId: deletePersonalDeduction
+      x-frozen: sha256:9d541ea185b2a5352645a4ff24aa0cee0bff62695fd9c82c04fac05aed730646
+      summary: Soft-delete a personal deduction (Undo via restore)
+      description: >-
+        Sets `deleted_at`: the deduction leaves the list and the estimate at once and can be
+        restored for 30 days (then it is purged), so the app offers Undo instead of a
+        confirmation. Deleting an already deleted deduction answers `204`. Allowed for a
+        read-only user. An archived taxpayer answers `422 taxpayer_archived`. Budget:
+        `annual_writes`.
+      x-module: module_annual
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Deleted (restorable).
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+        '400': { $ref: '#/components/responses/AnnualBadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/AnnualNotFound' }
+        '422': { $ref: '#/components/responses/RecordTaxpayerArchived' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
+  /v1/taxpayers/{taxpayerId}/personal-deductions/{deductionId}/restore:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+      - $ref: '#/components/parameters/DeductionId'
+    post:
+      tags: [Annual]
+      operationId: restorePersonalDeduction
+      x-frozen: sha256:353493f649331f71c29d7655009dc0e442082e5ca6c2dce51c243035c32b4df7
+      summary: Undo a personal-deduction delete
+      description: >-
+        Clears `deleted_at`. Allowed for a read-only user (no access check, never `402`):
+        Undo gives back the user's own row and uses no trial slot, as `restoreIncome`. The
+        list bound **is** re-checked: it bounds the unpaginated list and the O(rows)
+        deduction pass (ADR-0009), so a year that already holds 500 live deductions (rows
+        created after the delete) answers `422 limit_reached` and the row stays restorable
+        until it is purged. Restoring a live deduction answers `200` unchanged; a purged
+        one, or another user's, `404`. An archived taxpayer answers `422 taxpayer_archived`.
+        `warnings` are computed as on create. Budget: `annual_writes`.
+
+
+        `422 business_rule_violation` details: `taxpayerId` → `taxpayer_archived`; `body` →
+        `limit_reached` (500 live deductions in the row's fiscal year).
+      x-module: module_annual
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Restored.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PersonalDeduction' }
+        '400': { $ref: '#/components/responses/AnnualBadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/AnnualNotFound' }
+        '422': { $ref: '#/components/responses/AnnualRuleViolation' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
+  /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/filed-payments/{fiscalYear}:
+    parameters:
+      - $ref: '#/components/parameters/TaxpayerId'
+      - $ref: '#/components/parameters/RegimeCodePath'
+      - $ref: '#/components/parameters/FiscalYearPath'
+    get:
+      tags: [Annual]
+      operationId: getFiledPayments
+      x-frozen: sha256:bf10c2a7cbb93da3bcab19acd431f6709801f07bf9cf09dffeec7498feb0609e
+      summary: The 12 provisional ISR payments of one regime and year, with their source
+      description: >-
+        One row per month (January .. December) with the provisional ISR payment the
+        annual estimate credits and where it comes from (MODULE-annual §2.5, OQ-A1):
+        **(1)** `filed_cents`, the amount the user confirmed or typed here → **(2)**
+        `tax_input_cents`, the M5 tax input `prior_provisional_payments` of that month →
+        **(3)** `app_estimate_cents`, the app's own monthly estimate for the regime
+        (`max(0, isr)`). `effective_cents` and `source` are the first present. A month
+        outside the regime's window, or not closed yet in the current year, is `in_window:
+        false` or carries `source: none`. The screen prefills the 12 inline rows with
+        `effective_cents`; "Confirmar todos" sends them to `putFiledPayments`.
+
+
+        Only regimes with provisional ISR payments: 606, 612, 625 (without the definitive
+        option), 626, 601. Reads are allowed for a read-only user and an archived taxpayer.
+        Budget: `estimate_reads` (one read plus one for the 12-month estimate range).
+
+
+        `FieldError.code` values beyond JSON Schema keywords: `fiscalYear` → `out_of_range`
+        (a future year). `422 business_rule_violation` details: `fiscalYear` →
+        `parameters_unavailable`; `regimeCode` → `regime_not_active` (not held in any month
+        of the year) or `payments_not_applicable` (a held regime without provisional ISR
+        payments, e.g. 605 or 625 with the definitive option).
+      x-module: module_annual
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The year's 12 months.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FiledPayments' }
+        '400': { $ref: '#/components/responses/AnnualBadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/AnnualNotFound' }
+        '422': { $ref: '#/components/responses/AnnualRuleViolation' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
+    put:
+      tags: [Annual]
+      operationId: putFiledPayments
+      x-frozen: sha256:40ede7cb4573f07603704290b2d939435b7dd4cd4b636eee7121dd34f419095f
+      summary: Replace the confirmed provisional ISR payments of one regime and year
+      description: >-
+        Replaces **all** confirmed months of `(taxpayer, regime, fiscalYear)` with
+        `months` (an empty array clears them; an absent month is "not confirmed", so the
+        estimate falls back to the tax input or the app estimate). Idempotent. At most one
+        entry per month; `amount_cents >= 0` is the amount actually paid (`0` is a confirmed
+        zero). Answers the same body as `getFiledPayments`.
+
+
+        **Order of checks:** schema (`400`) → read-only access (`402`, OQ-A9) → archived
+        taxpayer, fiscal year, regime and window (`422`) → month rules (`400`) → replace.
+        Budget: `annual_writes` plus the `estimate_reads` of the answer. Audited as
+        `annual_filed_payments.updated` with user, taxpayer, regime and fiscal year only.
+
+
+        `FieldError.code` values beyond JSON Schema keywords (`field` is
+        `months.<index>[.<property>]`): `invalid` (a repeated month); `out_of_range` (a
+        month not closed yet in the current year); `fiscalYear` → `out_of_range` (a future
+        year). `422 business_rule_violation` details: `taxpayerId` → `taxpayer_archived`;
+        `fiscalYear` → `parameters_unavailable`; `regimeCode` → `regime_not_active` or
+        `payments_not_applicable`; `months.<index>.month` → `regime_not_active` (a month
+        outside the regime's window).
+      x-module: module_annual
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FiledPaymentsUpdate' }
+      responses:
+        '200':
+          description: Saved; the 12 months as `getFiledPayments` answers them.
+          headers:
+            Cache-Control: { $ref: '#/components/headers/NoStore' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FiledPayments' }
+        '400': { $ref: '#/components/responses/AnnualBadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/RecordReadOnly' }
+        '404': { $ref: '#/components/responses/AnnualNotFound' }
+        '422': { $ref: '#/components/responses/AnnualRuleViolation' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/RecordInternalError' }
+
   # ---------------------------------------------------------------- M9 Reminders
   /v1/devices:
     post:
@@ -4160,6 +5192,29 @@ components:
       description: Default `false`; `true` requires `iva_rate=exempt` (`422 residential_rent_exempt`).
       schema: { type: boolean }
 
+    # Annual (ANN-02, ADR-0009).
+    FiscalYearPath:
+      name: fiscalYear
+      in: path
+      required: true
+      description: Fiscal year (2026 .. the current year, America/Mexico_City). Before 2026 → `422`; after the current year → `400 out_of_range`.
+      schema: { $ref: '#/components/schemas/FiscalYear' }
+    FiscalYearQuery:
+      name: fiscal_year
+      in: query
+      required: true
+      description: Fiscal year (2026 .. the current year, America/Mexico_City). Before 2026 → `422`; after the current year → `400 out_of_range`.
+      schema: { $ref: '#/components/schemas/FiscalYear' }
+    StatementId:
+      name: statementId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Uuid' }
+    DeductionId:
+      name: deductionId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Uuid' }
   headers:
     NoStore:
       x-frozen: sha256:54eb73c86a25f912c1a1c22a4e6556ebc433a024e2a0e05d9c262e1ac8247077
@@ -4550,6 +5605,174 @@ components:
               details:
                 - { field: period, code: parameters_unavailable, message: Sólo podemos estimar desde enero de 2026. }
 
+    # Annual errors (MODULE-annual §5, ADR-0009); `Cache-Control: no-store` as every response.
+    # 402 reuses RecordReadOnly, 422 on delete/restore RecordTaxpayerArchived, 500
+    # RecordInternalError; 401 and 429 are the shared ones.
+    AnnualBadRequest:
+      x-frozen: sha256:7db41b3ac4a06a23114efae438551d8f07665b8bcd998ecedad577acf22a57b4
+      description: >-
+        Input does not match the contract (malformed fiscal year, regime code, path id, query
+        parameter or body; unknown field; bad enum; negative amount), a future fiscal year
+        (`out_of_range`), or a field rule of the operation (`details[].code`: see it).
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            futureYear:
+              value:
+                error:
+                  code: validation_failed
+                  message: One or more fields are invalid.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: fiscalYear, code: out_of_range, message: Aún no podemos estimar un año futuro. }
+            categoryFieldMissing:
+              summary: A tuition deduction without its level
+              value:
+                error:
+                  code: validation_failed
+                  message: One or more fields are invalid.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: tuition_level, code: required, message: Indica el nivel escolar. }
+            paidOnOutOfRange:
+              summary: A deduction paid after today
+              value:
+                error:
+                  code: validation_failed
+                  message: One or more fields are invalid.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: paid_on, code: out_of_range, message: La fecha no puede ser futura ni anterior a 2026. }
+    AnnualNotFound:
+      x-frozen: sha256:3fe0062e7ca6b5c93283c0a9bcfa65ee9a3ab6abba31e13e1313c2bd15b0a879
+      description: >-
+        The taxpayer, constancia or deduction does not exist, belongs to another user or is
+        purged, or `module_annual` is effectively OFF (`module_annual`, `module_tax_engine`
+        or `module_taxpayers` disabled), which answers `404` before any input check, a
+        malformed request included (indistinguishable on purpose). With the module ON a
+        malformed id is `400`.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            error: { code: not_found, message: Not found., request_id: req_01J9Z6Q4X8 }
+    AnnualParametersUnavailable:
+      x-frozen: sha256:b35ddf5f16dd1ae1cf4e1cd617b2f9ef8e43fd90f097d752f8e0517f2d31e3e8
+      description: >-
+        The fiscal year is before 2026, the first fiscal year with transcribed tax parameters
+        (`parameters_unavailable`). A well-formed request the engine cannot answer, hence
+        `422`, as `getTaxpayerEstimate` and `getHistory`.
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          example:
+            error:
+              code: business_rule_violation
+              message: There are no tax parameters for that fiscal year.
+              request_id: req_01J9Z6Q4X8
+              details:
+                - { field: fiscal_year, code: parameters_unavailable, message: Sólo podemos estimar desde 2026. }
+    AnnualRuleViolation:
+      x-frozen: sha256:095a1a62b2cd469589ed94a45943040bd3ef268a4a03ed94bf4dabc82adbf119
+      description: >-
+        Well-formed but violates an annual rule (`details[].code`, the subset each operation
+        lists): `parameters_unavailable` (fiscal year before 2026), `person_type_not_allowed`
+        (a persona moral writing personas físicas' data), `taxpayer_archived`,
+        `regime_not_active` (regime not held in the year, or a month outside its window),
+        `payments_not_applicable` (a regime with no provisional ISR payments),
+        `limit_reached` (list bound of the year).
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            parametersUnavailable:
+              value:
+                error:
+                  code: business_rule_violation
+                  message: There are no tax parameters for that fiscal year.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: fiscal_year, code: parameters_unavailable, message: Sólo podemos estimar desde 2026. }
+            personTypeNotAllowed:
+              value:
+                error:
+                  code: business_rule_violation
+                  message: This applies only to a persona física.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: taxpayerId, code: person_type_not_allowed, message: Las deducciones personales y constancias de sueldos son sólo de personas físicas. }
+            taxpayerArchived:
+              value:
+                error:
+                  code: business_rule_violation
+                  message: This taxpayer is archived. Unarchive it to make changes.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: taxpayerId, code: taxpayer_archived, message: Desarchiva al contribuyente primero. }
+            regimeNotActive:
+              value:
+                error:
+                  code: business_rule_violation
+                  message: The taxpayer does not hold this regime in that fiscal year.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: regimeCode, code: regime_not_active, message: No tienes este régimen en ese ejercicio. }
+            monthOutsideWindow:
+              value:
+                error:
+                  code: business_rule_violation
+                  message: The taxpayer does not hold this regime in that month.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: months.0.month, code: regime_not_active, message: No tenías este régimen en ese mes. }
+            paymentsNotApplicable:
+              value:
+                error:
+                  code: business_rule_violation
+                  message: This regime has no provisional ISR payments.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: regimeCode, code: payments_not_applicable, message: Este régimen no hace pagos provisionales de ISR. }
+            limitReached:
+              value:
+                error:
+                  code: business_rule_violation
+                  message: This fiscal year already has the maximum number of entries.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: body, code: limit_reached, message: Ya registraste el máximo de este año. }
+    AnnualIdConflict:
+      x-frozen: sha256:987899d67722a80c94463a642c3de280bc60c26ae2ce163d772679ac20cc27fc
+      description: >-
+        The client `id` is reused: by the caller with other fields, another taxpayer or a
+        deleted row (`details`: `id` / `id_reused`), or it belongs to another user (no
+        `details`).
+      headers:
+        Cache-Control: { $ref: '#/components/headers/NoStore' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+          examples:
+            idReused:
+              value:
+                error:
+                  code: conflict
+                  message: The request conflicts with the current state.
+                  request_id: req_01J9Z6Q4X8
+                  details:
+                    - { field: id, code: id_reused, message: Este identificador ya se usó con otros datos. }
+            foreignId:
+              value:
+                error: { code: conflict, message: The request conflicts with the current state., request_id: req_01J9Z6Q4X8 }
   schemas:
     # ------------------------------------------------------------ primitives
     Uuid:
@@ -4628,7 +5851,15 @@ components:
         `resico_cap_exceeded` when a RESICO (626) regime's income collected in the year is above
         its cap (PF 3,500,000, LISR 113-E; PM 35,000,000, LISR 206): the taxpayer leaves RESICO
         (PF from the next month, LISR 113-E/113-I; PM from the next fiscal year, LISR 214), the
-        month is still estimated under RESICO (MODULE-tax-engine §2.3, §2.9).
+        month is still estimated under RESICO (MODULE-tax-engine §2.3, §2.9). Annual
+        estimate (MODULE-annual §2.8, 0.11.0; `annual_estimate` is first there instead of
+        `not_tax_advice`, and `incomplete_inputs` / `cpa_review_pending` are reused):
+        `annual_estimate` always; `year_in_progress` (current fiscal year);
+        `payments_estimated` (a provisional payment taken from the app's estimate);
+        `deductions_as_entered` (a personal deduction applied); `resico_pf_definitive` (a
+        RESICO PF check section); `informative_income` (PF total income over 500,000.00,
+        LISR 150); `rmf_2027_pending` (fiscal year 2026); `inflation_adjustment_excluded`
+        (PM sections); `no_annual_iva` always.
       enum:
         - not_tax_advice
         - incomplete_inputs
@@ -4640,6 +5871,15 @@ components:
         - iva_mixed_activity
         - cpa_review_pending
         - resico_cap_exceeded
+        - annual_estimate
+        - year_in_progress
+        - payments_estimated
+        - deductions_as_entered
+        - resico_pf_definitive
+        - informative_income
+        - rmf_2027_pending
+        - inflation_adjustment_excluded
+        - no_annual_iva
     DisclaimerSeverity:
       x-frozen: sha256:8429837655ae31f5f2ec2bbcdb5e05b87988db4e779030e4cf985bd03611eafc
       type: string
@@ -5222,7 +6462,11 @@ components:
         on `supplier_regime` (derived as 612); `deduction_requires_remittance` on `withholding`
         (an expense with a withholding above 0 is deductible only if it is remitted by the 17th
         of the next month). `withholding_differs_from_rate` is **retired**: WH-06 stops sending
-        it, and it stays in the list because the list is append-only.
+        it, and it stays in the list because the list is append-only. Annual (MODULE-annual,
+        0.11.0): `cash_not_deductible` on `payment_method` (a personal deduction of a
+        cash-restricted category paid in cash is stored but never applied);
+        `salary_regime_not_held` on `fiscal_year` (a salary constancia of a year in which the
+        taxpayer does not hold 605: accepted, add the regime, OQ-A2).
       enum:
         - rfc_check_digit_mismatch
         - regime_combination_needs_cpa_review
@@ -5238,6 +6482,8 @@ components:
         - foreign_counterparty_not_supported
         - supplier_regime_unknown
         - deduction_requires_remittance
+        - cash_not_deductible
+        - salary_regime_not_held
     RfcInput:
       x-frozen: sha256:fd37fdbdaecba3f8606df31b502d5391862219c4ff10dd2a013a199cf66b6c4c
       type: string
@@ -6428,7 +7674,10 @@ components:
         withholding), `withholding_rule_unverified` (a line fed by records whose derived
         withholding matched a ⚠️ rule, MODULE-withholdings §6), `withheld_iva_credit_timing`
         (IVA withheld from suppliers credited the month after, assuming timely remittance,
-        LIVA 5 fr. IV; 0.10.0).
+        LIVA 5 fr. IV; 0.10.0). Annual estimate (MODULE-annual §2.10, 0.11.0):
+        `platform_nondefinitive_annual`, `uma_for_minimum_wage`, `deduction_cap_resico_income`,
+        `salary_obligation_basis`, `cu_rounding`, `resico_pm_ptu_base`,
+        `resico_pf_relief_renewal`, `ptu_rate`.
       enum:
         - rif_reduction
         - rif_bimonthly_iva
@@ -6437,6 +7686,14 @@ components:
         - resico_pm_interest_withholding
         - withholding_rule_unverified
         - withheld_iva_credit_timing
+        - platform_nondefinitive_annual
+        - uma_for_minimum_wage
+        - deduction_cap_resico_income
+        - salary_obligation_basis
+        - cu_rounding
+        - resico_pm_ptu_base
+        - resico_pf_relief_renewal
+        - ptu_rate
     MissingInput:
       x-frozen: sha256:0e1eec1b32b5e51bd57737e253711409c2e2329d30c73f767f733d714d353eb0
       type: object
@@ -6613,9 +7870,9 @@ components:
         opaque to the client). Bumped whenever an engine change can move a figure.
       examples: [1.0.1]
     TaxpayerEstimate:
-      x-frozen: sha256:e5824557c23ffd39fc20267b21ba354cc646fd0f8cc5bdd4c54c96f4a58bf5dc
+      x-frozen: sha256:dff310b01b1c248b547fac9a5d17c80efc2c0d319622eee5e257ec0fe4e2675a
       type: object
-      required: [taxpayer_id, period, due_date, legend, disclaimers, regimes, totals, parameter_set, records_fingerprint, engine_version]
+      required: [taxpayer_id, period, due_date, legend, disclaimers, regimes, totals, parameter_set, records_fingerprint, figures_fingerprint, engine_version]
       description: >-
         Informational estimate of one month (derived on every read; same records, inputs,
         parameters and engine version → byte-identical JSON). `due_date` is day 17 of the
@@ -6640,13 +7897,10 @@ components:
         figures_fingerprint:
           $ref: '#/components/schemas/FiguresFingerprint'
           description: >-
-            Hash of the figures shown (M8-01, additive). Optional only until M8-03 ships the
-            M5 domain function that computes it: M8-03 **will make it required** (a response
-            narrowing, non-breaking; tracked in PLAN M8-03). The app posts it, with
-            `records_fingerprint`, `engine_version` and `parameter_set`, to
-            `markHistoryViewed`; until then a client that receives no value skips marking the
-            month viewed.
-        engine_version: { type: string, examples: [1.0.0] }
+            Hash of the figures shown (M8-01; required since M8-03, 0.11.1, a response
+            narrowing). The app posts it, with `records_fingerprint`, `engine_version` and
+            `parameter_set`, to `markHistoryViewed`.
+        engine_version: { $ref: '#/components/schemas/EngineVersion' }
       examples:
         - taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
           period: '2026-03'
@@ -7410,6 +8664,1164 @@ components:
           figures_fingerprint: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb202606
           engine_version: 1.0.1
           parameter_set: { fiscal_year: 2026, version: 1 }
+
+    # ------------------------------------------------------------ annual (ANN-02, ADR-0009)
+    AnnualLegend:
+      x-frozen: sha256:d731bb476c478e9916b718123609da585edb37ec2e8e395932678b5f151be5ab
+      type: string
+      const: Esto es un aproximado; tu contador te dará las cifras reales.
+      description: >-
+        Mandatory legend of every annual surface (MODULE-annual owner decision 1, §2.8);
+        rendered from this server field. Not the monthly `Legend`.
+    AnnualYearStatus:
+      x-frozen: sha256:5d6120c712eca0a43b0d3a25431b640eff9c2a37e1af1fb114488a658f4d1162
+      type: string
+      enum: [closed, in_progress]
+      description: >-
+        `in_progress` when the fiscal year is the current one (America/Mexico_City): figures
+        use the records through `data_through`, never extrapolated (OQ-A3).
+    AnnualSectionKind:
+      x-frozen: sha256:4c366834f96f9fa5ad0a548261629532cf097aa49b3268cb4055e04cdf5850d8
+      type: string
+      enum: [pf_art152, pf_resico_check, pm_601, pm_resico, explanation]
+      description: >-
+        `pf_art152`: one aggregated LISR 152 computation of a persona física's 605, 606, 612
+        and 625 non-definitive income. `pf_resico_check`: RESICO PF 113-F informative check,
+        never a balance. `pm_601`, `pm_resico`: per regime (LISR 9). `explanation`: any other
+        regime, text and deadline only.
+    AnnualComputedSectionKind:
+      x-frozen: sha256:579ee124a10aed9b819783030a0524203227096776206efb25f50d44a428d4a8
+      type: string
+      enum: [pf_art152, pf_resico_check, pm_601, pm_resico]
+      description: The `AnnualSectionKind` values that have a computation trace.
+    AnnualSectionStatus:
+      x-frozen: sha256:2b6ec05a5d3d81565dd228260cf479e992005e130ecc3785e31c2e90b9d537be
+      type: string
+      enum: [complete, incomplete, informational]
+      description: >-
+        Precedence `informational` > `incomplete` > `complete`. `incomplete`: a required input
+        is missing and the section is computed with its documented fallback ("Incompleto" chip
+        and CTA). `informational`: `pf_resico_check` and `explanation`; no payable or
+        refundable balance.
+    AnnualObligation:
+      x-frozen: sha256:6accad04257afa3b5d8784c32a960c2d565b84ead2d761055cbd12d300de0d60
+      type: string
+      enum: [obligated, optional, not_obligated, relieved]
+      description: >-
+        Whether the return must be filed (MODULE-annual §2.4): `pf_art152` is `obligated`,
+        `optional` (salary only within the limits: filing is optional, a refund is the usual
+        reason) or `not_obligated`; `pf_resico_check` is `relieved` (rule 3.13.7); PM
+        sections are always `obligated`.
+    AnnualBalanceKind:
+      x-frozen: sha256:b79e23ea835fcdaf3e81f42d5c0256f8b319d99e04d3051bbaf04606045c6f4c
+      type: string
+      enum: [a_cargo, a_favor, cero]
+      description: Shown in words ("Saldo a cargo", "Saldo a favor", "Sin saldo"), never by colour alone.
+    AnnualBalance:
+      x-frozen: sha256:643495e8ce580239df5760292557edaba345c09aa2150324792d11b4691c74a4
+      type: object
+      required: [kind, amount_cents]
+      description: >-
+        `isr_cents − credits.total_cents`, rounded once to the centavo (half away from zero):
+        positive → `a_cargo`, negative → `a_favor` with its absolute value, zero → `cero`.
+      properties:
+        kind: { $ref: '#/components/schemas/AnnualBalanceKind' }
+        amount_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+      examples:
+        - { kind: a_favor, amount_cents: 940800 }
+    PaymentSourceCounts:
+      x-frozen: sha256:9c1cb607a4f698c70f11597fd1cabc9212df62b34684a3a41a0255b49590b0f6
+      type: object
+      required: [filed_months, tax_input_months, estimated_by_app_months]
+      description: >-
+        How many regime-months of provisional payments came from each source (MODULE-annual
+        §2.5): confirmed here (`filed`), the M5 tax input (`tax_input`), or the app's own
+        monthly estimate (`estimated_by_app`, which raises `payments_estimated`).
+      properties:
+        filed_months: { type: integer, minimum: 0, maximum: 60 }
+        tax_input_months: { type: integer, minimum: 0, maximum: 60 }
+        estimated_by_app_months: { type: integer, minimum: 0, maximum: 60 }
+      examples:
+        - { filed_months: 6, tax_input_months: 0, estimated_by_app_months: 3 }
+    AnnualCredits:
+      x-frozen: sha256:64190b35b07fb3e2afeaa79980d6ed526d0eecf51000231617aef10a285e5618
+      type: object
+      required: [payments_cents, withholdings_cents, salary_isr_cents, total_cents, payment_sources]
+      description: >-
+        What is subtracted from the annual ISR: provisional ISR payments of the section's
+        regimes, ISR withheld from the taxpayer (10 % by a persona moral, platforms; PM:
+        interest withholding), ISR withheld on salary (Σ constancias; 0 for PM).
+        `total_cents` is their sum.
+      properties:
+        payments_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        withholdings_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        salary_isr_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        total_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        payment_sources: { $ref: '#/components/schemas/PaymentSourceCounts' }
+      examples:
+        - payments_cents: 5577386
+          withholdings_cents: 3000000
+          salary_isr_cents: 0
+          total_cents: 8577386
+          payment_sources: { filed_months: 12, tax_input_months: 0, estimated_by_app_months: 0 }
+    AnnualTax:
+      x-frozen: sha256:dcbc3ed9c6f71402a4c4e67355d815aab4dbaa5ff1e0eb2452458616c10cf418
+      type: object
+      required: [accumulable_income_cents, personal_deductions_cents, base_cents, isr_cents, credits, balance]
+      description: >-
+        The section's annual ISR. `accumulable_income_cents`: PF, Σ of each chapter's
+        result floored at 0 (a 612 loss stays in 612, LISR 109); PM, ingresos acumulables.
+        `personal_deductions_cents`: applied after caps (PF only, `null` for PM).
+        `base_cents`: PF base (≤ 0 → 0); PM resultado fiscal. `isr_cents`: PF annual tariff
+        (Anexo 8 C.II), PM 30 %.
+      properties:
+        accumulable_income_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        personal_deductions_cents:
+          oneOf:
+            - $ref: '#/components/schemas/NonNegativeCents'
+            - type: 'null'
+        base_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        isr_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        credits: { $ref: '#/components/schemas/AnnualCredits' }
+        balance: { $ref: '#/components/schemas/AnnualBalance' }
+      examples:
+        - accumulable_income_cents: 50000000
+          personal_deductions_cents: 4000000
+          base_cents: 46000000
+          isr_cents: 7636586
+          credits:
+            payments_cents: 5577386
+            withholdings_cents: 3000000
+            salary_isr_cents: 0
+            total_cents: 8577386
+            payment_sources: { filed_months: 12, tax_input_months: 0, estimated_by_app_months: 0 }
+          balance: { kind: a_favor, amount_cents: 940800 }
+    PmAnnualExtras:
+      x-frozen: sha256:d2bb58a4afe2418ff96b1f0aa7b2e08d2f466526ddee1487562512ff5341b8fb
+      type: object
+      required: [ptu_base_cents, ptu_to_distribute_cents, suggested_cu_next_year]
+      description: >-
+        Informative PM figures. `ptu_base_cents`: 601, ingresos acumulables − deductions
+        (without PTU paid or losses; the art. 28 fr. XXX adjustment is not modelled ⚠️); RESICO
+        PM, utilidad fiscal per art. 212 (⚠️ `resico_pm_ptu_base`). `ptu_to_distribute_cents`:
+        10 % of the base (601 only, ⚠️ `ptu_rate`; `null` for RESICO PM).
+        `suggested_cu_next_year`: utilidad fiscal ÷ ingresos nominales, 4 decimals half-up
+        (601 only, ⚠️ `cu_rounding`; `"0.0000"` when the utilidad is ≤ 0; `null` for RESICO
+        PM), "Sugerido para tus pagos de {fy+1}".
+      properties:
+        ptu_base_cents: { $ref: '#/components/schemas/MoneyCents' }
+        ptu_to_distribute_cents:
+          oneOf:
+            - $ref: '#/components/schemas/NonNegativeCents'
+            - type: 'null'
+        suggested_cu_next_year:
+          oneOf:
+            - $ref: '#/components/schemas/DecimalRate'
+            - type: 'null'
+      examples:
+        - { ptu_base_cents: 150000000, ptu_to_distribute_cents: 15000000, suggested_cu_next_year: '0.1380' }
+    ResicoPfCheck:
+      x-frozen: sha256:b615124c689fbd04e669e34fcabd8fb6d563b86f301b73013217801117818c33
+      type: object
+      required: [income_cents, rate, annual_isr_cents, monthly_payments_cents, withheld_cents, difference_cents]
+      description: >-
+        RESICO PF 113-F informative reconciliation (MODULE-annual §2.7): annual income
+        collected × the annual non-marginal `rate` − the monthly RESICO ISR − the 1.25 %
+        withheld = `difference_cents`, shown as "diferencia informativa", **never** as an
+        amount to pay or to get back (the monthly payments are definitive, rule 3.13.7).
+      properties:
+        income_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        rate: { $ref: '#/components/schemas/DecimalRate' }
+        annual_isr_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        monthly_payments_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        difference_cents: { $ref: '#/components/schemas/MoneyCents' }
+      examples:
+        - { income_cents: 48000000, rate: '0.0110', annual_isr_cents: 528000, monthly_payments_cents: 660000, withheld_cents: 0, difference_cents: -132000 }
+    AnnualNoteCode:
+      type: string
+      description: >-
+        Append-only (like `ErrorCode`): clients show the `text` of a code they do not know.
+        `refund_only_paid` (a saldo a favor that depends on a payment estimated by the app:
+        only what was actually paid or withheld is refunded, LISR 152); `refund_needs_efirma`
+        (saldo a favor ≥ 10,000.00); `loss_carryforward` (a chapter or PM loss, amortizable in
+        later years); `cu_suggestion` (601 suggested coeficiente for next year).
+      enum: [refund_only_paid, refund_needs_efirma, loss_carryforward, cu_suggestion]
+    AnnualNote:
+      x-frozen: sha256:ac2fa3674f5273a9c936b1df9495501fd2261db5bd97571f9a381044fd378d82
+      type: object
+      required: [code, text]
+      description: An informative note under a section's figure (es-MX, server text, never an amount on its own).
+      properties:
+        code: { $ref: '#/components/schemas/AnnualNoteCode' }
+        text: { type: string }
+      examples:
+        - { code: refund_needs_efirma, text: Para solicitar la devolución necesitas e.firma. }
+    AnnualInputTarget:
+      x-frozen: sha256:227d58c724e818fd9553ce88243f549208593ba158540ed53344f8cd4dad2f7e
+      type: string
+      enum: [salary_statements, personal_deductions, annual_inputs, filed_payments, tax_inputs]
+      description: >-
+        The screen that completes a missing input: `listSalaryStatements`,
+        `listPersonalDeductions`, `getAnnualInputs`, `getFiledPayments` (for `regime_code`) or
+        the M5 `getTaxInputs` (for `regime_code`).
+    AnnualMissingInput:
+      x-frozen: sha256:3964bd02580d3f6e496c8b051a7bc2ed1ac1eabd1dd8dfe1282ca5a531bbf650
+      type: object
+      required: [key, label, target, regime_code, months]
+      description: >-
+        A required input the section does not have (MODULE-annual §2.6): `salary_statement`
+        (the taxpayer holds 605 and has no constancia; salary counted as 0),
+        `prior_year_accumulable_income` (donations exist; they are excluded), `filed_payment`
+        (months whose default payment came from an `incomplete` monthly estimate; `months`
+        lists them), or an M5 tax-input key (`target: tax_inputs`). `regime_code` is set for
+        `filed_payments` and `tax_inputs`, `null` otherwise; `months` is empty unless the key
+        is monthly.
+      properties:
+        key: { type: string, pattern: '^[a-z][a-z0-9]*(_[a-z0-9]+)*$', maxLength: 64 }
+        label: { type: string, description: Spanish label for the CTA. }
+        target: { $ref: '#/components/schemas/AnnualInputTarget' }
+        regime_code:
+          oneOf:
+            - $ref: '#/components/schemas/RegimeCode'
+            - type: 'null'
+        months:
+          type: array
+          maxItems: 12
+          items: { $ref: '#/components/schemas/Period' }
+      examples:
+        - key: filed_payment
+          label: Pagos provisionales presentados
+          target: filed_payments
+          regime_code: '612'
+          months: ['2026-03']
+    AnnualSection:
+      x-frozen: sha256:1d1299826cf26a9ad35bb7967c561c6e81d240ff734ee8b164b3f3a42e1f73c4
+      type: object
+      required:
+        - kind
+        - regimes
+        - status
+        - missing_inputs
+        - obligation
+        - obligation_reasons
+        - deadline
+        - tax
+        - pm_extras
+        - resico_check
+        - explanation
+        - notes
+        - cpa_review_pending
+        - cpa_topics
+        - parameter_set
+      description: >-
+        One section of the annual estimate (MODULE-annual §2.1). `tax` is set for
+        `pf_art152`, `pm_601` and `pm_resico` (also when `incomplete`), `null` for
+        `pf_resico_check` and `explanation`. `pm_extras` only on PM sections, `resico_check`
+        only on `pf_resico_check`. `explanation` is the text of an `explanation` or
+        `pf_resico_check` section (or an informative remark), `null` otherwise.
+        `obligation` is `null` for an `explanation` section; `obligation_reasons` are the
+        plain-words reasons that decided it (e.g. "Tuviste dos patrones al mismo tiempo").
+        `deadline` is the section's own due date from the parameters (PF 2027-04-30, PM
+        2027-03-31, 603 informative 2027-02-15), moved to the next business day (CFF 12 ⚠️);
+        `null` when nothing is filed for it.
+      properties:
+        kind: { $ref: '#/components/schemas/AnnualSectionKind' }
+        regimes:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/RegimeCode' }
+        status: { $ref: '#/components/schemas/AnnualSectionStatus' }
+        missing_inputs:
+          type: array
+          items: { $ref: '#/components/schemas/AnnualMissingInput' }
+        obligation:
+          oneOf:
+            - $ref: '#/components/schemas/AnnualObligation'
+            - type: 'null'
+        obligation_reasons:
+          type: array
+          items: { type: string }
+        deadline: { type: [string, 'null'], format: date }
+        tax:
+          oneOf:
+            - $ref: '#/components/schemas/AnnualTax'
+            - type: 'null'
+        pm_extras:
+          oneOf:
+            - $ref: '#/components/schemas/PmAnnualExtras'
+            - type: 'null'
+        resico_check:
+          oneOf:
+            - $ref: '#/components/schemas/ResicoPfCheck'
+            - type: 'null'
+        explanation: { type: [string, 'null'] }
+        notes:
+          type: array
+          items: { $ref: '#/components/schemas/AnnualNote' }
+        cpa_review_pending:
+          type: boolean
+          description: A rule of this section is not validated by a CPA yet (⚠️, strong banner).
+        cpa_topics:
+          type: array
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/CpaTopic' }
+        parameter_set: { $ref: '#/components/schemas/ParameterSetRef' }
+      examples:
+        - kind: explanation
+          regimes: ['603']
+          status: informational
+          missing_inputs: []
+          obligation: null
+          obligation_reasons: []
+          deadline: '2027-02-15'
+          tax: null
+          pm_extras: null
+          resico_check: null
+          explanation: Presentas una declaración informativa a más tardar el 15 de febrero de 2027; tu contador la prepara.
+          notes: []
+          cpa_review_pending: false
+          cpa_topics: []
+          parameter_set: { fiscal_year: 2026, version: 1 }
+    AnnualEstimate:
+      x-frozen: sha256:b1580ed81064b38b2c1f1f1137d7a099a815ba17487098c19cb3027e9381de62
+      type: object
+      required:
+        - taxpayer_id
+        - fiscal_year
+        - person_type
+        - legend
+        - disclaimers
+        - year_status
+        - data_through
+        - deadline
+        - headline_sections
+        - sections
+        - informative_income_over_500k
+        - parameter_set
+        - engine_version
+      description: >-
+        Informational annual estimate (derived on every read; byte-identical for the same
+        inputs, parameters and engine version). `disclaimers` order: `annual_estimate`
+        first, then by severity (`strong`, `warning`, `info`), then by code; `no_annual_iva`
+        and, for fiscal year 2026, `rmf_2027_pending` are always present. `deadline` is the
+        earliest section deadline (`null` when no section has one). `data_through` is the
+        last month with records counted (`YYYY-12` for a closed year, the last closed month
+        in the current year, `null` in its January). `informative_income_over_500k`: a PF
+        whose total income, exempt included, exceeds 500,000.00 (LISR 150).
+      properties:
+        taxpayer_id: { $ref: '#/components/schemas/Uuid' }
+        fiscal_year: { $ref: '#/components/schemas/FiscalYear' }
+        person_type: { $ref: '#/components/schemas/PersonType' }
+        legend: { $ref: '#/components/schemas/AnnualLegend' }
+        disclaimers:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/Disclaimer' }
+        year_status: { $ref: '#/components/schemas/AnnualYearStatus' }
+        data_through:
+          oneOf:
+            - $ref: '#/components/schemas/Period'
+            - type: 'null'
+        deadline: { type: [string, 'null'], format: date }
+        headline_sections:
+          type: array
+          uniqueItems: true
+          description: The sections whose `tax.balance` is the headline, each shown on its own (never netted).
+          items: { $ref: '#/components/schemas/AnnualComputedSectionKind' }
+        sections:
+          type: array
+          items: { $ref: '#/components/schemas/AnnualSection' }
+        informative_income_over_500k: { type: boolean }
+        parameter_set: { $ref: '#/components/schemas/ParameterSetRef' }
+        engine_version: { $ref: '#/components/schemas/EngineVersion' }
+      examples:
+        - taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a83
+          fiscal_year: 2026
+          person_type: moral
+          legend: Esto es un aproximado; tu contador te dará las cifras reales.
+          disclaimers:
+            - code: annual_estimate
+              severity: info
+              text: Estimación informativa de la declaración anual 2026. No sustituye la declaración que presenta tu contador ante el SAT. Basada en LISR arts. 9, 109, 113-F, 150–152, Anexo 8 RMF 2026 y RMF 2026.
+            - code: no_annual_iva
+              severity: info
+              text: 'El IVA no tiene declaración anual: se paga mes con mes.'
+            - code: rmf_2027_pending
+              severity: info
+              text: Las facilidades para la anual 2026 (pago en parcialidades, exenciones, RESICO) se publican en la RMF 2027; pueden cambiar.
+          year_status: closed
+          data_through: '2026-12'
+          deadline: '2027-02-15'
+          headline_sections: []
+          sections:
+            - kind: explanation
+              regimes: ['603']
+              status: informational
+              missing_inputs: []
+              obligation: null
+              obligation_reasons: []
+              deadline: '2027-02-15'
+              tax: null
+              pm_extras: null
+              resico_check: null
+              explanation: Presentas una declaración informativa a más tardar el 15 de febrero de 2027; tu contador la prepara.
+              notes: []
+              cpa_review_pending: false
+              cpa_topics: []
+              parameter_set: { fiscal_year: 2026, version: 1 }
+          informative_income_over_500k: false
+          parameter_set: { fiscal_year: 2026, version: 1 }
+          engine_version: 1.1.0
+    AnnualLineSource:
+      x-frozen: sha256:f9114c789eff3b608322a4a72a1feee74501c06d815466ce2eb56354731b38ea
+      type: string
+      pattern: '^(records|computed|salary_statements|personal_deductions|annual_inputs|filed_payment|estimated_by_app|tax_input:[a-z][a-z0-9_]*|params:[a-z0-9][a-z0-9_.]*)$'
+      maxLength: 96
+      description: >-
+        Where an annual line's figure comes from: `records` (incomes/expenses of the year),
+        `salary_statements`, `personal_deductions`, `annual_inputs`, a provisional payment
+        `filed_payment` (confirmed) / `tax_input:prior_provisional_payments` / `estimated_by_app`
+        ("Estimado por la app"), another `tax_input:<key>`, `params:<key>` or `computed`.
+      examples: [estimated_by_app]
+    AnnualBreakdownLine:
+      x-frozen: sha256:495b72093eb8b061517a3de9bed768c8ab8f12997381a83b5be57e7eea072b8c
+      type: object
+      required: [seq, regime_code, concept, operation, amount_cents, rate, legal_basis, source, needs_cpa_review]
+      description: >-
+        One step of an annual computation trace: the monthly `BreakdownLine` shape (same
+        `operation` values and rules) without `tax` (every annual line is ISR) and with
+        `regime_code`, the regime a per-chapter or per-payment line belongs to (`null` for a
+        section-wide line). `rate` only on `multiply` lines.
+      properties:
+        seq: { type: integer, minimum: 1 }
+        regime_code:
+          oneOf:
+            - $ref: '#/components/schemas/RegimeCode'
+            - type: 'null'
+        concept: { type: string, description: Human-readable step (Spanish). }
+        operation: { type: string, enum: [input, add, subtract, multiply, lookup, result, rounding_adjustment, info] }
+        amount_cents: { $ref: '#/components/schemas/MoneyCents' }
+        rate:
+          oneOf:
+            - $ref: '#/components/schemas/DecimalRate'
+            - type: 'null'
+        legal_basis:
+          type: array
+          items: { $ref: '#/components/schemas/Citation' }
+        source: { $ref: '#/components/schemas/AnnualLineSource' }
+        needs_cpa_review: { type: boolean }
+      examples:
+        - { seq: 10, regime_code: '612', concept: 'Pagos provisionales de ISR (julio a septiembre, estimados por la app)', operation: subtract, amount_cents: 1560000, rate: null, legal_basis: [{ law: LISR, article: '152', note: null }], source: estimated_by_app, needs_cpa_review: false }
+    AnnualBreakdown:
+      x-frozen: sha256:ae9d67769d87856f7c1b9e4693f5f5358b1140a44165b45e8b49ff486faeeb66
+      type: object
+      required: [taxpayer_id, fiscal_year, section, lines, legend, disclaimers, engine_version]
+      description: >-
+        Header: `section.parameter_set` and `engine_version`. `legend` and `disclaimers`
+        travel with every breakdown (the estimate's disclaimers that bear on this section,
+        same order), so the warnings are visible wherever the figures are.
+      properties:
+        taxpayer_id: { $ref: '#/components/schemas/Uuid' }
+        fiscal_year: { $ref: '#/components/schemas/FiscalYear' }
+        section: { $ref: '#/components/schemas/AnnualSection' }
+        lines:
+          type: array
+          items: { $ref: '#/components/schemas/AnnualBreakdownLine' }
+        legend: { $ref: '#/components/schemas/AnnualLegend' }
+        disclaimers:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/Disclaimer' }
+        engine_version: { $ref: '#/components/schemas/EngineVersion' }
+      examples:
+        - taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+          fiscal_year: 2026
+          section:
+            kind: pf_art152
+            regimes: ['612']
+            status: complete
+            missing_inputs: []
+            obligation: obligated
+            obligation_reasons: [Tuviste ingresos por actividad empresarial o profesional.]
+            deadline: '2027-04-30'
+            tax:
+              accumulable_income_cents: 50000000
+              personal_deductions_cents: 4000000
+              base_cents: 46000000
+              isr_cents: 7636586
+              credits:
+                payments_cents: 5577386
+                withholdings_cents: 3000000
+                salary_isr_cents: 0
+                total_cents: 8577386
+                payment_sources: { filed_months: 12, tax_input_months: 0, estimated_by_app_months: 0 }
+              balance: { kind: a_favor, amount_cents: 940800 }
+            pm_extras: null
+            resico_check: null
+            explanation: null
+            notes: []
+            cpa_review_pending: false
+            cpa_topics: []
+            parameter_set: { fiscal_year: 2026, version: 1 }
+          lines:
+            - { seq: 1, regime_code: '612', concept: Ingresos cobrados en el año, operation: input, amount_cents: 90000000, rate: null, legal_basis: [{ law: LISR, article: '102', note: null }], source: records, needs_cpa_review: false }
+            - { seq: 2, regime_code: '612', concept: Deducciones autorizadas pagadas en el año, operation: subtract, amount_cents: 40000000, rate: null, legal_basis: [{ law: LISR, article: '103', note: null }, { law: LISR, article: '105', note: null }], source: records, needs_cpa_review: false }
+            - { seq: 3, regime_code: '612', concept: Utilidad del ejercicio (actividad empresarial y profesional), operation: result, amount_cents: 50000000, rate: null, legal_basis: [{ law: LISR, article: '109', note: null }], source: computed, needs_cpa_review: false }
+            - { seq: 4, regime_code: null, concept: Ingresos acumulables, operation: result, amount_cents: 50000000, rate: null, legal_basis: [{ law: LISR, article: '152', note: null }], source: computed, needs_cpa_review: false }
+            - { seq: 5, regime_code: null, concept: 'Deducciones personales: gastos médicos', operation: subtract, amount_cents: 4000000, rate: null, legal_basis: [{ law: LISR, article: '151', note: fracción I }], source: personal_deductions, needs_cpa_review: false }
+            - { seq: 6, regime_code: null, concept: Base del impuesto anual, operation: result, amount_cents: 46000000, rate: null, legal_basis: [{ law: LISR, article: '152', note: null }], source: computed, needs_cpa_review: false }
+            - { seq: 7, regime_code: null, concept: 'Cuota fija (tarifa anual, renglón 7)', operation: lookup, amount_cents: 6798192, rate: null, legal_basis: [{ law: Anexo 8 RMF 2026, article: C.II, note: null }], source: params:isr.art152.annual, needs_cpa_review: false }
+            - { seq: 8, regime_code: null, concept: Excedente del límite inferior por la tasa, operation: multiply, amount_cents: 838394, rate: '0.2352', legal_basis: [{ law: Anexo 8 RMF 2026, article: C.II, note: null }], source: params:isr.art152.annual, needs_cpa_review: false }
+            - { seq: 9, regime_code: null, concept: ISR del ejercicio, operation: result, amount_cents: 7636586, rate: null, legal_basis: [{ law: LISR, article: '152', note: null }], source: computed, needs_cpa_review: false }
+            - { seq: 10, regime_code: '612', concept: Pagos provisionales de ISR presentados (enero a diciembre), operation: subtract, amount_cents: 5577386, rate: null, legal_basis: [{ law: LISR, article: '152', note: null }], source: filed_payment, needs_cpa_review: false }
+            - { seq: 11, regime_code: '612', concept: ISR que te retuvieron personas morales (10 %), operation: subtract, amount_cents: 3000000, rate: null, legal_basis: [{ law: LISR, article: '106', note: párrafo quinto }], source: records, needs_cpa_review: false }
+            - { seq: 12, regime_code: null, concept: Saldo a favor, operation: result, amount_cents: -940800, rate: null, legal_basis: [{ law: LISR, article: '152', note: null }], source: computed, needs_cpa_review: false }
+          legend: Esto es un aproximado; tu contador te dará las cifras reales.
+          disclaimers:
+            - code: annual_estimate
+              severity: info
+              text: Estimación informativa de la declaración anual 2026. No sustituye la declaración que presenta tu contador ante el SAT. Basada en LISR arts. 9, 109, 113-F, 150–152, Anexo 8 RMF 2026 y RMF 2026.
+            - code: deductions_as_entered
+              severity: info
+              text: Tomamos tus deducciones personales como las registraste; el SAT las valida con tus CFDI.
+            - code: no_annual_iva
+              severity: info
+              text: 'El IVA no tiene declaración anual: se paga mes con mes.'
+            - code: rmf_2027_pending
+              severity: info
+              text: Las facilidades para la anual 2026 (pago en parcialidades, exenciones, RESICO) se publican en la RMF 2027; pueden cambiar.
+          engine_version: 1.1.0
+    AnnualRegimeTaxInput:
+      x-frozen: sha256:88125b398e3a7446ce67f1f5572c54370ef6d277119410b6da5cf11aaf3ffafd
+      type: object
+      required: [regime_code, key, label, value_cents]
+      description: >-
+        Read-only mirror of one annual-relevant M5 tax input (`money` kind) of a regime held
+        in the year; edited with `putTaxInputs`. `value_cents: null` = not entered.
+      properties:
+        regime_code: { $ref: '#/components/schemas/RegimeCode' }
+        key: { type: string, pattern: '^[a-z][a-z0-9]*(_[a-z0-9]+)*$', maxLength: 64 }
+        label: { type: string }
+        value_cents:
+          oneOf:
+            - $ref: '#/components/schemas/NonNegativeCents'
+            - type: 'null'
+      examples:
+        - { regime_code: '612', key: annual_depreciation, label: Depreciación del ejercicio, value_cents: null }
+    AnnualInputs:
+      x-frozen: sha256:bba21a85b58725d32e727bf9bf8c80fc16f594084e02aac9f20ce714136de21a
+      type: object
+      required:
+        - fiscal_year
+        - prior_year_accumulable_income_cents
+        - other_exempt_income_cents
+        - told_employer_will_file
+        - regime_tax_inputs
+        - updated_at
+      description: >-
+        Per-year annual facts (MODULE-annual §2.6). `prior_year_accumulable_income_cents`:
+        the previous year's acumulables before personal deductions, for the 7 % donation cap
+        (`null` = unknown, OQ-A5). `other_exempt_income_cents`: exempt income outside the
+        records, for the 15 % cap's total income. `told_employer_will_file`: the employee
+        told the employer they will file (obligation test). `regime_tax_inputs`: read-only,
+        ordered by regime then the catalog order of keys. `updated_at: null` = never saved
+        (defaults).
+      properties:
+        fiscal_year: { $ref: '#/components/schemas/FiscalYear' }
+        prior_year_accumulable_income_cents:
+          oneOf:
+            - $ref: '#/components/schemas/NonNegativeCents'
+            - type: 'null'
+        other_exempt_income_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        told_employer_will_file: { type: boolean }
+        regime_tax_inputs:
+          type: array
+          items: { $ref: '#/components/schemas/AnnualRegimeTaxInput' }
+        updated_at: { type: [string, 'null'], format: date-time }
+      examples:
+        - fiscal_year: 2026
+          prior_year_accumulable_income_cents: 68000000
+          other_exempt_income_cents: 0
+          told_employer_will_file: false
+          regime_tax_inputs:
+            - { regime_code: '612', key: ptu_paid, label: PTU pagada en el ejercicio, value_cents: 0 }
+            - { regime_code: '612', key: prior_year_losses, label: Pérdidas fiscales de ejercicios anteriores, value_cents: null }
+            - { regime_code: '612', key: annual_depreciation, label: Depreciación del ejercicio, value_cents: 1250000 }
+          updated_at: '2027-02-10T17:05:00Z'
+    AnnualInputsUpdate:
+      x-frozen: sha256:07644f8968cae5469f0f2b9720eac34a2b1116c3b11afd96c98d5a5c2c695106
+      type: object
+      required: [prior_year_accumulable_income_cents, other_exempt_income_cents, told_employer_will_file]
+      additionalProperties: false
+      description: The complete set of per-year facts (replace, not merge).
+      properties:
+        prior_year_accumulable_income_cents:
+          oneOf:
+            - $ref: '#/components/schemas/NonNegativeCents'
+            - type: 'null'
+        other_exempt_income_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        told_employer_will_file: { type: boolean }
+      examples:
+        - { prior_year_accumulable_income_cents: 68000000, other_exempt_income_cents: 0, told_employer_will_file: false }
+    EmployerLabel:
+      x-frozen: sha256:bc92a6988dc951993bb37a24b707c23de2f0d3fde8cdb2350ca8cbf61d69c8b0
+      type: string
+      minLength: 1
+      maxLength: 60
+      description: >-
+        Optional alias of the employer ("Empleo principal"); never an RFC or a legal name
+        requirement. Trimmed, no control characters, stored NFC (ADR-0004); never logged.
+      examples: [Empleo principal]
+    SalaryStatement:
+      x-frozen: sha256:058869e367fea172f7d6935f33d7226a3e3cf9fdf84a4d8fada740812a3d4ae5
+      type: object
+      required:
+        - id
+        - taxpayer_id
+        - fiscal_year
+        - employer_label
+        - accumulable_cents
+        - exempt_cents
+        - isr_withheld_cents
+        - simultaneous
+        - left_before_year_end
+        - payer_not_withholding
+        - warnings
+        - created_at
+        - updated_at
+      description: >-
+        One employer's constancia de sueldos (605) totals, as printed: the app never
+        recomputes exemptions or the employment subsidy. The three flags feed the obligation
+        test (LISR 98 fr. III). `warnings` is filled on writes only.
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        taxpayer_id: { $ref: '#/components/schemas/Uuid' }
+        fiscal_year: { $ref: '#/components/schemas/FiscalYear' }
+        employer_label:
+          oneOf:
+            - $ref: '#/components/schemas/EmployerLabel'
+            - type: 'null'
+        accumulable_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        exempt_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        isr_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        simultaneous:
+          type: boolean
+          description: Worked for two or more employers at the same time.
+        left_before_year_end: { type: boolean }
+        payer_not_withholding:
+          type: boolean
+          description: The employer was not obliged to withhold (e.g. an international organization).
+        warnings:
+          type: array
+          items: { $ref: '#/components/schemas/Warning' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+      examples:
+        - id: 0199d4b0-1a2b-7c3d-8e4f-5a6b7c8d9e01
+          taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+          fiscal_year: 2026
+          employer_label: Empleo principal
+          accumulable_cents: 30000000
+          exempt_cents: 0
+          isr_withheld_cents: 4000000
+          simultaneous: true
+          left_before_year_end: false
+          payer_not_withholding: false
+          warnings: []
+          created_at: '2027-01-28T16:40:00Z'
+          updated_at: '2027-01-28T16:40:00Z'
+    SalaryStatementCreate:
+      x-frozen: sha256:1d6d87e8d70b78e58c647b56bf5977173b99554db8cd888b94cbe0a0103d8e6b
+      type: object
+      required: [fiscal_year, accumulable_cents, exempt_cents, isr_withheld_cents]
+      additionalProperties: false
+      description: The three booleans default to `false`; `id` is the client's idempotency key.
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        fiscal_year: { $ref: '#/components/schemas/FiscalYear' }
+        employer_label: { $ref: '#/components/schemas/EmployerLabel' }
+        accumulable_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        exempt_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        isr_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        simultaneous: { type: boolean, default: false }
+        left_before_year_end: { type: boolean, default: false }
+        payer_not_withholding: { type: boolean, default: false }
+      examples:
+        - id: 0199d4b0-1a2b-7c3d-8e4f-5a6b7c8d9e02
+          fiscal_year: 2026
+          employer_label: Segundo empleo
+          accumulable_cents: 15000000
+          exempt_cents: 0
+          isr_withheld_cents: 800000
+          simultaneous: true
+    SalaryStatementUpdate:
+      x-frozen: sha256:975505dd281c434eb144a0fc298a93346d8c0def3f2e372082b1209ecdf5d372
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      description: 'Merge-patch; `employer_label: null` clears it.'
+      properties:
+        fiscal_year: { $ref: '#/components/schemas/FiscalYear' }
+        employer_label:
+          oneOf:
+            - $ref: '#/components/schemas/EmployerLabel'
+            - type: 'null'
+        accumulable_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        exempt_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        isr_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        simultaneous: { type: boolean }
+        left_before_year_end: { type: boolean }
+        payer_not_withholding: { type: boolean }
+      examples:
+        - { left_before_year_end: true }
+    SalaryStatementTotals:
+      x-frozen: sha256:079abb5edbcfe37b641facb5e616805f9365c098b012a15501269314030a1705
+      type: object
+      required: [accumulable_cents, exempt_cents, isr_withheld_cents]
+      properties:
+        accumulable_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        exempt_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        isr_withheld_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+      examples:
+        - { accumulable_cents: 45000000, exempt_cents: 0, isr_withheld_cents: 4800000 }
+    SalaryStatementList:
+      x-frozen: sha256:062ee726ed658542b61af47d1ca1881f96fe059827f720fa40b9308be9c2504c
+      type: object
+      required: [fiscal_year, items, totals]
+      properties:
+        fiscal_year: { $ref: '#/components/schemas/FiscalYear' }
+        items:
+          type: array
+          maxItems: 20
+          items: { $ref: '#/components/schemas/SalaryStatement' }
+        totals: { $ref: '#/components/schemas/SalaryStatementTotals' }
+      examples:
+        - fiscal_year: 2026
+          items:
+            - id: 0199d4b0-1a2b-7c3d-8e4f-5a6b7c8d9e01
+              taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+              fiscal_year: 2026
+              employer_label: Empleo principal
+              accumulable_cents: 30000000
+              exempt_cents: 0
+              isr_withheld_cents: 4000000
+              simultaneous: true
+              left_before_year_end: false
+              payer_not_withholding: false
+              warnings: []
+              created_at: '2027-01-28T16:40:00Z'
+              updated_at: '2027-01-28T16:40:00Z'
+            - id: 0199d4b0-1a2b-7c3d-8e4f-5a6b7c8d9e02
+              taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+              fiscal_year: 2026
+              employer_label: Segundo empleo
+              accumulable_cents: 15000000
+              exempt_cents: 0
+              isr_withheld_cents: 800000
+              simultaneous: true
+              left_before_year_end: false
+              payer_not_withholding: false
+              warnings: []
+              created_at: '2027-01-28T16:42:00Z'
+              updated_at: '2027-01-28T16:42:00Z'
+          totals: { accumulable_cents: 45000000, exempt_cents: 0, isr_withheld_cents: 4800000 }
+    DeductionCategory:
+      x-frozen: sha256:8b1032b6dffc1ebfc05e1dfba18e19cd1ac340a027a9d3d89b8988f31d34c801
+      type: string
+      enum:
+        - medical
+        - medical_disability
+        - funeral
+        - donation
+        - mortgage_real_interest
+        - retirement_contribution
+        - health_insurance
+        - school_transport
+        - local_payroll_tax
+        - tuition
+      description: >-
+        LISR 151 fr. I–VIII and the colegiaturas decree (MODULE-annual §2.6). Capped group
+        (min(5 UMA anuales, 15 % of total income)): medical, funeral, donation,
+        mortgage_real_interest, health_insurance, school_transport, local_payroll_tax; own
+        caps: funeral (1 UMA anual), donation (7 %; government 4 %), retirement_contribution
+        (min(10 %, 5 UMA)), tuition (per student and level); uncapped:
+        medical_disability. Not deductible in cash: medical, medical_disability,
+        school_transport, tuition.
+    DeductionPaymentMethod:
+      x-frozen: sha256:e94a65f3e9f0c3f8bca11e20de91f9f61d69c768f373ec45f767fa0d9d6e624f
+      type: string
+      enum: [electronic, cash]
+      description: '`electronic`: card, transfer, check or e-wallet. `cash` is excluded for the four cash-restricted categories.'
+    DeductionBeneficiary:
+      x-frozen: sha256:dd5694494616674261db23e1ede945787adbe9ec38cacaaa849bb89ff1505c9a
+      type: string
+      enum: [self, spouse, ascendant, descendant]
+      description: Anyone but `self` means the user attested that the dependant's income is below one UMA anual (not verified ⚠️).
+    DoneeType:
+      x-frozen: sha256:adf91cdd399d7829c73949628ded18bf539460b59f9910d3d4f597c1bd0805cf
+      type: string
+      enum: [authorized, government]
+      description: '`donation` only: an authorized donee (7 % cap) or a government entity (4 % within the 7 %).'
+    TuitionLevel:
+      x-frozen: sha256:d7d04e991796e4093197af203b69917a551b8a851c0984da1aa25f9c53b734c0
+      type: string
+      enum: [preescolar, primaria, secundaria, profesional_tecnico, bachillerato]
+      description: '`tuition` only; the cap of the highest level the student had in the year applies.'
+    StudentLabel:
+      x-frozen: sha256:ac7f6902b98d76dbb49c4de456a14a72181781f362421c7e6f6048a3dab6ab74
+      type: string
+      minLength: 1
+      maxLength: 40
+      description: >-
+        Alias of the student the tuition cap is counted per ("Hija menor"); no full name
+        needed. Trimmed, no control characters, stored NFC (ADR-0004); never logged.
+      examples: [Hija menor]
+    DeductionExclusion:
+      x-frozen: sha256:019b2318f3203194ee224d707225867aab1d426700cbf650d945773ecd195c03
+      type: string
+      enum: [cash_not_deductible]
+      description: Why a stored deduction is never applied (shown as an excluded line in the breakdown).
+    PersonalDeduction:
+      x-frozen: sha256:fc87693b4fdf471bc6217b0d25092ff45fe16cdec16f92112de69c1a8edfc0dd
+      type: object
+      required:
+        - id
+        - taxpayer_id
+        - fiscal_year
+        - category
+        - amount_cents
+        - paid_on
+        - payment_method
+        - beneficiary
+        - donee_type
+        - student_label
+        - tuition_level
+        - scholarship_cents
+        - cfdi_uuid
+        - excluded
+        - warnings
+        - created_at
+        - updated_at
+      description: >-
+        A live personal deduction. `fiscal_year` is the year of `paid_on` (read-only).
+        `excluded` is set when the row can never be applied (`cash_not_deductible`), `null`
+        otherwise; caps are applied in the estimate, not here. `warnings` is filled on writes
+        only.
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        taxpayer_id: { $ref: '#/components/schemas/Uuid' }
+        fiscal_year: { $ref: '#/components/schemas/FiscalYear' }
+        category: { $ref: '#/components/schemas/DeductionCategory' }
+        amount_cents: { $ref: '#/components/schemas/PositiveCents' }
+        paid_on: { type: string, format: date }
+        payment_method: { $ref: '#/components/schemas/DeductionPaymentMethod' }
+        beneficiary: { $ref: '#/components/schemas/DeductionBeneficiary' }
+        donee_type:
+          oneOf:
+            - $ref: '#/components/schemas/DoneeType'
+            - type: 'null'
+        student_label:
+          oneOf:
+            - $ref: '#/components/schemas/StudentLabel'
+            - type: 'null'
+        tuition_level:
+          oneOf:
+            - $ref: '#/components/schemas/TuitionLevel'
+            - type: 'null'
+        scholarship_cents:
+          oneOf:
+            - $ref: '#/components/schemas/NonNegativeCents'
+            - type: 'null'
+        cfdi_uuid:
+          oneOf:
+            - $ref: '#/components/schemas/CfdiUuid'
+            - type: 'null'
+        excluded:
+          oneOf:
+            - $ref: '#/components/schemas/DeductionExclusion'
+            - type: 'null'
+        warnings:
+          type: array
+          items: { $ref: '#/components/schemas/Warning' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+      examples:
+        - id: 0199d4b1-2b3c-7d4e-8f5a-6b7c8d9e0f02
+          taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+          fiscal_year: 2026
+          category: tuition
+          amount_cents: 3000000
+          paid_on: '2026-08-20'
+          payment_method: electronic
+          beneficiary: descendant
+          donee_type: null
+          student_label: Hija menor
+          tuition_level: primaria
+          scholarship_cents: 0
+          cfdi_uuid: null
+          excluded: null
+          warnings: []
+          created_at: '2026-08-20T15:10:00Z'
+          updated_at: '2026-08-20T15:10:00Z'
+    PersonalDeductionCreate:
+      x-frozen: sha256:21daca6ca366790b425839f17cf768d2d6360182387d06625c2fdc756b6b7edb
+      type: object
+      required: [category, amount_cents, paid_on, payment_method, beneficiary]
+      additionalProperties: false
+      description: >-
+        Category first, then only that category's fields (`donee_type` for `donation`;
+        `student_label`, `tuition_level`, `scholarship_cents` for `tuition`). `paid_on` of an
+        annual constancia (mortgage interest, retirement) defaults in the form to December 31.
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        category: { $ref: '#/components/schemas/DeductionCategory' }
+        amount_cents: { $ref: '#/components/schemas/PositiveCents' }
+        paid_on: { type: string, format: date }
+        payment_method: { $ref: '#/components/schemas/DeductionPaymentMethod' }
+        beneficiary: { $ref: '#/components/schemas/DeductionBeneficiary' }
+        donee_type:
+          oneOf:
+            - $ref: '#/components/schemas/DoneeType'
+            - type: 'null'
+        student_label:
+          oneOf:
+            - $ref: '#/components/schemas/StudentLabel'
+            - type: 'null'
+        tuition_level:
+          oneOf:
+            - $ref: '#/components/schemas/TuitionLevel'
+            - type: 'null'
+        scholarship_cents:
+          oneOf:
+            - $ref: '#/components/schemas/NonNegativeCents'
+            - type: 'null'
+        cfdi_uuid:
+          oneOf:
+            - $ref: '#/components/schemas/CfdiUuid'
+            - type: 'null'
+      examples:
+        - id: 0199d4b1-2b3c-7d4e-8f5a-6b7c8d9e0f01
+          category: medical
+          amount_cents: 4000000
+          paid_on: '2026-06-12'
+          payment_method: electronic
+          beneficiary: self
+    PersonalDeductionUpdate:
+      x-frozen: sha256:e886d7be27685eef52939706983055c953d1f9beb09b5906c070142b84b7f502
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      description: 'Merge-patch; `null` clears a nullable field.'
+      properties:
+        category: { $ref: '#/components/schemas/DeductionCategory' }
+        amount_cents: { $ref: '#/components/schemas/PositiveCents' }
+        paid_on: { type: string, format: date }
+        payment_method: { $ref: '#/components/schemas/DeductionPaymentMethod' }
+        beneficiary: { $ref: '#/components/schemas/DeductionBeneficiary' }
+        donee_type:
+          oneOf:
+            - $ref: '#/components/schemas/DoneeType'
+            - type: 'null'
+        student_label:
+          oneOf:
+            - $ref: '#/components/schemas/StudentLabel'
+            - type: 'null'
+        tuition_level:
+          oneOf:
+            - $ref: '#/components/schemas/TuitionLevel'
+            - type: 'null'
+        scholarship_cents:
+          oneOf:
+            - $ref: '#/components/schemas/NonNegativeCents'
+            - type: 'null'
+        cfdi_uuid:
+          oneOf:
+            - $ref: '#/components/schemas/CfdiUuid'
+            - type: 'null'
+      examples:
+        - { payment_method: electronic }
+    DeductionCategoryTotal:
+      x-frozen: sha256:332d842a54d89788117ebc8e74d3d01aa26bbf32b90b3c7aa8674715b61f1faa
+      type: object
+      required: [category, registered_cents, excluded_cents, count]
+      description: Registered amounts of one category (`excluded_cents`, the part that can never apply, is included in `registered_cents`).
+      properties:
+        category: { $ref: '#/components/schemas/DeductionCategory' }
+        registered_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        excluded_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        count: { type: integer, minimum: 0, maximum: 500 }
+      examples:
+        - { category: medical, registered_cents: 4120000, excluded_cents: 120000, count: 2 }
+    PersonalDeductionList:
+      x-frozen: sha256:cc6656a04b5e52b4b340b93b1d240ecba4d6794d2ec14b9f339a7fc13e047d33
+      type: object
+      required: [fiscal_year, items, totals]
+      description: '`totals` has one entry per category with at least one row, in `DeductionCategory` order.'
+      properties:
+        fiscal_year: { $ref: '#/components/schemas/FiscalYear' }
+        items:
+          type: array
+          maxItems: 500
+          items: { $ref: '#/components/schemas/PersonalDeduction' }
+        totals:
+          type: array
+          items: { $ref: '#/components/schemas/DeductionCategoryTotal' }
+      examples:
+        - fiscal_year: 2026
+          items:
+            - id: 0199d4b1-2b3c-7d4e-8f5a-6b7c8d9e0f04
+              taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+              fiscal_year: 2026
+              category: medical
+              amount_cents: 120000
+              paid_on: '2026-09-02'
+              payment_method: cash
+              beneficiary: self
+              donee_type: null
+              student_label: null
+              tuition_level: null
+              scholarship_cents: null
+              cfdi_uuid: null
+              excluded: cash_not_deductible
+              warnings: []
+              created_at: '2026-09-02T18:30:00Z'
+              updated_at: '2026-09-02T18:30:00Z'
+            - id: 0199d4b1-2b3c-7d4e-8f5a-6b7c8d9e0f01
+              taxpayer_id: 0199d4a2-8f00-7c44-a1b2-3c4d5e6f7a80
+              fiscal_year: 2026
+              category: medical
+              amount_cents: 4000000
+              paid_on: '2026-06-12'
+              payment_method: electronic
+              beneficiary: self
+              donee_type: null
+              student_label: null
+              tuition_level: null
+              scholarship_cents: null
+              cfdi_uuid: 6F3B2C1D-8A4E-4B7F-9C2D-1E5A7B9C3D4F
+              excluded: null
+              warnings: []
+              created_at: '2026-06-12T20:05:00Z'
+              updated_at: '2026-06-12T20:05:00Z'
+          totals:
+            - { category: medical, registered_cents: 4120000, excluded_cents: 120000, count: 2 }
+    FiledPaymentSource:
+      x-frozen: sha256:0826bdcf76eb3d88c7c69f0baf7110cd2eeaf80e459309cdaa1c92256eb24299
+      type: string
+      enum: [filed, tax_input, estimated_by_app, none]
+      description: >-
+        Where a month's credited payment comes from (precedence filed → tax input → app
+        estimate, OQ-A1). `none`: no payment for the month (outside the regime's window, or
+        not closed yet in the current year).
+    FiledPaymentMonth:
+      x-frozen: sha256:56eefae811c3a623b94b6258798e01e5a05e803f1d9957a6ab891780df16aafb
+      type: object
+      required:
+        - month
+        - period
+        - in_window
+        - filed_cents
+        - tax_input_cents
+        - app_estimate_cents
+        - app_estimate_incomplete
+        - effective_cents
+        - source
+      description: >-
+        One month. `filed_cents`: confirmed here. `tax_input_cents`: the M5
+        `prior_provisional_payments` value of the month. `app_estimate_cents`: the app's
+        monthly ISR estimate for the regime, `max(0, isr)` (`null` outside the window or for
+        a month not closed yet); `app_estimate_incomplete` when that estimate was
+        `incomplete`, which makes the annual section `incomplete` unless the month is filed.
+        `effective_cents`/`source`: the first present by precedence (`null`/`none` when
+        none is).
+      properties:
+        month: { type: integer, minimum: 1, maximum: 12 }
+        period: { $ref: '#/components/schemas/Period' }
+        in_window: { type: boolean }
+        filed_cents:
+          oneOf:
+            - $ref: '#/components/schemas/NonNegativeCents'
+            - type: 'null'
+        tax_input_cents:
+          oneOf:
+            - $ref: '#/components/schemas/NonNegativeCents'
+            - type: 'null'
+        app_estimate_cents:
+          oneOf:
+            - $ref: '#/components/schemas/NonNegativeCents'
+            - type: 'null'
+        app_estimate_incomplete: { type: boolean }
+        effective_cents:
+          oneOf:
+            - $ref: '#/components/schemas/NonNegativeCents'
+            - type: 'null'
+        source: { $ref: '#/components/schemas/FiledPaymentSource' }
+      examples:
+        - { month: 7, period: '2026-07', in_window: true, filed_cents: null, tax_input_cents: null, app_estimate_cents: 520000, app_estimate_incomplete: false, effective_cents: 520000, source: estimated_by_app }
+    FiledPayments:
+      x-frozen: sha256:cfbed85db932c423a78ee82bd46b766d757bc191d9e3f74402388135379b4d02
+      type: object
+      required: [regime_code, fiscal_year, months, total_effective_cents, updated_at]
+      description: >-
+        Exactly 12 months, January first. `total_effective_cents` is Σ `effective_cents`
+        (what the annual estimate credits for this regime). `updated_at: null` = nothing
+        confirmed yet.
+      properties:
+        regime_code: { $ref: '#/components/schemas/RegimeCode' }
+        fiscal_year: { $ref: '#/components/schemas/FiscalYear' }
+        months:
+          type: array
+          minItems: 12
+          maxItems: 12
+          items: { $ref: '#/components/schemas/FiledPaymentMonth' }
+        total_effective_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+        updated_at: { type: [string, 'null'], format: date-time }
+      examples:
+        - regime_code: '612'
+          fiscal_year: 2026
+          months:
+            - { month: 1, period: '2026-01', in_window: true, filed_cents: 500000, tax_input_cents: null, app_estimate_cents: 480000, app_estimate_incomplete: false, effective_cents: 500000, source: filed }
+            - { month: 2, period: '2026-02', in_window: true, filed_cents: 500000, tax_input_cents: null, app_estimate_cents: 500000, app_estimate_incomplete: false, effective_cents: 500000, source: filed }
+            - { month: 3, period: '2026-03', in_window: true, filed_cents: 500000, tax_input_cents: null, app_estimate_cents: 510000, app_estimate_incomplete: false, effective_cents: 500000, source: filed }
+            - { month: 4, period: '2026-04', in_window: true, filed_cents: 500000, tax_input_cents: null, app_estimate_cents: 500000, app_estimate_incomplete: false, effective_cents: 500000, source: filed }
+            - { month: 5, period: '2026-05', in_window: true, filed_cents: 500000, tax_input_cents: null, app_estimate_cents: 500000, app_estimate_incomplete: false, effective_cents: 500000, source: filed }
+            - { month: 6, period: '2026-06', in_window: true, filed_cents: 500000, tax_input_cents: null, app_estimate_cents: 500000, app_estimate_incomplete: false, effective_cents: 500000, source: filed }
+            - { month: 7, period: '2026-07', in_window: true, filed_cents: null, tax_input_cents: null, app_estimate_cents: 520000, app_estimate_incomplete: false, effective_cents: 520000, source: estimated_by_app }
+            - { month: 8, period: '2026-08', in_window: true, filed_cents: null, tax_input_cents: null, app_estimate_cents: 520000, app_estimate_incomplete: false, effective_cents: 520000, source: estimated_by_app }
+            - { month: 9, period: '2026-09', in_window: true, filed_cents: null, tax_input_cents: null, app_estimate_cents: 520000, app_estimate_incomplete: false, effective_cents: 520000, source: estimated_by_app }
+            - { month: 10, period: '2026-10', in_window: true, filed_cents: null, tax_input_cents: null, app_estimate_cents: null, app_estimate_incomplete: false, effective_cents: null, source: none }
+            - { month: 11, period: '2026-11', in_window: true, filed_cents: null, tax_input_cents: null, app_estimate_cents: null, app_estimate_incomplete: false, effective_cents: null, source: none }
+            - { month: 12, period: '2026-12', in_window: true, filed_cents: null, tax_input_cents: null, app_estimate_cents: null, app_estimate_incomplete: false, effective_cents: null, source: none }
+          total_effective_cents: 4560000
+          updated_at: '2026-07-15T14:00:00Z'
+    FiledPaymentEntry:
+      x-frozen: sha256:0049caaa95077d8fec94e70c1b2d86c22c53889074faf59edd8cb4aeda577d33
+      type: object
+      required: [month, amount_cents]
+      additionalProperties: false
+      properties:
+        month: { type: integer, minimum: 1, maximum: 12 }
+        amount_cents: { $ref: '#/components/schemas/NonNegativeCents' }
+      examples:
+        - { month: 7, amount_cents: 520000 }
+    FiledPaymentsUpdate:
+      x-frozen: sha256:2b831110067b0505bf89ce97d4cdebc7dbb6be51384d18ff8a2d07692d2cb65f
+      type: object
+      required: [months]
+      additionalProperties: false
+      description: The complete set of confirmed months (replace, not merge); "Confirmar todos" sends the 12 prefilled values.
+      properties:
+        months:
+          type: array
+          maxItems: 12
+          items: { $ref: '#/components/schemas/FiledPaymentEntry' }
+      examples:
+        - months:
+            - { month: 7, amount_cents: 520000 }
+            - { month: 8, amount_cents: 520000 }
+            - { month: 9, amount_cents: 520000 }
 
     # ------------------------------------------------------------ reminders
     DeviceCreate:

@@ -35,5 +35,7 @@ const _$WarningCodeEnumMap = {
       'foreign_counterparty_not_supported',
   WarningCode.supplierRegimeUnknown: 'supplier_regime_unknown',
   WarningCode.deductionRequiresRemittance: 'deduction_requires_remittance',
+  WarningCode.cashNotDeductible: 'cash_not_deductible',
+  WarningCode.salaryRegimeNotHeld: 'salary_regime_not_held',
   WarningCode.$unknown: r'$unknown',
 };

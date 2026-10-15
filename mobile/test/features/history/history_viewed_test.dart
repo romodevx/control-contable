@@ -32,18 +32,6 @@ void main() {
         isNull,
       );
     });
-
-    test('an estimate with no figures fingerprint is not marked', () {
-      expect(
-        viewedRequestOf(
-          estimateFrom(
-            estimateJson(period: '2026-02', figuresFingerprint: null),
-          ),
-          current: '2026-03',
-        ),
-        isNull,
-      );
-    });
   });
 
   group('marking from any entry point', () {
