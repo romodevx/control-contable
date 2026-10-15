@@ -195,6 +195,12 @@ type fakeExpenses struct {
 	rows    map[string]storedRow
 	locked  []string
 	clockAt time.Time
+	// The backfill's view (WH-08): the locks Underived was asked for, the
+	// rows SaveDerivation wrote, and the errors either returns when set.
+	backfillLocks []usecase.Lock
+	saved         int
+	underivedErr  error
+	saveErr       error
 }
 
 type storedRow struct {
