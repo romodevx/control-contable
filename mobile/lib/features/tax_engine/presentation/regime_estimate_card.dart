@@ -130,20 +130,20 @@ String cpaTopicsText(AppLocalizations l10n, List<CpaTopic> topics) => topics
         CpaTopic.crossRegimeIvaNetting => l10n.cpaTopicCrossRegimeIvaNetting,
         CpaTopic.resicoPmInterestWithholding =>
           l10n.cpaTopicResicoPmInterestWithholding,
+        CpaTopic.platformNondefinitiveAnnual =>
+          l10n.cpaTopicPlatformNondefinitiveAnnual,
+        CpaTopic.umaForMinimumWage => l10n.cpaTopicUmaForMinimumWage,
+        CpaTopic.deductionCapResicoIncome =>
+          l10n.cpaTopicDeductionCapResicoIncome,
+        CpaTopic.salaryObligationBasis => l10n.cpaTopicSalaryObligationBasis,
+        CpaTopic.cuRounding => l10n.cpaTopicCuRounding,
+        CpaTopic.resicoPmPtuBase => l10n.cpaTopicResicoPmPtuBase,
+        CpaTopic.resicoPfReliefRenewal => l10n.cpaTopicResicoPfReliefRenewal,
+        CpaTopic.ptuRate => l10n.cpaTopicPtuRate,
         // Contract 0.10.0 (ADR-0008); sent from WH-09 on. WH-11/WH-12 give
         // them their own copy; until then they read as an unknown topic.
         CpaTopic.withholdingRuleUnverified ||
         CpaTopic.withheldIvaCreditTiming ||
-        // Contract 0.11.0 (ADR-0009): annual-only topics; ANN-17 gives the
-        // annual screen its own copy.
-        CpaTopic.platformNondefinitiveAnnual ||
-        CpaTopic.umaForMinimumWage ||
-        CpaTopic.deductionCapResicoIncome ||
-        CpaTopic.salaryObligationBasis ||
-        CpaTopic.cuRounding ||
-        CpaTopic.resicoPmPtuBase ||
-        CpaTopic.resicoPfReliefRenewal ||
-        CpaTopic.ptuRate ||
         CpaTopic.$unknown => l10n.cpaTopicOther,
       },
     )
