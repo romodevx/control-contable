@@ -86,6 +86,10 @@ class ExpenseFormModel extends ChangeNotifier {
     ivaRate.addListener(_recompute);
     category.addListener(() => supplier.followCategory(chosenCategory));
     form.addListener(_followFacts);
+    // Text fields notify the form only when their error changes: the date
+    // feeds the withholding preview (its remittance deadline), so each new
+    // date must reach listeners.
+    paidOn.text.addListener(notifyListeners);
   }
 
   /// Whose expense (its person type decides the withholdings).

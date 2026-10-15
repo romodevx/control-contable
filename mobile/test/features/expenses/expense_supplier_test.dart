@@ -349,6 +349,27 @@ void main() {
       );
     });
 
+    // iOS QA walk 2026-10-15: with the amount typed first, changing the
+    // payment date afterwards kept the card on today's deadline ("17 de
+    // noviembre") although the server derives July 17 for a June payment.
+    testWidgets('changing the payment date after the amount asks again with '
+        'the new date', (tester) async {
+      harness.expenses.previewAnswer = (_) => moralPaysConsultant;
+      await pumpForm(tester);
+      await pickCategory(tester, _fees);
+      await chooseIn(tester, _e1, _pf);
+      await chooseIn(tester, _e2, 'Actividad empresarial o profesional (612)');
+      await typeInto(tester, _amount, '40000');
+      await settlePreview(tester);
+      final before = harness.expenses.previewRequests.length;
+
+      await typeInto(tester, _paidOn, '15062026');
+      await settlePreview(tester);
+
+      expect(harness.expenses.previewRequests.length, greaterThan(before));
+      expect(harness.expenses.previewRequests.last.on, '2026-06-15');
+    });
+
     testWidgets('an unknown supplier regime warns that it changes the '
         'withholding', (tester) async {
       harness.expenses.previewAnswer = (_) => preview(

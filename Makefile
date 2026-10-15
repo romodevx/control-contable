@@ -167,7 +167,7 @@ mobile-artifact-check-test:
 mobile-deps-scan:
 	go run $(OSV_SCANNER) scan source --lockfile=$(MOBILE)/pubspec.lock
 
-## mobile-build-ipa: obfuscated release IPA for FLAVOR (needs Xcode + the iOS schemes, OB6)
+## mobile-build-ipa: obfuscated release IPA for FLAVOR (needs Xcode and signing; schemes in ios/Runner.xcodeproj)
 mobile-build-ipa: mobile-require-api-url
 	cd $(MOBILE) && flutter build ipa $(MOBILE_RELEASE_FLAGS)
 

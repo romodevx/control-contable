@@ -5,6 +5,7 @@ import 'package:control_contable/core/forms/form_notice.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/theme/app_spacing.dart';
 import 'package:control_contable/core/time/clock.dart';
+import 'package:control_contable/core/widgets/captioned_picker.dart';
 import 'package:control_contable/features/taxpayers/application/taxpayer_settings.dart';
 import 'package:control_contable/features/taxpayers/domain/periods.dart';
 import 'package:control_contable/features/taxpayers/presentation/settings/settings_feedback.dart';
@@ -103,11 +104,9 @@ class _EndRegimePanelState extends ConsumerState<EndRegimePanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(l10n.settingsEndRegimeLabel),
-        const SizedBox(height: AppSpacing.xxs),
-        Semantics(
-          label: l10n.settingsEndRegimeLabel,
-          child: DropdownButtonFormField<String>(
+        CaptionedPicker(
+          caption: l10n.settingsEndRegimeLabel,
+          picker: DropdownButtonFormField<String>(
             initialValue: _endPeriod,
             isExpanded: true,
             items: [

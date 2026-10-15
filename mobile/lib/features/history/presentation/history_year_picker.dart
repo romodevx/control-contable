@@ -1,4 +1,4 @@
-import 'package:control_contable/core/theme/app_spacing.dart';
+import 'package:control_contable/core/widgets/captioned_picker.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
@@ -28,11 +28,10 @@ class HistoryYearPicker extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(label, style: Theme.of(context).textTheme.titleSmall),
-        const SizedBox(height: AppSpacing.xxs),
-        Semantics(
-          label: label,
-          child: DropdownButtonFormField<int>(
+        CaptionedPicker(
+          caption: label,
+          style: Theme.of(context).textTheme.titleSmall,
+          picker: DropdownButtonFormField<int>(
             key: const ValueKey('history-year'),
             initialValue: selected,
             isExpanded: true,

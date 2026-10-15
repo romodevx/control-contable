@@ -9,6 +9,8 @@ import 'package:control_contable/features/taxpayers/taxpayers_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../helpers/spoken_labels.dart';
+
 import 'pump_onboarding.dart';
 import 'taxpayers_fakes.dart';
 
@@ -80,6 +82,17 @@ void main() {
       );
       expect(find.text('Terminamos el régimen 606.'), findsOneWidget);
       expect(find.text('Terminado'), findsNWidgets(2));
+    });
+
+    // iOS QA walk (VoiceOver, 2026-10-15): read as a text and again as
+    // the picker's label.
+    testWidgets('the month label is announced once', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pumpSettings(tester);
+      await _tapIn(tester, _regimeCard('606'), 'Terminar régimen');
+
+      expect(timesSpoken(tester, 'Último mes en este régimen'), 1);
+      semantics.dispose();
     });
 
     testWidgets('another month can be chosen', (tester) async {
@@ -210,6 +223,18 @@ void main() {
       expect(harness.location, TaxpayersRoutes.settings(_id));
       expect(find.text('Agregamos el régimen 605.'), findsOneWidget);
       expect(find.text('605 · Régimen 605'), findsOneWidget);
+    });
+
+    testWidgets('the month question is announced once', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pumpSettings(tester);
+      await tapText(tester, 'Agregar régimen');
+
+      expect(
+        timesSpoken(tester, '¿Desde qué mes tributas en este régimen?'),
+        1,
+      );
+      semantics.dispose();
     });
 
     testWidgets('asks from which month the regime counts; this month by '
