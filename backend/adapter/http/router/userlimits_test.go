@@ -13,6 +13,7 @@ import (
 
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
+	"github.com/romodevx/control-contable/backend/adapter/http/router/routertest"
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
 	"github.com/romodevx/control-contable/backend/internal/platform/httperr"
 	"github.com/romodevx/control-contable/backend/internal/platform/logging"
@@ -48,10 +49,10 @@ func newUserLimitedHarness(t *testing.T, flags flagSet, limits map[string]router
 	require.NoError(t, err)
 	h := &userLimitedHarness{}
 	h.handler, err = router.New(fakeAPI{calls: &h.calls}, spec, router.Options{
-		Flags:      flags,
-		Authn:      principalAuthn{},
-		Logger:     logging.New(&h.logs, nil),
-		UserLimits: limits,
+		Flags:          flags,
+		Authenticators: routertest.Authenticators(principalAuthn{}),
+		Logger:         logging.New(&h.logs, nil),
+		UserLimits:     limits,
 	})
 	require.NoError(t, err)
 	return h
@@ -122,7 +123,7 @@ func TestUserLimits_failClosedWhenTheLimiterFails(t *testing.T) {
 func TestNew_rejectsBadUserLimits(t *testing.T) {
 	spec, err := gen.GetSpec()
 	require.NoError(t, err)
-	base := router.Options{Flags: flagSet{}, Authn: principalAuthn{}, Logger: logging.New(&bytes.Buffer{}, nil)}
+	base := router.Options{Flags: flagSet{}, Authenticators: routertest.Authenticators(principalAuthn{}), Logger: logging.New(&bytes.Buffer{}, nil)}
 
 	t.Run("an operation the contract lacks", func(t *testing.T) {
 		opts := base

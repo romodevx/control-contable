@@ -16,6 +16,7 @@ import (
 
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
+	"github.com/romodevx/control-contable/backend/adapter/http/router/routertest"
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
 	"github.com/romodevx/control-contable/backend/internal/platform/httperr"
 	"github.com/romodevx/control-contable/backend/internal/platform/logging"
@@ -54,6 +55,11 @@ func (f fakeAPI) Login(_ context.Context, req gen.LoginRequestObject) (gen.Login
 func (f fakeAPI) ListIncomes(context.Context, gen.ListIncomesRequestObject) (gen.ListIncomesResponseObject, error) {
 	*f.calls = append(*f.calls, "listIncomes")
 	return nil, f.incomeErr
+}
+
+func (f fakeAPI) ReceiveRevenueCatWebhook(context.Context, gen.ReceiveRevenueCatWebhookRequestObject) (gen.ReceiveRevenueCatWebhookResponseObject, error) {
+	*f.calls = append(*f.calls, "receiveRevenueCatWebhook")
+	return gen.ReceiveRevenueCatWebhook200Response{}, nil
 }
 
 type flagSet map[string]bool
@@ -100,11 +106,11 @@ func newHarness(t testing.TB, s setup) *harness {
 	h := &harness{}
 	api := fakeAPI{calls: &h.calls, loginBody: &h.loginBody, incomeErr: s.incomeErr}
 	h.handler, err = router.New(api, spec, router.Options{
-		Flags:        s.flags,
-		Authn:        recordingAuthn{deny: s.denyAuthn, paths: &h.authnSeen},
-		Logger:       logging.New(&h.logs, nil),
-		MaxBodyBytes: s.maxBody,
-		NotBuilt:     s.notBuilt,
+		Flags:          s.flags,
+		Authenticators: routertest.Authenticators(recordingAuthn{deny: s.denyAuthn, paths: &h.authnSeen}),
+		Logger:         logging.New(&h.logs, nil),
+		MaxBodyBytes:   s.maxBody,
+		NotBuilt:       s.notBuilt,
 	})
 	require.NoError(t, err)
 	return h
@@ -406,7 +412,7 @@ func TestNew_failsClosedWhenARouteHasNoOperation(t *testing.T) {
 		}
 	}
 
-	_, err = router.New(fakeAPI{}, &pruned, router.Options{Flags: flagSet{}, Authn: recordingAuthn{paths: new([]string)}, Logger: logging.New(&bytes.Buffer{}, nil)})
+	_, err = router.New(fakeAPI{}, &pruned, router.Options{Flags: flagSet{}, Authenticators: routertest.Authenticators(recordingAuthn{paths: new([]string)}), Logger: logging.New(&bytes.Buffer{}, nil)})
 
 	assert.ErrorContains(t, err, "GET /healthz")
 }
@@ -456,7 +462,7 @@ func TestNew_failsOnANotBuiltOperationTheContractLacks(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = router.New(fakeAPI{}, spec, router.Options{
-		Flags: flagSet{}, Authn: recordingAuthn{paths: new([]string)}, Logger: logging.New(&bytes.Buffer{}, nil),
+		Flags: flagSet{}, Authenticators: routertest.Authenticators(recordingAuthn{paths: new([]string)}), Logger: logging.New(&bytes.Buffer{}, nil),
 		NotBuilt: []string{"logout", "noSuchOperation"},
 	})
 

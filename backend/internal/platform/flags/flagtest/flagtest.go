@@ -2,7 +2,7 @@
 // (testing rule: flag-aware suites). Typical use in a module's HTTP tests:
 //
 //	flagtest.OnOff(t, "module_incomes", func(t *testing.T, f flagtest.Static, on bool) {
-//		h, err := router.New(api, spec, router.Options{Flags: f, Authn: authn, Logger: logger})
+//		h, err := router.New(api, spec, router.Options{Flags: f, Authenticators: map[string]router.Authenticator{router.SchemeBearer: authn}, Logger: logger})
 //		require.NoError(t, err)
 //		rec := httptest.NewRecorder()
 //		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/taxpayers/"+id+"/incomes", nil))

@@ -55,18 +55,34 @@ type AllModulesOff struct{}
 func (AllModulesOff) Enabled(context.Context, string) bool { return false }
 
 // Authenticator guards operations that declare a security requirement. It
-// writes the 401 envelope itself or calls next with the principal in the
-// request context. The bearer JWT authenticator (authhttp.Authenticator,
-// M1-07) implements it; there is deliberately no pass-through one.
+// writes the 401 envelope itself or calls next (with the principal in the
+// request context, for a user scheme). The bearer JWT authenticator
+// (authhttp.Authenticator, M1-07) implements it for SchemeBearer; there is
+// deliberately no pass-through one.
 type Authenticator interface {
 	Authenticate(next http.Handler) http.Handler
 }
 
-// Options configures New. Flags, Authn and Logger are required.
+// The security schemes the contract declares (components.securitySchemes),
+// the keys of Options.Authenticators.
+const (
+	// SchemeBearer is the user's EdDSA access token, the contract's default.
+	SchemeBearer = "bearerAuth"
+	// SchemeRevenueCatWebhook is the shared secret RevenueCat sends to the
+	// webhook (M7).
+	SchemeRevenueCatWebhook = "revenueCatWebhookSecret"
+)
+
+// Options configures New. Flags, Authenticators and Logger are required.
 type Options struct {
-	Flags  FlagGate
-	Authn  Authenticator
-	Logger *slog.Logger
+	Flags FlagGate
+	// Authenticators are keyed by security scheme name. Each secured
+	// operation runs only the authenticator of the one scheme it declares
+	// (or the contract's default), so a credential of one scheme never
+	// satisfies another. Every built secured operation's scheme needs one,
+	// and every key must be a scheme the contract declares.
+	Authenticators map[string]Authenticator
+	Logger         *slog.Logger
 	// MaxBodyBytes caps the request body; 0 means DefaultMaxBodyBytes.
 	MaxBodyBytes int64
 	// NotBuilt lists the operationIds whose handler does not exist yet
@@ -90,8 +106,11 @@ type Options struct {
 // operation in spec: an unknown route is a startup error, never an ungated
 // or unvalidated one.
 func New(si gen.StrictServerInterface, spec *openapi3.T, opts Options) (http.Handler, error) {
-	if opts.Authn == nil {
+	if len(opts.Authenticators) == 0 {
 		return nil, errors.New("router: no authenticator: secured operations would run unauthenticated")
+	}
+	if err := checkSchemes(spec, opts.Authenticators); err != nil {
+		return nil, fmt.Errorf("router: %w", err)
 	}
 	if opts.MaxBodyBytes == 0 {
 		opts.MaxBodyBytes = DefaultMaxBodyBytes
@@ -153,12 +172,58 @@ func (g *registrar) HandleFunc(pattern string, handler func(http.ResponseWriter,
 		next = limit(limiter, principalKey, g.opts.Logger, next)
 	}
 	if !isPublic(route) {
-		next = g.opts.Authn.Authenticate(next)
+		authn, err := g.authenticator(route)
+		if err != nil {
+			g.failures = append(g.failures, err)
+			return
+		}
+		next = authn.Authenticate(next)
 	}
 	if limiter, ok := g.opts.OperationLimits[route.Operation.OperationID]; ok {
 		next = limit(limiter, g.opts.ClientKey, g.opts.Logger, next)
 	}
 	g.mux.Handle(pattern, flaggate.Wrap(g.opts.Flags, module, next))
+}
+
+// authenticator returns the authenticator of the one security scheme route
+// declares (its own security, or the contract's default). Alternatives or
+// combined schemes would need a policy the router does not have, and a
+// scheme without an authenticator would run unauthenticated: both fail New.
+func (g *registrar) authenticator(route *routers.Route) (Authenticator, error) {
+	id := route.Operation.OperationID
+	requirements := route.Spec.Security
+	if route.Operation.Security != nil {
+		requirements = *route.Operation.Security
+	}
+	if len(requirements) != 1 || len(requirements[0]) != 1 {
+		return nil, fmt.Errorf("operation %q must declare exactly one security scheme, got %d requirement(s)", id, len(requirements))
+	}
+	scheme := soleScheme(requirements[0])
+	authn, ok := g.opts.Authenticators[scheme]
+	if !ok {
+		return nil, fmt.Errorf("operation %q requires security scheme %q, which has no authenticator", id, scheme)
+	}
+	return authn, nil
+}
+
+// soleScheme returns the scheme name of a one-scheme requirement.
+func soleScheme(requirement openapi3.SecurityRequirement) string {
+	for scheme := range requirement {
+		return scheme
+	}
+	return ""
+}
+
+// checkSchemes fails on an authenticator keyed by a scheme the contract does
+// not declare: a typo would leave the real scheme without one.
+func checkSchemes(spec *openapi3.T, authenticators map[string]Authenticator) error {
+	var unknown []error
+	for scheme := range authenticators {
+		if _, ok := spec.Components.SecuritySchemes[scheme]; !ok {
+			unknown = append(unknown, fmt.Errorf("authenticator for %q: the contract declares no such security scheme", scheme))
+		}
+	}
+	return errors.Join(unknown...)
 }
 
 // ServeHTTP implements http.Handler. A request that matches no pattern gets

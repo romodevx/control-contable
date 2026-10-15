@@ -17,6 +17,7 @@ import (
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
 	"github.com/romodevx/control-contable/backend/adapter/http/middleware"
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
+	"github.com/romodevx/control-contable/backend/adapter/http/router/routertest"
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagtest"
 	"github.com/romodevx/control-contable/backend/internal/platform/httperr"
@@ -118,9 +119,9 @@ func newLoggedRouter(t *testing.T, store usecase.DeviceStore) (http.Handler, *lo
 	logs := &lockedBuffer{}
 	routes, err := router.New(server{Handler: remindershttp.NewHandler(remindershttp.UseCases{Devices: devices})}, spec,
 		router.Options{
-			Flags:  flagtest.Static{"module_reminders": true},
-			Authn:  principalAuthn{},
-			Logger: logging.New(logs, slog.LevelDebug),
+			Flags:          flagtest.Static{"module_reminders": true},
+			Authenticators: routertest.Authenticators(principalAuthn{}),
+			Logger:         logging.New(logs, slog.LevelDebug),
 		})
 	require.NoError(t, err)
 	return middleware.Chain(routes, middleware.NoStore), logs
