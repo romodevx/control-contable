@@ -105,8 +105,8 @@ func newHandlerWithModules(t *testing.T, cfg config.Config, db health.Pinger, f 
 func newHandlerWithAll(t *testing.T, cfg config.Config, db health.Pinger, f flagService, auth authModule,
 	records recordModules, taxEngine taxEngineModule, logger *slog.Logger) http.Handler {
 	t.Helper()
-	dashboard, history := stubDashboardModule(), stubHistoryModule()
-	if taxEngine.estimator != nil { // the real modules (contract tests): the real dashboard and history over them
+	dashboard, history, annual := stubDashboardModule(), stubHistoryModule(), stubAnnualModule()
+	if taxEngine.estimator != nil { // the real modules (contract tests): the real dashboard, history and annual over them
 		var err error
 		dashboard, err = newDashboardModule(dashboardWiring{
 			tx: records.taxpayers.tx, flags: f, taxpayers: records.taxpayers.queries, estimator: taxEngine.estimator,
@@ -117,10 +117,15 @@ func newHandlerWithAll(t *testing.T, cfg config.Config, db health.Pinger, f flag
 			tx: records.taxpayers.tx, flags: f, estimator: taxEngine.estimator, limits: auth.limits, clock: taxEngine.clock,
 		})
 		require.NoError(t, err)
+		annual, err = newAnnualModule(annualWiring{
+			tx: records.taxpayers.tx, taxpayers: records.taxpayers.queries, estimator: taxEngine.estimator,
+			limits: auth.limits, logger: logger, clock: taxEngine.clock,
+		})
+		require.NoError(t, err)
 	}
 	h, err := newHandler(cfg, deps{logger: logger, db: db, flags: f, auth: auth, taxpayers: records.taxpayers,
 		incomes: records.incomes, expenses: records.expenses, taxEngine: taxEngine, dashboard: dashboard, history: history,
-		now: time.Now})
+		annual: annual, now: time.Now})
 	require.NoError(t, err)
 	return h
 }

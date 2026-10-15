@@ -28,6 +28,10 @@ var prerequisites = map[string][]string{
 	// MODULE-history §3 (PLAN D7): History without estimates has nothing to
 	// show; through the engine it also needs module_taxpayers.
 	"module_history": {"module_tax_engine"},
+	// MODULE-annual §6, ADR-0009: the annual estimate is a sub-context of
+	// the engine and lives under a taxpayer. The flag row itself is
+	// registered by migration in ANN-22.
+	"module_annual": {"module_tax_engine", "module_taxpayers"},
 }
 
 // Prerequisites returns a copy of the declared module prerequisites.
