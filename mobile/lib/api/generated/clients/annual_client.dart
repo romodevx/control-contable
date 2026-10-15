@@ -127,7 +127,7 @@ abstract class AnnualClient {
 
   /// Edit a salary constancia (merge-patch; null clears the label).
   ///
-  /// Merge-patch on top-level fields: absent = unchanged, `employer_label: null` clears it. `id` cannot be sent. Every rule of `createSalaryStatement` is re-run on the merged row, with the same codes and warnings. A read-only user gets `402`; an archived taxpayer `422 taxpayer_archived`. Last write wins. Budget: `annual_writes`.
+  /// Merge-patch on top-level fields: absent = unchanged, `employer_label: null` clears it. `id` cannot be sent. Every rule of `createSalaryStatement` is re-run on the merged row, with the same codes and warnings; moving `fiscal_year` applies that year's list bound (`422 limit_reached`; the row itself is not counted twice). A read-only user gets `402`; an archived taxpayer `422 taxpayer_archived`. Last write wins. Budget: `annual_writes`.
   @PATCH('/v1/taxpayers/{taxpayerId}/salary-statements/{statementId}')
   Future<SalaryStatement> updateSalaryStatement({
     @Path('taxpayerId') required Uuid taxpayerId,
@@ -175,7 +175,7 @@ abstract class AnnualClient {
 
   /// Edit a personal deduction (merge-patch; null clears a nullable field).
   ///
-  /// Merge-patch on top-level fields: absent = unchanged, `null` clears a nullable one (`donee_type`, `student_label`, `tuition_level`, `scholarship_cents`, `cfdi_uuid`). `id` cannot be sent. Every rule of `createPersonalDeduction` is re-run on the merged row (changing `category` must also send or clear its category fields), with the same codes and `warnings`; moving `paid_on` to another year moves the row to that fiscal year. A deleted row answers `404`. A read-only user gets `402`; an archived taxpayer `422 taxpayer_archived`. Last write wins. Budget: `annual_writes`.
+  /// Merge-patch on top-level fields: absent = unchanged, `null` clears a nullable one (`donee_type`, `student_label`, `tuition_level`, `scholarship_cents`, `cfdi_uuid`). `id` cannot be sent. Every rule of `createPersonalDeduction` is re-run on the merged row (changing `category` must also send or clear its category fields), with the same codes and `warnings`; moving `paid_on` to another year moves the row to that fiscal year, whose list bound applies (`422 limit_reached`; the row itself is not counted twice). A deleted row answers `404`. A read-only user gets `402`; an archived taxpayer `422 taxpayer_archived`. Last write wins. Budget: `annual_writes`.
   @PATCH('/v1/taxpayers/{taxpayerId}/personal-deductions/{deductionId}')
   Future<PersonalDeduction> updatePersonalDeduction({
     @Path('taxpayerId') required Uuid taxpayerId,
@@ -194,7 +194,9 @@ abstract class AnnualClient {
 
   /// Undo a personal-deduction delete.
   ///
-  /// Clears `deleted_at`. Allowed for a read-only user (no access check, never `402`): Undo gives back the user's own row and creates nothing, as `restoreIncome`. The list bound is not re-checked. Restoring a live deduction answers `200` unchanged; a purged one, or another user's, `404`. An archived taxpayer answers `422 taxpayer_archived`. `warnings` are computed as on create. Budget: `annual_writes`.
+  /// Clears `deleted_at`. Allowed for a read-only user (no access check, never `402`): Undo gives back the user's own row and uses no trial slot, as `restoreIncome`. The list bound **is** re-checked: it bounds the unpaginated list and the O(rows) deduction pass (ADR-0009), so a year that already holds 500 live deductions (rows created after the delete) answers `422 limit_reached` and the row stays restorable until it is purged. Restoring a live deduction answers `200` unchanged; a purged one, or another user's, `404`. An archived taxpayer answers `422 taxpayer_archived`. `warnings` are computed as on create. Budget: `annual_writes`.
+  ///
+  /// `422 business_rule_violation` details: `taxpayerId` → `taxpayer_archived`; `body` → `limit_reached` (500 live deductions in the row's fiscal year).
   @POST('/v1/taxpayers/{taxpayerId}/personal-deductions/{deductionId}/restore')
   Future<PersonalDeduction> restorePersonalDeduction({
     @Path('taxpayerId') required Uuid taxpayerId,

@@ -53,7 +53,7 @@ tags:
   - name: History
     description: M8 `module_history`.
   - name: Annual
-    description: '`module_annual` - annual return estimate, its inputs (salary statements, personal deductions, filed payments). Requires `module_tax_engine`.'
+    description: '`module_annual` - annual return estimate, its inputs (salary statements, personal deductions, filed payments). Requires `module_tax_engine` and `module_taxpayers`.'
   - name: Reminders
     description: M9 `module_reminders` - devices, settings, tax calendar.
 
@@ -4527,12 +4527,13 @@ paths:
     patch:
       tags: [Annual]
       operationId: updateSalaryStatement
-      x-frozen: sha256:c0ee7a414d1c71023c2a4e14b12accffd4af334cbe18e5dff5ab1c3bcd58bea1
+      x-frozen: sha256:614ab84c1b3586411fcdc74080af244494465f2000143bd9312a0d2e7c3ecdcd
       summary: Edit a salary constancia (merge-patch; null clears the label)
       description: >-
         Merge-patch on top-level fields: absent = unchanged, `employer_label: null` clears
         it. `id` cannot be sent. Every rule of `createSalaryStatement` is re-run on the
-        merged row, with the same codes and warnings. A read-only user gets `402`; an
+        merged row, with the same codes and warnings; moving `fiscal_year` applies that
+        year's list bound (`422 limit_reached`; the row itself is not counted twice). A read-only user gets `402`; an
         archived taxpayer `422 taxpayer_archived`. Last write wins. Budget: `annual_writes`.
       x-module: module_annual
       security:
@@ -4633,7 +4634,7 @@ paths:
     post:
       tags: [Annual]
       operationId: createPersonalDeduction
-      x-frozen: sha256:c79661f2458aab6852083a650775b79948302697e91749e2f634a360ade9380c
+      x-frozen: sha256:ae408e47f914faa98979a188893d15d3763a89df6077a9de7614ee4ac7754fd2
       summary: Record a personal deduction (idempotent client id)
       description: >-
         Records one personal deduction of a persona física (LISR 151 fr. I–VIII and the
@@ -4704,7 +4705,7 @@ paths:
                   id: 0199d4b1-2b3c-7d4e-8f5a-6b7c8d9e0f03
                   category: donation
                   amount_cents: 500000
-                  paid_on: '2026-11-03'
+                  paid_on: '2026-07-03'
                   payment_method: electronic
                   beneficiary: self
                   donee_type: government
@@ -4762,7 +4763,7 @@ paths:
     patch:
       tags: [Annual]
       operationId: updatePersonalDeduction
-      x-frozen: sha256:8f8e294fb3116c68b2f0c936b80d55a9233caab4896722650873baa78ea9ee2c
+      x-frozen: sha256:fc842fe65b6f85c4ae9ed338a2f5096b29e0435c68bc293dbc18650335bcddd6
       summary: Edit a personal deduction (merge-patch; null clears a nullable field)
       description: >-
         Merge-patch on top-level fields: absent = unchanged, `null` clears a nullable one
@@ -4770,7 +4771,8 @@ paths:
         `id` cannot be sent. Every rule of `createPersonalDeduction` is re-run on the merged
         row (changing `category` must also send or clear its category fields), with the same
         codes and `warnings`; moving `paid_on` to another year moves the row to that fiscal
-        year. A deleted row answers `404`. A read-only user gets `402`; an archived taxpayer
+        year, whose list bound applies (`422 limit_reached`; the row itself is not counted
+        twice). A deleted row answers `404`. A read-only user gets `402`; an archived taxpayer
         `422 taxpayer_archived`. Last write wins. Budget: `annual_writes`.
       x-module: module_annual
       security:
@@ -4831,15 +4833,21 @@ paths:
     post:
       tags: [Annual]
       operationId: restorePersonalDeduction
-      x-frozen: sha256:1b1fa0986f1072a99720b408488e6fe5ec813626793951e5ba6b7ff8a32f646c
+      x-frozen: sha256:353493f649331f71c29d7655009dc0e442082e5ca6c2dce51c243035c32b4df7
       summary: Undo a personal-deduction delete
       description: >-
         Clears `deleted_at`. Allowed for a read-only user (no access check, never `402`):
-        Undo gives back the user's own row and creates nothing, as `restoreIncome`. The list
-        bound is not re-checked. Restoring a live deduction answers `200` unchanged; a
-        purged one, or another user's, `404`. An archived taxpayer answers
-        `422 taxpayer_archived`. `warnings` are computed as on create. Budget:
-        `annual_writes`.
+        Undo gives back the user's own row and uses no trial slot, as `restoreIncome`. The
+        list bound **is** re-checked: it bounds the unpaginated list and the O(rows)
+        deduction pass (ADR-0009), so a year that already holds 500 live deductions (rows
+        created after the delete) answers `422 limit_reached` and the row stays restorable
+        until it is purged. Restoring a live deduction answers `200` unchanged; a purged
+        one, or another user's, `404`. An archived taxpayer answers `422 taxpayer_archived`.
+        `warnings` are computed as on create. Budget: `annual_writes`.
+
+
+        `422 business_rule_violation` details: `taxpayerId` → `taxpayer_archived`; `body` →
+        `limit_reached` (500 live deductions in the row's fiscal year).
       x-module: module_annual
       security:
         - bearerAuth: []
@@ -4854,7 +4862,7 @@ paths:
         '400': { $ref: '#/components/responses/AnnualBadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/AnnualNotFound' }
-        '422': { $ref: '#/components/responses/RecordTaxpayerArchived' }
+        '422': { $ref: '#/components/responses/AnnualRuleViolation' }
         '429': { $ref: '#/components/responses/TooManyRequests' }
         '500': { $ref: '#/components/responses/RecordInternalError' }
   /v1/taxpayers/{taxpayerId}/regimes/{regimeCode}/filed-payments/{fiscalYear}:
