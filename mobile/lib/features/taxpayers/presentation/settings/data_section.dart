@@ -50,6 +50,13 @@ class _DataSectionState extends ConsumerState<DataSection> {
     (repository) =>
         repository.rename(taxpayerId: _taxpayer.id, displayName: name),
     (_) => AppLocalizations.of(context).settingsNameSaved,
+    fieldError: (failure) => switch (displayNameRejectionOf(failure)) {
+      final rejection? => describeDisplayNameRejection(
+        rejection,
+        AppLocalizations.of(context),
+      ),
+      null => null,
+    },
   );
 
   Future<FieldError?> _correctRfc(String typed) {

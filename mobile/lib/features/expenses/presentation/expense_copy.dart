@@ -8,6 +8,7 @@ import 'package:control_contable/core/fiscal/withholding_labels.dart';
 import 'package:control_contable/core/forms/choice_controllers.dart';
 import 'package:control_contable/core/forms/field_error.dart';
 import 'package:control_contable/core/forms/money.dart';
+import 'package:control_contable/core/forms/server_field_errors.dart';
 import 'package:control_contable/core/records/record_save.dart';
 import 'package:control_contable/features/expenses/application/expense_form_model.dart';
 import 'package:control_contable/features/expenses/domain/expense_rules.dart';
@@ -94,6 +95,7 @@ FieldError describeExpenseDetail(api.FieldError detail, AppLocalizations l10n) {
   if (detail.code == _required) return const MissingValue();
   return CustomFieldError(switch (detail.code) {
     'unknown_category' => l10n.expenseErrorUnknownCategory,
+    invisibleCharactersCode => l10n.fieldInvisibleCharacters,
     'has_cfdi_mismatch' => l10n.expenseErrorHasCfdiMismatch,
     'out_of_range' => l10n.incomeErrorOutOfRange,
     'iva_amount_mismatch' => l10n.incomeErrorIvaMismatch,

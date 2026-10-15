@@ -121,7 +121,7 @@ class OnboardingFlow extends ChangeNotifier implements RegimeWizard {
   Taxpayer? _created;
   List<Warning> _warnings = const [];
   RfcRejection? _rfcRejection;
-  bool _displayNameRejected = false;
+  DisplayNameRejection? _displayNameRejection;
   Map<String, Set<String>> _optionRejections = const {};
   OnboardingNotice? _notice;
 
@@ -164,8 +164,8 @@ class OnboardingFlow extends ChangeNotifier implements RegimeWizard {
   /// Why the server refused the RFC, until the user submits it again.
   RfcRejection? get rfcRejection => _rfcRejection;
 
-  /// Whether the server refused the display name.
-  bool get displayNameRejected => _displayNameRejected;
+  /// Why the server refused the display name, `null` when it did not.
+  DisplayNameRejection? get displayNameRejection => _displayNameRejection;
 
   /// Options the server refused, by regime code.
   @override
@@ -251,7 +251,7 @@ class OnboardingFlow extends ChangeNotifier implements RegimeWizard {
   void submitIdentity({required String displayName, required String rfc}) {
     rememberIdentity(displayName: displayName, rfc: rfc);
     _rfcRejection = null;
-    _displayNameRejected = false;
+    _displayNameRejection = null;
     _go(OnboardingStep.regimes);
   }
 
@@ -425,9 +425,9 @@ class OnboardingFlow extends ChangeNotifier implements RegimeWizard {
   void _routeDetails(List<api.FieldError> details) {
     final verdict = sortDetails(details, sentRegimes: _regimes);
     _rfcRejection = verdict.rfc;
-    _displayNameRejected = verdict.displayName;
+    _displayNameRejection = verdict.displayName;
     _optionRejections = verdict.options;
-    if (verdict.rfc != null || verdict.displayName) {
+    if (verdict.rfc != null || verdict.displayName != null) {
       return _go(OnboardingStep.identity);
     }
     if (verdict.regime || verdict.startPeriod) {

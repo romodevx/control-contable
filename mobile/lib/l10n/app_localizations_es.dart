@@ -143,6 +143,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get authEmailInvalid => 'Escribe un correo como nombre@ejemplo.mx.';
 
   @override
+  String get fieldInvisibleCharacters =>
+      'Quita los caracteres invisibles o de formato; suelen llegar al copiar y pegar texto.';
+
+  @override
   String get authNameTooLong => 'Escribe un nombre de hasta 120 caracteres.';
 
   @override

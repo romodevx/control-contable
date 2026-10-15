@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:control_contable/api/generated/models/field_error.dart' as api;
 import 'package:control_contable/core/forms/field_error.dart';
+import 'package:control_contable/core/forms/server_field_errors.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 
@@ -52,6 +53,7 @@ FieldError describeSignUpDetail(api.FieldError detail, AppLocalizations l10n) {
     ('password', _tooShortCode) => l10n.authPasswordTooShort,
     ('password', _tooLongCode) => l10n.authPasswordTooLong,
     ('email', _) => l10n.authEmailInvalid,
+    ('name', invisibleCharactersCode) => l10n.fieldInvisibleCharacters,
     ('name', _) => l10n.authNameTooLong,
     ('code', _) => l10n.authCodeFormat,
     ('accepted_documents', _) => l10n.authDocumentsStale,
@@ -59,6 +61,16 @@ FieldError describeSignUpDetail(api.FieldError detail, AppLocalizations l10n) {
   };
   return CustomFieldError(message);
 }
+
+/// The field error for the server's verdict on the profile name.
+FieldError describeProfileNameDetail(
+  api.FieldError detail,
+  AppLocalizations l10n,
+) => switch (detail.code) {
+  _tooShortCode => const MissingValue(),
+  invisibleCharactersCode => CustomFieldError(l10n.fieldInvisibleCharacters),
+  _ => CustomFieldError(l10n.authNameTooLong),
+};
 
 /// The form-level es-MX message for [failure]. Field verdicts
 /// (`ApiValidationFailure` details) are shown on their fields instead.

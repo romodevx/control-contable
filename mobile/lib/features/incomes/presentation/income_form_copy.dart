@@ -3,6 +3,7 @@ import 'package:control_contable/api/generated/models/warning.dart';
 import 'package:control_contable/api/generated/models/warning_code.dart';
 import 'package:control_contable/core/fiscal/withholding_labels.dart';
 import 'package:control_contable/core/forms/field_error.dart';
+import 'package:control_contable/core/forms/server_field_errors.dart';
 import 'package:control_contable/features/incomes/application/income_form_model.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 
@@ -35,6 +36,7 @@ FieldError describeIncomeDetail(api.FieldError detail, AppLocalizations l10n) {
   if (detail.code == _required) return const MissingValue();
   return CustomFieldError(switch (detail.code) {
     'out_of_range' => l10n.incomeErrorOutOfRange,
+    invisibleCharactersCode => l10n.fieldInvisibleCharacters,
     'iva_amount_mismatch' => l10n.incomeErrorIvaMismatch,
     'rate_not_valid_on_date' => l10n.incomeErrorRateNotValid,
     'withholding_not_applicable' => l10n.incomeErrorWithholdingNotApplicable,
