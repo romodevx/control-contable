@@ -13,6 +13,36 @@ void main() {
   setUp(() => form = AppFormController());
   tearDown(() => form.dispose());
 
+  group('inactive fields (a choice hides them)', () {
+    test('are skipped on submit and lose their error', () async {
+      final donee = form.add(ChoiceFieldController(label: 'Donataria'));
+      await form.submit(() async {});
+      expect(donee.error, isA<MissingChoice>());
+
+      donee.isActive = false;
+      expect(donee.error, isNull);
+      var saved = false;
+      await form.submit(() async => saved = true);
+
+      expect(saved, isTrue);
+      expect(form.invalidFields, isEmpty);
+    });
+
+    test('count again once active', () async {
+      final donee = form.add(ChoiceFieldController(label: 'Donataria'))
+        ..isActive = false;
+      var notified = 0;
+      form.addListener(() => notified++);
+
+      donee.isActive = true;
+      final saved = await form.submit(() async {});
+
+      expect(notified, greaterThan(0));
+      expect(saved, isFalse);
+      expect(donee.isActive, isTrue);
+    });
+  });
+
   group('validation policy (ui-forms-and-modals.md)', () {
     test('a required-but-empty field shows nothing until submit', () async {
       final name = form.textField(label: 'Nombre')..handleBlur();

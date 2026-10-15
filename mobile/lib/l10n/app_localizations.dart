@@ -4185,6 +4185,774 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'la tasa de PTU'**
   String get cpaTopicPtuRate;
+
+  /// Read-only notice on the annual input screens.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu cuenta es de solo consulta: puedes ver y eliminar tus datos, pero capturar o cambiar algo requiere un plan.'**
+  String get annualInputsReadOnlyNotice;
+
+  /// Annual input save offline.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo guardar por falta de conexión. Vuelve a tocar Guardar: no se duplicará.'**
+  String get annualWriteUnreachable;
+
+  /// Annual input save failed for another reason.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo guardar. Intenta de nuevo.'**
+  String get annualWriteFailed;
+
+  /// 409 id_reused on an annual create.
+  ///
+  /// In es, this message translates to:
+  /// **'Este registro ya se había guardado con otros datos. Revisa la lista.'**
+  String get annualWriteIdReused;
+
+  /// 404 on an annual edit.
+  ///
+  /// In es, this message translates to:
+  /// **'Este registro ya no existe: se eliminó en otro lugar.'**
+  String get annualWriteGone;
+
+  /// 422 person_type_not_allowed.
+  ///
+  /// In es, this message translates to:
+  /// **'Este dato es sólo para personas físicas.'**
+  String get annualWritePersonType;
+
+  /// 422 regime_not_active on filed payments.
+  ///
+  /// In es, this message translates to:
+  /// **'En ese mes no tenías este régimen.'**
+  String get annualWriteRegimeNotActive;
+
+  /// Server 'invalid' on a label.
+  ///
+  /// In es, this message translates to:
+  /// **'Usa sólo letras, números y espacios, sin espacios al inicio ni al final.'**
+  String get annualWriteInvalidText;
+
+  /// Button opening the new personal deduction form.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar deducción'**
+  String get annualDeductionsAdd;
+
+  /// Status while the deductions load.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando tus deducciones personales…'**
+  String get annualDeductionsLoading;
+
+  /// Deductions load failure.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar tus deducciones personales.'**
+  String get annualDeductionsLoadFailed;
+
+  /// Summary: everything registered.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrado'**
+  String get annualDeductionsRegisteredTotal;
+
+  /// Summary: what the estimate applied after caps.
+  ///
+  /// In es, this message translates to:
+  /// **'Aplicado en tu estimación'**
+  String get annualDeductionsAppliedTotal;
+
+  /// Explains the applied amount.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que la estimación toma después de los topes de ley y sin lo pagado en efectivo.'**
+  String get annualDeductionsAppliedHelp;
+
+  /// Heading over the caps that bind.
+  ///
+  /// In es, this message translates to:
+  /// **'Tope aplicado'**
+  String get annualDeductionsCapsTitle;
+
+  /// Undo toast after deleting deductions.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{Deducción eliminada} other{{count} deducciones eliminadas}}'**
+  String annualDeductionsDeleted(int count);
+
+  /// Toast after Undo.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{Deducción restaurada} other{{count} deducciones restauradas}}'**
+  String annualDeductionsRestored(int count);
+
+  /// Undo refused.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo restaurar la deducción.'**
+  String get annualDeductionsRestoreFailed;
+
+  /// Delete refused.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo eliminar la deducción. Intenta de nuevo.'**
+  String get annualDeductionsDeleteFailed;
+
+  /// 422 limit_reached on a deduction.
+  ///
+  /// In es, this message translates to:
+  /// **'Llegaste al límite de 500 deducciones de este año. Para agregar otra, elimina alguna.'**
+  String get annualDeductionsFullOnSave;
+
+  /// Empty deductions list.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no registras deducciones personales de {year}.'**
+  String annualDeductionsEmpty(String year);
+
+  /// The year holds 500 deductions.
+  ///
+  /// In es, this message translates to:
+  /// **'Llegaste al límite de 500 deducciones de {year}. Para agregar otra, elimina alguna.'**
+  String annualDeductionsFull(String year);
+
+  /// Registered amount of one category.
+  ///
+  /// In es, this message translates to:
+  /// **'Registrado: {amount}'**
+  String annualDeductionsGroupRegistered(String amount);
+
+  /// Cash-excluded amount of one category.
+  ///
+  /// In es, this message translates to:
+  /// **'No deducible por pago en efectivo: {amount}'**
+  String annualDeductionsGroupExcluded(String amount);
+
+  /// Row chip of a cash deduction in a restricted category.
+  ///
+  /// In es, this message translates to:
+  /// **'En efectivo: no deducible'**
+  String get annualDeductionsCashExcluded;
+
+  /// Delete button of one deduction.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar deducción de {amount}'**
+  String annualDeductionsDeleteTooltip(String amount);
+
+  /// Title of the deduction form.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva deducción'**
+  String get annualDeductionFormTitle;
+
+  /// Leave-with-changes dialog.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Descartar esta deducción?'**
+  String get annualDeductionDiscardTitle;
+
+  /// Toast after saving a deduction.
+  ///
+  /// In es, this message translates to:
+  /// **'Deducción guardada'**
+  String get annualDeductionSaved;
+
+  /// Category field label.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo de deducción'**
+  String get annualDeductionCategory;
+
+  /// Amount field label.
+  ///
+  /// In es, this message translates to:
+  /// **'Monto'**
+  String get annualDeductionAmount;
+
+  /// Amount help.
+  ///
+  /// In es, this message translates to:
+  /// **'El total de tu factura o constancia.'**
+  String get annualDeductionAmountHelp;
+
+  /// Amount help for tuition.
+  ///
+  /// In es, this message translates to:
+  /// **'Sólo la colegiatura, sin inscripción ni reinscripción.'**
+  String get annualDeductionTuitionAmountHelp;
+
+  /// Date field label.
+  ///
+  /// In es, this message translates to:
+  /// **'Fecha de pago'**
+  String get annualDeductionPaidOn;
+
+  /// Date help for annual-constancia categories.
+  ///
+  /// In es, this message translates to:
+  /// **'Es una constancia anual: usamos el 31 de diciembre.'**
+  String get annualDeductionYearEndHelp;
+
+  /// paid_on out of the fiscal year.
+  ///
+  /// In es, this message translates to:
+  /// **'La fecha debe ser de {year}.'**
+  String annualDeductionDateOutOfYear(String year);
+
+  /// Non-cash toggle for cash-restricted categories.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagué con tarjeta, transferencia o cheque'**
+  String get annualDeductionElectronic;
+
+  /// Shown when the payment was cash.
+  ///
+  /// In es, this message translates to:
+  /// **'En efectivo no es deducible: la guardamos, pero la estimación la deja fuera.'**
+  String get annualDeductionCashWarning;
+
+  /// Beneficiary field label.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Para quién fue?'**
+  String get annualDeductionBeneficiary;
+
+  /// Beneficiary self.
+  ///
+  /// In es, this message translates to:
+  /// **'Para mí'**
+  String get annualBeneficiarySelf;
+
+  /// Beneficiary spouse.
+  ///
+  /// In es, this message translates to:
+  /// **'Cónyuge o concubino(a)'**
+  String get annualBeneficiarySpouse;
+
+  /// Beneficiary ascendant.
+  ///
+  /// In es, this message translates to:
+  /// **'Ascendiente (padres, abuelos)'**
+  String get annualBeneficiaryAscendant;
+
+  /// Beneficiary descendant.
+  ///
+  /// In es, this message translates to:
+  /// **'Descendiente (hijos, nietos)'**
+  String get annualBeneficiaryDescendant;
+
+  /// Dependant income attestation.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmo que esta persona tuvo ingresos menores a una UMA anual en {year}.'**
+  String annualDeductionAttest(String year);
+
+  /// Donee field label.
+  ///
+  /// In es, this message translates to:
+  /// **'¿A quién donaste?'**
+  String get annualDeductionDonee;
+
+  /// Donee authorized.
+  ///
+  /// In es, this message translates to:
+  /// **'Donataria autorizada'**
+  String get annualDoneeAuthorized;
+
+  /// Donee government.
+  ///
+  /// In es, this message translates to:
+  /// **'Gobierno'**
+  String get annualDoneeGovernment;
+
+  /// Student label field.
+  ///
+  /// In es, this message translates to:
+  /// **'Alumno'**
+  String get annualDeductionStudent;
+
+  /// Student label help.
+  ///
+  /// In es, this message translates to:
+  /// **'Un nombre para distinguirlo: el tope es por alumno.'**
+  String get annualDeductionStudentHelp;
+
+  /// Student label too long.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe hasta 40 caracteres.'**
+  String get annualDeductionStudentInvalid;
+
+  /// Tuition level field.
+  ///
+  /// In es, this message translates to:
+  /// **'Nivel escolar'**
+  String get annualDeductionLevel;
+
+  /// Tuition level.
+  ///
+  /// In es, this message translates to:
+  /// **'Preescolar'**
+  String get annualLevelPreescolar;
+
+  /// Tuition level.
+  ///
+  /// In es, this message translates to:
+  /// **'Primaria'**
+  String get annualLevelPrimaria;
+
+  /// Tuition level.
+  ///
+  /// In es, this message translates to:
+  /// **'Secundaria'**
+  String get annualLevelSecundaria;
+
+  /// Tuition level.
+  ///
+  /// In es, this message translates to:
+  /// **'Profesional técnico'**
+  String get annualLevelProfesionalTecnico;
+
+  /// Tuition level.
+  ///
+  /// In es, this message translates to:
+  /// **'Bachillerato'**
+  String get annualLevelBachillerato;
+
+  /// Scholarship field.
+  ///
+  /// In es, this message translates to:
+  /// **'Beca recibida'**
+  String get annualDeductionScholarship;
+
+  /// Disclosure with the optional CFDI folio.
+  ///
+  /// In es, this message translates to:
+  /// **'Más datos'**
+  String get annualDeductionMore;
+
+  /// Optional CFDI UUID.
+  ///
+  /// In es, this message translates to:
+  /// **'Folio fiscal (UUID) del CFDI'**
+  String get annualDeductionCfdi;
+
+  /// Bad CFDI UUID format.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe el folio completo: 32 letras y números en grupos 8-4-4-4-12.'**
+  String get annualDeductionCfdiInvalid;
+
+  /// Deduction category medical.
+  ///
+  /// In es, this message translates to:
+  /// **'Honorarios médicos y hospitalarios'**
+  String get annualCategoryMedical;
+
+  /// Deduction category medical_disability.
+  ///
+  /// In es, this message translates to:
+  /// **'Gastos médicos por incapacidad o discapacidad'**
+  String get annualCategoryMedicalDisability;
+
+  /// Deduction category funeral.
+  ///
+  /// In es, this message translates to:
+  /// **'Gastos funerarios'**
+  String get annualCategoryFuneral;
+
+  /// Deduction category donation.
+  ///
+  /// In es, this message translates to:
+  /// **'Donativos'**
+  String get annualCategoryDonation;
+
+  /// Deduction category mortgage_real_interest.
+  ///
+  /// In es, this message translates to:
+  /// **'Intereses reales de crédito hipotecario'**
+  String get annualCategoryMortgage;
+
+  /// Deduction category retirement_contribution.
+  ///
+  /// In es, this message translates to:
+  /// **'Aportaciones voluntarias para el retiro'**
+  String get annualCategoryRetirement;
+
+  /// Deduction category health_insurance.
+  ///
+  /// In es, this message translates to:
+  /// **'Primas de seguros de gastos médicos'**
+  String get annualCategoryHealthInsurance;
+
+  /// Deduction category school_transport.
+  ///
+  /// In es, this message translates to:
+  /// **'Transporte escolar obligatorio'**
+  String get annualCategorySchoolTransport;
+
+  /// Deduction category local_payroll_tax.
+  ///
+  /// In es, this message translates to:
+  /// **'Impuesto local sobre salarios'**
+  String get annualCategoryLocalPayrollTax;
+
+  /// Deduction category tuition.
+  ///
+  /// In es, this message translates to:
+  /// **'Colegiaturas'**
+  String get annualCategoryTuition;
+
+  /// A category unknown to this app version.
+  ///
+  /// In es, this message translates to:
+  /// **'Otra deducción'**
+  String get annualCategoryOther;
+
+  /// Opens the constancia sheet.
+  ///
+  /// In es, this message translates to:
+  /// **'Agregar constancia'**
+  String get annualSalaryAdd;
+
+  /// Status while constancias load.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando tus constancias de sueldos…'**
+  String get annualSalaryLoading;
+
+  /// Constancias load failure.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar tus constancias de sueldos.'**
+  String get annualSalaryLoadFailed;
+
+  /// Empty constancias list.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no registras constancias de sueldos de {year}.'**
+  String annualSalaryEmpty(String year);
+
+  /// Totals card heading.
+  ///
+  /// In es, this message translates to:
+  /// **'Total del año'**
+  String get annualSalaryTotals;
+
+  /// Accumulable salary.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresos gravados (acumulables)'**
+  String get annualSalaryAccumulable;
+
+  /// Exempt salary.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresos exentos'**
+  String get annualSalaryExempt;
+
+  /// ISR withheld on salary.
+  ///
+  /// In es, this message translates to:
+  /// **'ISR retenido'**
+  String get annualSalaryIsrWithheld;
+
+  /// Optional employer alias.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre del empleador'**
+  String get annualSalaryEmployer;
+
+  /// Employer alias help.
+  ///
+  /// In es, this message translates to:
+  /// **'Sólo para que la reconozcas: no pedimos el RFC del empleador.'**
+  String get annualSalaryEmployerHelp;
+
+  /// A constancia without an alias.
+  ///
+  /// In es, this message translates to:
+  /// **'Constancia {number}'**
+  String annualSalaryUnnamed(int number);
+
+  /// Sheet intro.
+  ///
+  /// In es, this message translates to:
+  /// **'Copia los totales de tu constancia de sueldos (CFDI de retenciones).'**
+  String get annualSalaryHelp;
+
+  /// Sheet title, new.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva constancia'**
+  String get annualSalaryFormTitle;
+
+  /// Sheet title, edit.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar constancia'**
+  String get annualSalaryEditTitle;
+
+  /// Disclosure of the special-case boxes.
+  ///
+  /// In es, this message translates to:
+  /// **'Situaciones especiales'**
+  String get annualSalaryMore;
+
+  /// simultaneous.
+  ///
+  /// In es, this message translates to:
+  /// **'Trabajé para dos o más empleadores al mismo tiempo'**
+  String get annualSalarySimultaneous;
+
+  /// left_before_year_end.
+  ///
+  /// In es, this message translates to:
+  /// **'Dejé de trabajar antes del 31 de diciembre'**
+  String get annualSalaryLeft;
+
+  /// payer_not_withholding.
+  ///
+  /// In es, this message translates to:
+  /// **'Mi empleador no estaba obligado a retenerme'**
+  String get annualSalaryPayerNotWithholding;
+
+  /// Toast after creating.
+  ///
+  /// In es, this message translates to:
+  /// **'Constancia guardada'**
+  String get annualSalarySaved;
+
+  /// Toast after editing.
+  ///
+  /// In es, this message translates to:
+  /// **'Constancia actualizada'**
+  String get annualSalaryUpdated;
+
+  /// Warning salary_regime_not_held.
+  ///
+  /// In es, this message translates to:
+  /// **'No tienes el régimen de sueldos (605) en tus datos: agrégalo para que tu anual lo considere completo.'**
+  String get annualSalaryRegimeNotHeld;
+
+  /// 422 limit_reached on a constancia.
+  ///
+  /// In es, this message translates to:
+  /// **'Llegaste al límite de 20 constancias de este año.'**
+  String get annualSalaryFull;
+
+  /// Leave-with-changes dialog.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Descartar esta constancia?'**
+  String get annualSalaryDiscardTitle;
+
+  /// Delete button of one constancia.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar {name}'**
+  String annualSalaryDeleteTooltip(String name);
+
+  /// Delete confirmation title.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Eliminar {name}?'**
+  String annualSalaryDeleteTitle(String name);
+
+  /// Delete confirmation body.
+  ///
+  /// In es, this message translates to:
+  /// **'No se puede deshacer.'**
+  String get annualSalaryDeleteBody;
+
+  /// Delete confirmation primary.
+  ///
+  /// In es, this message translates to:
+  /// **'Eliminar'**
+  String get annualSalaryDeleteConfirm;
+
+  /// Delete confirmation cancel.
+  ///
+  /// In es, this message translates to:
+  /// **'Conservar'**
+  String get annualSalaryDeleteKeep;
+
+  /// Toast after deleting.
+  ///
+  /// In es, this message translates to:
+  /// **'Constancia eliminada'**
+  String get annualSalaryDeleted;
+
+  /// Delete refused.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo eliminar la constancia. Intenta de nuevo.'**
+  String get annualSalaryDeleteFailed;
+
+  /// Filed payments intro.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe lo que pagaste cada mes según tus acuses. Los montos estimados los calculó la app.'**
+  String get annualPaymentsIntro;
+
+  /// Status while filed payments load.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando tus pagos provisionales…'**
+  String get annualPaymentsLoading;
+
+  /// Filed payments load failure.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar tus pagos provisionales.'**
+  String get annualPaymentsLoadFailed;
+
+  /// Stores every shown amount as filed.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar todos'**
+  String get annualPaymentsConfirmAll;
+
+  /// Help under Confirmar todos.
+  ///
+  /// In es, this message translates to:
+  /// **'Guarda como pagados los montos que ves en los meses sin confirmar.'**
+  String get annualPaymentsConfirmAllHelp;
+
+  /// Month confirmed by the user.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmado'**
+  String get annualPaymentsSourceFiled;
+
+  /// Month from the prior_provisional_payments tax input.
+  ///
+  /// In es, this message translates to:
+  /// **'De tus datos fiscales — confírmalo'**
+  String get annualPaymentsSourceTaxInput;
+
+  /// Month estimated by the app.
+  ///
+  /// In es, this message translates to:
+  /// **'Estimado por la app — confírmalo'**
+  String get annualPaymentsSourceEstimated;
+
+  /// Month estimated from an incomplete estimate.
+  ///
+  /// In es, this message translates to:
+  /// **'Estimado con datos incompletos — confírmalo'**
+  String get annualPaymentsSourceIncomplete;
+
+  /// Month with nothing to prefill.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin estimación: escribe lo que pagaste'**
+  String get annualPaymentsSourceNone;
+
+  /// Month outside the regime window.
+  ///
+  /// In es, this message translates to:
+  /// **'No tenías este régimen en este mes.'**
+  String get annualPaymentsOutOfWindow;
+
+  /// Sum of effective months.
+  ///
+  /// In es, this message translates to:
+  /// **'Total del año: {amount}'**
+  String annualPaymentsTotal(String amount);
+
+  /// Toast after saving.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{Pagos guardados: ningún mes confirmado} =1{Pagos guardados: 1 mes confirmado} other{Pagos guardados: {count} meses confirmados}}'**
+  String annualPaymentsSaved(int count);
+
+  /// Status while the annual facts load.
+  ///
+  /// In es, this message translates to:
+  /// **'Cargando los datos del año…'**
+  String get annualFactsLoading;
+
+  /// Facts load failure.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudieron cargar los datos del año.'**
+  String get annualFactsLoadFailed;
+
+  /// Prior-year accumulable income.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresos acumulables de {year}'**
+  String annualFactsPriorYear(String year);
+
+  /// Prior-year help.
+  ///
+  /// In es, this message translates to:
+  /// **'Antes de deducciones personales; sirve para el tope de donativos (7 %). Déjalo vacío si no lo sabes.'**
+  String get annualFactsPriorYearHelp;
+
+  /// Other exempt income.
+  ///
+  /// In es, this message translates to:
+  /// **'Otros ingresos exentos'**
+  String get annualFactsOtherExempt;
+
+  /// Other exempt help.
+  ///
+  /// In es, this message translates to:
+  /// **'Exentos que no registraste en la app; cuentan para el tope de 15 %.'**
+  String get annualFactsOtherExemptHelp;
+
+  /// told_employer_will_file.
+  ///
+  /// In es, this message translates to:
+  /// **'Le avisé a mi empleador que presentaré mi declaración anual'**
+  String get annualFactsToldEmployer;
+
+  /// Toast after saving the facts.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos del año guardados'**
+  String get annualFactsSaved;
+
+  /// Leave-with-changes dialog.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Descartar los cambios?'**
+  String get annualFactsDiscardTitle;
+
+  /// Heading over the regime tax inputs.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos de tus regímenes'**
+  String get annualFactsRegimeTitle;
+
+  /// Regime tax inputs help.
+  ///
+  /// In es, this message translates to:
+  /// **'Pérdidas, PTU y depreciación se capturan en los datos fiscales de cada régimen.'**
+  String get annualFactsRegimeHelp;
+
+  /// A regime tax input without value.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin capturar'**
+  String get annualFactsRegimeEmpty;
+
+  /// Opens the tax input.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar {label}, régimen {code}'**
+  String annualFactsRegimeEdit(String label, String code);
+
+  /// PM note over the read-only list.
+  ///
+  /// In es, this message translates to:
+  /// **'Las personas morales sólo capturan los datos de sus regímenes.'**
+  String get annualFactsMoralNote;
 }
 
 class _AppLocalizationsDelegate

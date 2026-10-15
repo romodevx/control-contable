@@ -5,6 +5,8 @@ import 'package:control_contable/core/router/not_found_screen.dart';
 import 'package:control_contable/features/annual/presentation/annual_breakdown_screen.dart';
 import 'package:control_contable/features/annual/presentation/annual_input_pending_screen.dart';
 import 'package:control_contable/features/annual/presentation/annual_screen.dart';
+import 'package:control_contable/features/annual/presentation/personal_deduction_form_page.dart';
+import 'package:control_contable/features/annual/presentation/personal_deductions_screen.dart';
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
@@ -31,6 +33,10 @@ abstract final class AnnualRoutes {
   /// The personal deductions of the year (ANN-19).
   static String personalDeductions(String taxpayerId, int fiscalYear) =>
       '${_of(taxpayerId, fiscalYear)}/deducciones';
+
+  /// The new personal deduction form of the year (ANN-19).
+  static String newPersonalDeduction(String taxpayerId, int fiscalYear) =>
+      '${personalDeductions(taxpayerId, fiscalYear)}/nueva';
 
   /// The salary constancias of the year (ANN-20).
   static String salaryStatements(String taxpayerId, int fiscalYear) =>
@@ -78,8 +84,23 @@ final FeatureModule annualFeature = FeatureModule(
         );
       },
     ),
+    GoRoute(
+      path: '$_year/deducciones',
+      builder: (context, state) => _ofYear(
+        state,
+        (taxpayerId, year) =>
+            PersonalDeductionsScreen(taxpayerId: taxpayerId, fiscalYear: year),
+      ),
+    ),
+    GoRoute(
+      path: '$_year/deducciones/nueva',
+      builder: (context, state) => _ofYear(
+        state,
+        (taxpayerId, year) =>
+            PersonalDeductionFormPage(taxpayerId: taxpayerId, fiscalYear: year),
+      ),
+    ),
     for (final (path, input) in [
-      ('$_year/deducciones', AnnualInput.personalDeductions),
       ('$_year/constancias', AnnualInput.salaryStatements),
       ('$_year/datos', AnnualInput.annualInputs),
       ('$_year/pagos/:$_regimeCode', AnnualInput.filedPayments),
@@ -93,6 +114,16 @@ Widget _pending(GoRouterState state, AnnualInput input) =>
     _yearOf(state) == null
     ? const NotFoundScreen()
     : AnnualInputPendingScreen(input: input);
+
+/// The screen [build] makes for the location's taxpayer and year, or not
+/// found when the year is not a number.
+Widget _ofYear(
+  GoRouterState state,
+  Widget Function(String taxpayerId, int fiscalYear) build,
+) => switch (_yearOf(state)) {
+  final year? => build(state.pathParameters[_taxpayerId]!, year),
+  null => const NotFoundScreen(),
+};
 
 int? _yearOf(GoRouterState state) =>
     int.tryParse(state.pathParameters[_fiscalYear] ?? '');

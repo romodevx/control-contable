@@ -3382,5 +3382,605 @@
   "cpaTopicPtuRate": "la tasa de PTU",
   "@cpaTopicPtuRate": {
     "description": "CPA topic ptu_rate."
+  },
+  "annualInputsReadOnlyNotice": "Tu cuenta es de solo consulta: puedes ver y eliminar tus datos, pero capturar o cambiar algo requiere un plan.",
+  "@annualInputsReadOnlyNotice": {
+    "description": "Read-only notice on the annual input screens."
+  },
+  "annualWriteUnreachable": "No se pudo guardar por falta de conexión. Vuelve a tocar Guardar: no se duplicará.",
+  "@annualWriteUnreachable": {
+    "description": "Annual input save offline."
+  },
+  "annualWriteFailed": "No se pudo guardar. Intenta de nuevo.",
+  "@annualWriteFailed": {
+    "description": "Annual input save failed for another reason."
+  },
+  "annualWriteIdReused": "Este registro ya se había guardado con otros datos. Revisa la lista.",
+  "@annualWriteIdReused": {
+    "description": "409 id_reused on an annual create."
+  },
+  "annualWriteGone": "Este registro ya no existe: se eliminó en otro lugar.",
+  "@annualWriteGone": {
+    "description": "404 on an annual edit."
+  },
+  "annualWritePersonType": "Este dato es sólo para personas físicas.",
+  "@annualWritePersonType": {
+    "description": "422 person_type_not_allowed."
+  },
+  "annualWriteRegimeNotActive": "En ese mes no tenías este régimen.",
+  "@annualWriteRegimeNotActive": {
+    "description": "422 regime_not_active on filed payments."
+  },
+  "annualWriteInvalidText": "Usa sólo letras, números y espacios, sin espacios al inicio ni al final.",
+  "@annualWriteInvalidText": {
+    "description": "Server 'invalid' on a label."
+  },
+  "annualDeductionsAdd": "Agregar deducción",
+  "@annualDeductionsAdd": {
+    "description": "Button opening the new personal deduction form."
+  },
+  "annualDeductionsLoading": "Cargando tus deducciones personales…",
+  "@annualDeductionsLoading": {
+    "description": "Status while the deductions load."
+  },
+  "annualDeductionsLoadFailed": "No se pudieron cargar tus deducciones personales.",
+  "@annualDeductionsLoadFailed": {
+    "description": "Deductions load failure."
+  },
+  "annualDeductionsRegisteredTotal": "Registrado",
+  "@annualDeductionsRegisteredTotal": {
+    "description": "Summary: everything registered."
+  },
+  "annualDeductionsAppliedTotal": "Aplicado en tu estimación",
+  "@annualDeductionsAppliedTotal": {
+    "description": "Summary: what the estimate applied after caps."
+  },
+  "annualDeductionsAppliedHelp": "Lo que la estimación toma después de los topes de ley y sin lo pagado en efectivo.",
+  "@annualDeductionsAppliedHelp": {
+    "description": "Explains the applied amount."
+  },
+  "annualDeductionsCapsTitle": "Tope aplicado",
+  "@annualDeductionsCapsTitle": {
+    "description": "Heading over the caps that bind."
+  },
+  "annualDeductionsDeleted": "{count, plural, =1{Deducción eliminada} other{{count} deducciones eliminadas}}",
+  "@annualDeductionsDeleted": {
+    "description": "Undo toast after deleting deductions.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "annualDeductionsRestored": "{count, plural, =1{Deducción restaurada} other{{count} deducciones restauradas}}",
+  "@annualDeductionsRestored": {
+    "description": "Toast after Undo.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "annualDeductionsRestoreFailed": "No se pudo restaurar la deducción.",
+  "@annualDeductionsRestoreFailed": {
+    "description": "Undo refused."
+  },
+  "annualDeductionsDeleteFailed": "No se pudo eliminar la deducción. Intenta de nuevo.",
+  "@annualDeductionsDeleteFailed": {
+    "description": "Delete refused."
+  },
+  "annualDeductionsFullOnSave": "Llegaste al límite de 500 deducciones de este año. Para agregar otra, elimina alguna.",
+  "@annualDeductionsFullOnSave": {
+    "description": "422 limit_reached on a deduction."
+  },
+  "annualDeductionsEmpty": "Aún no registras deducciones personales de {year}.",
+  "@annualDeductionsEmpty": {
+    "description": "Empty deductions list.",
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "annualDeductionsFull": "Llegaste al límite de 500 deducciones de {year}. Para agregar otra, elimina alguna.",
+  "@annualDeductionsFull": {
+    "description": "The year holds 500 deductions.",
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "annualDeductionsGroupRegistered": "Registrado: {amount}",
+  "@annualDeductionsGroupRegistered": {
+    "description": "Registered amount of one category.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "annualDeductionsGroupExcluded": "No deducible por pago en efectivo: {amount}",
+  "@annualDeductionsGroupExcluded": {
+    "description": "Cash-excluded amount of one category.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "annualDeductionsCashExcluded": "En efectivo: no deducible",
+  "@annualDeductionsCashExcluded": {
+    "description": "Row chip of a cash deduction in a restricted category."
+  },
+  "annualDeductionsDeleteTooltip": "Eliminar deducción de {amount}",
+  "@annualDeductionsDeleteTooltip": {
+    "description": "Delete button of one deduction.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "annualDeductionFormTitle": "Nueva deducción",
+  "@annualDeductionFormTitle": {
+    "description": "Title of the deduction form."
+  },
+  "annualDeductionDiscardTitle": "¿Descartar esta deducción?",
+  "@annualDeductionDiscardTitle": {
+    "description": "Leave-with-changes dialog."
+  },
+  "annualDeductionSaved": "Deducción guardada",
+  "@annualDeductionSaved": {
+    "description": "Toast after saving a deduction."
+  },
+  "annualDeductionCategory": "Tipo de deducción",
+  "@annualDeductionCategory": {
+    "description": "Category field label."
+  },
+  "annualDeductionAmount": "Monto",
+  "@annualDeductionAmount": {
+    "description": "Amount field label."
+  },
+  "annualDeductionAmountHelp": "El total de tu factura o constancia.",
+  "@annualDeductionAmountHelp": {
+    "description": "Amount help."
+  },
+  "annualDeductionTuitionAmountHelp": "Sólo la colegiatura, sin inscripción ni reinscripción.",
+  "@annualDeductionTuitionAmountHelp": {
+    "description": "Amount help for tuition."
+  },
+  "annualDeductionPaidOn": "Fecha de pago",
+  "@annualDeductionPaidOn": {
+    "description": "Date field label."
+  },
+  "annualDeductionYearEndHelp": "Es una constancia anual: usamos el 31 de diciembre.",
+  "@annualDeductionYearEndHelp": {
+    "description": "Date help for annual-constancia categories."
+  },
+  "annualDeductionDateOutOfYear": "La fecha debe ser de {year}.",
+  "@annualDeductionDateOutOfYear": {
+    "description": "paid_on out of the fiscal year.",
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "annualDeductionElectronic": "Pagué con tarjeta, transferencia o cheque",
+  "@annualDeductionElectronic": {
+    "description": "Non-cash toggle for cash-restricted categories."
+  },
+  "annualDeductionCashWarning": "En efectivo no es deducible: la guardamos, pero la estimación la deja fuera.",
+  "@annualDeductionCashWarning": {
+    "description": "Shown when the payment was cash."
+  },
+  "annualDeductionBeneficiary": "¿Para quién fue?",
+  "@annualDeductionBeneficiary": {
+    "description": "Beneficiary field label."
+  },
+  "annualBeneficiarySelf": "Para mí",
+  "@annualBeneficiarySelf": {
+    "description": "Beneficiary self."
+  },
+  "annualBeneficiarySpouse": "Cónyuge o concubino(a)",
+  "@annualBeneficiarySpouse": {
+    "description": "Beneficiary spouse."
+  },
+  "annualBeneficiaryAscendant": "Ascendiente (padres, abuelos)",
+  "@annualBeneficiaryAscendant": {
+    "description": "Beneficiary ascendant."
+  },
+  "annualBeneficiaryDescendant": "Descendiente (hijos, nietos)",
+  "@annualBeneficiaryDescendant": {
+    "description": "Beneficiary descendant."
+  },
+  "annualDeductionAttest": "Confirmo que esta persona tuvo ingresos menores a una UMA anual en {year}.",
+  "@annualDeductionAttest": {
+    "description": "Dependant income attestation.",
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "annualDeductionDonee": "¿A quién donaste?",
+  "@annualDeductionDonee": {
+    "description": "Donee field label."
+  },
+  "annualDoneeAuthorized": "Donataria autorizada",
+  "@annualDoneeAuthorized": {
+    "description": "Donee authorized."
+  },
+  "annualDoneeGovernment": "Gobierno",
+  "@annualDoneeGovernment": {
+    "description": "Donee government."
+  },
+  "annualDeductionStudent": "Alumno",
+  "@annualDeductionStudent": {
+    "description": "Student label field."
+  },
+  "annualDeductionStudentHelp": "Un nombre para distinguirlo: el tope es por alumno.",
+  "@annualDeductionStudentHelp": {
+    "description": "Student label help."
+  },
+  "annualDeductionStudentInvalid": "Escribe hasta 40 caracteres.",
+  "@annualDeductionStudentInvalid": {
+    "description": "Student label too long."
+  },
+  "annualDeductionLevel": "Nivel escolar",
+  "@annualDeductionLevel": {
+    "description": "Tuition level field."
+  },
+  "annualLevelPreescolar": "Preescolar",
+  "@annualLevelPreescolar": {
+    "description": "Tuition level."
+  },
+  "annualLevelPrimaria": "Primaria",
+  "@annualLevelPrimaria": {
+    "description": "Tuition level."
+  },
+  "annualLevelSecundaria": "Secundaria",
+  "@annualLevelSecundaria": {
+    "description": "Tuition level."
+  },
+  "annualLevelProfesionalTecnico": "Profesional técnico",
+  "@annualLevelProfesionalTecnico": {
+    "description": "Tuition level."
+  },
+  "annualLevelBachillerato": "Bachillerato",
+  "@annualLevelBachillerato": {
+    "description": "Tuition level."
+  },
+  "annualDeductionScholarship": "Beca recibida",
+  "@annualDeductionScholarship": {
+    "description": "Scholarship field."
+  },
+  "annualDeductionMore": "Más datos",
+  "@annualDeductionMore": {
+    "description": "Disclosure with the optional CFDI folio."
+  },
+  "annualDeductionCfdi": "Folio fiscal (UUID) del CFDI",
+  "@annualDeductionCfdi": {
+    "description": "Optional CFDI UUID."
+  },
+  "annualDeductionCfdiInvalid": "Escribe el folio completo: 32 letras y números en grupos 8-4-4-4-12.",
+  "@annualDeductionCfdiInvalid": {
+    "description": "Bad CFDI UUID format."
+  },
+  "annualCategoryMedical": "Honorarios médicos y hospitalarios",
+  "@annualCategoryMedical": {
+    "description": "Deduction category medical."
+  },
+  "annualCategoryMedicalDisability": "Gastos médicos por incapacidad o discapacidad",
+  "@annualCategoryMedicalDisability": {
+    "description": "Deduction category medical_disability."
+  },
+  "annualCategoryFuneral": "Gastos funerarios",
+  "@annualCategoryFuneral": {
+    "description": "Deduction category funeral."
+  },
+  "annualCategoryDonation": "Donativos",
+  "@annualCategoryDonation": {
+    "description": "Deduction category donation."
+  },
+  "annualCategoryMortgage": "Intereses reales de crédito hipotecario",
+  "@annualCategoryMortgage": {
+    "description": "Deduction category mortgage_real_interest."
+  },
+  "annualCategoryRetirement": "Aportaciones voluntarias para el retiro",
+  "@annualCategoryRetirement": {
+    "description": "Deduction category retirement_contribution."
+  },
+  "annualCategoryHealthInsurance": "Primas de seguros de gastos médicos",
+  "@annualCategoryHealthInsurance": {
+    "description": "Deduction category health_insurance."
+  },
+  "annualCategorySchoolTransport": "Transporte escolar obligatorio",
+  "@annualCategorySchoolTransport": {
+    "description": "Deduction category school_transport."
+  },
+  "annualCategoryLocalPayrollTax": "Impuesto local sobre salarios",
+  "@annualCategoryLocalPayrollTax": {
+    "description": "Deduction category local_payroll_tax."
+  },
+  "annualCategoryTuition": "Colegiaturas",
+  "@annualCategoryTuition": {
+    "description": "Deduction category tuition."
+  },
+  "annualCategoryOther": "Otra deducción",
+  "@annualCategoryOther": {
+    "description": "A category unknown to this app version."
+  },
+  "annualSalaryAdd": "Agregar constancia",
+  "@annualSalaryAdd": {
+    "description": "Opens the constancia sheet."
+  },
+  "annualSalaryLoading": "Cargando tus constancias de sueldos…",
+  "@annualSalaryLoading": {
+    "description": "Status while constancias load."
+  },
+  "annualSalaryLoadFailed": "No se pudieron cargar tus constancias de sueldos.",
+  "@annualSalaryLoadFailed": {
+    "description": "Constancias load failure."
+  },
+  "annualSalaryEmpty": "Aún no registras constancias de sueldos de {year}.",
+  "@annualSalaryEmpty": {
+    "description": "Empty constancias list.",
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "annualSalaryTotals": "Total del año",
+  "@annualSalaryTotals": {
+    "description": "Totals card heading."
+  },
+  "annualSalaryAccumulable": "Ingresos gravados (acumulables)",
+  "@annualSalaryAccumulable": {
+    "description": "Accumulable salary."
+  },
+  "annualSalaryExempt": "Ingresos exentos",
+  "@annualSalaryExempt": {
+    "description": "Exempt salary."
+  },
+  "annualSalaryIsrWithheld": "ISR retenido",
+  "@annualSalaryIsrWithheld": {
+    "description": "ISR withheld on salary."
+  },
+  "annualSalaryEmployer": "Nombre del empleador",
+  "@annualSalaryEmployer": {
+    "description": "Optional employer alias."
+  },
+  "annualSalaryEmployerHelp": "Sólo para que la reconozcas: no pedimos el RFC del empleador.",
+  "@annualSalaryEmployerHelp": {
+    "description": "Employer alias help."
+  },
+  "annualSalaryUnnamed": "Constancia {number}",
+  "@annualSalaryUnnamed": {
+    "description": "A constancia without an alias.",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "annualSalaryHelp": "Copia los totales de tu constancia de sueldos (CFDI de retenciones).",
+  "@annualSalaryHelp": {
+    "description": "Sheet intro."
+  },
+  "annualSalaryFormTitle": "Nueva constancia",
+  "@annualSalaryFormTitle": {
+    "description": "Sheet title, new."
+  },
+  "annualSalaryEditTitle": "Editar constancia",
+  "@annualSalaryEditTitle": {
+    "description": "Sheet title, edit."
+  },
+  "annualSalaryMore": "Situaciones especiales",
+  "@annualSalaryMore": {
+    "description": "Disclosure of the special-case boxes."
+  },
+  "annualSalarySimultaneous": "Trabajé para dos o más empleadores al mismo tiempo",
+  "@annualSalarySimultaneous": {
+    "description": "simultaneous."
+  },
+  "annualSalaryLeft": "Dejé de trabajar antes del 31 de diciembre",
+  "@annualSalaryLeft": {
+    "description": "left_before_year_end."
+  },
+  "annualSalaryPayerNotWithholding": "Mi empleador no estaba obligado a retenerme",
+  "@annualSalaryPayerNotWithholding": {
+    "description": "payer_not_withholding."
+  },
+  "annualSalarySaved": "Constancia guardada",
+  "@annualSalarySaved": {
+    "description": "Toast after creating."
+  },
+  "annualSalaryUpdated": "Constancia actualizada",
+  "@annualSalaryUpdated": {
+    "description": "Toast after editing."
+  },
+  "annualSalaryRegimeNotHeld": "No tienes el régimen de sueldos (605) en tus datos: agrégalo para que tu anual lo considere completo.",
+  "@annualSalaryRegimeNotHeld": {
+    "description": "Warning salary_regime_not_held."
+  },
+  "annualSalaryFull": "Llegaste al límite de 20 constancias de este año.",
+  "@annualSalaryFull": {
+    "description": "422 limit_reached on a constancia."
+  },
+  "annualSalaryDiscardTitle": "¿Descartar esta constancia?",
+  "@annualSalaryDiscardTitle": {
+    "description": "Leave-with-changes dialog."
+  },
+  "annualSalaryDeleteTooltip": "Eliminar {name}",
+  "@annualSalaryDeleteTooltip": {
+    "description": "Delete button of one constancia.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "annualSalaryDeleteTitle": "¿Eliminar {name}?",
+  "@annualSalaryDeleteTitle": {
+    "description": "Delete confirmation title.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "annualSalaryDeleteBody": "No se puede deshacer.",
+  "@annualSalaryDeleteBody": {
+    "description": "Delete confirmation body."
+  },
+  "annualSalaryDeleteConfirm": "Eliminar",
+  "@annualSalaryDeleteConfirm": {
+    "description": "Delete confirmation primary."
+  },
+  "annualSalaryDeleteKeep": "Conservar",
+  "@annualSalaryDeleteKeep": {
+    "description": "Delete confirmation cancel."
+  },
+  "annualSalaryDeleted": "Constancia eliminada",
+  "@annualSalaryDeleted": {
+    "description": "Toast after deleting."
+  },
+  "annualSalaryDeleteFailed": "No se pudo eliminar la constancia. Intenta de nuevo.",
+  "@annualSalaryDeleteFailed": {
+    "description": "Delete refused."
+  },
+  "annualPaymentsIntro": "Escribe lo que pagaste cada mes según tus acuses. Los montos estimados los calculó la app.",
+  "@annualPaymentsIntro": {
+    "description": "Filed payments intro."
+  },
+  "annualPaymentsLoading": "Cargando tus pagos provisionales…",
+  "@annualPaymentsLoading": {
+    "description": "Status while filed payments load."
+  },
+  "annualPaymentsLoadFailed": "No se pudieron cargar tus pagos provisionales.",
+  "@annualPaymentsLoadFailed": {
+    "description": "Filed payments load failure."
+  },
+  "annualPaymentsConfirmAll": "Confirmar todos",
+  "@annualPaymentsConfirmAll": {
+    "description": "Stores every shown amount as filed."
+  },
+  "annualPaymentsConfirmAllHelp": "Guarda como pagados los montos que ves en los meses sin confirmar.",
+  "@annualPaymentsConfirmAllHelp": {
+    "description": "Help under Confirmar todos."
+  },
+  "annualPaymentsSourceFiled": "Confirmado",
+  "@annualPaymentsSourceFiled": {
+    "description": "Month confirmed by the user."
+  },
+  "annualPaymentsSourceTaxInput": "De tus datos fiscales — confírmalo",
+  "@annualPaymentsSourceTaxInput": {
+    "description": "Month from the prior_provisional_payments tax input."
+  },
+  "annualPaymentsSourceEstimated": "Estimado por la app — confírmalo",
+  "@annualPaymentsSourceEstimated": {
+    "description": "Month estimated by the app."
+  },
+  "annualPaymentsSourceIncomplete": "Estimado con datos incompletos — confírmalo",
+  "@annualPaymentsSourceIncomplete": {
+    "description": "Month estimated from an incomplete estimate."
+  },
+  "annualPaymentsSourceNone": "Sin estimación: escribe lo que pagaste",
+  "@annualPaymentsSourceNone": {
+    "description": "Month with nothing to prefill."
+  },
+  "annualPaymentsOutOfWindow": "No tenías este régimen en este mes.",
+  "@annualPaymentsOutOfWindow": {
+    "description": "Month outside the regime window."
+  },
+  "annualPaymentsTotal": "Total del año: {amount}",
+  "@annualPaymentsTotal": {
+    "description": "Sum of effective months.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "annualPaymentsSaved": "{count, plural, =0{Pagos guardados: ningún mes confirmado} =1{Pagos guardados: 1 mes confirmado} other{Pagos guardados: {count} meses confirmados}}",
+  "@annualPaymentsSaved": {
+    "description": "Toast after saving.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "annualFactsLoading": "Cargando los datos del año…",
+  "@annualFactsLoading": {
+    "description": "Status while the annual facts load."
+  },
+  "annualFactsLoadFailed": "No se pudieron cargar los datos del año.",
+  "@annualFactsLoadFailed": {
+    "description": "Facts load failure."
+  },
+  "annualFactsPriorYear": "Ingresos acumulables de {year}",
+  "@annualFactsPriorYear": {
+    "description": "Prior-year accumulable income.",
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "annualFactsPriorYearHelp": "Antes de deducciones personales; sirve para el tope de donativos (7 %). Déjalo vacío si no lo sabes.",
+  "@annualFactsPriorYearHelp": {
+    "description": "Prior-year help."
+  },
+  "annualFactsOtherExempt": "Otros ingresos exentos",
+  "@annualFactsOtherExempt": {
+    "description": "Other exempt income."
+  },
+  "annualFactsOtherExemptHelp": "Exentos que no registraste en la app; cuentan para el tope de 15 %.",
+  "@annualFactsOtherExemptHelp": {
+    "description": "Other exempt help."
+  },
+  "annualFactsToldEmployer": "Le avisé a mi empleador que presentaré mi declaración anual",
+  "@annualFactsToldEmployer": {
+    "description": "told_employer_will_file."
+  },
+  "annualFactsSaved": "Datos del año guardados",
+  "@annualFactsSaved": {
+    "description": "Toast after saving the facts."
+  },
+  "annualFactsDiscardTitle": "¿Descartar los cambios?",
+  "@annualFactsDiscardTitle": {
+    "description": "Leave-with-changes dialog."
+  },
+  "annualFactsRegimeTitle": "Datos de tus regímenes",
+  "@annualFactsRegimeTitle": {
+    "description": "Heading over the regime tax inputs."
+  },
+  "annualFactsRegimeHelp": "Pérdidas, PTU y depreciación se capturan en los datos fiscales de cada régimen.",
+  "@annualFactsRegimeHelp": {
+    "description": "Regime tax inputs help."
+  },
+  "annualFactsRegimeEmpty": "Sin capturar",
+  "@annualFactsRegimeEmpty": {
+    "description": "A regime tax input without value."
+  },
+  "annualFactsRegimeEdit": "Editar {label}, régimen {code}",
+  "@annualFactsRegimeEdit": {
+    "description": "Opens the tax input.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "annualFactsMoralNote": "Las personas morales sólo capturan los datos de sus regímenes.",
+  "@annualFactsMoralNote": {
+    "description": "PM note over the read-only list."
   }
 }
