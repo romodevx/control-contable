@@ -139,7 +139,15 @@ func TestAnnualQA_confirmAllKeepsTheFigure(t *testing.T) {
 	assertAnnualFrame(t, after)
 	assert.NotContains(t, disclaimerCodes(after), "payments_estimated", "every payment is confirmed")
 	require.NotEmpty(t, after.Sections)
-	assert.Equal(t, *section.Tax, *after.Sections[0].Tax, "confirming the shown values moves no figure")
+	// Only where the payments come from changes: every estimated month is
+	// now filed, and no figure moves.
+	want, got := *section.Tax, *after.Sections[0].Tax
+	sources := want.Credits.PaymentSources
+	assert.Positive(t, sources.EstimatedByAppMonths)
+	assert.Equal(t, gen.PaymentSourceCounts{FiledMonths: sources.FiledMonths + sources.EstimatedByAppMonths,
+		TaxInputMonths: sources.TaxInputMonths}, got.Credits.PaymentSources, "every estimated month is now filed")
+	want.Credits.PaymentSources, got.Credits.PaymentSources = gen.PaymentSourceCounts{}, gen.PaymentSourceCounts{}
+	assert.Equal(t, want, got, "confirming the shown values moves no figure")
 	assert.Equal(t, section.Status, after.Sections[0].Status)
 }
 
@@ -178,18 +186,29 @@ func TestAnnualQA_personaMoral(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 }
 
-// annualWriteOps are the writes of annualSteps: everything a read-only user
-// or an archived taxpayer must be refused.
+// annualWriteOps are the writes of annualSteps: everything an archived
+// taxpayer must be refused.
 var annualWriteOps = []string{
 	"putAnnualInputs", "createSalaryStatement", "updateSalaryStatement", "deleteSalaryStatement",
 	"createPersonalDeduction", "updatePersonalDeduction", "deletePersonalDeduction", "restorePersonalDeduction",
 	"putFiledPayments",
 }
 
+// readOnlyAllowed are the writes open to a read-only user, with their
+// answer: deletes and Undo, so read-only never makes a delete one-way
+// (ADR-0009, CONTRACT.md 0.6.1, as for records).
+var readOnlyAllowed = map[string]int{
+	"deleteSalaryStatement":    http.StatusNoContent,
+	"deletePersonalDeduction":  http.StatusNoContent,
+	"restorePersonalDeduction": http.StatusOK,
+}
+
 // refusedSweep runs annualSteps with ids already created (a deduction and a
-// constancia), expecting every read served and every write refused with
-// status and, when given, the detail code.
-func refusedSweep(t *testing.T, env contractEnv, f estimateFixture, ids map[string]string, status int, detail string) {
+// constancia), expecting every read served, each write in allowed answered
+// with its status and every other write refused with status and, when
+// given, the detail code.
+func refusedSweep(t *testing.T, env contractEnv, f estimateFixture, ids map[string]string, allowed map[string]int,
+	status int, detail string) {
 	t.Helper()
 	fill := func(s string) string {
 		for placeholder, id := range ids {
@@ -205,6 +224,10 @@ func refusedSweep(t *testing.T, env contractEnv, f estimateFixture, ids map[stri
 			continue
 		}
 		writes++
+		if want, ok := allowed[step.op]; ok {
+			assert.Equal(t, want, rec.Code, "%s: stays open: %s", step.op, rec.Body.String())
+			continue
+		}
 		assert.Equal(t, status, rec.Code, "%s: %s", step.op, rec.Body.String())
 		if detail != "" && rec.Code == status {
 			assert.Contains(t, details(t, rec), detail, step.op)
@@ -240,7 +263,8 @@ func (e contractEnv) createdID(t *testing.T, rec *httptest.ResponseRecorder) str
 }
 
 // US-A13 and §5 on all 15 operations through the stack: a read-only user
-// (trial ended) reads everything and every write is 402; an archived
+// (trial ended) reads everything, may delete and Undo (ADR-0009), and every
+// other write is 402; an archived
 // taxpayer reads everything and every write is 422 taxpayer_archived.
 func TestAnnualQA_readOnlyAndArchivedOnEveryWrite(t *testing.T) {
 	env := newContractEnv(t, pingOK{}, withTaxEngineDay(estToday))
@@ -251,7 +275,7 @@ func TestAnnualQA_readOnlyAndArchivedOnEveryWrite(t *testing.T) {
 		ids := env.annualRecords(t, ana)
 		env.makeReadOnly(t, ana.userID)
 
-		refusedSweep(t, env, ana, ids, http.StatusPaymentRequired, "")
+		refusedSweep(t, env, ana, ids, readOnlyAllowed, http.StatusPaymentRequired, "")
 		assertAnnualFrame(t, env.annualEstimate(t, ana))
 	})
 
@@ -261,7 +285,7 @@ func TestAnnualQA_readOnlyAndArchivedOnEveryWrite(t *testing.T) {
 		rec := env.do(env.send(http.MethodPost, "/v1/taxpayers/"+bea.taxpayer+"/archive", "", bea.token))
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
-		refusedSweep(t, env, bea, ids, http.StatusUnprocessableEntity, "taxpayerId/taxpayer_archived")
+		refusedSweep(t, env, bea, ids, nil, http.StatusUnprocessableEntity, "taxpayerId/taxpayer_archived")
 	})
 }
 
