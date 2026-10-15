@@ -193,6 +193,8 @@ success without running its gates.
 6. Docs are code: update the README, runbooks or package docs in the same PR. Stale docs are bugs.
 
 Work is planned in [PLAN-control-contable.md](docs/project-specs/PLAN-control-contable.md).
+Open cross-module follow-ups, blockers and accepted risks are in
+[FOLLOW-UPS.md](docs/project-specs/FOLLOW-UPS.md): pick `open-unblocked` items from there.
 
 ## Security
 

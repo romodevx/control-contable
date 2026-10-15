@@ -21,6 +21,8 @@
   dependency says so; the work-around for each blocker is in §6.
 - Every task follows TDD (failing test first). "Contract freeze" tasks review, lint and freeze
   the module's paths in the already-drafted `docs/api/openapi.yaml`; they do not invent new API.
+- **Follow-ups** that outlive their PR (owner blockers, per-environment steps, review notes,
+  accepted risks) are tracked in [FOLLOW-UPS.md](FOLLOW-UPS.md).
 
 ### Per-module cycle (fixed order)
 
