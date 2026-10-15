@@ -134,6 +134,18 @@ func (PushToken) MarshalJSON() ([]byte, error) { return []byte(`"` + redactedTok
 // hex HMAC truncated to it, MODULE-reminders §2.4 step 5).
 const MaxCollapseIDBytes = 64
 
+// MaxPushPayloadBytes caps the text a notification carries (title, body,
+// deep link and collapse id), in bytes: half of FCM's 4,096-byte message
+// limit, so the keys and platform blocks around it always fit and FCM never
+// refuses a message for its size (M9 security gate F2). BuildMessage stays
+// far below it (three names of at most 80 characters).
+const MaxPushPayloadBytes = 2048
+
+// payloadBytes is the size of the text n carries (MaxPushPayloadBytes).
+func payloadBytes(n PushNotification) int {
+	return len(n.Title) + len(n.Body) + len(n.DeepLink) + len(n.CollapseID)
+}
+
 // ValidatePush checks a Send's arguments before anything leaves the process.
 // Every PushSender calls it, the fakes included, so a message-builder bug
 // fails the job's tests the way it would fail in production. The error
@@ -148,6 +160,8 @@ func ValidatePush(n PushNotification, targets []PushTarget) error {
 		return fmt.Errorf("%w: body is empty", ErrInvalidPushNotification)
 	case len(n.CollapseID) > MaxCollapseIDBytes:
 		return fmt.Errorf("%w: collapse id over %d bytes", ErrInvalidPushNotification, MaxCollapseIDBytes)
+	case payloadBytes(n) > MaxPushPayloadBytes:
+		return fmt.Errorf("%w: payload over %d bytes", ErrInvalidPushNotification, MaxPushPayloadBytes)
 	}
 	for i, target := range targets {
 		if target.Token.IsZero() {

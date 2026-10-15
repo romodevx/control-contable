@@ -191,6 +191,29 @@ func TestBuildNotification_Refuses(t *testing.T) {
 	require.ErrorIs(t, err, domain.ErrInvalidKind)
 }
 
+// M9 security gate F2: a listed name is at most MaxListedNameRunes
+// characters (the contract's display_name maxLength), so a name that got
+// past the taxpayers module's own check cannot grow the payload.
+func TestBuildNotification_CapsEachName(t *testing.T) {
+	long := strings.Repeat("ñ", domain.MaxListedNameRunes+5)
+	exact := strings.Repeat("b", domain.MaxListedNameRunes)
+	in := domain.MessageInput{
+		Kind: domain.KindDue, Period: april2026(t), DueDate: civil(2026, time.May, 18),
+		Taxpayers: []domain.Listed{{Name: long}, {Name: exact, Estimate: domain.EstimatePending}},
+	}
+
+	names, err := domain.BuildMessage(in)
+	require.NoError(t, err)
+	in.Taxpayers[0].Estimate, in.Taxpayers[0].AmountCents = domain.EstimateAmount, 452000
+	amounts, err := domain.BuildMessage(in)
+	require.NoError(t, err)
+
+	capped := strings.Repeat("ñ", domain.MaxListedNameRunes-1) + "…"
+	assert.Equal(t, "Revisa tu estimado de abril para: "+capped+", "+exact+".", names.Body)
+	assert.True(t, strings.HasPrefix(amounts.Body, capped+": $"), amounts.Body)
+	assert.Contains(t, amounts.Body, exact+": estimado pendiente")
+}
+
 // §2.4 step 5: hex HMAC(user, period, kind), 64 characters (the
 // apns-collapse-id limit), stable, and distinct per key part.
 func TestCollapseID(t *testing.T) {
