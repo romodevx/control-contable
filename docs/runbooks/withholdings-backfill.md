@@ -30,6 +30,38 @@ CREATE ROLE cc_worker_definer NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPL
 GRANT cc_worker_definer TO cc_owner WITH INHERIT FALSE, SET TRUE;
 ```
 
+## Shared environments (staging, production): the safe procedure
+
+Locally, `make -C backend backfill-withholdings` is enough. Anywhere shared, every step below is
+mandatory and is done in this order; skipping one is a stop.
+
+1. **Gate.** WH-15 (security) has passed for this version of the command, and the owner has
+   agreed the window. Pick a low-traffic window: rows are locked `FOR NO KEY UPDATE` per user
+   while derived, so an edit of the same record waits for that user's transaction.
+2. **Credentials.** `DATABASE_URL` is the `cc_worker` secret, read from the secret manager into
+   the environment of the process that runs the command (the worker's runtime, not a laptop
+   shell history). Never the owner's or a superuser's URL: the command refuses them anyway.
+   Never paste the URL into a ticket, a PR or the report.
+3. **Backup.** Take a restorable point first: a managed snapshot / PITR mark, or a `pg_dump`
+   of `incomes` and `expenses` by the bootstrap superuser (`cc_owner` cannot take it: under FORCE
+   RLS it sees no row). Note the snapshot id or LSN and confirm it completed before going on.
+   The dump holds every user's records: it stays encrypted, in the environment's backup store,
+   and is deleted with that store's retention, never copied elsewhere.
+4. **Dry run first.** Run without `-apply` (section 1). Keep the report with the task (it holds
+   record ids and counts only). The owner reviews "different amounts" and "assumed facts"
+   before anything is written.
+5. **Metrics, before.** Record in the task: the dry-run counts per table, the start time, and
+   the command's duration (`time ...`). A count much larger than the number of legacy records
+   (or than the records of the bumped table version) is a stop: find out why first.
+6. **Apply** (section 2), under `time`, with the same `DATABASE_URL`. A failure stops the run
+   with the users before it committed; fix the cause and re-run, it resumes (idempotent).
+7. **Metrics, after.** Run the dry run again (section 3) and record: `0 to re-derive` per table
+   except the "need user input" ids, which must equal the first dry run's; the apply's duration;
+   API error rate and latency over the window (no 5xx or lock-wait spike while it ran).
+8. **Rollback**, only if the derivations are wrong: restore the derived columns of the listed
+   ids from the step 3 backup (the command writes no other column), then fix the kernel and run
+   again. Never drop the backup until step 7 is signed off.
+
 ## 1. Dry run (default): read the report
 
 ```sh
