@@ -504,7 +504,7 @@ M9-07 (FCM) and M9-09 (Flutter push) are built against fakes; live verification 
 | M9-02 | Migration `devices`, `reminder_settings`, `notification_log` (RLS) + definer fns `due_reminder_users`, `claim_push_token` + isolation tests | db-sr | P0-11 | 3.5 | — | `feature/reminders-migrations` | — | [x] |
 | M9-03 | Migration `holidays` (global) seeded 2026–2027 with sources | db-sr | P0-10 | 1.5 | — | `feature/reminders-migrations` | — | [x] |
 | M9-04 | Due-date rule into `internal/kernel/fiscal` (`NextBusinessDay`, `MonthlyDueDate`, `HolidaySet`; ADR-0007 §3 amended), replace both taxengine copies (monthly `duedate.go`, annual `businessDay`) and `noHolidays` with the `holidays` adapter, + `GET /v1/tax-calendar` (TDD, golden 2025-12..2027-11) | backend-sr | M9-01, M9-03, P0-13 | 4 | — | `feature/reminders-calendar` | — | [x] |
-| M9-05 | Devices + reminder settings use cases and handlers, contract tests, flag ON/OFF | backend-sr | M9-02, M1-07 | 3.5 | — | `feature/reminders-settings` | — | [ ] |
+| M9-05 | Devices + reminder settings use cases and handlers, contract tests, flag ON/OFF (push token keys `PUSH_TOKEN_ENC_KEY` / `PUSH_TOKEN_INDEX_PEPPER`, required outside dev) | backend-sr | M9-02, M1-07 | 3.5 | — | `feature/reminders-settings` | — | [x] |
 | M9-06 | Reminder job: due users, per-user tx, `notification_log` exactly-once, bounded errgroup, optional amounts when module_tax_engine ON | backend-sr | P0-27, M9-04, M9-05, M5-22 | 4.5 | — | `feature/reminders-worker` | — | [ ] |
 | M9-07 | FCM sender adapter (Firebase Admin) + UNREGISTERED cleanup, fake in tests | backend-sr | P0-08 | 2.5 | PG-M79 | `feature/reminders-fcm` | OB9 (live check only) | [ ] |
 | M9-08 | Soft-delete purge job (30 days) via `purge_soft_deleted` definer fn (runs regardless of reminder flag) | db-sr | P0-27, M3-02, M4-03, ANN-03 (must also purge `personal_deductions`, ANN-25) | 2 | — | `feature/records-purge-job` | — | [x] |
@@ -524,6 +524,9 @@ M9-07 (FCM) and M9-09 (Flutter push) are built against fakes; live verification 
 | M9-02 N2 | A `pending` row whose day passed is never returned again; marking it `failed` / `error_class = expired` (§2.4 step 5) is the job's write, in that user's transaction | backend-sr | M9-06 |
 | M9-02 N3 | `notification_log` 13-month retention: add it to `purge_soft_deleted` (cutoff-only definer policy + a `created_at` index then) | db-sr | Before `module_reminders` is enabled in a shared environment |
 | M9-02 N4 | `claim_push_token` is owned by `cc_auth_definer` (the API-side definer role) rather than a new bootstrap role; the security gate may ask for a dedicated one | security | M9-14 |
+| M9-05 N1 | Push tokens are sealed by `reminders/infra/pushtoken.Vault` (AES-256-GCM, AAD = installation id ‖ user id; `token_hmac` = unscoped HMAC so the claim matches across users) under their own secrets `PUSH_TOKEN_ENC_KEY` / `PUSH_TOKEN_INDEX_PEPPER` (`_KEY_ID` default 1; `config.LoadReminders`, distinct from every auth and RFC key, required outside dev). The worker must load the same config and open with `Vault.Open` | backend-sr | M9-06, M9-07 |
+| M9-05 N2 | No rotation path for `PUSH_TOKEN_ENC_KEY` yet (one keyring entry, like the RFC key): add a previous-key entry or rely on the app's re-registration before rotating; provision both secrets in the secret manager before the first shared deploy | devops-sr | Before `module_reminders` is enabled in a shared environment |
+| M9-05 N3 | `show_amounts` is stored as chosen whatever `module_tax_engine`'s state; `domain.Settings.AmountsShown(engineOn)` is the rule the job applies (§2.5); the app hides the toggle with the engine OFF | backend-sr + frontend-sr | M9-06, M9-10 |
 
 ### AN — Annual estimate (`module_annual`)
 

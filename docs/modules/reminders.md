@@ -5,7 +5,7 @@
 | Flag | `module_reminders` (OFF by default; implied OFF when `module_taxpayers` is OFF) |
 | Spec | [MODULE-reminders.md](../project-specs/MODULE-reminders.md) |
 | Contract | [`docs/api/openapi.yaml`](../api/openapi.yaml), tag `Reminders`, `x-module: module_reminders` (frozen by M9-01, 0.13.0) |
-| Status | Contract frozen; `getTaxCalendar` built (M9-04); devices, settings and the job in progress (PLAN M9-05..M9-14). The full page lands with the module docs task (M9-15) |
+| Status | Contract frozen; `getTaxCalendar` built (M9-04); devices and settings built (M9-05; push token keys `PUSH_TOKEN_ENC_KEY` / `PUSH_TOKEN_INDEX_PEPPER`); the job in progress (PLAN M9-06..M9-14). The full page lands with the module docs task (M9-15) |
 
 ## Contract highlights
 

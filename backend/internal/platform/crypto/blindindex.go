@@ -44,6 +44,13 @@ func NewEmailIndex(pepper []byte) (*BlindIndex, error) {
 	return newBlindIndex(pepper, normalizeEmail)
 }
 
+// NewTokenIndex returns the token_hmac index of push tokens
+// (MODULE-reminders §2.3): the token is opaque and case-sensitive, so it is
+// hashed exactly as given; only an empty token is refused.
+func NewTokenIndex(pepper []byte) (*BlindIndex, error) {
+	return newBlindIndex(pepper, verbatim)
+}
+
 func newBlindIndex(pepper []byte, normalize func(string) (string, error)) (*BlindIndex, error) {
 	if len(pepper) < MinPepperSize {
 		return nil, fmt.Errorf("%w: %d bytes, want at least %d", ErrInvalidPepper, len(pepper), MinPepperSize)
@@ -121,6 +128,14 @@ func normalizeEmail(email string) (string, error) {
 		return "", ErrEmptyInput
 	}
 	return normalized, nil
+}
+
+// verbatim keeps an opaque value as given; only an empty one is refused.
+func verbatim(value string) (string, error) {
+	if value == "" {
+		return "", ErrEmptyInput
+	}
+	return value, nil
 }
 
 // lowerASCIIRune lower-cases only A-Z. strings.ToLower would also map U+212A

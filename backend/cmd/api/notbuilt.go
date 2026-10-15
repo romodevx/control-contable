@@ -41,22 +41,6 @@ func lowerFirst(s string) string {
 	return string(unicode.ToLower(r)) + s[size:]
 }
 
-func (notBuilt) RegisterDevice(context.Context, gen.RegisterDeviceRequestObject) (gen.RegisterDeviceResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) UnregisterDevice(context.Context, gen.UnregisterDeviceRequestObject) (gen.UnregisterDeviceResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) GetReminderSettings(context.Context, gen.GetReminderSettingsRequestObject) (gen.GetReminderSettingsResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) PutReminderSettings(context.Context, gen.PutReminderSettingsRequestObject) (gen.PutReminderSettingsResponseObject, error) {
-	return nil, errNotBuilt
-}
-
 func (notBuilt) GetSubscription(context.Context, gen.GetSubscriptionRequestObject) (gen.GetSubscriptionResponseObject, error) {
 	return nil, errNotBuilt
 }

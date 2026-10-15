@@ -83,7 +83,7 @@ func schemaExample(t *testing.T, schema string) string {
 // (the second exception to no-store, contract 0.13.0).
 func TestGetTaxCalendar(t *testing.T) {
 	cal := &fakeCalendar{year: calendar2026(t)}
-	h := remindershttp.NewHandler(cal)
+	h := remindershttp.NewHandler(remindershttp.UseCases{Calendar: cal})
 
 	resp, err := h.GetTaxCalendar(asCaller(t), gen.GetTaxCalendarRequestObject{Params: gen.GetTaxCalendarParams{Year: 2026}})
 	require.NoError(t, err)
@@ -99,7 +99,7 @@ func TestGetTaxCalendar(t *testing.T) {
 func TestGetTaxCalendarWithoutPrincipal(t *testing.T) {
 	cal := &fakeCalendar{}
 
-	resp, err := remindershttp.NewHandler(cal).GetTaxCalendar(t.Context(), gen.GetTaxCalendarRequestObject{})
+	resp, err := remindershttp.NewHandler(remindershttp.UseCases{Calendar: cal}).GetTaxCalendar(t.Context(), gen.GetTaxCalendarRequestObject{})
 	require.NoError(t, err)
 	rec := httptest.NewRecorder()
 	require.NoError(t, resp.VisitGetTaxCalendarResponse(rec))
@@ -114,7 +114,7 @@ func TestGetTaxCalendarWithoutPrincipal(t *testing.T) {
 func TestGetTaxCalendarPassesUseCaseErrors(t *testing.T) {
 	cal := &fakeCalendar{err: errCalendarDown}
 
-	_, err := remindershttp.NewHandler(cal).GetTaxCalendar(asCaller(t), gen.GetTaxCalendarRequestObject{Params: gen.GetTaxCalendarParams{Year: 2026}})
+	_, err := remindershttp.NewHandler(remindershttp.UseCases{Calendar: cal}).GetTaxCalendar(asCaller(t), gen.GetTaxCalendarRequestObject{Params: gen.GetTaxCalendarParams{Year: 2026}})
 
 	require.ErrorIs(t, err, errCalendarDown)
 }
@@ -128,17 +128,24 @@ func TestGetTaxCalendarRefusesAZeroDate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			cal := &fakeCalendar{year: usecase.Year{Entries: []usecase.Entry{entry}}}
 
-			_, err := remindershttp.NewHandler(cal).GetTaxCalendar(asCaller(t), gen.GetTaxCalendarRequestObject{Params: gen.GetTaxCalendarParams{Year: 2026}})
+			_, err := remindershttp.NewHandler(remindershttp.UseCases{Calendar: cal}).GetTaxCalendar(asCaller(t), gen.GetTaxCalendarRequestObject{Params: gen.GetTaxCalendarParams{Year: 2026}})
 
 			require.Error(t, err)
 		})
 	}
 }
 
-// MODULE-reminders §2.7: tax_calendar_reads, 120 per hour, burst 60.
+// MODULE-reminders §2.7: tax_calendar_reads, 120 per hour, burst 60;
+// devices_writes, 30 per hour, burst 10, one bucket for register and
+// unregister; reminder_settings_writes, 60 per hour, burst 20. Reads of the
+// settings have no budget of their own (the edge limiter bounds them).
 func TestUserLimits(t *testing.T) {
+	devices := ratelimit.Policy{Scope: "devices_writes", Burst: 10, Interval: 2 * time.Minute}
 	assert.Equal(t, map[string]ratelimit.Policy{
-		"getTaxCalendar": {Scope: "tax_calendar_reads", Burst: 60, Interval: 30 * time.Second},
+		"getTaxCalendar":      {Scope: "tax_calendar_reads", Burst: 60, Interval: 30 * time.Second},
+		"registerDevice":      devices,
+		"unregisterDevice":    devices,
+		"putReminderSettings": {Scope: "reminder_settings_writes", Burst: 20, Interval: time.Minute},
 	}, remindershttp.UserLimits)
 	for _, p := range remindershttp.UserLimits {
 		require.NoError(t, p.Validate())

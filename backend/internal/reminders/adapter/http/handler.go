@@ -1,6 +1,7 @@
 // Package remindershttp is the reminders module's HTTP adapter: it
 // translates between the contract (docs/api/openapi.yaml, module_reminders)
-// and the reminders use cases. Today: getTaxCalendar (M9-04).
+// and the reminders use cases: getTaxCalendar (M9-04), registerDevice,
+// unregisterDevice, getReminderSettings and putReminderSettings (M9-05).
 package remindershttp
 
 import (
@@ -14,6 +15,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/principal"
 	"github.com/romodevx/control-contable/backend/internal/platform/requestid"
+	"github.com/romodevx/control-contable/backend/internal/reminders/domain"
 	"github.com/romodevx/control-contable/backend/internal/reminders/usecase"
 )
 
@@ -35,16 +37,41 @@ type Calendar interface {
 	Year(ctx context.Context, year int) (usecase.Year, error)
 }
 
-// Handler implements getTaxCalendar of gen.StrictServerInterface. cmd/api
-// embeds it in the API server. The user id comes from the principal the
-// router's authenticator verified; use case errors are client-ready
-// *apperr.Error values returned as is (the router writes the envelope).
-type Handler struct {
-	calendar Calendar
+// Devices is the devices use case (usecase.Devices).
+type Devices interface {
+	Register(ctx context.Context, userID string, r usecase.Registration) (usecase.Registered, error)
+	Unregister(ctx context.Context, userID, installationID string) error
 }
 
-// NewHandler returns the handler over the use case.
-func NewHandler(calendar Calendar) *Handler { return &Handler{calendar: calendar} }
+// Settings is the reminder settings use case (usecase.Settings).
+type Settings interface {
+	Get(ctx context.Context, userID string) (domain.Settings, error)
+	Put(ctx context.Context, userID string, in usecase.SettingsInput) (domain.Settings, error)
+}
+
+// UseCases are the module's use cases the handler serves.
+type UseCases struct {
+	Calendar Calendar
+	Devices  Devices
+	Settings Settings
+}
+
+// Handler implements the module_reminders operations of
+// gen.StrictServerInterface. cmd/api embeds it in the API server. The user
+// id comes from the principal the router's authenticator verified; use case
+// errors are client-ready *apperr.Error values returned as is (the router
+// writes the envelope). The push token goes to the use case only: it is
+// never logged, echoed or returned.
+type Handler struct {
+	calendar Calendar
+	devices  Devices
+	settings Settings
+}
+
+// NewHandler returns the handler over the use cases.
+func NewHandler(uc UseCases) *Handler {
+	return &Handler{calendar: uc.Calendar, devices: uc.Devices, settings: uc.Settings}
+}
 
 // GetTaxCalendar implements gen.StrictServerInterface (GET
 // /v1/tax-calendar). The router has validated year against the contract.
