@@ -11,19 +11,15 @@ import (
 
 	"github.com/romodevx/control-contable/backend/internal/platform/flags"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagsgorm"
+	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagtest"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgtest"
 )
 
-// The module flags the migrations seed, all OFF: the baseline's nine and
-// module_annual (ANN-22). demo_full holds every one.
-var seededKeys = []string{
-	"module_annual", "module_auth", "module_dashboard", "module_expenses", "module_history", "module_incomes",
-	"module_reminders", "module_subscriptions", "module_tax_engine", "module_taxpayers",
-}
+// The module flags the migrations seed, all OFF (flagtest.ModuleKeys).
+// demo_full holds every one.
+var seededKeys = flagtest.ModuleKeys()
 
-var demoCore = []string{
-	"module_auth", "module_dashboard", "module_expenses", "module_incomes", "module_tax_engine", "module_taxpayers",
-}
+var demoCore = flagtest.DemoCoreKeys()
 
 func open(t *testing.T, db *sql.DB) *flagsgorm.DB {
 	t.Helper()

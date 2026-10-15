@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"testing"
 
@@ -12,6 +13,7 @@ import (
 
 	"github.com/romodevx/control-contable/backend/internal/platform/flags"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagsgorm"
+	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagtest"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgtest"
 	"github.com/romodevx/control-contable/backend/migrations"
 )
@@ -29,16 +31,21 @@ func runAs(t *testing.T, db *pgtest.Database, role pgtest.Role, args ...string) 
 	return out.String(), err
 }
 
+// modulesON is list's summary line: on modules ON out of the registry.
+func modulesON(on int) string {
+	return fmt.Sprintf("%d of %d modules ON", on, len(flagtest.ModuleKeys()))
+}
+
 func TestExecute_AsOwner(t *testing.T) {
 	db := pgtest.NewDatabase(t)
 
 	out, err := runAs(t, db, pgtest.RoleOwner, "list")
 	require.NoError(t, err)
-	assert.Contains(t, out, "0 of 10 modules ON")
+	assert.Contains(t, out, modulesON(0))
 
 	out, err = runAs(t, db, pgtest.RoleOwner, "apply-preset", "demo_core")
 	require.NoError(t, err)
-	assert.Contains(t, out, "6 of 10 modules ON")
+	assert.Contains(t, out, modulesON(len(flagtest.DemoCoreKeys())))
 
 	out, err = runAs(t, db, pgtest.RoleOwner, "enable", "module_reminders")
 	require.NoError(t, err)
@@ -80,7 +87,7 @@ func TestExecute_RefusesARuntimeRole(t *testing.T) {
 	require.ErrorIs(t, err, migrations.ErrNotOwner)
 	out, err := runAs(t, db, pgtest.RoleOwner, "list")
 	require.NoError(t, err)
-	assert.Contains(t, out, "0 of 10 modules ON", "nothing changed")
+	assert.Contains(t, out, modulesON(0), "nothing changed")
 }
 
 // A preset shows exactly its modules: none of them is hidden by a
