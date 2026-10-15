@@ -516,6 +516,10 @@ WHERE user_id = $1 AND status = 'pending' AND claimed_at < $2::timestamptz - int
 	require.NoError(t, err)
 	assert.Zero(t, affected, "a fresh lease is not")
 
+	_, err = execAsUser(t, worker, userA,
+		"UPDATE notification_log SET status = 'sent', sent_at = now() WHERE user_id = $1", userA)
+	requireSQLState(t, err, sqlstateCheckViolation)
+
 	affected, err = execAsUser(t, worker, userA,
 		"UPDATE notification_log SET status = 'sent', sent_at = now(), devices_ok = 1, devices_failed = 0 WHERE user_id = $1", userA)
 	require.NoError(t, err)
