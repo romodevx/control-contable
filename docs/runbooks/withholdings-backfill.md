@@ -125,11 +125,11 @@ derived record is not visited twice.
 
 ## 5. Not done here
 
-**Before deploying API contract 0.12.0 (WH-11 / WH-12, ADR-0008 amendment) to an
-environment, apply this backfill there.** Since 0.12.0 `Income` requires `counterparty_kind`,
-`operation_kind` and `withholding`, and `Expense` requires `withholding`; the server answers
-`500` for a record without them rather than send a body that breaks the contract. A dry run
-that reports no record to derive is the go signal.
+API contract 0.12.0 (WH-11 / WH-12, ADR-0008 Amendment 2) does **not** depend on this
+backfill having run: a record it has not derived is served with its facts (an income's from
+`counterparty_type`, the same §5.2 mapping as here) and `withholding: null`, and an edit
+derives it. Run the backfill so those records show their derivation and the estimate uses the
+derived amounts, not as a deploy precondition.
 
 The step that drops the `incomes.counterparty_type` column (PLAN WH-08) needs this backfill
 applied in every environment first: the column is the only source of a legacy income's

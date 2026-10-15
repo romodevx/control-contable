@@ -209,17 +209,28 @@ request does not change; the schemas now say what the server already did.
    sending it in the same PR.
 2. **Required.** `IncomeCreate.counterparty_kind` (the server already answered
    `400 required`). `Income`: `counterparty_kind`, `operation_kind`, `residential_rent`,
-   `via_platform`, `withholding`. `IncomeDefaults.last_used`. `Expense`: `supplier_kind`,
-   `supplier_regime`, `operation_kind` (all three nullable), `residential_rent`,
-   `withholding`. `isr_withheld_cents` / `iva_withheld_cents` stay in responses as the
-   read-only mirrors (§7.3).
-3. **A record without a derivation is a server fault.** Required means the server can never
-   send a legacy income or expense the WH-08 backfill has not derived. The presenters answer
-   `500` for one (logged, no body that breaks the contract) instead of omitting the members.
-   Deriving on read was rejected: §2 keeps reads pure and the table version auditable. So the
-   **backfill is a deploy precondition of 0.12.0** in each environment
-   ([runbook](../runbooks/withholdings-backfill.md) §5). All withholdings modules are still
-   OFF in every shared environment (OQ-W6), so no user meets the `500` meanwhile.
+   `via_platform`, `withholding` (nullable, item 3). `IncomeDefaults.last_used`. `Expense`:
+   `supplier_kind`, `supplier_regime`, `operation_kind` (all three nullable),
+   `residential_rent`, `withholding` (nullable, item 3). `isr_withheld_cents` /
+   `iva_withheld_cents` stay in responses as the read-only mirrors (§7.3).
+3. **A record the backfill has not derived is served; no deploy order.** The first draft
+   answered `500` for a legacy record and made the WH-08 backfill a deploy precondition. That
+   was rejected in review: the backfill leaves its "need user input" rows underived for good
+   (a regime no longer held, a date out of range), so those records, and every list page
+   holding one, would answer `500` forever and could never be opened to be fixed; and any
+   environment deployed before its run would fail the same way. Instead:
+   - **Facts.** The incomes use case fills a legacy income's missing facts with the
+     backfill's own §5.2 mapping (`legacyFacts`: `counterparty_type`, then the regime
+     default) on every load: get, list, update, restore and the create replay. A diff-only
+     `PATCH` therefore applies to the facts the read served, and an edit derives and stores
+     them. `counterparty_type` is `NOT NULL` with a CHECK, so the mapping is total. A legacy
+     expense's supplier facts were already nullable.
+   - **Withholding.** `Income.withholding` and `Expense.withholding` are required but
+     nullable: `null` only for a record stored before automatic derivation that the server
+     has not derived. A read never derives (§2 keeps reads pure, the table version auditable,
+     and the estimate still uses the stored amounts until the record is derived), so serving
+     a figure the estimate does not use was ruled out. The backfill, or an edit, derives it.
+   - A record with facts but a corrupt derivation (an unknown withholder) is still a `500`.
 4. **Dead code removed with the members.** The income suggestion table
    (`domain.PolicyFor`, `WithholdingPolicy.Suggest`) only fed the removed `IncomeDefaults`
    fields, so it is deleted; `fiscal.DeriveWithholdings` is the only withholding table left.
