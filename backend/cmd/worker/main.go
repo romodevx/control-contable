@@ -92,13 +92,36 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 // short transactions; a run cut short resumes on the next tick).
 const recordsPurgeTimeout = 10 * time.Minute
 
-// newRegistry registers the production jobs over pool (cc_worker). Module jobs
-// check their flag on every run and skip while the module is OFF
-// (feature_flags is readable by cc_worker); the records purge never does.
-// push is the reminders' sender (M9-07) and keys the push token keys the API
-// seals with, for the reminder job (M9-06). In dev without keys the job is
-// not registered (logged); outside dev config requires them.
+// scheduledJob is a production job with the timeout each of its runs gets.
+type scheduledJob struct {
+	job     worker.Job
+	timeout time.Duration
+}
+
+// newRegistry registers the production jobs (newJobs) over pool (cc_worker),
+// on the system clock.
 func newRegistry(pool *sql.DB, logger *slog.Logger, push reminders.PushSender, keys config.Reminders) (*worker.Registry, error) {
+	jobs, err := newJobs(pool, logger, push, keys, clock.NewSystem())
+	if err != nil {
+		return nil, err
+	}
+	reg := &worker.Registry{}
+	for _, j := range jobs {
+		if err := reg.Register(j.job, j.timeout); err != nil {
+			return nil, err
+		}
+	}
+	return reg, nil
+}
+
+// newJobs builds the production jobs over pool (cc_worker), in registration
+// order. Module jobs check their flag on every run and skip while the module
+// is effectively OFF (feature_flags is readable by cc_worker); the records
+// purge never does (MODULE-reminders §3). push is the reminders' sender
+// (M9-07) and keys the push token keys the API seals with, for the reminder
+// job (M9-06); now is its clock. In dev without keys the reminder job is not
+// built (logged); outside dev config requires them.
+func newJobs(pool *sql.DB, logger *slog.Logger, push reminders.PushSender, keys config.Reminders, now clock.Clock) ([]scheduledJob, error) {
 	units, err := pgdb.NewTxManager(pool)
 	if err != nil {
 		return nil, err
@@ -110,22 +133,16 @@ func newRegistry(pool *sql.DB, logger *slog.Logger, push reminders.PushSender, k
 	if err != nil {
 		return nil, err
 	}
-	reg := &worker.Registry{}
-	if err := reg.Register(purge, recordsPurgeTimeout); err != nil {
-		return nil, err
-	}
+	jobs := []scheduledJob{{job: purge, timeout: recordsPurgeTimeout}}
 	if !hasReminderKeys(keys) {
 		logger.Warn("reminders disabled", slog.String("reason", "PUSH_TOKEN_ENC_KEY / PUSH_TOKEN_INDEX_PEPPER are not set"))
-		return reg, nil
+		return jobs, nil
 	}
-	job, err := newReminderJob(pool, units, logger, push, keys, clock.NewSystem())
+	job, err := newReminderJob(pool, units, logger, push, keys, now)
 	if err != nil {
 		return nil, err
 	}
-	if err := reg.Register(job, remindersTimeout); err != nil {
-		return nil, err
-	}
-	return reg, nil
+	return append(jobs, scheduledJob{job: job, timeout: remindersTimeout}), nil
 }
 
 // newRunner builds the Runner over pool (cc_worker); the leader lock is held
