@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
+	"github.com/romodevx/control-contable/backend/cmd/internal/profiles"
 	expenseshttp "github.com/romodevx/control-contable/backend/internal/expenses/adapter/http"
 	expdomain "github.com/romodevx/control-contable/backend/internal/expenses/domain"
 	expinfra "github.com/romodevx/control-contable/backend/internal/expenses/infra"
@@ -18,12 +19,6 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/tx"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/infra/ratecatalog"
 	tpusecase "github.com/romodevx/control-contable/backend/internal/taxpayers/usecase"
-)
-
-// The regime options that change an expense category's hint.
-const (
-	optionDeductionMode    = "deduction_mode"    // 606
-	optionDefinitiveOption = "definitive_option" // 625
 )
 
 // expensesWiring is what the expenses module needs from the composition
@@ -90,25 +85,7 @@ func (a taxpayerProfiles) Profile(ctx context.Context, userID, taxpayerID string
 	if err != nil {
 		return expusecase.TaxpayerProfile{}, err
 	}
-	out := expusecase.TaxpayerProfile{PersonType: fiscal.PersonType(p.PersonType), Archived: p.Archived}
-	for _, r := range p.Regimes {
-		out.Regimes = append(out.Regimes, regimeHold(r))
-	}
-	return out, nil
-}
-
-func regimeHold(r tpusecase.RegimeProfile) expusecase.RegimeHold {
-	hold := expusecase.RegimeHold{Code: fiscal.RegimeCode(r.Code), StartPeriod: r.Window.Start.String()}
-	if !r.Window.IsOpen() {
-		hold.EndPeriod = r.Window.End.String()
-	}
-	if mode, ok := r.Options[optionDeductionMode].Text(); ok {
-		hold.Options.DeductionMode = expdomain.DeductionMode(mode)
-	}
-	if definitive, ok := r.Options[optionDefinitiveOption].Bool(); ok {
-		hold.Options.DefinitiveOption = definitive
-	}
-	return hold
+	return profiles.Expenses(p), nil
 }
 
 // expenseParameters adapts the tax engine's RateCatalog (M5-08), bound to

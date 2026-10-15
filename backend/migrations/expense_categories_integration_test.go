@@ -376,7 +376,8 @@ func TestExpenseCatalog_ReadOnlyForTheApp(t *testing.T) {
 
 func TestExpenseCatalog_NoOtherRuntimeRoleReadsIt(t *testing.T) {
 	db := pgtest.NewDatabase(t)
-	for _, role := range []pgtest.Role{pgtest.RoleWebhook, pgtest.RoleWorker} {
+	// cc_worker reads the catalog since WH-08 (20261018100000, the withholdings backfill).
+	for _, role := range []pgtest.Role{pgtest.RoleWebhook} {
 		for _, table := range expenseCatalogTables {
 			t.Run(string(role)+"/"+table, func(t *testing.T) {
 				_, err := db.Connect(t, role).ExecContext(t.Context(), "SELECT 1 FROM "+table)
