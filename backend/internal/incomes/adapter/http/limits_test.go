@@ -35,24 +35,16 @@ func TestUserLimits_coverEveryWriteOfTheModule(t *testing.T) {
 	}
 
 	require.Len(t, writes, 4)
-	// 4 reads since contract 0.10.0: previewIncomeWithholdings spends its own
-	// withholding_previews budget, wired by WH-06 with its handler (ADR-0008).
 	require.Len(t, reads, 4)
-	assert.ElementsMatch(t, writes, keys(incomeshttp.UserLimits))
-	for _, id := range reads {
-		assert.NotContains(t, incomeshttp.UserLimits, id, "reads spend no write budget")
+	writeBudget := ratelimit.PerWindow("income_writes", 300, time.Hour)
+	previews := ratelimit.PerWindow("withholding_previews", 1200, time.Hour)
+	want := map[string]ratelimit.Policy{"previewIncomeWithholdings": previews}
+	for _, id := range writes {
+		want[id] = writeBudget
 	}
-	want := ratelimit.PerWindow("income_writes", 300, time.Hour)
-	for id, policy := range incomeshttp.UserLimits {
-		assert.Equal(t, want, policy, "%s shares the one write budget", id)
+	assert.Equal(t, want, incomeshttp.UserLimits,
+		"writes share one budget; the preview spends withholding_previews (ADR-0008 §4); other reads none")
+	for _, policy := range incomeshttp.UserLimits {
 		require.NoError(t, policy.Validate())
 	}
-}
-
-func keys(m map[string]ratelimit.Policy) []string {
-	out := make([]string, 0, len(m))
-	for k := range m {
-		out = append(out, k)
-	}
-	return out
 }

@@ -1,6 +1,7 @@
 package usecase_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -116,6 +117,7 @@ func TestDefaults(t *testing.T) {
 			got, err := h.uc.Defaults(t.Context(), userA, tt.q)
 
 			require.NoError(t, err)
+			got.LastUsed = usecase.LastFacts{} // TestDefaults_LastUsed
 			assert.Equal(t, tt.want, got)
 			assert.Equal(t, []string{"ro"}, h.tx.modes, "a read: allowed read-only")
 			assert.Zero(t, h.access.ensures)
@@ -178,4 +180,34 @@ func TestDefaults_NotFound(t *testing.T) {
 		_, err := h.uc.Defaults(t.Context(), userA, usecase.DefaultsQuery{TaxpayerID: id, Regime: "612", Counterparty: domain.CounterpartyPublic})
 		requireApp(t, err, apperr.CodeNotFound)
 	}
+}
+
+// IncomeLastUsed (MODULE-withholdings §2.1): the first time no counterparty
+// is preselected (OQ-W2) and the operation is the regime's; afterwards the
+// facts of the newest income in the regime.
+func TestDefaults_LastUsed(t *testing.T) {
+	q := usecase.DefaultsQuery{TaxpayerID: taxpayerA, Regime: "612", Counterparty: domain.CounterpartyMoral, On: "2026-09-12"}
+	h := newHarness(t)
+
+	got, err := h.uc.Defaults(t.Context(), userA, q)
+	require.NoError(t, err)
+	assert.Equal(t, usecase.LastFacts{Operation: fiscal.OperationProfessionalServices}, got.LastUsed)
+
+	in := us1(t)
+	in.Counterparty, in.Operation = fiscal.ReceptorGovFederal, fiscal.OperationCommission
+	_, err = h.uc.Create(t.Context(), userA, create(incomeID, taxpayerA, in))
+	require.NoError(t, err)
+	got, err = h.uc.Defaults(t.Context(), userA, q)
+	require.NoError(t, err)
+	assert.Equal(t, usecase.LastFacts{Counterparty: fiscal.ReceptorGovFederal, Operation: fiscal.OperationCommission}, got.LastUsed)
+
+	platform := q
+	platform.TaxpayerID, platform.Regime, platform.Counterparty = platformA, "625", domain.CounterpartyPlatform
+	got, err = h.uc.Defaults(t.Context(), userA, platform)
+	require.NoError(t, err)
+	assert.Equal(t, usecase.LastFacts{Operation: fiscal.OperationOther, ViaPlatform: true}, got.LastUsed, "625 starts via a platform")
+
+	h.store.lastFactsErr = errors.New("connection reset")
+	_, err = h.uc.Defaults(t.Context(), userA, q)
+	require.Error(t, err)
 }

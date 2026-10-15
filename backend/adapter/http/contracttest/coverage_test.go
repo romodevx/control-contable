@@ -17,9 +17,6 @@ import (
 // operation to the contract means adding it here (with its task) or covering
 // it in the same PR.
 var pendingOperations = map[string]string{
-	// Withholdings (ADR-0008): the previews ship with their module's derivation.
-	"previewIncomeWithholdings":  "WH-06",
-	"previewExpenseWithholdings": "WH-07",
 	// module_annual (ADR-0009): handlers and contract tests ship together.
 	"getAnnualEstimate":        "ANN-15",
 	"getAnnualBreakdown":       "ANN-15",

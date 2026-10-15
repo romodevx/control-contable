@@ -152,15 +152,16 @@ func (e *env) wire(t *testing.T, options ...envOption) *env {
 		Directory: tpinfra.NewCatalog(), Records: tpinfra.NoRecords{}, Clock: clock.NewFixed(today),
 	})
 	deps := usecase.Deps{
-		Tx:         e.txm,
-		Access:     access.NewPolicy(e.txm, accessgorm.NewStore(), accessgorm.NewStore(), clock.NewSystem()),
-		Regimes:    queries,
-		Taxpayers:  profileAdapter{queries: queries},
-		Expenses:   infra.NewStore(),
-		Categories: infra.NewCategoryCatalog(),
-		Parameters: parametersAdapter{Catalog: catalog},
-		Clock:      clock.NewFixed(today),
-		Logger:     slog.New(slog.NewJSONHandler(e.logs, &slog.HandlerOptions{Level: slog.LevelDebug})),
+		Tx:           e.txm,
+		Access:       access.NewPolicy(e.txm, accessgorm.NewStore(), accessgorm.NewStore(), clock.NewSystem()),
+		Regimes:      queries,
+		Taxpayers:    profileAdapter{queries: queries},
+		Expenses:     infra.NewStore(),
+		Categories:   infra.NewCategoryCatalog(),
+		Parameters:   parametersAdapter{Catalog: catalog},
+		Withholdings: catalog.Withholdings(),
+		Clock:        clock.NewFixed(today),
+		Logger:       slog.New(slog.NewJSONHandler(e.logs, &slog.HandlerOptions{Level: slog.LevelDebug})),
 	}
 	for _, o := range options {
 		o(&deps)

@@ -17,10 +17,19 @@ var writeBudget = ratelimit.PerWindow("expense_writes", 300, time.Hour)
 // UserLimits are the per-user limits of the module by operationId, keyed by
 // the authenticated user. cmd/api hands them to the router, which applies
 // them right after authentication. Reads are not limited here (the edge
-// limiter covers them).
+// limiter covers them), except the withholding preview, which the form calls
+// as the user types.
 var UserLimits = map[string]ratelimit.Policy{
-	"createExpense":  writeBudget,
-	"updateExpense":  writeBudget,
-	"deleteExpense":  writeBudget,
-	"restoreExpense": writeBudget,
+	"createExpense":              writeBudget,
+	"updateExpense":              writeBudget,
+	"deleteExpense":              writeBudget,
+	"restoreExpense":             writeBudget,
+	"previewExpenseWithholdings": PreviewBudget,
 }
+
+// PreviewBudget is the per-user budget of the withholding previews (ADR-0008
+// §4): 1200 per hour, burst 1200, separate from the write budgets. Its scope
+// is the one previewIncomeWithholdings spends too (a bucket per scope and
+// user), so both forms share one budget without the modules importing each
+// other; cmd/api checks the two policies are equal.
+var PreviewBudget = ratelimit.PerWindow("withholding_previews", 1200, time.Hour)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/romodevx/control-contable/backend/internal/expenses/domain"
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/access"
 )
@@ -118,6 +119,19 @@ func sameRequest(e StoredExpense, taxpayerID string, in CreateInput, description
 	d := in.Draft
 	return !e.Deleted && e.TaxpayerID == taxpayerID && e.Regime == in.Regime && e.Category == d.Category &&
 		e.Amount == d.Amount && e.IVARate == d.IVARate && e.IVA == d.IVA && e.PaymentMethod == d.PaymentMethod &&
-		e.PaidOn == d.PaidOn && e.HasCFDI == d.HasCFDI && e.CFDIUUID == d.CFDIUUID && e.Withheld == d.Withheld &&
-		e.Description == description && overrideOf(e) == d.Deductible
+		e.PaidOn == d.PaidOn && e.HasCFDI == d.HasCFDI && e.CFDIUUID == d.CFDIUUID &&
+		sameSupplier(e.Supplier, d.Supplier) && e.Description == description && overrideOf(e) == d.Deductible
+}
+
+// sameSupplier compares the stored supplier facts with a request's: an
+// omitted operation or persona física regime matches the default the
+// first create resolved (the category's operation, "No sé").
+func sameSupplier(stored, sent domain.Supplier) bool {
+	if sent.Operation == "" {
+		sent.Operation = stored.Operation
+	}
+	if sent.Regime == "" && sent.Kind == domain.SupplierPFWithActivity {
+		sent.Regime = domain.SupplierRegimeUnknown
+	}
+	return stored == sent
 }

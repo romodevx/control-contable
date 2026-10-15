@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Control Contable API
-  version: 0.11.2
+  version: 0.11.3
   summary: Monthly IVA and provisional ISR estimates for Mexican taxpayers.
   description: |
     Spec-first contract (single source of truth). Server stubs (oapi-codegen),
@@ -1303,7 +1303,7 @@ paths:
     post:
       tags: [Incomes]
       operationId: createIncome
-      x-frozen: sha256:0c6ff1a0d075386a3fd18127fc18a534dcc0dfd38d6c2857602d31ff64a055c9
+      x-frozen: sha256:b2baef0bc8085783a2230d895b542c0b3bf833f4d9df9d7895f6239e45866c9e
       summary: Record an income (idempotent client id; trial cap enforced)
       description: >-
         Records an income of the active taxpayer. Amounts are MXN centavos (`int64`), the
@@ -1348,7 +1348,7 @@ paths:
         `isr_withheld_cents` / `iva_withheld_cents` → `withholding_not_applicable` (the
         person type, regime and `counterparty_type` allow no such withholding),
         `withholding_exceeds_base` (ISR above `amount_cents`, IVA above `iva_cents`), both
-        retired by WH-06; `platform_activity` → `activity_not_held` (not among the taxpayer's
+        retired by WH-06 (never sent since 0.11.3); `platform_activity` → `activity_not_held` (not among the taxpayer's
         625 activities); `iva_rate` → `residential_rent_exempt` (`residential_rent: true` with
         a rate other than `exempt`). `via_platform: true` outside 625 and persona moral
         regimes → `400` `not_for_regime`.
@@ -1359,9 +1359,13 @@ paths:
         `operation_kind`, `residential_rent`, `via_platform` and the amounts, stores them with
         the rule ids and `table_version`, and returns them read-only in `withholding` (mirrored
         in `isr_withheld_cents` / `iva_withheld_cents`). There is no manual override.
-        **Transition:** until WH-06 lands the server still stores the typed amounts of the
-        deprecated fields and omits `withholding`; WH-06 removes the deprecated fields
-        (contract step, 0.10.x).
+        **0.11.3 (WH-06):** `counterparty_kind` is required (`400 required`); a body that
+        carries `isr_withheld_cents` or `iva_withheld_cents`, whatever the value, answers
+        `400 validation_failed` with `additionalProperties` on that field, the same answer a
+        schema without them gives. The deprecated members stay in the schema only so the
+        generated clients keep compiling until WH-11 drops them; `counterparty_type` is still
+        required by the schema and ignored by the server (the stored value mirrors
+        `counterparty_kind` and `via_platform`).
 
 
         Success bodies carry non-blocking `warnings` (MODULE-incomes §2.8, MODULE-withholdings
@@ -1370,7 +1374,7 @@ paths:
         `collected_on` / `invoiced_on` (the date reads a provisional parameter set, see
         `WarningCode`); `withholding_cpa_unverified` on `withholding`;
         `foreign_counterparty_not_supported` on `counterparty_kind`.
-        `withholding_differs_from_rate` (on the typed amounts) is sent only until WH-06.
+        `withholding_differs_from_rate` is retired (never sent since 0.11.3).
         Messages never carry amounts, descriptions or UUIDs.
       x-module: module_incomes
       security:
@@ -1672,7 +1676,7 @@ paths:
     get:
       tags: [Incomes]
       operationId: getIncomeDefaults
-      x-frozen: sha256:256de17b2fe9ed9e298a25cdd4c1b9a59af62860852cd7b2e90d0e5a113de084
+      x-frozen: sha256:788554798f7e34b6c4e3b00a2e37d7c2b7b5ce001d16d7c33f144b9207ccd71a
       summary: IVA rates and suggested withholding rates for a new income (prefills the form)
       description: >-
         Resolved from the rate catalog (`RateCatalog`, dated parameter data) for the
@@ -1691,8 +1695,9 @@ paths:
 
 
         **0.10.0 (ADR-0008):** `last_used` carries the withholding facts to preselect
-        (MODULE-withholdings §2.1). The `*_withholding_*` fields and the `counterparty_type`
-        parameter are deprecated; WH-06 removes them (the derived figures come from
+        (MODULE-withholdings §2.1); since 0.11.3 (WH-06) it is always sent. The
+        `*_withholding_*` fields and the `counterparty_type` parameter are deprecated and kept
+        for the shipped form until WH-11 (the derived figures come from
         `previewIncomeWithholdings`).
       x-module: module_incomes
       security:
@@ -1706,7 +1711,7 @@ paths:
           in: query
           required: true
           deprecated: true
-          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
+          x-deprecated-reason: Removed from the contract by WH-11 (ADR-0008 amendment); withholdings are derived.
           description: Deprecated in 0.10.0; removed by WH-06 (ADR-0008).
           schema: { $ref: '#/components/schemas/CounterpartyType' }
         - $ref: '#/components/parameters/OnDate'
@@ -2191,7 +2196,7 @@ paths:
     post:
       tags: [Expenses]
       operationId: createExpense
-      x-frozen: sha256:4dcd1f275a997fa10cbdeeb4d9adf179c65f0e4159747db7a7b6be0c19ed5730
+      x-frozen: sha256:6e39111001b946153b3f6498e8b60da20f474fe3e0c4ac66a818f6f62eab52a2
       summary: Record an expense (idempotent client id; trial cap enforced)
       description: >-
         Records an expense of the active taxpayer. Idempotency, order of checks, regime
@@ -2216,11 +2221,11 @@ paths:
         `taxpayerId` → `taxpayer_archived`; `iva_rate` → `rate_not_valid_on_date`;
         `iva_cents` → `iva_amount_mismatch`; `isr_withheld_cents` / `iva_withheld_cents` →
         `withholding_not_applicable` (only a persona moral withholds from its suppliers),
-        `withholding_exceeds_base`, both retired by WH-07; `supplier_kind` /
+        `withholding_exceeds_base`, both retired by WH-07 (never sent since 0.11.3); `supplier_kind` /
         `supplier_regime` / `operation_kind` / `residential_rent` → `supplier_not_applicable`
         (a persona física taxpayer, or `supplier_regime` without `supplier_kind:
-        pf_with_activity`); `iva_rate` → `residential_rent_exempt`. Once WH-07 lands a persona
-        moral without `supplier_kind` answers `400` `required` on it.
+        pf_with_activity`); `iva_rate` → `residential_rent_exempt`. Since 0.11.3 (WH-07) a
+        persona moral without `supplier_kind` answers `400` `required` on it.
 
 
         **Withholdings are derived (ADR-0008, MODULE-withholdings §2.2, §3).** For a persona
@@ -2229,9 +2234,12 @@ paths:
         `withholding` (`withholder: you`, `remit_due_on` the 17th of the next month);
         `deductible` keeps the category rule, and the deduction is conditioned on the
         remittance (warning `deduction_requires_remittance`). A persona física taxpayer always
-        gets a zero `withholding` with `withholder: none`. **Transition:** until WH-07 lands the
-        server still stores the typed amounts of the deprecated fields and omits
-        `withholding`; WH-07 removes them (contract step, 0.10.x).
+        gets a zero `withholding` with `withholder: none`. `creditable_iva_cents` (the M5 input,
+        not on the wire) becomes the creditable share of the IVA **paid** (IVA − IVA withheld);
+        the creditable share of the IVA withheld is credited the month after its remittance
+        (LIVA 5 fr. IV, WH-09). **0.11.3 (WH-07):** `isr_withheld_cents` /
+        `iva_withheld_cents` with any value answer `400 additionalProperties`; they stay in the
+        schema only until WH-12 regenerates the Dart client.
 
 
         Success bodies carry non-blocking `warnings`: `cash_over_threshold` on
@@ -5400,12 +5408,13 @@ components:
                   details:
                     - { field: taxpayerId, code: taxpayer_archived, message: Desarchiva al contribuyente primero. }
     IncomeRuleViolation:
-      x-frozen: sha256:954d42efac186995b1ac869807399df3369c8df19abb9c3bed0b5c939a0e47db
+      x-frozen: sha256:f364ecdec024fcd3161d41491b6d1de1cf84556d0ffb3215999745c7585a46b3
       description: >-
         Well-formed but violates an income rule: regime window, archived taxpayer, IVA rate
         or amount, withholdings, 625 activity (`details[].code`: see `createIncome`).
         `withholding_not_applicable` and `withholding_exceeds_base` are retired by WH-06 (no
-        typed amount is left to check); `residential_rent_exempt` is new in 0.10.0.
+        typed amount is left to check; never sent since 0.11.3); `residential_rent_exempt` is
+        new in 0.10.0.
       headers:
         Cache-Control: { $ref: '#/components/headers/NoStore' }
       content:
@@ -6645,10 +6654,10 @@ components:
         (`getTaxpayerEstimate`).
       examples: ['2026-09-10']
     CounterpartyType:
-      x-frozen: sha256:72a87f097acbb3f963c1c6a1c21c0b14ee23359f92328b3d27aac2dedc27c4a1
+      x-frozen: sha256:426e7cb2dcf354102862a0cda7882b9201bf772ca72175acb37f4c269727f96a
       type: string
       deprecated: true
-      x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
+      x-deprecated-reason: Removed from the contract by WH-11 (ADR-0008 amendment); withholdings are derived.
       enum: [persona_fisica, persona_moral, publico_general, plataforma]
       description: >-
         **Deprecated in 0.10.0** (ADR-0008): replaced by `CounterpartyKind` plus `via_platform`.
@@ -6919,7 +6928,7 @@ components:
           isr_withheld_cents: 100000
           iva_withheld_cents: 106667
     IncomeCreate:
-      x-frozen: sha256:e0ff1f603de41f4d2e3120b48d3417a770f4f9d60466eae9916e5d18b08be6da
+      x-frozen: sha256:0db367425d29ac60e211b2ea5c3cf9ccddd89808777178e8b3989988b6d7ffd1
       type: object
       required: [regime_code, counterparty_type, amount_cents, iva_rate, iva_cents]
       additionalProperties: false
@@ -6928,11 +6937,12 @@ components:
         The date the regime's basis needs is required by the server: `collected_on` (cash
         regimes) or `invoiced_on` (accrual regimes). Withholdings are **derived** from
         `counterparty_kind`, `operation_kind`, `residential_rent` and `via_platform`
-        (ADR-0008); no request carries an amount. **Transition (0.10.0 → WH-06):** the deprecated
-        `counterparty_type`, `isr_withheld_cents` and `iva_withheld_cents` are still read until
-        WH-06 lands; WH-06 removes them (sending them then answers `400 additionalProperties`)
-        and makes `counterparty_kind` required. New clients send both `counterparty_type` and
-        `counterparty_kind` meanwhile and never the typed amounts.
+        (ADR-0008); no request carries an amount. **0.11.3 (WH-06):** `counterparty_kind` is
+        required (`400 required`); `isr_withheld_cents` / `iva_withheld_cents` with any value
+        answer `400 additionalProperties`; the deprecated `counterparty_type` is still required
+        by the schema and ignored (its stored value mirrors `counterparty_kind` and
+        `via_platform`). The deprecated members leave the schema with WH-11, which regenerates
+        the Dart client with the new form.
       properties:
         id:
           $ref: '#/components/schemas/Uuid'
@@ -6941,7 +6951,7 @@ components:
         counterparty_type: { $ref: '#/components/schemas/CounterpartyType' }
         counterparty_kind:
           $ref: '#/components/schemas/CounterpartyKind'
-          description: Required once WH-06 lands (`required` on `counterparty_kind`).
+          description: Required since 0.11.3 (`400 required` when missing).
         operation_kind:
           $ref: '#/components/schemas/OperationKind'
           description: >-
@@ -6969,13 +6979,13 @@ components:
         isr_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
           deprecated: true
-          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
-          description: Deprecated in 0.10.0, removed by WH-06 (ADR-0008). ISR withheld by the payer (default 0); at most `amount_cents`.
+          x-deprecated-reason: Removed from the contract by WH-11 (ADR-0008 amendment); withholdings are derived.
+          description: Retired by WH-06 (0.11.3, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
         iva_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
           deprecated: true
-          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
-          description: Deprecated in 0.10.0, removed by WH-06 (ADR-0008). IVA withheld by the payer (default 0); at most `iva_cents`.
+          x-deprecated-reason: Removed from the contract by WH-11 (ADR-0008 amendment); withholdings are derived.
+          description: Retired by WH-06 (0.11.3, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
         invoiced_on:
           oneOf:
             - $ref: '#/components/schemas/BusinessDate'
@@ -7006,15 +7016,15 @@ components:
           collected_on: '2026-09-10'
           description: Diseño de logotipo
     IncomeUpdate:
-      x-frozen: sha256:8bf82fecd070d946d4c29edbdf3c6adc579dd7cbb312411347046e4e84110b9c
+      x-frozen: sha256:5e17d8d2b9a8e70795fb99e5a3c7c8ecd5565f5098948eec84d9b01f97f22c8f
       type: object
       minProperties: 1
       additionalProperties: false
       description: >-
         Merge-patch on top-level fields: absent = unchanged, `null` clears a nullable field.
         `id` is immutable and not accepted. Any change re-derives the withholding (ADR-0008).
-        The deprecated `counterparty_type`, `isr_withheld_cents` and `iva_withheld_cents` are
-        removed by WH-06 (see `IncomeCreate`).
+        Since 0.11.3 (WH-06) `isr_withheld_cents` / `iva_withheld_cents` with any value answer
+        `400 additionalProperties` and `counterparty_type` is ignored (see `IncomeCreate`).
       properties:
         regime_code: { $ref: '#/components/schemas/RegimeCode' }
         counterparty_type: { $ref: '#/components/schemas/CounterpartyType' }
@@ -7028,13 +7038,13 @@ components:
         isr_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
           deprecated: true
-          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
-          description: Deprecated in 0.10.0, removed by WH-06 (ADR-0008).
+          x-deprecated-reason: Removed from the contract by WH-11 (ADR-0008 amendment); withholdings are derived.
+          description: Retired by WH-06 (0.11.3). Any value answers `400 additionalProperties`.
         iva_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
           deprecated: true
-          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
-          description: Deprecated in 0.10.0, removed by WH-06 (ADR-0008).
+          x-deprecated-reason: Removed from the contract by WH-11 (ADR-0008 amendment); withholdings are derived.
+          description: Retired by WH-06 (0.11.3). Any value answers `400 additionalProperties`.
         invoiced_on:
           oneOf:
             - $ref: '#/components/schemas/BusinessDate'
@@ -7055,7 +7065,12 @@ components:
       examples:
         - description: Diseño de logotipo y manual de marca
     Income:
-      x-frozen: sha256:5bb6dd5a53ad07210828ad20b8ef3030c847c708e3609942a098ceee8bcfa4ef
+      x-frozen: sha256:270d45481e2ce63af3e9483f61e00839b632d8e82b6f8e84ed0e89860e1d5239
+      description: >-
+        `withholding` is the derived withholding (read-only, ADR-0008): sent for every income
+        written since 0.11.3 (WH-06), absent only on a legacy row until the WH-08 backfill derives
+        it. (A `$ref` keeps no sibling description: the strict response validator would drop the
+        referenced properties.)
       type: object
       required:
         - id
@@ -7083,12 +7098,12 @@ components:
         counterparty_type: { $ref: '#/components/schemas/CounterpartyType' }
         counterparty_kind:
           $ref: '#/components/schemas/CounterpartyKind'
-          description: Who was billed. Present on every income once WH-06 lands (then required).
+          description: Who was billed. Present on every income written since 0.11.3 (WH-06); a legacy row gets it from the WH-08 backfill.
         operation_kind:
           $ref: '#/components/schemas/OperationKind'
-          description: As sent, or the default stored when the question was hidden. Required once WH-06 lands.
-        residential_rent: { type: boolean, description: Required once WH-06 lands. }
-        via_platform: { type: boolean, description: Required once WH-06 lands. }
+          description: As sent, or the default stored when the question was hidden (last used in the regime, else the regime default). Present on every income written since 0.11.3.
+        residential_rent: { type: boolean, description: Always sent since 0.11.3. }
+        via_platform: { type: boolean, description: Always sent since 0.11.3. }
         amount_cents: { $ref: '#/components/schemas/PositiveCents' }
         iva_rate: { $ref: '#/components/schemas/IvaRate' }
         iva_cents: { $ref: '#/components/schemas/NonNegativeCents' }
@@ -7098,9 +7113,7 @@ components:
         iva_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
           description: Read-only mirror of `withholding.iva_cents` (kept for list totals and the estimate).
-        withholding:
-          $ref: '#/components/schemas/Withholding'
-          description: The derived withholding (read-only). Required once WH-06 lands.
+        withholding: { $ref: '#/components/schemas/Withholding' }
         invoiced_on:
           oneOf:
             - $ref: '#/components/schemas/BusinessDate'
@@ -7128,7 +7141,7 @@ components:
             `[]` on reads. Codes: `duplicate_cfdi_uuid` (`cfdi_uuid`), `provisional_parameters`
             (`collected_on` / `invoiced_on`), `withholding_cpa_unverified` (`withholding`),
             `foreign_counterparty_not_supported` (`counterparty_kind`).
-            `withholding_differs_from_rate` is retired: WH-06 stops sending it (no typed amount
+            `withholding_differs_from_rate` is retired: never sent since 0.11.3 (no typed amount
             is left to compare).
           items: { $ref: '#/components/schemas/Warning' }
         created_at: { type: string, format: date-time }
@@ -7212,7 +7225,7 @@ components:
             isr_withheld_cents: 0
             iva_withheld_cents: 0
     IncomeDefaults:
-      x-frozen: sha256:cd7b8f14aa6e2bfdb86fea5628181de78fc9b3b9b00079e0b62684a8ce4c8303
+      x-frozen: sha256:13a378fa372d7f98dcdc5ae2be5ab384eb331b5d03732063fac40ed95b06fa50
       type: object
       required:
         - iva_rates_allowed
@@ -7224,10 +7237,10 @@ components:
         - platform_activity
       description: >-
         Form prefill from the rate catalog (UX only; the server re-validates every write).
-        The four `*_withholding_*` fields are **deprecated in 0.10.0** and removed by WH-06
-        (ADR-0008): withholdings are derived, so there is no rate to suggest; the form shows
-        `previewIncomeWithholdings` instead. `last_used` replaces them (required once WH-06
-        lands).
+        The four `*_withholding_*` fields are **deprecated in 0.10.0** (ADR-0008): withholdings
+        are derived, so there is no rate to suggest; the form shows `previewIncomeWithholdings`
+        instead. They stay for the shipped form until WH-11. `last_used` replaces them and is
+        always sent since 0.11.3 (WH-06).
       properties:
         iva_rates_allowed:
           type: array
@@ -7238,24 +7251,24 @@ components:
         isr_withholding_allowed:
           type: boolean
           deprecated: true
-          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
+          x-deprecated-reason: Removed from the contract by WH-11 (ADR-0008 amendment); withholdings are derived.
         isr_withholding_rate:
           oneOf:
             - $ref: '#/components/schemas/DecimalRate'
             - type: 'null'
           deprecated: true
-          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
+          x-deprecated-reason: Removed from the contract by WH-11 (ADR-0008 amendment); withholdings are derived.
           description: Fraction of `amount_cents`; `null` when not allowed or when there is no suggestion.
         iva_withholding_allowed:
           type: boolean
           deprecated: true
-          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
+          x-deprecated-reason: Removed from the contract by WH-11 (ADR-0008 amendment); withholdings are derived.
         iva_withholding_rate:
           oneOf:
             - $ref: '#/components/schemas/DecimalRate'
             - type: 'null'
           deprecated: true
-          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
+          x-deprecated-reason: Removed from the contract by WH-11 (ADR-0008 amendment); withholdings are derived.
           description: Fraction of `iva_cents` (2/3 = `0.666667`); `null` when not allowed or when there is no suggestion.
         platform_activity:
           oneOf:
@@ -7286,20 +7299,20 @@ components:
       enum: [category_default, user]
       description: '`user` when the user overrode `deductible`; `category_default` otherwise.'
     ExpenseCreate:
-      x-frozen: sha256:abdb7c42240455b610d487d92a59b24482a00a592f46b4e65d72011992aeee6d
+      x-frozen: sha256:5843860e5acdeaae84f27a696232c3f93f679c3c8717ca3f1315e9f03bedd201
       type: object
       required: [regime_code, category_code, amount_cents, iva_rate, iva_cents, payment_method, paid_on, has_cfdi]
       additionalProperties: false
       description: >-
         `user_id` comes from the session and `taxpayer_id` from the path, never from the body.
         Withholdings are **derived** (ADR-0008): a persona moral taxpayer describes its supplier
-        (`supplier_kind`, required for it once WH-07 lands; `supplier_regime`;
+        (`supplier_kind`, required for it since 0.11.3; `supplier_regime`;
         `operation_kind`, defaulting to the category's; `residential_rent`) and the server
         derives what it must withhold and remit. A persona física never withholds from a
         domestic supplier: any supplier field answers `422` `supplier_not_applicable`.
-        **Transition (0.10.0 → WH-07):** the deprecated `isr_withheld_cents` and
-        `iva_withheld_cents` are still read until WH-07 lands; WH-07 removes them (sending them
-        then answers `400 additionalProperties`). New clients never send them.
+        **0.11.3 (WH-07):** the deprecated `isr_withheld_cents` and `iva_withheld_cents` with
+        any value answer `400 additionalProperties`; they leave the schema with WH-12, which
+        regenerates the Dart client with the new form.
       properties:
         id:
           $ref: '#/components/schemas/Uuid'
@@ -7332,7 +7345,7 @@ components:
           description: The user's override; omitted or `null` uses the default.
         supplier_kind:
           $ref: '#/components/schemas/SupplierKind'
-          description: Persona moral taxpayers only; required for them once WH-07 lands.
+          description: Persona moral taxpayers only; required for them since 0.11.3 (`400 required`).
         supplier_regime:
           $ref: '#/components/schemas/SupplierRegime'
           description: >-
@@ -7350,13 +7363,13 @@ components:
         isr_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
           deprecated: true
-          x-deprecated-reason: Removed by WH-07 (ADR-0008); withholdings are derived.
-          description: Deprecated in 0.10.0, removed by WH-07 (ADR-0008). ISR the taxpayer (a persona moral) withheld from the supplier (default 0); at most `amount_cents`.
+          x-deprecated-reason: Removed from the contract by WH-12 (ADR-0008 amendment); withholdings are derived.
+          description: Retired by WH-07 (0.11.3, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
         iva_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
           deprecated: true
-          x-deprecated-reason: Removed by WH-07 (ADR-0008); withholdings are derived.
-          description: Deprecated in 0.10.0, removed by WH-07 (ADR-0008). IVA the taxpayer (a persona moral) withheld from the supplier (LIVA 1-A, default 0); at most `iva_cents`.
+          x-deprecated-reason: Removed from the contract by WH-12 (ADR-0008 amendment); withholdings are derived.
+          description: Retired by WH-07 (0.11.3, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
         description: { $ref: '#/components/schemas/RecordDescription' }
       examples:
         - id: 0199d4a3-2b3c-7e4d-9f50-6b7c8d9e0f12
@@ -7370,7 +7383,7 @@ components:
           has_cfdi: true
           description: Suscripción anual de diseño
     ExpenseUpdate:
-      x-frozen: sha256:6f3eb359cc2ebe504ca5d8425afd55de071f66122e4582be84f8c440ae6d92ff
+      x-frozen: sha256:9d0cb7da46910d4cd2937f7caea969a7942214acc636a6150fd89629333fb0d7
       type: object
       minProperties: 1
       additionalProperties: false
@@ -7378,8 +7391,9 @@ components:
         Merge-patch on top-level fields: absent = unchanged, `null` clears `cfdi_uuid`,
         `description` or the `deductible` override. `id` is immutable and not accepted. Any
         change re-derives the withholding (ADR-0008); moving `supplier_kind` away from
-        `pf_with_activity` clears `supplier_regime`. The deprecated `isr_withheld_cents` and
-        `iva_withheld_cents` are removed by WH-07 (see `ExpenseCreate`).
+        `pf_with_activity` clears `supplier_regime`. Since 0.11.3 (WH-07) `isr_withheld_cents` /
+        `iva_withheld_cents` with any value answer `400 additionalProperties` (see
+        `ExpenseCreate`).
       properties:
         regime_code: { $ref: '#/components/schemas/RegimeCode' }
         category_code: { type: string, minLength: 1, maxLength: 40 }
@@ -7401,18 +7415,22 @@ components:
         isr_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
           deprecated: true
-          x-deprecated-reason: Removed by WH-07 (ADR-0008); withholdings are derived.
-          description: Deprecated in 0.10.0, removed by WH-07 (ADR-0008).
+          x-deprecated-reason: Removed from the contract by WH-12 (ADR-0008 amendment); withholdings are derived.
+          description: Retired by WH-07 (0.11.3). Any value answers `400 additionalProperties`.
         iva_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
           deprecated: true
-          x-deprecated-reason: Removed by WH-07 (ADR-0008); withholdings are derived.
-          description: Deprecated in 0.10.0, removed by WH-07 (ADR-0008).
+          x-deprecated-reason: Removed from the contract by WH-12 (ADR-0008 amendment); withholdings are derived.
+          description: Retired by WH-07 (0.11.3). Any value answers `400 additionalProperties`.
         description: { $ref: '#/components/schemas/RecordDescription' }
       examples:
         - deductible: true
     Expense:
-      x-frozen: sha256:6ee03e5ae65e4b63c2498704999ab4eb89831f828c485dd8b5ed24823cc0372e
+      x-frozen: sha256:5dae507bab65d97eaf384b68d5db9313d50a7d7dc585541d853de0dbfb913c90
+      description: >-
+        `withholding` is the derived withholding (read-only, ADR-0008): all zero with
+        `withholder: none` for a persona física taxpayer; sent for every expense written since
+        0.11.3 (WH-07), absent only on a legacy row until the WH-08 backfill derives it.
       type: object
       required:
         - id
@@ -7454,29 +7472,25 @@ components:
           oneOf:
             - $ref: '#/components/schemas/SupplierKind'
             - type: 'null'
-          description: '`null` for a persona física taxpayer. Required (nullable) once WH-07 lands.'
+          description: '`null` for a persona física taxpayer. Always sent (nullable) since 0.11.3.'
         supplier_regime:
           oneOf:
             - $ref: '#/components/schemas/SupplierRegime'
             - type: 'null'
-          description: '`null` unless `supplier_kind: pf_with_activity`. Required (nullable) once WH-07 lands.'
+          description: '`null` unless `supplier_kind: pf_with_activity`. Always sent (nullable) since 0.11.3.'
         operation_kind:
           oneOf:
             - $ref: '#/components/schemas/OperationKind'
             - type: 'null'
-          description: '`null` for a persona física taxpayer. Required (nullable) once WH-07 lands.'
-        residential_rent: { type: boolean, description: Required once WH-07 lands. }
+          description: '`null` for a persona física taxpayer. Always sent (nullable) since 0.11.3.'
+        residential_rent: { type: boolean, description: Always sent since 0.11.3. }
         isr_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
           description: Read-only mirror of `withholding.isr_cents` (kept for list totals and the estimate).
         iva_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
           description: Read-only mirror of `withholding.iva_cents` (kept for list totals and the estimate).
-        withholding:
-          $ref: '#/components/schemas/Withholding'
-          description: >-
-            The derived withholding (read-only); all zero with `withholder: none` for a persona
-            física taxpayer. Required once WH-07 lands.
+        withholding: { $ref: '#/components/schemas/Withholding' }
         description: { $ref: '#/components/schemas/RecordDescription' }
         deductible:
           type: boolean
@@ -7567,7 +7581,7 @@ components:
       enum: [deductible, partially_deductible, not_deductible, isr_not_applicable]
       description: The hint shown for a category in the taxpayer's regime (after options such as 606 `blind_35`).
     ExpenseCategory:
-      x-frozen: sha256:1418d2c7e211f526560c98d901898f0f066546d21490fdab85c9e2d3cf486dea
+      x-frozen: sha256:566e8e2be427309d8de251a93a800e8010f33035f6745455f57cac0584aedff9
       type: object
       required: [code, name, deductibility, default_deductible, note, legal_basis]
       properties:
@@ -7586,8 +7600,10 @@ components:
             MODULE-withholdings §2.2): what a persona moral's "Tu proveedor" question E3 starts
             at, and what `createExpense`, `updateExpense` and `previewExpenseWithholdings` use
             when `operation_kind` is omitted. Clients never keep their own copy of this table.
-            Optional in 0.11.2 (additive); sent once WH-03 seeds it and WH-07 serves it, when it
-            **will be required**. Absent, a client leaves E3 unselected and omits
+            Optional since 0.11.2 (additive). Since 0.11.3 (WH-07) it is sent on every category
+            of a persona moral taxpayer, and absent for a persona física (the question does not
+            exist: a persona física never withholds from a domestic supplier). It stays optional
+            in the schema for that reason. Absent, a client leaves E3 unselected and omits
             `operation_kind`, so the server applies the same default.
       examples:
         - code: software

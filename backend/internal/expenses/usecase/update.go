@@ -83,9 +83,20 @@ func merge(e StoredExpense, p Patch) (regime fiscal.RegimeCode, d domain.Draft) 
 	set(&d.HasCFDI, p.HasCFDI)
 	set(&d.CFDIUUID, p.CFDIUUID)
 	set(&d.Deductible, p.Deductible)
-	set(&d.Withheld.ISR, p.ISRWithheld)
-	set(&d.Withheld.IVA, p.IVAWithheld)
+	mergeSupplier(&d.Supplier, p)
 	return regime, d
+}
+
+// mergeSupplier applies the patch's supplier facts. A persona física
+// supplier's regime means nothing for another kind: moving away clears it.
+func mergeSupplier(s *domain.Supplier, p Patch) {
+	set(&s.Kind, p.SupplierKind)
+	if p.SupplierKind != nil && *p.SupplierKind != domain.SupplierPFWithActivity {
+		s.Regime = ""
+	}
+	set(&s.Regime, p.SupplierRegime)
+	set(&s.Operation, p.OperationKind)
+	set(&s.ResidentialRent, p.ResidentialRent)
 }
 
 // set overwrites *field with *patch when the patch carries a value.

@@ -42,6 +42,9 @@ func toCreateInput(userID, taxpayerID string, body *gen.ExpenseCreate) (usecase.
 	if body == nil {
 		return in, nil
 	}
+	if err := rejectTypedWithholdings(body.IsrWithheldCents, body.IvaWithheldCents); err != nil {
+		return usecase.CreateInput{}, err
+	}
 	paidOn, err := toDate(body.PaidOn)
 	if err != nil {
 		return usecase.CreateInput{}, err
@@ -64,7 +67,7 @@ func toCreateInput(userID, taxpayerID string, body *gen.ExpenseCreate) (usecase.
 		IVARate: fiscal.IVARate(body.IvaRate), IVA: money.Cents(body.IvaCents),
 		PaymentMethod: domain.PaymentMethod(body.PaymentMethod), PaidOn: paidOn, HasCFDI: body.HasCfdi,
 		CFDIUUID: folio, Deductible: toOverride(body.Deductible),
-		Withheld: fiscal.Withholdings{ISR: centsOrZero(body.IsrWithheldCents), IVA: centsOrZero(body.IvaWithheldCents)},
+		Supplier: supplierOf(body.SupplierKind, body.SupplierRegime, body.OperationKind, body.ResidentialRent),
 	}
 	return in, nil
 }
@@ -76,6 +79,9 @@ func toPatch(body *gen.ExpenseUpdate) (usecase.Patch, error) {
 	var p usecase.Patch
 	if body == nil {
 		return p, nil
+	}
+	if err := rejectTypedWithholdings(body.IsrWithheldCents, body.IvaWithheldCents); err != nil {
+		return usecase.Patch{}, err
 	}
 	if body.PaidOn != nil {
 		d, err := toDate(*body.PaidOn)
@@ -96,8 +102,10 @@ func toPatch(body *gen.ExpenseUpdate) (usecase.Patch, error) {
 	p.IVA = convert(body.IvaCents, toCents)
 	p.PaymentMethod = convert(body.PaymentMethod, func(m gen.PaymentMethod) domain.PaymentMethod { return domain.PaymentMethod(m) })
 	p.HasCFDI = body.HasCfdi
-	p.ISRWithheld = convert(body.IsrWithheldCents, toCents)
-	p.IVAWithheld = convert(body.IvaWithheldCents, toCents)
+	p.SupplierKind = convert(body.SupplierKind, func(k gen.SupplierKind) domain.SupplierKind { return domain.SupplierKind(k) })
+	p.SupplierRegime = convert(body.SupplierRegime, func(r gen.SupplierRegime) domain.SupplierRegime { return domain.SupplierRegime(r) })
+	p.OperationKind = convert(body.OperationKind, func(o gen.OperationKind) fiscal.OperationKind { return fiscal.OperationKind(o) })
+	p.ResidentialRent = body.ResidentialRent
 	p.Deductible = patchOverride(body.Deductible)
 	p.Description = patchDescription(body.Description)
 	return p, nil
@@ -178,13 +186,6 @@ func toFolio(raw string) (fiscal.CFDIUUID, error) {
 
 func toCents(v int64) money.Cents { return money.Cents(v) }
 
-func centsOrZero(v *int64) money.Cents {
-	if v == nil {
-		return 0
-	}
-	return money.Cents(*v)
-}
-
 // convert maps an optional value, keeping nil.
 func convert[From, To any](v *From, f func(From) To) *To {
 	if v == nil {
@@ -224,12 +225,19 @@ func toExpense(e usecase.Expense) (gen.Expense, error) {
 	if err != nil {
 		return gen.Expense{}, fmt.Errorf("expenses http: paid_on of %s: %w", e.ID, err)
 	}
+	withholding, err := toWithholding(e.Withholding, e.Amount, e.IVA, e.RemitDueOn)
+	if err != nil {
+		return gen.Expense{}, fmt.Errorf("expenses http: withholding of %s: %w", e.ID, err)
+	}
+	kind, regime, operation := supplierFields(e.Supplier)
 	return gen.Expense{
 		Id: id, TaxpayerId: taxpayerID, RegimeCode: string(e.Regime), CategoryCode: string(e.Category),
 		AmountCents: int64(e.Amount), IvaRate: gen.IvaRate(e.IVARate), IvaCents: int64(e.IVA),
 		PaymentMethod: gen.PaymentMethod(e.PaymentMethod), PaidOn: openapi_types.Date{Time: paidOn}, HasCfdi: e.HasCFDI,
 		CfdiUuid:         nullableText(e.CFDIUUID.String()),
-		IsrWithheldCents: int64(e.Withheld.ISR), IvaWithheldCents: int64(e.Withheld.IVA),
+		IsrWithheldCents: int64(e.Withholding.ISR), IvaWithheldCents: int64(e.Withholding.IVA),
+		SupplierKind: kind, SupplierRegime: regime, OperationKind: operation,
+		ResidentialRent: &e.Supplier.ResidentialRent, Withholding: withholding,
 		Description: nullableText(e.Description), Deductible: e.Deductible,
 		DeductibleSource: gen.DeductibleSource(e.Source), Warnings: toWarnings(e.Warnings),
 		Legend: gen.Legend(e.Legend), CreatedAt: e.CreatedAt, UpdatedAt: e.UpdatedAt,
@@ -268,6 +276,7 @@ func toCategoryList(l usecase.CategoryList) gen.ExpenseCategoryList {
 		items = append(items, gen.ExpenseCategory{
 			Code: string(c.Code), Name: c.Name, Deductibility: gen.Deductibility(c.Deductibility),
 			DefaultDeductible: c.DefaultDeductible, Note: nullableText(c.Note), LegalBasis: nullableText(c.LegalBasis),
+			DefaultOperationKind: defaultOperationKind(c.DefaultOperation),
 		})
 	}
 	rates := make([]gen.IvaRate, 0, len(l.IVARatesAllowed))
@@ -277,4 +286,14 @@ func toCategoryList(l usecase.CategoryList) gen.ExpenseCategoryList {
 	return gen.ExpenseCategoryList{
 		Items: items, IvaRatesAllowed: rates, CashPaymentLimitCents: int64(l.CashPaymentLimit), Legend: gen.Legend(l.Legend),
 	}
+}
+
+// defaultOperationKind is the category's E3 default, absent for a persona
+// física's category (contract ExpenseCategory.default_operation_kind).
+func defaultOperationKind(o fiscal.OperationKind) *gen.OperationKind {
+	if o == "" {
+		return nil
+	}
+	out := gen.OperationKind(o)
+	return &out
 }

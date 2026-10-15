@@ -49,9 +49,12 @@ type WithholdingDefault struct {
 type Defaults struct {
 	IVARatesAllowed  []fiscal.IVARate
 	SuggestedIVARate fiscal.IVARate
+	// ISR and IVA are the deprecated suggestions (ADR-0008), served for the
+	// shipped form until WH-11.
 	ISR              WithholdingDefault
 	IVA              WithholdingDefault
 	PlatformActivity domain.PlatformActivity
+	LastUsed         LastFacts
 }
 
 // Defaults answers getIncomeDefaults (MODULE-incomes OQ-7): the dated rates
@@ -79,13 +82,27 @@ func (uc *Incomes) Defaults(ctx context.Context, userID string, q DefaultsQuery)
 		if !ok {
 			return regimeNotHeldOn(fieldRegime)
 		}
-		out, err = uc.defaults(profile, held, q, on)
+		if out, err = uc.defaults(profile, held, q, on); err != nil {
+			return err
+		}
+		out.LastUsed, err = uc.lastUsed(ctx, taxpayerID, profile.PersonType, held.Code)
 		return err
 	})
 	if err != nil {
 		return Defaults{}, present("income defaults", err)
 	}
 	return out, nil
+}
+
+// lastUsed is IncomeLastUsed (MODULE-withholdings §2.1): the facts of the
+// newest income in the regime, or the first-time defaults: no counterparty
+// (OQ-W2), the regime's operation, no housing rent, via a platform in 625.
+func (uc *Incomes) lastUsed(ctx context.Context, taxpayerID string, person fiscal.PersonType, regime fiscal.RegimeCode) (LastFacts, error) {
+	last, ok, err := uc.deps.Store.LastFacts(ctx, taxpayerID, regime)
+	if err != nil || ok {
+		return last, err
+	}
+	return LastFacts{Operation: domain.DefaultOperation(person, regime), ViaPlatform: domain.DefaultViaPlatform(regime)}, nil
 }
 
 // defaultsDay validates the query (400 with every field) and returns its

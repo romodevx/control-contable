@@ -22,17 +22,20 @@ const (
 	LockUpdate
 )
 
-// Fields are an income's persisted fields after normalization. The zero
+// Fields are an income's persisted facts after normalization (the derived
+// withholding is apart: it is a function of them). The zero
 // value of a nullable field is null: a zero Date, an empty
 // PlatformActivity, a zero CFDIUUID, an empty Description. Fields is
 // comparable, which the idempotent replay relies on.
 type Fields struct {
 	Regime           fiscal.RegimeCode
-	Counterparty     domain.Counterparty
+	Counterparty     fiscal.ReceptorKind  // "" on a record stored before WH-06
+	Operation        fiscal.OperationKind // "" on a record stored before WH-06
+	ResidentialRent  bool
+	ViaPlatform      bool
 	Amount           money.Cents // subtotal before IVA
 	IVARate          fiscal.IVARate
 	IVA              money.Cents
-	Withheld         fiscal.Withholdings
 	Dates            domain.Dates
 	PlatformActivity domain.PlatformActivity
 	CFDIUUID         fiscal.CFDIUUID
@@ -45,6 +48,9 @@ type StoredIncome struct {
 	ID         string
 	TaxpayerID string
 	Fields
+	Withholding fiscal.WithholdingRecord
+	// CounterpartyType is the deprecated counterparty_type column.
+	CounterpartyType domain.Counterparty
 	// BookedOn is the ISR date the database derives (incomes.booked_on).
 	BookedOn  fiscal.Date
 	Deleted   bool
@@ -52,12 +58,23 @@ type StoredIncome struct {
 	UpdatedAt time.Time
 }
 
-// NewIncome is an income to insert. The database derives booked_on.
+// NewIncome is an income to insert with its derived withholding. The
+// database derives booked_on.
 type NewIncome struct {
 	ID         string
 	UserID     string
 	TaxpayerID string
 	Fields
+	Withholding fiscal.WithholdingRecord
+}
+
+// LastFacts are the withholding facts of the taxpayer's newest live income
+// in a regime (MODULE-withholdings §2.1 "last used").
+type LastFacts struct {
+	Counterparty    fiscal.ReceptorKind
+	Operation       fiscal.OperationKind
+	ResidentialRent bool
+	ViaPlatform     bool
 }
 
 // ListFilter selects the live incomes of a taxpayer booked in
@@ -97,8 +114,8 @@ type Store interface {
 	// Insert stores a new income, or ErrIDTaken when the id exists (for
 	// any user: the primary key sees across RLS).
 	Insert(ctx context.Context, in NewIncome) error
-	// Update replaces the fields of income id.
-	Update(ctx context.Context, id string, f Fields) error
+	// Update replaces the facts and the derived withholding of income id.
+	Update(ctx context.Context, id string, f Fields, w fiscal.WithholdingRecord) error
 	// SetDeleted soft-deletes (true) or restores (false) income id.
 	SetDeleted(ctx context.Context, id string, deleted bool) error
 	// CFDIUUIDInUse reports another live income of taxpayerID (not
@@ -108,6 +125,10 @@ type Store interface {
 	List(ctx context.Context, f ListFilter, after Keyset, limit int) ([]StoredIncome, error)
 	// Totals sums every income of f.
 	Totals(ctx context.Context, f ListFilter) (PeriodTotals, error)
+	// LastFacts returns the facts of the newest live income of taxpayerID
+	// in regime that has them (a record stored before WH-06 has none), and
+	// false when there is none.
+	LastFacts(ctx context.Context, taxpayerID string, regime fiscal.RegimeCode) (LastFacts, bool, error)
 	// IncomeBasis returns the catalog's income basis of a regime
 	// (regimes.income_basis).
 	IncomeBasis(ctx context.Context, person fiscal.PersonType, regime fiscal.RegimeCode) (domain.IncomeBasis, error)

@@ -32,7 +32,7 @@ func softwareDraft(t *testing.T) domain.Draft {
 
 func assess(t *testing.T, d domain.Draft, p domain.Payer, r domain.CategoryRule) (domain.Assessment, error) {
 	t.Helper()
-	return domain.Assess(d, p, r, date(t, today), catalog2026(t))
+	return domain.Assess(d, p, r, date(t, today), catalog2026(t), withholdings2026(t))
 }
 
 func TestAssessUS1Software(t *testing.T) {
@@ -45,7 +45,6 @@ func TestAssessUS1Software(t *testing.T) {
 	assert.False(t, got.CashOverLimit)
 	assert.Equal(t, money.Cents(80_00), got.CreditableIVA)
 	assert.Nil(t, got.Warnings)
-	assert.Equal(t, fiscal.Suggested{}, got.Suggested)
 	assert.Equal(t, domain.Totals{Subtotal: 500_00, IVA: 80_00, Total: 580_00, Net: 580_00}, got.Totals)
 	assert.Equal(t, "2026-09-12", got.BookedOn.String())
 }
@@ -212,46 +211,6 @@ func TestAssessDeductible(t *testing.T) {
 	}
 }
 
-// TestAssessWithholdingsMade: US-E1 and PM-601-IVA-01, a persona moral
-// withholding from a PF lawyer.
-func TestAssessWithholdingsMade(t *testing.T) {
-	tests := []struct {
-		name         string
-		amount, iva  money.Cents
-		withheld     fiscal.Withholdings
-		wantTotals   domain.Totals
-		wantSuggests fiscal.Suggested
-	}{
-		{
-			name: "US-E1: fees 10,000 + 1,600", amount: 10_000_00, iva: 1_600_00,
-			withheld:   fiscal.Withholdings{ISR: 1_000_00, IVA: 1_066_67},
-			wantTotals: domain.Totals{Subtotal: 10_000_00, IVA: 1_600_00, Total: 11_600_00, Withheld: 2_066_67, Net: 9_533_33},
-			wantSuggests: fiscal.Suggested{
-				ISR: fiscal.Suggestion{Cents: 1_000_00, Known: true}, IVA: fiscal.Suggestion{Cents: 1_066_67, Known: true},
-			},
-		},
-		{
-			name: "PM-601-IVA-01: fees 50,000 + 8,000", amount: 50_000_00, iva: 8_000_00,
-			withheld:   fiscal.Withholdings{ISR: 5_000_00, IVA: 5_333_33},
-			wantTotals: domain.Totals{Subtotal: 50_000_00, IVA: 8_000_00, Total: 58_000_00, Withheld: 10_333_33, Net: 47_666_67},
-			wantSuggests: fiscal.Suggested{
-				ISR: fiscal.Suggestion{Cents: 5_000_00, Known: true}, IVA: fiscal.Suggestion{Cents: 5_333_33, Known: true},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			d := softwareDraft(t)
-			d.Category, d.Amount, d.IVA, d.Withheld = domain.CategoryProfessionalFees, tt.amount, tt.iva, tt.withheld
-			got, err := assess(t, d, pm601, feesBusiness)
-			require.NoError(t, err)
-			assert.Equal(t, tt.wantTotals, got.Totals)
-			assert.Equal(t, tt.wantSuggests, got.Suggested)
-			assert.Nil(t, got.Warnings, "suggestions are UX only: no warning")
-		})
-	}
-}
-
 func TestAssessRejects(t *testing.T) {
 	someUUID, err := fiscal.ParseCFDIUUID("6F1C2A3B-4D5E-4F60-8A9B-0C1D2E3F4A5B")
 	require.NoError(t, err)
@@ -269,10 +228,6 @@ func TestAssessRejects(t *testing.T) {
 			violations(domain.FieldAmountCents, fiscal.ErrOutOfRange)},
 		{"negative IVA", pf612, softwareBusiness, func(d *domain.Draft) { d.IVA = -1 }, fiscal.ClassValidation,
 			violations(domain.FieldIVACents, fiscal.ErrOutOfRange)},
-		{"negative ISR withheld", pm601, softwareBusiness, func(d *domain.Draft) { d.Withheld.ISR = -1 }, fiscal.ClassValidation,
-			violations(domain.FieldISRWithheldCents, fiscal.ErrOutOfRange)},
-		{"IVA withheld above the maximum", pm601, softwareBusiness, func(d *domain.Draft) { d.Withheld.IVA = math.MaxInt64 }, fiscal.ClassValidation,
-			violations(domain.FieldIVAWithheldCents, fiscal.ErrOutOfRange)},
 		{"missing category", pf612, rule("", domain.Deductible, true), func(d *domain.Draft) { d.Category = "" }, fiscal.ClassValidation,
 			violations(domain.FieldCategoryCode, fiscal.ErrRequired)},
 		{"missing IVA rate", pf612, softwareBusiness, func(d *domain.Draft) { d.IVARate = "" }, fiscal.ClassValidation,
@@ -296,25 +251,9 @@ func TestAssessRejects(t *testing.T) {
 			violations(domain.FieldDeductible, fiscal.ErrInvalid)},
 		{"every validation error is reported", pf612, softwareBusiness, func(d *domain.Draft) {
 			d.Amount, d.PaidOn = 0, fiscal.Date{}
-			d.Withheld.ISR = 1_00
 		}, fiscal.ClassValidation, fiscal.Violations{
 			{Field: domain.FieldAmountCents, Err: fiscal.ErrMustBePositive},
 			{Field: domain.FieldPaidOn, Err: fiscal.ErrRequired},
-		}},
-		{"US-E1: a física withholds ISR", pf612, feesBusiness, func(d *domain.Draft) {
-			d.Category, d.Amount, d.IVA = domain.CategoryProfessionalFees, 10_000_00, 1_600_00
-			d.Withheld = fiscal.Withholdings{ISR: 1_000_00}
-		}, fiscal.ClassBusinessRule, violations(domain.FieldISRWithheldCents, fiscal.ErrWithholdingNotApplicable)},
-		{"a física withholds IVA", pf612, feesBusiness, func(d *domain.Draft) {
-			d.Category, d.Amount, d.IVA = domain.CategoryProfessionalFees, 10_000_00, 1_600_00
-			d.Withheld = fiscal.Withholdings{IVA: 1_066_67}
-		}, fiscal.ClassBusinessRule, violations(domain.FieldIVAWithheldCents, fiscal.ErrWithholdingNotApplicable)},
-		{"ISR withheld above the amount", pm601, feesBusiness, func(d *domain.Draft) {
-			d.Category = domain.CategoryProfessionalFees
-			d.Withheld = fiscal.Withholdings{ISR: 500_01, IVA: 80_01}
-		}, fiscal.ClassBusinessRule, fiscal.Violations{
-			{Field: domain.FieldISRWithheldCents, Err: fiscal.ErrWithholdingExceedsBase},
-			{Field: domain.FieldIVAWithheldCents, Err: fiscal.ErrWithholdingExceedsBase},
 		}},
 		{"IVA amount mismatch", pf612, softwareBusiness, func(d *domain.Draft) { d.IVA = 60_00 }, fiscal.ClassBusinessRule,
 			violations(domain.FieldIVACents, fiscal.ErrIVAAmountMismatch)},
@@ -335,7 +274,7 @@ func TestAssessRejects(t *testing.T) {
 func TestAssessRateNotValidOnDate(t *testing.T) {
 	d := softwareDraft(t)
 	d.IVARate, d.IVA, d.PaidOn = fiscal.IVARate8, 40_00, date(t, "2027-01-05")
-	_, err := domain.Assess(d, pf612, softwareBusiness, date(t, "2027-02-01"), catalog2026(t))
+	_, err := domain.Assess(d, pf612, softwareBusiness, date(t, "2027-02-01"), catalog2026(t), withholdings2026(t))
 	got, ok := errors.AsType[fiscal.Violations](err)
 	require.True(t, ok)
 	assert.Equal(t, violations(domain.FieldIVARate, fiscal.ErrRateNotValidOnDate), got)
@@ -350,7 +289,6 @@ func TestAssessServerFaults(t *testing.T) {
 	noCashLimit := catalog2026(t)
 	delete(noCashLimit.amounts, domain.KeyCashPaymentLimit)
 	cash := func(d *domain.Draft) { d.PaymentMethod = domain.PaymentCash }
-	fees := func(d *domain.Draft) { d.Category = domain.CategoryProfessionalFees }
 	none := func(*domain.Draft) {}
 	badRule := softwareBusiness
 	badRule.Deductibility = "maybe"
@@ -373,7 +311,6 @@ func TestAssessServerFaults(t *testing.T) {
 		{"no catalog", pf612, softwareBusiness, none, today, nil},
 		{"no cash-payment limit in force", pf612, softwareBusiness, cash, today, noCashLimit},
 		{"catalog IVA rate overflows", pf612, softwareBusiness, none, today, absurd(fiscal.KeyIVAGeneral)},
-		{"catalog ISR withholding rate overflows", pm601, feesBusiness, fees, today, absurd(fiscal.KeyISRWithholdingFees)},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -383,8 +320,28 @@ func TestAssessServerFaults(t *testing.T) {
 			if tt.today != "" {
 				now = date(t, tt.today)
 			}
-			_, err := domain.Assess(d, tt.payer, tt.rule, now, tt.catalog)
+			_, err := domain.Assess(d, tt.payer, tt.rule, now, tt.catalog, withholdings2026(t))
 			require.ErrorIs(t, err, fiscal.ErrInvalidParameter)
+			_, isViolation := errors.AsType[fiscal.Violations](err)
+			assert.False(t, isViolation)
+		})
+	}
+}
+
+// A withholding rate that overflows, or one the catalog lacks on the day,
+// is a parameter fault: the server never guesses a withholding.
+func TestAssessWithholdingParameterFaults(t *testing.T) {
+	absurd := withholdings2026(t)
+	absurd.rates[fiscal.KeyISRWithholdingFees] = []dated[money.Rate]{{from: date(t, "2022-01-01"), value: math.MaxInt64}}
+	missing := withholdings2026(t)
+	delete(missing.rates, fiscal.KeyISRWithholdingFees)
+	for name, catalog := range map[string]fakeWithholdingCatalog{"overflows": absurd, "missing": missing} {
+		t.Run(name, func(t *testing.T) {
+			d := feesDraft(t)
+			d.Amount, d.IVA = fiscal.MaxCents, 0
+			d.IVARate = fiscal.IVAExempt
+			_, err := domain.Assess(d, pm601, feesMoral, date(t, today), catalog2026(t), catalog)
+			require.Error(t, err)
 			_, isViolation := errors.AsType[fiscal.Violations](err)
 			assert.False(t, isViolation)
 		})

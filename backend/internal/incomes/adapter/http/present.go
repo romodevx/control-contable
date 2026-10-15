@@ -1,6 +1,7 @@
 package incomeshttp
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -26,6 +27,33 @@ const (
 // dateLayout is a contract date (BusinessDate) and fiscal.Date's String.
 const dateLayout = "2006-01-02"
 
+// detailAdditionalProperties is the JSON Schema keyword the router reports
+// for a body member the schema does not have (CONTRACT.md, FieldError.code).
+const detailAdditionalProperties = "additionalProperties"
+
+// msgRetiredField is the message of a retired withholding amount.
+const msgRetiredField = "Withholdings are derived by the server; do not send this field."
+
+// rejectTypedWithholdings answers a body that carries a typed withholding
+// amount, whatever its value, with the 400 a schema without it gives
+// (ADR-0008 amendment, contract 0.10.1): the members stay in the schema only
+// until WH-11 regenerates the Dart client.
+func rejectTypedWithholdings(isr, iva *int64) error {
+	var fields []apperr.FieldError
+	for _, f := range []struct {
+		name string
+		v    *int64
+	}{{domain.FieldISRWithheldCents, isr}, {domain.FieldIVAWithheldCents, iva}} {
+		if f.v != nil {
+			fields = append(fields, apperr.FieldError{Field: f.name, Code: detailAdditionalProperties, Message: msgRetiredField})
+		}
+	}
+	if len(fields) == 0 {
+		return nil
+	}
+	return apperr.New(apperr.CodeValidationFailed, msgInvalidInput).WithFields(fields...)
+}
+
 // invalidField is the 400 naming one field the adapter could not decode
 // (contract validation runs first, so this is a backstop).
 func invalidField(field string, cause error) error {
@@ -41,6 +69,9 @@ func toCreateInput(taxpayerID string, body *gen.IncomeCreate) (usecase.CreateInp
 	if body == nil {
 		return in, nil
 	}
+	if err := rejectTypedWithholdings(body.IsrWithheldCents, body.IvaWithheldCents); err != nil {
+		return usecase.CreateInput{}, err
+	}
 	invoiced, err := optionalDate(domain.FieldInvoicedOn, body.InvoicedOn)
 	if err != nil {
 		return usecase.CreateInput{}, err
@@ -53,9 +84,10 @@ func toCreateInput(taxpayerID string, body *gen.IncomeCreate) (usecase.CreateInp
 		in.ID = body.Id.String()
 	}
 	in.Income = usecase.IncomeInput{
-		Regime: fiscal.RegimeCode(body.RegimeCode), Counterparty: domain.Counterparty(body.CounterpartyType),
-		Amount: money.Cents(body.AmountCents), IVARate: fiscal.IVARate(body.IvaRate), IVA: money.Cents(body.IvaCents),
-		Withheld: fiscal.Withholdings{ISR: centsOrZero(body.IsrWithheldCents), IVA: centsOrZero(body.IvaWithheldCents)},
+		Regime: fiscal.RegimeCode(body.RegimeCode), Counterparty: receptorOrEmpty(body.CounterpartyKind),
+		Operation: operationOrEmpty(body.OperationKind), ResidentialRent: body.ResidentialRent != nil && *body.ResidentialRent,
+		ViaPlatform: body.ViaPlatform, Amount: money.Cents(body.AmountCents), IVARate: fiscal.IVARate(body.IvaRate),
+		IVA:      money.Cents(body.IvaCents),
 		Dates:    domain.Dates{InvoicedOn: invoiced, CollectedOn: collected},
 		CFDIUUID: textOrEmpty(body.CfdiUuid), Description: textOrEmpty(body.Description),
 	}
@@ -72,6 +104,9 @@ func toPatch(body *gen.IncomeUpdate) (usecase.Patch, error) {
 	if body == nil {
 		return p, nil
 	}
+	if err := rejectTypedWithholdings(body.IsrWithheldCents, body.IvaWithheldCents); err != nil {
+		return usecase.Patch{}, err
+	}
 	invoiced, err := patchDate(domain.FieldInvoicedOn, body.InvoicedOn)
 	if err != nil {
 		return usecase.Patch{}, err
@@ -82,12 +117,14 @@ func toPatch(body *gen.IncomeUpdate) (usecase.Patch, error) {
 	}
 	p.InvoicedOn, p.CollectedOn = invoiced, collected
 	p.Regime = convert(body.RegimeCode, func(s string) fiscal.RegimeCode { return fiscal.RegimeCode(s) })
-	p.Counterparty = convert(body.CounterpartyType, func(c gen.CounterpartyType) domain.Counterparty { return domain.Counterparty(c) }) //nolint:staticcheck // SA1019: deprecated field read until WH-06 (ADR-0008)
+	// counterparty_type is ignored (ADR-0008 amendment): its column mirrors
+	// counterparty_kind and via_platform.
+	p.Counterparty = convert(body.CounterpartyKind, func(k gen.CounterpartyKind) fiscal.ReceptorKind { return fiscal.ReceptorKind(k) })
+	p.Operation = convert(body.OperationKind, func(o gen.OperationKind) fiscal.OperationKind { return fiscal.OperationKind(o) })
+	p.ResidentialRent, p.ViaPlatform = body.ResidentialRent, body.ViaPlatform
 	p.Amount = convert(body.AmountCents, toCents)
 	p.IVARate = convert(body.IvaRate, func(r gen.IvaRate) fiscal.IVARate { return fiscal.IVARate(r) })
 	p.IVA = convert(body.IvaCents, toCents)
-	p.ISRWithheld = convert(body.IsrWithheldCents, toCents)
-	p.IVAWithheld = convert(body.IvaWithheldCents, toCents)
 	p.PlatformActivity = patchValue(body.PlatformActivity, func(a gen.PlatformActivity) domain.PlatformActivity {
 		return domain.PlatformActivity(a)
 	})
@@ -147,11 +184,18 @@ func toDate(name string, d openapi_types.Date) (fiscal.Date, error) {
 
 func toCents(v int64) money.Cents { return money.Cents(v) }
 
-func centsOrZero(v *int64) money.Cents {
-	if v == nil {
-		return 0
+func receptorOrEmpty(k *gen.CounterpartyKind) fiscal.ReceptorKind {
+	if k == nil {
+		return ""
 	}
-	return money.Cents(*v)
+	return fiscal.ReceptorKind(*k)
+}
+
+func operationOrEmpty(o *gen.OperationKind) fiscal.OperationKind {
+	if o == nil {
+		return ""
+	}
+	return fiscal.OperationKind(*o)
 }
 
 func textOrEmpty(s *string) string {
@@ -218,11 +262,19 @@ func toIncome(i usecase.Income, warnings []domain.Warning) (gen.Income, error) {
 	if err != nil {
 		return gen.Income{}, fmt.Errorf("incomes http: collected_on of %s: %w", i.ID, err)
 	}
+	withholding, err := toWithholding(i.Withholding, explained{
+		amount: i.Amount, iva: i.IVA, receptor: i.Counterparty, activity: i.PlatformActivity,
+	})
+	if err != nil {
+		return gen.Income{}, fmt.Errorf("incomes http: withholding of %s: %w", i.ID, err)
+	}
 	return gen.Income{
 		Id: id, TaxpayerId: taxpayerID, RegimeCode: string(i.Regime),
-		CounterpartyType: gen.CounterpartyType(i.Counterparty), AmountCents: int64(i.Amount), //nolint:staticcheck // SA1019: deprecated field served until WH-06 (ADR-0008)
+		CounterpartyType: gen.CounterpartyType(i.CounterpartyType), AmountCents: int64(i.Amount), //nolint:staticcheck // SA1019: the deprecated mirror is served until WH-11 (ADR-0008)
+		CounterpartyKind: optionalKind(i.Counterparty), OperationKind: optionalOperation(i.Operation),
+		ResidentialRent: &i.ResidentialRent, ViaPlatform: &i.ViaPlatform, Withholding: withholding,
 		IvaRate: gen.IvaRate(i.IVARate), IvaCents: int64(i.IVA),
-		IsrWithheldCents: int64(i.Withheld.ISR), IvaWithheldCents: int64(i.Withheld.IVA),
+		IsrWithheldCents: int64(i.Withholding.ISR), IvaWithheldCents: int64(i.Withholding.IVA),
 		InvoicedOn: invoiced, CollectedOn: collected, PendingCollection: i.PendingCollection,
 		PlatformActivity: nullableActivity(i.PlatformActivity), CfdiUuid: nullableText(i.CFDIUUID.String()),
 		Description: nullableText(i.Description), Warnings: toWarnings(warnings),
@@ -283,9 +335,13 @@ func toDefaults(d usecase.Defaults) gen.IncomeDefaults {
 	}
 	return gen.IncomeDefaults{
 		IvaRatesAllowed: rates, SuggestedIvaRate: gen.IvaRate(d.SuggestedIVARate),
-		IsrWithholdingAllowed: d.ISR.Allowed, IsrWithholdingRate: decimalRate(d.ISR.Suggested), //nolint:staticcheck // SA1019: deprecated field served until WH-06 (ADR-0008)
-		IvaWithholdingAllowed: d.IVA.Allowed, IvaWithholdingRate: decimalRate(d.IVA.Suggested), //nolint:staticcheck // SA1019: deprecated field served until WH-06 (ADR-0008)
+		IsrWithholdingAllowed: d.ISR.Allowed, IsrWithholdingRate: decimalRate(d.ISR.Suggested), //nolint:staticcheck // SA1019: deprecated field served until WH-11 (ADR-0008)
+		IvaWithholdingAllowed: d.IVA.Allowed, IvaWithholdingRate: decimalRate(d.IVA.Suggested), //nolint:staticcheck // SA1019: deprecated field served until WH-11 (ADR-0008)
 		PlatformActivity: nullableActivity(d.PlatformActivity),
+		LastUsed: &gen.IncomeLastUsed{
+			CounterpartyKind: optionalKind(d.LastUsed.Counterparty), OperationKind: gen.OperationKind(d.LastUsed.Operation),
+			ResidentialRent: d.LastUsed.ResidentialRent, ViaPlatform: d.LastUsed.ViaPlatform,
+		},
 	}
 }
 
@@ -298,3 +354,37 @@ func decimalRate(s usecase.SuggestedRate) *gen.DecimalRate {
 	out := s.Rate.String()
 	return &out
 }
+
+func toPreviewQuery(req gen.PreviewIncomeWithholdingsRequestObject) usecase.PreviewQuery {
+	p := req.Params
+	q := usecase.PreviewQuery{
+		TaxpayerID: req.TaxpayerId.String(), Regime: fiscal.RegimeCode(p.Regime), Amount: money.Cents(p.AmountCents),
+		IVARate: fiscal.IVARate(p.IvaRate), IVA: money.Cents(p.IvaCents), Counterparty: fiscal.ReceptorKind(p.CounterpartyKind),
+		Operation: operationOrEmpty(p.OperationKind), ResidentialRent: p.ResidentialRent != nil && *p.ResidentialRent,
+		ViaPlatform: p.ViaPlatform,
+	}
+	if p.On != nil {
+		q.On = p.On.String()
+	}
+	if p.PlatformActivity != nil {
+		q.PlatformActivity = domain.PlatformActivity(*p.PlatformActivity)
+	}
+	return q
+}
+
+// toPreview is the contract WithholdingPreview: a preview always derives.
+func toPreview(p usecase.Preview) (gen.WithholdingPreview, error) {
+	w, err := toWithholding(p.Withholding, explained{
+		amount: p.Amount, iva: p.IVA, receptor: p.Counterparty, activity: p.PlatformActivity,
+	})
+	if err != nil {
+		return gen.WithholdingPreview{}, fmt.Errorf("incomes http: preview withholding: %w", err)
+	}
+	if w == nil {
+		return gen.WithholdingPreview{}, errNotDerived
+	}
+	return gen.WithholdingPreview{Withholding: *w, Warnings: toWarnings(p.Warnings)}, nil
+}
+
+// errNotDerived reports a preview without a derivation: a use case fault.
+var errNotDerived = errors.New("incomes http: preview without a derivation")

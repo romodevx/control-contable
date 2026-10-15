@@ -77,3 +77,37 @@ func catalog2026(t *testing.T) fakeCatalog {
 		},
 	}
 }
+
+// fakeWithholdingCatalog is the test double of fiscal.WithholdingCatalog:
+// the dated rates plus the kernel's money parameters.
+type fakeWithholdingCatalog struct {
+	rates   map[fiscal.RateKey][]dated[money.Rate]
+	amounts map[fiscal.AmountKey][]dated[money.Cents]
+}
+
+func (c fakeWithholdingCatalog) Rate(key fiscal.RateKey, on fiscal.Date) (money.Rate, bool) {
+	return inForce(c.rates[key], on)
+}
+
+func (c fakeWithholdingCatalog) Amount(key fiscal.AmountKey, on fiscal.Date) (money.Cents, bool) {
+	return inForce(c.amounts[key], on)
+}
+
+// withholdings2026 holds the withholding parameters of params/data/2026
+// (MODULE-withholdings §3.2) the expense side reads.
+func withholdings2026(t *testing.T) fakeWithholdingCatalog {
+	t.Helper()
+	since2022 := date(t, "2022-01-01")
+	open := func(r string) []dated[money.Rate] { return []dated[money.Rate]{{from: since2022, value: rate(t, r)}} }
+	return fakeWithholdingCatalog{
+		rates: map[fiscal.RateKey][]dated[money.Rate]{
+			fiscal.KeyISRWithholdingFees:    open("0.10"),
+			fiscal.KeyISRWithholdingRent:    open("0.10"),
+			fiscal.KeyISRWithholdingRESICO:  open("0.0125"),
+			fiscal.KeyIVAWithholdingFreight: open("0.04"),
+		},
+		amounts: map[fiscal.AmountKey][]dated[money.Cents]{
+			fiscal.KeyIVAFederalWithholdingThreshold: {{from: since2022, value: 2_000_00}},
+		},
+	}
+}

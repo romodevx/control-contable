@@ -21,10 +21,14 @@ type Expense struct {
 	PaidOn        fiscal.Date
 	HasCFDI       bool
 	CFDIUUID      fiscal.CFDIUUID // zero = null
-	Withheld      fiscal.Withholdings
-	Description   string // "" = null
-	Deductible    bool
-	Source        domain.DeductibleSource
+	Supplier      domain.Supplier
+	Withholding   fiscal.WithholdingRecord
+	// RemitDueOn is when the taxpayer must remit what it withheld (zero
+	// when nothing).
+	RemitDueOn  fiscal.Date
+	Description string // "" = null
+	Deductible  bool
+	Source      domain.DeductibleSource
 	// Warnings are computed on writes (create, update, restore), never
 	// stored; reads carry none.
 	Warnings  []domain.Warning
@@ -66,9 +70,13 @@ type Patch struct {
 	HasCFDI       *bool
 	CFDIUUID      *fiscal.CFDIUUID
 	Deductible    *domain.Override
-	ISRWithheld   *money.Cents
-	IVAWithheld   *money.Cents
-	Description   *string
+	// The supplier facts; moving SupplierKind away from pf_with_activity
+	// clears the stored regime unless the patch sets one.
+	SupplierKind    *domain.SupplierKind
+	SupplierRegime  *domain.SupplierRegime
+	OperationKind   *fiscal.OperationKind
+	ResidentialRent *bool
+	Description     *string
 }
 
 // UpdateInput is an edit request.
@@ -118,6 +126,10 @@ type Category struct {
 	DefaultDeductible bool
 	Note              string // "" = null
 	LegalBasis        string
+	// DefaultOperation is the E3 default of a persona moral's supplier
+	// (category_regime_rules.default_operation_kind); "" for a persona
+	// física.
+	DefaultOperation fiscal.OperationKind
 }
 
 // CategoryList is the form's category catalog (contract ExpenseCategoryList).
@@ -126,4 +138,29 @@ type CategoryList struct {
 	IVARatesAllowed  []fiscal.IVARate
 	CashPaymentLimit money.Cents
 	Legend           string
+}
+
+// PreviewInput is previewExpenseWithholdings: the facts of an expense the
+// form is still editing. On is the payment date ("YYYY-MM-DD"; "" =
+// today in Mexico City).
+type PreviewInput struct {
+	UserID     string
+	TaxpayerID string
+	Regime     fiscal.RegimeCode
+	On         string
+	Category   domain.CategoryCode
+	Amount     money.Cents
+	IVARate    fiscal.IVARate
+	IVA        money.Cents
+	Supplier   domain.Supplier
+}
+
+// Preview is what the matching create would derive; nothing is stored.
+// Warnings are the withholding warnings only.
+type Preview struct {
+	Withholding fiscal.WithholdingRecord
+	RemitDueOn  fiscal.Date
+	Subtotal    money.Cents
+	IVA         money.Cents
+	Warnings    []domain.Warning
 }

@@ -20,6 +20,8 @@ func TestModuleErrorCodes(t *testing.T) {
 	}{
 		{domain.ErrUnknownCategory, fiscal.ClassValidation, "unknown_category"},
 		{domain.ErrHasCFDIMismatch, fiscal.ClassValidation, "has_cfdi_mismatch"},
+		{domain.ErrSupplierNotApplicable, fiscal.ClassBusinessRule, "supplier_not_applicable"},
+		{domain.ErrResidentialRentExempt, fiscal.ClassBusinessRule, "residential_rent_exempt"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.detail, func(t *testing.T) {

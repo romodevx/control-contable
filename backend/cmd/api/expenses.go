@@ -65,8 +65,10 @@ func newExpensesModule(w expensesWiring) (expensesModule, error) {
 		Expenses:   expinfra.NewStore(),
 		Categories: expinfra.NewCategoryCatalog(),
 		Parameters: parameters,
-		Clock:      clk,
-		Logger:     w.logger,
+		// The kernel's view of the same catalog (fiscal.AmountKey).
+		Withholdings: w.rates.Withholdings(),
+		Clock:        clk,
+		Logger:       w.logger,
 	})
 	return expensesModule{
 		handler:    expenseshttp.NewHandler(uc),

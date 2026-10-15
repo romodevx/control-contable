@@ -24,6 +24,7 @@ import 'withholding.dart';
 part 'expense.freezed.dart';
 part 'expense.g.dart';
 
+/// `withholding` is the derived withholding (read-only, ADR-0008): all zero with `withholder: none` for a persona física taxpayer; sent for every expense written since 0.11.3 (WH-07), absent only on a legacy row until the WH-08 backfill derives it.
 @Freezed()
 abstract class Expense with _$Expense {
   const factory Expense({
@@ -60,23 +61,21 @@ abstract class Expense with _$Expense {
     @JsonKey(name: 'created_at') required DateTime createdAt,
     @JsonKey(name: 'updated_at') required DateTime updatedAt,
 
-    /// `null` for a persona física taxpayer. Required (nullable) once WH-07 lands.
+    /// `null` for a persona física taxpayer. Always sent (nullable) since 0.11.3.
     @JsonKey(includeIfNull: false, name: 'supplier_kind')
     SupplierKind? supplierKind,
 
-    /// `null` unless `supplier_kind: pf_with_activity`. Required (nullable) once WH-07 lands.
+    /// `null` unless `supplier_kind: pf_with_activity`. Always sent (nullable) since 0.11.3.
     @JsonKey(includeIfNull: false, name: 'supplier_regime')
     SupplierRegime? supplierRegime,
 
-    /// `null` for a persona física taxpayer. Required (nullable) once WH-07 lands.
+    /// `null` for a persona física taxpayer. Always sent (nullable) since 0.11.3.
     @JsonKey(includeIfNull: false, name: 'operation_kind')
     OperationKind? operationKind,
 
-    /// Required once WH-07 lands.
+    /// Always sent since 0.11.3.
     @JsonKey(includeIfNull: false, name: 'residential_rent')
     bool? residentialRent,
-
-    /// The derived withholding (read-only); all zero with `withholder: none` for a persona física taxpayer. Required once WH-07 lands.
     @JsonKey(includeIfNull: false) Withholding? withholding,
   }) = _Expense;
 
