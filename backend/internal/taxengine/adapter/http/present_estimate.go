@@ -81,6 +81,7 @@ type EstimateBody struct {
 	Totals             totalsJSON           `json:"totals"`
 	ParameterSet       parameterSetJSON     `json:"parameter_set"`
 	RecordsFingerprint string               `json:"records_fingerprint"`
+	FiguresFingerprint string               `json:"figures_fingerprint"`
 	EngineVersion      string               `json:"engine_version"`
 }
 
@@ -136,6 +137,7 @@ func toEstimate(e usecase.TaxpayerEstimate) EstimateBody {
 		},
 		ParameterSet:       set,
 		RecordsFingerprint: e.RecordsFingerprint,
+		FiguresFingerprint: e.FiguresFingerprint,
 		EngineVersion:      e.EngineVersion,
 	}
 }

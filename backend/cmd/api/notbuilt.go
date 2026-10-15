@@ -69,14 +69,6 @@ func (notBuilt) GetTaxCalendar(context.Context, gen.GetTaxCalendarRequestObject)
 	return nil, errNotBuilt
 }
 
-func (notBuilt) GetHistory(context.Context, gen.GetHistoryRequestObject) (gen.GetHistoryResponseObject, error) {
-	return nil, errNotBuilt
-}
-
-func (notBuilt) MarkHistoryViewed(context.Context, gen.MarkHistoryViewedRequestObject) (gen.MarkHistoryViewedResponseObject, error) {
-	return nil, errNotBuilt
-}
-
 func (notBuilt) ReceiveRevenueCatWebhook(context.Context, gen.ReceiveRevenueCatWebhookRequestObject) (gen.ReceiveRevenueCatWebhookResponseObject, error) {
 	return nil, errNotBuilt
 }

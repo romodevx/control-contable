@@ -535,3 +535,35 @@ func TestEstimateMonthRecordsFingerprint(t *testing.T) {
 	assert.Equal(t, first, run(1_00))
 	assert.NotEqual(t, first, run(1_01))
 }
+
+// MODULE-history §2.4: every estimate carries the hash of the figures it
+// shows, computed by the one domain function (M5 and M8 never disagree).
+// A record of an informational regime moves neither hash (#98 FU1); a
+// figure that moves moves the figures hash.
+func TestEstimateMonthFiguresFingerprint(t *testing.T) {
+	run := func(isr money.Cents, informationalCash money.Cents) usecase.TaxpayerEstimate {
+		f := newEstFixture(fiscal.PersonFisica,
+			estHold(fiscal.RegimeBusiness, "2026-01", domain.TreatmentFull),
+			estHold("605", "2026-01", domain.TreatmentInformational))
+		f.ledger.incomes = []usecase.IncomeMonthSums{{Regime: "605", Month: time.March, Sums: domain.IncomeSums{Cash: informationalCash}}}
+		s612 := &estStrategy{key: est612, treatment: domain.TreatmentFull, byMonth: map[time.Month]domain.RegimeEstimate{
+			time.March: {Coverage: domain.TreatmentFull, ISR: estISR(isr), IVA: estIVA612},
+		}}
+		got, err := f.estimator(s612).EstimateMonth(t.Context(), userA, taxpayerA, "2026-03")
+		require.NoError(t, err)
+		return got
+	}
+
+	base := run(150_96, 1_00)
+	regimes := make([]domain.RegimeEstimate, 0, len(base.Regimes))
+	for _, r := range base.Regimes {
+		regimes = append(regimes, r.RegimeEstimate)
+	}
+
+	assert.Equal(t, domain.FiguresFingerprint(domain.FiguresInput{Totals: base.Totals, DueDate: base.DueDate, Regimes: regimes}),
+		base.FiguresFingerprint)
+	informational := run(150_96, 9_999_00)
+	assert.Equal(t, base.FiguresFingerprint, informational.FiguresFingerprint, "informational records change no figure")
+	assert.Equal(t, base.RecordsFingerprint, informational.RecordsFingerprint, "nor the records fingerprint (#98 FU1)")
+	assert.NotEqual(t, base.FiguresFingerprint, run(150_97, 1_00).FiguresFingerprint)
+}
