@@ -28,7 +28,10 @@ class HistoryYearPicker extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(label, style: Theme.of(context).textTheme.titleSmall),
+        // The picker below carries this label for screen readers.
+        ExcludeSemantics(
+          child: Text(label, style: Theme.of(context).textTheme.titleSmall),
+        ),
         const SizedBox(height: AppSpacing.xxs),
         Semantics(
           label: label,

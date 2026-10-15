@@ -12,6 +12,8 @@ import 'package:control_contable/features/taxpayers/presentation/onboarding_scre
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../helpers/spoken_labels.dart';
+
 import 'pump_onboarding.dart';
 import 'taxpayers_fakes.dart';
 
@@ -212,6 +214,19 @@ void main() {
         isNull,
         reason: 'this month is the server default',
       );
+    });
+
+    // iOS QA walk (VoiceOver, 2026-10-15): the question was read as a
+    // text and again as the picker's label.
+    testWidgets('the month question is announced once', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await openRegimes(tester);
+
+      expect(
+        timesSpoken(tester, '¿Desde qué mes tributas en estos regímenes?'),
+        1,
+      );
+      semantics.dispose();
     });
 
     testWidgets('a user onboarding in October picks January', (tester) async {

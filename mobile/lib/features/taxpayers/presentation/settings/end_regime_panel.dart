@@ -103,7 +103,8 @@ class _EndRegimePanelState extends ConsumerState<EndRegimePanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(l10n.settingsEndRegimeLabel),
+        // The picker below carries this label for screen readers.
+        ExcludeSemantics(child: Text(l10n.settingsEndRegimeLabel)),
         const SizedBox(height: AppSpacing.xxs),
         Semantics(
           label: l10n.settingsEndRegimeLabel,

@@ -37,7 +37,10 @@ class EstimatePeriodPicker extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (periods.contains(selected)) ...[
-          Text(l10n.estimatePeriodLabel, style: text.titleSmall),
+          // The picker below carries this label for screen readers.
+          ExcludeSemantics(
+            child: Text(l10n.estimatePeriodLabel, style: text.titleSmall),
+          ),
           const SizedBox(height: AppSpacing.xxs),
           Semantics(
             label: l10n.estimatePeriodLabel,

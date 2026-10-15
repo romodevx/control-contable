@@ -256,7 +256,10 @@ class _StartPeriodField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(label, style: Theme.of(context).textTheme.titleMedium),
+        // The picker below carries this label for screen readers.
+        ExcludeSemantics(
+          child: Text(label, style: Theme.of(context).textTheme.titleMedium),
+        ),
         const SizedBox(height: AppSpacing.xxs),
         Semantics(
           label: label,

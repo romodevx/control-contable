@@ -18,7 +18,7 @@ const _baseBundleId = 'mx.romodevx.controlContable';
 const _testsBundleId = '$_baseBundleId.RunnerTests';
 
 class _Flavor {
-  const _Flavor(this.name, this.bundleId, this.displayName);
+  const new(this.name, this.bundleId, this.displayName);
 
   final String name;
   final String bundleId;
@@ -40,7 +40,7 @@ const _baseXcconfig = {
 
 /// One `XCBuildConfiguration` object of the project file.
 class _BuildConfiguration {
-  const _BuildConfiguration(this.name, this.body);
+  const new(this.name, this.body);
 
   final String name;
   final String body;
