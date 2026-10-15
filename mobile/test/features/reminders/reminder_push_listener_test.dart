@@ -224,6 +224,26 @@ void main() {
       expect(harness.messaging.prompts, 0);
     });
 
+    // The previous user's row would keep sending their reminders here; the
+    // OS hides them only until this user grants the permission in Settings.
+    testWidgets('a leftover registration with reminders on but no OS '
+        'permission is claimed and removed', (tester) async {
+      harness.messaging.status = PushPermission.denied;
+      harness.store.registered = true;
+      harness.repository.settings = defaultSettings.copyWith(enabled: true);
+      await harness.pump(
+        tester,
+        modules: signedInModules,
+        signedIn: true,
+        location: null,
+      );
+
+      expect(harness.repository.registered, hasLength(1));
+      expect(harness.repository.unregistered, [testInstallationId]);
+      expect(await harness.store.isRegistered(), isFalse);
+      expect(harness.messaging.prompts, 0);
+    });
+
     testWidgets('a leftover registration with reminders on is claimed, '
         'never removed', (tester) async {
       harness.store.registered = true;

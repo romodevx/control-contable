@@ -19,8 +19,8 @@
   user's, unknown or already removed id → `404`, which the app treats as done. Any other
   failure keeps the app's "registered" marker: the sign-out then sends the id as `logout`'s
   `device_id` (the server deletes the row with the session, 0.14.0), and the next sign-in
-  claims the installation and deletes it when the new user's reminders are off (M9 security
-  gate F1).
+  claims the installation and deletes it unless the new user registers it (reminders off, or
+  no OS permission; M9 security gate F1).
 - `getReminderSettings` / `putReminderSettings` (`/v1/reminder-settings`): GET answers the
   defaults until the first save (`enabled: false`, `early_day: 14`, `on_due_date: true`,
   `send_time: 10:00`, `show_amounts: false`) without writing a row. PUT replaces the whole

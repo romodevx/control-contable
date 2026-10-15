@@ -29,8 +29,8 @@ class ReminderPushSync {
   /// push works, the OS allows it and the user's reminders are on. A
   /// registration still marked from before (a sign-out whose delete
   /// failed, M9 security gate F1) is claimed for this user either way, and
-  /// removed when this user's reminders are off, so the previous user's
-  /// reminders never reach this phone.
+  /// removed unless this user registers (reminders off, or no OS
+  /// permission), so the previous user's reminders never reach this phone.
   Future<void> afterSignIn() => _absorbed('reminders.sync', () async {
     if (!_messaging.isAvailable) return;
     final granted = await _messaging.permission() == PushPermission.granted;
@@ -39,7 +39,7 @@ class ReminderPushSync {
     final settings = await _repository.getSettings();
     if (settings.enabled && granted) {
       await _device.register();
-    } else if (!settings.enabled && leftover) {
+    } else if (leftover) {
       await _device.evict();
     }
   });

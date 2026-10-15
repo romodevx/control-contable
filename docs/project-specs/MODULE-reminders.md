@@ -128,7 +128,7 @@ SEC FU1). Reminders own no purge logic.
   another user's or an unknown id removes nothing, still `204`); (b) the app keeps its registered
   marker when the `DELETE` fails with anything but `404`, and sends the id with `logout` while the
   marker is set; (c) on the next sign-in a marker still set is **claimed** for the new user (`registerDevice`)
-  and, when that user's reminders are off, deleted at once, with or without the OS permission.
+  and deleted at once unless that user registers it (reminders off, or no OS permission).
 - **`INVALID_ARGUMENT` deletes a device only when FCM names the token** (`google.rpc.BadRequest`
   violation on `message.token`, M9 security gate F2). Anything else is the message: the device is kept
   (`rejected`). The payload is capped (title + body + link + collapse id ≤ 2,048 bytes, a listed name ≤ 80
