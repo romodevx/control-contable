@@ -93,6 +93,22 @@ type LedgerReader struct{}
 // NewLedgerReader returns a LedgerReader. It holds no pool.
 func NewLedgerReader() LedgerReader { return LedgerReader{} }
 
+// The withholder of an income, from its derived facts (WH-06):
+// counterparty_kind and via_platform, the same facts domain.LegacyCounterparty
+// mirrors into the deprecated counterparty_type. A platform sale is the
+// platform's; otherwise a persona moral or a government withholds as a moral.
+// A legacy income the WH-08 backfill has not derived yet (counterparty_kind
+// NULL) still answers by its stored counterparty_type, the backfill's own
+// §5.2 mapping (ADR-0008 Amendment 2, item 3: no deploy order). That
+// fallback, the ledger's last read of counterparty_type, goes with the
+// column's drop once every environment is backfilled (PLAN WH-08 contract
+// step).
+const (
+	byPlatform = `via_platform OR (counterparty_kind IS NULL AND counterparty_type = 'plataforma')`
+	byMoral    = `NOT via_platform AND coalesce(counterparty_kind IN ('pm', 'gov_federal', 'gov_state_municipal'),
+                                         counterparty_type = 'persona_moral')`
+)
+
 // incomeSumsSQL is the single round trip of IncomeSums. Each CTE is one
 // GROUP BY regime, month over its partial index (user_id from the RLS
 // policy, taxpayer_id, then the date range; the predicates drop the
@@ -122,10 +138,10 @@ WITH booked AS (
          coalesce(sum(iva_cents) FILTER (WHERE iva_rate = 'rate_8'), 0)                                 AS rate8_iva,
          coalesce(sum(amount_cents) FILTER (WHERE iva_rate = 'rate_0'), 0)                              AS rate0_base,
          coalesce(sum(amount_cents) FILTER (WHERE iva_rate = 'exempt'), 0)                              AS exempt_base,
-         coalesce(sum(iva_withheld_cents) FILTER (WHERE counterparty_type = 'persona_moral'), 0)        AS iva_withheld_moral,
-         coalesce(sum(iva_withheld_cents) FILTER (WHERE counterparty_type = 'plataforma'), 0)           AS iva_withheld_platform,
-         coalesce(sum(isr_withheld_cents) FILTER (WHERE counterparty_type = 'persona_moral'), 0)        AS isr_withheld_moral,
-         coalesce(sum(isr_withheld_cents) FILTER (WHERE counterparty_type = 'plataforma'), 0)           AS isr_withheld_platform
+         coalesce(sum(iva_withheld_cents) FILTER (WHERE ` + byMoral + `), 0)                         AS iva_withheld_moral,
+         coalesce(sum(iva_withheld_cents) FILTER (WHERE ` + byPlatform + `), 0)                      AS iva_withheld_platform,
+         coalesce(sum(isr_withheld_cents) FILTER (WHERE ` + byMoral + `), 0)                         AS isr_withheld_moral,
+         coalesce(sum(isr_withheld_cents) FILTER (WHERE ` + byPlatform + `), 0)                      AS isr_withheld_platform
   FROM incomes
   WHERE taxpayer_id = @taxpayer AND deleted_at IS NULL AND collected_on IS NOT NULL
     AND collected_on >= CAST(@from_date AS date) AND collected_on < CAST(@until_date AS date)

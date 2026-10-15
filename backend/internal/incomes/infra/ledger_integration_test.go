@@ -68,8 +68,13 @@ func seedLedgerTaxpayers(t *testing.T, e *env) {
 }
 
 // incomeFixture is one income row as the fixtures insert it; an empty date is NULL.
+// counterparty is the deprecated counterparty_type mirror; kind (counterparty_kind,
+// empty is NULL: a legacy row the WH-08 backfill has not derived) and viaPlatform are
+// the derived facts.
 type incomeFixture struct {
 	user, taxpayer, regime, counterparty, rate string
+	kind                                       string
+	viaPlatform                                bool
 	amount, iva, isrWithheld, ivaWithheld      money.Cents
 	invoicedOn, collectedOn                    string
 	deleted                                    bool
@@ -77,8 +82,8 @@ type incomeFixture struct {
 
 const insertIncomeFixtureSQL = `
 INSERT INTO incomes (user_id, taxpayer_id, regime_code, counterparty_type, amount_cents, iva_rate, iva_cents,
-                     isr_withheld_cents, iva_withheld_cents, invoiced_on, collected_on)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::date, $11::date)
+                     isr_withheld_cents, iva_withheld_cents, invoiced_on, collected_on, counterparty_kind, via_platform)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::date, $11::date, $12, $13)
 RETURNING id`
 
 func seedIncomes(t *testing.T, e *env, fixtures ...incomeFixture) {
@@ -88,6 +93,7 @@ func seedIncomes(t *testing.T, e *env, fixtures ...incomeFixture) {
 		queryAs(t, e.app, f.user, insertIncomeFixtureSQL, []any{
 			f.user, f.taxpayer, f.regime, f.counterparty, int64(f.amount), f.rate, int64(f.iva),
 			int64(f.isrWithheld), int64(f.ivaWithheld), nullDate(f.invoicedOn), nullDate(f.collectedOn),
+			nullText(f.kind), f.viaPlatform,
 		}, &id)
 		if f.deleted {
 			execAs(t, e.app, f.user, "UPDATE incomes SET deleted_at = now() WHERE id = $1", id)
@@ -101,6 +107,8 @@ func nullDate(raw string) any {
 	}
 	return raw
 }
+
+func nullText(raw string) any { return nullDate(raw) }
 
 func execAs(t *testing.T, app *sql.DB, userID, statement string, args ...any) {
 	t.Helper()
@@ -262,6 +270,34 @@ func TestLedgerReader_RESICOWithholdingByMoral(t *testing.T) {
 	}}, got)
 }
 
+// The withholder of a derived income comes from its facts (counterparty_kind,
+// via_platform), never from the deprecated counterparty_type mirror, so the
+// mirror's drop (PLAN WH-08 contract step) cannot change a figure. Each row's
+// mirror disagrees with its facts, which proves the facts are what is read: a
+// government withholds as a moral, a platform sale is the platform's.
+func TestLedgerReader_WithholderFollowsTheDerivedFacts(t *testing.T) {
+	e := newEnv(t)
+	seedLedgerTaxpayers(t, e)
+	seedIncomes(t, e,
+		withIncome(sale("2026-02-03", 10000_00), func(f *incomeFixture) {
+			f.taxpayer, f.regime, f.counterparty, f.kind = ledgerRESICO, "626", "plataforma", "gov_federal"
+			f.isrWithheld, f.ivaWithheld = 125_00, 1066_67
+		}),
+		withIncome(sale("2026-02-11", 4321_00), func(f *incomeFixture) {
+			f.taxpayer, f.regime, f.counterparty, f.kind, f.viaPlatform = ledgerRESICO, "626", "persona_moral", "pm", true
+			f.isrWithheld, f.ivaWithheld = 43_21, 345_68
+		}),
+	)
+
+	got := readIncomeSums(t, e, userA, infra.LedgerQuery{TaxpayerID: ledgerRESICO, FiscalYear: 2026, Through: time.February})
+
+	assert.Equal(t, []infra.IncomeMonthSums{{
+		Regime: fiscal.RegimeRESICO, Year: 2026, Month: time.February, Cash: 14321_00, ByRate: rate16(14321_00, 2291_36),
+		IVAWithheld: infra.Withheld{ByMoral: 1066_67, ByPlatform: 345_68},
+		ISRWithheld: infra.Withheld{ByMoral: 125_00, ByPlatform: 43_21},
+	}}, got)
+}
+
 func TestLedgerReader_DecemberReachesTheYearEnd(t *testing.T) {
 	e := newEnv(t)
 	seedLedgerTaxpayers(t, e)
@@ -377,7 +413,8 @@ func TestLedgerReader_UntaxedIncomeCannotCarryIVA(t *testing.T) {
 			f := withIncome(sale("2026-01-10", 1000_00), func(f *incomeFixture) { f.rate, f.iva = rate, 1_00 })
 			err := pgtest.AsUser(t.Context(), e.app, userA, func(tx *sql.Tx) error {
 				_, err := tx.ExecContext(t.Context(), insertIncomeFixtureSQL, f.user, f.taxpayer, f.regime, f.counterparty,
-					int64(f.amount), f.rate, int64(f.iva), int64(0), int64(0), f.invoicedOn, f.collectedOn)
+					int64(f.amount), f.rate, int64(f.iva), int64(0), int64(0), f.invoicedOn, f.collectedOn,
+					nullText(f.kind), f.viaPlatform)
 				return err
 			})
 			var pgErr *pgconn.PgError
