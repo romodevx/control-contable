@@ -4,11 +4,13 @@ import 'package:control_contable/api/generated/models/history_year.dart';
 import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/features/history/presentation/history_screen.dart';
+import 'package:control_contable/features/incomes/application/income_records.dart';
 import 'package:control_contable/features/taxpayers/application/active_taxpayer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../incomes/incomes_fakes.dart';
 import '../tax_engine/estimate_fixtures.dart';
 import '../taxpayers/taxpayers_fakes.dart';
 import 'history_fixtures.dart';
@@ -689,6 +691,23 @@ void main() {
       expect(harness.repository.calls, hasLength(2));
       expect(find.byKey(const ValueKey('history-empty')), findsNothing);
       expect(_row('2026-02'), findsOneWidget);
+    });
+
+    // Device walk 2026-10-15 (F3): the delete toast lives in the app-wide
+    // messenger, so its *Deshacer* can run while History is on top. The
+    // restored record must show without a pull-to-refresh.
+    testWidgets('an Undo run while History is open reads the year again', (
+      tester,
+    ) async {
+      await harness.pump(tester);
+      expect(harness.repository.calls, hasLength(1));
+
+      final deleted = income();
+      harness.incomes.incomes.add(deleted);
+      await harness.container.read(incomeRecordsProvider).restore([deleted]);
+      await tester.pumpAndSettle();
+
+      expect(harness.repository.calls, hasLength(2));
     });
 
     testWidgets('switching taxpayer never shows the previous figures', (
