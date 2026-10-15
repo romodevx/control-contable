@@ -7,8 +7,7 @@ import 'package:flutter/widgets.dart';
 /// Created through `AppFormController`, which owns and disposes it.
 abstract class AppFormFieldModel extends ChangeNotifier {
   /// A field labeled [label].
-  new({required this.label, bool isRequired = true, this.keepForNext = false})
-    : _isRequired = isRequired;
+  new({required this.label, this._isRequired = true, this.keepForNext = false});
 
   /// The visible label, also used by the error summary.
   final String label;

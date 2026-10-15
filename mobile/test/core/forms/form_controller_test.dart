@@ -49,9 +49,9 @@ void main() {
       await form.submit(() async {});
       expect(collected.error, isA<MissingValue>());
       var notified = 0;
-      collected.addListener(() => notified++);
-
-      collected.isRequired = false;
+      collected
+        ..addListener(() => notified++)
+        ..isRequired = false;
 
       expect(collected.isRequired, isFalse);
       expect(collected.error, isNull);
