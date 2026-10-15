@@ -223,12 +223,22 @@ deadlines:
 
 A deadline belongs to the fiscal year it closes: `valid_from` = 1 January and `valid_to` =
 31 December **of that fiscal year**, with the date in the next year (the 2027 file carries
-`2028-04-30` for PF). The engine reads it in force on the year's last day. Without it a
-fallback (provisional) estimate shows **no** deadline ("tu contador te indica el plazo")
-rather than the wrong year's (`TestEmbedded2026AnnualDeadlines`). Add the same cases to
-`embedded_<year>_annual_test.go` (copy `embedded_2026_annual_test.go`): every annual key
-present (`taxparams.DeductionLimitRequirements()`), the caps, the thresholds, the deadlines on
-31 December and `ErrNotInForce` on 1 January, and tariff spot rows.
+`2028-04-30` for PF). The engine reads it in force on the year's last day
+(`TestEmbedded2026AnnualDeadlines`: in force on 31 December, `ErrNotInForce` on 1 January),
+so an earlier year's dates can never stand in. Two consequences:
+
+- **The annual never runs on the §1 fallback.** Unlike the monthly estimate, a fiscal year
+  with no file of its own answers `422 parameters_unavailable` (`Estimator.resolve` refuses
+  a `Fallback` selection), and the app says "No hay tarifas cargadas para ese año". From
+  1 January until the new file ships, the current year ("Año en curso") cannot be
+  estimated; the previous year, the one being filed, is unaffected.
+- **The deadlines are mandatory.** A year file without them fails every annual estimate of
+  that year (`500`, the error is not mapped), so never ship a year without the three keys.
+
+Add the same cases to `embedded_<year>_annual_test.go` (copy `embedded_2026_annual_test.go`):
+every deduction-limit key present (`taxparams.DeductionLimitRequirements()`), the caps, the
+thresholds, the deadlines on 31 December and `ErrNotInForce` on 1 January, and tariff spot
+rows.
 
 ### 8.2 Read the RMF of the next year for the closing ejercicio
 

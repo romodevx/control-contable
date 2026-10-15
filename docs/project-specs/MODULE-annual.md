@@ -406,8 +406,8 @@ the `year_in_progress` warning shows and nothing is extrapolated. 2027 → `400 
 ### US-A13 Flags, isolation, read-only
 Given `module_annual` OFF (or `module_tax_engine` OFF), Then every annual route returns `404` and the
 entry is hidden. Given another user's taxpayer id, Then `404`. Given a read-only user (trial ended), Then
-reads work; creates, edits and PUTs return `402`; deleting and restoring (Undo) still work, so read-only
-never makes a delete one-way (ADR-0009, CONTRACT.md 0.6.1; aligned by ANN-26 after QA ANN-23 §6).
+reads work; creates, edits and PUTs return `402`; deleting (a deduction or a constancia) and restoring a
+deduction (Undo) still work, so read-only never makes a deduction's delete one-way (ADR-0009, CONTRACT.md 0.6.1; aligned by ANN-26 after QA ANN-23 §6).
 
 ## 5. Errors → ErrorCode (single envelope)
 

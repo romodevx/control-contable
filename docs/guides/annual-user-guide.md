@@ -13,7 +13,9 @@ comillas son los que ves en pantalla. La referencia técnica del módulo está e
 1. En **Inicio**, toca **"Declaración anual"**, en el encabezado. Si no lo ves, el módulo
    no está activo en tu cuenta.
 2. Elige el **"Ejercicio"**. Se puede estimar desde 2026 hasta el año en curso. Del 1 de
-   enero al 30 de abril la app abre el año anterior, que es el que se declara.
+   enero al 30 de abril la app abre el año anterior, que es el que se declara. A principios
+   de año el año en curso puede mostrar "No hay tarifas cargadas para ese año" hasta que la
+   app cargue sus tarifas; el año anterior sí se puede estimar.
 3. Si el año no ha terminado, verás **"Año en curso"**. La app calcula con tus registros
    hasta el último mes cerrado y no proyecta los meses que faltan.
 

@@ -583,6 +583,7 @@ tax engine's preconditions ([module page](../modules/annual.md#flags-prerequisit
 | QA O3 | Record forms (M3/M4) default the regime radio to the first regime held; for 605 + 612 that is the informative 605 | frontend-sr (`module_incomes` / `module_expenses`) | UX polish, before launch |
 | QA §7 | **iOS walk** of the annual screens (Xcode pending) | qa-sr | OB6 |
 | QA §7 | **Archived taxpayer device walk** (covered through the stack only) and RESICO PF / PM, 625, 603 on a device | qa-sr | Next device walk (REL-08 at the latest) |
+| ANN-26 FU1 | A current year with no parameter file of its own answers `422 parameters_unavailable` (no fallback, unlike the monthly), but the contract's 422 text says "before 2026" and the app says "Elige un año desde 2026": document the no-own-file case in the contract (architect) and give the client a message for it, or hide the year from the picker | architect + frontend-sr | Before 1 January 2027 |
 | RMF 2027 | Read RMF 2027 for ejercicio 2026: deadline extensions, rules 3.13.7 / 3.17.11 renewals, lower `rmfPendingYear` ([runbook §8](../runbooks/tax-params-update.md#8-the-annual-return-module_annual-rmf-deadlines-and-rule-renewals)) | backend-sr, qa-sr, CPA | Late December 2026 – January 2027 |
 
 ### REL — Release (MVP deployable)
