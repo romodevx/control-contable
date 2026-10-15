@@ -82,7 +82,7 @@ func TestPresetSmoke_historyReachableOnlyWhenThePresetIncludesIt(t *testing.T) {
 
 			assert.Equal(t, reachable, slices.Contains(env.enabledFlags(t), moduleHistoryKey), "GET /v1/flags")
 			for _, p := range probes {
-				rec := h.c.ServeOp(t, contracttest.Op(p.op), env.handler, env.send(p.method, p.target, p.body, ana.token))
+				rec := env.do(env.send(p.method, p.target, p.body, ana.token))
 				if reachable {
 					assert.Equal(t, p.status, rec.Code, "%s: the module answers: %s", p.op, rec.Body.String())
 					continue
