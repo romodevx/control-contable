@@ -9,13 +9,21 @@ import 'package:flutter/services.dart';
 /// `1234.5` and reads back as centavos ([MoneyFieldController.centavos]).
 class AppMoneyField extends StatelessWidget {
   /// A money field for [field].
-  const new({required this.field, required this.textInputAction, super.key});
+  const new({
+    required this.field,
+    required this.textInputAction,
+    this.helperText,
+    super.key,
+  });
 
   /// The amount field.
   final MoneyFieldController field;
 
   /// The IME action key.
   final TextInputAction textInputAction;
+
+  /// A short explanation under the field.
+  final String? helperText;
 
   @override
   Widget build(BuildContext context) => AppTextField(
@@ -24,6 +32,7 @@ class AppMoneyField extends StatelessWidget {
     textInputAction: textInputAction,
     autofillHints: const [],
     prefixText: r'$ ',
+    helperText: helperText,
     inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.,$ ]'))],
   );
 }
@@ -32,13 +41,21 @@ class AppMoneyField extends StatelessWidget {
 /// ([DateFieldController.date]).
 class AppDateField extends StatelessWidget {
   /// A date field for [field].
-  const new({required this.field, required this.textInputAction, super.key});
+  const new({
+    required this.field,
+    required this.textInputAction,
+    this.helperText,
+    super.key,
+  });
 
   /// The date field.
   final DateFieldController field;
 
   /// The IME action key.
   final TextInputAction textInputAction;
+
+  /// A short explanation under the field.
+  final String? helperText;
 
   @override
   Widget build(BuildContext context) => AppTextField(
@@ -47,6 +64,7 @@ class AppDateField extends StatelessWidget {
     textInputAction: textInputAction,
     autofillHints: const [],
     hintText: AppLocalizations.of(context).formDateHint,
+    helperText: helperText,
     inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d/\-. ]'))],
   );
 }

@@ -3,6 +3,7 @@ import 'package:control_contable/core/theme/app_spacing.dart';
 import 'package:control_contable/core/time/clock.dart';
 import 'package:control_contable/core/widgets/load_status.dart';
 import 'package:control_contable/features/annual/application/annual_estimate.dart';
+import 'package:control_contable/features/annual/application/annual_input_data.dart';
 import 'package:control_contable/features/annual/domain/annual_years.dart';
 import 'package:control_contable/features/annual/presentation/annual_states.dart';
 import 'package:control_contable/features/annual/presentation/annual_view.dart';
@@ -63,6 +64,9 @@ class AnnualScreen extends ConsumerWidget {
   Future<void> _refresh(WidgetRef ref, AnnualQuery? query) async {
     if (query == null) return;
     try {
+      ref
+        ..invalidate(personalDeductionsProvider(query))
+        ..invalidate(salaryStatementsProvider(query));
       final reloaded = ref.refresh(annualEstimateProvider(query).future);
       await reloaded;
     } on ApiFailure {

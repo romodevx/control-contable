@@ -200,7 +200,9 @@ void main() {
     );
   });
 
-  testWidgets('an incomplete section names what is missing', (tester) async {
+  testWidgets('an incomplete section links what is missing to its screen', (
+    tester,
+  ) async {
     await _open(
       harness,
       tester,
@@ -220,13 +222,14 @@ void main() {
       ),
     );
 
-    final named = find.text('Constancia de sueldos');
-    await _reveal(tester, named);
+    final cta = find.text('Constancia de sueldos');
+    await _reveal(tester, cta);
     expect(find.text('Falta:'), findsOneWidget);
-    // Its screen ships in ANN-20: named, never a link to a dead end.
+    await tester.tap(cta);
+    await tester.pumpAndSettle();
     expect(
-      find.ancestor(of: named, matching: find.byType(ListTile)),
-      findsNothing,
+      harness.location,
+      AnnualRoutes.salaryStatements(fixtureTaxpayerId, 2026),
     );
   });
 

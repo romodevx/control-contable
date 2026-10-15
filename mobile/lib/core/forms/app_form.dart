@@ -26,6 +26,7 @@ class AppForm extends StatelessWidget {
     this.allowCreateAnother = false,
     this.onSaveForNext,
     this.primaryLabel,
+    this.fitContent = false,
     super.key,
   });
 
@@ -52,6 +53,10 @@ class AppForm extends StatelessWidget {
 
   /// The primary's label; *Guardar* by default.
   final String? primaryLabel;
+
+  /// Whether the form takes only the height of its fields (a sheet whose
+  /// height fits its content) instead of all the height it is given.
+  final bool fitContent;
 
   void _submit() => unawaited(controller.submit(onSave));
 
@@ -88,8 +93,10 @@ class AppForm extends StatelessWidget {
         const SingleActivator(LogicalKeyboardKey.enter, meta: true): _submit,
       },
       child: Column(
+        mainAxisSize: fitContent ? MainAxisSize.min : MainAxisSize.max,
         children: [
-          Expanded(
+          Flexible(
+            fit: fitContent ? FlexFit.loose : FlexFit.tight,
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(AppSpacing.gutter),
               child: Column(

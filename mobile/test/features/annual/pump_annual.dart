@@ -4,11 +4,13 @@ import 'package:control_contable/api/generated/models/annual_breakdown.dart';
 import 'package:control_contable/api/generated/models/annual_computed_section_kind.dart';
 import 'package:control_contable/api/generated/models/annual_estimate.dart';
 import 'package:control_contable/api/generated/models/person_type.dart';
+import 'package:control_contable/core/access/read_only_access.dart';
 import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/links/url_opener.dart';
 import 'package:control_contable/core/router/app_router.dart';
 import 'package:control_contable/core/time/clock.dart';
 import 'package:control_contable/features/annual/annual_routes.dart';
+import 'package:control_contable/features/annual/data/annual_inputs_repository.dart';
 import 'package:control_contable/features/annual/data/annual_repository.dart';
 import 'package:control_contable/features/taxpayers/data/active_taxpayer_store.dart';
 import 'package:control_contable/features/taxpayers/data/taxpayers_repository.dart';
@@ -19,6 +21,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../helpers/pump_app.dart';
 import '../taxpayers/taxpayers_fakes.dart';
 import 'annual_fixtures.dart';
+import 'pump_annual_inputs.dart';
 
 /// One recorded annual estimate request.
 typedef AnnualCall = ({String taxpayerId, int fiscalYear});
@@ -95,6 +98,12 @@ class AnnualHarness {
   /// The annual server.
   final FakeAnnualRepository repository = FakeAnnualRepository();
 
+  /// The annual inputs server (ANN-19..21).
+  final FakeAnnualInputsRepository inputs = FakeAnnualInputsRepository();
+
+  /// Whether the session already knows the user is read-only.
+  bool readOnly = false;
+
   /// The running app's providers.
   late ProviderContainer container;
 
@@ -131,6 +140,7 @@ class AnnualHarness {
       overrides: [
         taxpayersRepositoryProvider.overrideWithValue(taxpayers),
         annualRepositoryProvider.overrideWithValue(repository),
+        annualInputsRepositoryProvider.overrideWithValue(inputs),
         clockProvider.overrideWithValue(() => now),
         urlOpenerProvider.overrideWithValue((url) async {
           openedUrls.add(url);
@@ -144,6 +154,9 @@ class AnnualHarness {
     container = ProviderScope.containerOf(
       tester.element(find.byType(MaterialApp)),
     );
+    if (readOnly) {
+      container.read(readOnlyAccessProvider.notifier).markReadOnly();
+    }
     if (location != null) {
       unawaited(container.read(appRouterProvider).push<void>(location));
       await tester.pumpAndSettle();

@@ -15,6 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../tax_engine/estimate_fixtures.dart' show fixtureTaxpayerId;
 import '../taxpayers/taxpayers_fakes.dart' show detail;
 import 'annual_fixtures.dart';
+import 'annual_inputs_fixtures.dart';
 import 'pump_annual.dart';
 
 /// AN-06's suggested coeficiente, labelled as MODULE-annual §2.7 asks.
@@ -462,28 +463,31 @@ void main() {
       ),
     );
 
-    // ANN-19..21 ship these screens: until then the input is named, never
-    // a link to a dead end (MODULE-annual §8 has no "próximamente").
-    for (final label in [
-      'Constancia de sueldos',
-      'Ingresos acumulables del año anterior',
-      'Pagos provisionales presentados',
-      'Donativos',
+    // Each missing input opens the screen that completes it (ANN-19..21).
+    for (final (label, location) in [
+      (
+        'Constancia de sueldos',
+        AnnualRoutes.salaryStatements(fixtureTaxpayerId, 2026),
+      ),
+      (
+        'Ingresos acumulables del año anterior',
+        AnnualRoutes.annualInputs(fixtureTaxpayerId, 2026),
+      ),
+      (
+        'Pagos provisionales presentados',
+        AnnualRoutes.filedPayments(fixtureTaxpayerId, 2026, '612'),
+      ),
+      ('Donativos', AnnualRoutes.personalDeductions(fixtureTaxpayerId, 2026)),
     ]) {
-      testWidgets('"Falta: $label" is named, without a link until its '
-          'screen ships', (tester) async {
+      testWidgets('"Falta: $label" opens its screen', (tester) async {
         await pumpIncomplete(tester);
-        final named = _inSection('pf_art152', find.text(label));
-        await _reveal(tester, named);
+        final cta = _inSection('pf_art152', find.text(label));
+        await _reveal(tester, cta);
 
         expect(_inSection('pf_art152', find.text('Falta:')), findsOneWidget);
-        expect(
-          find.ancestor(of: named, matching: find.byType(ListTile)),
-          findsNothing,
-        );
-        await tester.tap(named, warnIfMissed: false);
+        await tester.tap(cta);
         await tester.pumpAndSettle();
-        expect(harness.location, AnnualRoutes.estimate);
+        expect(harness.location, location);
       });
     }
 
@@ -526,14 +530,100 @@ void main() {
     });
   });
 
-  testWidgets('no "Datos para tu anual" until its screens ship (ANN-19..21): '
-      'no row to a dead end, nothing extra read', (tester) async {
-    await harness.pump(tester);
-    await _reveal(tester, _section('pf_art152'));
+  group('datos para tu anual', () {
+    testWidgets('PF: deductions and constancias with counters, payments per '
+        'regime, the year facts', (tester) async {
+      harness.inputs
+        ..deductions.addAll([
+          deductionJson(),
+          deductionJson(id: 'ded-2'),
+          deductionJson(id: 'ded-3'),
+        ])
+        ..statements.add(statementJson());
+      await harness.pump(tester);
+      final block = find.byKey(const ValueKey('annual-inputs'));
+      await _reveal(tester, block);
 
-    expect(find.byKey(const ValueKey('annual-inputs')), findsNothing);
-    expect(find.text('Datos para tu anual'), findsNothing);
-    expect(find.byIcon(Icons.chevron_right), findsNothing);
+      Finder inBlock(String text) =>
+          find.descendant(of: block, matching: find.text(text));
+      expect(inBlock('Datos para tu anual'), findsOneWidget);
+      expect(inBlock('Deducciones personales'), findsOneWidget);
+      expect(inBlock('3 registradas'), findsOneWidget);
+      expect(inBlock('Constancias de sueldos'), findsOneWidget);
+      expect(inBlock('1 registrada'), findsOneWidget);
+      expect(inBlock('Pagos provisionales presentados'), findsOneWidget);
+      expect(inBlock('Régimen 612'), findsOneWidget);
+      expect(inBlock('Datos del año'), findsOneWidget);
+
+      await tester.tap(inBlock('Deducciones personales'));
+      await tester.pumpAndSettle();
+      expect(
+        harness.location,
+        AnnualRoutes.personalDeductions(fixtureTaxpayerId, 2026),
+      );
+    });
+
+    testWidgets('PM: only the provisional payments', (tester) async {
+      harness.personType = PersonType.moral;
+      await harness.pump(
+        tester,
+        reply: _estimate(
+          personType: 'moral',
+          headline: ['pm_601'],
+          sections: [pm601SectionJson()],
+        ),
+      );
+      final block = find.byKey(const ValueKey('annual-inputs'));
+      await _reveal(tester, block);
+
+      expect(
+        find.descendant(
+          of: block,
+          matching: find.text('Deducciones personales'),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: block, matching: find.text('Régimen 601')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('counters that fail to load are left out', (tester) async {
+      harness.inputs.failures
+        ..['listDeductions'] = const ApiUnreachable()
+        ..['listStatements'] = const ApiUnreachable();
+      await harness.pump(tester);
+      final block = find.byKey(const ValueKey('annual-inputs'));
+      await _reveal(tester, block);
+
+      expect(
+        find.descendant(
+          of: block,
+          matching: find.text('Deducciones personales'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('registrada'), findsNothing);
+    });
+
+    testWidgets('read-only: says what still works', (tester) async {
+      harness.readOnly = true;
+      await harness.pump(tester);
+      final notice = find.byKey(const ValueKey('annual-read-only'));
+      await _reveal(tester, notice);
+
+      expect(
+        find.descendant(
+          of: notice,
+          matching: find.text(
+            'Tu periodo de prueba terminó: puedes consultar esta estimación, '
+            'pero capturar o cambiar datos requiere un plan.',
+          ),
+        ),
+        findsOneWidget,
+      );
+    });
   });
 
   group('disclaimers', () {

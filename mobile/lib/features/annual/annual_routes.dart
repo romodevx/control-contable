@@ -3,18 +3,24 @@ import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/router/feature_module.dart';
 import 'package:control_contable/core/router/not_found_screen.dart';
 import 'package:control_contable/features/annual/presentation/annual_breakdown_screen.dart';
+import 'package:control_contable/features/annual/presentation/annual_facts_screen.dart';
 import 'package:control_contable/features/annual/presentation/annual_screen.dart';
+import 'package:control_contable/features/annual/presentation/filed_payments_screen.dart';
+import 'package:control_contable/features/annual/presentation/personal_deduction_form_page.dart';
+import 'package:control_contable/features/annual/presentation/personal_deductions_screen.dart';
+import 'package:control_contable/features/annual/presentation/salary_statements_screen.dart';
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 const String _taxpayerId = 'taxpayerId';
 const String _fiscalYear = 'ejercicio';
 const String _section = 'seccion';
+const String _regimeCode = 'regimeCode';
 const String _root = '/anual';
 const String _year = '$_root/:$_taxpayerId/:$_fiscalYear';
 
-/// Locations owned by `module_annual`. Ids, years and section kinds travel
-/// in the location; never an amount or the RFC. The input screens arrive
-/// with ANN-19..21, each with its own location: none is a placeholder.
+/// Locations owned by `module_annual`. Ids, years, section kinds and regime
+/// codes travel in the location; never an amount or the RFC.
 abstract final class AnnualRoutes {
   /// The active taxpayer's annual estimate (ANN-17).
   static const String estimate = _root;
@@ -25,6 +31,29 @@ abstract final class AnnualRoutes {
     int fiscalYear,
     AnnualComputedSectionKind section,
   ) => '${_of(taxpayerId, fiscalYear)}/secciones/${section.json}';
+
+  /// The personal deductions of the year (ANN-19).
+  static String personalDeductions(String taxpayerId, int fiscalYear) =>
+      '${_of(taxpayerId, fiscalYear)}/deducciones';
+
+  /// The new personal deduction form of the year (ANN-19).
+  static String newPersonalDeduction(String taxpayerId, int fiscalYear) =>
+      '${personalDeductions(taxpayerId, fiscalYear)}/nueva';
+
+  /// The salary constancias of the year (ANN-20).
+  static String salaryStatements(String taxpayerId, int fiscalYear) =>
+      '${_of(taxpayerId, fiscalYear)}/constancias';
+
+  /// The per-year annual facts (ANN-21).
+  static String annualInputs(String taxpayerId, int fiscalYear) =>
+      '${_of(taxpayerId, fiscalYear)}/datos';
+
+  /// The provisional payments filed for [regime] in the year (ANN-21).
+  static String filedPayments(
+    String taxpayerId,
+    int fiscalYear,
+    String regime,
+  ) => '${_of(taxpayerId, fiscalYear)}/pagos/$regime';
 
   static String _of(String taxpayerId, int fiscalYear) =>
       '$_root/$taxpayerId/$fiscalYear';
@@ -57,8 +86,61 @@ final FeatureModule annualFeature = FeatureModule(
         );
       },
     ),
+    GoRoute(
+      path: '$_year/deducciones',
+      builder: (context, state) => _ofYear(
+        state,
+        (taxpayerId, year) =>
+            PersonalDeductionsScreen(taxpayerId: taxpayerId, fiscalYear: year),
+      ),
+    ),
+    GoRoute(
+      path: '$_year/deducciones/nueva',
+      builder: (context, state) => _ofYear(
+        state,
+        (taxpayerId, year) =>
+            PersonalDeductionFormPage(taxpayerId: taxpayerId, fiscalYear: year),
+      ),
+    ),
+    GoRoute(
+      path: '$_year/constancias',
+      builder: (context, state) => _ofYear(
+        state,
+        (taxpayerId, year) =>
+            SalaryStatementsScreen(taxpayerId: taxpayerId, fiscalYear: year),
+      ),
+    ),
+    GoRoute(
+      path: '$_year/datos',
+      builder: (context, state) => _ofYear(
+        state,
+        (taxpayerId, year) =>
+            AnnualFactsScreen(taxpayerId: taxpayerId, fiscalYear: year),
+      ),
+    ),
+    GoRoute(
+      path: '$_year/pagos/:$_regimeCode',
+      builder: (context, state) => _ofYear(
+        state,
+        (taxpayerId, year) => FiledPaymentsScreen(
+          taxpayerId: taxpayerId,
+          fiscalYear: year,
+          regime: state.pathParameters[_regimeCode]!,
+        ),
+      ),
+    ),
   ],
 );
+
+/// The screen [build] makes for the location's taxpayer and year, or not
+/// found when the year is not a number.
+Widget _ofYear(
+  GoRouterState state,
+  Widget Function(String taxpayerId, int fiscalYear) build,
+) => switch (_yearOf(state)) {
+  final year? => build(state.pathParameters[_taxpayerId]!, year),
+  null => const NotFoundScreen(),
+};
 
 int? _yearOf(GoRouterState state) =>
     int.tryParse(state.pathParameters[_fiscalYear] ?? '');
