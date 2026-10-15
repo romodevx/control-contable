@@ -45,6 +45,14 @@ func TestPresetKeys_areSortedProperSubsetsOfTheRegistry(t *testing.T) {
 		"demo_monetization is demo_core + subscriptions")
 }
 
+// MODULE-reminders §3, OQ-R8 (M9-11): module_reminders is registered and
+// only demo_full (every registered key) holds it.
+func TestModuleKeys_holdsTheRemindersInDemoFullOnly(t *testing.T) {
+	assert.Contains(t, flagtest.ModuleKeys(), "module_reminders")
+	assert.NotContains(t, flagtest.DemoCoreKeys(), "module_reminders")
+	assert.NotContains(t, flagtest.DemoMonetizationKeys(), "module_reminders")
+}
+
 func TestRegistry_returnsCopies(t *testing.T) {
 	keys := flagtest.ModuleKeys()
 	keys[0] = "module_mutated"

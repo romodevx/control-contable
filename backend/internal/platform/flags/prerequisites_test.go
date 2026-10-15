@@ -67,6 +67,11 @@ func TestEffectiveModules_remindersNeedTaxpayersNotTheEngine(t *testing.T) {
 		{"engine OFF is fine", []string{"module_taxpayers", "module_reminders"},
 			[]string{"module_taxpayers", "module_reminders"}},
 		{"taxpayers OFF", []string{"module_tax_engine", "module_reminders"}, []string{}},
+		// M9-11: the flag OFF leaves its prerequisite untouched; alone it is
+		// implied OFF.
+		{"reminders OFF", []string{"module_taxpayers", "module_tax_engine"},
+			[]string{"module_taxpayers", "module_tax_engine"}},
+		{"only reminders", []string{"module_reminders"}, []string{}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			assert.Equal(t, tc.want, flags.EffectiveModules(graph, tc.enabled))

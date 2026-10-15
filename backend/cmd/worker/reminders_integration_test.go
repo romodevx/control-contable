@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/romodevx/control-contable/backend/internal/platform/clock"
+	"github.com/romodevx/control-contable/backend/internal/platform/config"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
 	"github.com/romodevx/control-contable/backend/internal/reminders/domain"
 	"github.com/romodevx/control-contable/backend/internal/reminders/infra/store"
@@ -57,23 +58,21 @@ func seedAsUser(t *testing.T, db *sql.DB, user, query string, args ...any) {
 	require.NoError(t, tx.Commit())
 }
 
-// The worker's reminder job as cmd/worker wires it, over the real database
-// as cc_worker: the flags read, the tokens the API sealed opened with the
-// same keys, and the monthly Estimator run inside the user's transaction
-// (show_amounts on, every module ON). The estimate must compute as
-// cc_worker (its tax-inputs read is the M9-06 grant): no
-// "estimate_unavailable".
-func TestReminderJob_asWiredOverPostgres(t *testing.T) {
-	app, workerDB, owner := reminderDatabases(t)
-	_, err := owner.ExecContext(t.Context(), "UPDATE feature_flags SET enabled = true")
-	require.NoError(t, err)
+// reminderDay is 14 May 2026 10:05 local: the seeded user's early
+// reminder for April (MODULE-reminders §2.4) is due.
+var reminderDay = clock.NewFixed(time.Date(2026, time.May, 14, 10, 5, 0, 0, clock.Location()))
+
+// seedRemindedUser seeds, as cc_app, a user with reminders enabled at
+// 10:00 on day 14, one 612 taxpayer and one device whose token is sealed
+// with keys; it returns the device's token.
+func seedRemindedUser(t *testing.T, app *sql.DB, keys config.Reminders) domain.PushToken {
+	t.Helper()
 	for _, q := range []string{seedUserSQL, seedUsageSQL, seedTrialSQL, seedSettingsSQL} {
 		seedAsUser(t, app, reminderUser, q, reminderUser)
 	}
 	seedAsUser(t, app, reminderUser, seedTaxpayerSQL, reminderUser, reminderTaxpayer)
 	seedAsUser(t, app, reminderUser, seedRegimeSQL, reminderUser, reminderTaxpayer)
 
-	keys := testReminderKeys(t)
 	vault, err := newTokenVault(keys)
 	require.NoError(t, err)
 	token, err := domain.NewPushToken("fcm:" + rand.Text() + rand.Text())
@@ -88,13 +87,27 @@ func TestReminderJob_asWiredOverPostgres(t *testing.T) {
 		})
 		return err
 	}))
+	return token
+}
+
+// The worker's reminder job as cmd/worker wires it, over the real database
+// as cc_worker: the flags read, the tokens the API sealed opened with the
+// same keys, and the monthly Estimator run inside the user's transaction
+// (show_amounts on, every module ON). The estimate must compute as
+// cc_worker (its tax-inputs read is the M9-06 grant): no
+// "estimate_unavailable".
+func TestReminderJob_asWiredOverPostgres(t *testing.T) {
+	app, workerDB, owner := reminderDatabases(t)
+	_, err := owner.ExecContext(t.Context(), "UPDATE feature_flags SET enabled = true")
+	require.NoError(t, err)
+	keys := testReminderKeys(t)
+	token := seedRemindedUser(t, app, keys)
 
 	units, err := pgdb.NewTxManager(workerDB)
 	require.NoError(t, err)
 	var logs bytes.Buffer
 	sender := &pushtest.Sender{}
-	now := clock.NewFixed(time.Date(2026, time.May, 14, 10, 5, 0, 0, clock.Location()))
-	job, err := newReminderJob(workerDB, units, slog.New(slog.NewJSONHandler(&logs, nil)), sender, keys, now)
+	job, err := newReminderJob(workerDB, units, slog.New(slog.NewJSONHandler(&logs, nil)), sender, keys, reminderDay)
 	require.NoError(t, err)
 
 	require.NoError(t, job.Run(t.Context()))
