@@ -21,7 +21,7 @@ expected:
       regimes: ["601"]
       status: complete
       obligation: obligated
-      cpa_topics: [cu_rounding]
+      cpa_topics: [cu_rounding, ptu_rate] # ptu_rate: every pm_601 section shows the PTU line
       tax:
         accumulable_income: "10000000.00"
         base: "1180000.00" # utilidad fiscal 1,380,000 - losses 200,000 = resultado fiscal
@@ -30,5 +30,5 @@ expected:
         balance: {kind: a_cargo, amount: "22000.00"}
       pm_extras:
         ptu_base: "1500000.00" # acumulables - deductions, without PTU paid or losses
-        ptu_to_distribute: "150000.00"
+        # ptu_to_distribute (10 %, ⚠️ ptu_rate) is asserted apart, in AN-06-PTU (skipped)
         suggested_cu_next_year: "0.1380" # utilidad fiscal 1,380,000 / nominales 10,000,000

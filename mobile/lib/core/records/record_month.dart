@@ -10,6 +10,12 @@ const int _dayDigits = 2;
 const int _yearDigits = 4;
 const String _separator = '-';
 
+/// A `YYYY-MM` month as a location carries it.
+final RegExp _periodPattern = RegExp(r'^\d{4}-(0[1-9]|1[0-2])$');
+
+/// The query key a record list location names its month with.
+const String recordMonthQuery = 'periodo';
+
 /// A calendar month of records (incomes, expenses): the `period` query of
 /// the list endpoints (`YYYY-MM`).
 @immutable
@@ -29,6 +35,16 @@ class RecordMonth {
 
   /// The current month in America/Mexico_City at [now].
   factory current(DateTime now) => RecordMonth.ofDate(businessToday(now));
+
+  /// The month a list opens on: [period] when it is a `YYYY-MM` month no
+  /// later than the current one at [now], else the current month (a
+  /// location is user input).
+  factory opening(String? period, DateTime now) {
+    final current = RecordMonth.current(now);
+    if (period == null || !isMonthPeriod(period)) return current;
+    final named = RecordMonth.parse(period);
+    return current.isBefore(named) ? current : named;
+  }
 
   /// The year.
   final int year;
@@ -63,6 +79,10 @@ class RecordMonth {
   @override
   String toString() => period;
 }
+
+/// Whether [value] is a `YYYY-MM` month (the one period grammar a location
+/// may carry).
+bool isMonthPeriod(String value) => _periodPattern.hasMatch(value);
 
 /// Today's calendar date in America/Mexico_City at [now] (the server's
 /// bound for record dates).

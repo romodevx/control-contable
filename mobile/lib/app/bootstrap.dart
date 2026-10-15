@@ -29,6 +29,7 @@ void bootstrap(AppFlavor flavor) {
       overrides: [
         appConfigProvider.overrideWithValue(config),
         featureModulesProvider.overrideWithValue(appFeatureModules),
+        ...appFeatureWiring,
       ],
       child: const ControlContableApp(),
     ),

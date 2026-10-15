@@ -5,10 +5,16 @@ import 'package:flutter_riverpod/misc.dart';
 
 /// The month chosen on the estimate screen: `null` is the current month
 /// (the default), asked without a period so the server's clock decides.
-/// Forgotten when the screen closes.
+/// Starts at the month the screen was opened on (History opens a past
+/// one); forgotten when the screen closes.
 class EstimatePeriodNotifier extends Notifier<String?> {
+  /// The choice, starting at [_opened] (`null`: the current month).
+  new(this._opened);
+
+  final String? _opened;
+
   @override
-  String? build() => null;
+  String? build() => _opened;
 
   /// Chooses [period]; choosing [current] goes back to `null`, so the
   /// current month keeps following the server's clock.
@@ -16,9 +22,10 @@ class EstimatePeriodNotifier extends Notifier<String?> {
       state = period == current ? null : period;
 }
 
-/// See [EstimatePeriodNotifier].
-final NotifierProvider<EstimatePeriodNotifier, String?> estimatePeriodProvider =
-    NotifierProvider.autoDispose<EstimatePeriodNotifier, String?>(
+/// See [EstimatePeriodNotifier], keyed by the month the screen opened on.
+final NotifierProviderFamily<EstimatePeriodNotifier, String?, String?>
+estimatePeriodProvider = NotifierProvider.autoDispose
+    .family<EstimatePeriodNotifier, String?, String?>(
       EstimatePeriodNotifier.new,
       name: 'estimatePeriodProvider',
     );

@@ -130,6 +130,14 @@ func (v *validator) value(i int, val Value) {
 	case KindMoney:
 		v.amount(path, val.Money)
 	case KindFlag:
+	case KindCount:
+		if val.Count < 1 {
+			v.report("%s: count %d: %w", path, val.Count, ErrCountNotPositive)
+		}
+	case KindDate:
+		if val.Date.IsZero() {
+			v.report("%s: %w", path, ErrMissingDate)
+		}
 	default:
 		v.report("%s: value kind %d: %w", path, val.Kind, ErrInvalidKind)
 	}

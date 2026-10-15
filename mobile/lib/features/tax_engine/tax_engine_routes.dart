@@ -1,4 +1,5 @@
 import 'package:control_contable/core/flags/app_module.dart';
+import 'package:control_contable/core/records/record_month.dart';
 import 'package:control_contable/core/router/feature_module.dart';
 import 'package:control_contable/features/tax_engine/presentation/breakdown_screen.dart';
 import 'package:control_contable/features/tax_engine/presentation/estimate_screen.dart';
@@ -10,12 +11,19 @@ const String _period = 'period';
 const String _regimeCode = 'regimeCode';
 const String _fiscalYear = 'ejercicio';
 const String _field = 'campo';
+const String _estimatePeriod = 'periodo';
 
 /// Locations owned by `module_tax_engine`. Ids, periods and regime codes
 /// travel in the location; never an amount or the RFC.
 abstract final class TaxEngineRoutes {
   /// The active taxpayer's monthly estimate (M5-25).
   static const estimate = '/estimado';
+
+  /// The estimate opened on [period] (`YYYY-MM`; History, M8-05).
+  static String estimateOf(String period) => Uri(
+    path: estimate,
+    queryParameters: {_estimatePeriod: period},
+  ).toString();
 
   /// One regime's breakdown for [period] (M5-26).
   static String breakdown(String taxpayerId, String period, String regime) =>
@@ -41,7 +49,9 @@ final FeatureModule taxEngineFeature = FeatureModule(
   routes: [
     GoRoute(
       path: TaxEngineRoutes.estimate,
-      builder: (context, state) => const EstimateScreen(),
+      builder: (context, state) => EstimateScreen(
+        initialPeriod: _periodIn(state.uri.queryParameters[_estimatePeriod]),
+      ),
     ),
     GoRoute(
       path: TaxEngineRoutes.breakdown(
@@ -66,3 +76,7 @@ final FeatureModule taxEngineFeature = FeatureModule(
     ),
   ],
 );
+
+/// [value] when it is a `YYYY-MM` month, else `null` (the current month).
+String? _periodIn(String? value) =>
+    value != null && isMonthPeriod(value) ? value : null;

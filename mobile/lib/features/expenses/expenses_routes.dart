@@ -1,5 +1,6 @@
 import 'package:control_contable/api/generated/models/expense.dart';
 import 'package:control_contable/core/flags/app_module.dart';
+import 'package:control_contable/core/records/record_month.dart';
 import 'package:control_contable/core/router/feature_module.dart';
 import 'package:control_contable/features/expenses/presentation/expense_edit_screen.dart';
 import 'package:control_contable/features/expenses/presentation/expense_form_screen.dart';
@@ -11,6 +12,10 @@ import 'package:go_router/go_router.dart';
 abstract final class ExpensesRoutes {
   /// The month list (M4-09).
   static const list = '/gastos';
+
+  /// The month list opened on [period] (`YYYY-MM`; History, US-H6).
+  static String listOf(String period) =>
+      Uri(path: list, queryParameters: {recordMonthQuery: period}).toString();
 
   /// The new-expense page (M4-10).
   static const create = '/gastos/nuevo';
@@ -27,7 +32,9 @@ final FeatureModule expensesFeature = FeatureModule(
   routes: [
     GoRoute(
       path: ExpensesRoutes.list,
-      builder: (context, state) => const ExpensesScreen(),
+      builder: (context, state) => ExpensesScreen(
+        initialPeriod: state.uri.queryParameters[recordMonthQuery],
+      ),
       routes: [
         GoRoute(
           path: 'nuevo',

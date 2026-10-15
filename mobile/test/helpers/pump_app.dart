@@ -44,6 +44,7 @@ Future<void> pumpControlContableApp(
           flagsRepository ?? FakeFlagsRepository(enabledModules),
         ),
         featureModulesProvider.overrideWithValue(features ?? appFeatureModules),
+        ...appFeatureWiring,
         refreshTokenStoreProvider.overrideWithValue(
           refreshTokens ?? InMemoryRefreshTokenStore(),
         ),
