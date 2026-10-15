@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
+	"github.com/romodevx/control-contable/backend/cmd/internal/sealing"
 	expinfra "github.com/romodevx/control-contable/backend/internal/expenses/infra"
 	incomesinfra "github.com/romodevx/control-contable/backend/internal/incomes/infra"
 	"github.com/romodevx/control-contable/backend/internal/platform/access"
@@ -106,8 +107,7 @@ func newRFCVault(w taxpayersWiring) (*infra.RFCVault, error) {
 	if err != nil {
 		return nil, err
 	}
-	keyID := crypto.KeyID(w.keys.RFCKeyID) // #nosec G115 -- config bounds it to [1, crypto.MaxKeyID]
-	keyring, err := crypto.NewKeyring(keyID, map[crypto.KeyID][]byte{keyID: key})
+	keyring, err := sealing.Keyring(w.keys.RFCKeyID, key, w.keys.RFCPrevious)
 	if err != nil {
 		return nil, fmt.Errorf("taxpayers: rfc keyring: %w", err)
 	}

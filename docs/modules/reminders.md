@@ -7,7 +7,7 @@
 | Design | [ADR-0007 Amendment 1](../adr/0007-fiscal-shared-kernel.md#amendment-1-m9-01-2026-10-15-the-due-date-rule) (the due-date rule moves into the fiscal shared kernel), ADR-0001 O8 (worker, `notification_log`), ADR-0005 (rate limits) |
 | Contract | [`docs/api/openapi.yaml`](../api/openapi.yaml), tag `Reminders`, `x-module: module_reminders` (5 operations, frozen by M9-01 in 0.13.0; 0.14.0 added the optional `device_id` to `logout`). Reference generated from it: [API reference](#api-reference) |
 | Status | **Built**: M9-01..M9-14 done. QA M9-12 pass, tech-lead M9-13 **PASS**, security M9-14 **PASS** ([Gates](#gates)). **Live push not verified** (no Firebase project, OB9; iOS, OB6) |
-| Operations | [Enable reminders in a shared environment](../runbooks/reminders.md) (Firebase, APNs, secrets, deploy order, yearly holidays) · [records purge](../runbooks/records-purge.md) (13-month log retention) |
+| Operations | [Enable reminders in a shared environment](../runbooks/reminders.md) (Firebase, APNs, secrets, deploy order, yearly holidays) · [records purge](../runbooks/records-purge.md) (13-month log retention) · [encryption key rotation](../runbooks/key-rotation.md) |
 | Code | `backend/internal/kernel/fiscal/duedate.go` (the due-date rule), `backend/internal/reminders/` (`domain`, `usecase`, `adapter/http`, `infra/{fcm,holidays,jobstore,pushtoken,store}`), `backend/cmd/api/reminders.go`, `backend/cmd/worker/{reminders,push}.go`, migrations `20261021100000_holidays.sql`, `20261021101000_reminders.sql`, `20261022100000_reminders_job_reads.sql`, `20261022101000_notification_log_purge.sql`, `mobile/lib/features/reminders/` |
 
 ## What the user sees

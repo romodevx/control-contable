@@ -62,7 +62,7 @@ func TestWorkerJobs_remindersFollowTheFlagThePurgeAlwaysRuns(t *testing.T) {
 				names = append(names, j.job.Name())
 				require.NoError(t, j.job.Run(t.Context()), j.job.Name())
 			}
-			assert.Equal(t, []string{"records_purge", "auth_email_delivery", "reminders"}, names)
+			assert.Equal(t, []string{"records_purge", "auth_email_delivery", "reminders", "key_reseal"}, names)
 			assert.Len(t, sender.Sends(), tc.sends, "push sends")
 			assert.Equal(t, tc.sends, countLog(t, workerDB, reminderPeriod), "reminder log rows written")
 			assert.Zero(t, countLog(t, workerDB, expiredPeriod), "the purge deleted the expired row")

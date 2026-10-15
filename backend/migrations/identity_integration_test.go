@@ -172,7 +172,15 @@ func TestIdentityTables_NoAccessBeyondTheGrants(t *testing.T) {
 		{pgtest.RoleWebhook, "SELECT 1 FROM user_usage"},
 		{pgtest.RoleWebhook, "SELECT 1 FROM email_verifications"},
 		{pgtest.RoleWebhook, "UPDATE entitlements SET user_id = user_id"},
-		{pgtest.RoleWorker, "SELECT 1 FROM users"},
+		// cc_worker re-seals its own context's email since 20261024100000 (ADR-0012): the
+		// ciphertext and its key id only, never the hash, the password or the profile.
+		{pgtest.RoleWorker, "SELECT email_hash FROM users"},
+		{pgtest.RoleWorker, "SELECT password_hash FROM users"},
+		{pgtest.RoleWorker, "SELECT name FROM users"},
+		{pgtest.RoleWorker, "UPDATE users SET email_hash = email_hash"},
+		{pgtest.RoleWorker, "UPDATE users SET email_hash_version = 1"},
+		{pgtest.RoleWorker, "UPDATE users SET status = 'suspended'"},
+		{pgtest.RoleWorker, "DELETE FROM users"},
 		{pgtest.RoleWorker, "SELECT 1 FROM user_usage"},
 		{pgtest.RoleWorker, "SELECT 1 FROM entitlements"},
 		{pgtest.RoleWorker, "SELECT 1 FROM email_verifications"},

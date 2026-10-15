@@ -11,6 +11,10 @@ kept as a documented shared port by [ADR-0011](../adr/0011-access-and-authorizat
 on (dates, IVA treatment, CFDI UUID, withholding shares, the domain error model) go in the fiscal
 shared kernel, `backend/internal/kernel/fiscal` ([ADR-0007](../adr/0007-fiscal-shared-kernel.md)).
 
+Sealed platform data uses the rotation and re-seal procedure in
+[ADR-0012](../adr/0012-encryption-key-rotation.md) and the
+[key rotation runbook](../runbooks/key-rotation.md).
+
 ## Map
 
 | Package | Responsibility | Used by |

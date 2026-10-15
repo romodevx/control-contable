@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
+	"github.com/romodevx/control-contable/backend/cmd/internal/sealing"
 	"github.com/romodevx/control-contable/backend/internal/platform/config"
 	"github.com/romodevx/control-contable/backend/internal/platform/crypto"
 	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit/ratelimitpg"
@@ -85,8 +86,7 @@ func newPushTokenVault(w remindersWiring) (*pushtoken.Vault, error) {
 	if err != nil {
 		return nil, err
 	}
-	keyID := crypto.KeyID(w.keys.PushTokenKeyID) // #nosec G115 -- config bounds it to [1, crypto.MaxKeyID]
-	keyring, err := crypto.NewKeyring(keyID, map[crypto.KeyID][]byte{keyID: key})
+	keyring, err := sealing.Keyring(w.keys.PushTokenKeyID, key, w.keys.PushTokenPrevious)
 	if err != nil {
 		return nil, fmt.Errorf("reminders: push token keyring: %w", err)
 	}

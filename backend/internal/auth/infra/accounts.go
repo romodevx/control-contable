@@ -125,6 +125,17 @@ func (s *AccountStore) Find(ctx context.Context, id domain.UserID) (usecase.Acco
 	return s.toAccount(id, rows[0])
 }
 
+// ResealEmail moves an email_encrypted value of user id to the keyring's
+// active key (ADR-0012 key re-seal job); the address never leaves the
+// keyring. A value bound to another user fails with crypto.ErrDecrypt.
+func (s *AccountStore) ResealEmail(ciphertext []byte, id domain.UserID) ([]byte, error) {
+	resealed, err := s.emails.Reseal(ciphertext, emailAAD(id))
+	if err != nil {
+		return nil, fmt.Errorf("auth infra: reseal email: %w", err)
+	}
+	return resealed, nil
+}
+
 func (s *AccountStore) toAccount(id domain.UserID, row userRow) (usecase.Account, error) {
 	plain, err := s.emails.Decrypt(row.EmailEncrypted, emailAAD(id))
 	if err != nil {

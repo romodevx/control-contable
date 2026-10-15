@@ -326,10 +326,10 @@ func TestWorkerRole_RLSHolds(t *testing.T) {
 		}))
 		assert.Equal(t, 2, listed)
 		err := pgtest.WithoutUser(ctx, e.worker, func(tx *sql.Tx) error {
-			_, err := tx.ExecContext(ctx, "SELECT id FROM users")
+			_, err := tx.ExecContext(ctx, "SELECT email_hash FROM users")
 			return err
 		})
-		require.Error(t, err, "cc_worker reads no users column itself")
+		require.Error(t, err, "cc_worker reads no users column but the ones the key re-seal rewrites (ADR-0012)")
 		assert.Contains(t, err.Error(), "42501")
 		err = pgtest.WithoutUser(ctx, e.app, func(tx *sql.Tx) error {
 			_, err := tx.ExecContext(ctx, "SELECT withholding_backfill_users()")
@@ -341,7 +341,7 @@ func TestWorkerRole_RLSHolds(t *testing.T) {
 	t.Run("only the derived columns", func(t *testing.T) {
 		for _, statement := range []string{
 			"SELECT name FROM users",
-			"SELECT rfc_encrypted FROM taxpayers",
+			"SELECT rfc_hash FROM taxpayers", // rfc_encrypted is the key re-seal's (ADR-0012)
 			"UPDATE incomes SET amount_cents = 1",
 			"UPDATE expenses SET deductible = false",
 			"UPDATE incomes SET deleted_at = NULL",

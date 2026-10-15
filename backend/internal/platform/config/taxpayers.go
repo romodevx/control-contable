@@ -30,6 +30,9 @@ type Taxpayers struct {
 	RFCKeyID int
 	// RFCIndexPepper is zero only in dev when RFC_INDEX_PEPPER is not set.
 	RFCIndexPepper Secret
+	// RFCPrevious is the retired RFC key while a rotation is in flight
+	// (RFC_ENC_PREVIOUS_KEY, ADR-0012); zero otherwise.
+	RFCPrevious PreviousKey
 }
 
 // namedSecret is a decoded secret and the name it was loaded under.
@@ -54,14 +57,23 @@ func LoadTaxpayers(ctx context.Context, lookup Lookup, secrets SecretSource, env
 	if cfg.RFCKeyID, err = parseIntInRange(lookup, keyRFCKeyID, defaultRFCKeyID, 1, maxEmailKeyID); err != nil {
 		errs = append(errs, err)
 	}
-	errs = append(errs, distinctSecrets(
-		[]namedSecret{{secretRFCKey, cfg.RFCKey}, {secretRFCIndexPepper, cfg.RFCIndexPepper}},
-		authSecrets(auth),
-	)...)
+	var previousErrs []error
+	cfg.RFCPrevious, previousErrs = loadPreviousKey(ctx, lookup, secrets, secretRFCKey, keyRFCKeyID, cfg.RFCKeyID)
+	errs = append(errs, previousErrs...)
+	errs = append(errs, distinctSecrets(taxpayersSecrets(cfg), authSecrets(auth))...)
 	if len(errs) > 0 {
 		return Taxpayers{}, fmt.Errorf("config: %w", errors.Join(errs...))
 	}
 	return cfg, nil
+}
+
+// taxpayersSecrets are the taxpayers keys every later module key must
+// differ from.
+func taxpayersSecrets(cfg Taxpayers) []namedSecret {
+	previous, _ := previousKeyNames(secretRFCKey)
+	return []namedSecret{
+		{secretRFCKey, cfg.RFCKey}, {secretRFCIndexPepper, cfg.RFCIndexPepper}, {previous, cfg.RFCPrevious.Key},
+	}
 }
 
 // moduleKey is one hex secret a module loads, its size rule and where it
@@ -90,10 +102,11 @@ func loadModuleKeys(ctx context.Context, secrets SecretSource, env Environment, 
 
 // authSecrets are the auth keys every module key must differ from.
 func authSecrets(auth Auth) []namedSecret {
+	emailPrevious, _ := previousKeyNames(secretEmailKey)
 	return []namedSecret{
 		{secretEmailPepper, auth.EmailPepper}, {secretEmailKey, auth.EmailKey},
 		{secretCodeKey, auth.CodeKey}, {secretAccessTokenKey, auth.AccessTokenKey},
-		{secretPreviousAccessTokenKey, auth.PreviousAccessTokenKey},
+		{secretPreviousAccessTokenKey, auth.PreviousAccessTokenKey}, {emailPrevious, auth.EmailPrevious.Key},
 	}
 }
 

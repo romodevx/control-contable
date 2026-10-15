@@ -6,7 +6,7 @@
 | Spec | [MODULE-taxpayers.md](../project-specs/MODULE-taxpayers.md) |
 | Contract | [`docs/api/openapi.yaml`](../api/openapi.yaml), tag `Taxpayers`, `x-module: module_taxpayers` (frozen by M2-01, contract 0.4.0) |
 | Gates | [M2-13 tech lead](../reviews/M2-13-tech-lead-gate.md) PASS, [M2-14 security](../reviews/M2-14-security-gate.md) PASS |
-| Operations | [Taxpayers runbook](../runbooks/taxpayers.md) |
+| Operations | [Taxpayers runbook](../runbooks/taxpayers.md) · [encryption key rotation](../runbooks/key-rotation.md) |
 | Code | `backend/internal/taxpayers/` (domain, usecase, infra, adapter/http), `backend/migrations/20261013180000_regimes_catalog.sql`, `backend/migrations/20261013190000_taxpayers.sql`, `mobile/lib/features/taxpayers/` |
 
 ## What it does
