@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | PROPOSED (ANN-02; tech-lead review of the contract PR) |
+| Status | **Accepted** (2026-10-15). Proposed by ANN-02 (#134); implemented by #125, #127, #131, #133, #135, #140, #141, #144, #145, #148, #150; QA ANN-23 pass ([report](../../.gstack/qa-reports/qa-report-annual-2026-10-14.md), #153); gates ANN-24 PASS ([review](../reviews/ANN-24-tech-lead-gate.md)) and ANN-25 PASS ([verdict](https://github.com/romodevx/control-contable/pull/153#issuecomment-6186092941)). The read-only rule below (delete and restore stay open) is the one built and tested; MODULE-annual US-A13 / §5 were aligned to it by ANN-26 |
 | Date | 2026-10-15 |
 | Related | [MODULE-annual](../project-specs/MODULE-annual.md) (owner decisions 1–3, §2, §5, §10, OQ-A1..OQ-A9), [annual return research](../research/annual-return-2026.md), [ADR-0001](0001-stack.md) (Dependency Rule), [ADR-0002](0002-tax-engine.md) §1–§5, [ADR-0005](0005-rate-limits-in-postgres.md), [ADR-0007](0007-fiscal-shared-kernel.md), [CONTRACT.md](../api/CONTRACT.md), `backend/internal/archtest`, PLAN §ANN (ANN-02..ANN-27) |
 | Owner | architect |
@@ -121,7 +121,7 @@ Contract choices this ADR records:
   `annual_reads` (600/h); every write in `annual_writes` (300/h).
 
 Until ANN-15 builds the handlers, the 15 operations are `notBuilt` stubs (hidden `404`) and
-listed in `pendingOperations` under ANN-15.
+listed in `pendingOperations` under ANN-15. *(Done: ANN-15 built all 15 in #145.)*
 
 ## Consequences
 
