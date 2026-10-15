@@ -25,6 +25,9 @@ var prerequisites = map[string][]string{
 	// MODULE-dashboard §3: the route lives under a taxpayer. The engine is
 	// not a prerequisite (OQ-D7): with it OFF the dashboard shows no tax.
 	"module_dashboard": {"module_taxpayers"},
+	// MODULE-history §3 (PLAN D7): History without estimates has nothing to
+	// show; through the engine it also needs module_taxpayers.
+	"module_history": {"module_tax_engine"},
 }
 
 // Prerequisites returns a copy of the declared module prerequisites.

@@ -150,8 +150,8 @@ func (e contractEnv) request(method, target string) *http.Request {
 func TestContract_platformOperations(t *testing.T) {
 	c := contracttest.Load(t)
 	ops := gatedOperations(t)
-	modules := modulesOf(ops)
 	env := newContractEnv(t, pingOK{})
+	modules := registeredModules(t, env, modulesOf(ops))
 
 	for _, module := range modules {
 		flagtest.OnOff(t, module, func(t *testing.T, f flagtest.Static, on bool) {
@@ -255,6 +255,42 @@ func fillPath(template string) string {
 		}
 		return sampleID
 	})
+}
+
+// unregisteredModules are contract modules whose flag is not registered yet,
+// each with the PLAN task whose migration registers it. Contracts freeze
+// before their module is built (spec-first), so a module can be in the
+// contract with no feature_flags row. Its flag cannot be set, so it is swept
+// as OFF only: in every sweep each of its operations must be hidden. The
+// list only shrinks.
+var unregisteredModules = map[string]string{
+	"module_annual": "ANN-22",
+}
+
+// registeredModules returns the contract modules that have a flag row, and
+// fails for a module that is neither registered nor in unregisteredModules,
+// or that is both.
+func registeredModules(t *testing.T, env contractEnv, modules []string) []string {
+	t.Helper()
+	rows, err := env.store.List(t.Context())
+	require.NoError(t, err)
+	var registered []string
+	for _, module := range modules {
+		isRegistered := slices.ContainsFunc(rows, func(f flags.Flag) bool { return f.Key == module })
+		task, isPending := unregisteredModules[module]
+		switch {
+		case isRegistered && isPending:
+			t.Errorf("%s is registered: remove it from unregisteredModules (%s)", module, task)
+		case !isRegistered && !isPending:
+			t.Errorf("%s has no flag row: register it by migration or list it in unregisteredModules with its PLAN task", module)
+		case isRegistered:
+			registered = append(registered, module)
+		}
+	}
+	for module := range unregisteredModules {
+		assert.Containsf(t, modules, module, "unregisteredModules lists %q, which no contract operation declares", module)
+	}
+	return registered
 }
 
 func modulesOf(ops []gatedOperation) []string {

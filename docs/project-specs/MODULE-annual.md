@@ -477,6 +477,19 @@ Amounts, constancia figures and deduction details are never logged or echoed in 
 5. ADR-0008: annual engine placement (recommended: pure strategies in `internal/taxengine/annual`,
    reusing params, `Ledger`, `Exact` and tariff lookup; inputs, use case and HTTP in `internal/annual`).
 
+**Frozen by ANN-02 (contract 0.11.0, [ADR-0009](../adr/0009-annual-engine-placement.md)).** The ADR number
+is 0009 (0008 went to the withholdings). Placement: the whole annual sub-context lives in
+`internal/taxengine` (`domain/annual`, `usecase/annual`, `infra/annualinputs`, `adapter/http/annual`),
+because archtest `cross-module` forbids a separate `internal/annual` from importing the `Ledger` it must
+reuse. Contract refinements over this section: missing inputs are structured (`AnnualMissingInput`:
+`key`, `target`, `regime_code`, `months`) instead of `filed_payment:<regime>:<YYYY-MM>`; the breakdown
+uses its own `AnnualBreakdownLine` (adds `regime_code` and the payment sources); `getAnnualInputs`
+mirrors the regimes' annual tax inputs read-only; `putAnnualInputs` is personas físicas only
+(`person_type_not_allowed`); `getFiledPayments` refuses a regime with no provisional ISR
+(`payments_not_applicable`); lists are bounded (500 deductions, 20 constancias per year,
+`limit_reached`, re-checked on restore and on an edit that moves a row to another year); delete and
+restore stay open to a read-only user, as records.
+
 ## 11. Out of scope
 
 - Filing, the SAT pre-filled return, CFDI download/validation of deductions.

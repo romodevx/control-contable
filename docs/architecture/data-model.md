@@ -248,12 +248,19 @@ erDiagram
         uuid taxpayer_id FK
         text regime_code FK
         text description
-        text counterparty_type
+        text counterparty_type "deprecated: dropped after WH-08"
+        text counterparty_kind "Q1, ADR-0008"
+        text operation_kind "Q2"
+        boolean residential_rent "true => exempt"
+        boolean via_platform "Q4"
         bigint amount_cents
         text iva_rate "rate_16|rate_8|rate_0|exempt"
         bigint iva_cents
-        bigint isr_withheld_cents
-        bigint iva_withheld_cents
+        bigint isr_withheld_cents "derived (WH-06)"
+        bigint iva_withheld_cents "derived (WH-06)"
+        text[] withholding_rule_ids "derived"
+        text withholding_table_version "derived"
+        boolean withholding_cpa_unverified "derived"
         date invoiced_on
         date collected_on
         date booked_on "derived: ISR date"
@@ -277,9 +284,17 @@ erDiagram
         boolean deductible "effective verdict"
         boolean deductible_overridden "deductible_source = user"
         boolean cash_over_limit "assessed on write (LISR 27 fr. III)"
-        bigint creditable_iva_cents "assessed on write (LIVA 5)"
-        bigint isr_withheld_cents "withheld from supplier"
-        bigint iva_withheld_cents "withheld from supplier"
+        bigint creditable_iva_cents "assessed on write (LIVA 5): paid part"
+        bigint creditable_iva_withheld_cents "withheld part (LIVA 5 fr. IV)"
+        text supplier_kind "E1, PM taxpayers only"
+        text supplier_regime "E2, iff pf_with_activity"
+        text operation_kind "E3"
+        boolean residential_rent "true => exempt"
+        bigint isr_withheld_cents "withheld from supplier; derived (WH-07)"
+        bigint iva_withheld_cents "withheld from supplier; derived (WH-07)"
+        text[] withholding_rule_ids "derived"
+        text withholding_table_version "derived"
+        boolean withholding_cpa_unverified "derived"
         date paid_on
         timestamptz deleted_at
     }
@@ -299,6 +314,7 @@ erDiagram
         boolean default_deductible
         boolean iva_creditable_default
         text cash_payment_rule "over_limit|any_cash|not_applicable"
+        text default_operation_kind "E3 default; moral rows only"
         text note
         text legal_basis
         boolean needs_cpa_review
