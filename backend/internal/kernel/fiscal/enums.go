@@ -54,6 +54,7 @@ type RegimeCode string
 const (
 	RegimeRent      RegimeCode = "606" // Arrendamiento (PF)
 	RegimeBusiness  RegimeCode = "612" // Actividades empresariales y profesionales (PF)
+	RegimeRIF       RegimeCode = "621" // Incorporación fiscal (PF): pays by bimester
 	RegimePlatforms RegimeCode = "625" // Plataformas tecnológicas (PF)
 	RegimeRESICO    RegimeCode = "626" // RESICO: PF arts. 113-E..J, PM arts. 206-215
 )

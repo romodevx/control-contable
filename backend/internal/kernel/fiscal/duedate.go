@@ -115,6 +115,18 @@ func NextBusinessDay(d Date, h HolidaySet) (Date, MovedReason, error) {
 	return Date{}, MovedNone, fmt.Errorf("%s: %w within %d days", d, ErrNoBusinessDay, maxDueShift)
 }
 
+// PaysBimonthly reports a taxpayer whose payment follows the bimester: every
+// regime it holds in the period (codes) is 621 (MODULE-tax-engine §2.10).
+// Holding none is not bimonthly. It is MonthlyDueDate's bimonthly argument.
+func PaysBimonthly(codes []RegimeCode) bool {
+	for _, c := range codes {
+		if c != RegimeRIF {
+			return false
+		}
+	}
+	return len(codes) > 0
+}
+
 // MonthlyDueDate is the due date of the monthly period year-month: the
 // nominal day 17 of the month after it (after the bimester's second month
 // when bimonthly, the 621 regime, MODULE-tax-engine §2.10), and that day

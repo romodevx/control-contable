@@ -142,7 +142,10 @@ SEC FU1). Reminders own no purge logic.
 Worker job `reminders`, tick **every 5 minutes**, leader only (P0-27).
 
 1. **Flag check per run**: `module_reminders` effectively OFF (or a prerequisite OFF, §3) → the run is a no-op
-   (no rows written, nothing sent).
+   (no rows written, nothing sent). The same holds on a worker **without push configured** (no
+   `FCM_PROJECT_ID`): nothing is claimed, so no reminder is consumed, and the worker logs one
+   `event=reminders_push_disabled` warning; started with FCM later that day, it sends that day's
+   reminders (M9-13, from QA M9-12 O3).
 2. **Select due users** through SECURITY DEFINER `due_reminder_users(p_now, p_limit)` (M9-02): users with
    `enabled`, ≥ 1 device, ≥ 1 non-archived taxpayer, and a reminder **kind** (`early` | `due`) whose local
    send moment (date + `send_time`) is `≤ now` and **within today** (catch-up window: until 23:59 local of that
@@ -349,7 +352,8 @@ would punish lapsed users without protecting any paid capability.
 ## 9. Observability
 
 Metrics: `reminders_sent_total{kind}`, `reminders_failed_total{error_class}`, `reminders_skipped_total`,
-`devices_unregistered_total`, `reminders_calendar_unseeded` (alert), job duration. Logs carry user id
+`devices_unregistered_total`, `reminders_calendar_unseeded` (alert), `reminders_push_disabled` (alert:
+module ON on a worker without FCM, §2.4 step 1), job duration. Logs carry user id
 (UUID) and period only.
 
 ## 10. Contract changes for M9-01 (architect)

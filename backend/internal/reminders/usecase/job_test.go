@@ -249,6 +249,38 @@ func TestReminderJob_FlagOffIsANoOp(t *testing.T) {
 	assert.Zero(t, f.holidays.reads)
 }
 
+// A worker deployed without push configured (no Firebase project) must not
+// consume the day's reminders: it claims nothing, writes no row and says so
+// once, so a worker restarted with push later that day still sends them
+// (QA M9-12 O3: the deploy-order trap). The Send-level ErrPushDisabled stays
+// a permanent failure (TestReminderJob_WholeCallSendErrors) for a sender that
+// cannot say it is off.
+func TestReminderJob_PushDisabledClaimsNothingAndLaterSends(t *testing.T) {
+	april := jobPeriod(t, 2026, time.April)
+	unconfigured := newJobFixture(t, earlyNow)
+	unconfigured.push = usecase.DisabledPushSender{}
+	unconfigured.addUser(t, jobUser1, enabledSettings(t, false), twoTaxpayers(t), dev1)
+	unconfigured.dueFor(jobUser1, april, domain.KindEarly)
+	job := unconfigured.job(t)
+
+	for range 3 {
+		require.NoError(t, job.Run(t.Context()))
+	}
+
+	assert.Empty(t, unconfigured.due.calls, "no due users read, nothing claimed")
+	assert.Zero(t, unconfigured.db.rows(), "no notification_log row: the reminder is not consumed")
+	assert.Equal(t, 1, strings.Count(unconfigured.logs.String(), `"event":"reminders_push_disabled"`),
+		"the operator is warned once per process, not every 5 minutes")
+
+	configured := newJobFixture(t, earlyNow.Add(time.Hour))
+	configured.db, configured.due, configured.tokens = unconfigured.db, unconfigured.due, unconfigured.tokens
+
+	require.NoError(t, configured.run(t))
+
+	assert.Len(t, configured.sender.Sends(), 1, "the same day's reminder is sent once push is configured")
+	assert.Equal(t, usecase.LogSent, configured.db.row(t, jobUser1, april, domain.KindEarly).status)
+}
+
 // US-R5: two worker instances in the split-brain window run the same tick
 // concurrently: one log row, one send. A later run that day sends nothing.
 func TestReminderJob_ExactlyOnceAcrossTwoInstances(t *testing.T) {

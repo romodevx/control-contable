@@ -116,6 +116,29 @@ func TestMonthlyDueDateBimonthly(t *testing.T) {
 	}
 }
 
+// One rule for "this taxpayer pays by bimester" (MODULE-tax-engine §2.10):
+// every regime held in the period is 621. The estimate's due_date and the
+// reminders both read it here, so they cannot drift (M9-13 gate).
+func TestPaysBimonthly(t *testing.T) {
+	tests := []struct {
+		name  string
+		codes []fiscal.RegimeCode
+		want  bool
+	}{
+		{"no regime held", nil, false},
+		{"621 only", []fiscal.RegimeCode{fiscal.RegimeRIF}, true},
+		{"621 twice", []fiscal.RegimeCode{fiscal.RegimeRIF, fiscal.RegimeRIF}, true},
+		{"621 with a monthly regime", []fiscal.RegimeCode{fiscal.RegimeRIF, fiscal.RegimeBusiness}, false},
+		{"monthly only", []fiscal.RegimeCode{fiscal.RegimeRESICO}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, fiscal.PaysBimonthly(tt.codes))
+		})
+	}
+	assert.Equal(t, fiscal.RegimeCode("621"), fiscal.RegimeRIF)
+}
+
 func TestMonthlyDueDateRejectsABadPeriod(t *testing.T) {
 	for _, m := range []time.Month{0, 13} {
 		_, _, _, err := fiscal.MonthlyDueDate(2026, m, false, fiscal.HolidaySet{})
