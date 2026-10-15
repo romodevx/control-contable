@@ -11,6 +11,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/config"
 	"github.com/romodevx/control-contable/backend/internal/platform/logging"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
+	reminders "github.com/romodevx/control-contable/backend/internal/reminders/usecase"
 )
 
 func lookupFrom(env map[string]string) config.Lookup {
@@ -74,7 +75,7 @@ func TestNewRegistry_registersTheRecordsPurge(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = pool.Close() })
 
-	reg, err := newRegistry(pool, logging.New(&bytes.Buffer{}, nil))
+	reg, err := newRegistry(pool, logging.New(&bytes.Buffer{}, nil), reminders.DisabledPushSender{})
 
 	require.NoError(t, err)
 	assert.Equal(t, []string{"records_purge"}, reg.Names())
