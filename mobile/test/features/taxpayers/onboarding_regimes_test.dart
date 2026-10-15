@@ -231,6 +231,35 @@ void main() {
         '2026-01',
       );
     });
+    testWidgets('the month is asked before the regime list, on screen '
+        'without scrolling, and the month picked there is the one sent '
+        '(#152 QA O1)', (tester) async {
+      await openRegimes(tester);
+      final screen = tester.getRect(find.byType(Scaffold).last);
+      final question = find.text('¿Desde qué mes tributas en estos regímenes?');
+      final picker = find.byType(DropdownButtonFormField<String>);
+
+      expect(screen.contains(tester.getRect(question).topLeft), isTrue);
+      expect(screen.contains(tester.getRect(picker).bottomRight), isTrue);
+      expect(
+        tester.getRect(picker).bottom,
+        lessThan(tester.getRect(find.textContaining('626 ·')).top),
+        reason: 'the month comes before the regimes, never below them',
+      );
+      expect(tester.getSize(picker).height, greaterThanOrEqualTo(44));
+
+      await tester.tap(picker);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('julio de 2026').last);
+      await tester.pumpAndSettle();
+      await _pick(tester, '626');
+      await tapText(tester, _create);
+
+      expect(
+        harness.repository.creates.single.regimes.single.startPeriod,
+        '2026-07',
+      );
+    });
   });
 
   group('step 4: per-regime options', () {
