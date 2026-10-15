@@ -27,7 +27,6 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/money"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/annual"
-	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/annual/payments"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/taxparams"
 )
 
@@ -54,7 +53,7 @@ type Params interface {
 // Input is one PM regime's fiscal year. Income and Deductions are on the
 // regime's basis (601: accrued acumulables and authorized deductions;
 // RESICO: collected and paid). The rest are the M5 tax inputs and the
-// payments already resolved by precedence (payments.Resolve).
+// payments already resolved by precedence (annual.ResolvePayments).
 type Input struct {
 	FiscalYear          int
 	Income              money.Cents
@@ -63,7 +62,7 @@ type Input struct {
 	PTUPaid             money.Cents // ptu_paid
 	PriorYearLosses     money.Cents // prior_year_losses, already inflation-updated
 	InterestWithholding money.Cents // interest_withholding (LISR 54)
-	Payments            payments.Resolved
+	Payments            annual.ResolvedPayments
 }
 
 // Section is one computed PM section.

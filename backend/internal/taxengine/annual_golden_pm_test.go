@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"slices"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,7 +14,6 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/taxengine/annualgolden"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/annual"
-	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/annual/payments"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/annual/pm"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/taxparams"
 )
@@ -94,8 +92,8 @@ func pmInput(in annualgolden.Input, r annualgolden.RegimeInput) (pm.Input, error
 	}
 	for _, p := range in.Payments {
 		if p.Regime == r.Regime {
-			out.Payments.Payments = append(out.Payments.Payments, payments.Payment{
-				Month: time.Month(p.Month), Amount: p.Amount, Source: payments.Source(p.Source),
+			out.Payments.Payments = append(out.Payments.Payments, annual.Payment{
+				Month: p.Month, Amount: p.Amount, Source: annual.PaymentSource(p.Source),
 			})
 		}
 	}

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,7 +12,6 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/money"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/annual"
-	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/annual/payments"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/annual/pm"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/taxparams"
 )
@@ -61,9 +59,9 @@ func rate(t testing.TB, s string) money.Rate {
 	return r
 }
 
-func filed(t testing.TB, amount string) payments.Resolved {
+func filed(t testing.TB, amount string) annual.ResolvedPayments {
 	t.Helper()
-	return payments.Resolved{Payments: []payments.Payment{{Amount: cents(t, amount), Source: payments.SourceFiled}}}
+	return annual.ResolvedPayments{Payments: []annual.Payment{{Amount: cents(t, amount), Source: annual.PaymentFiled}}}
 }
 
 // trace renders lines as "code op amount", the shape the goldens compare.
@@ -252,12 +250,12 @@ func TestNoIncomeHasNoSuggestedCU(t *testing.T) {
 func TestPaymentsBySourceAndEstimates(t *testing.T) {
 	in := pm.Input{
 		FiscalYear: fiscalYear, Income: cents(t, "10000.00"),
-		Payments: payments.Resolved{
-			Payments: []payments.Payment{
-				{Month: time.January, Amount: cents(t, "1000.00"), Source: payments.SourceFiled},
-				{Month: time.February, Amount: cents(t, "2000.00"), Source: payments.SourceTaxInput},
-				{Month: time.March, Amount: cents(t, "3000.00"), Source: payments.SourceEstimatedByApp},
-				{Month: time.April, Amount: cents(t, "4000.00"), Source: payments.SourceEstimatedByApp},
+		Payments: annual.ResolvedPayments{
+			Payments: []annual.Payment{
+				{Month: 1, Amount: cents(t, "1000.00"), Source: annual.PaymentFiled},
+				{Month: 2, Amount: cents(t, "2000.00"), Source: annual.PaymentTaxInput},
+				{Month: 3, Amount: cents(t, "3000.00"), Source: annual.PaymentEstimatedByApp},
+				{Month: 4, Amount: cents(t, "4000.00"), Source: annual.PaymentEstimatedByApp},
 			},
 			Missing: []string{"filed_payment:601:2026-04"},
 		},
@@ -355,10 +353,10 @@ func TestComputeRefusesInvalidInput(t *testing.T) {
 		"negative losses":       func(in *pm.Input) { in.PriorYearLosses = -1 },
 		"negative interest":     func(in *pm.Input) { in.InterestWithholding = -1 },
 		"negative payment": func(in *pm.Input) {
-			in.Payments = payments.Resolved{Payments: []payments.Payment{{Amount: -1, Source: payments.SourceFiled}}}
+			in.Payments = annual.ResolvedPayments{Payments: []annual.Payment{{Amount: -1, Source: annual.PaymentFiled}}}
 		},
 		"unknown payment source": func(in *pm.Input) {
-			in.Payments = payments.Resolved{Payments: []payments.Payment{{Amount: 1, Source: "guessed"}}}
+			in.Payments = annual.ResolvedPayments{Payments: []annual.Payment{{Amount: 1, Source: "guessed"}}}
 		},
 		"no fiscal year": func(in *pm.Input) { in.FiscalYear = 0 },
 	}
@@ -378,9 +376,9 @@ func TestComputeReportsParamsAndOverflowErrors(t *testing.T) {
 	_, err := pm.NewRESICO().Compute(an06(t), &fakeParams{err: errParams})
 	require.ErrorIs(t, err, errParams)
 
-	in := pm.Input{FiscalYear: fiscalYear, Income: money.Cents(1 << 62), Payments: payments.Resolved{Payments: []payments.Payment{
-		{Amount: money.Cents(1 << 62), Source: payments.SourceFiled},
-		{Amount: money.Cents(1 << 62), Source: payments.SourceFiled},
+	in := pm.Input{FiscalYear: fiscalYear, Income: money.Cents(1 << 62), Payments: annual.ResolvedPayments{Payments: []annual.Payment{
+		{Amount: money.Cents(1 << 62), Source: annual.PaymentFiled},
+		{Amount: money.Cents(1 << 62), Source: annual.PaymentFiled},
 	}}}
 	_, err = pm.NewGeneral().Compute(in, params(t))
 	require.ErrorIs(t, err, money.ErrOverflow)

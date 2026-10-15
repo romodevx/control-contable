@@ -141,7 +141,7 @@ func readPayments(r PaymentsReader, fiscalYear int, regime fiscal.RegimeCode) (r
 			}
 			g.count++
 			if p.FromIncompleteEstimate {
-				out.missing = append(out.missing, fmt.Sprintf("filed_payment:%s:%04d-%02d", regime, fiscalYear, p.Month))
+				out.missing = append(out.missing, missingFiledPayment(regime, fiscalYear, p.Month))
 			}
 		}
 		if g.count > 0 {

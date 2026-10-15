@@ -9,7 +9,6 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/money"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/annual"
-	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/annual/payments"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/taxparams"
 )
 
@@ -46,13 +45,13 @@ const (
 const inputFiledPayments domain.InputKey = "filed_payments"
 
 // paymentLines are the code and source of each payment source's credit.
-var paymentLines = map[payments.Source]struct {
+var paymentLines = map[annual.PaymentSource]struct {
 	code   domain.LineCode
 	source domain.Source
 }{
-	payments.SourceFiled:          {LinePaymentsFiled, domain.SourceTaxInput(inputFiledPayments)},
-	payments.SourceTaxInput:       {LinePaymentsTaxInput, domain.SourceTaxInput(domain.InputPriorProvisionalPayments)},
-	payments.SourceEstimatedByApp: {LinePaymentsEstimated, domain.SourceComputed()},
+	annual.PaymentFiled:          {LinePaymentsFiled, domain.SourceTaxInput(inputFiledPayments)},
+	annual.PaymentTaxInput:       {LinePaymentsTaxInput, domain.SourceTaxInput(domain.InputPriorProvisionalPayments)},
+	annual.PaymentEstimatedByApp: {LinePaymentsEstimated, domain.SourceComputed()},
 }
 
 // basis is the legal basis of each art. 9 step of one regime.
@@ -79,7 +78,7 @@ type computation struct {
 	profitBeforePTU money.Exact // renta gravable before PTU paid and losses
 	taxableProfit   money.Exact // utilidad fiscal
 	tax             Tax
-	payments        payments.Resolved
+	payments        annual.ResolvedPayments
 }
 
 // compute traces the art. 9 annual tax of in, up to the balance.
@@ -152,7 +151,7 @@ func (c *computation) base(r regime, in Input, x *exact) money.Exact {
 // credit subtracts the provisional payments, one line per source with the
 // number of months as its argument, and the interest withholding; it
 // returns the payments credited.
-func (c *computation) credit(r regime, in Input, totals []payments.Total, x *exact) money.Cents {
+func (c *computation) credit(r regime, in Input, totals []annual.PaymentTotal, x *exact) money.Cents {
 	var paid money.Cents
 	for _, t := range totals {
 		line := paymentLines[t.Source]
@@ -196,7 +195,7 @@ func (in Input) validate() error {
 	if slices.ContainsFunc(figures, func(v money.Cents) bool { return v < 0 }) {
 		return fmt.Errorf("figures must not be negative: %w", ErrInvalidInput)
 	}
-	if slices.ContainsFunc(in.Payments.Payments, func(p payments.Payment) bool { return p.Amount < 0 || !p.Source.Valid() }) {
+	if slices.ContainsFunc(in.Payments.Payments, func(p annual.Payment) bool { return p.Amount < 0 || !p.Source.Valid() }) {
 		return fmt.Errorf("payments must be non-negative with a known source: %w", ErrInvalidInput)
 	}
 	if in.FiscalYear <= 0 {
