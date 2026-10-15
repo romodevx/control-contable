@@ -43,6 +43,8 @@ type jobDB struct {
 
 	claimErr  error
 	finishErr error
+	// finishDeadlines records, per Finish, whether its ctx had a deadline.
+	finishDeadlines []bool
 }
 
 func newJobDB() *jobDB {
@@ -116,6 +118,8 @@ func (db *jobDB) Finish(ctx context.Context, c usecase.LogClaim, o usecase.LogOu
 	}
 	db.mu.Lock()
 	defer db.mu.Unlock()
+	_, bounded := ctx.Deadline()
+	db.finishDeadlines = append(db.finishDeadlines, bounded)
 	if db.finishErr != nil {
 		return false, db.finishErr
 	}

@@ -36,6 +36,9 @@ const (
 	// leaseDuration is how long a claim is owned before another worker may
 	// re-claim it (§2.4 step 5); far above the sender's 30 s deadline.
 	leaseDuration = 10 * time.Minute
+	// recordTimeout bounds the record transaction, which outlives the run's
+	// cancellation (the send already happened) but must not hang shutdown.
+	recordTimeout = 10 * time.Second
 	// maxAttempts is the last attempt a transient failure is retried at.
 	maxAttempts = 3
 	// regimeBimonthly is the 621 regime: its payment follows the bimester.
@@ -582,9 +585,13 @@ func sanitizeClass(class, fallback string) string {
 
 // record deletes the invalid devices and records the outcome, in the
 // user's second short transaction. It runs on a context that the run's
-// cancellation does not cut: the send already happened.
+// cancellation does not cut (the send already happened), bounded by
+// recordTimeout; a record that times out leaves the row pending for the
+// lease retry.
 func (j *ReminderJob) record(ctx context.Context, r DueReminder, claim LogClaim, o LogOutcome, invalid []string, result userResult) (userResult, error) {
-	err := j.deps.Units.ReadWrite(context.WithoutCancel(ctx), r.UserID, func(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), recordTimeout)
+	defer cancel()
+	err := j.deps.Units.ReadWrite(ctx, r.UserID, func(ctx context.Context) error {
 		if len(invalid) > 0 {
 			n, err := j.deps.Recipients.DeleteDevices(ctx, invalid)
 			if err != nil {

@@ -760,6 +760,23 @@ func TestReminderJob_CancellationLeavesNoGoroutine(t *testing.T) {
 	}
 }
 
+// The record runs after the send on a context the run's cancellation does
+// not cut, but it is still bounded: a hung database must not stall the
+// worker's shutdown forever (go-style: honor cancellation, no leaks).
+func TestReminderJob_RecordIsBoundedByItsOwnDeadline(t *testing.T) {
+	april := jobPeriod(t, 2026, time.April)
+	f := newJobFixture(t, earlyNow)
+	f.addUser(t, jobUser1, enabledSettings(t, false), twoTaxpayers(t), dev1)
+	f.dueFor(jobUser1, april, domain.KindEarly)
+
+	require.NoError(t, f.run(t))
+
+	f.db.mu.Lock()
+	defer f.db.mu.Unlock()
+	require.Len(t, f.db.finishDeadlines, 1)
+	assert.True(t, f.db.finishDeadlines[0], "the record transaction carries its own deadline")
+}
+
 // §9: logs carry counts, user ids and periods only: never a token, a
 // display name or an amount.
 func TestReminderJob_LogsCarryNoSecretsOrPII(t *testing.T) {
