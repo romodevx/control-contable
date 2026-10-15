@@ -91,6 +91,7 @@ func withoutIdentity(t *testing.T, body string) map[string]json.RawMessage {
 	require.NoError(t, json.Unmarshal([]byte(body), &m), body)
 	delete(m, "taxpayer_id")
 	delete(m, "records_fingerprint")
+	delete(m, "figures_fingerprint")
 	delete(m, "engine_version")
 	if raw, ok := m["regimes"]; ok {
 		var regimes []map[string]json.RawMessage

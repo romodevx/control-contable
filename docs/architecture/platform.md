@@ -116,7 +116,7 @@ Invariants (gating):
 - **One key grammar.** `flags.ValidKey` (`module_[a-z][a-z0-9]*(_[a-z0-9]+)*`) is shared by the
   database CHECK, `cmd/flagmapgen` and the Redocly `x-module` rule.
 - **Prerequisites.** `flags.Prerequisites` declares, once, the modules whose data a module's
-  routes read (`module_tax_engine`, `module_incomes`, `module_expenses` and `module_dashboard` → `module_taxpayers`; MODULE-tax-engine §7, MODULE-incomes §6, MODULE-expenses §6, MODULE-dashboard §3). `Service` builds
+  routes read (`module_tax_engine`, `module_incomes`, `module_expenses` and `module_dashboard` → `module_taxpayers`; `module_history` → `module_tax_engine`; MODULE-tax-engine §7, MODULE-incomes §6, MODULE-expenses §6, MODULE-dashboard §3, MODULE-history §3). `Service` builds
   each snapshot from the effective set (`EffectiveModules`): a module whose prerequisite is OFF is
   OFF for the route gate (404) and absent from `GET /v1/flags`, from one snapshot. The graph is
   tested to be well-formed and acyclic (`CheckPrerequisites`); `cmd/flags list` shows the

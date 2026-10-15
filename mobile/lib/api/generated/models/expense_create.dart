@@ -20,7 +20,7 @@ import 'uuid.dart';
 part 'expense_create.freezed.dart';
 part 'expense_create.g.dart';
 
-/// `user_id` comes from the session and `taxpayer_id` from the path, never from the body. Withholdings are **derived** (ADR-0008): a persona moral taxpayer describes its supplier (`supplier_kind`, required for it since 0.10.1; `supplier_regime`; `operation_kind`, defaulting to the category's; `residential_rent`) and the server derives what it must withhold and remit. A persona física never withholds from a domestic supplier: any supplier field answers `422` `supplier_not_applicable`. **0.10.1 (WH-07):** the deprecated `isr_withheld_cents` and `iva_withheld_cents` with any value answer `400 additionalProperties`; they leave the schema with WH-12, which regenerates the Dart client with the new form.
+/// `user_id` comes from the session and `taxpayer_id` from the path, never from the body. Withholdings are **derived** (ADR-0008): a persona moral taxpayer describes its supplier (`supplier_kind`, required for it since 0.11.2; `supplier_regime`; `operation_kind`, defaulting to the category's; `residential_rent`) and the server derives what it must withhold and remit. A persona física never withholds from a domestic supplier: any supplier field answers `422` `supplier_not_applicable`. **0.11.2 (WH-07):** the deprecated `isr_withheld_cents` and `iva_withheld_cents` with any value answer `400 additionalProperties`; they leave the schema with WH-12, which regenerates the Dart client with the new form.
 @Freezed()
 abstract class ExpenseCreate with _$ExpenseCreate {
   const factory ExpenseCreate({
@@ -50,7 +50,7 @@ abstract class ExpenseCreate with _$ExpenseCreate {
     /// The user's override; omitted or `null` uses the default.
     @JsonKey(includeIfNull: false) bool? deductible,
 
-    /// Persona moral taxpayers only; required for them since 0.10.1 (`400 required`).
+    /// Persona moral taxpayers only; required for them since 0.11.2 (`400 required`).
     @JsonKey(includeIfNull: false, name: 'supplier_kind')
     SupplierKind? supplierKind,
 
@@ -66,11 +66,11 @@ abstract class ExpenseCreate with _$ExpenseCreate {
     @JsonKey(includeIfNull: false, name: 'residential_rent')
     bool? residentialRent,
 
-    /// Retired by WH-07 (0.10.1, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
+    /// Retired by WH-07 (0.11.2, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
     @JsonKey(includeIfNull: false, name: 'isr_withheld_cents')
     NonNegativeCents? isrWithheldCents,
 
-    /// Retired by WH-07 (0.10.1, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
+    /// Retired by WH-07 (0.11.2, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
     @JsonKey(includeIfNull: false, name: 'iva_withheld_cents')
     NonNegativeCents? ivaWithheldCents,
     @JsonKey(includeIfNull: false) RecordDescription? description,

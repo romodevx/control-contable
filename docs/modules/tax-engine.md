@@ -284,7 +284,7 @@ is accepted with the `withholding_differs_from_rate` warning: the CFDI wins):
 13 iva subtract 106667 IVA que te retuvieron personas morales
 14 iva result 213333 IVA de este régimen
 15 iva input 480000 IVA trasladado cobrado (todos tus regímenes)
-16 iva subtract 160000 IVA acreditable pagado (todos tus regímenes)
+16 iva subtract 160000 IVA acreditable (todos tus regímenes)
 17 iva subtract 106667 IVA que te retuvieron (todos tus regímenes)
 18 iva result 213333 IVA a cargo del mes (todos tus regímenes)
 {"code":"business_rule_violation","details":[{"field":"period","code":"parameters_unavailable"}]}

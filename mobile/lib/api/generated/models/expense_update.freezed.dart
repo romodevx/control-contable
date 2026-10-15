@@ -16,8 +16,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ExpenseUpdate {
 
-@JsonKey(includeIfNull: false, name: 'regime_code') RegimeCode? get regimeCode;@JsonKey(includeIfNull: false, name: 'category_code') String? get categoryCode;@JsonKey(includeIfNull: false, name: 'amount_cents') PositiveCents? get amountCents;@JsonKey(includeIfNull: false, name: 'iva_rate') IvaRate? get ivaRate;@JsonKey(includeIfNull: false, name: 'iva_cents') NonNegativeCents? get ivaCents;@JsonKey(includeIfNull: false, name: 'payment_method') PaymentMethod? get paymentMethod;@JsonKey(includeIfNull: false, name: 'paid_on') BusinessDate? get paidOn;@JsonKey(includeIfNull: false, name: 'has_cfdi') bool? get hasCfdi;@JsonKey(includeIfNull: false, name: 'cfdi_uuid') CfdiUuid? get cfdiUuid;@JsonKey(includeIfNull: false) bool? get deductible;@JsonKey(includeIfNull: false, name: 'supplier_kind') SupplierKind? get supplierKind;@JsonKey(includeIfNull: false, name: 'supplier_regime') SupplierRegime? get supplierRegime;@JsonKey(includeIfNull: false, name: 'operation_kind') OperationKind? get operationKind;@JsonKey(includeIfNull: false, name: 'residential_rent') bool? get residentialRent;/// Retired by WH-07 (0.10.1). Any value answers `400 additionalProperties`.
-@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') NonNegativeCents? get isrWithheldCents;/// Retired by WH-07 (0.10.1). Any value answers `400 additionalProperties`.
+@JsonKey(includeIfNull: false, name: 'regime_code') RegimeCode? get regimeCode;@JsonKey(includeIfNull: false, name: 'category_code') String? get categoryCode;@JsonKey(includeIfNull: false, name: 'amount_cents') PositiveCents? get amountCents;@JsonKey(includeIfNull: false, name: 'iva_rate') IvaRate? get ivaRate;@JsonKey(includeIfNull: false, name: 'iva_cents') NonNegativeCents? get ivaCents;@JsonKey(includeIfNull: false, name: 'payment_method') PaymentMethod? get paymentMethod;@JsonKey(includeIfNull: false, name: 'paid_on') BusinessDate? get paidOn;@JsonKey(includeIfNull: false, name: 'has_cfdi') bool? get hasCfdi;@JsonKey(includeIfNull: false, name: 'cfdi_uuid') CfdiUuid? get cfdiUuid;@JsonKey(includeIfNull: false) bool? get deductible;@JsonKey(includeIfNull: false, name: 'supplier_kind') SupplierKind? get supplierKind;@JsonKey(includeIfNull: false, name: 'supplier_regime') SupplierRegime? get supplierRegime;@JsonKey(includeIfNull: false, name: 'operation_kind') OperationKind? get operationKind;@JsonKey(includeIfNull: false, name: 'residential_rent') bool? get residentialRent;/// Retired by WH-07 (0.11.2). Any value answers `400 additionalProperties`.
+@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') NonNegativeCents? get isrWithheldCents;/// Retired by WH-07 (0.11.2). Any value answers `400 additionalProperties`.
 @JsonKey(includeIfNull: false, name: 'iva_withheld_cents') NonNegativeCents? get ivaWithheldCents;@JsonKey(includeIfNull: false) RecordDescription? get description;
 /// Create a copy of ExpenseUpdate
 /// with the given fields replaced by the non-null parameter values.
@@ -250,9 +250,9 @@ class _ExpenseUpdate implements ExpenseUpdate {
 @override@JsonKey(includeIfNull: false, name: 'supplier_regime') final  SupplierRegime? supplierRegime;
 @override@JsonKey(includeIfNull: false, name: 'operation_kind') final  OperationKind? operationKind;
 @override@JsonKey(includeIfNull: false, name: 'residential_rent') final  bool? residentialRent;
-/// Retired by WH-07 (0.10.1). Any value answers `400 additionalProperties`.
+/// Retired by WH-07 (0.11.2). Any value answers `400 additionalProperties`.
 @override@JsonKey(includeIfNull: false, name: 'isr_withheld_cents') final  NonNegativeCents? isrWithheldCents;
-/// Retired by WH-07 (0.10.1). Any value answers `400 additionalProperties`.
+/// Retired by WH-07 (0.11.2). Any value answers `400 additionalProperties`.
 @override@JsonKey(includeIfNull: false, name: 'iva_withheld_cents') final  NonNegativeCents? ivaWithheldCents;
 @override@JsonKey(includeIfNull: false) final  RecordDescription? description;
 

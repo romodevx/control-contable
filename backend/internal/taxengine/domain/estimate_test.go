@@ -79,7 +79,7 @@ func TestEnumsValid(t *testing.T) {
 		},
 		"topic": {
 			domain.TopicRIFReduction, domain.TopicRIFBimonthlyIVA, domain.TopicPlatformDefinitiveIVA,
-			domain.TopicCrossRegimeIVANetting, domain.TopicRESICOPMInterestWithholding,
+			domain.TopicCrossRegimeIVANetting, domain.TopicRESICOPMInterestWithholding, domain.TopicWithheldIVACreditTiming,
 		},
 		"severity": {domain.SeverityInfo, domain.SeverityWarning, domain.SeverityStrong},
 	}

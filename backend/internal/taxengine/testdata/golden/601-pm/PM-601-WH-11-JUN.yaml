@@ -1,0 +1,52 @@
+# golden: hand-authored from docs/project-specs/MODULE-withholdings.md §8 US-W6 (research withholdings-matrix-2026.md §5 WH-11). Never generated or rewritten by a tool.
+# Receptor side, June 2026: a PM 601 pays a PF 612 consultant fees of
+# 40,000.00 + IVA 6,400.00 on 2026-06-15 and withholds ISR 10 % = 4,000.00
+# (LISR 106 ¶5) and IVA 2/3 = 4,266.67 (LIVA 1-A, RLIVA 3 fr. I). The
+# creditable IVA splits: the paid part 6,400.00 - 4,266.67 = 2,133.33 is
+# credited in June; the withheld part 4,266.67 waits for July (LIVA 5 fr.
+# IV). Withholdings to remit by 17 July: 4,266.67 + 4,000.00 = 8,266.67.
+# No income in June: IVA = 0.00 - 2,133.33 = -2,133.33 (in favor).
+# The ISR inputs are given only so the regime is complete; ISR is not asserted.
+id: PM-601-WH-11-JUN
+source: spec:module-withholdings-us-w6
+input:
+  regime: "601"
+  person_type: moral
+  period: "2026-06"
+  options:
+    iva_fully_taxable: true
+  months:
+    - month: 6
+      expenses:
+        deductible_paid: "40000.00"
+        iva_paid: {rate_16: {base: "40000.00", iva: "6400.00"}}
+        creditable_iva_paid: "2133.33"
+        creditable_iva_withheld: "4266.67"
+        isr_withheld_to_remit: "4000.00"
+        iva_withheld_to_remit: "4266.67"
+  tax_inputs:
+    - {key: coeficiente_utilidad, kind: rate, rate: "0.1500"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 1, money: "0.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 2, money: "0.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 3, money: "0.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 4, money: "0.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 5, money: "0.00"}
+expected:
+  status: complete
+  taxes: [iva, withholding]
+  iva:
+    charged_collected: "0.00"
+    creditable_paid: "2133.33"
+    withheld_from_taxpayer: "0.00"
+    definitive_excluded: "0.00"
+    net: "-2133.33"
+  withheld_to_remit: "8266.67"
+  lines:
+    - {tax: iva, code: iva.charged.rate_16, op: input, amount: "0.00"}
+    - {tax: iva, code: iva.charged, op: result, amount: "0.00"}
+    - {tax: iva, code: iva.creditable, op: subtract, amount: "2133.33"}
+    - {tax: iva, code: iva.withheld.moral, op: subtract, amount: "0.00"}
+    - {tax: iva, code: iva.regime_net, op: result, amount: "-2133.33"}
+    - {tax: withholding, code: withholding.iva_to_remit, op: input, amount: "4266.67"}
+    - {tax: withholding, code: withholding.isr_to_remit, op: add, amount: "4000.00"}
+    - {tax: withholding, code: withholding.to_remit, op: result, amount: "8266.67"}

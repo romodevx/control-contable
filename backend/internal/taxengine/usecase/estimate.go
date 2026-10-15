@@ -64,7 +64,11 @@ type TaxpayerEstimate struct {
 	// and ParameterSet is an earlier year's (ADR-0002 §3).
 	ProvisionalParameters bool
 	RecordsFingerprint    string
-	EngineVersion         string
+	// FiguresFingerprint hashes the figures this estimate shows
+	// (domain.FiguresFingerprint, MODULE-history §2.4): M8 marks a viewed
+	// month changed only when it moves.
+	FiguresFingerprint string
+	EngineVersion      string
 	// Records are the period's live records the estimate read, summed over
 	// every regime (informational ones included): no contract field of the
 	// estimate, the dashboard's income vs expense view (M6-02).
@@ -73,9 +77,13 @@ type TaxpayerEstimate struct {
 
 // RecordTotals are one month's live records before IVA: incomes collected
 // (collected_on) and expenses paid (paid_on, every deductibility class).
+// HasIncomes and HasExpenses report any ledger row of the table in the
+// month, whatever its amounts (History's has_records, M8-03).
 type RecordTotals struct {
 	IncomeCollected money.Cents
 	ExpensesPaid    money.Cents
+	HasIncomes      bool
+	HasExpenses     bool
 }
 
 // Estimator computes a taxpayer's monthly estimate (Estimator, M5-22): the
@@ -109,13 +117,16 @@ func NewEstimator(deps EstimateDeps) (*Estimator, error) {
 // regimeRIF is the bimonthly régimen 621: its payment follows the bimester.
 const regimeRIF fiscal.RegimeCode = "621"
 
-// ledgerRecords is what one estimate reads, in one unit of work.
+// ledgerRecords is what one estimate reads, in one unit of work: one fiscal
+// year's rows and the previous December's expense rows (January's withheld
+// IVA credit).
 type ledgerRecords struct {
-	profile  TaxpayerProfile
-	incomes  []IncomeMonthSums
-	expenses []ExpenseMonthSums
-	inputs   map[fiscal.RegimeCode]domain.TaxInputs
-	texts    map[fiscal.RegimeCode]RegimeText
+	profile       TaxpayerProfile
+	incomes       []IncomeMonthSums
+	expenses      []ExpenseMonthSums
+	priorDecember []ExpenseMonthSums
+	inputs        map[fiscal.RegimeCode]domain.TaxInputs
+	texts         map[fiscal.RegimeCode]RegimeText
 }
 
 // EstimateMonth estimates rawPeriod ("YYYY-MM"; "" is the current month in
@@ -201,6 +212,7 @@ func (uc *Estimator) EstimateRange(ctx context.Context, userID, taxpayerID strin
 			return nil, fmt.Errorf("taxengine: records of %s: %w", p, err)
 		}
 		est.TaxpayerID, est.DueDate = id.String(), dues[i]
+		est.FiguresFingerprint = figuresFingerprintOf(est)
 		out = append(out, est)
 	}
 	return out, nil
@@ -246,11 +258,13 @@ func recordTotals(r ledgerRecords, month time.Month) (RecordTotals, error) {
 	}
 	for _, row := range r.incomes {
 		if row.Month == month {
+			out.HasIncomes = true
 			add(&out.IncomeCollected, row.Sums.Cash)
 		}
 	}
 	for _, row := range r.expenses {
 		if row.Month == month {
+			out.HasExpenses = true
 			add(&out.ExpensesPaid, row.Sums.DeductiblePaid)
 			add(&out.ExpensesPaid, row.Sums.NonDeductiblePaid)
 			add(&out.ExpensesPaid, row.Sums.CashOverLimitPaid)
@@ -312,20 +326,27 @@ type rangeRecords struct {
 	texts    map[fiscal.RegimeCode]RegimeText
 }
 
-// year narrows the range to one fiscal year's records.
+// year narrows the range to one fiscal year's records and the previous
+// December's expenses.
 func (r rangeRecords) year(fiscalYear int) ledgerRecords {
 	return ledgerRecords{
 		profile:  r.profile,
 		incomes:  slices.DeleteFunc(slices.Clone(r.incomes), func(row IncomeMonthSums) bool { return row.Year != fiscalYear }),
 		expenses: slices.DeleteFunc(slices.Clone(r.expenses), func(row ExpenseMonthSums) bool { return row.Year != fiscalYear }),
-		inputs:   r.inputs[fiscalYear],
-		texts:    r.texts,
+		priorDecember: slices.DeleteFunc(slices.Clone(r.expenses), func(row ExpenseMonthSums) bool {
+			return row.Year != fiscalYear-1 || row.Month != time.December
+		}),
+		inputs: r.inputs[fiscalYear],
+		texts:  r.texts,
 	}
 }
 
 // read loads the profile, the aggregates of January of from's fiscal year
-// through to (one statement per table), the tax inputs of every fiscal year
-// of the range (one statement) and the catalog texts.
+// through to (one statement per table; the expenses' reaches back to the
+// previous December, whose withheld IVA January credits, unless that
+// December is before the first fiscal year with parameters: no record is
+// dated there), the tax inputs of every fiscal year of the range (one
+// statement) and the catalog texts.
 func (uc *Estimator) read(ctx context.Context, userID, taxpayerID string, from, to domain.Period) (rangeRecords, error) {
 	profile, err := uc.deps.Profiles.Profile(ctx, userID, taxpayerID)
 	if err != nil {
@@ -339,7 +360,9 @@ func (uc *Estimator) read(ctx context.Context, userID, taxpayerID string, from, 
 	if err != nil {
 		return rangeRecords{}, fmt.Errorf("income sums: %w", err)
 	}
-	expenses, err := uc.deps.Ledger.ExpenseSums(ctx, q)
+	expenseQuery := q
+	expenseQuery.PriorDecember = from.Year() > firstParamsYear
+	expenses, err := uc.deps.Ledger.ExpenseSums(ctx, expenseQuery)
 	if err != nil {
 		return rangeRecords{}, fmt.Errorf("expense sums: %w", err)
 	}
@@ -516,12 +539,28 @@ func fingerprintOf(p domain.Period, sel taxparams.Selection, years map[fiscal.Re
 	return domain.Fingerprint(in), nil
 }
 
-// yearSumsThrough folds the rows of January..p into each regime's sums.
+// figuresFingerprintOf hashes what est shows; it needs the due date, so it
+// runs once the estimate is complete.
+func figuresFingerprintOf(est TaxpayerEstimate) string {
+	regimes := make([]domain.RegimeEstimate, 0, len(est.Regimes))
+	for _, r := range est.Regimes {
+		regimes = append(regimes, r.RegimeEstimate)
+	}
+	return domain.FiguresFingerprint(domain.FiguresInput{Totals: est.Totals, DueDate: est.DueDate, Regimes: regimes})
+}
+
+// yearSumsThrough folds the rows of January..p into each regime's sums,
+// with the previous December's withheld IVA.
 func yearSumsThrough(p domain.Period, r ledgerRecords) (map[fiscal.RegimeCode]domain.YearSums, error) {
 	m := p.Month()
 	incomes := slices.DeleteFunc(slices.Clone(r.incomes), func(row IncomeMonthSums) bool { return row.Month > m })
 	expenses := slices.DeleteFunc(slices.Clone(r.expenses), func(row ExpenseMonthSums) bool { return row.Month > m })
-	return YearSumsByRegime(LedgerQuery{FiscalYear: p.Year(), Through: m}, incomes, expenses)
+	q := LedgerQuery{FiscalYear: p.Year(), Through: m}
+	years, err := YearSumsByRegime(q, incomes, expenses)
+	if err != nil {
+		return nil, err
+	}
+	return WithPriorDecember(q, years, r.priorDecember)
 }
 
 // regimeInput assembles the strategy input of hold for p; a regime with no

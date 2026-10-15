@@ -60,23 +60,23 @@ abstract class Expense with _$Expense {
     @JsonKey(name: 'created_at') required DateTime createdAt,
     @JsonKey(name: 'updated_at') required DateTime updatedAt,
 
-    /// `null` for a persona física taxpayer. Always sent (nullable) since 0.10.1.
+    /// `null` for a persona física taxpayer. Always sent (nullable) since 0.11.2.
     @JsonKey(includeIfNull: false, name: 'supplier_kind')
     SupplierKind? supplierKind,
 
-    /// `null` unless `supplier_kind: pf_with_activity`. Always sent (nullable) since 0.10.1.
+    /// `null` unless `supplier_kind: pf_with_activity`. Always sent (nullable) since 0.11.2.
     @JsonKey(includeIfNull: false, name: 'supplier_regime')
     SupplierRegime? supplierRegime,
 
-    /// `null` for a persona física taxpayer. Always sent (nullable) since 0.10.1.
+    /// `null` for a persona física taxpayer. Always sent (nullable) since 0.11.2.
     @JsonKey(includeIfNull: false, name: 'operation_kind')
     OperationKind? operationKind,
 
-    /// Always sent since 0.10.1.
+    /// Always sent since 0.11.2.
     @JsonKey(includeIfNull: false, name: 'residential_rent')
     bool? residentialRent,
 
-    /// The derived withholding (read-only); all zero with `withholder: none` for a persona física taxpayer. Sent for every expense written since 0.10.1 (WH-07); absent only on a legacy row until the WH-08 backfill derives it.
+    /// The derived withholding (read-only); all zero with `withholder: none` for a persona física taxpayer. Sent for every expense written since 0.11.2 (WH-07); absent only on a legacy row until the WH-08 backfill derives it.
     @JsonKey(includeIfNull: false) Withholding? withholding,
   }) = _Expense;
 

@@ -92,13 +92,17 @@ const (
 	TopicPlatformDefinitiveIVA       CPATopic = "platform_definitive_iva"
 	TopicCrossRegimeIVANetting       CPATopic = "cross_regime_iva_netting"
 	TopicRESICOPMInterestWithholding CPATopic = "resico_pm_interest_withholding"
+	// TopicWithheldIVACreditTiming: the IVA withheld from suppliers is
+	// credited the month after, assuming it was remitted on time (LIVA 5
+	// fr. IV, MODULE-withholdings OQ-W4).
+	TopicWithheldIVACreditTiming CPATopic = "withheld_iva_credit_timing" //nolint:gosec // G101: a CPA topic name ("credit" is a tax credit), not a credential
 )
 
 // Valid reports a contract CpaTopic.
 func (c CPATopic) Valid() bool {
 	return slices.Contains([]CPATopic{
 		TopicRIFReduction, TopicRIFBimonthlyIVA, TopicPlatformDefinitiveIVA,
-		TopicCrossRegimeIVANetting, TopicRESICOPMInterestWithholding,
+		TopicCrossRegimeIVANetting, TopicRESICOPMInterestWithholding, TopicWithheldIVACreditTiming,
 	}, c)
 }
 

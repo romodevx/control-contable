@@ -30,7 +30,7 @@ type ledgerFixture struct {
 	rate, method                     string
 	cfdi, deductible, cashOver       bool
 	creditable, isrWithheld          money.Cents
-	ivaWithheld                      money.Cents
+	ivaWithheld, creditableWithheld  money.Cents
 	paidOn                           string
 	deleted                          bool
 }
@@ -38,8 +38,9 @@ type ledgerFixture struct {
 const insertLedgerFixtureSQL = `
 INSERT INTO expenses (user_id, taxpayer_id, regime_code, category_code, amount_cents, iva_rate, iva_cents,
                       payment_method, has_cfdi, deductible, deductible_overridden, cash_over_limit,
-                      creditable_iva_cents, isr_withheld_cents, iva_withheld_cents, paid_on)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16::date)
+                      creditable_iva_cents, isr_withheld_cents, iva_withheld_cents, paid_on,
+                      creditable_iva_withheld_cents)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16::date, $17)
 RETURNING id`
 
 func seedLedger(t *testing.T, e *env, fixtures ...ledgerFixture) {
@@ -49,7 +50,7 @@ func seedLedger(t *testing.T, e *env, fixtures ...ledgerFixture) {
 		queryAs(t, e.app, f.user, insertLedgerFixtureSQL, []any{
 			f.user, f.taxpayer, f.regime, f.category, int64(f.amount), f.rate, int64(f.iva), f.method, f.cfdi,
 			f.deductible, f.cashOver && f.deductible, f.cashOver, int64(f.creditable), int64(f.isrWithheld),
-			int64(f.ivaWithheld), f.paidOn,
+			int64(f.ivaWithheld), f.paidOn, int64(f.creditableWithheld),
 		}, &id)
 		if f.deleted {
 			execAs(t, e.app, f.user, "UPDATE expenses SET deleted_at = now() WHERE id = $1", id)
@@ -224,16 +225,24 @@ func TestLedgerReader_HasLive(t *testing.T) {
 	assert.False(t, hasLive(userA, taxpayerR), "the same user's other taxpayer")
 }
 
-func TestLedgerReader_WithholdingsMadeToSuppliers(t *testing.T) {
-	e := newEnv(t)
-	fees := ledgerFixture{
+// supplierFees is a 601 persona moral's April payment of fees to a PF
+// (MODULE-withholdings §4.2): of the IVA 1,600.00, 1,066.67 is withheld, so
+// the paid part 533.33 is creditable in April and the withheld part 1,066.67
+// the month after (LIVA 5 fr. IV).
+func supplierFees(paidOn string) ledgerFixture {
+	return ledgerFixture{
 		user: userA, taxpayer: taxpayerM, regime: "601", category: "servicios_profesionales",
 		amount: 10000_00, iva: 1600_00, rate: "rate_16", method: "transfer", cfdi: true, deductible: true,
-		creditable: 1600_00, isrWithheld: 1000_00, ivaWithheld: 1066_67, paidOn: "2026-04-10",
+		creditable: 533_33, creditableWithheld: 1066_67, isrWithheld: 1000_00, ivaWithheld: 1066_67, paidOn: paidOn,
 	}
+}
+
+func TestLedgerReader_WithholdingsMadeToSuppliers(t *testing.T) {
+	e := newEnv(t)
+	fees := supplierFees("2026-04-10")
 	notDeductible := with(fees, func(f *ledgerFixture) {
-		f.category, f.deductible, f.creditable, f.amount, f.iva = "renta_local", false, 0, 5000_00, 800_00
-		f.isrWithheld, f.ivaWithheld = 500_00, 533_33
+		f.category, f.deductible, f.creditable, f.creditableWithheld = "renta_local", false, 0, 0
+		f.amount, f.iva, f.isrWithheld, f.ivaWithheld = 5000_00, 800_00, 500_00, 533_33
 	})
 	seedLedger(t, e, fees, notDeductible)
 
@@ -242,9 +251,27 @@ func TestLedgerReader_WithholdingsMadeToSuppliers(t *testing.T) {
 	assert.Equal(t, []infra.ExpenseMonthSums{{
 		Regime: fiscal.RegimeCode("601"), Year: 2026, Month: time.April,
 		DeductiblePaid: 10000_00, NonDeductiblePaid: 5000_00,
-		IVAPaid: rate16(15000_00, 2400_00), CreditableIVAPaid: 1600_00,
+		IVAPaid: rate16(15000_00, 2400_00), CreditableIVAPaid: 533_33, CreditableIVAWithheld: 1066_67,
 		ISRWithheldToRemit: 1500_00, IVAWithheldToRemit: 1600_00,
-	}}, got, "withholdings are remitted whatever the deductibility")
+	}}, got, "withholdings are remitted whatever the deductibility; both creditable parts in one statement")
+}
+
+// WH-09: January credits the previous December's withheld IVA, so the tax
+// engine's read opens on December 1st of the year before, in the same
+// statement; November stays out.
+func TestLedgerReader_PriorDecemberOpensTheRangeOneMonthBack(t *testing.T) {
+	e := newEnv(t)
+	seedLedger(t, e, supplierFees("2026-11-30"), supplierFees("2026-12-01"), supplierFees("2027-01-31"),
+		supplierFees("2027-02-01"))
+
+	got := readExpenseSums(t, e, userA, infra.LedgerQuery{
+		TaxpayerID: taxpayerM, FiscalYear: 2027, Through: time.January, PriorDecember: true,
+	})
+
+	require.Len(t, got, 2)
+	assert.Equal(t, [2]int{2026, int(time.December)}, [2]int{got[0].Year, int(got[0].Month)})
+	assert.Equal(t, money.Cents(1066_67), got[0].CreditableIVAWithheld)
+	assert.Equal(t, [2]int{2027, int(time.January)}, [2]int{got[1].Year, int(got[1].Month)})
 }
 
 func TestLedgerReader_OtherUsersRowsAreInvisible(t *testing.T) {

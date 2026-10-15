@@ -1,0 +1,52 @@
+# golden: hand-authored from docs/project-specs/MODULE-withholdings.md §8 US-W6 (research withholdings-matrix-2026.md §5 WH-11). Never generated or rewritten by a tool.
+# Receptor side, July 2026: PM-601-WH-11-JUN's June, and no July record.
+# The IVA withheld in June (4,266.67), remitted with the June return by 17
+# July, is credited in the July return (LIVA 5 fr. IV, "en la declaración
+# de pago mensual siguiente a la declaración en la que se haya efectuado el
+# entero de la retención"), assuming it was remitted on time (CPA topic).
+# IVA = 0.00 - 0.00 paid - 4,266.67 withheld last month = -4,266.67.
+# June's withholdings were remitted with June's return: none to remit in July.
+# The ISR inputs are given only so the regime is complete; ISR is not asserted.
+id: PM-601-WH-11-JUL
+source: spec:module-withholdings-us-w6
+input:
+  regime: "601"
+  person_type: moral
+  period: "2026-07"
+  options:
+    iva_fully_taxable: true
+  months:
+    - month: 6
+      expenses:
+        deductible_paid: "40000.00"
+        iva_paid: {rate_16: {base: "40000.00", iva: "6400.00"}}
+        creditable_iva_paid: "2133.33"
+        creditable_iva_withheld: "4266.67"
+        isr_withheld_to_remit: "4000.00"
+        iva_withheld_to_remit: "4266.67"
+  tax_inputs:
+    - {key: coeficiente_utilidad, kind: rate, rate: "0.1500"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 1, money: "0.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 2, money: "0.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 3, money: "0.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 4, money: "0.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 5, money: "0.00"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 6, money: "0.00"}
+expected:
+  status: complete
+  taxes: [iva, withholding]
+  iva:
+    charged_collected: "0.00"
+    creditable_paid: "4266.67"
+    withheld_from_taxpayer: "0.00"
+    definitive_excluded: "0.00"
+    net: "-4266.67"
+  withheld_to_remit: "0.00"
+  lines:
+    - {tax: iva, code: iva.charged.rate_16, op: input, amount: "0.00"}
+    - {tax: iva, code: iva.charged, op: result, amount: "0.00"}
+    - {tax: iva, code: iva.creditable, op: subtract, amount: "0.00"}
+    - {tax: iva, code: iva.creditable.withheld_prior_month, op: subtract, amount: "4266.67"}
+    - {tax: iva, code: iva.withheld.moral, op: subtract, amount: "0.00"}
+    - {tax: iva, code: iva.regime_net, op: result, amount: "-4266.67"}
+  cpa_topics: [withheld_iva_credit_timing]

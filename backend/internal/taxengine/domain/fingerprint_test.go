@@ -98,6 +98,9 @@ func TestFingerprintChangesWithEveryInput(t *testing.T) {
 		{"the period", func(in *domain.FingerprintInput) { in.Period = period(t, "2026-04") }},
 		{"the parameter set", func(in *domain.FingerprintInput) { in.ParameterSet = "2026/v2" }},
 		{"provisional parameters", func(in *domain.FingerprintInput) { in.Provisional = true }},
+		{"the previous December's withheld creditable IVA", func(in *domain.FingerprintInput) {
+			in.Regimes[0].Input.Sums = in.Regimes[0].Input.Sums.WithPriorDecember(1)
+		}},
 		{"one more regime", func(in *domain.FingerprintInput) {
 			extra := in.Regimes[0]
 			extra.Input.Key.Regime = fiscal.RegimeRent
@@ -112,4 +115,42 @@ func TestFingerprintChangesWithEveryInput(t *testing.T) {
 			assert.NotEqual(t, want, domain.Fingerprint(in))
 		})
 	}
+}
+
+func listOption(items ...string) map[domain.OptionKey]domain.OptionValue {
+	return map[domain.OptionKey]domain.OptionValue{"activities": domain.ListOption(items)}
+}
+
+// #98 FU1: what never changes a figure never moves the fingerprint, so M8's
+// change_reason stays accurate. An informational regime computes nothing
+// (ADR-0002 §1): its record sums, options and tax inputs are not hashed,
+// only that it is held (key, treatment, active months). A multi_enum is a
+// set: its order is not hashed.
+func TestFingerprintIgnoresWhatNeverChangesAFigure(t *testing.T) {
+	informational := func(cash money.Cents, options map[domain.OptionKey]domain.OptionValue, values ...domain.TaxInputValue) domain.FingerprintInput {
+		r := fpRegime(t, cash, options, values...)
+		r.Treatment = domain.TreatmentInformational
+		return fpInput(t, r)
+	}
+	tests := []struct {
+		name        string
+		base, other domain.FingerprintInput
+	}{
+		{"informational record sums", informational(100_00, nil), informational(999_00, nil)},
+		{"informational options", informational(100_00, listOption("a")), informational(100_00, listOption("b"))},
+		{"informational tax inputs", informational(100_00, nil, prior(time.January, 1_00)), informational(100_00, nil)},
+		{"multi_enum order", fpInput(t, fpRegime(t, 100_00, listOption("a", "b"))), fpInput(t, fpRegime(t, 100_00, listOption("b", "a")))},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, domain.Fingerprint(tt.base), domain.Fingerprint(tt.other))
+		})
+	}
+}
+
+// The multi_enum's items still count: a different set moves the fingerprint.
+func TestFingerprintChangesWithMultiEnumItems(t *testing.T) {
+	assert.NotEqual(t,
+		domain.Fingerprint(fpInput(t, fpRegime(t, 100_00, listOption("a", "b")))),
+		domain.Fingerprint(fpInput(t, fpRegime(t, 100_00, listOption("a", "c")))))
 }

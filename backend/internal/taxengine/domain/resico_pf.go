@@ -18,13 +18,17 @@ const (
 )
 
 // The line codes of the RESICO PF ISR, in order; the withholding line only
-// when something was withheld. The annual cap is a disclaimer
+// when something was withheld, the excess line only when the withholding is
+// more than the month's ISR. The annual cap is a disclaimer
 // (DisclaimerRESICOCapExceeded), never a line: lines carry money.
 const (
 	LineRESICOPFIncomeMonth     LineCode = "isr.income_month"
 	LineRESICOPFRate            LineCode = "isr.resico_rate"
 	LineRESICOPFWithheldByMoral LineCode = "isr.withheld_by_moral"
-	LineRESICOPFPayable         LineCode = "isr.payable"
+	// LineRESICOPFExcessToAnnual is the withholding above the month's ISR:
+	// never refunded in the month, it is credited in the annual return.
+	LineRESICOPFExcessToAnnual LineCode = "isr.resico_excess_to_annual"
+	LineRESICOPFPayable        LineCode = "isr.payable"
 )
 
 // LabelRESICOPFAboveTable explains a partial RESICO PF estimate: the month's
@@ -44,6 +48,10 @@ var (
 		Law: "LISR", Article: "113-J", Note: "retención del 1.25 % por personas morales",
 	}}
 	basisRESICOPFPayable = []Citation{{Law: "LISR", Article: "113-E", Note: "pago mensual"}}
+	basisRESICOPFExcess  = []Citation{
+		{Law: "LISR", Article: "113-F", Note: "la declaración anual disminuye las retenciones del 113-J"},
+		{Law: "LISR", Article: "113-J", Note: "párrafo segundo"},
+	}
 )
 
 // RESICOPFStrategy is regime 626 for personas físicas (LISR 113-E to 113-J;
@@ -114,7 +122,7 @@ func (s RESICOPFStrategy) estimate(in Input, p *taxparams.Params) (RegimeEstimat
 	default:
 		est.ISR = isr
 	}
-	return t.finish(est, IVAInput{Sums: month, Options: in.Options})
+	return t.finish(est, monthIVA(in))
 }
 
 // resicoPFISR traces income × bracket rate − PM withholding = ISR. It
@@ -137,6 +145,13 @@ func (t *resicoTrace) resicoPFISR(table taxparams.Table, income IncomeSums) (*Ta
 	}
 	if withheld := income.ISRWithheld.ByMoral; withheld != 0 {
 		t.l.Subtract(resicoISRStep(LineRESICOPFWithheldByMoral, SourceRecords(), basisRESICOPFWithheld), t.exact(withheld))
+	}
+	if over := t.l.Running(); over < 0 {
+		// A4 ⚠️: the month floors at zero and the excess waits for the
+		// annual return (MODULE-withholdings §4.1).
+		excess := resicoISRStep(LineRESICOPFExcessToAnnual, SourceComputed(), basisRESICOPFExcess)
+		excess.NeedsCPAReview = true
+		t.l.Add(excess, -over)
 	}
 	result := NewTaxResult(t.l.Result(resicoISRStep(LineRESICOPFPayable, SourceComputed(), basisRESICOPFPayable)))
 	return &result, t.failure()

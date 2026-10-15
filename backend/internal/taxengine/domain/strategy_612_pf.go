@@ -105,7 +105,7 @@ func (s Strategy612PF) Estimate(in Input, p *taxparams.Params) (RegimeEstimate, 
 	if err != nil {
 		return RegimeEstimate{}, fmt.Errorf("612 ISR: %w", err)
 	}
-	iva, err := ComputeIVA(l, IVAInput{Sums: in.Sums.Month(in.Period.Month()), Options: in.Options})
+	iva, err := ComputeIVA(l, monthIVA(in))
 	if err != nil {
 		return RegimeEstimate{}, fmt.Errorf("612: %w", err)
 	}

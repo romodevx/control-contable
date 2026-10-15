@@ -23,8 +23,8 @@ _TaxpayerEstimate _$TaxpayerEstimateFromJson(Map<String, dynamic> json) =>
         json['parameter_set'] as Map<String, dynamic>,
       ),
       recordsFingerprint: json['records_fingerprint'] as String,
+      figuresFingerprint: json['figures_fingerprint'] as String,
       engineVersion: json['engine_version'] as String,
-      figuresFingerprint: json['figures_fingerprint'] as String?,
     );
 
 Map<String, dynamic> _$TaxpayerEstimateToJson(_TaxpayerEstimate instance) =>
@@ -38,6 +38,6 @@ Map<String, dynamic> _$TaxpayerEstimateToJson(_TaxpayerEstimate instance) =>
       'totals': instance.totals,
       'parameter_set': instance.parameterSet,
       'records_fingerprint': instance.recordsFingerprint,
+      'figures_fingerprint': instance.figuresFingerprint,
       'engine_version': instance.engineVersion,
-      'figures_fingerprint': ?instance.figuresFingerprint,
     };

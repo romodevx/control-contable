@@ -130,6 +130,7 @@ func estimateNet(t *testing.T) usecase.TaxpayerEstimate {
 		},
 		ParameterSet:       taxparams.SetID{FiscalYear: 2026, Version: 1},
 		RecordsFingerprint: "5e2a8c1f4b7d0e3a6c9f2b5e8d1a4c7f0b3e6a9d2c5f8b1e4a7d0c3f6b9e2a5d",
+		FiguresFingerprint: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee202603",
 		EngineVersion:      exampleEngineVersion,
 	}
 }
@@ -374,4 +375,28 @@ func mustPeriod(t *testing.T, s string) domain.Period {
 	p, err := domain.ParsePeriod(s)
 	require.NoError(t, err)
 	return p
+}
+
+// WH-09: the withheld IVA credited the month after (LIVA 5 fr. IV) is a CPA
+// topic with its own phrase, never the generic fallback.
+func TestGetTaxpayerEstimate_withheldIVACreditTimingTopic(t *testing.T) {
+	est := estimateNet(t)
+	est.Disclaimers = []domain.Disclaimer{{
+		Code: domain.DisclaimerCPAReviewPending, Severity: domain.SeverityStrong,
+		Topics: []domain.CPATopic{domain.TopicWithheldIVACreditTiming},
+	}}
+
+	resp, err := taxenginehttp.NewHandler(&fakeInputs{}, &fakeEstimates{estimate: est}).GetTaxpayerEstimate(authed(t),
+		gen.GetTaxpayerEstimateRequestObject{TaxpayerId: uuid.MustParse(taxpayerID)})
+
+	require.NoError(t, err)
+	rec := httptest.NewRecorder()
+	require.NoError(t, resp.VisitGetTaxpayerEstimateResponse(rec))
+	var body struct {
+		Disclaimers []gen.Disclaimer `json:"disclaimers"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Len(t, body.Disclaimers, 1)
+	assert.Equal(t, "Este cálculo usa reglas que un contador aún no valida: acreditar el mes siguiente el IVA que "+
+		"retuviste a tus proveedores. Tómalo con mayor reserva.", body.Disclaimers[0].Text)
 }

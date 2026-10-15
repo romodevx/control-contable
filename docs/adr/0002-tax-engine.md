@@ -336,6 +336,28 @@ them.
 - `getTaxpayerEstimate.period` is optional (current month, America/Mexico_City); periods
   before 2026 answer `422 parameters_unavailable` (OQ-T9).
 
+## Amendment 2 (M8-03, 2026-10-14)
+
+### A2.1 Figures fingerprint
+
+Every estimate also carries `figures_fingerprint` (contract 0.11.1, required): the SHA-256 of
+a canonical text of the figures the user sees, computed by `domain.FiguresFingerprint` next
+to `Fingerprint`. Scheme `figures/1`: the due date; the totals' ISR and IVA amounts,
+withholdings to remit and total payable; per regime (sorted by key) its key, status,
+`cpa_review_pending`, withholdings to remit, ISR amount and IVA components, an absent figure
+written `-`. Versions, texts, explanations, disclaimers, breakdown lines and sub-centavo
+precision are out. M8 marks a viewed month changed only when this hash moves
+(MODULE-history §2.4, OQ-H4). Changing the scheme marks every viewed month: it needs a
+further amendment and a one-time re-baseline of `estimate_views` in the same migration. The
+golden test `TestFiguresFingerprintGolden` pins it.
+
+### A2.2 Records fingerprint ignores what never changes a figure (#98 FU1)
+
+An informational regime contributes only its key, treatment and active months: its record
+sums, options and tax inputs are no longer hashed. A `multi_enum` option is hashed as a
+sorted set. Values change once; no view was stored before M8 shipped, so nothing is
+re-baselined.
+
 ## Engine version log
 
 `domain.EngineVersion` is hashed into the records fingerprint (§5). It changes whenever a
@@ -346,3 +368,4 @@ because they are only illustrations.
 |---|---|---|
 | 1.0.0 | 2026-10-13 | Launch strategy list (§2). |
 | 1.0.1 | 2026-10-14 | 626 PM adds the ISR it withheld from suppliers to `withheld_to_remit` (LISR 106 ¶5 / 116 ¶5 / 113-J), as 601 does. Found by the M5-24 property suite (PR #100). |
+| 1.1.0 | 2026-10-14 | WH-09 (MODULE-withholdings §4): the IVA a taxpayer withheld from its suppliers is credited in the return **after** the one that remitted it, not in the month it was withheld (LIVA 5 fr. IV, read verbatim). The expense ledger returns the creditable IVA in two parts, `CreditableIVAPaid` (`creditable_iva_cents`, credited in its month) and `CreditableIVAWithheld` (`creditable_iva_withheld_cents`, credited the next month), in the same statement; the estimate's expense read reaches back to the previous December (one statement, from fiscal year 2027: no record is dated before 2026), so January credits it. New IVA line `iva.creditable.withheld_prior_month` (⚠️, topic `withheld_iva_credit_timing`: assumes timely remittance, OQ-W4); `iva.components.creditable_paid` is both parts. 621 (bimonthly, a persona física never withholds IVA) takes no withheld part; 625 under the definitive option shows it as not applied. 626 PF: a month whose 1.25 % withholding exceeds the ISR shows 0 to pay and the excess as `isr.resico_excess_to_annual` (⚠️ A4, LISR 113-F) instead of a monthly balance in favor. The records fingerprint hashes the previous December's withheld IVA. Goldens PF-626-WH-01-EST, PM-601-WH-11-JUN, PM-601-WH-11-JUL, PM-601-IVA-02, PF-626-WH-A4-01. |
