@@ -2,7 +2,6 @@
 # The PTU base of this example is a ⚠️ rule: it is asserted apart, in AN-07-PTU (skipped).
 id: AN-07
 source: research:AN-07
-pending_strategy: true # ANN-11 registers pm_resico
 input:
   fiscal_year: 2026
   person_type: moral
@@ -25,3 +24,7 @@ expected:
         isr: "345000.00" # x 30 %
         credits: {payments: "360000.00"}
         balance: {kind: a_favor, amount: "15000.00"}
+      lines: # the research's subtotals, in the breakdown's order
+        - {code: isr.taxable_profit, op: result, amount: "1150000.00"} # utilidad fiscal
+        - {code: isr.annual_tax, op: result, amount: "345000.00"}
+        - {code: isr.balance, op: result, amount: "-15000.00"} # a favor

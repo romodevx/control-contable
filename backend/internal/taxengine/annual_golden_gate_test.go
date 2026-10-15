@@ -2,7 +2,9 @@ package taxengine_test
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"regexp"
 	"strings"
@@ -28,22 +30,54 @@ const (
 	annualResearchSource = "research:"
 )
 
-// gateAnnualEstimator is the annual engine the gate runs. No section is
-// registered yet: the strategy PRs (ANN-08..ANN-11) register theirs and
-// ANN-14 replaces this with the composition root's estimator, removing
-// pending_strategy from their cases and lowering the baseline.
-func gateAnnualEstimator() annualgolden.Estimator { return noAnnualSections{} }
+// gateAnnualEstimator is the annual engine the gate runs: the sections the
+// strategy PRs (ANN-08..ANN-11) register, each from its own file. ANN-14
+// replaces it with the composition root's estimator.
+func gateAnnualEstimator(t *testing.T) annualgolden.Estimator {
+	sections := annualSections{}
+	maps.Copy(sections, pmGateSections(t)) // ANN-10, ANN-11
+	return sections
+}
 
-type noAnnualSections struct{}
+// annualSectionOrder is the fixed order of an estimate's sections
+// (MODULE-annual §2.1).
+var annualSectionOrder = []annual.SectionKind{
+	annual.SectionPFArt152, annual.SectionPFRESICOCheck, annual.SectionPM601, annual.SectionPMRESICO, annual.SectionExplanation,
+}
 
-func (noAnnualSections) Registered(annual.SectionKind) bool { return false }
+// annualSection computes one section kind for a case's year: none when the
+// year holds no regime of its kind.
+type annualSection func(annualgolden.Input) ([]annualgolden.SectionResult, error)
 
-// errNoAnnualEngine is never reached: Evaluate calls Estimate only when
+// annualSections are the registered sections by kind.
+type annualSections map[annual.SectionKind]annualSection
+
+func (s annualSections) Registered(kind annual.SectionKind) bool {
+	_, ok := s[kind]
+	return ok
+}
+
+// errNoAnnualSection is never reached: Evaluate calls Estimate only when
 // every section a case expects is registered.
-var errNoAnnualEngine = errors.New("no annual section is registered")
+var errNoAnnualSection = errors.New("no annual section is registered")
 
-func (noAnnualSections) Estimate(annualgolden.Input) (annualgolden.Result, error) {
-	return annualgolden.Result{}, errNoAnnualEngine
+func (s annualSections) Estimate(in annualgolden.Input) (annualgolden.Result, error) {
+	if len(s) == 0 {
+		return annualgolden.Result{}, errNoAnnualSection
+	}
+	var out annualgolden.Result
+	for _, kind := range annualSectionOrder {
+		compute, ok := s[kind]
+		if !ok {
+			continue
+		}
+		sections, err := compute(in)
+		if err != nil {
+			return annualgolden.Result{}, fmt.Errorf("%s: %w", kind, err)
+		}
+		out.Sections = append(out.Sections, sections...)
+	}
+	return out, nil
 }
 
 func annualCases(t *testing.T) []annualgolden.Case {
@@ -59,7 +93,7 @@ func annualCases(t *testing.T) []annualgolden.Case {
 func TestGoldenAnnualCases(t *testing.T) {
 	cases := annualCases(t)
 
-	s := annualgolden.Run(t, cases, gateAnnualEstimator())
+	s := annualgolden.Run(t, cases, gateAnnualEstimator(t))
 
 	assert.Equal(t, len(cases), s.Total())
 	data, err := os.ReadFile(annualBaselineFile)

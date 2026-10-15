@@ -1,7 +1,6 @@
 # golden: hand-authored from research AN-06 (docs/research/annual-return-2026.md Part D). Never generated or rewritten by a tool.
 id: AN-06
 source: research:AN-06
-pending_strategy: true # ANN-10 registers pm_601
 input:
   fiscal_year: 2026
   person_type: moral
@@ -32,3 +31,9 @@ expected:
         ptu_base: "1500000.00" # acumulables - deductions, without PTU paid or losses
         # ptu_to_distribute (10 %, ⚠️ ptu_rate) is asserted apart, in AN-06-PTU (skipped)
         suggested_cu_next_year: "0.1380" # utilidad fiscal 1,380,000 / nominales 10,000,000
+      lines: # the research's subtotals, in the breakdown's order
+        - {code: isr.profit_before_ptu, op: result, amount: "1500000.00"}
+        - {code: isr.taxable_profit, op: result, amount: "1380000.00"} # utilidad fiscal
+        - {code: isr.base, op: result, amount: "1180000.00"} # resultado fiscal
+        - {code: isr.annual_tax, op: result, amount: "354000.00"}
+        - {code: isr.balance, op: result, amount: "22000.00"}

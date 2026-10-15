@@ -11,5 +11,3 @@ skipped:
 pending: # section kind: cases
   pf_art152: 4 # AN-01, AN-02, AN-05, AN-08 (ANN-08)
   pf_resico_check: 2 # AN-03-A, AN-03-B (ANN-09)
-  pm_601: 1 # AN-06 (ANN-10)
-  pm_resico: 1 # AN-07 (ANN-11)
