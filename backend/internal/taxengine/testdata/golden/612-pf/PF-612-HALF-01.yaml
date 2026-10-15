@@ -1,0 +1,32 @@
+# golden: hand-authored from docs/project-specs/MODULE-tax-engine.md §2.7 (credits off the ISR as shown). Never generated or rewritten by a tool.
+# February 2026, all the year's income in January: YTD 150,000.02, no deductions.
+# January paid its own figure: row 10, 37,009.69 + (150,000.02 - 141,880.67) x 34 %
+# = 37,009.69 + 2,760.579 = 39,770.269 -> 39,770.27.
+# February, row 8: 20,914.18 + (150,000.02 - 111,473.37) x 30 % = 20,914.18 + 11,557.995
+# = 32,472.175, shown 32,472.18. The balance is the ISR AS SHOWN less the payment:
+# 32,472.18 - 39,770.27 = -7,298.09 in favor (rounding the exact -7,298.095 gave -7,298.10).
+id: PF-612-HALF-01
+source: spec:module-tax-engine-2.7
+input:
+  regime: "612"
+  person_type: fisica
+  period: "2026-02"
+  months:
+    - month: 1
+      income: {cash: "150000.02"}
+  tax_inputs:
+    - {key: prior_provisional_payments, kind: money_monthly, month: 1, money: "39770.27"}
+expected:
+  status: complete
+  taxes: [isr]
+  isr: "-7298.09"
+  lines:
+    - {tax: isr, code: isr.income_ytd, op: input, amount: "150000.02"}
+    - {tax: isr, code: isr.deductions_ytd, op: subtract, amount: "0.00"}
+    - {tax: isr, code: isr.base, op: result, amount: "150000.02"}
+    - {tax: isr, code: isr.tariff_row, op: lookup, amount: "20914.18"}
+    - {tax: isr, code: isr.tariff_excess, op: multiply, amount: "11558.00"}
+    - {tax: isr, code: isr.caused, op: result, amount: "32472.18"}
+    - {tax: isr, code: isr.prior_payments, op: subtract, amount: "39770.27"}
+    - {tax: isr, code: isr.withheld_by_moral, op: subtract, amount: "0.00"}
+    - {tax: isr, code: isr.payable, op: result, amount: "-7298.09"}

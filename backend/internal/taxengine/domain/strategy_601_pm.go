@@ -179,7 +179,7 @@ func (GeneralPMStrategy) isr(l *Ledger, in Input, p *taxparams.Params) (TaxResul
 	l.Subtract(generalPMStep(generalPMLineLosses, SourceTaxInput(InputPriorYearLosses), generalPMBasisLosses),
 		generalPMUpTo(a.losses, l.Running()))
 	l.Result(generalPMStep(generalPMLineBase, SourceComputed(), generalPMBasisBase))
-	l.Scale(generalPMStep(generalPMLineRate, SourceParams(generalPMRateKey), generalPMBasisRate), rate)
+	l.ScaleRounded(generalPMStep(generalPMLineRate, SourceParams(generalPMRateKey), generalPMBasisRate), rate)
 	l.Subtract(generalPMStep(generalPMLinePriorPayments, SourceTaxInput(InputPriorProvisionalPayments), generalPMBasisPayments),
 		a.priorPayments)
 	l.Subtract(generalPMStep(generalPMLineInterestWithholding, SourceTaxInput(InputInterestWithholding), generalPMBasisInterest),

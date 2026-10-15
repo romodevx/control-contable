@@ -16,8 +16,9 @@ import (
 // subtotal and the running value carries on from it. ResultRounded and
 // ScaleRounded are the one exception to "the running value stays exact":
 // they carry on from the figure as shown, for a figure later steps are
-// defined against as the user sees it (the annual ISR the credits are
-// subtracted from, MODULE-annual §2.7). Both round once, with Exact.Round. Each line shows its
+// defined against as the user sees it (an ISR, monthly or annual, the
+// credits are subtracted from: MODULE-tax-engine §2.7, MODULE-annual
+// §2.7). Both round once, with Exact.Round. Each line shows its
 // value rounded to the centavo while the running value stays exact, so at a
 // Result the shown lines since the last anchor may miss the rounded result
 // by a centavo or two: the Ledger then appends a rounding_adjustment line
@@ -105,9 +106,10 @@ func (l *Ledger) Scale(s Step, r money.Rate) {
 }
 
 // ScaleRounded is Scale for a product later steps take as shown, such as
-// the RESICO annual ISR the payments are subtracted from (MODULE-annual
-// §2.7): the line shows the exact product, the running value starts from
-// it rounded to the centavo.
+// a rate-times-base ISR the payments or withholdings are subtracted from
+// (601, 626 and 625 monthly; the RESICO annual check, MODULE-annual §2.7):
+// the line shows the exact product, the running value starts from it
+// rounded to the centavo.
 func (l *Ledger) ScaleRounded(s Step, r money.Rate) {
 	l.Scale(s, r)
 	l.carryShown(s)
@@ -156,8 +158,8 @@ func (l *Ledger) Result(s Step) money.Exact {
 }
 
 // ResultRounded closes a figure that later steps take as shown, such as
-// the annual ISR the credits are subtracted from (MODULE-annual §2.7:
-// balance = ISR − credits): like Result, but the running value carries on
+// the tariff ISR the credits are subtracted from (612 and 606 monthly, the
+// annual ISR of MODULE-annual §2.7: balance = ISR − credits): like Result, but the running value carries on
 // from the rounded result, which it returns. Without it a half centavo of
 // the exact value could round a later result past the figure (an ISR of
 // 100.005 shown 100.01, less 100.01 paid, would be −0.01).

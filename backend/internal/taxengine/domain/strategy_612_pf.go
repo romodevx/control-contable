@@ -229,5 +229,5 @@ func (t *pf612Trace) caused(table taxparams.Table, base money.Exact, month strin
 	row.Args = []string{month}
 	b := t.l.Lookup(row, table, base)
 	t.l.AddProduct(pf612Step(pf612TariffExcess, SourceParams(pf612Tariff), pf612BasisTariff), b.Excess(base), b.Row.Rate)
-	t.l.Result(pf612Step(pf612Caused, SourceComputed(), pf612BasisCaused))
+	t.l.ResultRounded(pf612Step(pf612Caused, SourceComputed(), pf612BasisCaused))
 }

@@ -56,7 +56,7 @@ func TestRegistryResolves625PF(t *testing.T) {
 // M8 marks a month "changed since viewed" only when the fingerprint moves.
 // Change this pin and EngineVersion in the same commit.
 func TestEngineVersionPinsTheStrategyList(t *testing.T) {
-	pinned := map[string][]string{"1.0.1": launchStrategyKeys, "1.1.0": launchStrategyKeys}
+	pinned := map[string][]string{"1.0.1": launchStrategyKeys, "1.1.0": launchStrategyKeys, "1.1.1": launchStrategyKeys}
 
 	want, ok := pinned[domain.EngineVersion]
 

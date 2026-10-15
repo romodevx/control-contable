@@ -141,7 +141,7 @@ func (s RESICOPMStrategy) estimate(in Input, p *taxparams.Params) (RegimeEstimat
 		est.Disclaimers = append(est.Disclaimers, DisclaimerRESICOCapExceeded)
 	}
 	t.resicoPMBase(ytd, before)
-	t.l.Scale(resicoISRStep(LineRESICOPMRate, SourceParams(paramPersonaMoralRate), basisRESICOPMRate), rate)
+	t.l.ScaleRounded(resicoISRStep(LineRESICOPMRate, SourceParams(paramPersonaMoralRate), basisRESICOPMRate), rate)
 	if n > time.January {
 		t.l.Subtract(resicoISRStep(LineRESICOPMPriorPayments, SourceTaxInput(InputPriorProvisionalPayments), basisRESICOPMPrior), t.exact(prior))
 	}
