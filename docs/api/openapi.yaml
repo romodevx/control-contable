@@ -1676,7 +1676,7 @@ paths:
     get:
       tags: [Incomes]
       operationId: getIncomeDefaults
-      x-frozen: sha256:de6cb1d60b966b3ac6474d7c102382a9fbf890738c2bb2fa1f6216a1205deb6d
+      x-frozen: sha256:788554798f7e34b6c4e3b00a2e37d7c2b7b5ce001d16d7c33f144b9207ccd71a
       summary: IVA rates and suggested withholding rates for a new income (prefills the form)
       description: >-
         Resolved from the rate catalog (`RateCatalog`, dated parameter data) for the
@@ -1711,7 +1711,7 @@ paths:
           in: query
           required: true
           deprecated: true
-          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
+          x-deprecated-reason: Removed from the contract by WH-11 (ADR-0008 amendment); withholdings are derived.
           description: Deprecated in 0.10.0; removed by WH-06 (ADR-0008).
           schema: { $ref: '#/components/schemas/CounterpartyType' }
         - $ref: '#/components/parameters/OnDate'
@@ -6654,10 +6654,10 @@ components:
         (`getTaxpayerEstimate`).
       examples: ['2026-09-10']
     CounterpartyType:
-      x-frozen: sha256:72a87f097acbb3f963c1c6a1c21c0b14ee23359f92328b3d27aac2dedc27c4a1
+      x-frozen: sha256:426e7cb2dcf354102862a0cda7882b9201bf772ca72175acb37f4c269727f96a
       type: string
       deprecated: true
-      x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
+      x-deprecated-reason: Removed from the contract by WH-11 (ADR-0008 amendment); withholdings are derived.
       enum: [persona_fisica, persona_moral, publico_general, plataforma]
       description: >-
         **Deprecated in 0.10.0** (ADR-0008): replaced by `CounterpartyKind` plus `via_platform`.
@@ -6928,7 +6928,7 @@ components:
           isr_withheld_cents: 100000
           iva_withheld_cents: 106667
     IncomeCreate:
-      x-frozen: sha256:db1c869a724885eea7d7d78e80eb5552ffdbe262d94781f35ebe6c710ab10868
+      x-frozen: sha256:0db367425d29ac60e211b2ea5c3cf9ccddd89808777178e8b3989988b6d7ffd1
       type: object
       required: [regime_code, counterparty_type, amount_cents, iva_rate, iva_cents]
       additionalProperties: false
@@ -6979,12 +6979,12 @@ components:
         isr_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
           deprecated: true
-          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
+          x-deprecated-reason: Removed from the contract by WH-11 (ADR-0008 amendment); withholdings are derived.
           description: Retired by WH-06 (0.11.3, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
         iva_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
           deprecated: true
-          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
+          x-deprecated-reason: Removed from the contract by WH-11 (ADR-0008 amendment); withholdings are derived.
           description: Retired by WH-06 (0.11.3, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
         invoiced_on:
           oneOf:
@@ -7016,7 +7016,7 @@ components:
           collected_on: '2026-09-10'
           description: Diseño de logotipo
     IncomeUpdate:
-      x-frozen: sha256:e0fb4703923306e24b6eb783b648d2e864ad5a504f3a02ab2f0bdae26a5bc2f8
+      x-frozen: sha256:5e17d8d2b9a8e70795fb99e5a3c7c8ecd5565f5098948eec84d9b01f97f22c8f
       type: object
       minProperties: 1
       additionalProperties: false
@@ -7038,12 +7038,12 @@ components:
         isr_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
           deprecated: true
-          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
+          x-deprecated-reason: Removed from the contract by WH-11 (ADR-0008 amendment); withholdings are derived.
           description: Retired by WH-06 (0.11.3). Any value answers `400 additionalProperties`.
         iva_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
           deprecated: true
-          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
+          x-deprecated-reason: Removed from the contract by WH-11 (ADR-0008 amendment); withholdings are derived.
           description: Retired by WH-06 (0.11.3). Any value answers `400 additionalProperties`.
         invoiced_on:
           oneOf:
@@ -7225,7 +7225,7 @@ components:
             isr_withheld_cents: 0
             iva_withheld_cents: 0
     IncomeDefaults:
-      x-frozen: sha256:18100be7cdf419434041d6961585ff6743390558e561849eea2e170b796ba87f
+      x-frozen: sha256:13a378fa372d7f98dcdc5ae2be5ab384eb331b5d03732063fac40ed95b06fa50
       type: object
       required:
         - iva_rates_allowed
@@ -7251,24 +7251,24 @@ components:
         isr_withholding_allowed:
           type: boolean
           deprecated: true
-          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
+          x-deprecated-reason: Removed from the contract by WH-11 (ADR-0008 amendment); withholdings are derived.
         isr_withholding_rate:
           oneOf:
             - $ref: '#/components/schemas/DecimalRate'
             - type: 'null'
           deprecated: true
-          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
+          x-deprecated-reason: Removed from the contract by WH-11 (ADR-0008 amendment); withholdings are derived.
           description: Fraction of `amount_cents`; `null` when not allowed or when there is no suggestion.
         iva_withholding_allowed:
           type: boolean
           deprecated: true
-          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
+          x-deprecated-reason: Removed from the contract by WH-11 (ADR-0008 amendment); withholdings are derived.
         iva_withholding_rate:
           oneOf:
             - $ref: '#/components/schemas/DecimalRate'
             - type: 'null'
           deprecated: true
-          x-deprecated-reason: Removed by WH-06 (ADR-0008); withholdings are derived.
+          x-deprecated-reason: Removed from the contract by WH-11 (ADR-0008 amendment); withholdings are derived.
           description: Fraction of `iva_cents` (2/3 = `0.666667`); `null` when not allowed or when there is no suggestion.
         platform_activity:
           oneOf:
@@ -7299,7 +7299,7 @@ components:
       enum: [category_default, user]
       description: '`user` when the user overrode `deductible`; `category_default` otherwise.'
     ExpenseCreate:
-      x-frozen: sha256:e5f602208a0bbf989d8aa7284109b6247d0e37d2550b1742c1d09ceea01405de
+      x-frozen: sha256:5843860e5acdeaae84f27a696232c3f93f679c3c8717ca3f1315e9f03bedd201
       type: object
       required: [regime_code, category_code, amount_cents, iva_rate, iva_cents, payment_method, paid_on, has_cfdi]
       additionalProperties: false
@@ -7363,12 +7363,12 @@ components:
         isr_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
           deprecated: true
-          x-deprecated-reason: Removed by WH-07 (ADR-0008); withholdings are derived.
+          x-deprecated-reason: Removed from the contract by WH-12 (ADR-0008 amendment); withholdings are derived.
           description: Retired by WH-07 (0.11.3, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
         iva_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
           deprecated: true
-          x-deprecated-reason: Removed by WH-07 (ADR-0008); withholdings are derived.
+          x-deprecated-reason: Removed from the contract by WH-12 (ADR-0008 amendment); withholdings are derived.
           description: Retired by WH-07 (0.11.3, ADR-0008). Any value answers `400 additionalProperties`; the server derives it.
         description: { $ref: '#/components/schemas/RecordDescription' }
       examples:
@@ -7383,7 +7383,7 @@ components:
           has_cfdi: true
           description: Suscripción anual de diseño
     ExpenseUpdate:
-      x-frozen: sha256:a65b27fa9a7d8f32d9242a8e6150e34989593e20376fd3b569315d4de8115614
+      x-frozen: sha256:9d0cb7da46910d4cd2937f7caea969a7942214acc636a6150fd89629333fb0d7
       type: object
       minProperties: 1
       additionalProperties: false
@@ -7415,12 +7415,12 @@ components:
         isr_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
           deprecated: true
-          x-deprecated-reason: Removed by WH-07 (ADR-0008); withholdings are derived.
+          x-deprecated-reason: Removed from the contract by WH-12 (ADR-0008 amendment); withholdings are derived.
           description: Retired by WH-07 (0.11.3). Any value answers `400 additionalProperties`.
         iva_withheld_cents:
           $ref: '#/components/schemas/NonNegativeCents'
           deprecated: true
-          x-deprecated-reason: Removed by WH-07 (ADR-0008); withholdings are derived.
+          x-deprecated-reason: Removed from the contract by WH-12 (ADR-0008 amendment); withholdings are derived.
           description: Retired by WH-07 (0.11.3). Any value answers `400 additionalProperties`.
         description: { $ref: '#/components/schemas/RecordDescription' }
       examples:
