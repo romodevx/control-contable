@@ -30,6 +30,7 @@ const (
 	// devicesWriteBurst and settingsWriteBurst are §2.7's bursts.
 	devicesWriteBurst  = 10
 	settingsWriteBurst = 20
+	cleoEmail          = "cleo.ruiz@example.mx"
 	defaultsJSON       = `{"enabled":false,"early_day":14,"on_due_date":true,"send_time":"10:00","show_amounts":false}`
 )
 
@@ -144,16 +145,18 @@ func TestContract_reminderDevices(t *testing.T) {
 
 			assert.Equal(t, http.StatusNotFound, env.unregister(t, installationA, env.token).Code, "A lost the installation")
 		})
+		// A third user: A has spent its devices_writes burst (10) above.
+		cleo := env.signUp(t, cleoEmail, acceptableSample).Tokens.AccessToken
 		t.Run("204 on unregister, then 404 (done)", func(t *testing.T) {
-			require.Equal(t, http.StatusCreated, env.register(t, deviceBody(installationA, "ios", tokenB), env.token).Code)
+			require.Equal(t, http.StatusCreated, env.register(t, deviceBody(installationA, "ios", tokenB), cleo).Code)
 
-			rec := env.unregister(t, installationA, env.token)
+			rec := env.unregister(t, installationA, cleo)
 			assert.Equal(t, http.StatusNoContent, rec.Code)
 			assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
-			assert.Equal(t, http.StatusNotFound, env.unregister(t, installationA, env.token).Code)
+			assert.Equal(t, http.StatusNotFound, env.unregister(t, installationA, cleo).Code)
 		})
 		t.Run("400 for a malformed installation id", func(t *testing.T) {
-			assert.Equal(t, http.StatusBadRequest, env.unregister(t, "nope", env.token).Code)
+			assert.Equal(t, http.StatusBadRequest, env.unregister(t, "nope", cleo).Code)
 		})
 	}, "module_auth", "module_taxpayers")
 
