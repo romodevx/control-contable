@@ -39,10 +39,11 @@ const (
 	purgeTargetFailures           = "email_verification_failures"
 )
 
-// purgeTargets are every target purge_soft_deleted reports, in its order.
+// purgeTargets are every target purge_soft_deleted reports, in its order (notification_log
+// since M9-06, reminders_job_integration_test.go).
 var purgeTargets = []string{
 	purgeTargetIncomes, purgeTargetExpenses, purgeTargetPersonalDeductions,
-	purgeTargetRefreshTokens, purgeTargetVerifications, purgeTargetFailures,
+	purgeTargetRefreshTokens, purgeTargetVerifications, purgeTargetFailures, purgeTargetNotificationLog,
 }
 
 // softDeletable is one user table with a deleted_at column and how a row of it is written.
@@ -188,7 +189,7 @@ WHERE $1 = ANY (roles) AND tablename <> 'users' AND policyname LIKE '%\_purge\_%
 	var want []string
 	for _, target := range []string{
 		purgeTargetFailures, purgeTargetVerifications, purgeTargetExpenses, purgeTargetIncomes,
-		purgeTargetPersonalDeductions, purgeTargetRefreshTokens,
+		purgeTargetNotificationLog, purgeTargetPersonalDeductions, purgeTargetRefreshTokens,
 	} {
 		want = append(want, target+" DELETE", target+" SELECT")
 	}
