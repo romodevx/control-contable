@@ -94,6 +94,7 @@ ExpenseCategory _category(
   bool? defaultDeductible,
   String? note,
   String? basis = 'LISR 103',
+  OperationKind operation = OperationKind.businessServices,
 }) => ExpenseCategory(
   code: code,
   name: name,
@@ -102,6 +103,7 @@ ExpenseCategory _category(
       defaultDeductible ?? deductibility == Deductibility.deductible,
   note: note,
   legalBasis: basis,
+  defaultOperationKind: operation,
 );
 
 /// The catalog of a business regime (612), a sample of MODULE-expenses §2.2.
@@ -110,21 +112,29 @@ List<ExpenseCategory> businessCategories() => [
     'mercancia',
     'Mercancía y materias primas',
     Deductibility.deductible,
+    operation: OperationKind.saleOfGoods,
   ),
   _category(
     'servicios_profesionales',
     'Honorarios y servicios profesionales',
     Deductibility.deductible,
     note: 'Si eres persona moral, revisa las retenciones',
+    operation: OperationKind.professionalServices,
   ),
   _category(
     'renta_local',
     'Renta de local, oficina o bodega',
     Deductibility.deductible,
     note: 'Si eres persona moral, revisa las retenciones',
+    operation: OperationKind.rentRealEstate,
   ),
   _category('software', 'Software y suscripciones', Deductibility.deductible),
-  _category('fletes', 'Fletes y paquetería', Deductibility.deductible),
+  _category(
+    'fletes',
+    'Fletes y paquetería',
+    Deductibility.deductible,
+    operation: OperationKind.groundFreight,
+  ),
   _category(
     'papeleria',
     'Papelería y artículos de oficina',

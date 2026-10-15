@@ -176,6 +176,34 @@ void main() {
       expect(chosenIn(tester, _q2), OperationKind.professionalServices.json);
       expect(find.textContaining('ubcontrata'), findsNothing);
     });
+
+    testWidgets('the regime default is the server\'s (last_used), never a '
+        'table of the app: whatever it answers is preselected', (
+      tester,
+    ) async {
+      // 606 would be rent in the spec's table; the server is the authority.
+      firstTime(operation: OperationKind.saleOfGoods);
+      await pumpForm(tester, taxpayer: _landlord);
+
+      await chooseIn(tester, _q1, _pm);
+
+      expect(chosenIn(tester, _q2), OperationKind.saleOfGoods.json);
+    });
+
+    testWidgets('without the defaults (offline) it starts unanswered and is '
+        'omitted, so the server applies its own default', (tester) async {
+      harness.incomes.failAlways['defaults'] = const ApiUnreachable();
+      await pumpForm(tester, taxpayer: _landlord);
+      await chooseIn(tester, _q1, _pm);
+
+      expect(find.text(_q2), findsOneWidget);
+      expect(chosenIn(tester, _q2), isNull);
+      expect(find.text(_q3), findsNothing);
+      await typeInto(tester, _amount, '1000');
+      await tapText(tester, 'Guardar');
+
+      expect(harness.incomes.creates.single.operationKind, isNull);
+    });
   });
 
   group('WH-11 residential rent (Q3)', () {

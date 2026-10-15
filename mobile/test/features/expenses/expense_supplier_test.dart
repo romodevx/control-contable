@@ -19,6 +19,7 @@ import '../../helpers/choice_finders.dart';
 import '../../helpers/withholding_fixtures.dart';
 import '../taxpayers/pump_onboarding.dart' show tapText, typeInto;
 import '../taxpayers/taxpayers_fakes.dart';
+import 'expenses_fakes.dart' show businessCategories;
 import 'pump_expenses.dart';
 
 const _amount = 'Monto sin IVA';
@@ -182,6 +183,70 @@ void main() {
       expect(sent.residentialRent, isTrue);
       expect(sent.ivaRate, IvaRate.exempt);
       expect(sent.ivaCents, 0);
+    });
+
+    testWidgets('the operation starts at the default the catalog serves '
+        '(default_operation_kind), never at a table of the app', (
+      tester,
+    ) async {
+      harness.expenses.categoriesBy['601'] = [
+        for (final c in businessCategories())
+          c.code == 'software'
+              ? c.copyWith(defaultOperationKind: OperationKind.commission)
+              : c,
+      ];
+      await pumpForm(tester);
+      await pickCategory(tester, _software);
+      await tapText(tester, _section);
+
+      expect(chosenIn(tester, _e3), OperationKind.commission.json);
+      await typeInto(tester, _amount, '1000');
+      await settlePreview(tester);
+      expect(
+        harness.expenses.previewRequests.last.operationKind,
+        OperationKind.commission,
+      );
+      await tapText(tester, 'Guardar');
+      expect(
+        harness.expenses.creates.single.operationKind,
+        OperationKind.commission,
+      );
+    });
+
+    testWidgets('a category served without a default leaves the operation '
+        'unanswered and omits it, so the server applies its own', (
+      tester,
+    ) async {
+      harness.expenses.categoriesBy['601'] = [
+        for (final c in businessCategories())
+          c.code == 'software' ? c.copyWith(defaultOperationKind: null) : c,
+      ];
+      await pumpForm(tester);
+      await pickCategory(tester, _software);
+      await tapText(tester, _section);
+
+      expect(find.text(_e3), findsOneWidget);
+      expect(chosenIn(tester, _e3), isNull);
+      await typeInto(tester, _amount, '1000');
+      await settlePreview(tester);
+      expect(harness.expenses.previewRequests.last.operationKind, isNull);
+      await tapText(tester, 'Guardar');
+      expect(harness.expenses.creates.single.operationKind, isNull);
+    });
+
+    testWidgets('answers the user chose survive a change of category; only '
+        'suggestions follow it', (tester) async {
+      await pumpForm(tester);
+      await pickCategory(tester, _fees);
+      await chooseIn(tester, _e1, _pf);
+      await chooseIn(tester, _e2, 'RESICO (626)');
+
+      await pickCategory(tester, _rentCategory);
+
+      expect(chosenIn(tester, _e1), SupplierKind.pfWithActivity.json);
+      expect(chosenIn(tester, _e2), SupplierRegime.value626.json);
+      // Not chosen by the user: it follows the new category.
+      expect(chosenIn(tester, _e3), OperationKind.rentRealEstate.json);
     });
 
     testWidgets('abroad: nothing else is asked, and it warns', (tester) async {
