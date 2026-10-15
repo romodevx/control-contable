@@ -97,13 +97,13 @@ func (c annCase) estimator(t testing.TB) *usecaseannual.Estimator {
 	ports := annPorts{c: c}
 	profiles := txProfiles{usecase.TaxpayerProfile{PersonType: c.person, Regimes: c.holds}}
 	monthly, err := usecase.NewEstimator(usecase.EstimateDeps{
-		Tx: txUnit{}, Profiles: profiles, Ledger: ports, Inputs: inputs, Texts: txNoTexts{}, Holidays: txNoHolidays{},
+		Tx: txUnit{}, Profiles: profiles, Ledger: ports, Inputs: inputs, Texts: txNoTexts{}, Holidays: seededHolidays{},
 		Strategies: registry, Params: cat, Clock: clock.NewFixed(c.today),
 	})
 	require.NoError(t, err)
 	est, err := usecaseannual.NewEstimator(usecaseannual.EstimateDeps{
 		Tx: txUnit{}, Profiles: profiles, Ledger: ports, TaxInputs: inputs, YearInputs: ports, Filed: ports,
-		Monthly: monthly, MonthlyStrategies: registry, Sections: sections, Holidays: txNoHolidays{},
+		Monthly: monthly, MonthlyStrategies: registry, Sections: sections, Holidays: seededHolidays{},
 		Params: cat, Clock: clock.NewFixed(c.today),
 	})
 	require.NoError(t, err)

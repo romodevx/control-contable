@@ -18,6 +18,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/infra/annualinputs"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/infra/annuallimits"
+	taxholidays "github.com/romodevx/control-contable/backend/internal/taxengine/infra/holidays"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/infra/taxinputs"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/params"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/usecase"
@@ -125,7 +126,7 @@ func newAnnualEstimator(w annualWiring, now clock.Clock) (*usecaseannual.Estimat
 		Monthly:           w.estimator,
 		MonthlyStrategies: monthly,
 		Sections:          sections,
-		Holidays:          noHolidays{},
+		Holidays:          taxholidays.NewReader(),
 		Params:            catalog,
 		Clock:             now,
 	})

@@ -19,6 +19,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/taxengine"
 	taxenginehttp "github.com/romodevx/control-contable/backend/internal/taxengine/adapter/http"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain"
+	taxholidays "github.com/romodevx/control-contable/backend/internal/taxengine/infra/holidays"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/infra/taxinputs"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/params"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/usecase"
@@ -113,7 +114,7 @@ func newEstimator(w taxEngineWiring) (*usecase.Estimator, error) {
 		},
 		Inputs:     taxinputs.NewStore(),
 		Texts:      taxinputs.NewStore(),
-		Holidays:   noHolidays{},
+		Holidays:   taxholidays.NewReader(),
 		Strategies: registry,
 		Params:     catalog,
 		Clock:      now,

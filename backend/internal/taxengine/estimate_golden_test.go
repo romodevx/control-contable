@@ -86,10 +86,6 @@ func (txNoTexts) RegimeTexts(context.Context, string) (map[fiscal.RegimeCode]use
 	return nil, nil
 }
 
-type txNoHolidays struct{}
-
-func (txNoHolidays) IsHoliday(context.Context, fiscal.Date) (bool, error) { return false, nil }
-
 // txCase is one taxpayer's month: its regimes, records and inputs.
 type txCase struct {
 	personType fiscal.PersonType
@@ -114,7 +110,7 @@ func (c txCase) estimator(t testing.TB) *usecase.Estimator {
 	require.NoError(t, err)
 	est, err := usecase.NewEstimator(usecase.EstimateDeps{
 		Tx: txUnit{}, Profiles: txProfiles{usecase.TaxpayerProfile{PersonType: c.personType, Regimes: c.regimes}},
-		Ledger: c.ledger, Inputs: c.inputs, Texts: txNoTexts{}, Holidays: txNoHolidays{},
+		Ledger: c.ledger, Inputs: c.inputs, Texts: txNoTexts{}, Holidays: seededHolidays{},
 		Strategies: registry, Params: catalog, Clock: clock.NewFixed(txToday),
 	})
 	require.NoError(t, err)
