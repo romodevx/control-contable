@@ -177,10 +177,8 @@ void main() {
       expect(find.textContaining('ubcontrata'), findsNothing);
     });
 
-    testWidgets('the regime default is the server\'s (last_used), never a '
-        'table of the app: whatever it answers is preselected', (
-      tester,
-    ) async {
+    testWidgets("the regime default is the server's (last_used), never a "
+        'table of the app: whatever it answers is preselected', (tester) async {
       // 606 would be rent in the spec's table; the server is the authority.
       firstTime(operation: OperationKind.saleOfGoods);
       await pumpForm(tester, taxpayer: _landlord);

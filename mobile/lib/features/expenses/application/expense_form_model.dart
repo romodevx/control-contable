@@ -84,7 +84,7 @@ class ExpenseFormModel extends ChangeNotifier {
       field.text.addListener(_recompute);
     }
     ivaRate.addListener(_recompute);
-    category.addListener(() => supplier.followCategory(category.value));
+    category.addListener(() => supplier.followCategory(chosenCategory));
     form.addListener(_followFacts);
   }
 

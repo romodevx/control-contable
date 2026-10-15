@@ -1,4 +1,5 @@
 import 'package:control_contable/api/generated/models/expense.dart';
+import 'package:control_contable/api/generated/models/expense_category.dart';
 import 'package:control_contable/api/generated/models/operation_kind.dart';
 import 'package:control_contable/api/generated/models/supplier_kind.dart';
 import 'package:control_contable/api/generated/models/supplier_regime.dart';
@@ -18,23 +19,6 @@ typedef SupplierFactLabels = ({
 
 /// The supplier last used for a category in this session.
 typedef SupplierMemory = ({SupplierKind kind, SupplierRegime? regime});
-
-/// The categories whose default operation is not "business services",
-/// mirroring the seed's `category_regime_rules` (MODULE-withholdings §2.2)
-/// so E3 starts at the category's operation. The answer the user sees is
-/// the one sent; the seed only decides an omitted one.
-const Map<String, OperationKind> _categoryOperations = {
-  'servicios_profesionales': OperationKind.professionalServices,
-  'renta_local': OperationKind.rentRealEstate,
-  'arrendamiento_equipo': OperationKind.rentMovable,
-  'fletes': OperationKind.groundFreight,
-  'comisiones': OperationKind.commission,
-  'mercancia': OperationKind.saleOfGoods,
-};
-
-/// The operation a [category] stands for.
-OperationKind categoryDefaultOperation(String category) =>
-    _categoryOperations[category] ?? OperationKind.businessServices;
 
 /// "Tu proveedor" (MODULE-withholdings §2.2, E1–E4): what a persona moral
 /// must withhold from its supplier is derived from these facts by the
@@ -68,12 +52,7 @@ class ExpenseSupplierFacts {
       ChoiceFieldController(
         label: labels.operationKind,
         isRequired: false,
-        initialValue:
-            (stored?.operationKind ??
-                    (stored == null
-                        ? null
-                        : categoryDefaultOperation(stored.categoryCode)))
-                ?.json,
+        initialValue: stored?.operationKind?.json,
       ),
     );
     residentialRent = form.add(
@@ -83,6 +62,12 @@ class ExpenseSupplierFacts {
         initialValue: (stored?.residentialRent ?? false).choice,
       ),
     );
+    // A new expense starts at suggestions; a stored one at the user's answers.
+    if (stored == null) {
+      for (final field in _all) {
+        _suggested[field] = field.value;
+      }
+    }
   }
 
   /// Whether the taxpayer is a persona moral (only they withhold).
@@ -90,6 +75,11 @@ class ExpenseSupplierFacts {
 
   final SupplierMemory? Function(String category) _lastUsedFor;
   bool _opensItself;
+
+  /// What each question was last moved to by a suggestion: an answer that
+  /// differs from it (and is not empty) is the user's, and a suggestion
+  /// never replaces it. A stored expense's answers are the user's.
+  final Map<ChoiceFieldController, String?> _suggested = {};
 
   /// E1 "¿Quién te vendió o te dio el servicio?" (`SupplierKind.json`).
   late final ChoiceFieldController supplierKind;
@@ -165,23 +155,36 @@ class ExpenseSupplierFacts {
   bool? get residentialRentSent =>
       asksResidentialRent ? isResidentialRent : null;
 
-  /// The category changed to [category]: every answer moves to its
-  /// defaults (the supplier last used for it, else a company, except for
-  /// fees, rent and freight, where the user must choose).
-  void followCategory(String? category) {
+  /// The category changed to [category]: each answer the user has not
+  /// given moves to its default, the supplier last used for the category,
+  /// else a company (except for fees, rent and freight, where the user must
+  /// choose), and the operation the server gives the category
+  /// (`default_operation_kind`, never a copy of the seed here; absent, it
+  /// stays unanswered and is omitted, so the server applies the same one).
+  void followCategory(ExpenseCategory? category) {
     if (!isMoral) return;
-    final remembered = category == null ? null : _lastUsedFor(category);
+    final code = category?.code;
+    final remembered = code == null ? null : _lastUsedFor(code);
     final kind =
         remembered?.kind ??
-        (category == null || withholdingCategories.contains(category)
+        (code == null || withholdingCategories.contains(code)
             ? null
             : SupplierKind.pm);
-    _opensItself = kind != SupplierKind.pm;
-    supplierKind.value = kind?.json;
-    supplierRegime.value = (remembered?.regime ?? SupplierRegime.unknown).json;
-    operationKind.value = category == null
-        ? null
-        : categoryDefaultOperation(category).json;
-    residentialRent.value = no;
+    _suggest(supplierKind, kind?.json);
+    _opensItself = this.kind != SupplierKind.pm;
+    _suggest(
+      supplierRegime,
+      (remembered?.regime ?? SupplierRegime.unknown).json,
+    );
+    _suggest(operationKind, category?.defaultOperationKind?.json);
+    _suggest(residentialRent, no);
+  }
+
+  /// Moves [field] to [value] unless the user answered it.
+  void _suggest(ChoiceFieldController field, String? value) {
+    final current = field.value;
+    if (current != null && current != _suggested[field]) return;
+    _suggested[field] = value;
+    field.value = value;
   }
 }

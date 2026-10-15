@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:control_contable/api/generated/models/error_code.dart';
+import 'package:control_contable/api/generated/models/expense_category.dart';
 import 'package:control_contable/api/generated/models/iva_rate.dart';
 import 'package:control_contable/api/generated/models/operation_kind.dart';
 import 'package:control_contable/api/generated/models/supplier_kind.dart';
@@ -39,6 +40,16 @@ const _rentCategory = 'Renta de local, oficina o bodega';
 const _foreignWarning =
     'Las operaciones con el extranjero pueden llevar otros impuestos que la '
     'app todavía no calcula.';
+
+/// The business catalog with software served with [operation] as its
+/// default (`null`: the server sends none yet).
+List<ExpenseCategory> _softwareServedAs(OperationKind? operation) => [
+  for (final c in businessCategories())
+    if (c.code == 'software')
+      c.copyWith(defaultOperationKind: operation)
+    else
+      c,
+];
 
 void main() {
   late ExpensesHarness harness;
@@ -189,12 +200,9 @@ void main() {
         '(default_operation_kind), never at a table of the app', (
       tester,
     ) async {
-      harness.expenses.categoriesBy['601'] = [
-        for (final c in businessCategories())
-          c.code == 'software'
-              ? c.copyWith(defaultOperationKind: OperationKind.commission)
-              : c,
-      ];
+      harness.expenses.categoriesBy['601'] = _softwareServedAs(
+        OperationKind.commission,
+      );
       await pumpForm(tester);
       await pickCategory(tester, _software);
       await tapText(tester, _section);
@@ -217,10 +225,7 @@ void main() {
         'unanswered and omits it, so the server applies its own', (
       tester,
     ) async {
-      harness.expenses.categoriesBy['601'] = [
-        for (final c in businessCategories())
-          c.code == 'software' ? c.copyWith(defaultOperationKind: null) : c,
-      ];
+      harness.expenses.categoriesBy['601'] = _softwareServedAs(null);
       await pumpForm(tester);
       await pickCategory(tester, _software);
       await tapText(tester, _section);

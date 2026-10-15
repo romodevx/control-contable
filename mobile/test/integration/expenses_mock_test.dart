@@ -76,6 +76,14 @@ void main() {
 
         expect(catalog.legend, isNotEmpty);
         expect(catalog.ivaRatesAllowed, isNotEmpty);
+        // E3 starts at the server's category default (0.10.1).
+        expect(
+          {for (final c in catalog.items) c.code: c.defaultOperationKind},
+          containsPair(
+            'servicios_profesionales',
+            OperationKind.professionalServices,
+          ),
+        );
       });
 
       test(

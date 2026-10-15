@@ -26,27 +26,14 @@ typedef IncomeFactLabels = ({
   String viaPlatform,
 });
 
-/// What the operation is until the server says what was last used: the
-/// regime defaults the contract documents for `IncomeLastUsed` (612 and
-/// 626 PF professional services, 606 rent, 621 goods, a persona moral
-/// business services). A display default only: the server stores its own.
-OperationKind regimeDefaultOperation(String regime, {required bool isMoral}) {
-  if (isMoral) return OperationKind.businessServices;
-  return switch (regime) {
-    '606' => OperationKind.rentRealEstate,
-    '621' => OperationKind.saleOfGoods,
-    _ => OperationKind.professionalServices,
-  };
-}
-
 /// The facts the withholdings are derived from (MODULE-withholdings §2.1,
 /// Q1–Q4), each asked only when its answer can change a withholding, and
 /// preselected from what was last used in the regime (`last_used`) until
 /// the user answers. The figures come from the server (ADR-0008).
 class IncomeWithholdingFacts {
   /// The four questions added to [form] for a [isMoral] taxpayer, starting
-  /// at [stored] when editing, else at the regime defaults of
-  /// [regimeCode].
+  /// at [stored] when editing, else empty until the server's `last_used`
+  /// for [regimeCode] arrives ([applyLastUsed]).
   new({
     required AppFormController form,
     required IncomeFactLabels labels,
@@ -67,10 +54,10 @@ class IncomeWithholdingFacts {
         label: labels.operationKind,
         isRequired: false,
         keepForNext: true,
-        initialValue:
-            (stored?.operationKind ??
-                    regimeDefaultOperation(regime, isMoral: isMoral))
-                .json,
+        // The regime default is the server's (`last_used`), never a copy
+        // here: until it arrives (or if it cannot), Q2 is unanswered and
+        // omitted, so the server applies the same default.
+        initialValue: stored?.operationKind?.json,
       ),
     );
     residentialRent = form.add(
