@@ -177,6 +177,18 @@ class AppFormController extends ChangeNotifier {
     return field;
   }
 
+  /// Moves [field] right before [anchor] when another choice moves it on
+  /// screen, so the error summary keeps the reading order.
+  void moveBefore(AppFormFieldModel field, AppFormFieldModel anchor) {
+    assert(_fields.contains(field), '${field.label} is not in this form.');
+    assert(_fields.contains(anchor), '${anchor.label} is not in this form.');
+    if (identical(field, anchor)) return;
+    _fields
+      ..remove(field)
+      ..insert(_fields.indexOf(anchor), field);
+    notifyListeners();
+  }
+
   void _setSaving(bool saving) {
     // A save can outlive its screen (the user leaves while it is in flight).
     if (_isDisposed) return;

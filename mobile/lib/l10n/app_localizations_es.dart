@@ -1044,6 +1044,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get incomeFieldCollectedOn => 'Fecha de cobro';
 
   @override
+  String get incomeCollectedOnAccrualHelp =>
+      'Decide el mes del IVA. Si aún no te pagan, déjala vacía: queda «Por cobrar».';
+
+  @override
   String get incomeFieldInvoicedOn => 'Fecha de factura';
 
   @override

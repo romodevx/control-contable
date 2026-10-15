@@ -1361,6 +1361,10 @@
   "@incomeFieldCollectedOn": {
     "description": "Date the income was collected."
   },
+  "incomeCollectedOnAccrualHelp": "Decide el mes del IVA. Si aún no te pagan, déjala vacía: queda «Por cobrar».",
+  "@incomeCollectedOnAccrualHelp": {
+    "description": "Hint under the collection date of an accrual income (PM 601, 620, 622, 623, 624): IVA is cash-based (LIVA 1-B), so this date sets the IVA month; empty means pending collection."
+  },
   "incomeFieldInvoicedOn": "Fecha de factura",
   "@incomeFieldInvoicedOn": {
     "description": "Date the CFDI was issued."

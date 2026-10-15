@@ -147,6 +147,25 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('the helper is read with its field, once', (tester) async {
+    final semantics = tester.ensureSemantics();
+    const help = 'Decide el mes del IVA.';
+    final date = form.dateField(label: 'Fecha de cobro');
+    await pumpFields(tester, [
+      AppDateField(
+        field: date,
+        textInputAction: TextInputAction.done,
+        helperText: help,
+      ),
+    ]);
+
+    expect(find.text(help), findsOneWidget, reason: 'still shown');
+    final node = tester.getSemantics(find.byType(EditableText));
+    expect(node.hint, contains(help));
+    expect(find.bySemanticsLabel(help), findsNothing, reason: 'not twice');
+    semantics.dispose();
+  });
+
   testWidgets('a format error appears only after leaving the field', (
     tester,
   ) async {

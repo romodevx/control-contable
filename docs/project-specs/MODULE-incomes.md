@@ -359,13 +359,16 @@ are es-MX safe text (localized by the client) and never carry amounts, descripti
 - **Container: its own page** (`IncomeFormPage`), not a dialog. The form has 11 inputs in total,
   more than 6, so the field-count rule sends it to a page, as PLAN M3-09 says (OQ-1). Progressive
   disclosure keeps the 80 % case short:
-  - Visible: Monto (sin IVA) · Tasa de IVA · Fecha de cobro (601: Fecha de factura) · ¿Quién te
-    pagó? (counterparty) · Descripción. Régimen appears only when the taxpayer holds more than one
+  - Visible: Monto (sin IVA) · Tasa de IVA · Fecha de cobro (accrual: Fecha de factura, required,
+    then Fecha de cobro right under it, **empty by default** = "Por cobrar", hinted "Decide el mes
+    del IVA", M5-30 FU1/D6) · ¿Quién te pagó? (counterparty) · Descripción. The basis is the
+    regime of the income being registered (served `income_basis`), so mixed regimes switch it. Régimen appears only when the taxpayer holds more than one
     on that date; Actividad only for 625 with more than one activity.
   - "Retenciones": collapsed; opens **prefilled** when the counterparty allows withholdings.
     **Replaced** by the read-only derived card and questions Q1–Q4 of
     [MODULE-withholdings §2.1, §2.3](MODULE-withholdings.md#21-income-form-nuevo-ingreso-every-taxpayer).
-  - "Más detalles": collapsed: IVA amount (editable), the other date, Folio fiscal (UUID).
+  - "Más detalles": collapsed: IVA amount (editable), the invoice date (cash regimes only),
+    Folio fiscal (UUID).
 - Single column; label above every field; optional fields marked "(opcional)" (fewer than the
   required ones). Amount: `inputmode="decimal"`, accepts `10000`, `10,000.00`, `$10 000.5`;
   client converts to centavos by string parsing, never floats. Dates accept `dd/mm/aaaa` with or
