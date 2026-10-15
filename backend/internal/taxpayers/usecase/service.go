@@ -159,7 +159,10 @@ func toTaxpayer(t StoredTaxpayer, held []HeldRegime) Taxpayer {
 }
 
 func toRegime(h HeldRegime) TaxpayerRegime {
-	return TaxpayerRegime{Code: h.Code, Name: h.Name, Treatment: h.Treatment, Options: h.Options, Window: h.Window}
+	return TaxpayerRegime{
+		Code: h.Code, Name: h.Name, Treatment: h.Treatment, IncomeBasis: h.IncomeBasis,
+		Options: h.Options, Window: h.Window,
+	}
 }
 
 func mustPeriod(raw string) domain.Period {

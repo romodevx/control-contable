@@ -142,7 +142,7 @@ class _Loaded extends ConsumerWidget {
     return RecordRow(
       key: ValueKey(income.id),
       date: MaterialLocalizations.of(context)
-          .formatShortMonthDay(bookingDateOf(income)),
+          .formatShortMonthDay(bookingDateOf(income, taxpayer.regimes)),
       title: title,
       amountCents: income.amountCents + income.ivaCents,
       tag: regime?.name ?? income.regimeCode,

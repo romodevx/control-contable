@@ -302,7 +302,7 @@ func (s *memStore) InsertRegime(ctx context.Context, r usecase.NewRegime) error 
 		return err
 	}
 	s.regimes[key] = &regimeRow{userID: r.UserID, ack: r.NeedsCPAReviewAck, held: usecase.HeldRegime{
-		TaxpayerID: r.TaxpayerID, Code: r.Code, Name: cat.Name, Treatment: cat.Treatment,
+		TaxpayerID: r.TaxpayerID, Code: r.Code, Name: cat.Name, Treatment: cat.Treatment, IncomeBasis: fakeIncomeBasis(r.PersonType),
 		Options: maps.Clone(r.Options), Window: domain.Window{Start: r.Start},
 	}}
 	return nil
@@ -354,7 +354,7 @@ func (s *memStore) seedTaxpayer(userID, id string, personType domain.PersonType,
 	s.rows[id] = row
 	for _, r := range regimes {
 		s.regimes[id+"/"+r.code] = &regimeRow{userID: userID, held: usecase.HeldRegime{
-			TaxpayerID: id, Code: r.code, Name: "Regime " + r.code, Treatment: "full",
+			TaxpayerID: id, Code: r.code, Name: "Regime " + r.code, Treatment: "full", IncomeBasis: fakeIncomeBasis(personType),
 			Options: maps.Clone(r.options), Window: r.window,
 		}}
 	}
@@ -518,4 +518,13 @@ func window(t *testing.T, start, end string) domain.Window {
 		w.End = period(t, end)
 	}
 	return w
+}
+
+// fakeIncomeBasis stands in for the catalog join (regimes.income_basis): a
+// value per person type, enough to prove the use cases carry it through.
+func fakeIncomeBasis(pt domain.PersonType) string {
+	if pt == domain.PersonTypeMoral {
+		return "accrual"
+	}
+	return "cash"
 }

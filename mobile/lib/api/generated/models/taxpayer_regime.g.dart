@@ -11,6 +11,7 @@ _TaxpayerRegime _$TaxpayerRegimeFromJson(Map<String, dynamic> json) =>
       regimeCode: json['regime_code'] as String,
       name: json['name'] as String,
       treatment: Treatment.fromJson(json['treatment'] as String),
+      incomeBasis: IncomeBasis.fromJson(json['income_basis'] as String),
       options: json['options'] as Map<String, dynamic>,
       startPeriod: json['start_period'] as String,
       endPeriod: json['end_period'] as String?,
@@ -24,6 +25,7 @@ Map<String, dynamic> _$TaxpayerRegimeToJson(_TaxpayerRegime instance) =>
       'regime_code': instance.regimeCode,
       'name': instance.name,
       'treatment': _$TreatmentEnumMap[instance.treatment]!,
+      'income_basis': _$IncomeBasisEnumMap[instance.incomeBasis]!,
       'options': instance.options,
       'start_period': instance.startPeriod,
       'end_period': instance.endPeriod,
@@ -35,4 +37,10 @@ const _$TreatmentEnumMap = {
   Treatment.partial: 'partial',
   Treatment.informational: 'informational',
   Treatment.$unknown: r'$unknown',
+};
+
+const _$IncomeBasisEnumMap = {
+  IncomeBasis.cash: 'cash',
+  IncomeBasis.accrual: 'accrual',
+  IncomeBasis.$unknown: r'$unknown',
 };

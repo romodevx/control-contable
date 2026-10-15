@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Regime {
 
- RegimeCode get code; String get name;@JsonKey(name: 'person_type') PersonType get personType; Treatment get treatment;/// Plain-language explanation for a partial or informational regime; `null` for full.
+ RegimeCode get code; String get name;@JsonKey(name: 'person_type') PersonType get personType; Treatment get treatment;@JsonKey(name: 'income_basis') IncomeBasis get incomeBasis;/// Plain-language explanation for a partial or informational regime; `null` for full.
 @JsonKey(includeIfNull: true) String? get explanation;@JsonKey(name: 'option_defs') List<RegimeOptionDef> get optionDefs;/// Per-fiscal-year tax inputs the estimate needs (`PUT …/tax-inputs`, M5); not options. Exactly the stored `regimes.required_inputs` (CHECK `regime_required_inputs_valid`).
 @JsonKey(name: 'required_inputs') List<TaxInputDef> get requiredInputs;@JsonKey(name: 'incompatible_with') List<RegimeIncompatibility> get incompatibleWith;/// Regimes it may overlap in time, but only with the warning `regime_combination_needs_cpa_review`: the pair is allowed and not yet verified by a CPA (`regime_compatibility.needs_cpa_review`); `reason` is the warning's message. Symmetric, like `incompatible_with`, so the client can warn before submitting. Added in 0.4.0 without a version bump (optional response field); the server always sends it, possibly empty.
 @JsonKey(includeIfNull: false, name: 'review_pending_with') List<RegimeIncompatibility>? get reviewPendingWith;
@@ -33,20 +33,20 @@ $RegimeCopyWith<Regime> get copyWith => _$RegimeCopyWithImpl<Regime>(this as Reg
 @override
 bool operator ==(Object other) {
   final _this = this as Regime;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Regime&&(identical(other.code, _this.code) || other.code == _this.code)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.personType, _this.personType) || other.personType == _this.personType)&&(identical(other.treatment, _this.treatment) || other.treatment == _this.treatment)&&(identical(other.explanation, _this.explanation) || other.explanation == _this.explanation)&&const DeepCollectionEquality().equals(other.optionDefs, _this.optionDefs)&&const DeepCollectionEquality().equals(other.requiredInputs, _this.requiredInputs)&&const DeepCollectionEquality().equals(other.incompatibleWith, _this.incompatibleWith)&&const DeepCollectionEquality().equals(other.reviewPendingWith, _this.reviewPendingWith));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Regime&&(identical(other.code, _this.code) || other.code == _this.code)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.personType, _this.personType) || other.personType == _this.personType)&&(identical(other.treatment, _this.treatment) || other.treatment == _this.treatment)&&(identical(other.incomeBasis, _this.incomeBasis) || other.incomeBasis == _this.incomeBasis)&&(identical(other.explanation, _this.explanation) || other.explanation == _this.explanation)&&const DeepCollectionEquality().equals(other.optionDefs, _this.optionDefs)&&const DeepCollectionEquality().equals(other.requiredInputs, _this.requiredInputs)&&const DeepCollectionEquality().equals(other.incompatibleWith, _this.incompatibleWith)&&const DeepCollectionEquality().equals(other.reviewPendingWith, _this.reviewPendingWith));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Regime;
-  return Object.hash(runtimeType,_this.code,_this.name,_this.personType,_this.treatment,_this.explanation,const DeepCollectionEquality().hash(_this.optionDefs),const DeepCollectionEquality().hash(_this.requiredInputs),const DeepCollectionEquality().hash(_this.incompatibleWith),const DeepCollectionEquality().hash(_this.reviewPendingWith));
+  return Object.hash(runtimeType,_this.code,_this.name,_this.personType,_this.treatment,_this.incomeBasis,_this.explanation,const DeepCollectionEquality().hash(_this.optionDefs),const DeepCollectionEquality().hash(_this.requiredInputs),const DeepCollectionEquality().hash(_this.incompatibleWith),const DeepCollectionEquality().hash(_this.reviewPendingWith));
 }
 
 @override
 String toString() {
   final _this = this as Regime;
-  return 'Regime(code: ${_this.code}, name: ${_this.name}, personType: ${_this.personType}, treatment: ${_this.treatment}, explanation: ${_this.explanation}, optionDefs: ${_this.optionDefs}, requiredInputs: ${_this.requiredInputs}, incompatibleWith: ${_this.incompatibleWith}, reviewPendingWith: ${_this.reviewPendingWith})';
+  return 'Regime(code: ${_this.code}, name: ${_this.name}, personType: ${_this.personType}, treatment: ${_this.treatment}, incomeBasis: ${_this.incomeBasis}, explanation: ${_this.explanation}, optionDefs: ${_this.optionDefs}, requiredInputs: ${_this.requiredInputs}, incompatibleWith: ${_this.incompatibleWith}, reviewPendingWith: ${_this.reviewPendingWith})';
 }
 
 
@@ -57,7 +57,7 @@ abstract mixin class $RegimeCopyWith<$Res>  {
   factory $RegimeCopyWith(Regime value, $Res Function(Regime) _then) = _$RegimeCopyWithImpl;
 @useResult
 $Res call({
- RegimeCode code, String name,@JsonKey(name: 'person_type') PersonType personType, Treatment treatment,@JsonKey(includeIfNull: true) String? explanation,@JsonKey(name: 'option_defs') List<RegimeOptionDef> optionDefs,@JsonKey(name: 'required_inputs') List<TaxInputDef> requiredInputs,@JsonKey(name: 'incompatible_with') List<RegimeIncompatibility> incompatibleWith,@JsonKey(includeIfNull: false, name: 'review_pending_with') List<RegimeIncompatibility>? reviewPendingWith
+ RegimeCode code, String name,@JsonKey(name: 'person_type') PersonType personType, Treatment treatment,@JsonKey(name: 'income_basis') IncomeBasis incomeBasis,@JsonKey(includeIfNull: true) String? explanation,@JsonKey(name: 'option_defs') List<RegimeOptionDef> optionDefs,@JsonKey(name: 'required_inputs') List<TaxInputDef> requiredInputs,@JsonKey(name: 'incompatible_with') List<RegimeIncompatibility> incompatibleWith,@JsonKey(includeIfNull: false, name: 'review_pending_with') List<RegimeIncompatibility>? reviewPendingWith
 });
 
 
@@ -74,13 +74,14 @@ class _$RegimeCopyWithImpl<$Res>
 
 /// Create a copy of Regime
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? code = null,Object? name = null,Object? personType = null,Object? treatment = null,Object? explanation = freezed,Object? optionDefs = null,Object? requiredInputs = null,Object? incompatibleWith = null,Object? reviewPendingWith = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? code = null,Object? name = null,Object? personType = null,Object? treatment = null,Object? incomeBasis = null,Object? explanation = freezed,Object? optionDefs = null,Object? requiredInputs = null,Object? incompatibleWith = null,Object? reviewPendingWith = freezed,}) {
   return _then(Regime(
 code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
 as RegimeCode,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,personType: null == personType ? _self.personType : personType // ignore: cast_nullable_to_non_nullable
 as PersonType,treatment: null == treatment ? _self.treatment : treatment // ignore: cast_nullable_to_non_nullable
-as Treatment,explanation: freezed == explanation ? _self.explanation : explanation // ignore: cast_nullable_to_non_nullable
+as Treatment,incomeBasis: null == incomeBasis ? _self.incomeBasis : incomeBasis // ignore: cast_nullable_to_non_nullable
+as IncomeBasis,explanation: freezed == explanation ? _self.explanation : explanation // ignore: cast_nullable_to_non_nullable
 as String?,optionDefs: null == optionDefs ? _self.optionDefs : optionDefs // ignore: cast_nullable_to_non_nullable
 as List<RegimeOptionDef>,requiredInputs: null == requiredInputs ? _self.requiredInputs : requiredInputs // ignore: cast_nullable_to_non_nullable
 as List<TaxInputDef>,incompatibleWith: null == incompatibleWith ? _self.incompatibleWith : incompatibleWith // ignore: cast_nullable_to_non_nullable
@@ -170,10 +171,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( RegimeCode code,  String name, @JsonKey(name: 'person_type')  PersonType personType,  Treatment treatment, @JsonKey(includeIfNull: true)  String? explanation, @JsonKey(name: 'option_defs')  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs')  List<TaxInputDef> requiredInputs, @JsonKey(name: 'incompatible_with')  List<RegimeIncompatibility> incompatibleWith, @JsonKey(includeIfNull: false, name: 'review_pending_with')  List<RegimeIncompatibility>? reviewPendingWith)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( RegimeCode code,  String name, @JsonKey(name: 'person_type')  PersonType personType,  Treatment treatment, @JsonKey(name: 'income_basis')  IncomeBasis incomeBasis, @JsonKey(includeIfNull: true)  String? explanation, @JsonKey(name: 'option_defs')  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs')  List<TaxInputDef> requiredInputs, @JsonKey(name: 'incompatible_with')  List<RegimeIncompatibility> incompatibleWith, @JsonKey(includeIfNull: false, name: 'review_pending_with')  List<RegimeIncompatibility>? reviewPendingWith)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Regime() when $default != null:
-return $default(_that.code,_that.name,_that.personType,_that.treatment,_that.explanation,_that.optionDefs,_that.requiredInputs,_that.incompatibleWith,_that.reviewPendingWith);case _:
+return $default(_that.code,_that.name,_that.personType,_that.treatment,_that.incomeBasis,_that.explanation,_that.optionDefs,_that.requiredInputs,_that.incompatibleWith,_that.reviewPendingWith);case _:
   return orElse();
 
 }
@@ -191,10 +192,10 @@ return $default(_that.code,_that.name,_that.personType,_that.treatment,_that.exp
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( RegimeCode code,  String name, @JsonKey(name: 'person_type')  PersonType personType,  Treatment treatment, @JsonKey(includeIfNull: true)  String? explanation, @JsonKey(name: 'option_defs')  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs')  List<TaxInputDef> requiredInputs, @JsonKey(name: 'incompatible_with')  List<RegimeIncompatibility> incompatibleWith, @JsonKey(includeIfNull: false, name: 'review_pending_with')  List<RegimeIncompatibility>? reviewPendingWith)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( RegimeCode code,  String name, @JsonKey(name: 'person_type')  PersonType personType,  Treatment treatment, @JsonKey(name: 'income_basis')  IncomeBasis incomeBasis, @JsonKey(includeIfNull: true)  String? explanation, @JsonKey(name: 'option_defs')  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs')  List<TaxInputDef> requiredInputs, @JsonKey(name: 'incompatible_with')  List<RegimeIncompatibility> incompatibleWith, @JsonKey(includeIfNull: false, name: 'review_pending_with')  List<RegimeIncompatibility>? reviewPendingWith)  $default,) {final _that = this;
 switch (_that) {
 case _Regime():
-return $default(_that.code,_that.name,_that.personType,_that.treatment,_that.explanation,_that.optionDefs,_that.requiredInputs,_that.incompatibleWith,_that.reviewPendingWith);case _:
+return $default(_that.code,_that.name,_that.personType,_that.treatment,_that.incomeBasis,_that.explanation,_that.optionDefs,_that.requiredInputs,_that.incompatibleWith,_that.reviewPendingWith);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -211,10 +212,10 @@ return $default(_that.code,_that.name,_that.personType,_that.treatment,_that.exp
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( RegimeCode code,  String name, @JsonKey(name: 'person_type')  PersonType personType,  Treatment treatment, @JsonKey(includeIfNull: true)  String? explanation, @JsonKey(name: 'option_defs')  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs')  List<TaxInputDef> requiredInputs, @JsonKey(name: 'incompatible_with')  List<RegimeIncompatibility> incompatibleWith, @JsonKey(includeIfNull: false, name: 'review_pending_with')  List<RegimeIncompatibility>? reviewPendingWith)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( RegimeCode code,  String name, @JsonKey(name: 'person_type')  PersonType personType,  Treatment treatment, @JsonKey(name: 'income_basis')  IncomeBasis incomeBasis, @JsonKey(includeIfNull: true)  String? explanation, @JsonKey(name: 'option_defs')  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs')  List<TaxInputDef> requiredInputs, @JsonKey(name: 'incompatible_with')  List<RegimeIncompatibility> incompatibleWith, @JsonKey(includeIfNull: false, name: 'review_pending_with')  List<RegimeIncompatibility>? reviewPendingWith)?  $default,) {final _that = this;
 switch (_that) {
 case _Regime() when $default != null:
-return $default(_that.code,_that.name,_that.personType,_that.treatment,_that.explanation,_that.optionDefs,_that.requiredInputs,_that.incompatibleWith,_that.reviewPendingWith);case _:
+return $default(_that.code,_that.name,_that.personType,_that.treatment,_that.incomeBasis,_that.explanation,_that.optionDefs,_that.requiredInputs,_that.incompatibleWith,_that.reviewPendingWith);case _:
   return null;
 
 }
@@ -226,13 +227,14 @@ return $default(_that.code,_that.name,_that.personType,_that.treatment,_that.exp
 @JsonSerializable()
 
 class _Regime implements Regime {
-  const _Regime({required this.code, required this.name, @JsonKey(name: 'person_type') required this.personType, required this.treatment, @JsonKey(includeIfNull: true) required this.explanation, @JsonKey(name: 'option_defs') required  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs') required  List<TaxInputDef> requiredInputs, @JsonKey(name: 'incompatible_with') required  List<RegimeIncompatibility> incompatibleWith, @JsonKey(includeIfNull: false, name: 'review_pending_with')  List<RegimeIncompatibility>? reviewPendingWith}): _optionDefs = optionDefs,_requiredInputs = requiredInputs,_incompatibleWith = incompatibleWith,_reviewPendingWith = reviewPendingWith;
+  const _Regime({required this.code, required this.name, @JsonKey(name: 'person_type') required this.personType, required this.treatment, @JsonKey(name: 'income_basis') required this.incomeBasis, @JsonKey(includeIfNull: true) required this.explanation, @JsonKey(name: 'option_defs') required  List<RegimeOptionDef> optionDefs, @JsonKey(name: 'required_inputs') required  List<TaxInputDef> requiredInputs, @JsonKey(name: 'incompatible_with') required  List<RegimeIncompatibility> incompatibleWith, @JsonKey(includeIfNull: false, name: 'review_pending_with')  List<RegimeIncompatibility>? reviewPendingWith}): _optionDefs = optionDefs,_requiredInputs = requiredInputs,_incompatibleWith = incompatibleWith,_reviewPendingWith = reviewPendingWith;
   factory _Regime.fromJson(Map<String, dynamic> json) => _$RegimeFromJson(json);
 
 @override final  RegimeCode code;
 @override final  String name;
 @override@JsonKey(name: 'person_type') final  PersonType personType;
 @override final  Treatment treatment;
+@override@JsonKey(name: 'income_basis') final  IncomeBasis incomeBasis;
 /// Plain-language explanation for a partial or informational regime; `null` for full.
 @override@JsonKey(includeIfNull: true) final  String? explanation;
  final  List<RegimeOptionDef> _optionDefs;
@@ -283,18 +285,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Regime&&(identical(other.code, code) || other.code == code)&&(identical(other.name, name) || other.name == name)&&(identical(other.personType, personType) || other.personType == personType)&&(identical(other.treatment, treatment) || other.treatment == treatment)&&(identical(other.explanation, explanation) || other.explanation == explanation)&&const DeepCollectionEquality().equals(other.optionDefs, _optionDefs)&&const DeepCollectionEquality().equals(other.requiredInputs, _requiredInputs)&&const DeepCollectionEquality().equals(other.incompatibleWith, _incompatibleWith)&&const DeepCollectionEquality().equals(other.reviewPendingWith, _reviewPendingWith));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Regime&&(identical(other.code, code) || other.code == code)&&(identical(other.name, name) || other.name == name)&&(identical(other.personType, personType) || other.personType == personType)&&(identical(other.treatment, treatment) || other.treatment == treatment)&&(identical(other.incomeBasis, incomeBasis) || other.incomeBasis == incomeBasis)&&(identical(other.explanation, explanation) || other.explanation == explanation)&&const DeepCollectionEquality().equals(other.optionDefs, _optionDefs)&&const DeepCollectionEquality().equals(other.requiredInputs, _requiredInputs)&&const DeepCollectionEquality().equals(other.incompatibleWith, _incompatibleWith)&&const DeepCollectionEquality().equals(other.reviewPendingWith, _reviewPendingWith));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,code,name,personType,treatment,explanation,const DeepCollectionEquality().hash(_optionDefs),const DeepCollectionEquality().hash(_requiredInputs),const DeepCollectionEquality().hash(_incompatibleWith),const DeepCollectionEquality().hash(_reviewPendingWith));
+    return Object.hash(runtimeType,code,name,personType,treatment,incomeBasis,explanation,const DeepCollectionEquality().hash(_optionDefs),const DeepCollectionEquality().hash(_requiredInputs),const DeepCollectionEquality().hash(_incompatibleWith),const DeepCollectionEquality().hash(_reviewPendingWith));
 }
 
 @override
 String toString() {
-    return 'Regime(code: $code, name: $name, personType: $personType, treatment: $treatment, explanation: $explanation, optionDefs: $optionDefs, requiredInputs: $requiredInputs, incompatibleWith: $incompatibleWith, reviewPendingWith: $reviewPendingWith)';
+    return 'Regime(code: $code, name: $name, personType: $personType, treatment: $treatment, incomeBasis: $incomeBasis, explanation: $explanation, optionDefs: $optionDefs, requiredInputs: $requiredInputs, incompatibleWith: $incompatibleWith, reviewPendingWith: $reviewPendingWith)';
 }
 
 
@@ -305,7 +307,7 @@ abstract mixin class _$RegimeCopyWith<$Res> implements $RegimeCopyWith<$Res> {
   factory _$RegimeCopyWith(_Regime value, $Res Function(_Regime) _then) = __$RegimeCopyWithImpl;
 @override @useResult
 $Res call({
- RegimeCode code, String name,@JsonKey(name: 'person_type') PersonType personType, Treatment treatment,@JsonKey(includeIfNull: true) String? explanation,@JsonKey(name: 'option_defs') List<RegimeOptionDef> optionDefs,@JsonKey(name: 'required_inputs') List<TaxInputDef> requiredInputs,@JsonKey(name: 'incompatible_with') List<RegimeIncompatibility> incompatibleWith,@JsonKey(includeIfNull: false, name: 'review_pending_with') List<RegimeIncompatibility>? reviewPendingWith
+ RegimeCode code, String name,@JsonKey(name: 'person_type') PersonType personType, Treatment treatment,@JsonKey(name: 'income_basis') IncomeBasis incomeBasis,@JsonKey(includeIfNull: true) String? explanation,@JsonKey(name: 'option_defs') List<RegimeOptionDef> optionDefs,@JsonKey(name: 'required_inputs') List<TaxInputDef> requiredInputs,@JsonKey(name: 'incompatible_with') List<RegimeIncompatibility> incompatibleWith,@JsonKey(includeIfNull: false, name: 'review_pending_with') List<RegimeIncompatibility>? reviewPendingWith
 });
 
 
@@ -322,13 +324,14 @@ class __$RegimeCopyWithImpl<$Res>
 
 /// Create a copy of Regime
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? code = null,Object? name = null,Object? personType = null,Object? treatment = null,Object? explanation = freezed,Object? optionDefs = null,Object? requiredInputs = null,Object? incompatibleWith = null,Object? reviewPendingWith = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? code = null,Object? name = null,Object? personType = null,Object? treatment = null,Object? incomeBasis = null,Object? explanation = freezed,Object? optionDefs = null,Object? requiredInputs = null,Object? incompatibleWith = null,Object? reviewPendingWith = freezed,}) {
   return _then(_Regime(
 code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
 as RegimeCode,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,personType: null == personType ? _self.personType : personType // ignore: cast_nullable_to_non_nullable
 as PersonType,treatment: null == treatment ? _self.treatment : treatment // ignore: cast_nullable_to_non_nullable
-as Treatment,explanation: freezed == explanation ? _self.explanation : explanation // ignore: cast_nullable_to_non_nullable
+as Treatment,incomeBasis: null == incomeBasis ? _self.incomeBasis : incomeBasis // ignore: cast_nullable_to_non_nullable
+as IncomeBasis,explanation: freezed == explanation ? _self.explanation : explanation // ignore: cast_nullable_to_non_nullable
 as String?,optionDefs: null == optionDefs ? _self._optionDefs : optionDefs // ignore: cast_nullable_to_non_nullable
 as List<RegimeOptionDef>,requiredInputs: null == requiredInputs ? _self._requiredInputs : requiredInputs // ignore: cast_nullable_to_non_nullable
 as List<TaxInputDef>,incompatibleWith: null == incompatibleWith ? _self._incompatibleWith : incompatibleWith // ignore: cast_nullable_to_non_nullable

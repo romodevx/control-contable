@@ -163,6 +163,8 @@ Expected: `f | f | f | f`. A `t` is an incident: a migration widened a grant.
 to); the category's creditability is enforced by the domain only. Correcting a wrong tax fact
 is a code fix plus a forward migration that recomputes it, never a hand `UPDATE`. If a
 regime's `income_basis` ever changes, the same migration must re-derive `incomes.booked_on`.
+The app follows on its next taxpayer read: it takes the basis from `TaxpayerRegime.income_basis`
+(ADR-0010), so no app release is needed.
 
 ## 4. Regime end and records
 

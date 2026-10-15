@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:control_contable/api/generated/models/counterparty_kind.dart';
+import 'package:control_contable/api/generated/models/income_basis.dart';
 import 'package:control_contable/api/generated/models/iva_rate.dart';
 import 'package:control_contable/api/generated/models/operation_kind.dart';
 import 'package:control_contable/api/generated/models/person_type.dart';
@@ -49,7 +50,7 @@ final Taxpayer _resico = taxpayer(regimes: [heldRegime('626')]);
 final Taxpayer _landlord = taxpayer(regimes: [heldRegime('606')]);
 final Taxpayer _moral601 = taxpayer(
   personType: PersonType.moral,
-  regimes: [heldRegime('601')],
+  regimes: [heldRegime('601', incomeBasis: IncomeBasis.accrual)],
 );
 Taxpayer _platforms({bool rfcGiven = true}) => taxpayer(
   regimes: [

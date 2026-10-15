@@ -59,6 +59,7 @@ func TestCreate_PersistsTheTaxpayerRegimesAndOptions(t *testing.T) {
 	require.Len(t, got.Regimes, 2)
 	assert.Equal(t, "Arrendamiento", got.Regimes[0].Name)
 	assert.Equal(t, "full", got.Regimes[0].Treatment)
+	assert.Equal(t, "cash", got.Regimes[0].IncomeBasis, "joined from the catalog")
 	assert.Equal(t, domain.StringOption("blind_35"), got.Regimes[0].Options["deduction_mode"])
 	assert.Equal(t, domain.BoolOption(false), got.Regimes[0].Options["iva_border_region"], "every option, defaults included")
 	assert.Equal(t, domain.ListOption([]string{"lodging", "goods_services"}), got.Regimes[1].Options["activities"], "catalog order")
@@ -68,6 +69,21 @@ func TestCreate_PersistsTheTaxpayerRegimesAndOptions(t *testing.T) {
 	queryAs(t, e.app, userA, "SELECT person_type || '|' || rfc_check_digit_valid::text || '|' || rfc_key_id::text FROM taxpayers WHERE id = $1",
 		[]any{got.ID}, &stored)
 	assert.Equal(t, "fisica|true|1", stored)
+}
+
+func TestCreate_HeldRegimesCarryTheCatalogIncomeBasis(t *testing.T) {
+	e := newEnv(t, userA).wire(t)
+	moral := usecase.CreateInput{PersonType: "moral", RFC: rfcMoral, DisplayName: "Empresa",
+		Regimes: []usecase.RegimeInput{{Code: "601", Start: "2026-01"}}}
+
+	created, err := e.taxpayers.Create(t.Context(), userA, moral)
+	require.NoError(t, err)
+	got, err := e.taxpayers.Get(t.Context(), userA, created.Taxpayer.ID)
+	require.NoError(t, err)
+
+	require.Len(t, got.Regimes, 1)
+	assert.Equal(t, "accrual", got.Regimes[0].IncomeBasis, "601 PM is an accrual regime (regimes.income_basis)")
+	assert.Equal(t, created.Taxpayer.Regimes, got.Regimes)
 }
 
 func TestCreate_StoresTheRFCSealedForItsRowAndOwner(t *testing.T) {

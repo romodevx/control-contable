@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:control_contable/api/generated/models/counterparty_kind.dart';
 import 'package:control_contable/api/generated/models/error_code.dart';
+import 'package:control_contable/api/generated/models/income_basis.dart';
 import 'package:control_contable/api/generated/models/iva_rate.dart';
 import 'package:control_contable/api/generated/models/person_type.dart';
 import 'package:control_contable/api/generated/models/platform_activity.dart';
@@ -161,7 +162,7 @@ void main() {
         tester,
         taxpayer: taxpayer(
           personType: PersonType.moral,
-          regimes: [heldRegime('601')],
+          regimes: [heldRegime('601', incomeBasis: IncomeBasis.accrual)],
         ),
       );
       expect(find.text(_invoicedOn), findsOneWidget);
@@ -175,6 +176,21 @@ void main() {
       expect(sent.collectedOn, isNull);
     });
 
+    // FU1/D6 (ADR-0010): the booking date is the server's income_basis for
+    // the held regime, never a table of codes in the app.
+    testWidgets('the booking date follows the served income_basis, not the '
+        'regime code', (tester) async {
+      await pumpForm(
+        tester,
+        taxpayer: taxpayer(
+          regimes: [heldRegime('612', incomeBasis: IncomeBasis.accrual)],
+        ),
+      );
+
+      expect(find.text(_invoicedOn), findsOneWidget);
+      expect(find.text(_collectedOn), findsNothing);
+    });
+
     // M5-30 (M5-29 QA, PM-601-IVA-01): a 601 income counts for IVA only
     // once collected (LIVA 1-B); its collection date lives in "Más
     // detalles" and must reach the request.
@@ -184,7 +200,7 @@ void main() {
         tester,
         taxpayer: taxpayer(
           personType: PersonType.moral,
-          regimes: [heldRegime('601')],
+          regimes: [heldRegime('601', incomeBasis: IncomeBasis.accrual)],
         ),
       );
       await typeInto(tester, _invoicedOn, '05102026');

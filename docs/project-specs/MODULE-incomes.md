@@ -73,7 +73,9 @@ Ports M3 provides:
 ### 2.2 Cash vs accrual: which date the estimate uses
 
 The regime's income basis is catalog data: a new column `regimes.income_basis`
-(`cash | accrual`, M3-02 forward migration), not a `switch` in code.
+(`cash | accrual`, M3-02 forward migration), not a `switch` in code. The contract serves it as
+`Regime.income_basis` and `TaxpayerRegime.income_basis` (0.16.0, ADR-0010), so clients never
+mirror this table.
 
 | Basis | Regimes | ISR date | IVA date | Required date |
 |---|---|---|---|---|

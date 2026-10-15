@@ -4,6 +4,7 @@
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'income_basis.dart';
 import 'person_type.dart';
 import 'regime_code.dart';
 import 'regime_incompatibility.dart';
@@ -14,7 +15,7 @@ import 'treatment.dart';
 part 'regime.freezed.dart';
 part 'regime.g.dart';
 
-/// Catalog key is `(code, person_type)`; e.g. 626 exists as RESICO PF and RESICO PM. `treatment` is the support level. `incompatible_with` is symmetric (if A lists B, B lists A) and only applies to overlapping period windows; an absent pair is allowed.
+/// Catalog key is `(code, person_type)`; e.g. 626 exists as RESICO PF and RESICO PM. `treatment` is the support level; `income_basis` is the date an income of the regime books on (the single source; `TaxpayerRegime` embeds the same value). `incompatible_with` is symmetric (if A lists B, B lists A) and only applies to overlapping period windows; an absent pair is allowed.
 @Freezed()
 abstract class Regime with _$Regime {
   const factory Regime({
@@ -22,6 +23,7 @@ abstract class Regime with _$Regime {
     required String name,
     @JsonKey(name: 'person_type') required PersonType personType,
     required Treatment treatment,
+    @JsonKey(name: 'income_basis') required IncomeBasis incomeBasis,
 
     /// Plain-language explanation for a partial or informational regime; `null` for full.
     @JsonKey(includeIfNull: true) required String? explanation,
