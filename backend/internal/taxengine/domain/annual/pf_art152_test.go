@@ -431,6 +431,30 @@ func TestPFArt152BalanceKinds(t *testing.T) {
 	}
 }
 
+// TestPFArt152BalanceIsTheShownISRLessTheCredits is the ANN-16 regression
+// (MODULE-annual §2.7 step 9: balance = ISR − credits): a salary of
+// 300,009.95 has an exact ISR of 41,422.035, shown 41,422.04. When the
+// employer withheld exactly that, the balance is cero; it was a favor of
+// 0.01 because the credits were subtracted from the unrounded ISR (the
+// half centavo then rounded away from zero, past it).
+func TestPFArt152BalanceIsTheShownISRLessTheCredits(t *testing.T) {
+	in := annual.PFYear{
+		FiscalYear:       2026,
+		Regimes:          []annual.RegimeYear{{Regime: art152Salary}},
+		SalaryStatements: []annual.SalaryStatement{art152Constancia(pesos(t, "300009.95"), 0, pesos(t, "41422.04"))},
+	}
+
+	got := art152Compute(t, in, art152Payments{})
+
+	isr := art152Line(t, got.Section.Lines, annual.LineArt152ISR)
+	require.Equal(t, money.Exact(41_422_035_000), isr.Exact, "the case needs a half-centavo ISR")
+	assert.Equal(t, pesos(t, "41422.04"), got.Section.Tax.ISR)
+	assert.Equal(t, annual.Balance{Kind: annual.BalanceCero}, got.Section.Tax.Balance)
+	assert.Zero(t, art152Line(t, got.Section.Lines, annual.LineArt152Balance).Amount)
+	assert.NotContains(t, art152Codes(got.Section.Lines), domain.LineCode(domain.LabelRoundingAdjustment),
+		"ISR − credits needs no adjustment")
+}
+
 // TestPFArt152CapOnRESICOIncome: RESICO income stays out of the global
 // cap's total income (OQ-A4) and raises its CPA topic.
 func TestPFArt152CapOnRESICOIncome(t *testing.T) {

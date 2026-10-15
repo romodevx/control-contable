@@ -13,7 +13,11 @@ import (
 //
 // It keeps a running value. Input, Lookup and Scale start a new running
 // value (an anchor); Add, Subtract and AddProduct change it; Result closes a
-// subtotal and the running value carries on from it. Each line shows its
+// subtotal and the running value carries on from it. ResultRounded and
+// ScaleRounded are the one exception to "the running value stays exact":
+// they carry on from the figure as shown, for a figure later steps are
+// defined against as the user sees it (the annual ISR the credits are
+// subtracted from, MODULE-annual §2.7). Both round once, with Exact.Round. Each line shows its
 // value rounded to the centavo while the running value stays exact, so at a
 // Result the shown lines since the last anchor may miss the rounded result
 // by a centavo or two: the Ledger then appends a rounding_adjustment line
@@ -100,6 +104,15 @@ func (l *Ledger) Scale(s Step, r money.Rate) {
 	}
 }
 
+// ScaleRounded is Scale for a product later steps take as shown, such as
+// the RESICO annual ISR the payments are subtracted from (MODULE-annual
+// §2.7): the line shows the exact product, the running value starts from
+// it rounded to the centavo.
+func (l *Ledger) ScaleRounded(s Step, r money.Rate) {
+	l.Scale(s, r)
+	l.carryShown(s)
+}
+
 // Lookup finds base's row in table and starts a new running value from the
 // row's fixed fee: a lookup line naming the row. It returns the bracket, so
 // the strategy can AddProduct its excess times its rate; the zero Bracket
@@ -140,6 +153,34 @@ func (l *Ledger) Result(s Step) money.Exact {
 	l.append(l.line(s, OpResult, l.running, 0, 0))
 	l.shown = rounded
 	return l.running
+}
+
+// ResultRounded closes a figure that later steps take as shown, such as
+// the annual ISR the credits are subtracted from (MODULE-annual §2.7:
+// balance = ISR − credits): like Result, but the running value carries on
+// from the rounded result, which it returns. Without it a half centavo of
+// the exact value could round a later result past the figure (an ISR of
+// 100.005 shown 100.01, less 100.01 paid, would be −0.01).
+func (l *Ledger) ResultRounded(s Step) money.Exact {
+	l.Result(s)
+	l.carryShown(s)
+	if l.err != nil {
+		return 0
+	}
+	return l.running
+}
+
+// carryShown moves the running value to the figure shown for it (the
+// last line's rounded value), so later steps start from what the user
+// sees. A centavo rounded up past Exact's range is ErrOverflow.
+func (l *Ledger) carryShown(s Step) {
+	if l.err != nil {
+		return
+	}
+	shown, err := l.shown.Exact()
+	if !l.fail(s, err) {
+		l.running = shown
+	}
 }
 
 // Info records a fact with no arithmetic ("Retención definitiva"); it needs
