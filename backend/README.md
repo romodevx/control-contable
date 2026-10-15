@@ -81,7 +81,9 @@ SUPERUSER or BYPASSRLS role, or when the role cannot be verified).
   shutdown. A panic is recovered and logged; logs carry the job name, outcome and duration only.
 - **Shutdown** (SIGINT/SIGTERM) cancels running jobs, waits for them, then unlocks.
 - Jobs stay idempotent: two instances may briefly both act as leader between a leader's
-  session dying and its next heartbeat. No production job is registered yet (M9 adds them).
+  session dying and its next heartbeat. Production jobs: `records_purge` (hourly, whatever the
+  flags say; [runbook](../docs/runbooks/records-purge.md)) and `reminders` (every 5 minutes, a
+  no-op while `module_reminders` is OFF; [runbook](../docs/runbooks/reminders.md)).
 
 ### Local database
 

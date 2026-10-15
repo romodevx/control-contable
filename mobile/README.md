@@ -308,7 +308,8 @@ Builds and tests never need the files.
 
 **Never commit the files** (public repo, GitGuardian): `**/google-services.json` and
 `**/GoogleService-Info.plist` are git-ignored and `test/platform/firebase_config_test.dart`
-fails if one appears in the tree. CI writes them from secrets before building.
+fails if one appears in the tree. The release pipeline will write them from the secret manager
+before building (REL-04, not wired yet); per-environment setup: [reminders runbook §4](../docs/runbooks/reminders.md#4-app-config-files-per-flavor).
 
 | Platform | Where the file goes | Notes |
 |---|---|---|
