@@ -220,12 +220,13 @@ void main() {
       ),
     );
 
-    await _reveal(tester, find.text('Constancia de sueldos'));
-    await tester.tap(find.text('Constancia de sueldos'));
-    await tester.pumpAndSettle();
+    final named = find.text('Constancia de sueldos');
+    await _reveal(tester, named);
+    expect(find.text('Falta:'), findsOneWidget);
+    // Its screen ships in ANN-20: named, never a link to a dead end.
     expect(
-      harness.location,
-      AnnualRoutes.salaryStatements(fixtureTaxpayerId, 2026),
+      find.ancestor(of: named, matching: find.byType(ListTile)),
+      findsNothing,
     );
   });
 

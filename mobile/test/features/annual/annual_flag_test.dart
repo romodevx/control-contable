@@ -27,10 +27,15 @@ final List<String> _locations = [
     2026,
     AnnualComputedSectionKind.pfArt152,
   ),
-  AnnualRoutes.personalDeductions(fixtureTaxpayerId, 2026),
-  AnnualRoutes.salaryStatements(fixtureTaxpayerId, 2026),
-  AnnualRoutes.annualInputs(fixtureTaxpayerId, 2026),
-  AnnualRoutes.filedPayments(fixtureTaxpayerId, 2026, '612'),
+];
+
+/// Where ANN-19..21 will capture the annual inputs: no screen yet, so no
+/// placeholder either (a deep link is not found, never a dead end).
+const List<String> _unshippedInputs = [
+  '/anual/$fixtureTaxpayerId/2026/deducciones',
+  '/anual/$fixtureTaxpayerId/2026/constancias',
+  '/anual/$fixtureTaxpayerId/2026/datos',
+  '/anual/$fixtureTaxpayerId/2026/pagos/612',
 ];
 
 /// `module_annual` OFF hides every annual surface (the server's 404 is the
@@ -48,10 +53,6 @@ void main() {
       unorderedEquals([
         '/anual',
         '/anual/:taxpayerId/:ejercicio/secciones/:seccion',
-        '/anual/:taxpayerId/:ejercicio/deducciones',
-        '/anual/:taxpayerId/:ejercicio/constancias',
-        '/anual/:taxpayerId/:ejercicio/datos',
-        '/anual/:taxpayerId/:ejercicio/pagos/:regimeCode',
       ]),
     );
   });
@@ -90,6 +91,18 @@ void main() {
       expect(harness.location, location);
       expect(find.text('Página no encontrada'), findsNothing);
       expect(find.byType(Scaffold), findsWidgets);
+    }
+  });
+
+  testWidgets('on: an input location is not found until its screen ships', (
+    tester,
+  ) async {
+    await harness.pump(tester, location: null);
+    for (final location in _unshippedInputs) {
+      harness.container.read(appRouterProvider).go(location);
+      await tester.pumpAndSettle();
+
+      expect(harness.location, AppRoutes.notFound, reason: location);
     }
   });
 }

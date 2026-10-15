@@ -368,7 +368,8 @@ void main() {
         'Base de PTU',
         'PTU a repartir',
         r'$150,000.00',
-        'Coeficiente de utilidad sugerido para 2027: 0.1380',
+        'Coeficiente de utilidad sugerido para tus pagos de 2027: 0.1380. '
+            'Confírmalo con tu contador.',
         'Sin validar por un contador',
       ]) {
         expect(
@@ -449,50 +450,59 @@ void main() {
       missingJson('donation', 'Donativos', 'personal_deductions'),
     ];
 
-    final expected = <String, String>{
-      'Constancia de sueldos': AnnualRoutes.salaryStatements(
-        fixtureTaxpayerId,
-        2026,
+    Future<void> pumpIncomplete(WidgetTester tester) => harness.pump(
+      tester,
+      reply: _estimate(
+        disclaimers: [annualEstimateDisclaimer, annualIncompleteDisclaimer],
+        sections: [sectionJson(status: 'incomplete', missingInputs: missing)],
       ),
-      'Ingresos acumulables del año anterior': AnnualRoutes.annualInputs(
-        fixtureTaxpayerId,
-        2026,
-      ),
-      'Pagos provisionales presentados': AnnualRoutes.filedPayments(
-        fixtureTaxpayerId,
-        2026,
-        '612',
-      ),
-      'PTU pagada': TaxEngineRoutes.taxInputs(
-        fixtureTaxpayerId,
-        '612',
-        fiscalYear: 2026,
-        field: 'ptu_paid',
-      ),
-      'Donativos': AnnualRoutes.personalDeductions(fixtureTaxpayerId, 2026),
-    };
+    );
 
-    for (final MapEntry(key: label, value: location) in expected.entries) {
-      testWidgets('"Falta: $label" opens its screen', (tester) async {
-        await harness.pump(
-          tester,
-          reply: _estimate(
-            disclaimers: [annualEstimateDisclaimer, annualIncompleteDisclaimer],
-            sections: [
-              sectionJson(status: 'incomplete', missingInputs: missing),
-            ],
-          ),
-        );
-        final cta = _inSection('pf_art152', find.text(label));
-        await _reveal(tester, cta);
+    // ANN-19..21 ship these screens: until then the input is named, never
+    // a link to a dead end (MODULE-annual §8 has no "próximamente").
+    for (final label in [
+      'Constancia de sueldos',
+      'Ingresos acumulables del año anterior',
+      'Pagos provisionales presentados',
+      'Donativos',
+    ]) {
+      testWidgets('"Falta: $label" is named, without a link until its '
+          'screen ships', (tester) async {
+        await pumpIncomplete(tester);
+        final named = _inSection('pf_art152', find.text(label));
+        await _reveal(tester, named);
 
         expect(_inSection('pf_art152', find.text('Falta:')), findsOneWidget);
-        await tester.tap(cta);
+        expect(
+          find.ancestor(of: named, matching: find.byType(ListTile)),
+          findsNothing,
+        );
+        await tester.tap(named, warnIfMissed: false);
         await tester.pumpAndSettle();
-
-        expect(harness.location, location);
+        expect(harness.location, AnnualRoutes.estimate);
       });
     }
+
+    testWidgets('"Falta: PTU pagada" opens the tax-inputs form at its field', (
+      tester,
+    ) async {
+      await pumpIncomplete(tester);
+      final cta = _inSection('pf_art152', find.text('PTU pagada'));
+      await _reveal(tester, cta);
+
+      await tester.tap(cta);
+      await tester.pumpAndSettle();
+
+      expect(
+        harness.location,
+        TaxEngineRoutes.taxInputs(
+          fixtureTaxpayerId,
+          '612',
+          fiscalYear: 2026,
+          field: 'ptu_paid',
+        ),
+      );
+    });
 
     testWidgets('the months of a missing payment are named', (tester) async {
       await harness.pump(
@@ -512,90 +522,14 @@ void main() {
     });
   });
 
-  group('datos para tu anual', () {
-    testWidgets('PF: deductions and constancias with counters, payments per '
-        'regime', (tester) async {
-      await harness.pump(tester);
-      final block = find.byKey(const ValueKey('annual-inputs'));
-      await _reveal(tester, block);
+  testWidgets('no "Datos para tu anual" until its screens ship (ANN-19..21): '
+      'no row to a dead end, nothing extra read', (tester) async {
+    await harness.pump(tester);
+    await _reveal(tester, _section('pf_art152'));
 
-      Finder inBlock(String text) =>
-          find.descendant(of: block, matching: find.text(text));
-      expect(inBlock('Datos para tu anual'), findsOneWidget);
-      expect(inBlock('Deducciones personales'), findsOneWidget);
-      expect(inBlock('3 registradas'), findsOneWidget);
-      expect(inBlock('Constancias de sueldos'), findsOneWidget);
-      expect(inBlock('1 registrada'), findsOneWidget);
-      expect(inBlock('Pagos provisionales presentados'), findsOneWidget);
-      expect(inBlock('Régimen 612'), findsOneWidget);
-
-      await tester.tap(inBlock('Deducciones personales'));
-      await tester.pumpAndSettle();
-      expect(
-        harness.location,
-        AnnualRoutes.personalDeductions(fixtureTaxpayerId, 2026),
-      );
-    });
-
-    testWidgets('PM: only the provisional payments', (tester) async {
-      harness.personType = PersonType.moral;
-      await harness.pump(
-        tester,
-        reply: _estimate(
-          personType: 'moral',
-          headline: ['pm_601'],
-          sections: [pm601SectionJson()],
-        ),
-      );
-      final block = find.byKey(const ValueKey('annual-inputs'));
-      await _reveal(tester, block);
-
-      expect(
-        find.descendant(
-          of: block,
-          matching: find.text('Deducciones personales'),
-        ),
-        findsNothing,
-      );
-      expect(
-        find.descendant(of: block, matching: find.text('Régimen 601')),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('counters that fail to load are left out', (tester) async {
-      harness.repository.counts = const ApiUnreachable();
-      await harness.pump(tester);
-      final block = find.byKey(const ValueKey('annual-inputs'));
-      await _reveal(tester, block);
-
-      expect(
-        find.descendant(
-          of: block,
-          matching: find.text('Deducciones personales'),
-        ),
-        findsOneWidget,
-      );
-      expect(find.textContaining('registrada'), findsNothing);
-    });
-
-    testWidgets('read-only: says what still works', (tester) async {
-      harness.readOnly = true;
-      await harness.pump(tester);
-      final notice = find.byKey(const ValueKey('annual-read-only'));
-      await _reveal(tester, notice);
-
-      expect(
-        find.descendant(
-          of: notice,
-          matching: find.text(
-            'Tu periodo de prueba terminó: puedes consultar esta estimación, '
-            'pero capturar o cambiar datos requiere un plan.',
-          ),
-        ),
-        findsOneWidget,
-      );
-    });
+    expect(find.byKey(const ValueKey('annual-inputs')), findsNothing);
+    expect(find.text('Datos para tu anual'), findsNothing);
+    expect(find.byIcon(Icons.chevron_right), findsNothing);
   });
 
   group('disclaimers', () {
