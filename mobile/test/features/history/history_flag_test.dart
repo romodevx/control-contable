@@ -45,6 +45,22 @@ void main() {
     expect(historyEntry(), findsOneWidget);
   });
 
+  // Device walk 2026-10-15: records saved from inside History (its
+  // "Registrar ingreso", "Ver ingresos" → edit) left Home's dashboard
+  // stale ("Aún no hay ingresos…", the trial count unspent) on return.
+  testWidgets('returning from History reads the dashboard again', (
+    tester,
+  ) async {
+    await harness.pump(tester, modules: {...homeModules, AppModule.history});
+    expect(harness.repository.calls, hasLength(1));
+
+    await tester.tap(historyEntry());
+    await tester.pumpAndSettle();
+    await harness.back(tester);
+
+    expect(harness.repository.calls, hasLength(2));
+  });
+
   // M8-07 QA: the entry lives in Home's app bar, so it must follow
   // module_history alone, also on the placeholder Home (dashboard OFF).
   final placeholderHome = homeModules.difference({AppModule.dashboard});

@@ -4,6 +4,7 @@ import 'package:control_contable/core/theme/app_spacing.dart';
 import 'package:control_contable/features/annual/presentation/annual_entry_button.dart';
 import 'package:control_contable/features/auth/presentation/account_button.dart';
 import 'package:control_contable/features/auth/presentation/sign_out_button.dart';
+import 'package:control_contable/features/dashboard/application/dashboard.dart';
 import 'package:control_contable/features/dashboard/presentation/dashboard_home.dart';
 import 'package:control_contable/features/expenses/presentation/expenses_entry_button.dart';
 import 'package:control_contable/features/history/presentation/history_entry_button.dart';
@@ -15,6 +16,7 @@ import 'package:control_contable/features/taxpayers/presentation/onboarding_laun
 import 'package:control_contable/features/taxpayers/presentation/taxpayer_switcher.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Home. With `module_dashboard` on it is the dashboard of the active
 /// taxpayer (M6); off, the previous placeholder home stays. Offers
@@ -35,7 +37,7 @@ class HomeScreen extends StatelessWidget {
         title: ActiveTaxpayerSwitcher(fallback: Text(l10n.navHome)),
         actions: const [
           FlagGate(module: AppModule.annual, child: AnnualEntryButton()),
-          FlagGate(module: AppModule.history, child: HistoryEntryButton()),
+          FlagGate(module: AppModule.history, child: _HomeHistoryEntry()),
           FlagGate(module: AppModule.auth, child: AccountButton()),
           FlagGate(module: AppModule.auth, child: SignOutButton()),
         ],
@@ -47,6 +49,16 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+/// "Historial", reading the dashboard again on return: History's links
+/// open the record forms and lists, so Home's figures may be stale.
+class _HomeHistoryEntry extends ConsumerWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) =>
+      HistoryEntryButton(onReturn: () => ref.invalidate(dashboardProvider));
 }
 
 /// The home before the dashboard: entry buttons into each module, and the
