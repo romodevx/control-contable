@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:control_contable/api/generated/models/counterparty_kind.dart';
-import 'package:control_contable/api/generated/models/counterparty_type.dart';
 import 'package:control_contable/api/generated/models/income.dart';
 import 'package:control_contable/api/generated/models/income_create.dart';
 import 'package:control_contable/api/generated/models/income_defaults.dart';
@@ -30,11 +29,22 @@ int _ids = 0;
 String nextIncomeId() =>
     '0192f0c4-0000-4000-8000-${(++_ids).toString().padLeft(12, '0')}';
 
-/// An income as the server answers it.
+/// The derivation of an income nobody withholds from (a persona moral
+/// billing a persona moral): ISR-2, IVA-8.
+Withholding _nothingWithheld(int netCents) => withholding(
+  netCents: netCents,
+  explanations: const {
+    'ISR-2': 'Como persona moral, no te retienen ISR en esta operación.',
+    'IVA-8': 'Tampoco te retienen IVA en esta operación.',
+  },
+);
+
+/// An income as the server answers it: by default billed to a persona
+/// moral, with nothing withheld (the derivation the facts carry is the
+/// caller's when it matters).
 Income income({
   String? id,
   String regime = '612',
-  CounterpartyType counterparty = CounterpartyType.personaMoral,
   int amountCents = 1000000,
   IvaRate ivaRate = IvaRate.rate16,
   int ivaCents = 160000,
@@ -45,16 +55,15 @@ Income income({
   String? description = 'Diseño de logotipo',
   String? cfdiUuid,
   List<Warning> warnings = const [],
-  CounterpartyKind? counterpartyKind,
-  OperationKind? operationKind,
-  bool? residentialRent,
-  bool? viaPlatform,
+  CounterpartyKind counterpartyKind = CounterpartyKind.pm,
+  OperationKind operationKind = OperationKind.professionalServices,
+  bool residentialRent = false,
+  bool viaPlatform = false,
   Withholding? withholding,
 }) => Income(
   id: id ?? nextIncomeId(),
   taxpayerId: incomesTaxpayerId,
   regimeCode: regime,
-  counterpartyType: counterparty,
   amountCents: amountCents,
   ivaRate: ivaRate,
   ivaCents: ivaCents,
@@ -74,7 +83,11 @@ Income income({
   operationKind: operationKind,
   residentialRent: residentialRent,
   viaPlatform: viaPlatform,
-  withholding: withholding,
+  withholding:
+      withholding ??
+      _nothingWithheld(
+        amountCents + ivaCents - isrWithheldCents - ivaWithheldCents,
+      ),
 );
 
 /// The withholding facts of the last income in a regime
@@ -101,10 +114,6 @@ const IncomeDefaults moralDefaults612 = IncomeDefaults(
     IvaRate.exempt,
   ],
   suggestedIvaRate: IvaRate.rate16,
-  isrWithholdingAllowed: true,
-  isrWithholdingRate: '0.1',
-  ivaWithholdingAllowed: true,
-  ivaWithholdingRate: '0.666667',
   platformActivity: null,
   lastUsed: IncomeLastUsed(
     counterpartyKind: CounterpartyKind.pm,
@@ -123,10 +132,6 @@ const IncomeDefaults noWithholdingDefaults = IncomeDefaults(
     IvaRate.exempt,
   ],
   suggestedIvaRate: IvaRate.rate16,
-  isrWithholdingAllowed: false,
-  isrWithholdingRate: null,
-  ivaWithholdingAllowed: false,
-  ivaWithholdingRate: null,
   platformActivity: null,
   lastUsed: IncomeLastUsed(
     counterpartyKind: CounterpartyKind.pfNoActivityOrPublic,
@@ -256,17 +261,16 @@ class FakeIncomesRepository implements IncomesRepository {
       id: income.id ?? nextIncomeId(),
       taxpayerId: taxpayerId,
       regimeCode: income.regimeCode,
-      // ignore: deprecated_member_use_from_same_package, removed by WH-06 (ADR-0008).
-      counterpartyType: income.counterpartyType,
       counterpartyKind: income.counterpartyKind,
-      operationKind: income.operationKind,
-      residentialRent: income.residentialRent,
-      viaPlatform: income.viaPlatform,
+      operationKind: income.operationKind ?? OperationKind.professionalServices,
+      residentialRent: income.residentialRent ?? false,
+      viaPlatform: income.viaPlatform ?? false,
       amountCents: income.amountCents,
       ivaRate: income.ivaRate,
       ivaCents: income.ivaCents,
-      isrWithheldCents: income.isrWithheldCents ?? 0,
-      ivaWithheldCents: income.ivaWithheldCents ?? 0,
+      isrWithheldCents: 0,
+      ivaWithheldCents: 0,
+      withholding: _nothingWithheld(income.amountCents + income.ivaCents),
       invoicedOn: income.invoicedOn,
       collectedOn: income.collectedOn,
       platformActivity: income.platformActivity,

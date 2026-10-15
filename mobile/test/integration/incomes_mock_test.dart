@@ -9,7 +9,6 @@ library;
 import 'dart:io';
 
 import 'package:control_contable/api/generated/models/counterparty_kind.dart';
-import 'package:control_contable/api/generated/models/counterparty_type.dart';
 import 'package:control_contable/api/generated/models/income_create.dart';
 import 'package:control_contable/api/generated/models/iva_rate.dart';
 import 'package:control_contable/api/generated/models/operation_kind.dart';
@@ -81,7 +80,6 @@ void main() {
             income: IncomeCreate(
               id: newUuidV4(),
               regimeCode: '612',
-              counterpartyType: CounterpartyType.personaMoral,
               counterpartyKind: CounterpartyKind.pm,
               operationKind: OperationKind.professionalServices,
               amountCents: 1000000,

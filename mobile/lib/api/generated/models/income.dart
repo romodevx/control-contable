@@ -7,7 +7,6 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'business_date.dart';
 import 'cfdi_uuid.dart';
 import 'counterparty_kind.dart';
-import 'counterparty_type.dart';
 import 'iva_rate.dart';
 import 'non_negative_cents.dart';
 import 'operation_kind.dart';
@@ -22,16 +21,22 @@ import 'withholding.dart';
 part 'income.freezed.dart';
 part 'income.g.dart';
 
-/// `withholding` is the derived withholding (read-only, ADR-0008): sent for every income written since 0.11.3 (WH-06), absent only on a legacy row until the WH-08 backfill derives it. (A `$ref` keeps no sibling description: the strict response validator would drop the referenced properties.)
+/// `withholding` is the derived withholding (read-only, ADR-0008). **0.12.0 (WH-11, ADR-0008 amendment):** `counterparty_type` is removed; `counterparty_kind`, `operation_kind`, `residential_rent`, `via_platform` and `withholding` are required (every income written since 0.11.3 has them, and the WH-08 backfill derives them for older rows before this version is deployed). (A `$ref` keeps no sibling description: the strict response validator would drop the referenced properties.)
 @Freezed()
 abstract class Income with _$Income {
   const factory Income({
     required Uuid id,
     @JsonKey(name: 'taxpayer_id') required Uuid taxpayerId,
     @JsonKey(name: 'regime_code') required RegimeCode regimeCode,
-    @JsonKey(name: 'counterparty_type')
-    @Deprecated('This is marked as deprecated')
-    required CounterpartyType counterpartyType,
+
+    /// Who was billed.
+    @JsonKey(name: 'counterparty_kind')
+    required CounterpartyKind counterpartyKind,
+
+    /// As sent, or the default stored when the question was hidden (last used in the regime, else the regime default).
+    @JsonKey(name: 'operation_kind') required OperationKind operationKind,
+    @JsonKey(name: 'residential_rent') required bool residentialRent,
+    @JsonKey(name: 'via_platform') required bool viaPlatform,
     @JsonKey(name: 'amount_cents') required PositiveCents amountCents,
     @JsonKey(name: 'iva_rate') required IvaRate ivaRate,
     @JsonKey(name: 'iva_cents') required NonNegativeCents ivaCents,
@@ -43,6 +48,7 @@ abstract class Income with _$Income {
     /// Read-only mirror of `withholding.iva_cents` (kept for list totals and the estimate).
     @JsonKey(name: 'iva_withheld_cents')
     required NonNegativeCents ivaWithheldCents,
+    required Withholding withholding,
     @JsonKey(includeIfNull: true, name: 'invoiced_on')
     required BusinessDate? invoicedOn,
     @JsonKey(includeIfNull: true, name: 'collected_on')
@@ -60,22 +66,6 @@ abstract class Income with _$Income {
     required List<Warning> warnings,
     @JsonKey(name: 'created_at') required DateTime createdAt,
     @JsonKey(name: 'updated_at') required DateTime updatedAt,
-
-    /// Who was billed. Present on every income written since 0.11.3 (WH-06); a legacy row gets it from the WH-08 backfill.
-    @JsonKey(includeIfNull: false, name: 'counterparty_kind')
-    CounterpartyKind? counterpartyKind,
-
-    /// As sent, or the default stored when the question was hidden (last used in the regime, else the regime default). Present on every income written since 0.11.3.
-    @JsonKey(includeIfNull: false, name: 'operation_kind')
-    OperationKind? operationKind,
-
-    /// Always sent since 0.11.3.
-    @JsonKey(includeIfNull: false, name: 'residential_rent')
-    bool? residentialRent,
-
-    /// Always sent since 0.11.3.
-    @JsonKey(includeIfNull: false, name: 'via_platform') bool? viaPlatform,
-    @JsonKey(includeIfNull: false) Withholding? withholding,
   }) = _Income;
 
   factory Income.fromJson(Map<String, Object?> json) => _$IncomeFromJson(json);

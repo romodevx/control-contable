@@ -1,5 +1,4 @@
 import 'package:control_contable/api/generated/models/counterparty_kind.dart';
-import 'package:control_contable/api/generated/models/counterparty_type.dart';
 import 'package:control_contable/api/generated/models/income.dart';
 import 'package:control_contable/api/generated/models/income_last_used.dart';
 import 'package:control_contable/api/generated/models/operation_kind.dart';
@@ -46,7 +45,7 @@ class IncomeWithholdingFacts {
       ChoiceFieldController(
         label: labels.counterpartyKind,
         keepForNext: true,
-        initialValue: _storedKind(stored)?.json,
+        initialValue: stored?.counterpartyKind.json,
       ),
     );
     operationKind = form.add(
@@ -57,7 +56,7 @@ class IncomeWithholdingFacts {
         // The regime default is the server's (`last_used`), never a copy
         // here: until it arrives (or if it cannot), Q2 is unanswered and
         // omitted, so the server applies the same default.
-        initialValue: stored?.operationKind?.json,
+        initialValue: stored?.operationKind.json,
       ),
     );
     residentialRent = form.add(
@@ -73,11 +72,7 @@ class IncomeWithholdingFacts {
         label: labels.viaPlatform,
         isRequired: false,
         keepForNext: true,
-        initialValue:
-            (stored?.viaPlatform ??
-                    (_wasPlatform(stored) ||
-                        (stored == null && regime == platformRegime)))
-                .choice,
+        initialValue: (stored?.viaPlatform ?? regime == platformRegime).choice,
       ),
     );
     for (final field in _all) {
@@ -124,23 +119,6 @@ class IncomeWithholdingFacts {
     'via_platform': viaPlatform,
   };
 
-  static bool _wasPlatform(Income? stored) =>
-      // ignore: deprecated_member_use_from_same_package, legacy rows until WH-08 backfills them.
-      stored?.counterpartyType == CounterpartyType.plataforma;
-
-  static CounterpartyKind? _storedKind(Income? stored) {
-    if (stored == null) return null;
-    if (stored.counterpartyKind case final kind?) return kind;
-    // ignore: deprecated_member_use_from_same_package, legacy rows until WH-08 backfills them.
-    return switch (stored.counterpartyType) {
-      CounterpartyType.personaFisica => CounterpartyKind.pfWithActivity,
-      CounterpartyType.publicoGeneral => CounterpartyKind.pfNoActivityOrPublic,
-      CounterpartyType.personaMoral ||
-      CounterpartyType.plataforma => CounterpartyKind.pm,
-      CounterpartyType.$unknown => null,
-    };
-  }
-
   /// Who was billed, once answered.
   CounterpartyKind? get kind {
     final value = counterpartyKind.value;
@@ -181,19 +159,6 @@ class IncomeWithholdingFacts {
 
   /// `via_platform` as sent: only where it may be (625 and persona moral).
   bool? get viaPlatformSent => asksViaPlatform ? isViaPlatform : null;
-
-  /// The deprecated `counterparty_type` 0.10.0 still requires (WH-06 drops
-  /// it), mapped from the new facts.
-  CounterpartyType get legacyType {
-    if (isViaPlatform) return CounterpartyType.plataforma;
-    return switch (kind) {
-      CounterpartyKind.pm ||
-      CounterpartyKind.govFederal ||
-      CounterpartyKind.govStateMunicipal => CounterpartyType.personaMoral,
-      CounterpartyKind.pfWithActivity => CounterpartyType.personaFisica,
-      _ => CounterpartyType.publicoGeneral,
-    };
-  }
 
   /// The server's `last_used` for the regime: each question the user has
   /// not answered moves to it.

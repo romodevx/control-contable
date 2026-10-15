@@ -214,9 +214,14 @@ void main() {
       expect(sent.amountCents, 1000000);
       expect(sent.ivaRate, IvaRate.rate16);
       expect(sent.ivaCents, 160000);
-      // Never typed nor sent: the server derives them (ADR-0008).
-      expect(sent.isrWithheldCents, isNull);
-      expect(sent.ivaWithheldCents, isNull);
+      // Only facts travel: no withholding amount (ADR-0008) and no
+      // counterparty_type (removed in 0.12.0, WH-11).
+      expect(
+        sent.toJson().keys,
+        isNot(
+          anyOf(contains('isr_withheld_cents'), contains('counterparty_type')),
+        ),
+      );
       expect(sent.collectedOn, '2026-10-13');
       expect(sent.description, 'Diseño de logotipo');
       expect(harness.location, IncomesRoutes.list);

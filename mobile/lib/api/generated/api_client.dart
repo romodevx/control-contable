@@ -16,7 +16,7 @@ import 'clients/history_client.dart';
 import 'clients/annual_client.dart';
 import 'clients/reminders_client.dart';
 
-/// Control Contable API `v0.11.3`.
+/// Control Contable API `v0.12.0`.
 ///
 /// Monthly IVA and provisional ISR estimates for Mexican taxpayers.
 ///
@@ -48,7 +48,7 @@ class ApiClient {
   final Dio _dio;
   final String? _baseUrl;
 
-  static String get version => '0.11.3';
+  static String get version => '0.12.0';
 
   PlatformClient? _platform;
   AuthClient? _auth;

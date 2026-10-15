@@ -1,5 +1,4 @@
 import 'package:control_contable/api/generated/clients/incomes_client.dart';
-import 'package:control_contable/api/generated/models/counterparty_type.dart';
 import 'package:control_contable/api/generated/models/income.dart';
 import 'package:control_contable/api/generated/models/income_create.dart';
 import 'package:control_contable/api/generated/models/income_defaults.dart';
@@ -114,8 +113,6 @@ class ApiIncomesRepository implements IncomesRepository {
     () => _client.getIncomeDefaults(
       taxpayerId: taxpayerId,
       regime: regime,
-      // Still required by 0.10.0 and ignored by `last_used`; WH-06 drops it.
-      counterpartyType: CounterpartyType.personaFisica,
       onValue: on,
       platformActivity: platformActivity,
     ),

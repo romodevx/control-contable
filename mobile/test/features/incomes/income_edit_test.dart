@@ -1,8 +1,6 @@
 import 'package:control_contable/api/generated/models/counterparty_kind.dart';
-import 'package:control_contable/api/generated/models/counterparty_type.dart';
 import 'package:control_contable/api/generated/models/error_code.dart';
 import 'package:control_contable/api/generated/models/iva_rate.dart';
-import 'package:control_contable/api/generated/models/operation_kind.dart';
 import 'package:control_contable/api/generated/models/withholder.dart';
 import 'package:control_contable/core/access/read_only_access.dart';
 import 'package:control_contable/core/network/api_failure.dart';
@@ -40,7 +38,7 @@ void main() {
     WidgetTester tester, {
     IvaRate ivaRate = IvaRate.rate16,
     int ivaCents = 160000,
-    CounterpartyKind? counterpartyKind,
+    CounterpartyKind counterpartyKind = CounterpartyKind.pm,
   }) async {
     harness.incomes.incomes.add(
       income(
@@ -50,9 +48,6 @@ void main() {
         ivaRate: ivaRate,
         ivaCents: ivaCents,
         counterpartyKind: counterpartyKind,
-        operationKind: counterpartyKind == null
-            ? null
-            : OperationKind.professionalServices,
         withholding: withholding(
           isrCents: 100000,
           ivaCents: 106667,
@@ -82,7 +77,7 @@ void main() {
         findsOneWidget,
       );
       expect(harness.incomes.previewRequests, isEmpty);
-      // A legacy income (no facts yet) starts at its old payer type.
+      // The stored facts preselect the questions.
       expect(chosenIn(tester, _q1), CounterpartyKind.pm.json);
       await tapText(tester, _more);
       expect(_textOf(tester, _description), 'Diseño de logotipo');
@@ -90,7 +85,7 @@ void main() {
 
     testWidgets('changing who was billed re-derives it and sends the new '
         'facts (US-W9)', (tester) async {
-      await openEdit(tester, counterpartyKind: CounterpartyKind.pm);
+      await openEdit(tester);
 
       await chooseIn(
         tester,
@@ -109,10 +104,7 @@ void main() {
       await tapText(tester, 'Guardar');
 
       expect(harness.incomes.patches, [
-        {
-          'counterparty_type': CounterpartyType.personaFisica.json,
-          'counterparty_kind': CounterpartyKind.pfWithActivity.json,
-        },
+        {'counterparty_kind': CounterpartyKind.pfWithActivity.json},
       ]);
     });
 
