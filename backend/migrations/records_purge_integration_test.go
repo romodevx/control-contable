@@ -341,6 +341,52 @@ FROM email_verifications ORDER BY 1`))
 	assert.Equal(t, 1, openWindows)
 }
 
+// Purging a parent whose successor stays (the successor is not yet past the cutoff)
+// runs the self FK's ON DELETE SET NULL (rotated_from) as the table owner: the call
+// succeeds, the successor survives with only its link cleared, and its revocation is
+// untouched (refresh_tokens_history_is_final).
+func TestPurgeSoftDeleted_ParentPurgeKeepsSuccessorAndItsHistory(t *testing.T) {
+	db := pgtest.NewDatabase(t)
+	app := db.Connect(t, pgtest.RoleApp)
+	owner := db.Connect(t, pgtest.RoleOwner)
+	worker := db.Connect(t, pgtest.RoleWorker)
+	seedUsers(t, app, userA)
+
+	const (
+		parent    = "00000000-0000-4000-8000-0000000003a1"
+		successor = "00000000-0000-4000-8000-0000000003a2"
+		family    = "00000000-0000-4000-8000-0000000004a1"
+	)
+	_, err := execAsUser(t, app, userA, insertSessionSQL, userA, "secret-"+parent, family, parent, nil)
+	require.NoError(t, err)
+	_, err = execAsUser(t, app, userA, "UPDATE refresh_tokens SET rotated_at = now() WHERE id = $1", parent)
+	require.NoError(t, err)
+	_, err = execAsUser(t, app, userA, insertSessionSQL, userA, "secret-"+successor, family, successor, parent)
+	require.NoError(t, err)
+	_, err = execAsUser(t, app, userA,
+		"UPDATE refresh_tokens SET revoked_at = now(), revoke_reason = 'reuse_detected' WHERE id = $1", successor)
+	require.NoError(t, err)
+	asOwnerWithoutForce(t, owner, purgeTargetRefreshTokens, `
+UPDATE refresh_tokens SET created_at = now() - interval '72 hours', expires_at = now() + interval '600 hours',
+                          absolute_expires_at = now() + interval '2000 hours',
+                          revoked_at = now() - interval '48 hours', revoke_reason = 'reuse_detected'
+WHERE id = $1`, parent)
+
+	counts := purge(t, worker, purgeBatch)
+	assert.Equal(t, 1, counts[purgeTargetRefreshTokens], "only the parent is past the cutoff")
+	assert.Equal(t, []string{successor}, idsOf(t, app, purgeTargetRefreshTokens, userA))
+
+	var linked bool
+	var reason string
+	require.NoError(t, pgtest.AsUser(t.Context(), app, userA, func(tx *sql.Tx) error {
+		return tx.QueryRowContext(t.Context(),
+			"SELECT rotated_from IS NOT NULL, revoke_reason FROM refresh_tokens WHERE id = $1", successor).
+			Scan(&linked, &reason)
+	}))
+	assert.False(t, linked, "the link to the purged parent is cleared")
+	assert.Equal(t, "reuse_detected", reason, "the successor's revocation is kept")
+}
+
 // Bounded batches: a call deletes at most p_batch_size rows per target, so the worker
 // loops; once drained, a re-run deletes nothing (idempotent).
 func TestPurgeSoftDeleted_BoundedBatchesAndIdempotentRerun(t *testing.T) {
