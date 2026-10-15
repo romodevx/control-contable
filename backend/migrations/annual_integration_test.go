@@ -487,10 +487,10 @@ func TestAnnualTables_NoAccessBeyondTheGrants(t *testing.T) {
 	}
 	immutable := map[string][]string{
 		personalDeductions.name: {"id", "user_id", "taxpayer_id", "person_type", "created_at", "updated_at"},
-		salaryStatements.name: {"id", "user_id", "taxpayer_id", "person_type", "fiscal_year", "created_at",
-			"updated_at"},
-		filedPayments.name: {"user_id", "taxpayer_id", "regime_code", "fiscal_year", "month", "created_at", "updated_at"},
-		annualInputs.name:  {"user_id", "taxpayer_id", "fiscal_year", "created_at", "updated_at"},
+		// fiscal_year moves since 20261017100000 (updateSalaryStatement, ANN-13).
+		salaryStatements.name: {"id", "user_id", "taxpayer_id", "person_type", "created_at", "updated_at"},
+		filedPayments.name:    {"user_id", "taxpayer_id", "regime_code", "fiscal_year", "month", "created_at", "updated_at"},
+		annualInputs.name:     {"user_id", "taxpayer_id", "fiscal_year", "created_at", "updated_at"},
 	}
 	for _, tbl := range allAnnualTables {
 		for _, col := range immutable[tbl.name] {
@@ -518,6 +518,7 @@ func TestAnnualTables_NoAccessBeyondTheGrants(t *testing.T) {
 			"UPDATE personal_deductions SET deleted_at = NULL",
 			`UPDATE salary_statements SET employer_label = 'Patrón 1', accumulable_cents = 1, exempt_cents = 1,
 			 isr_withheld_cents = 1, simultaneous = true, left_before_year_end = true, payer_not_withholding = true`,
+			"UPDATE salary_statements SET fiscal_year = 2027",
 			"DELETE FROM salary_statements",
 			"DELETE FROM annual_filed_payments WHERE regime_code = '612' AND fiscal_year = 2026",
 			`INSERT INTO annual_filed_payments (user_id, taxpayer_id, regime_code, fiscal_year, month, amount_cents)
