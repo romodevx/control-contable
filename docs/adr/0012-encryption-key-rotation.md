@@ -88,9 +88,12 @@ The sealing keys and exact settings are:
 
 ## Consequences
 
-- Rotations are performed by deploying both keys to all API and worker instances, running the
-  worker until `rows_on_old_keys` is zero for the rotating columns, then removing the previous
-  key and redeploying. The full procedure and rollback limits are in the
+- Rotations deploy in two phases: first every API and worker instance gets the new key in the
+  previous-key slot while the old key stays active (the slot means "also opens"), then the two
+  are swapped. A single deploy that adds and activates the new key at once leaves a rolling
+  window in which old API instances cannot open rows sealed by new instances or re-sealed by the
+  worker, which starts on its own. The worker then runs until `rows_on_old_keys` is zero for the
+  rotating columns, and the old key is removed with another redeploy. The full procedure and rollback limits are in the
   [key rotation runbook](../runbooks/key-rotation.md).
 - Legacy ciphertexts remain readable because their key id already identifies the original key;
   there is no bulk migration before a rotation.

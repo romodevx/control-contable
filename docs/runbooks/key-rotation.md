@@ -10,7 +10,7 @@ re-seal job. See [ADR-0012](../adr/0012-encryption-key-rotation.md) for the deci
 | Role | `cc_worker` for `key_reseal`; API and worker runtime roles for application traffic. Never `cc_owner`, a superuser, or a `BYPASSRLS` login for the job |
 | Grants | Migration `20261024100000_key_reseal.sql`: `cc_worker` executes `reseal_pending_users(smallint, uuid, integer)`, `reseal_pending_taxpayers(smallint, uuid, integer)`, `reseal_pending_devices(smallint, uuid, integer)`, and `key_usage()`. The pending functions return ids only and are owned by `cc_worker_definer`; row rewrites use per-user RLS and column grants |
 | Gate | WP3 security and tech-lead gates for this version of the worker and migration must pass before a shared-environment rotation |
-| Deploy order | Deploy active and previous keys to every API and worker instance first; then run `key_reseal`; remove the previous key only after readiness is zero and the rollback retention period has passed |
+| Deploy order | Two phases: (A) every API and worker instance learns the new key as *previous* while the old key stays active; (B) only then swap them. `key_reseal` starts on its own once a worker runs phase B. Remove the old key only after readiness is zero and the rollback retention period has passed |
 
 ## 0. Prerequisites
 
@@ -38,12 +38,27 @@ re-seal job. See [ADR-0012](../adr/0012-encryption-key-rotation.md) for the deci
 3. Choose a key id not used by the current key, for example the next unused positive id within
    the configured range. Record the id, not the key value, in the change record.
 
-## 2. Deploy both keys everywhere
+## 2. Deploy both keys everywhere, in two phases
 
-For each key being rotated, set the new key and id as active and the existing key and id as
-previous. Deploy these settings to **all API and worker instances**, and wait until all instances
-are healthy before starting re-sealing. This ensures every live API can open either ciphertext
-version while the worker writes new-key ciphertexts.
+`key_reseal` is not started by hand: every worker runs it every 15 minutes and re-seals any row
+whose key id differs from the worker's active id. A rolling deploy also runs old and new
+instances side by side for a while. If one deploy both adds the new key and makes it active,
+new API instances seal fresh writes with the new key, and a new worker starts re-sealing, while
+API instances still on the old configuration cannot open those rows (reads fail until the
+rollout ends). Avoid that window with two deploys:
+
+1. **Phase A, make the new key readable everywhere.** Keep the current key and id as active and
+   add the new key and id as *previous* (`X_PREVIOUS_KEY`, `X_PREVIOUS_KEY_ID`; the slot only
+   means "also opens", and its id may be higher than the active one). Nothing is sealed with the
+   new key yet and the job has nothing to do. Deploy to **all API and worker instances** and
+   wait until every instance runs this configuration and is healthy.
+2. **Phase B, make the new key active.** Swap the two: the new key and id become active, the old
+   key and id become previous. Deploy to all API and worker instances. Every instance, old or
+   new, can now open both versions, so the rollout is safe. While old and new workers overlap
+   they may move a few rows back and forth between the two keys; both stay readable and the
+   overlap ends with the rollout. Prefer stopping the old worker before starting the new one.
+
+The settings are:
 
 | Sealed value | Active settings | Previous settings |
 |---|---|---|
