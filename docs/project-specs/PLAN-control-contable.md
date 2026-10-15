@@ -500,7 +500,7 @@ M9-07 (FCM) and M9-09 (Flutter push) are built against fakes; live verification 
 
 | ID | Task | Owner | Deps | Est (h) | Par | Branch | Blocked by | Done |
 |---|---|---|---|---|---|---|---|---|
-| M9-01 | Contract freeze: devices, reminder-settings, tax-calendar | architect | P0-05 | 1 | — | `feature/reminders-contract` | — | [ ] |
+| M9-01 | Contract freeze: devices, reminder-settings, tax-calendar (0.13.0; ADR-0007 Amendment 1; `module_reminders` → `module_taxpayers` prerequisite) | architect | P0-05 | 1 | — | `feature/reminders-contract` | — | [x] |
 | M9-02 | Migration `devices`, `reminder_settings`, `notification_log` (RLS) + definer fns `due_reminder_users`, `claim_push_token` + isolation tests | db-sr | P0-11 | 3.5 | — | `feature/reminders-migrations` | — | [ ] |
 | M9-03 | Migration `holidays` (global) seeded 2026–2027 with sources | db-sr | P0-10 | 1.5 | — | `feature/reminders-migrations` | — | [ ] |
 | M9-04 | Due-date rule into `internal/kernel/fiscal` (`NextBusinessDay`, `MonthlyDueDate`, `HolidaySet`; ADR-0007 §3 amended), replace both taxengine copies (monthly `duedate.go`, annual `businessDay`) and `noHolidays` with the `holidays` adapter, + `GET /v1/tax-calendar` (TDD, golden 2025-12..2027-11) | backend-sr | M9-01, M9-03, P0-13 | 4 | — | `feature/reminders-calendar` | — | [ ] |
