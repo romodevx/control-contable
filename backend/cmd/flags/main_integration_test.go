@@ -34,11 +34,11 @@ func TestExecute_AsOwner(t *testing.T) {
 
 	out, err := runAs(t, db, pgtest.RoleOwner, "list")
 	require.NoError(t, err)
-	assert.Contains(t, out, "0 of 9 modules ON")
+	assert.Contains(t, out, "0 of 10 modules ON")
 
 	out, err = runAs(t, db, pgtest.RoleOwner, "apply-preset", "demo_core")
 	require.NoError(t, err)
-	assert.Contains(t, out, "6 of 9 modules ON")
+	assert.Contains(t, out, "6 of 10 modules ON")
 
 	out, err = runAs(t, db, pgtest.RoleOwner, "enable", "module_reminders")
 	require.NoError(t, err)
@@ -80,7 +80,7 @@ func TestExecute_RefusesARuntimeRole(t *testing.T) {
 	require.ErrorIs(t, err, migrations.ErrNotOwner)
 	out, err := runAs(t, db, pgtest.RoleOwner, "list")
 	require.NoError(t, err)
-	assert.Contains(t, out, "0 of 9 modules ON", "nothing changed")
+	assert.Contains(t, out, "0 of 10 modules ON", "nothing changed")
 }
 
 // A preset shows exactly its modules: none of them is hidden by a
