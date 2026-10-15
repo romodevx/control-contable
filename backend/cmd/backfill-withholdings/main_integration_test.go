@@ -319,7 +319,26 @@ func TestWorkerRole_RLSHolds(t *testing.T) {
 			assert.Zero(t, affected, statement)
 		}
 	})
-	t.Run("only the derived columns and the user ids", func(t *testing.T) {
+	t.Run("the user list comes from the definer function only", func(t *testing.T) {
+		var listed int
+		require.NoError(t, pgtest.WithoutUser(ctx, e.worker, func(tx *sql.Tx) error {
+			return tx.QueryRowContext(ctx, "SELECT count(*) FROM withholding_backfill_users()").Scan(&listed)
+		}))
+		assert.Equal(t, 2, listed)
+		err := pgtest.WithoutUser(ctx, e.worker, func(tx *sql.Tx) error {
+			_, err := tx.ExecContext(ctx, "SELECT id FROM users")
+			return err
+		})
+		require.Error(t, err, "cc_worker reads no users column itself")
+		assert.Contains(t, err.Error(), "42501")
+		err = pgtest.WithoutUser(ctx, e.app, func(tx *sql.Tx) error {
+			_, err := tx.ExecContext(ctx, "SELECT withholding_backfill_users()")
+			return err
+		})
+		require.Error(t, err, "cc_app may not list users")
+		assert.Contains(t, err.Error(), "42501")
+	})
+	t.Run("only the derived columns", func(t *testing.T) {
 		for _, statement := range []string{
 			"SELECT name FROM users",
 			"SELECT rfc_encrypted FROM taxpayers",

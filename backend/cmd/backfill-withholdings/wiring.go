@@ -53,9 +53,9 @@ func newBackfiller(pool *sql.DB, now clock.Clock) (*backfiller, error) {
 	}, nil
 }
 
-// userStore lists the users through the System unit of work: no user
-// context, and the users_select_worker policy shows every id (the only
-// column cc_worker may read there).
+// userStore lists the users through the System unit of work (no user
+// context) and the SECURITY DEFINER withholding_backfill_users(): user ids
+// only. cc_worker itself reads no users row.
 type userStore struct {
 	system tx.SystemManager
 }
@@ -68,7 +68,7 @@ func (s userStore) UserIDs(ctx context.Context) ([]string, error) {
 		if err != nil {
 			return err
 		}
-		return db.Raw("SELECT id::text FROM users ORDER BY id").Scan(&ids).Error
+		return db.Raw("SELECT id::text FROM withholding_backfill_users() AS id ORDER BY id").Scan(&ids).Error
 	})
 	if err != nil {
 		return nil, fmt.Errorf("read user ids: %w", err)

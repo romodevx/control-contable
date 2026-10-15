@@ -16,8 +16,19 @@ Two kinds of records need this command:
 |---|---|
 | Owner | backend-sr (run), owner (reads the dry run before `-apply`) |
 | Role | `cc_worker` (`DATABASE_URL`, the worker's secret). Never `cc_owner`: under FORCE RLS it sees no row. The command refuses a superuser, owner or BYPASSRLS login in every environment |
-| Grants | Migration `20261018100000_withholdings_backfill_worker`: see [data-model.md](../architecture/data-model.md#database-roles) |
+| Grants | Migration `20261018100000_withholdings_backfill_worker`: see [data-model.md](../architecture/data-model.md#database-roles). The user list comes from the SECURITY DEFINER `withholding_backfill_users()` (ids only), owned by the NOLOGIN `cc_worker_definer`; `cc_worker` itself reads no row outside a user's context |
 | Gate | WH-15 (security) before running against a shared environment |
+
+## 0. Once per environment: the `cc_worker_definer` role
+
+The migration refuses to run, with a hint, until the bootstrap role exists (cc_owner has
+NOCREATEROLE). Locally `make -C backend db-reset` recreates the roles from
+`infra/local/postgres/bootstrap/roles.sql`. Elsewhere, as the bootstrap superuser:
+
+```sql
+CREATE ROLE cc_worker_definer NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT;
+GRANT cc_worker_definer TO cc_owner WITH INHERIT FALSE, SET TRUE;
+```
 
 ## 1. Dry run (default): read the report
 
