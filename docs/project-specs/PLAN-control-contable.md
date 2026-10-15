@@ -494,6 +494,8 @@ preconditions hold.
 
 ### M9 — Reminders (`module_reminders`)
 
+Spec: [MODULE-reminders.md](MODULE-reminders.md) (stage 1, 2026-10-15; OQ-R1 Friday extension pending owner/CPA). Calendar rule: [research §A.4.1](../research/tax-regimes-mx-2026.md).
+
 M9-07 (FCM) and M9-09 (Flutter push) are built against fakes; live verification waits for the Firebase project (OB9).
 
 | ID | Task | Owner | Deps | Est (h) | Par | Branch | Blocked by | Done |
@@ -501,7 +503,7 @@ M9-07 (FCM) and M9-09 (Flutter push) are built against fakes; live verification 
 | M9-01 | Contract freeze: devices, reminder-settings, tax-calendar | architect | P0-05 | 1 | — | `feature/reminders-contract` | — | [ ] |
 | M9-02 | Migration `devices`, `reminder_settings`, `notification_log` (RLS) + definer fns `due_reminder_users`, `claim_push_token` + isolation tests | db-sr | P0-11 | 3.5 | — | `feature/reminders-migrations` | — | [ ] |
 | M9-03 | Migration `holidays` (global) seeded 2026–2027 with sources | db-sr | P0-10 | 1.5 | — | `feature/reminders-migrations` | — | [ ] |
-| M9-04 | TaxCalendar domain (day 17 → next business day) + `GET /v1/tax-calendar` (TDD) | backend-sr | M9-01, M9-03, P0-13 | 3 | — | `feature/reminders-calendar` | — | [ ] |
+| M9-04 | Due-date rule into `internal/kernel/fiscal` (`NextBusinessDay`, `MonthlyDueDate`, `HolidaySet`; ADR-0007 §3 amended), replace both taxengine copies (monthly `duedate.go`, annual `businessDay`) and `noHolidays` with the `holidays` adapter, + `GET /v1/tax-calendar` (TDD, golden 2025-12..2027-11) | backend-sr | M9-01, M9-03, P0-13 | 4 | — | `feature/reminders-calendar` | — | [ ] |
 | M9-05 | Devices + reminder settings use cases and handlers, contract tests, flag ON/OFF | backend-sr | M9-02, M1-07 | 3.5 | — | `feature/reminders-settings` | — | [ ] |
 | M9-06 | Reminder job: due users, per-user tx, `notification_log` exactly-once, bounded errgroup, optional amounts when module_tax_engine ON | backend-sr | P0-27, M9-04, M9-05, M5-22 | 4.5 | — | `feature/reminders-worker` | — | [ ] |
 | M9-07 | FCM sender adapter (Firebase Admin) + UNREGISTERED cleanup, fake in tests | backend-sr | P0-08 | 2.5 | PG-M79 | `feature/reminders-fcm` | OB9 (live check only) | [ ] |

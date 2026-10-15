@@ -214,6 +214,34 @@ Agricultural, livestock, forestry and fishing (AGAPES) individuals in 612: incom
 | RESICO PF limit | $3.5M (§A.2.5) | 113-E |
 | Platform definitive option | ≤ $300k | 113-B; LIVA 18-L |
 
+### A.4.1 Moving the day-17 due date (CFF art. 12, read 2026-10-15; M9 reminders)
+
+CFF art. 12 (current text, last reform DOF 09-04-2026, source 4), verbatim:
+
+- ¶1 (non-business days): "En los plazos fijados en días no se contarán los sábados, los domingos ni el 1o. de enero; el primer lunes de febrero en conmemoración del 5 de febrero; el tercer lunes de marzo en conmemoración del 21 de marzo; el 1o. y 5 de mayo; el 16 de septiembre; el tercer lunes de noviembre en conmemoración del 20 de noviembre; el 1o. de diciembre de cada 6 años, cuando corresponda a la transmisión del Poder Ejecutivo y el 25 de diciembre."
+- ¶2 (SAT vacations): "Tampoco se contarán en dichos plazos, los días en que tengan vacaciones generales las autoridades fiscales federales, **excepto cuando se trate de plazos para la presentación de declaraciones y pago de contribuciones, exclusivamente, en cuyos casos esos días se consideran hábiles**." → SAT vacation periods (RMF rule 2.1.6; 2026 summer period 20–31 July, 1st RMF amendment, DOF 09-07-2026, source 12) **never** move the monthly payment.
+- ¶3 (date-certain deadlines): "En los plazos establecidos por períodos y aquéllos en que se señale una fecha determinada para su extinción se computarán todos los días." (Day 17 is a fixed date.)
+- ¶5 (the move): "si el último día del plazo o en la fecha determinada, las oficinas ante las que se vaya a hacer el trámite permanecen cerradas durante el horario normal de labores o se trate de un día inhábil, se prorrogará el plazo hasta el siguiente día hábil. [...] **También se prorrogará el plazo hasta el siguiente día hábil, cuando sea viernes el último día del plazo en que se deba realizar el pago de contribuciones, ante las instituciones de crédito autorizadas.**"
+
+Rule used by the app: **day 17 of the following month; if it is a Saturday, Sunday or a ¶1 holiday, move to the next day that is none of those.** Not applied: the RFC-digit grace (§A.4 ⚠️), SAT vacation periods (¶2: business days for payments), and the **Friday extension** (last sentence of ¶5) ⚠️: it covers payment at authorised banks, and practitioners disagree on whether it extends the filing; the app keeps the Friday (earlier, safe date) until a CPA confirms. Holy Thursday and Friday are declared non-business days for SAT by RMF rule 2.1.6 (2026: 2 and 3 April) ⚠️ whether they move a payment deadline was not confirmed; no day 17 in 2026–2027 falls on them, so no shown date depends on it.
+
+Non-business days from ¶1 (plus rule 2.1.6 Holy Thursday/Friday, marked) for the `holidays` table:
+
+| Date | Day | Basis | | Date | Day | Basis |
+|---|---|---|---|---|---|---|
+| 2026-01-01 | Thu | CFF 12 ¶1 | | 2027-01-01 | Fri | CFF 12 ¶1 |
+| 2026-02-02 | Mon | CFF 12 ¶1 (1st Mon Feb) | | 2027-02-01 | Mon | CFF 12 ¶1 (1st Mon Feb) |
+| 2026-03-16 | Mon | CFF 12 ¶1 (3rd Mon Mar) | | 2027-03-15 | Mon | CFF 12 ¶1 (3rd Mon Mar) |
+| 2026-04-02 | Thu | RMF 2.1.6 (Jueves Santo) ⚠️ | | 2027-03-25 | Thu | RMF 2.1.6 (Jueves Santo) ⚠️ not yet published |
+| 2026-04-03 | Fri | RMF 2.1.6 (Viernes Santo) ⚠️ | | 2027-03-26 | Fri | RMF 2.1.6 (Viernes Santo) ⚠️ not yet published |
+| 2026-05-01 | Fri | CFF 12 ¶1 | | 2027-05-01 | Sat | CFF 12 ¶1 |
+| 2026-05-05 | Tue | CFF 12 ¶1 | | 2027-05-05 | Wed | CFF 12 ¶1 |
+| 2026-09-16 | Wed | CFF 12 ¶1 | | 2027-09-16 | Thu | CFF 12 ¶1 |
+| 2026-11-16 | Mon | CFF 12 ¶1 (3rd Mon Nov) | | 2027-11-15 | Mon | CFF 12 ¶1 (3rd Mon Nov) |
+| 2026-12-25 | Fri | CFF 12 ¶1 | | 2027-12-25 | Sat | CFF 12 ¶1 |
+
+(1 December every six years: next 2030, out of range.) Resulting moved due dates: periods 2025-12 → 2026-01-19, 2026-04 → 2026-05-18, 2026-09 → 2026-10-19, 2026-12 → 2027-01-18, 2027-03 → 2027-04-19, 2027-06 → 2027-07-19, 2027-09 → 2027-10-18 (all weekends; no 2026–2027 day 17 meets a holiday). Fridays kept (Friday extension not applied ⚠️): 2026-04-17, 2026-07-17, 2027-09-17, 2027-12-17.
+
 ## A.5 Worked examples (PF), for table-driven tests
 
 All amounts are in MXN, rounded to 2 decimals at the end only.
@@ -354,6 +382,7 @@ The rules are the same as §A.3 (16 %, 8 % border, 0 %, exempt, creditable IVA, 
 | 9 | DOF 31-12-2025, decree extending the northern and southern border incentives to 31-12-2026 | https://dof.gob.mx/nota_detalle.php?codigo=5777697&fecha=31%2F12%2F2025 · SAT copy: https://www.sat.gob.mx/minisitio/EstimulosFiscalesFronteraNorteSur/documentos/Decreto_modifica_diversos_estimulos_fiscales_region_fronteriza_norte_sur.pdf |
 | 10 | Northern border incentive decree (DOF 31-12-2018), arts. 11–13 IVA | https://sidof.segob.gob.mx/notas/docFuente/5547485 |
 | 11 | PTU 10 %, Sexta Comisión (DOF 18-09-2020) ⚠️ secondary source | https://idconline.mx/laboral/2020/10/06/mantienen-el-mismo-porcentaje-de-ptu-a-repartir |
+| 12 | RMF 2026 rule 2.1.6 "Días inhábiles" (Holy Thursday/Friday 2026; summer vacation 20–31 July 2026, 1st amendment DOF 09-07-2026) ⚠️ secondary sources, accessed 2026-10-15 | https://siemprealdia.co/mexico/fiscal/dias-inhabiles-del-sat/ · https://www.elcontribuyente.mx/2026/07/sat-anuncia-vacaciones-conoce-como-afecta-tus-tramites-fiscales/ |
 
 **Not retrieved:** the full RMF 2026 text (the SAT host timed out). The rule numbers for RESICO and platform facilities (Title 3.13, 3.11.x) and a secondary-source claim that RMF rule 4.1.4 sets 100 % IVA withholding on rentals were **not confirmed**. That claim contradicts RLIVA art. 3 fr. I c), which sets 2/3 and is the version used here. Verify against the official RMF 2026 before release.
 
