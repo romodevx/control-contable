@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Writes the LOCAL stack's .env from .env.example, replacing every *_PASSWORD placeholder
-# with a fresh random value (openssl, 24 bytes as hex) and every CC_AUTH_* and CC_RFC_* key
+# with a fresh random value (openssl, 24 bytes as hex) and every CC_AUTH_*, CC_RFC_* and CC_PUSH_TOKEN_* key
 # with 32 random bytes as hex, mode 0600. Refuses to overwrite.
 # Usage: init-env.sh <example> <target>
 set -euo pipefail
@@ -20,7 +20,7 @@ trap 'rm -f "$tmp"' EXIT
 while IFS= read -r line || [ -n "$line" ]; do
   case "$line" in
     [A-Z]*_PASSWORD=*) printf '%s=%s\n' "${line%%=*}" "$(openssl rand -hex 24)" ;;
-    CC_AUTH_*=* | CC_RFC_*=*) printf '%s=%s\n' "${line%%=*}" "$(openssl rand -hex 32)" ;;
+    CC_AUTH_*=* | CC_RFC_*=* | CC_PUSH_TOKEN_*=*) printf '%s=%s\n' "${line%%=*}" "$(openssl rand -hex 32)" ;;
     *) printf '%s\n' "$line" ;;
   esac
 done <"$example" >"$tmp"
