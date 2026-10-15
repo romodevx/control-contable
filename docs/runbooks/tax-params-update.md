@@ -199,7 +199,82 @@ rates or a rule of the decision table:
 
 A new year whose withholding rates are unchanged needs no bump: rates are read by date.
 
-## 8. Release checklist
+## 8. The annual return (`module_annual`): RMF deadlines and rule renewals
+
+The annual estimate ([module](../modules/annual.md)) reads the same parameter file, plus a
+few things only the **next** year's RMF settles. The RMF for year *N+1* is published in the
+DOF in the last days of December of *N* (RMF 2026: DOF 28-12-2025), so the annual for
+ejercicio *N* is filed under rules that appear after the year closes. Do this part in the
+same window as §3, on the same branch or a follow-up one.
+
+### 8.1 What the file must carry for the new year
+
+Every annual key, re-read from its source (§2): `isr.art152.annual` (Anexo 8 C.II;
+`TestEmbedded<year>AnnualTariffEqualsTheDecemberTable` asserts it equals the December
+art. 106 table), `deduction.personal.*`, `deduction.tuition_cap.*`,
+`annual.salary_obligation_threshold`, `annual.informative_income_threshold`, and the three
+deadlines:
+
+| Key | Ejercicio 2026 | Read off |
+|---|---|---|
+| `annual.deadline.pf` | 2027-04-30 | LISR 150 ¶1, "en el mes de abril del año siguiente" |
+| `annual.deadline.pm` | 2027-03-31 | LISR 76 fr. V, three months after the year ends |
+| `annual.deadline.nonprofit_informative` | 2027-02-15 | LISR 86 fr. III |
+
+A deadline belongs to the fiscal year it closes: `valid_from` = 1 January and `valid_to` =
+31 December **of that fiscal year**, with the date in the next year (the 2027 file carries
+`2028-04-30` for PF). The engine reads it in force on the year's last day. Without it a
+fallback (provisional) estimate shows **no** deadline ("tu contador te indica el plazo")
+rather than the wrong year's (`TestEmbedded2026AnnualDeadlines`). Add the same cases to
+`embedded_<year>_annual_test.go` (copy `embedded_2026_annual_test.go`): every annual key
+present (`taxparams.DeductionLimitRequirements()`), the caps, the thresholds, the deadlines on
+31 December and `ErrNotInForce` on 1 January, and tariff spot rows.
+
+### 8.2 Read the RMF of the next year for the closing ejercicio
+
+When the RMF *N+1* is out, read it for the annual of ejercicio *N* and record each finding
+in [CPA-REVIEW.md](../reviews/CPA-REVIEW.md):
+
+| What to look for | Where it lives in the app | If it changed |
+|---|---|---|
+| **Deadline extension** (a rule or decree moving abril / marzo / 15 de febrero) | `annual.deadline.*` in the *N* file | Ship `params/data/<N>/v<k+1>.yaml` with only the dates changed and the RMF rule cited in `basis` (mid-year correction path, §3; §10 rollback). Run §7: a new version moves fingerprints; bump `EngineVersion` only if a test says figures moved |
+| **RESICO PF relief renewed** (2026: rule 3.13.7, "no presentas anual por estos ingresos") | `pf_resico_check` citations and text (`domain/annual/pf_resico_check.go`, `section.go`, `explain/texts.go` `resico_pf_definitive`); CPA topic `resico_pf_relief_renewal` | Renewed with the same wording: update the citation year ("RMF 2026" → the rule's RMF). Not renewed or reworded: a rule change, so a strategy change ([add-a-regime guide](../guides/add-a-regime.md) step 9), goldens AN-03 re-checked, CPA |
+| **Salary relief** (3.17.11, written for ejercicio 2025 only; **not applied** to 2026) | Obligation test of `pf_art152` (MODULE-annual §2.4) | Renewed for *N*: a rule change (strategy + goldens + CPA); until then the app keeps the stricter reading |
+| **Payment facilities** (parcialidades, exenciones) and other annual rules (e.g. 3.17.2, interest over 100,000) | `explain/explanations.go` citations; disclaimer `rmf_2027_pending` | Citations follow the new RMF; a new rule is a code change |
+
+### 8.3 Turn off or roll the `rmf_<N+1>_pending` disclaimer
+
+`rmf_2027_pending` ("Las facilidades para la anual 2026 … se publican en la RMF 2027; pueden
+cambiar") is raised for every fiscal year up to `rmfPendingYear`
+(`backend/internal/taxengine/usecase/annual/estimate_assemble.go`, today `2026`).
+
+- **RMF 2027 published and §8.2 done:** lower `rmfPendingYear` to `2025` (test first: a 2026
+  estimate no longer carries the code). The 2026 estimates stop saying the facilities are
+  pending.
+- **Next cycle (ejercicio 2027, RMF 2028 pending):** the code name carries the year and
+  `DisclaimerCode` is append-only, so append `rmf_2028_pending` to the contract enum
+  (contract minor bump, architect; [CONTRACT.md](../api/CONTRACT.md) rules), add its text and
+  severity in `domain/annual/enums.go` and `explain/texts.go`, and raise it for 2027. Never
+  reuse `rmf_2027_pending` for another year.
+
+### 8.4 Year-bearing annual texts
+
+Like §5, these name the year and must move with the file (wording, not figures; if a golden
+or the engine-version digest moves anyway, follow §7):
+
+```sh
+grep -rn 'RMF 20\|Anexo 8' backend/internal/taxengine/domain/annual --include='*.go' | grep -v _test
+```
+
+Today: `pf_art152.go` ("RMF 2026", Anexo 8 C.II), `pf_resico_check.go` (3.13.7 "RMF 2026")
+and a comment in `section.go`, `explain/explanations.go` (3.17.2). The `annual_estimate`,
+`resico_pf_definitive` and `rmf_*_pending` texts (`explain/texts.go`) build the year from the
+fiscal year: if a renewal for ejercicio *N* sits in the RMF *N+1*, `resico_pf_definitive`
+must cite that RMF, not "RMF *N*". Also update the user guide's deadline
+table ([annual-user-guide.md §2](../guides/annual-user-guide.md#2-qué-ves)) and the
+contract examples that show the dates.
+
+## 9. Release checklist
 
 Copy into the PR description and tick each line.
 
@@ -210,13 +285,14 @@ Copy into the PR description and tick each line.
 - [ ] Year-bearing texts and citations updated (`texts.go`, strategies, contract examples, MODULE §2.3)
 - [ ] `EngineVersion` bumped, digest pinned and logged **if** §7 says so
 - [ ] Withholding rates unchanged, or verified + `WithholdingTableVersion` bumped + [backfill](withholdings-backfill.md) run after the deploy (§7)
+- [ ] Annual (§8): the year's annual keys and deadlines, `embedded_<year>_annual_test.go`; RMF of the next year read for the closing ejercicio (deadline extensions, rules 3.13.7 / 3.17.11 renewals) and recorded; `rmfPendingYear` / `rmf_<year>_pending` updated; annual year-bearing texts and the user guide's deadlines updated
 - [ ] Anything new or ambiguous added to [CPA-REVIEW.md](../reviews/CPA-REVIEW.md)
 - [ ] `make -C backend check`, `make -C backend test-integration`, `make contract-lint`, `make api-error-tables-check` green; CI required checks green
 - [ ] Tech-lead review; security gate for the deploy (REL-09)
 - [ ] Deployed: the parameters are embedded (`go:embed`), so a new API build is the release. After the deploy, an estimate for January of the new year shows the new parameter set in the breakdown header and no `provisional_parameters` warning (unless §6 chose a provisional file)
 - [ ] Module page and this runbook updated if anything here was wrong (stale docs are bugs)
 
-## 9. Rollback
+## 10. Rollback
 
 A wrong value is fixed **forward** with `v<N+1>.yaml` (the highest version wins); the bad
 version stays in the repository as history. If a deploy must be undone before the fix, roll
