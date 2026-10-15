@@ -361,9 +361,10 @@ class IncomeFormModel extends ChangeNotifier {
     _recompute();
   }
 
-  /// The regime changed: its dates follow its basis. A booking date the
-  /// user did not type (the prefilled today) moves to the new booking
-  /// field; one they typed is copied, never lost.
+  /// The regime changed: its dates follow its basis. A new income's
+  /// booking date the user did not type (the prefilled today) moves to the
+  /// new booking field; one they typed, or an edited income's stored one,
+  /// is copied, never lost.
   void _followBasis() {
     final next = incomeBasisOf(regimeCode, _regimes);
     if (next == _basis) return;
@@ -374,8 +375,11 @@ class IncomeFormModel extends ChangeNotifier {
     collectedOn.isRequired = !isAccrual;
     if (to.value.isEmpty) {
       to.text.text = from.text.text;
-      if (!from.isDirty) from.text.clear();
+      if (!isEditing && !from.isDirty) from.text.clear();
     }
+    // The invoice date shows first (accrual) or in "Más detalles" (cash):
+    // the error summary follows it there.
+    form.moveBefore(invoicedOn, isAccrual ? collectedOn : cfdiUuid);
     notifyListeners();
   }
 
