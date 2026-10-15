@@ -231,6 +231,35 @@ void main() {
         '2026-01',
       );
     });
+    testWidgets('the month is asked before the regime list, on screen '
+        'without scrolling, and the month picked there is the one sent '
+        '(#152 QA O1)', (tester) async {
+      await openRegimes(tester);
+      final screen = tester.getRect(find.byType(Scaffold).last);
+      final question = find.text('¿Desde qué mes tributas en estos regímenes?');
+      final picker = find.byType(DropdownButtonFormField<String>);
+
+      expect(screen.contains(tester.getRect(question).topLeft), isTrue);
+      expect(screen.contains(tester.getRect(picker).bottomRight), isTrue);
+      expect(
+        tester.getRect(picker).bottom,
+        lessThan(tester.getRect(find.textContaining('626 ·')).top),
+        reason: 'the month comes before the regimes, never below them',
+      );
+      expect(tester.getSize(picker).height, greaterThanOrEqualTo(44));
+
+      await tester.tap(picker);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('julio de 2026').last);
+      await tester.pumpAndSettle();
+      await _pick(tester, '626');
+      await tapText(tester, _create);
+
+      expect(
+        harness.repository.creates.single.regimes.single.startPeriod,
+        '2026-07',
+      );
+    });
   });
 
   group('step 4: per-regime options', () {
@@ -758,6 +787,26 @@ void main() {
       expect(find.text('Primer ejercicio fiscal'), findsNothing);
       expect(find.text('Ingresos del año'), findsOneWidget);
     });
+  });
+
+  testWidgets('at 200 % text on a phone the month still comes first and '
+      'step 3 lays out without overflow (#159 review)', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(360, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await openRegimes(tester);
+
+    expect(tester.takeException(), isNull);
+    final picker = find.byType(DropdownButtonFormField<String>);
+    await tester.ensureVisible(picker);
+    await tester.pumpAndSettle();
+    expect(tester.getSize(picker).height, greaterThanOrEqualTo(44));
+    await tester.scrollUntilVisible(find.textContaining('626 ·'), 200);
+    expect(
+      tester.getRect(picker).bottom,
+      lessThan(tester.getRect(find.textContaining('626 ·')).top),
+    );
   });
 
   for (final brightness in Brightness.values) {
