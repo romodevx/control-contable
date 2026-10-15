@@ -14,9 +14,10 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/pgtest"
 )
 
-// The nine module flags the baseline migration seeds, all OFF.
+// The module flags the migrations seed, all OFF: the baseline's nine and
+// module_annual (ANN-22). demo_full holds every one.
 var seededKeys = []string{
-	"module_auth", "module_dashboard", "module_expenses", "module_history", "module_incomes",
+	"module_annual", "module_auth", "module_dashboard", "module_expenses", "module_history", "module_incomes",
 	"module_reminders", "module_subscriptions", "module_tax_engine", "module_taxpayers",
 }
 

@@ -22,9 +22,10 @@ const (
 	sqlstateCheckViolation        = "23514"
 )
 
-// moduleFlags is the MODULES.md flag registry: one key per product module M1–M9.
+// moduleFlags is the MODULES.md flag registry: one key per product module
+// M1–M9, plus module_annual (MODULE-annual §6, registered by ANN-22).
 var moduleFlags = []string{
-	"module_auth", "module_dashboard", "module_expenses", "module_history", "module_incomes",
+	"module_annual", "module_auth", "module_dashboard", "module_expenses", "module_history", "module_incomes",
 	"module_reminders", "module_subscriptions", "module_tax_engine", "module_taxpayers",
 }
 

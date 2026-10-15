@@ -20,20 +20,11 @@ import (
 // root over Postgres as cc_app: the estimate of TX-NET-01's taxpayer in the
 // year in progress ("today" is estToday, 20 October 2026), the inputs'
 // writes, another user's taxpayer (404) and the flag with its
-// prerequisites. The module_annual flag row is registered here as a fixture
-// of this test database: ANN-22 registers it by migration.
+// prerequisites. The module_annual flag row is the migration's (ANN-22).
 
 // annualModules are the flags these suites set.
 var annualModules = []string{
 	"module_auth", "module_taxpayers", "module_incomes", "module_expenses", "module_tax_engine", "module_annual",
-}
-
-// registerAnnualFlag inserts module_annual's row, OFF.
-func (e contractEnv) registerAnnualFlag(t *testing.T) {
-	t.Helper()
-	_, err := e.owner.ExecContext(t.Context(),
-		`INSERT INTO feature_flags (key, description) VALUES ('module_annual', 'Annual estimate (test fixture until ANN-22)')`)
-	require.NoError(t, err)
 }
 
 func annualAllOn() flagtest.Static {
@@ -51,7 +42,6 @@ func annualEstimateTarget(taxpayerID string, year int) string {
 func TestAnnualContract_estimateAndInputsThroughTheStack(t *testing.T) {
 	c := contracttest.Load(t)
 	env := newContractEnv(t, pingOK{}, withTaxEngineDay(estToday))
-	env.registerAnnualFlag(t)
 	env.apply(t, annualModules, annualAllOn())
 	ana := env.txNet01Taxpayer(t, signUpEmail, acceptableSample, rfcAna)
 	bea := env.txNet01Taxpayer(t, beaEmail, otherSample, "AAAA010101AA0")
@@ -111,7 +101,6 @@ func TestAnnualContract_estimateAndInputsThroughTheStack(t *testing.T) {
 func TestAnnualContract_impliedOffWithoutTheEngine(t *testing.T) {
 	c := contracttest.Load(t)
 	env := newContractEnv(t, pingOK{}, withTaxEngineDay(estToday))
-	env.registerAnnualFlag(t)
 	flagsOn := annualAllOn()
 	env.apply(t, annualModules, flagsOn)
 	ana := env.txNet01Taxpayer(t, signUpEmail, acceptableSample, rfcAna)
