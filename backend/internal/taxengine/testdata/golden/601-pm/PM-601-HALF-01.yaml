@@ -1,0 +1,30 @@
+# golden: hand-authored from docs/project-specs/MODULE-tax-engine.md §2.7 (credits off the ISR as shown). Never generated or rewritten by a tool.
+# 601, February 2026, all the year's income invoiced in January: YTD 500,000.25, CU 0.2000.
+# 0.20 x 500,000.25 = base 100,000.05; x 30 % = 30,000.015, shown 30,000.02.
+# January's payment was that same figure, 30,000.02. The balance is the ISR AS SHOWN less
+# the payment: 30,000.02 - 30,000.02 = 0.00 (rounding the exact -0.005 gave -0.01 in favor).
+id: PM-601-HALF-01
+source: spec:module-tax-engine-2.7
+input:
+  regime: "601"
+  person_type: moral
+  period: "2026-02"
+  months:
+    - {month: 1, income: {accrual: "500000.25"}}
+  tax_inputs:
+    - {key: coeficiente_utilidad, kind: rate, rate: "0.2000"}
+    - {key: prior_provisional_payments, kind: money_monthly, month: 1, money: "30000.02"}
+expected:
+  status: complete
+  taxes: [isr]
+  isr: "0.00"
+  lines:
+    - {tax: isr, code: isr.income_ytd, op: input, amount: "500000.25"}
+    - {tax: isr, code: isr.coeficiente, op: multiply, amount: "100000.05"}
+    - {tax: isr, code: isr.ptu, op: subtract, amount: "0.00"}
+    - {tax: isr, code: isr.prior_year_losses, op: subtract, amount: "0.00"}
+    - {tax: isr, code: isr.base, op: result, amount: "100000.05"}
+    - {tax: isr, code: isr.rate, op: multiply, amount: "30000.02"}
+    - {tax: isr, code: isr.prior_payments, op: subtract, amount: "30000.02"}
+    - {tax: isr, code: isr.interest_withholding, op: subtract, amount: "0.00"}
+    - {tax: isr, code: isr.payable, op: result, amount: "0.00"}

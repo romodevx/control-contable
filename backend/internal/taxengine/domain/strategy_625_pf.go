@@ -238,7 +238,7 @@ func platformISR(l *Ledger, est *RegimeEstimate, month MonthSums, in Input, p *t
 		return err
 	}
 	l.Input(platformStep(TaxISR, platformLineIncome, SourceRecords(), platformBasisIncome), income)
-	l.Scale(platformStep(TaxISR, platformLineRate, SourceParams(r.key), r.basis), rate)
+	l.ScaleRounded(platformStep(TaxISR, platformLineRate, SourceParams(r.key), r.basis), rate)
 	l.Subtract(platformStep(TaxISR, platformLineWithheld, SourceRecords(), platformBasisWithheld), withheld)
 	if over := l.Running(); over < 0 {
 		l.Add(platformStep(TaxISR, platformLineNoFavor, SourceComputed(), platformBasisDefinitive), -over)

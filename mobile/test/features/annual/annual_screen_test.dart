@@ -10,6 +10,7 @@ import 'package:control_contable/features/annual/annual_routes.dart';
 import 'package:control_contable/features/annual/presentation/annual_screen.dart';
 import 'package:control_contable/features/tax_engine/tax_engine_routes.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../tax_engine/estimate_fixtures.dart' show fixtureTaxpayerId;
@@ -527,6 +528,35 @@ void main() {
         _inSection('pf_art152', find.text('marzo de 2026')),
         findsOneWidget,
       );
+    });
+
+    // ANN-23 QA (device walk, TalkBack tree): with a single missing input
+    // its row merged into the section, so the whole section (regimes,
+    // status, obligation, deadline, notes) was announced as one button
+    // that opened the constancias. Two inputs split apart by chance.
+    testWidgets('a single missing input is its own button; the section is '
+        'not one', (tester) async {
+      final handle = tester.ensureSemantics();
+      await harness.pump(
+        tester,
+        reply: _estimate(
+          sections: [
+            sectionJson(status: 'incomplete', missingInputs: [missing[0]]),
+          ],
+        ),
+      );
+      final cta = _inSection('pf_art152', find.text('Constancia de sueldos'));
+      await _reveal(tester, cta);
+
+      final link = tester.getSemantics(cta);
+      expect(link.label, 'Constancia de sueldos');
+      expect(link.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+      final status = tester.getSemantics(
+        _inSection('pf_art152', find.text('Estás obligado a presentarla.')),
+      );
+      expect(status.getSemanticsData().hasAction(SemanticsAction.tap), isFalse);
+      expect(status.label, isNot(contains('Constancia de sueldos')));
+      handle.dispose();
     });
   });
 

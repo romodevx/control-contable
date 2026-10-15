@@ -141,7 +141,7 @@ func (t *resicoTrace) resicoPFISR(table taxparams.Table, income IncomeSums) (*Ta
 	if cash > 0 {
 		rateStep := resicoISRStep(LineRESICOPFRate, SourceParams(paramRESICOPFMonthly), basisRESICOPFRate)
 		rateStep.Args = []string{strconv.Itoa(bracket.Number)} // the table row, for the label
-		t.l.Scale(rateStep, bracket.Row.Rate)
+		t.l.ScaleRounded(rateStep, bracket.Row.Rate)
 	}
 	if withheld := income.ISRWithheld.ByMoral; withheld != 0 {
 		t.l.Subtract(resicoISRStep(LineRESICOPFWithheldByMoral, SourceRecords(), basisRESICOPFWithheld), t.exact(withheld))

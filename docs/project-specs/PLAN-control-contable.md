@@ -505,7 +505,7 @@ M9-07 (FCM) and M9-09 (Flutter push) are built against fakes; live verification 
 | M9-05 | Devices + reminder settings use cases and handlers, contract tests, flag ON/OFF | backend-sr | M9-02, M1-07 | 3.5 | — | `feature/reminders-settings` | — | [ ] |
 | M9-06 | Reminder job: due users, per-user tx, `notification_log` exactly-once, bounded errgroup, optional amounts when module_tax_engine ON | backend-sr | P0-27, M9-04, M9-05, M5-22 | 4.5 | — | `feature/reminders-worker` | — | [ ] |
 | M9-07 | FCM sender adapter (Firebase Admin) + UNREGISTERED cleanup, fake in tests | backend-sr | P0-08 | 2.5 | PG-M79 | `feature/reminders-fcm` | OB9 (live check only) | [ ] |
-| M9-08 | Soft-delete purge job (30 days) via `purge_soft_deleted` definer fn (runs regardless of reminder flag) | db-sr | P0-27, M3-02, M4-03 | 2 | — | `feature/records-purge-job` | — | [ ] |
+| M9-08 | Soft-delete purge job (30 days) via `purge_soft_deleted` definer fn (runs regardless of reminder flag) | db-sr | P0-27, M3-02, M4-03, ANN-03 (must also purge `personal_deductions`, ANN-25) | 2 | — | `feature/records-purge-job` | — | [ ] |
 | M9-09 | Flutter push: firebase_messaging, permission prompt, device registration | frontend-sr | M9-01, M1-12 | 3.5 | — | `feature/reminders-mobile-push` | OB9, OB7 | [ ] |
 | M9-10 | Flutter reminder settings screen | frontend-sr | M9-09 | 3 | — | `feature/reminders-mobile-settings` | — | [ ] |
 | M9-11 | Register flag `module_reminders` + preset `demo_full` | backend-sr | M9-06, M9-07, M9-10 | 0.5 | — | `feature/reminders-flag` | — | [ ] |
@@ -524,32 +524,32 @@ approved, so it is **not** in the §4 totals: **AN adds 27 tasks, 91.5 h (109.8 
 
 | ID | Task | Owner | Deps | Est (h) | Par | Branch | Blocked by | Done |
 |---|---|---|---|---|---|---|---|---|
-| ANN-01 | Spec MODULE-annual + this plan section | pm | research #118 | 2 | — | `feature/annual-spec` | — | [ ] |
+| ANN-01 | Spec MODULE-annual + this plan section | pm | research #118 | 2 | — | `feature/annual-spec` | — | [x] |
 | ANN-02 | ADR-0009 (annual engine placement; spec said 0008, taken by WH-02) + contract freeze: annual estimate/breakdown, annual inputs, salary statements, personal deductions (+restore), filed payments, `annual_depreciation` key; lint | architect | ANN-01 | 3 | — | `feature/annual-contract` | — | [x] |
-| ANN-03 | Migrations `personal_deductions`, `salary_statements`, `annual_filed_payments`, `annual_inputs` (ENABLE + FORCE RLS, FKs, cascades, indexes) + RLS isolation tests per table; catalog forward migration adding `annual_depreciation` to 612 PF / 601 PM / 626 PM `required_inputs` | db-sr | ANN-02, M5-20 | 4 | PG-AN-F | `feature/annual-migrations` | — | [ ] |
-| ANN-04 | Params `params/data/2026/v1.yaml` (new version if required by the loader): `isr.annual_152` (Anexo 8 C.II), deduction caps (5 UMA, 15 %, 10 %/5 UMA, 1 UMA funeral, 7 %/4 % donations), tuition caps per level, $400k salary and $500k informative thresholds, deadlines PF/PM/603 (PTU 10 % deferred to ANN-10 ⚠️: resolution not fetched, ANN-05 finding 4, CPA-REVIEW); schema + typed validation; test `isr.annual_152` == December art. 106 table | backend-sr | ANN-02, M5-03 | 3 | PG-AN-F | `feature/annual-params` | — | [ ] |
-| ANN-05 | Independent double-entry verification of the ANN-04 values against Anexo 8 C.II (DOF), LISR 151, decree DOF 26-12-2013 arts. 1.8–1.10, INEGI UMA 2026, with source SHA-256 (same method as M5-06) | qa-sr | ANN-04 | 2 | — | `feature/annual-params` | — | [ ] |
-| ANN-06 | Annual golden harness: case YAML with constancias, deductions, filed payments, tax inputs; runner; skip-with-reason; CI hard gate; generated cap-boundary and `isr.annual_152` row edges | qa-sr | ANN-02, M5-07 | 2.5 | PG-AN-F | `feature/annual-golden-harness` | — | [ ] |
-| ANN-07 | Domain: personal-deductions calculator (eligibility/cash, own caps, global cap, uncapped, "Tope aplicado" lines) + property tests (applied ≤ registered, ≤ caps, monotonic) | backend-sr | ANN-04, ANN-06 | 5 | — | `feature/annual-deductions-domain` | — | [ ] |
-| ANN-08 | Strategy `pf_art152` (605/606/612/625 non-definitive aggregation, per-chapter floors, 612 loss stays in 612, credits with sources, obligation test art. 98 fr. III); goldens AN-01, AN-02, AN-04 (skip), AN-05, AN-08 | backend-sr | ANN-05, ANN-07 | 6 | PG-AN-S | `feature/annual-pf-152` | — | [ ] |
-| ANN-09 | Strategy `pf_resico_check` (113-F informative, never a balance); golden AN-03 (a, b) | backend-sr | ANN-05, ANN-06 | 2 | PG-AN-S | `feature/annual-resico-pf` | — | [ ] |
-| ANN-10 | Strategy `pm_601` (art. 9, depreciation, PTU paid, losses, credits; PTU base/10 % from a `ptu.rate` param read off the DOF resolution, topic `ptu_rate` ⚠️; suggested CU 4 dp); golden AN-06 (AN-06-PTU skipped) | backend-sr | ANN-05, ANN-06 | 4 | PG-AN-S | `feature/annual-601` | — | [ ] |
-| ANN-11 | Strategy `pm_resico` (cash flow art. 9, PTU base ⚠️); golden AN-07 (PTU assertion skip) | backend-sr | ANN-05, ANN-06 | 3 | PG-AN-S | `feature/annual-resico-pm` | — | [ ] |
-| ANN-12 | Explanation sections + deadlines + 625 definitive / > $500k informative notes + disclaimers/CPA topics catalog | backend-sr | ANN-04 | 3 | PG-AN-S | `feature/annual-explanations` | — | [ ] |
-| ANN-13 | Repositories + use cases: personal deductions (create/update/delete/restore), salary statements, annual inputs, filed payments (regime window check); access policy `402`; person-type and archived checks | backend-sr | ANN-03, ANN-02 | 6 | — | `feature/annual-inputs` | — | [ ] |
-| ANN-14 | `EstimateAnnual` use case: one LedgerReader pass, Estimator range for default payments (payment precedence), TaxInputReader, section assembly, rounding + `Ajuste por redondeo`, legend, disclaimers, statuses | backend-sr | ANN-08, ANN-09, ANN-10, ANN-11, ANN-12, ANN-13, M5-22 | 5 | — | `feature/annual-estimate` | — | [ ] |
-| ANN-15 | Handlers + contract tests for all annual ops, flag ON/OFF/implied, rate-limit budget, EXPLAIN ANALYZE, p95 < 500 ms | backend-sr | ANN-14 | 4 | — | `feature/annual-http` | — | [ ] |
-| ANN-16 | Annual property suite, fixed seed (lines + adjustment = result, byte-identical JSON, balance sign vs credits) | qa-sr | ANN-14 | 2.5 | — | `feature/annual-property-tests` | — | [ ] |
-| ANN-17 | Flutter annual screen: year picker, headline balance + deadline, sections, legend, disclaimers, CPA banner, `incomplete` CTA (links only to shipped screens; annual inputs named without a link until ANN-19..21) | frontend-sr | ANN-02, M5-25 | 5 | — | `feature/annual-mobile-estimate` | — | [ ] |
-| ANN-18 | Flutter annual breakdown (reuses M5-26 widgets) | frontend-sr | ANN-17, M5-26 | 2.5 | — | `feature/annual-mobile-breakdown` | — | [ ] |
-| ANN-19 | Flutter personal deductions: list by category with applied/registered, category-driven form (own screen), cash warning, delete + Undo; adds the "Datos para tu anual" block (row + counter) and links its "Falta" CTAs (restore from 74d97e3) | frontend-sr | ANN-17 | 6 | — | `feature/annual-mobile-deductions` | — | [ ] |
-| ANN-20 | Flutter salary constancias list + sheet form; its "Datos para tu anual" row + "Falta" link | frontend-sr | ANN-17 | 3.5 | — | `feature/annual-mobile-salary` | — | [ ] |
-| ANN-21 | Flutter filed payments (12 inline rows prefilled with app estimates, "Confirmar todos") + annual inputs form; their "Datos para tu anual" rows + "Falta" links | frontend-sr | ANN-17 | 4 | — | `feature/annual-mobile-payments` | — | [ ] |
+| ANN-03 | Migrations `personal_deductions`, `salary_statements`, `annual_filed_payments`, `annual_inputs` (ENABLE + FORCE RLS, FKs, cascades, indexes) + RLS isolation tests per table; catalog forward migration adding `annual_depreciation` to 612 PF / 601 PM / 626 PM `required_inputs` | db-sr | ANN-02, M5-20 | 4 | PG-AN-F | `feature/annual-migrations` | — | [x] |
+| ANN-04 | Params `params/data/2026/v1.yaml` (new version if required by the loader): `isr.annual_152` (Anexo 8 C.II), deduction caps (5 UMA, 15 %, 10 %/5 UMA, 1 UMA funeral, 7 %/4 % donations), tuition caps per level, $400k salary and $500k informative thresholds, deadlines PF/PM/603 (PTU 10 % deferred to ANN-10 ⚠️: resolution not fetched, ANN-05 finding 4, CPA-REVIEW); schema + typed validation; test `isr.annual_152` == December art. 106 table | backend-sr | ANN-02, M5-03 | 3 | PG-AN-F | `feature/annual-params` | — | [x] |
+| ANN-05 | Independent double-entry verification of the ANN-04 values against Anexo 8 C.II (DOF), LISR 151, decree DOF 26-12-2013 arts. 1.8–1.10, INEGI UMA 2026, with source SHA-256 (same method as M5-06) | qa-sr | ANN-04 | 2 | — | `feature/annual-params` | — | [x] |
+| ANN-06 | Annual golden harness: case YAML with constancias, deductions, filed payments, tax inputs; runner; skip-with-reason; CI hard gate; generated cap-boundary and `isr.annual_152` row edges | qa-sr | ANN-02, M5-07 | 2.5 | PG-AN-F | `feature/annual-golden-harness` | — | [x] |
+| ANN-07 | Domain: personal-deductions calculator (eligibility/cash, own caps, global cap, uncapped, "Tope aplicado" lines) + property tests (applied ≤ registered, ≤ caps, monotonic) | backend-sr | ANN-04, ANN-06 | 5 | — | `feature/annual-deductions-domain` | — | [x] |
+| ANN-08 | Strategy `pf_art152` (605/606/612/625 non-definitive aggregation, per-chapter floors, 612 loss stays in 612, credits with sources, obligation test art. 98 fr. III); goldens AN-01, AN-02, AN-04 (skip), AN-05, AN-08 | backend-sr | ANN-05, ANN-07 | 6 | PG-AN-S | `feature/annual-pf-152` | — | [x] |
+| ANN-09 | Strategy `pf_resico_check` (113-F informative, never a balance); golden AN-03 (a, b) | backend-sr | ANN-05, ANN-06 | 2 | PG-AN-S | `feature/annual-resico-pf` | — | [x] |
+| ANN-10 | Strategy `pm_601` (art. 9, depreciation, PTU paid, losses, credits; PTU base/10 % from a `ptu.rate` param read off the DOF resolution, topic `ptu_rate` ⚠️; suggested CU 4 dp); golden AN-06 (AN-06-PTU skipped) | backend-sr | ANN-05, ANN-06 | 4 | PG-AN-S | `feature/annual-601` | — | [x] |
+| ANN-11 | Strategy `pm_resico` (cash flow art. 9, PTU base ⚠️); golden AN-07 (PTU assertion skip) | backend-sr | ANN-05, ANN-06 | 3 | PG-AN-S | `feature/annual-resico-pm` | — | [x] |
+| ANN-12 | Explanation sections + deadlines + 625 definitive / > $500k informative notes + disclaimers/CPA topics catalog | backend-sr | ANN-04 | 3 | PG-AN-S | `feature/annual-explanations` | — | [x] |
+| ANN-13 | Repositories + use cases: personal deductions (create/update/delete/restore), salary statements, annual inputs, filed payments (regime window check); access policy `402`; person-type and archived checks | backend-sr | ANN-03, ANN-02 | 6 | — | `feature/annual-inputs` | — | [x] |
+| ANN-14 | `EstimateAnnual` use case: one LedgerReader pass, Estimator range for default payments (payment precedence), TaxInputReader, section assembly, rounding + `Ajuste por redondeo`, legend, disclaimers, statuses | backend-sr | ANN-08, ANN-09, ANN-10, ANN-11, ANN-12, ANN-13, M5-22 | 5 | — | `feature/annual-estimate` | — | [x] |
+| ANN-15 | Handlers + contract tests for all annual ops, flag ON/OFF/implied, rate-limit budget, EXPLAIN ANALYZE, p95 < 500 ms | backend-sr | ANN-14 | 4 | — | `feature/annual-http` | — | [x] |
+| ANN-16 | Annual property suite, fixed seed (lines + adjustment = result, byte-identical JSON, balance sign vs credits) | qa-sr | ANN-14 | 2.5 | — | `feature/annual-property-tests` | — | [x] |
+| ANN-17 | Flutter annual screen: year picker, headline balance + deadline, sections, legend, disclaimers, CPA banner, `incomplete` CTA (links only to shipped screens; annual inputs named without a link until ANN-19..21) | frontend-sr | ANN-02, M5-25 | 5 | — | `feature/annual-mobile-estimate` | — | [x] |
+| ANN-18 | Flutter annual breakdown (reuses M5-26 widgets) | frontend-sr | ANN-17, M5-26 | 2.5 | — | `feature/annual-mobile-breakdown` | — | [x] |
+| ANN-19 | Flutter personal deductions: list by category with applied/registered, category-driven form (own screen), cash warning, delete + Undo; adds the "Datos para tu anual" block (row + counter) and links its "Falta" CTAs (restore from 74d97e3) | frontend-sr | ANN-17 | 6 | — | `feature/annual-mobile-deductions` | — | [x] |
+| ANN-20 | Flutter salary constancias list + sheet form; its "Datos para tu anual" row + "Falta" link | frontend-sr | ANN-17 | 3.5 | — | `feature/annual-mobile-salary` | — | [x] |
+| ANN-21 | Flutter filed payments (12 inline rows prefilled with app estimates, "Confirmar todos") + annual inputs form; their "Datos para tu anual" rows + "Falta" links | frontend-sr | ANN-17 | 4 | — | `feature/annual-mobile-payments` | — | [x] |
 | ANN-22 | Register flag `module_annual` + prerequisites (`module_tax_engine`, `module_taxpayers`) + `demo_full` preset | backend-sr | ANN-15, ANN-16, ANN-18, ANN-19, ANN-20, ANN-21 | 0.5 | — | `feature/annual-flag` | — | [x] |
-| ANN-23 | QA AN: LOCAL DB wiped, data entered through the app; UI figures equal AN-01..AN-08; flag ON/OFF; read-only; PF and PM | qa-sr | ANN-22 | 5 | — | `feature/annual-qa-fixes` | OB6 | [ ] |
-| ANN-24 | Tech-lead gate AN (OCP per section, purity, no floats, determinism, ports only) | tech-lead | ANN-23 | 2 | — | (PR review) | — | [ ] |
-| ANN-25 | Security gate AN (RLS on 4 tables, PII in labels, logs, flag matrix, 404 indistinguishability) | security | ANN-23 | 2 | — | `feature/annual-security-gate` | — | [ ] |
-| ANN-26 | Docs AN: user-facing annual guide, Dec–Jan params runbook additions (RMF 2027 deadlines, rule renewals) | doc-writer | ANN-24, ANN-25 | 2 | — | `feature/annual-docs` | — | [ ] |
+| ANN-23 | QA AN: LOCAL DB wiped, data entered through the app; UI figures equal AN-01..AN-08; flag ON/OFF; read-only; PF and PM | qa-sr | ANN-22 | 5 | — | `feature/annual-qa-fixes` | OB6 | [x] |
+| ANN-24 | Tech-lead gate AN (OCP per section, purity, no floats, determinism, ports only) | tech-lead | ANN-23 | 2 | — | (PR review) | — | [x] |
+| ANN-25 | Security gate AN (RLS on 4 tables, PII in labels, logs, flag matrix, 404 indistinguishability) | security | ANN-23 | 2 | — | `feature/annual-security-gate` | — | [x] |
+| ANN-26 | Docs AN: user-facing annual guide, Dec–Jan params runbook additions (RMF 2027 deadlines, rule renewals) | doc-writer | ANN-24, ANN-25 | 2 | — | `feature/annual-docs` | — | [x] |
 | ANN-27 | CPA sign-off of annual goldens and topics (AR Part E CPA list); un-skip or record decisions | qa-sr | ANN-23 | 2 | — | `feature/annual-cpa-signoff` | OB5 | [ ] |
 
 Parallel groups: **PG-AN-F** (ANN-03, ANN-04, ANN-06) after ANN-02: separate migration files, params
@@ -562,6 +562,29 @@ tech-lead 2 · security 2 · doc-writer 2 → **91.5 h raw, 109.8 h with +20%**.
 (aggregation + obligation logic) and ANN-19 (category-driven form). External risk: RMF 2027 (late
 December 2026) may change deadlines or rules 3.13.7 / 3.17.x for ejercicio 2026 → params data change +
 ANN-27 re-check.
+
+#### AN follow-ups
+
+Deferred by the ANN-23 QA ([report](../../.gstack/qa-reports/qa-report-annual-2026-10-14.md) §6–§7),
+the [ANN-24 tech-lead gate](../reviews/ANN-24-tech-lead-gate.md#follow-ups-non-blocking), the
+[ANN-25 security gate](https://github.com/romodevx/control-contable/pull/153#issuecomment-6186092941)
+and ANN-26; none blocks the module. ANN-24 and ANN-25 have passed; `module_annual` also keeps the
+tax engine's preconditions ([module page](../modules/annual.md#flags-prerequisites-and-presets)).
+
+| ID | Item | Owner | Target |
+|---|---|---|---|
+| ANN-27 | **CPA sign-off** of the annual goldens and ⚠️ topics; un-skip AN-04 / AN-07 PTU or record decisions | qa-sr, owner + CPA | OB5 |
+| SEC FU1 | M9-08 purge job must cover soft-deleted `personal_deductions` (LFPDPPP retention); ANN-03 added to M9-08's deps | db-sr | With M9-08 |
+| SEC FU2 | Guard test: every `x-module: module_annual` operation has a budget in `annualhttp.UserLimits` (as the taxpayers and expenses `limits_test.go` do) | backend-sr | Next annual HTTP change |
+| SEC FU3 | Reject Unicode format characters (Cf: bidi override, zero-width) in `student_label` / `employer_label` (`validLabel`; DB CHECK too) — Low, display spoofing of the user's own data | backend-sr + db-sr | Next annual inputs change |
+| TL FU1 | Deadline per section kind lives in `explain.sectionDeadlines`: the strategy returns its deadline kind, or a test that every computed kind has one | backend-sr | Next annual strategy |
+| TL FU2 | `fiscal.RegimeGeneralPM` constant for the `"601"` literals (`pmSection`, `regimeYearOf`) | backend-sr | `/refactor` |
+| QA O2 | Filed-payments prefill vs the monthly screen: an on-screen hint on the prefilled rows (the [user guide §3.3](../guides/annual-user-guide.md#33-pagos-provisionales-presentados-confirmados) explains it today) | frontend-sr | UX polish, before launch |
+| QA O3 | Record forms (M3/M4) default the regime radio to the first regime held; for 605 + 612 that is the informative 605 | frontend-sr (`module_incomes` / `module_expenses`) | UX polish, before launch |
+| QA §7 | **iOS walk** of the annual screens (Xcode pending) | qa-sr | OB6 |
+| QA §7 | **Archived taxpayer device walk** (covered through the stack only) and RESICO PF / PM, 625, 603 on a device | qa-sr | Next device walk (REL-08 at the latest) |
+| ANN-26 FU1 | A current year with no parameter file of its own answers `422 parameters_unavailable` (no fallback, unlike the monthly), but the contract's 422 text says "before 2026" and the app says "Elige un año desde 2026": document the no-own-file case in the contract (architect) and give the client a message for it, or hide the year from the picker | architect + frontend-sr | Before 1 January 2027 |
+| RMF 2027 | Read RMF 2027 for ejercicio 2026: deadline extensions, rules 3.13.7 / 3.17.11 renewals, lower `rmfPendingYear` ([runbook §8](../runbooks/tax-params-update.md#8-the-annual-return-module_annual-rmf-deadlines-and-rule-renewals)) | backend-sr, qa-sr, CPA | Late December 2026 – January 2027 |
 
 ### REL — Release (MVP deployable)
 

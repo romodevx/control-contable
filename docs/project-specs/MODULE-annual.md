@@ -406,7 +406,8 @@ the `year_in_progress` warning shows and nothing is extrapolated. 2027 → `400 
 ### US-A13 Flags, isolation, read-only
 Given `module_annual` OFF (or `module_tax_engine` OFF), Then every annual route returns `404` and the
 entry is hidden. Given another user's taxpayer id, Then `404`. Given a read-only user (trial ended), Then
-reads work and writes return `402`.
+reads work; creates, edits and PUTs return `402`; deleting (a deduction or a constancia) and restoring a
+deduction (Undo) still work, so read-only never makes a deduction's delete one-way (ADR-0009, CONTRACT.md 0.6.1; aligned by ANN-26 after QA ANN-23 §6).
 
 ## 5. Errors → ErrorCode (single envelope)
 
@@ -415,7 +416,7 @@ reads work and writes return `402`.
 | Malformed id / body / year, unknown field, bad enum, amount < 0, `paid_on` outside the year, bad UUID | 400 | `validation_failed` | field codes |
 | Future `fiscal_year` | 400 | `validation_failed` | `out_of_range` |
 | No / invalid token | 401 | `unauthorized` | |
-| Read-only user writing | 402 | `entitlement_required` | |
+| Read-only user creating, editing or PUTting (delete and restore stay allowed, ADR-0009) | 402 | `entitlement_required` | |
 | Flag OFF (or implied), foreign or unknown taxpayer / row | 404 | `not_found` | |
 | `fiscal_year` < 2026 | 422 | `business_rule_violation` | `parameters_unavailable` |
 | Personal deduction / constancia on a PM | 422 | `business_rule_violation` | `person_type_not_allowed` |
@@ -515,4 +516,4 @@ restore stay open to a read-only user, as records.
 | OQ-A6 | 614 interest in art. 152 | **DECIDED:** **Explanation only** in v1 |
 | OQ-A7 | Presets including `module_annual` | **DECIDED:** **`demo_full` only** |
 | OQ-A8 | Default year shown | **DECIDED:** Previous year Jan → 30 abr, else current year |
-| OQ-A9 | Free tier: are annual inputs counted in trial record caps? | **DECIDED:** **No**; writes need `pro`/trial like `putTaxInputs` (402 when read-only) |
+| OQ-A9 | Free tier: are annual inputs counted in trial record caps? | **DECIDED:** **No**; creates, edits and PUTs need `pro`/trial like `putTaxInputs` (402 when read-only); delete and restore stay open (ADR-0009) |

@@ -234,5 +234,5 @@ func (t *rentTrace) tax(table taxparams.Table, base money.Exact) {
 		b := t.l.Lookup(rentStep(rentLineTariffRow, SourceParams(rentParamTariff), rentBasisTariff), table, base)
 		t.l.AddProduct(rentStep(rentLineExcess, SourceParams(rentParamTariff), rentBasisTariff), b.Excess(base), b.Row.Rate)
 	}
-	t.l.Result(rentStep(rentLineCaused, SourceComputed(), rentBasisBase))
+	t.l.ResultRounded(rentStep(rentLineCaused, SourceComputed(), rentBasisBase))
 }
