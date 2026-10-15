@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TaxpayerCreate {
 
-@JsonKey(name: 'person_type') PersonType get personType; RfcInput get rfc;/// Trimmed and NFC-normalized.
+@JsonKey(name: 'person_type') PersonType get personType; RfcInput get rfc;/// Trimmed and NFC-normalized; no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators): `400 validation_failed`, field code `invisible_characters`.
 @JsonKey(name: 'display_name') String get displayName;/// At least one regime; each code at most once (`regimes.N.regime_code` / `duplicate`).
  List<TaxpayerRegimeCreate> get regimes;/// Optional client-generated id (idempotent retries).
 @JsonKey(includeIfNull: false) Uuid? get id;
@@ -227,7 +227,7 @@ class _TaxpayerCreate implements TaxpayerCreate {
 
 @override@JsonKey(name: 'person_type') final  PersonType personType;
 @override final  RfcInput rfc;
-/// Trimmed and NFC-normalized.
+/// Trimmed and NFC-normalized; no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators): `400 validation_failed`, field code `invisible_characters`.
 @override@JsonKey(name: 'display_name') final  String displayName;
 /// At least one regime; each code at most once (`regimes.N.regime_code` / `duplicate`).
  final  List<TaxpayerRegimeCreate> _regimes;

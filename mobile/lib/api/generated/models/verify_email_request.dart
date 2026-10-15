@@ -18,6 +18,8 @@ abstract class VerifyEmailRequest with _$VerifyEmailRequest {
 
     /// The new account's password (D8). 12-128 characters; the breached/common-password check (offline list, D5) runs server-side.
     required String password,
+
+    /// Trimmed and NFC-normalized; no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators): `400 validation_failed`, field code `invisible_characters`.
     @JsonKey(includeIfNull: false) String? name,
   }) = _VerifyEmailRequest;
 

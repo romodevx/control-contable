@@ -13,6 +13,7 @@ part 'taxpayer_update.g.dart';
 @Freezed()
 abstract class TaxpayerUpdate with _$TaxpayerUpdate {
   const factory TaxpayerUpdate({
+    /// Trimmed and NFC-normalized; no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators): `400 validation_failed`, field code `invisible_characters`.
     @JsonKey(includeIfNull: false, name: 'display_name') String? displayName,
     @JsonKey(includeIfNull: false) RfcInput? rfc,
   }) = _TaxpayerUpdate;

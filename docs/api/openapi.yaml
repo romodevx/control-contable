@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Control Contable API
-  version: 0.13.0
+  version: 0.14.0
   summary: Monthly IVA and provisional ISR estimates for Mexican taxpayers.
   description: |
     Spec-first contract (single source of truth). Server stubs (oapi-codegen),
@@ -6282,7 +6282,7 @@ components:
       examples:
         - status: verification_sent
     VerifyEmailRequest:
-      x-frozen: sha256:7e8f356efba1abf886669add85205441432ac94514d8e8fa347374605f81b451
+      x-frozen: sha256:993dd4a8ebc428c8960493d243f82d9a077db007ca76212fcda35530faa5d404
       type: object
       required: [email, code, password]
       additionalProperties: false
@@ -6294,7 +6294,7 @@ components:
           minLength: 12
           maxLength: 128
           description: The new account's password (D8). 12-128 characters; the breached/common-password check (offline list, D5) runs server-side.
-        name: { type: string, minLength: 1, maxLength: 120 }
+        name: { type: string, minLength: 1, maxLength: 120, description: 'Trimmed and NFC-normalized; no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators): `400 validation_failed`, field code `invisible_characters`.' }
       examples:
         - email: ana.gomez@example.mx
           code: '482913'
@@ -6388,12 +6388,12 @@ components:
           name: Ana Gómez Ruiz
           created_at: '2026-10-13T16:00:00Z'
     UserUpdate:
-      x-frozen: sha256:bf94938d30f177509883fc4b8985c6481c40bfa3dc07e43281a9e080cf6ecc41
+      x-frozen: sha256:851fdb89627e9a417536c7236cbdc14287b6b7f70d9214ddf6a2e85cf15e9c15
       type: object
       minProperties: 1
       additionalProperties: false
       properties:
-        name: { type: string, minLength: 1, maxLength: 120 }
+        name: { type: string, minLength: 1, maxLength: 120, description: 'Trimmed and NFC-normalized; no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators): `400 validation_failed`, field code `invisible_characters`.' }
       examples:
         - name: Ana Gómez de la Torre
     DeleteAccountRequest:
@@ -6812,7 +6812,7 @@ components:
           archived_at: null
           created_at: '2026-10-13T16:05:00Z'
     TaxpayerCreate:
-      x-frozen: sha256:8a383124069d2ae913c3ba8dea5cae752e986c3be12762529f0aca11e047ec7a
+      x-frozen: sha256:1e5a734943c29d47dd21fac5daa3f8b250d65c6124d52ae52f55a85d1bcf25ef
       type: object
       required: [person_type, rfc, display_name, regimes]
       additionalProperties: false
@@ -6822,7 +6822,7 @@ components:
           description: Optional client-generated id (idempotent retries).
         person_type: { $ref: '#/components/schemas/PersonType' }
         rfc: { $ref: '#/components/schemas/RfcInput' }
-        display_name: { type: string, minLength: 1, maxLength: 80, description: 'Trimmed and NFC-normalized.' }
+        display_name: { type: string, minLength: 1, maxLength: 80, description: 'Trimmed and NFC-normalized; no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators): `400 validation_failed`, field code `invisible_characters`.' }
         regimes:
           type: array
           minItems: 1
@@ -6838,13 +6838,13 @@ components:
               options: { deduction_mode: blind_35 }
               start_period: '2026-01'
     TaxpayerUpdate:
-      x-frozen: sha256:3a26eed74b7b3f1fa119b89b594b9c7ca810f1de32992568b3b046a90eda4274
+      x-frozen: sha256:d4614d9e37b26d66dc1746b6882f0259f59db6e9afa32880c29574806f6ced79
       type: object
       minProperties: 1
       additionalProperties: false
       description: Person type is immutable. `rfc` corrects a mistyped RFC of the same person type (OQ-1).
       properties:
-        display_name: { type: string, minLength: 1, maxLength: 80 }
+        display_name: { type: string, minLength: 1, maxLength: 80, description: 'Trimmed and NFC-normalized; no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators): `400 validation_failed`, field code `invisible_characters`.' }
         rfc: { $ref: '#/components/schemas/RfcInput' }
       examples:
         - display_name: Ana (negocio)
@@ -7151,10 +7151,10 @@ components:
         `duplicate_cfdi_uuid` (partial collections, OQ-9). Never logged or echoed in errors.
       examples: [6F3B2C1D-8A4E-4B7F-9C2D-1E5A7B9C3D4F]
     RecordDescription:
-      x-frozen: sha256:346e2d060d76f54d2e89ee1bcae89bb03efd7f654c44e991912800b17a0f2056
+      x-frozen: sha256:7ea5a9a617140914044757c74ba4d5ccb20415472ac6e818bc5f3c9f546efefb
       type: [string, 'null']
       maxLength: 200
-      description: Free text, trimmed and NFC-normalized; empty becomes `null`. Never logged (may name a client).
+      description: 'Free text, trimmed and NFC-normalized; empty becomes `null`; no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators): `400 validation_failed`, field code `invisible_characters`. Never logged (may name a client).'
     PeriodTotals:
       x-frozen: sha256:256a926c73a1824ecc7c666f225f72054dc1a1befdceaed4c90ef675e370c661
       type: object
@@ -9549,13 +9549,13 @@ components:
       examples:
         - { prior_year_accumulable_income_cents: 68000000, other_exempt_income_cents: 0, told_employer_will_file: false }
     EmployerLabel:
-      x-frozen: sha256:bc92a6988dc951993bb37a24b707c23de2f0d3fde8cdb2350ca8cbf61d69c8b0
+      x-frozen: sha256:c0424983390552e924adb6d99bdc0487f35bfb2a7e583d0bfac61b32b8c7a2cb
       type: string
       minLength: 1
       maxLength: 60
       description: >-
         Optional alias of the employer ("Empleo principal"); never an RFC or a legal name
-        requirement. Trimmed, no control characters, stored NFC (ADR-0004); never logged.
+        requirement. Trimmed, stored NFC (ADR-0004); no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators): `400 validation_failed`, field code `invisible_characters`. Never logged.
       examples: [Empleo principal]
     SalaryStatement:
       x-frozen: sha256:058869e367fea172f7d6935f33d7226a3e3cf9fdf84a4d8fada740812a3d4ae5
@@ -9753,13 +9753,13 @@ components:
       enum: [preescolar, primaria, secundaria, profesional_tecnico, bachillerato]
       description: '`tuition` only; the cap of the highest level the student had in the year applies.'
     StudentLabel:
-      x-frozen: sha256:ac7f6902b98d76dbb49c4de456a14a72181781f362421c7e6f6048a3dab6ab74
+      x-frozen: sha256:d4ff98c2173826e9900a32f2e03a417fba398705b49fbbfcf73bd4daccb9979e
       type: string
       minLength: 1
       maxLength: 40
       description: >-
         Alias of the student the tuition cap is counted per ("Hija menor"); no full name
-        needed. Trimmed, no control characters, stored NFC (ADR-0004); never logged.
+        needed. Trimmed, stored NFC (ADR-0004); no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators): `400 validation_failed`, field code `invisible_characters`. Never logged.
       examples: [Hija menor]
     DeductionExclusion:
       x-frozen: sha256:019b2318f3203194ee224d707225867aab1d426700cbf650d945773ecd195c03

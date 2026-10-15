@@ -19,7 +19,8 @@ mixin _$VerifyEmailRequest {
 /// Trimmed, lower-cased and NFC-normalised server-side before lookup or hashing.
  String get email;/// 6-digit emailed code; 15 min TTL, 5 wrong tries.
  String get code;/// The new account's password (D8). 12-128 characters; the breached/common-password check (offline list, D5) runs server-side.
- String get password;@JsonKey(includeIfNull: false) String? get name;
+ String get password;/// Trimmed and NFC-normalized; no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators): `400 validation_failed`, field code `invisible_characters`.
+@JsonKey(includeIfNull: false) String? get name;
 /// Create a copy of VerifyEmailRequest
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -230,6 +231,7 @@ class _VerifyEmailRequest implements VerifyEmailRequest {
 @override final  String code;
 /// The new account's password (D8). 12-128 characters; the breached/common-password check (offline list, D5) runs server-side.
 @override final  String password;
+/// Trimmed and NFC-normalized; no invisible characters (control, format such as zero-width or bidi controls, line or paragraph separators): `400 validation_failed`, field code `invisible_characters`.
 @override@JsonKey(includeIfNull: false) final  String? name;
 
 /// Create a copy of VerifyEmailRequest
