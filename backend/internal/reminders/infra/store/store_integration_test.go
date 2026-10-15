@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/rand"
 	"database/sql"
+	"errors"
 	"os"
 	"testing"
 	"time"
@@ -49,6 +50,7 @@ SELECT id, digest, '\x0001'::bytea || digest || digest, 1,
 FROM v`
 
 type env struct {
+	db       *pgtest.Database
 	app      *sql.DB
 	txm      *pgdb.TxManager
 	vault    *pushtoken.Vault
@@ -58,7 +60,8 @@ type env struct {
 
 func newEnv(t *testing.T) *env {
 	t.Helper()
-	e := &env{app: pgtest.NewDatabase(t).Connect(t, pgtest.RoleApp), devices: store.NewDevices(), settings: store.NewSettings()}
+	db := pgtest.NewDatabase(t)
+	e := &env{db: db, app: db.Connect(t, pgtest.RoleApp), devices: store.NewDevices(), settings: store.NewSettings()}
 	var err error
 	e.txm, err = pgdb.NewTxManager(e.app)
 	require.NoError(t, err)
@@ -199,6 +202,42 @@ func TestDevices_deleteIsOwnOnly(t *testing.T) {
 	assert.True(t, e.remove(t, userA, device1))
 	assert.False(t, e.remove(t, userA, device1), "a second call matches nothing")
 	assert.False(t, e.remove(t, userA, device2), "unknown")
+}
+
+// errRollback ends a unit of work that must leave nothing behind.
+var errRollback = errors.New("rollback")
+
+// Defense in depth: the device read and delete name the caller themselves
+// (user_id = app_user_id()), so another user's installation stays out of
+// reach even where RLS does not apply. Proved as the table owner with FORCE
+// RLS lifted inside a unit of work that is rolled back: without the
+// predicate, B would read and delete A's device here.
+func TestDevices_readAndDeleteAreOwnOnlyWithoutRLS(t *testing.T) {
+	e := newEnv(t)
+	e.claim(t, userA, e.sealed(t, userA, device1, newToken(t), ""))
+	owner, err := pgdb.NewTxManager(e.db.Connect(t, pgtest.RoleOwner))
+	require.NoError(t, err)
+
+	err = owner.ReadWrite(t.Context(), userB, func(ctx context.Context) error {
+		conn, err := pgdb.Conn(ctx)
+		require.NoError(t, err)
+		require.NoError(t, conn.Exec("ALTER TABLE devices NO FORCE ROW LEVEL SECURITY").Error)
+
+		_, err = e.devices.Device(ctx, device1)
+		require.ErrorIs(t, err, usecase.ErrDeviceNotFound, "B reads A's device")
+		deleted, err := e.devices.DeleteDevice(ctx, device1)
+		require.NoError(t, err)
+		assert.False(t, deleted, "B deletes A's device")
+
+		_, err = e.devices.Device(ctx, device1)
+		require.ErrorIs(t, err, usecase.ErrDeviceNotFound)
+		return errRollback
+	})
+
+	require.ErrorIs(t, err, errRollback)
+	_, err = e.device(t, userA, device1)
+	require.NoError(t, err, "A's row is intact")
+	require.NoError(t, pgtest.CheckRLSForced(t.Context(), e.db.Connect(t, pgtest.RoleOwner), pgtest.Table{Name: "devices", OwnerColumn: "user_id"}))
 }
 
 func (e *env) readSettings(t *testing.T, user string) (domain.Settings, bool) {

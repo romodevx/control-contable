@@ -32,9 +32,13 @@ const (
 const (
 	claimSQL = `SELECT claim_push_token(CAST(? AS uuid), CAST(? AS uuid), CAST(? AS text), CAST(? AS bytea),
        CAST(? AS smallint), CAST(? AS bytea), CAST(? AS text)) AS created`
+	// The device read and delete also name the caller (defense in depth,
+	// like every user-scoped query): RLS already limits them to the unit of
+	// work's user, and an installation id alone never reaches another user's
+	// row should a policy ever be loosened.
 	deviceSQL = `SELECT id::text AS id, platform, app_version, created_at, last_seen_at
-FROM devices WHERE id = CAST(? AS uuid)`
-	deleteDeviceSQL = `DELETE FROM devices WHERE id = CAST(? AS uuid)`
+FROM devices WHERE id = CAST(? AS uuid) AND user_id = (SELECT app_user_id())`
+	deleteDeviceSQL = `DELETE FROM devices WHERE id = CAST(? AS uuid) AND user_id = (SELECT app_user_id())`
 	settingsSQL     = `SELECT enabled, early_day, on_due_date, to_char(send_time, 'HH24:MI') AS send_time, show_amounts
 FROM reminder_settings WHERE user_id = CAST(? AS uuid)`
 	saveSettingsSQL = `INSERT INTO reminder_settings (user_id, enabled, early_day, on_due_date, send_time, show_amounts)
