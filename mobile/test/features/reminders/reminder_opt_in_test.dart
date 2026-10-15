@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:control_contable/api/generated/models/device_platform.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/features/reminders/application/push_device.dart';
@@ -174,6 +176,85 @@ void main() {
 
       expect(repository.puts.last.enabled, isFalse);
       expect(repository.unregistered, [_installationId]);
+    });
+
+    test('change shows the new value at once and saves the whole object', () async {
+      repository.settings = defaultSettings.copyWith(enabled: true);
+      await container.read(reminderSettingsProvider.future);
+      final pending = Completer<void>();
+      repository.putReply = pending;
+      final next = repository.settings.copyWith(showAmounts: true);
+
+      final saving = notifier().change(next);
+
+      expect(container.read(reminderSettingsProvider).value, next);
+      pending.complete();
+      expect(await saving, ChangeOutcome.saved);
+      expect(repository.puts.single, next);
+      expect(container.read(reminderSettingsProvider).value, next);
+    });
+
+    test('a failed change reverts to what the server holds and throws', () async {
+      final saved = defaultSettings.copyWith(enabled: true);
+      repository.settings = saved;
+      await container.read(reminderSettingsProvider.future);
+      repository.putReply = const ApiUnreachable();
+
+      await expectLater(
+        notifier().change(saved.copyWith(sendTime: '08:00')),
+        throwsA(isA<ApiUnreachable>()),
+      );
+
+      expect(container.read(reminderSettingsProvider).value, saved);
+    });
+
+    test('a change leaving nothing to send is refused locally, no PUT', () async {
+      final saved = defaultSettings.copyWith(enabled: true, earlyDay: null);
+      repository.settings = saved;
+      await container.read(reminderSettingsProvider.future);
+
+      final outcome = await notifier().change(saved.copyWith(onDueDate: false));
+
+      expect(outcome, ChangeOutcome.noReminderSelected);
+      expect(repository.puts, isEmpty);
+      expect(container.read(reminderSettingsProvider).value, saved);
+    });
+
+    test('rapid changes save in order and the last one wins', () async {
+      final saved = defaultSettings.copyWith(enabled: true);
+      repository.settings = saved;
+      await container.read(reminderSettingsProvider.future);
+      final pending = Completer<void>();
+      repository.putReply = pending;
+      final first = saved.copyWith(sendTime: '08:00');
+      final second = first.copyWith(showAmounts: true);
+
+      final firstSave = notifier().change(first);
+      final secondSave = notifier().change(second);
+      pending.complete();
+
+      expect(await firstSave, ChangeOutcome.superseded);
+      expect(await secondSave, ChangeOutcome.saved);
+      expect(repository.puts, [first, second]);
+      expect(container.read(reminderSettingsProvider).value, second);
+    });
+
+    test('a failure drops the queued change too: nothing half-applied', () async {
+      final saved = defaultSettings.copyWith(enabled: true);
+      repository.settings = saved;
+      await container.read(reminderSettingsProvider.future);
+      final pending = Completer<void>();
+      repository.putReply = pending;
+      final first = saved.copyWith(sendTime: '08:00');
+
+      final firstSave = notifier().change(first);
+      final secondSave = notifier().change(first.copyWith(showAmounts: true));
+      pending.completeError(const ApiUnreachable());
+
+      await expectLater(firstSave, throwsA(isA<ApiUnreachable>()));
+      expect(await secondSave, ChangeOutcome.superseded);
+      expect(repository.puts, [first]);
+      expect(container.read(reminderSettingsProvider).value, saved);
     });
 
     test('save replaces the whole object', () async {

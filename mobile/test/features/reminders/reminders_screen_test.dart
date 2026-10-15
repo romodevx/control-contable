@@ -17,7 +17,10 @@ const String _timeLabel = 'Hora del aviso';
 const String _amounts =
     'Mostrar montos en las notificaciones (se verán en la pantalla de '
     'bloqueo)';
-const String _save = 'Guardar cambios';
+const String _saved = 'Guardado.';
+const String _saveFailed =
+    'No se pudo guardar el cambio; se restauró el valor anterior. Inténtelo '
+    'de nuevo.';
 const String _noneSelected =
     'Elija al menos un recordatorio: el anticipado o el del día del '
     'vencimiento.';
@@ -28,7 +31,16 @@ Finder _switchOf(String label) => find.widgetWithText(SwitchListTile, label);
 bool _isOn(WidgetTester tester, String label) =>
     tester.widget<SwitchListTile>(_switchOf(label)).value;
 
-Finder get _saveButton => find.widgetWithText(FilledButton, _save);
+List<String> _announced(WidgetTester tester) => [
+  for (final announcement in tester.takeAnnouncements()) announcement.message,
+];
+
+Future<void> _chooseEarlyDay(WidgetTester tester, String option) async {
+  await tester.tap(find.byType(DropdownButtonFormField<int?>));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(option).last);
+  await tester.pumpAndSettle();
+}
 
 void _tall(WidgetTester tester) {
   tester.view
@@ -224,91 +236,104 @@ void main() {
       expect(find.textContaining('nunca su RFC'), findsOneWidget);
     });
 
-    testWidgets('nothing selected: an error on submit, no PUT', (tester) async {
+    testWidgets('autosave: no save button, no primary needed (§7)', (
+      tester,
+    ) async {
       _tall(tester);
       await harness.pump(tester);
 
-      await tester.tap(find.text('El día 14 del mes de pago'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Sin recordatorio anticipado').last);
-      await tester.pumpAndSettle();
-      await tester.tap(_switchOf(_dueLabel));
-      await tester.pumpAndSettle();
-      expect(find.text(_noneSelected), findsNothing, reason: 'submit only');
-
-      await tester.tap(_saveButton);
-      await tester.pumpAndSettle();
-
-      expect(find.text(_noneSelected), findsOneWidget);
-      expect(harness.repository.puts, isEmpty);
+      expect(find.byType(FilledButton), findsNothing);
+      expect(find.text('Guardar cambios'), findsNothing);
     });
 
-    testWidgets('save sends the whole object and confirms', (tester) async {
+    testWidgets('each change saves the whole object at once and says so', (
+      tester,
+    ) async {
       _tall(tester);
+      final handle = tester.ensureSemantics();
       await harness.pump(tester);
+      tester.takeAnnouncements();
 
-      await tester.tap(find.text('El día 14 del mes de pago'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Sin recordatorio anticipado').last);
-      await tester.pumpAndSettle();
       await tester.tap(_switchOf(_amounts));
-      await tester.pumpAndSettle();
-      await tester.tap(_saveButton);
       await tester.pumpAndSettle();
 
       expect(
         harness.repository.puts.single,
-        defaultSettings.copyWith(
-          enabled: true,
-          earlyDay: null,
-          showAmounts: true,
-        ),
+        defaultSettings.copyWith(enabled: true, showAmounts: true),
       );
-      expect(find.text('Cambios guardados.'), findsOneWidget);
+      expect(_isOn(tester, _amounts), isTrue);
+      expect(find.text(_saved), findsOneWidget);
+      expect(_announced(tester), [_saved]);
+
+      await _chooseEarlyDay(tester, 'Sin recordatorio anticipado');
+
+      expect(harness.repository.puts.last.earlyDay, isNull);
+      expect(_announced(tester), [_saved], reason: 'every save, not once');
+      handle.dispose();
     });
 
-    testWidgets('the primary is never disabled, not even while saving', (
+    testWidgets('a failed change reverts the control and says so', (
+      tester,
+    ) async {
+      _tall(tester);
+      final handle = tester.ensureSemantics();
+      await harness.pump(tester);
+      tester.takeAnnouncements();
+      harness.repository.putReply = const ApiUnreachable();
+
+      await tester.tap(_switchOf(_amounts));
+      await tester.pumpAndSettle();
+
+      expect(_isOn(tester, _amounts), isFalse, reason: 'reverted');
+      expect(find.text(_saveFailed), findsOneWidget);
+      expect(find.text(_saved), findsNothing);
+      expect(_announced(tester), [_saveFailed]);
+      handle.dispose();
+    });
+
+    testWidgets('a failed early-day change shows the saved day again', (
       tester,
     ) async {
       _tall(tester);
       await harness.pump(tester);
-      expect(tester.widget<FilledButton>(_saveButton).onPressed, isNotNull);
+      harness.repository.putReply = const ApiUnreachable();
 
-      final pending = Completer<void>();
-      harness.repository.putReply = pending;
-      await tester.tap(_saveButton);
-      await tester.pump();
+      await _chooseEarlyDay(tester, 'El día 10 del mes de pago');
 
-      expect(
-        find.descendant(
-          of: _saveButton,
-          matching: find.byType(CircularProgressIndicator),
-        ),
-        findsOneWidget,
-      );
-      expect(tester.widget<FilledButton>(_saveButton).onPressed, isNotNull);
-      await tester.tap(_saveButton);
-      await tester.pump();
-      expect(harness.repository.puts, hasLength(1), reason: 'repeat ignored');
-
-      pending.complete();
-      await tester.pumpAndSettle();
+      expect(find.text('El día 14 del mes de pago'), findsOneWidget);
+      expect(find.text('El día 10 del mes de pago'), findsNothing);
+      expect(find.text(_saveFailed), findsOneWidget);
     });
 
-    testWidgets('the server 422 no_reminder_selected reads the same', (
+    testWidgets('leaving nothing to send is refused: no PUT, switch stays', (
       tester,
     ) async {
       _tall(tester);
-      harness.repository.putReply = const ApiRejected(code: null);
       await harness.pump(tester);
 
-      await tester.tap(_saveButton);
+      await _chooseEarlyDay(tester, 'Sin recordatorio anticipado');
+      await tester.tap(_switchOf(_dueLabel));
       await tester.pumpAndSettle();
 
-      expect(
-        find.text('No se pudieron guardar los cambios. Inténtelo de nuevo.'),
-        findsOneWidget,
-      );
+      expect(harness.repository.puts, hasLength(1), reason: 'only the day');
+      expect(_isOn(tester, _dueLabel), isTrue);
+      expect(find.text(_noneSelected), findsOneWidget);
+    });
+
+    testWidgets('a later valid change clears the error', (tester) async {
+      _tall(tester);
+      harness.repository.putReply = const ApiUnreachable();
+      await harness.pump(tester);
+
+      await tester.tap(_switchOf(_amounts));
+      await tester.pumpAndSettle();
+      expect(find.text(_saveFailed), findsOneWidget);
+
+      await tester.tap(_switchOf(_amounts));
+      await tester.pumpAndSettle();
+
+      expect(find.text(_saveFailed), findsNothing);
+      expect(find.text(_saved), findsOneWidget);
     });
 
     testWidgets('the time uses the platform picker', (tester) async {
@@ -410,8 +435,8 @@ void main() {
       await harness.pump(tester);
 
       expect(tester.takeException(), isNull);
-      await tester.scrollUntilVisible(_saveButton, 200);
-      expect(_saveButton, findsOneWidget);
+      await tester.scrollUntilVisible(_switchOf(_amounts), 200);
+      expect(_switchOf(_amounts), findsOneWidget);
     });
   });
 }
