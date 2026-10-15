@@ -43,8 +43,9 @@ const (
 	// (taxpayer, regimes), one aggregate per table for the fiscal year, the
 	// tax inputs (one statement), the regime texts and the year's views
 	// (one primary-key range scan). It does not grow with months
-	// (MODULE-history §2.6 targets at most 7).
-	histPerfReads = 7
+	// (MODULE-history §2.6 targets at most 8: the eighth is the due date's
+	// holidays read, M9-04, one statement).
+	histPerfReads = 8
 	// histCountRecords of each table seed the statement-count check.
 	histCountRecords = 400
 	// histMonths is a past fiscal year's months.

@@ -199,7 +199,8 @@ Per `getHistory`, at most:
 
 - Never 12 × `EstimateMonth`; `EstimateRange` runs the pure engine per month (< 2 ms each).
   `has_records` comes from the same aggregate rows. A statement-count test pins the number (target
-  **≤ 7**, measured and amended in M8-03 like M6 §2.4).
+  **≤ 7**, measured and amended in M8-03 like M6 §2.4; **≤ 8 since M9-04**: the estimate's due date reads
+  the `holidays` tables in one statement, ADR-0007 Amendment 1).
 - **Targets**: p95 **< 1 s** for 3 regimes and 10,000 records in the fiscal year; internal goal ≤ 300 ms
   (Go benchmark + EXPLAIN ANALYZE in M8-03, k6 in REL-06). `markHistoryViewed`: one upsert, p95 < 100 ms.
 - No cache in v1; `Cache-Control: no-store` on both routes.

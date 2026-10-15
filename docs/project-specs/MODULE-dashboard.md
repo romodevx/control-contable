@@ -150,6 +150,9 @@ The use case never loops 12 × `EstimateMonth`. Per request, at most:
   the target is **≤ 8 (≤ 10 with an empty window)**. `TestContract_dashboardStatementCount`
   pins 8 in the regular integration suite for a one-year and a two-year window;
   `TestPerf_dashboardReadPath` (CC_PERF=1) re-checks it at volume.
+- **Amended by M9-04 (2026-10-15): 9 reads (≤ 11 with an empty window).** The estimate's due
+  date now reads the `holidays` tables (ADR-0007 Amendment 1): one statement per request
+  (seeded years LEFT JOIN their days, a few dozen rows), constant in `months`.
 - Indexes: the existing `(user_id, taxpayer_id, collected_on)` / `(…, paid_on)` serve 2/3; M6-03
   confirms with EXPLAIN that no sequential scan appears.
 - No cache in v1 (estimates are derived on every read, ADR-0002 §5). `Cache-Control: no-store`.
@@ -282,7 +285,7 @@ Home refreshes.
 
 ### US-D9 Performance
 - **Given** 3 regimes and 10,000 records per fiscal year across two fiscal years, **When**
-  `getDashboard` runs 1,000 times, **Then** server p95 < 1 s and ≤ 8 SQL statements per request
+  `getDashboard` runs 1,000 times, **Then** server p95 < 1 s and ≤ 9 SQL statements per request (8 before M9-04's holidays read)
   (≤ 10 with an empty window; §2.4 has the measured numbers).
 
 ## 5. Errors → ErrorCode (single envelope)

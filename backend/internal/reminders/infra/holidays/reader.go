@@ -17,11 +17,19 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/reminders/usecase"
 )
 
-// The two reads: both tables are a handful of rows per seeded year.
-const (
-	yearsQuery = `SELECT year FROM holiday_years ORDER BY year`
-	daysQuery  = `SELECT day FROM holidays WHERE moves_due_date ORDER BY day`
-)
+// holidaysQuery is the one read, a single statement: each seeded year with
+// the days of it that move a due date, a year with none as one row with a
+// NULL day. Both tables are a handful of rows per seeded year.
+const holidaysQuery = `SELECT y.year, h.day
+FROM holiday_years y
+LEFT JOIN holidays h ON h.year = y.year AND h.moves_due_date
+ORDER BY y.year, h.day`
+
+// holidayRow is one row of holidaysQuery.
+type holidayRow struct {
+	Year int        `gorm:"column:year"`
+	Day  *time.Time `gorm:"column:day"`
+}
 
 // Reader implements usecase.HolidayCalendar.
 type Reader struct{}
@@ -37,19 +45,20 @@ func (Reader) Holidays(ctx context.Context) (fiscal.HolidaySet, error) {
 	if err != nil {
 		return fiscal.HolidaySet{}, err
 	}
-	var years []int
-	if err := db.Raw(yearsQuery).Scan(&years).Error; err != nil {
-		return fiscal.HolidaySet{}, fmt.Errorf("reminders holidays: years: %w", err)
+	var rows []holidayRow
+	if err := db.Raw(holidaysQuery).Scan(&rows).Error; err != nil {
+		return fiscal.HolidaySet{}, fmt.Errorf("reminders holidays: %w", err)
 	}
-	var stored []time.Time
-	if err := db.Raw(daysQuery).Scan(&stored).Error; err != nil {
-		return fiscal.HolidaySet{}, fmt.Errorf("reminders holidays: days: %w", err)
-	}
-	days := make([]fiscal.Date, 0, len(stored))
-	for _, t := range stored {
-		d, err := fiscal.ParseDate(t.Format(time.DateOnly))
+	years := make([]int, 0, len(rows))
+	days := make([]fiscal.Date, 0, len(rows))
+	for _, r := range rows {
+		years = append(years, r.Year)
+		if r.Day == nil {
+			continue
+		}
+		d, err := fiscal.ParseDate(r.Day.Format(time.DateOnly))
 		if err != nil {
-			return fiscal.HolidaySet{}, fmt.Errorf("reminders holidays: day %s: %w", t, err)
+			return fiscal.HolidaySet{}, fmt.Errorf("reminders holidays: day %s: %w", r.Day, err)
 		}
 		days = append(days, d)
 	}
