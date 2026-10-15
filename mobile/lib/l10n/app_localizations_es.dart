@@ -2684,6 +2684,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudo restaurar la deducción.';
 
   @override
+  String get annualDeductionsRestoreFull =>
+      'No se pudo restaurar: este año ya tiene 500 deducciones, el límite. Para restaurarla, elimina otra.';
+
+  @override
   String get annualDeductionsDeleteFailed =>
       'No se pudo eliminar la deducción. Intenta de nuevo.';
 

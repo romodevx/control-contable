@@ -3461,6 +3461,10 @@
   "@annualDeductionsRestoreFailed": {
     "description": "Undo refused."
   },
+  "annualDeductionsRestoreFull": "No se pudo restaurar: este año ya tiene 500 deducciones, el límite. Para restaurarla, elimina otra.",
+  "@annualDeductionsRestoreFull": {
+    "description": "Undo refused with 422 limit_reached (the year holds 500 deductions)."
+  },
   "annualDeductionsDeleteFailed": "No se pudo eliminar la deducción. Intenta de nuevo.",
   "@annualDeductionsDeleteFailed": {
     "description": "Delete refused."

@@ -57,6 +57,7 @@ Future<void> _restore(
             refusal,
             l10n,
             fallback: l10n.annualDeductionsRestoreFailed,
+            limitReached: l10n.annualDeductionsRestoreFull,
           ),
   );
 }

@@ -71,15 +71,21 @@ FieldError describeAnnualDetail(
   _ => l10n.annualWriteFailed,
 });
 
-/// Why a delete or restore was refused, in words.
+/// Why a delete or restore was refused, in words; [limitReached] names
+/// the list bound a restore re-checks.
 String refusalText(
   ApiFailure failure,
   AppLocalizations l10n, {
   required String fallback,
+  String? limitReached,
 }) => switch (failure) {
   ApiRejected(:final details)
       when details.any((d) => d.code == 'taxpayer_archived') =>
     l10n.settingsArchivedWrite,
+  ApiRejected(:final details)
+      when limitReached != null &&
+          details.any((d) => d.code == 'limit_reached') =>
+    limitReached,
   _ => fallback,
 };
 

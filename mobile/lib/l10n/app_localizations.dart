@@ -4288,6 +4288,12 @@ abstract class AppLocalizations {
   /// **'No se pudo restaurar la deducción.'**
   String get annualDeductionsRestoreFailed;
 
+  /// Undo refused with 422 limit_reached (the year holds 500 deductions).
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo restaurar: este año ya tiene 500 deducciones, el límite. Para restaurarla, elimina otra.'**
+  String get annualDeductionsRestoreFull;
+
   /// Delete refused.
   ///
   /// In es, this message translates to:
