@@ -88,7 +88,8 @@ Category → default `operation_kind` (seed data in `category_regime_rules`, not
 `arrendamiento_equipo` (if present) → `rent_movable`; `fletes` → `ground_freight`;
 `comisiones` (if present) → `commission`; `mercancia`/inventory categories → `sale_of_goods`;
 every other category → `business_services`. M4's seed may lack some codes; WH-03 adds the column and
-fills what exists, the CPA reviews it with the catalog.
+fills what exists, the CPA reviews it with the catalog. `listExpenseCategories` exposes it as `ExpenseCategory.default_operation_kind`
+(contract 0.10.1): the app reads it from there and never keeps its own copy (WH-14).
 
 ### 2.3 The derived result on screen (both forms)
 

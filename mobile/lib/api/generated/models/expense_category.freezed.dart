@@ -20,7 +20,8 @@ mixin _$ExpenseCategory {
  String get name; Deductibility get deductibility;/// The `deductible` a new expense starts with (before the CFDI and cash rules); conservative for partial cases.
 @JsonKey(name: 'default_deductible') bool get defaultDeductible;/// es-MX note shown with the hint.
 @JsonKey(includeIfNull: true) String? get note;/// Article-level basis (e.g. `LISR 103`).
-@JsonKey(includeIfNull: true, name: 'legal_basis') String? get legalBasis;
+@JsonKey(includeIfNull: true, name: 'legal_basis') String? get legalBasis;/// The `operation_kind` of this category (seed data in `category_regime_rules`, MODULE-withholdings §2.2): what a persona moral's "Tu proveedor" question E3 starts at, and what `createExpense`, `updateExpense` and `previewExpenseWithholdings` use when `operation_kind` is omitted. Clients never keep their own copy of this table. Optional in 0.10.1 (additive); sent once WH-03 seeds it and WH-07 serves it, when it **will be required**. Absent, a client leaves E3 unselected and omits `operation_kind`, so the server applies the same default.
+@JsonKey(includeIfNull: false, name: 'default_operation_kind') OperationKind? get defaultOperationKind;
 /// Create a copy of ExpenseCategory
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -34,20 +35,20 @@ $ExpenseCategoryCopyWith<ExpenseCategory> get copyWith => _$ExpenseCategoryCopyW
 @override
 bool operator ==(Object other) {
   final _this = this as ExpenseCategory;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ExpenseCategory&&(identical(other.code, _this.code) || other.code == _this.code)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.deductibility, _this.deductibility) || other.deductibility == _this.deductibility)&&(identical(other.defaultDeductible, _this.defaultDeductible) || other.defaultDeductible == _this.defaultDeductible)&&(identical(other.note, _this.note) || other.note == _this.note)&&(identical(other.legalBasis, _this.legalBasis) || other.legalBasis == _this.legalBasis));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ExpenseCategory&&(identical(other.code, _this.code) || other.code == _this.code)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.deductibility, _this.deductibility) || other.deductibility == _this.deductibility)&&(identical(other.defaultDeductible, _this.defaultDeductible) || other.defaultDeductible == _this.defaultDeductible)&&(identical(other.note, _this.note) || other.note == _this.note)&&(identical(other.legalBasis, _this.legalBasis) || other.legalBasis == _this.legalBasis)&&(identical(other.defaultOperationKind, _this.defaultOperationKind) || other.defaultOperationKind == _this.defaultOperationKind));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as ExpenseCategory;
-  return Object.hash(runtimeType,_this.code,_this.name,_this.deductibility,_this.defaultDeductible,_this.note,_this.legalBasis);
+  return Object.hash(runtimeType,_this.code,_this.name,_this.deductibility,_this.defaultDeductible,_this.note,_this.legalBasis,_this.defaultOperationKind);
 }
 
 @override
 String toString() {
   final _this = this as ExpenseCategory;
-  return 'ExpenseCategory(code: ${_this.code}, name: ${_this.name}, deductibility: ${_this.deductibility}, defaultDeductible: ${_this.defaultDeductible}, note: ${_this.note}, legalBasis: ${_this.legalBasis})';
+  return 'ExpenseCategory(code: ${_this.code}, name: ${_this.name}, deductibility: ${_this.deductibility}, defaultDeductible: ${_this.defaultDeductible}, note: ${_this.note}, legalBasis: ${_this.legalBasis}, defaultOperationKind: ${_this.defaultOperationKind})';
 }
 
 
@@ -58,7 +59,7 @@ abstract mixin class $ExpenseCategoryCopyWith<$Res>  {
   factory $ExpenseCategoryCopyWith(ExpenseCategory value, $Res Function(ExpenseCategory) _then) = _$ExpenseCategoryCopyWithImpl;
 @useResult
 $Res call({
- String code, String name, Deductibility deductibility,@JsonKey(name: 'default_deductible') bool defaultDeductible,@JsonKey(includeIfNull: true) String? note,@JsonKey(includeIfNull: true, name: 'legal_basis') String? legalBasis
+ String code, String name, Deductibility deductibility,@JsonKey(name: 'default_deductible') bool defaultDeductible,@JsonKey(includeIfNull: true) String? note,@JsonKey(includeIfNull: true, name: 'legal_basis') String? legalBasis,@JsonKey(includeIfNull: false, name: 'default_operation_kind') OperationKind? defaultOperationKind
 });
 
 
@@ -75,7 +76,7 @@ class _$ExpenseCategoryCopyWithImpl<$Res>
 
 /// Create a copy of ExpenseCategory
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? code = null,Object? name = null,Object? deductibility = null,Object? defaultDeductible = null,Object? note = freezed,Object? legalBasis = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? code = null,Object? name = null,Object? deductibility = null,Object? defaultDeductible = null,Object? note = freezed,Object? legalBasis = freezed,Object? defaultOperationKind = freezed,}) {
   return _then(ExpenseCategory(
 code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -83,7 +84,8 @@ as String,deductibility: null == deductibility ? _self.deductibility : deductibi
 as Deductibility,defaultDeductible: null == defaultDeductible ? _self.defaultDeductible : defaultDeductible // ignore: cast_nullable_to_non_nullable
 as bool,note: freezed == note ? _self.note : note // ignore: cast_nullable_to_non_nullable
 as String?,legalBasis: freezed == legalBasis ? _self.legalBasis : legalBasis // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,defaultOperationKind: freezed == defaultOperationKind ? _self.defaultOperationKind : defaultOperationKind // ignore: cast_nullable_to_non_nullable
+as OperationKind?,
   ));
 }
 
@@ -168,10 +170,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String code,  String name,  Deductibility deductibility, @JsonKey(name: 'default_deductible')  bool defaultDeductible, @JsonKey(includeIfNull: true)  String? note, @JsonKey(includeIfNull: true, name: 'legal_basis')  String? legalBasis)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String code,  String name,  Deductibility deductibility, @JsonKey(name: 'default_deductible')  bool defaultDeductible, @JsonKey(includeIfNull: true)  String? note, @JsonKey(includeIfNull: true, name: 'legal_basis')  String? legalBasis, @JsonKey(includeIfNull: false, name: 'default_operation_kind')  OperationKind? defaultOperationKind)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ExpenseCategory() when $default != null:
-return $default(_that.code,_that.name,_that.deductibility,_that.defaultDeductible,_that.note,_that.legalBasis);case _:
+return $default(_that.code,_that.name,_that.deductibility,_that.defaultDeductible,_that.note,_that.legalBasis,_that.defaultOperationKind);case _:
   return orElse();
 
 }
@@ -189,10 +191,10 @@ return $default(_that.code,_that.name,_that.deductibility,_that.defaultDeductibl
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String code,  String name,  Deductibility deductibility, @JsonKey(name: 'default_deductible')  bool defaultDeductible, @JsonKey(includeIfNull: true)  String? note, @JsonKey(includeIfNull: true, name: 'legal_basis')  String? legalBasis)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String code,  String name,  Deductibility deductibility, @JsonKey(name: 'default_deductible')  bool defaultDeductible, @JsonKey(includeIfNull: true)  String? note, @JsonKey(includeIfNull: true, name: 'legal_basis')  String? legalBasis, @JsonKey(includeIfNull: false, name: 'default_operation_kind')  OperationKind? defaultOperationKind)  $default,) {final _that = this;
 switch (_that) {
 case _ExpenseCategory():
-return $default(_that.code,_that.name,_that.deductibility,_that.defaultDeductible,_that.note,_that.legalBasis);case _:
+return $default(_that.code,_that.name,_that.deductibility,_that.defaultDeductible,_that.note,_that.legalBasis,_that.defaultOperationKind);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -209,10 +211,10 @@ return $default(_that.code,_that.name,_that.deductibility,_that.defaultDeductibl
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String code,  String name,  Deductibility deductibility, @JsonKey(name: 'default_deductible')  bool defaultDeductible, @JsonKey(includeIfNull: true)  String? note, @JsonKey(includeIfNull: true, name: 'legal_basis')  String? legalBasis)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String code,  String name,  Deductibility deductibility, @JsonKey(name: 'default_deductible')  bool defaultDeductible, @JsonKey(includeIfNull: true)  String? note, @JsonKey(includeIfNull: true, name: 'legal_basis')  String? legalBasis, @JsonKey(includeIfNull: false, name: 'default_operation_kind')  OperationKind? defaultOperationKind)?  $default,) {final _that = this;
 switch (_that) {
 case _ExpenseCategory() when $default != null:
-return $default(_that.code,_that.name,_that.deductibility,_that.defaultDeductible,_that.note,_that.legalBasis);case _:
+return $default(_that.code,_that.name,_that.deductibility,_that.defaultDeductible,_that.note,_that.legalBasis,_that.defaultOperationKind);case _:
   return null;
 
 }
@@ -224,7 +226,7 @@ return $default(_that.code,_that.name,_that.deductibility,_that.defaultDeductibl
 @JsonSerializable()
 
 class _ExpenseCategory implements ExpenseCategory {
-  const _ExpenseCategory({required this.code, required this.name, required this.deductibility, @JsonKey(name: 'default_deductible') required this.defaultDeductible, @JsonKey(includeIfNull: true) required this.note, @JsonKey(includeIfNull: true, name: 'legal_basis') required this.legalBasis});
+  const _ExpenseCategory({required this.code, required this.name, required this.deductibility, @JsonKey(name: 'default_deductible') required this.defaultDeductible, @JsonKey(includeIfNull: true) required this.note, @JsonKey(includeIfNull: true, name: 'legal_basis') required this.legalBasis, @JsonKey(includeIfNull: false, name: 'default_operation_kind') this.defaultOperationKind});
   factory _ExpenseCategory.fromJson(Map<String, dynamic> json) => _$ExpenseCategoryFromJson(json);
 
 @override final  String code;
@@ -237,6 +239,8 @@ class _ExpenseCategory implements ExpenseCategory {
 @override@JsonKey(includeIfNull: true) final  String? note;
 /// Article-level basis (e.g. `LISR 103`).
 @override@JsonKey(includeIfNull: true, name: 'legal_basis') final  String? legalBasis;
+/// The `operation_kind` of this category (seed data in `category_regime_rules`, MODULE-withholdings §2.2): what a persona moral's "Tu proveedor" question E3 starts at, and what `createExpense`, `updateExpense` and `previewExpenseWithholdings` use when `operation_kind` is omitted. Clients never keep their own copy of this table. Optional in 0.10.1 (additive); sent once WH-03 seeds it and WH-07 serves it, when it **will be required**. Absent, a client leaves E3 unselected and omits `operation_kind`, so the server applies the same default.
+@override@JsonKey(includeIfNull: false, name: 'default_operation_kind') final  OperationKind? defaultOperationKind;
 
 /// Create a copy of ExpenseCategory
 /// with the given fields replaced by the non-null parameter values.
@@ -251,18 +255,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _ExpenseCategory&&(identical(other.code, code) || other.code == code)&&(identical(other.name, name) || other.name == name)&&(identical(other.deductibility, deductibility) || other.deductibility == deductibility)&&(identical(other.defaultDeductible, defaultDeductible) || other.defaultDeductible == defaultDeductible)&&(identical(other.note, note) || other.note == note)&&(identical(other.legalBasis, legalBasis) || other.legalBasis == legalBasis));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _ExpenseCategory&&(identical(other.code, code) || other.code == code)&&(identical(other.name, name) || other.name == name)&&(identical(other.deductibility, deductibility) || other.deductibility == deductibility)&&(identical(other.defaultDeductible, defaultDeductible) || other.defaultDeductible == defaultDeductible)&&(identical(other.note, note) || other.note == note)&&(identical(other.legalBasis, legalBasis) || other.legalBasis == legalBasis)&&(identical(other.defaultOperationKind, defaultOperationKind) || other.defaultOperationKind == defaultOperationKind));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,code,name,deductibility,defaultDeductible,note,legalBasis);
+    return Object.hash(runtimeType,code,name,deductibility,defaultDeductible,note,legalBasis,defaultOperationKind);
 }
 
 @override
 String toString() {
-    return 'ExpenseCategory(code: $code, name: $name, deductibility: $deductibility, defaultDeductible: $defaultDeductible, note: $note, legalBasis: $legalBasis)';
+    return 'ExpenseCategory(code: $code, name: $name, deductibility: $deductibility, defaultDeductible: $defaultDeductible, note: $note, legalBasis: $legalBasis, defaultOperationKind: $defaultOperationKind)';
 }
 
 
@@ -273,7 +277,7 @@ abstract mixin class _$ExpenseCategoryCopyWith<$Res> implements $ExpenseCategory
   factory _$ExpenseCategoryCopyWith(_ExpenseCategory value, $Res Function(_ExpenseCategory) _then) = __$ExpenseCategoryCopyWithImpl;
 @override @useResult
 $Res call({
- String code, String name, Deductibility deductibility,@JsonKey(name: 'default_deductible') bool defaultDeductible,@JsonKey(includeIfNull: true) String? note,@JsonKey(includeIfNull: true, name: 'legal_basis') String? legalBasis
+ String code, String name, Deductibility deductibility,@JsonKey(name: 'default_deductible') bool defaultDeductible,@JsonKey(includeIfNull: true) String? note,@JsonKey(includeIfNull: true, name: 'legal_basis') String? legalBasis,@JsonKey(includeIfNull: false, name: 'default_operation_kind') OperationKind? defaultOperationKind
 });
 
 
@@ -290,7 +294,7 @@ class __$ExpenseCategoryCopyWithImpl<$Res>
 
 /// Create a copy of ExpenseCategory
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? code = null,Object? name = null,Object? deductibility = null,Object? defaultDeductible = null,Object? note = freezed,Object? legalBasis = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? code = null,Object? name = null,Object? deductibility = null,Object? defaultDeductible = null,Object? note = freezed,Object? legalBasis = freezed,Object? defaultOperationKind = freezed,}) {
   return _then(_ExpenseCategory(
 code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -298,7 +302,8 @@ as String,deductibility: null == deductibility ? _self.deductibility : deductibi
 as Deductibility,defaultDeductible: null == defaultDeductible ? _self.defaultDeductible : defaultDeductible // ignore: cast_nullable_to_non_nullable
 as bool,note: freezed == note ? _self.note : note // ignore: cast_nullable_to_non_nullable
 as String?,legalBasis: freezed == legalBasis ? _self.legalBasis : legalBasis // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,defaultOperationKind: freezed == defaultOperationKind ? _self.defaultOperationKind : defaultOperationKind // ignore: cast_nullable_to_non_nullable
+as OperationKind?,
   ));
 }
 
