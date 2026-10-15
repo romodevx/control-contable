@@ -1685,9 +1685,9 @@
   "@estimateIvaCharged": {
     "description": "Regime IVA component."
   },
-  "estimateIvaCreditable": "IVA acreditable pagado",
+  "estimateIvaCreditable": "IVA acreditable",
   "@estimateIvaCreditable": {
-    "description": "Regime IVA component (subtracted)."
+    "description": "Regime IVA component (subtracted): the IVA paid this month plus the IVA withheld from suppliers last month (engine 1.1.0), so never labelled as paid."
   },
   "estimateIvaWithheld": "IVA retenido por clientes",
   "@estimateIvaWithheld": {

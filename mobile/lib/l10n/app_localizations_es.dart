@@ -1304,7 +1304,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get estimateIvaCharged => 'IVA trasladado cobrado';
 
   @override
-  String get estimateIvaCreditable => 'IVA acreditable pagado';
+  String get estimateIvaCreditable => 'IVA acreditable';
 
   @override
   String get estimateIvaWithheld => 'IVA retenido por clientes';

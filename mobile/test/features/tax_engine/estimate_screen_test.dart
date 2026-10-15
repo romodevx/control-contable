@@ -356,6 +356,44 @@ void main() {
     expect(find.text(r'$166,333.33'), findsOneWidget);
   });
 
+  // WH-13 QA regression: since engine 1.1.0 (WH-09) creditable_paid_cents
+  // also holds the IVA withheld from suppliers the month before. In
+  // PM-601-WH-11-JUL all of it is that withheld part and nothing was paid in
+  // July, so labelling it "pagado" contradicted the breakdown, which shows
+  // "IVA acreditable pagado: $0.00" and the withheld line apart.
+  testWidgets('the creditable IVA is not labelled as paid: it may be the '
+      'IVA withheld last month (PM-601-WH-11-JUL)', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 2400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await harness.pump(
+      tester,
+      reply: estimateFrom(
+        estimateJson(
+          period: '2026-07',
+          dueDate: '2026-08-17',
+          ivaCents: -426667,
+          isrCents: 0,
+          regimes: [
+            regimeJson(
+              '601',
+              isrCents: 0,
+              iva: const {
+                'charged_collected_cents': 0,
+                'creditable_paid_cents': 426667,
+                'withheld_from_taxpayer_cents': 0,
+                'definitive_excluded_cents': 0,
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+
+    expect(_inCard('601', find.text('IVA acreditable')), findsOneWidget);
+    expect(find.textContaining('IVA acreditable pagado'), findsNothing);
+    expect(_inCard('601', find.text(r'−$4,266.67')), findsOneWidget);
+  });
+
   testWidgets('the strong CPA warning sits above the figures and names the '
       'topics on the regime (TX-NET-01)', (tester) async {
     await harness.pump(
