@@ -17,7 +17,7 @@ import (
 // user's transaction (the reminder's amounts are the Estimator's), and the platform
 // purge deletes notification_log rows after 13 months (MODULE-reminders §2.6).
 const (
-	remindersJobReadsVersion   = 20261022100000
+	remindersJobReadsVersion    = 20261022100000
 	notificationLogPurgeVersion = 20261022101000
 
 	purgeTargetNotificationLog = "notification_log"

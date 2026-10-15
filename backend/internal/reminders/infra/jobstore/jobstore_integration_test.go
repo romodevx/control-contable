@@ -276,10 +276,10 @@ func (e *env) finish(t *testing.T, user string, c usecase.LogClaim, o usecase.Lo
 }
 
 type logRow struct {
-	status, class                  string
-	attempts                       int
-	sentAt                         sql.NullTime
-	devicesOK, devicesFailed       sql.NullInt64
+	status, class            string
+	attempts                 int
+	sentAt                   sql.NullTime
+	devicesOK, devicesFailed sql.NullInt64
 }
 
 func (e *env) logRow(t *testing.T, user string, kind domain.Kind) logRow {

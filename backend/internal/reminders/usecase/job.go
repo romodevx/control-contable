@@ -263,13 +263,13 @@ func (j *ReminderJob) serveBatch(ctx context.Context, plan runPlan, batch []DueR
 
 // userResult is how one user's reminder ended in this run.
 type userResult struct {
-	kind        domain.Kind
-	claimed     bool
-	status      LogStatus
-	errorClass  string
-	expired     int
+	kind         domain.Kind
+	claimed      bool
+	status       LogStatus
+	errorClass   string
+	expired      int
 	unregistered int
-	lost        bool // the row moved on before the record
+	lost         bool // the row moved on before the record
 }
 
 // claimed is what the claim transaction read for the send.
