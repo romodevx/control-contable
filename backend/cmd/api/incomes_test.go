@@ -12,12 +12,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	expenseshttp "github.com/romodevx/control-contable/backend/internal/expenses/adapter/http"
 	incomeshttp "github.com/romodevx/control-contable/backend/internal/incomes/adapter/http"
 	"github.com/romodevx/control-contable/backend/internal/incomes/domain"
 	incomes "github.com/romodevx/control-contable/backend/internal/incomes/usecase"
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagtest"
 	"github.com/romodevx/control-contable/backend/internal/platform/logging"
+	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit"
 	"github.com/romodevx/control-contable/backend/internal/platform/tx"
 	taxpayersdomain "github.com/romodevx/control-contable/backend/internal/taxpayers/domain"
 	taxpayers "github.com/romodevx/control-contable/backend/internal/taxpayers/usecase"
@@ -167,3 +169,13 @@ type stubTx struct{}
 
 func (stubTx) ReadWrite(context.Context, string, tx.Work) error { return errStubIncomes }
 func (stubTx) ReadOnly(context.Context, string, tx.Work) error  { return errStubIncomes }
+
+// ADR-0008 §4: the two withholding previews spend one per-user budget,
+// withholding_previews (a scope is a bucket, ADR-0005), so the card of
+// either form cannot double the 1200 per hour.
+func TestWithholdingPreviewsShareOneBudget(t *testing.T) {
+	income := incomeshttp.UserLimits["previewIncomeWithholdings"]
+	expense := expenseshttp.UserLimits["previewExpenseWithholdings"]
+	assert.Equal(t, ratelimit.PerWindow("withholding_previews", 1200, time.Hour), income)
+	assert.Equal(t, income, expense)
+}

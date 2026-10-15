@@ -52,6 +52,8 @@ func incomeProbes() []recordProbe {
 		{"updateIncome", http.MethodPatch, "/incomes/" + smokeIncomeID, `{"description":"Smoke"}`},
 		{"deleteIncome", http.MethodDelete, "/incomes/" + smokeIncomeID, ""},
 		{"restoreIncome", http.MethodPost, "/incomes/" + smokeIncomeID + "/restore", ""},
+		{"previewIncomeWithholdings", http.MethodGet,
+			"/incomes/withholding-preview?regime=612&amount_cents=100&iva_rate=exempt&iva_cents=0&counterparty_kind=pm", ""},
 	}
 }
 
@@ -64,13 +66,13 @@ func expenseProbes() []recordProbe {
 		{"updateExpense", http.MethodPatch, "/expenses/" + smokeExpenseID, `{"deductible":true}`},
 		{"deleteExpense", http.MethodDelete, "/expenses/" + smokeExpenseID, ""},
 		{"restoreExpense", http.MethodPost, "/expenses/" + smokeExpenseID + "/restore", ""},
+		{"previewExpenseWithholdings", http.MethodGet,
+			"/expenses/withholding-preview?regime=612&amount_cents=100&iva_rate=exempt&iva_cents=0&category_code=software", ""},
 	}
 }
 
 // builtOwnedOperations are module's operations minus the not-built stubs,
 // which answer the hidden-module 404 whatever the preset (router NotBuilt).
-// The withholding previews (contract 0.10.0) join the probes when WH-06 and
-// WH-07 build them (ADR-0008).
 func builtOwnedOperations(module string) []string {
 	notBuilt := notBuiltOperations()
 	return slices.DeleteFunc(ownedOperations(module), func(op string) bool {
