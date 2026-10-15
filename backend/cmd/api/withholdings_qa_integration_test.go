@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -51,7 +52,9 @@ func (e contractEnv) grantComp(t *testing.T, userID string) {
 func incomePreviewQuery(t *testing.T, body string) string {
 	t.Helper()
 	var fields map[string]any
-	require.NoError(t, json.Unmarshal([]byte(body), &fields))
+	dec := json.NewDecoder(strings.NewReader(body))
+	dec.UseNumber() // amounts stay integers in the query ("10000000", never "1e+07")
+	require.NoError(t, dec.Decode(&fields))
 	q := url.Values{}
 	q.Set("regime", fmt.Sprint(fields["regime_code"]))
 	on, ok := fields["collected_on"]
@@ -160,7 +163,7 @@ func TestWithholdingsQA_goldensThroughTheAPI(t *testing.T) {
 		{name: "WH-12 612 honorarios to the Federación: MVP defaults, flagged", taxpayer: fisica,
 			fields: with(map[string]any{"counterparty_kind": "gov_federal", "amount_cents": 3_000_000, "iva_cents": 480_000}),
 			isr:    300_000, iva: 320_000, net: 2_860_000, rules: []string{"ISR-5", "IVA-7"},
-			cpaUnverified: true, warnings: []string{"withholding_cpa_unverified@counterparty_kind"}},
+			cpaUnverified: true, warnings: []string{"withholding_cpa_unverified@withholding"}},
 	}
 	create, preview := contracttest.Op("createIncome"), contracttest.Op("previewIncomeWithholdings")
 	for _, g := range goldens {
