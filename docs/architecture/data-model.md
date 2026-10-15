@@ -350,10 +350,13 @@ erDiagram
         timestamptz viewed_at
     }
     devices {
-        uuid id PK
+        uuid id PK "installation id"
         uuid user_id FK
         text platform
-        text push_token UK
+        bytea token_ciphertext
+        smallint token_key_id
+        bytea token_hmac UK
+        text app_version
         timestamptz last_seen_at
     }
     reminder_settings {
@@ -367,15 +370,28 @@ erDiagram
     notification_log {
         uuid id PK
         uuid user_id FK
-        date due_date
+        date period "first of month"
         text kind "early|due"
-        text status
+        text channel "push"
+        text status "pending|sent|failed|skipped"
+        smallint attempts
+        timestamptz claimed_at
         timestamptz sent_at
+        text error_class
+    }
+    holiday_years {
+        smallint year PK
+        date seeded_on
+        text source_note
     }
     holidays {
         date day PK
+        smallint year FK "generated"
         text name
-        text source
+        text basis "cff_12|rmf_2_1_6"
+        boolean moves_due_date
+        text source_url
+        date verified_on
     }
 ```
 
@@ -417,8 +433,10 @@ in MODULES.md M5 are dropped (MODULES.md updated to match).
 | email_verifications | `INDEX (expires_at)` | Purge job range scan |
 | refresh_tokens | `INDEX (family_id)` | Revoke a family in one statement |
 | revenuecat_events | PK `event_id` | Idempotency |
-| notification_log | `UNIQUE (user_id, due_date, kind)` | Exactly-once reminders |
-| devices | `UNIQUE (push_token)` | Token moves to the latest user on re-login |
+| notification_log | `UNIQUE (user_id, period, kind, channel)`; `CHECK` period first of month, `attempts` 1-3, `sent` iff `sent_at` (and ≥ 1 device); trigger: sent / failed / skipped are final | Exactly-once reminders keyed on the period, not the due date (a holidays fix cannot resend), M9-02 |
+| devices | `UNIQUE (token_hmac)`; `INDEX (user_id, last_seen_at)`; token ciphertext framed like the RFC's | One installation per token (claim lookup); RLS, LRU cap of 10, "has a device" probe |
+| reminder_settings | `CHECK` `early_day` 1-16 or NULL, `send_time` whole minutes, enabled ⇒ some reminder selected; partial `INDEX (early_day, user_id) WHERE enabled` and `(user_id) WHERE enabled AND on_due_date` | `422 no_reminder_selected` at the DB too; one index per `due_reminder_users` branch (EXPLAIN ANALYZE at 50k users: 3-8 ms per batch of 500) |
+| holidays | PK `day`; generated `year` → `holiday_years`; `basis` ∈ cff_12 / rmf_2_1_6; https `source_url` | Only seeded years hold days; every row cites its source (M9-03) |
 
 The leading `user_id` in every index matches the RLS predicate. Each critical query
 (the estimate aggregate, list pages, the dashboard) gets `EXPLAIN ANALYZE` in its module PR.
@@ -442,9 +460,9 @@ against `entitlements.ends_at`.
 | `cc_owner` | Owns schema; runs goose migrations | `cmd/migrate` only |
 | `cc_app` | DML on user tables (subject to RLS), SELECT on catalogs. **NOBYPASSRLS, not owner** | API |
 | `cc_webhook` | INSERT/UPDATE `revenuecat_events`; DML on `subscriptions`, `entitlements` (subject to RLS) | Webhook handler (separate pool) |
-| `cc_worker` | EXECUTE `due_reminder_users()`, `purge_soft_deleted()`; DML on reminder tables (subject to RLS). Withholdings backfill (WH-08, `20261018100000`): EXECUTE `withholding_backfill_users()` (user ids only); SELECT own `taxpayers` (profile columns, never the RFC ciphertext), `taxpayer_regimes`, `incomes`, `expenses`; SELECT the catalogs; UPDATE own `incomes` / `expenses` facts and derived withholding columns only | Worker, `cmd/backfill-withholdings` |
-| `cc_auth_definer` | **NOLOGIN, NOBYPASSRLS.** Owns the auth definer functions; column grants + policies scoped to the email HMAC bound by the running function (`app.auth_email_hash`). `cc_owner` is a member `WITH INHERIT FALSE, SET TRUE` (ownership transfer only) | Auth definer functions (M1-03) |
-| `cc_worker_definer` | **NOLOGIN, NOBYPASSRLS.** Owns the worker's cross-user definer functions (`withholding_backfill_users()`, WH-08; `purge_soft_deleted(integer)`, M9-08); one policy shows `users(id)` only; the M9-08 policies (SELECT + DELETE) match only rows past the purge cutoffs on `incomes`, `expenses`, `personal_deductions`, `refresh_tokens`, `email_verifications`, `email_verification_failures`. `cc_owner` is a member `WITH INHERIT FALSE, SET TRUE` | Worker definer functions |
+| `cc_worker` | EXECUTE `due_reminder_users()`, `purge_soft_deleted()`. Reminders (M9-02, `20261021101000`), own rows only: SELECT + DELETE `devices`, SELECT `reminder_settings`, SELECT + INSERT + UPDATE (state columns) `notification_log`; SELECT `holidays`, `holiday_years`. Withholdings backfill (WH-08, `20261018100000`): EXECUTE `withholding_backfill_users()` (user ids only); SELECT own `taxpayers` (profile columns, never the RFC ciphertext), `taxpayer_regimes`, `incomes`, `expenses`; SELECT the catalogs; UPDATE own `incomes` / `expenses` facts and derived withholding columns only | Worker, `cmd/backfill-withholdings` |
+| `cc_auth_definer` | **NOLOGIN, NOBYPASSRLS.** Owns the auth definer functions; column grants + policies scoped to the email HMAC bound by the running function (`app.auth_email_hash`). Also owns `claim_push_token` (M9-02, the API-side definer): its `devices` policies match the caller's own rows (`app_user_id()`, EXECUTE granted to it) plus, while a claim runs, the rows holding the installation id / token HMAC the claim binds (`app.device_claim_id`, `app.device_claim_hmac`, cleared before return). `cc_owner` is a member `WITH INHERIT FALSE, SET TRUE` (ownership transfer only) | Auth definer functions (M1-03), device claim (M9-02) |
+| `cc_worker_definer` | **NOLOGIN, NOBYPASSRLS.** Owns the worker's cross-user definer functions (`withholding_backfill_users()`, WH-08; `purge_soft_deleted(integer)`, M9-08); one policy shows `users(id)` only; the M9-08 policies (SELECT + DELETE) match only rows past the purge cutoffs on `incomes`, `expenses`, `personal_deductions`, `refresh_tokens`, `email_verifications`, `email_verification_failures`. `due_reminder_users(...)` (M9-02): SELECT-only policies (`*_due_reminders`) on enabled `reminder_settings`, `devices(user_id)`, live `taxpayers(user_id)` and the dedupe columns of `notification_log`. `cc_owner` is a member `WITH INHERIT FALSE, SET TRUE` | Worker definer functions |
 
 `SECURITY DEFINER` functions (`SET search_path = pg_catalog, public, pg_temp`, every
 reference schema-qualified, narrow return types) are the only ways to read across users.
@@ -454,7 +472,18 @@ The auth ones (M1-03) are owned by `cc_auth_definer`, not `cc_owner`: under FORC
 EXECUTE goes to `cc_app` only.
 - `auth_lookup_credentials(email_hash)` returns `(id, password_hash, status)` and is used
   by login only.
-- `due_reminder_users(ts)` returns user ids only.
+- `due_reminder_users(now, due_today, after, limit)` (M9-02, owner `cc_worker_definer`, EXECUTE
+  `cc_worker`) returns `(user_id, period, kind)` only, keyset by user id (≤ 1000 per call):
+  users with reminders enabled, a device and a live taxpayer whose reminder of today (in
+  America/Mexico_City) is due by `now` and has no `notification_log` row, or a `pending`
+  one whose 10-minute lease expired with fewer than 3 attempts. `due_today` (is today the
+  moved due date?) comes from the Go fiscal kernel, so the CFF 12 rule is not duplicated in SQL.
+- `claim_push_token(user, installation_id, platform, ciphertext, key_id, token_hmac,
+  app_version)` (M9-02, owner `cc_auth_definer`, EXECUTE `cc_app`) registers an installation
+  for `app_user_id()` only (another `user` → 42501): deletes any other row holding that
+  installation id or token HMAC (another user's, or the caller's stale reinstall), upserts the
+  caller's row, evicts beyond 10 devices by `last_seen_at`, and returns only whether the row
+  was created (201) or refreshed (200), never anything about a previous owner.
 - `purge_soft_deleted(batch_size)` (M9-08, owner `cc_worker_definer`, EXECUTE `cc_worker`)
   deletes up to `batch_size` rows per target past its cutoff, which the function computes
   itself (records 30 days after soft delete, dead auth state after 24 h), and returns one
@@ -512,15 +541,16 @@ Every table below has `ENABLE` + `FORCE ROW LEVEL SECURITY` in its first migrati
 | expenses | owner | owner | owner | owner | |
 | subscriptions | owner | owner (cc_webhook) | owner (cc_webhook) | — | cc_app: SELECT only. The webhook sets `app.current_user_id` to the event's `app_user_id` (our user id) before touching `subscriptions` / `entitlements` |
 | estimate_views | owner | owner | owner (what was seen; key immutable) | — | Write = one upsert; rows leave only by cascade (users, taxpayers). cc_worker/cc_webhook get nothing |
-| devices | owner | owner | owner | owner | Re-login of a token owned by another user: `DELETE` through a definer function `claim_push_token(token)` |
-| reminder_settings | owner | owner | owner | — | |
-| notification_log | owner | owner (cc_worker) | owner (cc_worker) | — | |
+| devices | owner (no token columns for cc_app) | — | — | owner | cc_app and cc_worker never INSERT/UPDATE: registration is `claim_push_token`, which moves an installation id or token held by any other row to the caller (M9-02). cc_worker: SELECT (token, to send) + DELETE (UNREGISTERED) own |
+| reminder_settings | owner | owner | owner (preference columns) | — | PUT is an upsert; cc_worker: SELECT own |
+| notification_log | owner (cc_worker) | owner (cc_worker) | owner (cc_worker; state columns only) | — | cc_app gets nothing; retention (13 months) belongs to the platform purge |
 
 "owner" = `user_id = (SELECT app_user_id())`.
 
 **No user-scoped RLS (global, read-only to `cc_app`).** feature_flags, flag_presets, legal_documents
 (ENABLE, one `SELECT TO cc_app` policy; v1 rows are placeholders pending legal review),
-regimes, regime_compatibility, expense_categories, category_regime_rules, holidays. Writes
+regimes, regime_compatibility, expense_categories, category_regime_rules, holidays and
+holiday_years (M9-03: `SELECT TO cc_app, cc_worker`, the two roles that compute a due date). Writes
 happen through migrations only. Flag toggles happen through an admin migration or CLI as
 `cc_owner`.
 

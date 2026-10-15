@@ -8,6 +8,7 @@
 --   cc_worker   Worker. Same posture as cc_app.
 --   cc_auth_definer
 --               NOLOGIN, NOBYPASSRLS. Owns the auth SECURITY DEFINER functions (M1-03)
+--               and the API's device claim (M9-02 claim_push_token)
 --               and reaches only the rows its narrow RLS policies allow. cc_owner is a
 --               member WITH INHERIT FALSE, SET TRUE: it may SET ROLE to it (needed to hand
 --               it the functions and to drop them on Down) but never inherits its

@@ -501,13 +501,13 @@ M9-07 (FCM) and M9-09 (Flutter push) are built against fakes; live verification 
 | ID | Task | Owner | Deps | Est (h) | Par | Branch | Blocked by | Done |
 |---|---|---|---|---|---|---|---|---|
 | M9-01 | Contract freeze: devices, reminder-settings, tax-calendar | architect | P0-05 | 1 | — | `feature/reminders-contract` | — | [ ] |
-| M9-02 | Migration `devices`, `reminder_settings`, `notification_log` (RLS) + definer fns `due_reminder_users`, `claim_push_token` + isolation tests | db-sr | P0-11 | 3.5 | — | `feature/reminders-migrations` | — | [ ] |
-| M9-03 | Migration `holidays` (global) seeded 2026–2027 with sources | db-sr | P0-10 | 1.5 | — | `feature/reminders-migrations` | — | [ ] |
+| M9-02 | Migration `devices`, `reminder_settings`, `notification_log` (RLS) + definer fns `due_reminder_users`, `claim_push_token` + isolation tests | db-sr | P0-11 | 3.5 | — | `feature/reminders-migrations` | — | [x] |
+| M9-03 | Migration `holidays` (global) seeded 2026–2027 with sources | db-sr | P0-10 | 1.5 | — | `feature/reminders-migrations` | — | [x] |
 | M9-04 | Due-date rule into `internal/kernel/fiscal` (`NextBusinessDay`, `MonthlyDueDate`, `HolidaySet`; ADR-0007 §3 amended), replace both taxengine copies (monthly `duedate.go`, annual `businessDay`) and `noHolidays` with the `holidays` adapter, + `GET /v1/tax-calendar` (TDD, golden 2025-12..2027-11) | backend-sr | M9-01, M9-03, P0-13 | 4 | — | `feature/reminders-calendar` | — | [ ] |
 | M9-05 | Devices + reminder settings use cases and handlers, contract tests, flag ON/OFF | backend-sr | M9-02, M1-07 | 3.5 | — | `feature/reminders-settings` | — | [ ] |
 | M9-06 | Reminder job: due users, per-user tx, `notification_log` exactly-once, bounded errgroup, optional amounts when module_tax_engine ON | backend-sr | P0-27, M9-04, M9-05, M5-22 | 4.5 | — | `feature/reminders-worker` | — | [ ] |
 | M9-07 | FCM sender adapter (Firebase Admin) + UNREGISTERED cleanup, fake in tests | backend-sr | P0-08 | 2.5 | PG-M79 | `feature/reminders-fcm` | OB9 (live check only) | [ ] |
-| M9-08 | Soft-delete purge job (30 days) via `purge_soft_deleted` definer fn (runs regardless of reminder flag) | db-sr | P0-27, M3-02, M4-03, ANN-03 (must also purge `personal_deductions`, ANN-25) | 2 | — | `feature/records-purge-job` | — | [[x] |
+| M9-08 | Soft-delete purge job (30 days) via `purge_soft_deleted` definer fn (runs regardless of reminder flag) | db-sr | P0-27, M3-02, M4-03, ANN-03 (must also purge `personal_deductions`, ANN-25) | 2 | — | `feature/records-purge-job` | — | [x] |
 | M9-09 | Flutter push: firebase_messaging, permission prompt, device registration | frontend-sr | M9-01, M1-12 | 3.5 | — | `feature/reminders-mobile-push` | OB9, OB7 | [ ] |
 | M9-10 | Flutter reminder settings screen | frontend-sr | M9-09 | 3 | — | `feature/reminders-mobile-settings` | — | [ ] |
 | M9-11 | Register flag `module_reminders` + preset `demo_full` | backend-sr | M9-06, M9-07, M9-10 | 0.5 | — | `feature/reminders-flag` | — | [ ] |
@@ -515,6 +515,15 @@ M9-07 (FCM) and M9-09 (Flutter push) are built against fakes; live verification 
 | M9-13 | Tech-lead gate M9 | tech-lead | M9-12 | 1.5 | — | (PR review) | — | [ ] |
 | M9-14 | Security gate M9 (lock-screen amounts opt-in, token claim) | security | M9-12 | 1.5 | — | (PR review) | — | [ ] |
 | M9-15 | Docs M9 | doc-writer | M9-13, M9-14 | 1 | — | `feature/reminders-docs` | — | [ ] |
+
+#### M9 notes from M9-02 / M9-03 (migrations `20261021100000`, `20261021101000`)
+
+| ID | Item | Owner | Target |
+|---|---|---|---|
+| M9-02 N1 | `due_reminder_users(p_now, p_due_today, p_after, p_limit)` returns `(user_id, period, kind)`: the worker passes `p_due_today` from the fiscal kernel (the CFF 12 rule stays out of SQL) and pages by `p_after` | backend-sr | M9-06 |
+| M9-02 N2 | A `pending` row whose day passed is never returned again; marking it `failed` / `error_class = expired` (§2.4 step 5) is the job's write, in that user's transaction | backend-sr | M9-06 |
+| M9-02 N3 | `notification_log` 13-month retention: add it to `purge_soft_deleted` (cutoff-only definer policy + a `created_at` index then) | db-sr | Before `module_reminders` is enabled in a shared environment |
+| M9-02 N4 | `claim_push_token` is owned by `cc_auth_definer` (the API-side definer role) rather than a new bootstrap role; the security gate may ask for a dedicated one | security | M9-14 |
 
 ### AN — Annual estimate (`module_annual`)
 
