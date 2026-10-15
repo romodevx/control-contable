@@ -32,6 +32,9 @@ var prerequisites = map[string][]string{
 	// the engine and lives under a taxpayer. The flag row itself is
 	// registered by migration in ANN-22.
 	"module_annual": {"module_tax_engine", "module_taxpayers"},
+	// MODULE-reminders §3: a reminder lists the user's taxpayers. Not the
+	// engine: without it the reminder sends names only.
+	"module_reminders": {"module_taxpayers"},
 }
 
 // Prerequisites returns a copy of the declared module prerequisites.

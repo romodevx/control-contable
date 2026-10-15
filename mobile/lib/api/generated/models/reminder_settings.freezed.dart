@@ -16,9 +16,11 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ReminderSettings {
 
- bool get enabled;/// Day of month for the early reminder; null disables it.
-@JsonKey(includeIfNull: true, name: 'early_day') int? get earlyDay;@JsonKey(name: 'on_due_date') bool get onDueDate;/// Local time, America/Mexico_City.
-@JsonKey(name: 'send_time') String get sendTime;/// Lock-screen privacy opt-in.
+/// Opt-in. The app asks for the OS notification permission before sending `true`.
+ bool get enabled;/// Day of the due month for the early reminder (nominal calendar day, sent even on a weekend); `null` = no early reminder.
+@JsonKey(includeIfNull: true, name: 'early_day') int? get earlyDay;/// Remind on the due date itself (after any weekend or holiday move).
+@JsonKey(name: 'on_due_date') bool get onDueDate;/// `HH:MM`, America/Mexico_City (every user, no per-user zone); delivered within one reminder-job tick (5 minutes).
+@JsonKey(name: 'send_time') String get sendTime;/// Show each taxpayer's estimated amount in the notification. Privacy opt-in: the OS shows it on the lock screen. Without it, or with `module_tax_engine` OFF, the notification lists names only.
 @JsonKey(name: 'show_amounts') bool get showAmounts;
 /// Create a copy of ReminderSettings
 /// with the given fields replaced by the non-null parameter values.
@@ -222,16 +224,18 @@ return $default(_that.enabled,_that.earlyDay,_that.onDueDate,_that.sendTime,_tha
 @JsonSerializable()
 
 class _ReminderSettings implements ReminderSettings {
-  const _ReminderSettings({this.enabled = false, @JsonKey(includeIfNull: true, name: 'early_day') this.earlyDay = 14, @JsonKey(name: 'on_due_date') this.onDueDate = true, @JsonKey(name: 'send_time') this.sendTime = '10:00', @JsonKey(name: 'show_amounts') this.showAmounts = false});
+  const _ReminderSettings({required this.enabled, @JsonKey(includeIfNull: true, name: 'early_day') required this.earlyDay, @JsonKey(name: 'on_due_date') required this.onDueDate, @JsonKey(name: 'send_time') required this.sendTime, @JsonKey(name: 'show_amounts') required this.showAmounts});
   factory _ReminderSettings.fromJson(Map<String, dynamic> json) => _$ReminderSettingsFromJson(json);
 
-@override@JsonKey() final  bool enabled;
-/// Day of month for the early reminder; null disables it.
+/// Opt-in. The app asks for the OS notification permission before sending `true`.
+@override final  bool enabled;
+/// Day of the due month for the early reminder (nominal calendar day, sent even on a weekend); `null` = no early reminder.
 @override@JsonKey(includeIfNull: true, name: 'early_day') final  int? earlyDay;
+/// Remind on the due date itself (after any weekend or holiday move).
 @override@JsonKey(name: 'on_due_date') final  bool onDueDate;
-/// Local time, America/Mexico_City.
+/// `HH:MM`, America/Mexico_City (every user, no per-user zone); delivered within one reminder-job tick (5 minutes).
 @override@JsonKey(name: 'send_time') final  String sendTime;
-/// Lock-screen privacy opt-in.
+/// Show each taxpayer's estimated amount in the notification. Privacy opt-in: the OS shows it on the lock screen. Without it, or with `module_tax_engine` OFF, the notification lists names only.
 @override@JsonKey(name: 'show_amounts') final  bool showAmounts;
 
 /// Create a copy of ReminderSettings

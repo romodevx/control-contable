@@ -9,7 +9,7 @@ ADR-0005 (rate limits) · ADR-0007 (fiscal shared kernel) · [MODULE-tax-engine.
 §2.10 (due date, holiday gap) · research
 [tax-regimes-mx-2026.md §A.4.1](../research/tax-regimes-mx-2026.md) (CFF art. 12 verbatim, holidays
 2026–2027) · contract scaffold `registerDevice` / `unregisterDevice` / `getReminderSettings` /
-`putReminderSettings` / `getTaxCalendar` in `docs/api/openapi.yaml` (not frozen; changes in §10).
+`putReminderSettings` / `getTaxCalendar` in `docs/api/openapi.yaml`, **frozen by M9-01 (0.13.0)** with the changes of §10.
 
 ## 1. Purpose and scope
 
@@ -353,6 +353,17 @@ Metrics: `reminders_sent_total{kind}`, `reminders_failed_total{error_class}`, `r
 5. Append to the details enum: `no_reminder_selected`, `calendar_unavailable` (append-only).
 6. `x-module: module_reminders` on all five; examples for a moved (weekend) entry, a first-time GET,
    and the `422`s.
+
+**As frozen (M9-01, 0.13.0).** All six items landed. Decisions the spec left open:
+`FieldError.code` is an open string, so the two new detail codes are listed in the operations'
+descriptions and in `docs/api/CONTRACT.md` (there is no detail-code enum to append to);
+`registerDevice` is the one create that never answers `409` (the installation id is not a record
+id; a claim is not a conflict); `Device` gained `app_version` (nullable) and `last_seen_at`;
+`TaxObligation` (append-only) and `TaxCalendarMovedReason` are named schemas; `entries` holds
+exactly 12; the request schemas carry no `default` keywords (the defaults are documented, and
+answered by GET); `getReminderSettings` has no budget of its own (edge limiter only). The
+`module_reminders` → `module_taxpayers` prerequisite (§3) is declared in
+`internal/platform/flags/prerequisites.go`.
 
 ## 11. Out of scope
 

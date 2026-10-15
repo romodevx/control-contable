@@ -4,23 +4,20 @@
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+/// Why the nominal date (day 17) is not the due date: `weekend` when day 17 is a Saturday or Sunday, `holiday` when it is a holiday that moves due dates. The days skipped after it may be of either kind.
 @JsonEnum()
-enum TaxCalendarEntryMovedReason {
+enum TaxCalendarMovedReason {
   @JsonValue('weekend')
   weekend('weekend'),
   @JsonValue('holiday')
   holiday('holiday'),
 
-  /// The name has been replaced because it contains a keyword. Original name: `null`.
-  @JsonValue(null)
-  valueNull(null),
-
   /// Default value for all unparsed values, allows backward compatibility when adding new values on the backend.
   $unknown(null);
 
-  const TaxCalendarEntryMovedReason(this.json);
+  const TaxCalendarMovedReason(this.json);
 
-  factory TaxCalendarEntryMovedReason.fromJson(String? json) =>
+  factory TaxCalendarMovedReason.fromJson(String json) =>
       values.firstWhere((e) => e.json == json, orElse: () => $unknown);
 
   final String? json;
@@ -29,6 +26,6 @@ enum TaxCalendarEntryMovedReason {
   String toString() => json?.toString() ?? super.toString();
 
   /// Returns all defined enum values excluding the $unknown value.
-  static List<TaxCalendarEntryMovedReason> get $valuesDefined =>
+  static List<TaxCalendarMovedReason> get $valuesDefined =>
       values.where((value) => value != $unknown).toList();
 }

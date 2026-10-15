@@ -109,7 +109,7 @@ Some modules read another module's data and declare it as a **prerequisite**
 effectively ON only while its own flag and every prerequisite's are ON. Otherwise its routes
 answer `404` and `GET /v1/flags` omits it; `flags list` shows it as `hidden` with a `REQUIRES`
 column and says which flag to turn ON. Today `module_incomes`, `module_expenses`,
-`module_tax_engine` and `module_dashboard` require `module_taxpayers`; `module_history` and
+`module_tax_engine`, `module_dashboard` and `module_reminders` require `module_taxpayers`; `module_history` and
 `module_annual` require `module_tax_engine` (and through it `module_taxpayers`). The dashboard does not
 require the engine or the record modules: each one OFF removes its part of Home.
 Every seeded preset includes the prerequisites of its modules (integration-tested).
