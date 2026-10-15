@@ -12,7 +12,9 @@ import '../dashboard/pump_dashboard.dart';
 /// `module_history` on the dashboard Home the presets show (M8-06):
 /// `demo_core` / `demo_monetization` leave it out, `demo_full` holds it
 /// (MODULE-history §3, OQ-H6). The server's 404 is the security boundary;
-/// this is UX through the single FlagGate.
+/// this is UX through the single FlagGate. Implied OFF (engine OFF)
+/// is the server's: GET /v1/flags omits the flag, which the OFF case covers;
+/// the preset smoke in backend/cmd/api proves the omission.
 void main() {
   late DashboardHarness harness;
 
@@ -41,15 +43,5 @@ void main() {
 
     expect(find.byKey(const ValueKey('dashboard-hero')), findsOneWidget);
     expect(historyEntry(), findsOneWidget);
-  });
-
-  testWidgets('implied OFF: with the engine OFF the server leaves '
-      'module_history out, so no entry shows', (tester) async {
-    await harness.pump(
-      tester,
-      modules: homeModules.difference({AppModule.taxEngine}),
-    );
-
-    expect(historyEntry(), findsNothing);
   });
 }
