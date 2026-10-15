@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/features/reminders/domain/push_token.dart';
@@ -36,7 +34,7 @@ List<String> _announced(WidgetTester tester) => [
 ];
 
 Future<void> _chooseEarlyDay(WidgetTester tester, String option) async {
-  await tester.tap(find.byType(DropdownButtonFormField<int?>));
+  await tester.tap(find.byType(DropdownButton<int?>));
   await tester.pumpAndSettle();
   await tester.tap(find.text(option).last);
   await tester.pumpAndSettle();

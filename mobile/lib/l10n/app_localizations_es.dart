@@ -3157,14 +3157,11 @@ class AppLocalizationsEs extends AppLocalizations {
       'Las notificaciones se ven en la pantalla de bloqueo. Muestran los nombres de sus contribuyentes, nunca su RFC; los montos sólo si usted lo elige.';
 
   @override
-  String get remindersSave => 'Guardar cambios';
-
-  @override
-  String get remindersSaved => 'Cambios guardados.';
+  String get remindersSaved => 'Guardado.';
 
   @override
   String get remindersSaveFailed =>
-      'No se pudieron guardar los cambios. Inténtelo de nuevo.';
+      'No se pudo guardar el cambio; se restauró el valor anterior. Inténtelo de nuevo.';
 
   @override
   String get remindersNoneSelected =>

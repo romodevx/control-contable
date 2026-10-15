@@ -4069,21 +4069,17 @@
   "@remindersPrivacyNote": {
     "description": "Lock-screen privacy explanation."
   },
-  "remindersSave": "Guardar cambios",
-  "@remindersSave": {
-    "description": "Saves the reminder details."
-  },
-  "remindersSaved": "Cambios guardados.",
+  "remindersSaved": "Guardado.",
   "@remindersSaved": {
-    "description": "Save confirmation."
+    "description": "Polite confirmation after each autosaved change (MODULE-reminders §7)."
   },
-  "remindersSaveFailed": "No se pudieron guardar los cambios. Inténtelo de nuevo.",
+  "remindersSaveFailed": "No se pudo guardar el cambio; se restauró el valor anterior. Inténtelo de nuevo.",
   "@remindersSaveFailed": {
-    "description": "Save failed."
+    "description": "An autosaved change failed; the control went back to the saved value."
   },
   "remindersNoneSelected": "Elija al menos un recordatorio: el anticipado o el del día del vencimiento.",
   "@remindersNoneSelected": {
-    "description": "Submit error: enabled with nothing to send."
+    "description": "A change was refused: reminders on with nothing to send."
   },
   "remindersUpcomingTitle": "Próximos vencimientos",
   "@remindersUpcomingTitle": {

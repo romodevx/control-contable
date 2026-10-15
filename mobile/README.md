@@ -292,8 +292,11 @@ Spec: `docs/project-specs/MODULE-reminders.md`. Code: `lib/features/reminders/`.
   (data payload) → the estimate of that period; Home when `module_tax_engine` is off or the
   link is unknown.
 - **Settings**: the amounts toggle defaults OFF and is hidden while `module_tax_engine` is off;
-  its label states the lock-screen consequence. The details save with "Guardar cambios"
-  (never disabled); the opt-in switch saves at once (it is the permission flow).
+  its label states the lock-screen consequence. The details **autosave per change**
+  (MODULE-reminders §7, no primary button): the control moves at once, every save is
+  confirmed with a polite "Guardado.", a failure puts the control back and is announced, a
+  change that would leave nothing to send is refused locally. Changes save one at a time,
+  last one wins. The opt-in switch moves only once saved (it is the permission flow).
 
 ### Firebase configuration (OB9: the project does not exist yet)
 

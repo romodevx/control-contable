@@ -95,7 +95,7 @@ class _RemindersViewState extends ConsumerState<RemindersView> {
           value: enabled,
           onChanged: (on) => _onSwitch(on: on),
         ),
-        if (enabled) ReminderDetailsForm(saved: widget.settings),
+        if (enabled) ReminderDetailsForm(settings: widget.settings),
         const SizedBox(height: AppSpacing.xl),
         const _Padded(UpcomingDueDatesSection()),
       ],

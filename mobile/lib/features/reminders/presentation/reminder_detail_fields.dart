@@ -57,18 +57,27 @@ class EarlyDayField extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return LabeledField(
       label: l10n.remindersEarlyDayLabel,
-      child: DropdownButtonFormField<int?>(
-        initialValue: value,
-        isExpanded: true,
-        onChanged: onChanged,
-        items: [
-          DropdownMenuItem(child: Text(l10n.remindersEarlyDayNone)),
-          for (var day = _firstEarlyDay; day <= _lastEarlyDay; day++)
-            DropdownMenuItem(
-              value: day,
-              child: Text(l10n.remindersEarlyDayOption(day)),
-            ),
-        ],
+      // A controlled DropdownButton, not a DropdownButtonFormField: a form
+      // field keeps the picked value as its own state, so a reverted
+      // autosave would still show the refused day.
+      child: InputDecorator(
+        decoration: const InputDecoration(),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<int?>(
+            value: value,
+            isExpanded: true,
+            isDense: true,
+            onChanged: onChanged,
+            items: [
+              DropdownMenuItem(child: Text(l10n.remindersEarlyDayNone)),
+              for (var day = _firstEarlyDay; day <= _lastEarlyDay; day++)
+                DropdownMenuItem(
+                  value: day,
+                  child: Text(l10n.remindersEarlyDayOption(day)),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

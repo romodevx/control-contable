@@ -5068,25 +5068,19 @@ abstract class AppLocalizations {
   /// **'Las notificaciones se ven en la pantalla de bloqueo. Muestran los nombres de sus contribuyentes, nunca su RFC; los montos sólo si usted lo elige.'**
   String get remindersPrivacyNote;
 
-  /// Saves the reminder details.
+  /// Polite confirmation after each autosaved change (MODULE-reminders §7).
   ///
   /// In es, this message translates to:
-  /// **'Guardar cambios'**
-  String get remindersSave;
-
-  /// Save confirmation.
-  ///
-  /// In es, this message translates to:
-  /// **'Cambios guardados.'**
+  /// **'Guardado.'**
   String get remindersSaved;
 
-  /// Save failed.
+  /// An autosaved change failed; the control went back to the saved value.
   ///
   /// In es, this message translates to:
-  /// **'No se pudieron guardar los cambios. Inténtelo de nuevo.'**
+  /// **'No se pudo guardar el cambio; se restauró el valor anterior. Inténtelo de nuevo.'**
   String get remindersSaveFailed;
 
-  /// Submit error: enabled with nothing to send.
+  /// A change was refused: reminders on with nothing to send.
   ///
   /// In es, this message translates to:
   /// **'Elija al menos un recordatorio: el anticipado o el del día del vencimiento.'**
