@@ -46,3 +46,8 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Firebase config (M9-09, OB9): never committed (public repo). CI writes them from
+# secrets; see README "Push notifications".
+**/google-services.json
+**/GoogleService-Info.plist

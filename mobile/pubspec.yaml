@@ -9,7 +9,10 @@ environment:
 
 # Pins follow ADR-0001 (Context7-verified 2026-10-13). Exact versions: upgrades are deliberate.
 dependencies:
+  app_settings: 9.0.0
   dio: 5.11.1
+  firebase_core: 4.15.0
+  firebase_messaging: 16.7.0
   flutter:
     sdk: flutter
   flutter_localizations:

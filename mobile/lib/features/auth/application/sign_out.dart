@@ -1,5 +1,6 @@
 import 'package:control_contable/core/diagnostics/error_reporter.dart';
 import 'package:control_contable/core/session/session.dart';
+import 'package:control_contable/core/session/sign_out_steps.dart';
 import 'package:control_contable/features/auth/data/auth_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,12 +11,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// covered by the 30-day sliding expiry and family revocation on reuse.
 class SignOut {
   /// Signs [_session] out through [_repository]; a failed revocation is
-  /// told to [_reporter].
-  new(this._repository, this._session, this._reporter);
+  /// told to [_reporter]. [beforeRevoke] runs first, with a bearer.
+  new(
+    this._repository,
+    this._session,
+    this._reporter, {
+    this.beforeRevoke = const [],
+  });
 
   final AuthRepository _repository;
   final Session _session;
   final ErrorReporter _reporter;
+
+  /// What the slices do before the revocation (each failure absorbed).
+  final List<SignOutStep> beforeRevoke;
 
   /// Revokes, then wipes. Never throws: the user ends up signed out either
   /// way, and the router shows the login form. A token the wipe could not
@@ -26,6 +35,9 @@ class SignOut {
       // yet. The interceptor never refreshes for an auth endpoint, so the
       // use case gets one first (a failure here only skips the revocation).
       if (_session.accessToken == null) await _session.refresh();
+      for (final step in beforeRevoke) {
+        await _absorbed(step);
+      }
       final refreshToken = await _session.readRefreshToken();
       if (refreshToken != null) await _repository.logout(refreshToken);
     } on Exception catch (error) {
@@ -37,6 +49,14 @@ class SignOut {
       await _session.end();
     }
   }
+
+  Future<void> _absorbed(SignOutStep step) async {
+    try {
+      await step();
+    } on Exception catch (error) {
+      _reporter.report('signOut.beforeRevoke', error);
+    }
+  }
 }
 
 /// The sign-out use case.
@@ -45,6 +65,7 @@ final signOutProvider = Provider<SignOut>(
     ref.watch(authRepositoryProvider),
     ref.watch(sessionProvider),
     ref.watch(errorReporterProvider),
+    beforeRevoke: ref.watch(signOutStepsProvider),
   ),
   name: 'signOutProvider',
 );

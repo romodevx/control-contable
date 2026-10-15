@@ -66,6 +66,9 @@ class FakeAuthRepository implements AuthRepository {
   final List<String> loggedOut = [];
   Exception? logoutError;
 
+  /// Called on each logout, before it answers (to observe ordering).
+  void Function()? onLogout;
+
   @override
   Future<List<LegalDocument>> listLegalDocuments() async {
     documentCalls++;
@@ -106,6 +109,7 @@ class FakeAuthRepository implements AuthRepository {
 
   @override
   Future<void> logout(String refreshToken) async {
+    onLogout?.call();
     loggedOut.add(refreshToken);
     if (logoutError case final error?) throw error;
   }

@@ -114,4 +114,41 @@ void main() {
       expect(reporter.reports.single.error, same(failure));
     });
   }
+
+  group('steps before the revocation (M9-09: unregister the push device)', () {
+    test('run with a bearer, before the refresh token is revoked', () async {
+      final order = <String>[];
+      repository.onLogout = () => order.add('revoke');
+      signOut = SignOut(
+        repository,
+        session,
+        reporter,
+        beforeRevoke: [
+          () async => order.add('step:${session.accessToken != null}'),
+        ],
+      );
+
+      await signOut();
+
+      expect(order, ['step:true', 'revoke']);
+      expectSignedOutLocally();
+    });
+
+    test('a failing step is reported and the sign-out goes on', () async {
+      const failure = ApiUnreachable();
+      signOut = SignOut(
+        repository,
+        session,
+        reporter,
+        beforeRevoke: [() => Future.error(failure)],
+      );
+
+      final thrown = await failureOf(signOut.call);
+
+      expect(thrown, isNull);
+      expect(repository.loggedOut, isNotEmpty);
+      expect(reporter.reports.single.operation, 'signOut.beforeRevoke');
+      expectSignedOutLocally();
+    });
+  });
 }

@@ -271,6 +271,54 @@ Widgets never hard-code a color, radius or face; they read `context.tokens` (`Ap
 - Fonts (Public Sans, Source Serif 4; SIL OFL 1.1, latin subset) are bundled in
   `assets/fonts/`: no runtime font fetching.
 
+## Reminders and push notifications (`module_reminders`, M9-09 / M9-10)
+
+Spec: `docs/project-specs/MODULE-reminders.md`. Code: `lib/features/reminders/`.
+
+- **Entry**: Home's app bar bell → `/recordatorios`, only while `module_reminders` is on (OFF:
+  no entry, the location is "not found", no permission prompt, no registration).
+- **Permission**: asked only when the user turns "Recibir recordatorios de pago" on — never at
+  launch. Denied ⇒ the screen explains and offers "Abrir ajustes del sistema"; it never
+  re-prompts. FCM auto-init is off in both manifests, so no token exists before opt-in.
+- **Device**: `POST /v1/devices` with the installation id (a UUIDv7 kept in preferences) after
+  opt-in, after every sign-in while reminders are on, and on every FCM token rotation;
+  `DELETE /v1/devices/{id}` on opt-out and on sign-out (before the session is revoked).
+- **Token hygiene**: the FCM token is a `PushToken` whose `toString()` is redacted. The
+  generated `DeviceCreate` prints every field, so it is built only inline in
+  `ApiRemindersRepository` (`test/features/reminders/push_token_redaction_test.dart` fails on
+  any other construction site, on `pushToken` anywhere else, or on a Dio `LogInterceptor`).
+  Absorbed errors are reported by type only (`describeAbsorbedError`).
+- **Deep link**: a tapped reminder carries `link = controlcontable://estimate?period=YYYY-MM`
+  (data payload) → the estimate of that period; Home when `module_tax_engine` is off or the
+  link is unknown.
+- **Settings**: the amounts toggle defaults OFF and is hidden while `module_tax_engine` is off;
+  its label states the lock-screen consequence. The details **autosave per change**
+  (MODULE-reminders §7, no primary button): the control moves at once, every save is
+  confirmed with a polite "Guardado.", a failure puts the control back and is announced, a
+  change that would leave nothing to send is refused locally. Changes save one at a time,
+  last one wins. The opt-in switch moves only once saved (it is the permission flow).
+
+### Firebase configuration (OB9: the project does not exist yet)
+
+Firebase starts in `bootstrap` through `startPushMessaging`, guarded: no config file, a
+failure or a 3 s timeout ⇒ the app boots normally, the reminders screen says
+"Notificaciones no disponibles en esta versión de la app." and no device is registered.
+Builds and tests never need the files.
+
+**Never commit the files** (public repo, GitGuardian): `**/google-services.json` and
+`**/GoogleService-Info.plist` are git-ignored and `test/platform/firebase_config_test.dart`
+fails if one appears in the tree. CI writes them from secrets before building.
+
+| Platform | Where the file goes | Notes |
+|---|---|---|
+| Android, all flavors | `android/app/google-services.json` | One file with the three clients: `mx.romodevx.control_contable` (prod), `….dev`, `….staging` |
+| Android, per flavor (alternative) | `android/app/src/{dev,staging,prod}/google-services.json` | Each build needs the file of its flavor |
+| iOS | `ios/Runner/GoogleService-Info.plist`, added to the Runner target | iOS has one scheme today; per-flavor plists arrive with the iOS schemes (OB6) via a build-phase copy |
+
+The Gradle plugin `com.google.gms.google-services` (4.4.4) is applied only when an Android
+file exists. iOS also needs, with the Apple account (OB6): the Push Notifications capability
+(`aps-environment` entitlement) and the APNs key uploaded to the Firebase project.
+
 ## Localization
 
 es-MX is the only locale. Copy lives in `lib/l10n/app_es.arb` (template); `app_es_MX.arb`

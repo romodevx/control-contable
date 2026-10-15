@@ -3087,6 +3087,124 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get annualFactsMoralNote =>
       'Las personas morales sólo capturan los datos de sus regímenes.';
+
+  @override
+  String get remindersTitle => 'Recordatorios';
+
+  @override
+  String get remindersLoading => 'Cargando sus recordatorios…';
+
+  @override
+  String get remindersLoadFailed => 'No se pudieron cargar sus recordatorios.';
+
+  @override
+  String get remindersEnabledLabel => 'Recibir recordatorios de pago';
+
+  @override
+  String get remindersEnabledHelp =>
+      'Un aviso antes de cada fecha de pago mensual estimada, con la lista de sus contribuyentes.';
+
+  @override
+  String get remindersUnavailable =>
+      'Notificaciones no disponibles en esta versión de la app.';
+
+  @override
+  String get remindersDenied =>
+      'Las notificaciones están bloqueadas para Control Contable. Permítalas en los ajustes del sistema para recibir recordatorios.';
+
+  @override
+  String get remindersOpenSystemSettings => 'Abrir ajustes del sistema';
+
+  @override
+  String get remindersTurnOnFailed =>
+      'No se pudieron activar los recordatorios. Inténtelo de nuevo.';
+
+  @override
+  String get remindersTurnOffFailed =>
+      'No se pudieron desactivar los recordatorios. Inténtelo de nuevo.';
+
+  @override
+  String get remindersEarlyDayLabel => 'Recordatorio anticipado';
+
+  @override
+  String get remindersEarlyDayNone => 'Sin recordatorio anticipado';
+
+  @override
+  String remindersEarlyDayOption(int day) {
+    return 'El día $day del mes de pago';
+  }
+
+  @override
+  String get remindersOnDueDateLabel => 'Avisarme el día del vencimiento';
+
+  @override
+  String get remindersSendTimeLabel => 'Hora del aviso';
+
+  @override
+  String remindersSendTimeValue(String time) {
+    return '$time (hora del centro de México)';
+  }
+
+  @override
+  String get remindersSendTimeChange => 'Cambiar';
+
+  @override
+  String get remindersShowAmountsLabel =>
+      'Mostrar montos en las notificaciones (se verán en la pantalla de bloqueo)';
+
+  @override
+  String get remindersPrivacyNote =>
+      'Las notificaciones se ven en la pantalla de bloqueo. Muestran los nombres de sus contribuyentes, nunca su RFC; los montos sólo si usted lo elige.';
+
+  @override
+  String get remindersSaved => 'Guardado.';
+
+  @override
+  String get remindersSaveFailed =>
+      'No se pudo guardar el cambio; se restauró el valor anterior. Inténtelo de nuevo.';
+
+  @override
+  String get remindersNoneSelected =>
+      'Elija al menos un recordatorio: el anticipado o el del día del vencimiento.';
+
+  @override
+  String get remindersUpcomingTitle => 'Próximos vencimientos';
+
+  @override
+  String get remindersUpcomingLoading => 'Cargando fechas…';
+
+  @override
+  String get remindersUpcomingFailed => 'No se pudieron cargar las fechas.';
+
+  @override
+  String get remindersUpcomingEmpty => 'Sin fechas disponibles por ahora.';
+
+  @override
+  String remindersUpcomingDate(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMMEEEEd(
+      localeName,
+    );
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String remindersUpcomingPeriod(DateTime month) {
+    final intl.DateFormat monthDateFormat = intl.DateFormat.yMMMM(localeName);
+    final String monthString = monthDateFormat.format(month);
+
+    return 'Pago mensual de $monthString';
+  }
+
+  @override
+  String get remindersMovedWeekend => 'Se recorre por fin de semana';
+
+  @override
+  String get remindersMovedHoliday => 'Se recorre por día inhábil';
+
+  @override
+  String get remindersSubjectToConfirmation => 'Fechas sujetas a confirmación.';
 }
 
 /// The translations for Spanish Castilian, as used in Mexico (`es_MX`).
