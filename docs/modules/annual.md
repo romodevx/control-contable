@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| Flag | `module_annual` (OFF by default; requires `module_tax_engine`, and through it `module_taxpayers`; registered by ANN-22) |
+| Flag | `module_annual` (OFF by default; requires `module_tax_engine`, and through it `module_taxpayers`; registered by migration `20261019100000_register_module_annual` (ANN-22); in `demo_full` only) |
 | Spec | [MODULE-annual.md](../project-specs/MODULE-annual.md) |
 | Design | [ADR-0009](../adr/0009-annual-engine-placement.md) (a sub-context of the tax engine module), [ADR-0002](../adr/0002-tax-engine.md) |
 | Contract | [`docs/api/openapi.yaml`](../api/openapi.yaml), tag `Annual`, `x-module: module_annual` (frozen by ANN-02, 0.11.0) |
-| Status | Contract frozen; backend built (ANN-03..ANN-15: inputs, `EstimateAnnual`, handlers); flag row, presets, gates and docs pending (ANN-22..ANN-27). The full page lands with the module docs task (ANN-26) |
+| Status | Contract frozen; backend built (ANN-03..ANN-15: inputs, `EstimateAnnual`, handlers); flag registered, in `demo_full` (ANN-22); QA, gates and docs pending (ANN-23..ANN-27). The full page lands with the module docs task (ANN-26) |
 
 ## Contract highlights
 

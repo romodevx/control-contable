@@ -163,4 +163,4 @@ Each preset has an E2E smoke test.
 |---|---|
 | `demo_core` | auth, taxpayers, incomes, expenses, tax_engine, dashboard |
 | `demo_monetization` | `demo_core` + subscriptions |
-| `demo_full` | all M1–M9 |
+| `demo_full` | all M1–M9 + annual |
