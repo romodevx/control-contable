@@ -614,7 +614,7 @@ Full-app QA (REL-08) follows rules/qa-browser.md adapted to mobile: LOCAL DB wip
 | REL-01 | IaC staging + prod: Cloud Run (api, worker, migrate job), Cloud SQL PG 18 MX region, Secret Manager, role bootstrap | devops-sr | P0-19 | 8 | — | `release/infra-iac` | OB3 | [ ] |
 | REL-02 | CD: images, migration job as cc_owner, auto-deploy staging on merge to dev, prod behind manual approval | devops-sr | REL-01 | 4 | — | `release/cd-pipeline` | OB3 | [ ] |
 | REL-03 | Observability + DR: RED metrics, uptime checks, alerts, PITR, restore-drill runbook | devops-sr | REL-01 | 4 | — | `release/observability` | OB3 | [ ] |
-| REL-04 | Mobile release pipeline: signing, fastlane, TestFlight + Play internal track, symbols to crash reporting | devops-sr | P0-25 | 5 | — | `release/mobile-pipeline` | OB6, OB7, OB9 | [ ] |
+| REL-04 | Mobile release pipeline: signing, fastlane, TestFlight + Play internal track, symbols to crash reporting; IPA artifact gate (no symbols/dSYM/maps in `Runner.app`, iOS QA O6) | devops-sr | P0-25 | 5 | — | `release/mobile-pipeline` | OB6, OB7, OB9 | [ ] |
 | REL-05 | Preset E2E smokes: demo_core, demo_monetization, demo_full | qa-sr | M1-18, M2-15, M3-14, M4-15, M5-32, M6-09, M7-15, M8-10, M9-15 | 4 | — | `release/preset-smokes` | — | [ ] |
 | REL-06 | k6 load test on staging: record CRUD p95 < 300 ms, dashboard p95 < 1 s | qa-sr | REL-02, M6-03 | 3 | — | `release/load-tests` | OB3 | [ ] |
 | REL-07 | Store compliance pack: privacy labels / data safety, subscription terms, restore, in-app deletion check, aviso de privacidad link | frontend-sr | M7-09, M1-13 | 3 | — | `release/store-compliance` | OB1, OB10 | [ ] |
