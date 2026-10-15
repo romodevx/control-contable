@@ -2184,10 +2184,10 @@ abstract class AppLocalizations {
   /// **'IVA trasladado cobrado'**
   String get estimateIvaCharged;
 
-  /// Regime IVA component (subtracted).
+  /// Regime IVA component (subtracted): the IVA paid this month plus the IVA withheld from suppliers last month (engine 1.1.0), so never labelled as paid.
   ///
   /// In es, this message translates to:
-  /// **'IVA acreditable pagado'**
+  /// **'IVA acreditable'**
   String get estimateIvaCreditable;
 
   /// Regime IVA component (subtracted).

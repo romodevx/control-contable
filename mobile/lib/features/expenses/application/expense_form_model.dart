@@ -383,6 +383,7 @@ class ExpenseFormModel extends ChangeNotifier {
     _catalog = catalog;
     final chosen = IvaRate.fromJson(ivaRate.value ?? '');
     if (!catalog.ivaRatesAllowed.contains(chosen)) ivaRate.value = null;
+    if (isEditing) supplier.showServerDefault(chosenCategory);
     notifyListeners();
   }
 
