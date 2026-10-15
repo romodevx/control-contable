@@ -2,6 +2,7 @@ package usecase_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,18 +14,39 @@ import (
 
 const otherUserID = "0199d4a2-7c1e-7b3a-9f10-2c5e8a1b4d02"
 
+// deviceID is the push installation id the app sends with logout.
+const deviceID = "0199d4a4-3c4d-7f5e-8a61-7c8d9e0f1a23"
+
 type logoutEnv struct {
-	uc    *usecase.Logout
-	tx    *fakeTx
-	store *fakeRotation
-	logs  interface{ String() string }
+	uc      *usecase.Logout
+	tx      *fakeTx
+	store   *fakeRotation
+	devices *fakeDevices
+	logs    interface{ String() string }
 }
 
 func newLogoutEnv() *logoutEnv {
 	logger, logs := capturedLogs()
-	e := &logoutEnv{tx: &fakeTx{}, store: newFakeRotation(), logs: logs}
-	e.uc = usecase.NewLogout(usecase.LogoutDeps{Tx: e.tx, Tokens: e.store, Logger: logger})
+	e := &logoutEnv{tx: &fakeTx{}, store: newFakeRotation(), devices: &fakeDevices{}, logs: logs}
+	e.uc = usecase.NewLogout(usecase.LogoutDeps{Tx: e.tx, Tokens: e.store, Devices: e.devices, Logger: logger})
 	return e
+}
+
+// deviceDelete is one DeleteDevice call: the id and the unit of work's user.
+type deviceDelete struct {
+	installationID string
+	txUser         string
+}
+
+// fakeDevices records the push devices logout removes.
+type fakeDevices struct {
+	deletes []deviceDelete
+	err     error
+}
+
+func (f *fakeDevices) DeleteDevice(ctx context.Context, installationID string) (bool, error) {
+	f.deletes = append(f.deletes, deviceDelete{installationID: installationID, txUser: txUser(ctx)})
+	return f.err == nil, f.err
 }
 
 func tokenOf(t *testing.T, userID string, seed byte) domain.RefreshToken {
@@ -123,3 +145,107 @@ type failingRevoker struct{}
 func (failingRevoker) RevokeFamily(context.Context, domain.TokenHash, usecase.RevokeReason) error {
 	return errDB
 }
+
+// M9 security gate F1: the push device goes with the session, in the same
+// unit of work as the revocation and as the caller, so a phone that changes
+// hands never keeps the previous user's reminders.
+func TestLogout_removesThePushDeviceInTheSameUnitOfWork(t *testing.T) {
+	e := newLogoutEnv()
+	token := tokenOf(t, newUserID, 1)
+	e.store.add(token, storedToken{family: "f"})
+
+	err := e.uc.Execute(t.Context(), usecase.LogoutInput{UserID: newUserID, RefreshToken: token.Reveal(), DeviceID: deviceID})
+
+	require.NoError(t, err)
+	assert.Equal(t, 1, e.tx.calls, "one transaction for both")
+	assert.Equal(t, []deviceDelete{{installationID: deviceID, txUser: newUserID}}, e.devices.deletes)
+	assert.True(t, e.store.row(token).revoked)
+	assert.NotContains(t, e.logs.String(), deviceID, "the installation id is not logged")
+}
+
+func TestLogout_withoutADeviceIDRemovesNoDevice(t *testing.T) {
+	e := newLogoutEnv()
+	token := tokenOf(t, newUserID, 1)
+
+	require.NoError(t, e.uc.Execute(t.Context(), usecase.LogoutInput{UserID: newUserID, RefreshToken: token.Reveal()}))
+	assert.Empty(t, e.devices.deletes)
+}
+
+// The device is the bearer's, whatever the refresh token: another user's
+// token is still not looked up, but the caller's own device is removed.
+func TestLogout_anotherUsersTokenStillRemovesTheCallersDevice(t *testing.T) {
+	e := newLogoutEnv()
+	token := tokenOf(t, otherUserID, 1)
+	e.store.add(token, storedToken{})
+
+	err := e.uc.Execute(t.Context(), usecase.LogoutInput{UserID: newUserID, RefreshToken: token.Reveal(), DeviceID: deviceID})
+
+	require.NoError(t, err)
+	assert.Equal(t, []deviceDelete{{installationID: deviceID, txUser: newUserID}}, e.devices.deletes)
+	assert.False(t, e.store.row(token).revoked, "another user's token is never touched")
+	assert.Empty(t, e.store.revokes)
+}
+
+// An unknown or another user's device removes nothing and is still a
+// success (no oracle); the canonical lower-case id is what is looked up.
+func TestLogout_unknownDeviceIsASuccess(t *testing.T) {
+	e := newLogoutEnv()
+	token := tokenOf(t, newUserID, 1)
+	e.uc = usecase.NewLogout(usecase.LogoutDeps{Tx: e.tx, Tokens: e.store, Devices: missingDevices{}})
+
+	err := e.uc.Execute(t.Context(), usecase.LogoutInput{UserID: newUserID, RefreshToken: token.Reveal(), DeviceID: deviceID})
+
+	require.NoError(t, err)
+}
+
+func TestLogout_canonicalizesTheDeviceID(t *testing.T) {
+	e := newLogoutEnv()
+	token := tokenOf(t, newUserID, 1)
+
+	err := e.uc.Execute(t.Context(), usecase.LogoutInput{
+		UserID: newUserID, RefreshToken: token.Reveal(), DeviceID: strings.ToUpper(deviceID),
+	})
+
+	require.NoError(t, err)
+	require.Len(t, e.devices.deletes, 1)
+	assert.Equal(t, deviceID, e.devices.deletes[0].installationID)
+}
+
+func TestLogout_malformedDeviceIDIsRejectedBeforeAnyWork(t *testing.T) {
+	e := newLogoutEnv()
+	token := tokenOf(t, newUserID, 1)
+
+	err := e.uc.Execute(t.Context(), usecase.LogoutInput{UserID: newUserID, RefreshToken: token.Reveal(), DeviceID: "not-a-uuid"})
+
+	require.ErrorIs(t, err, usecase.ErrInvalidDeviceID)
+	assert.Zero(t, e.tx.calls)
+}
+
+// Atomic: a failed device removal rolls the revocation back and is an
+// error, so the app can retry the whole logout.
+func TestLogout_deviceFailureRollsTheLogoutBack(t *testing.T) {
+	e := newLogoutEnv()
+	e.devices.err = errDB
+	token := tokenOf(t, newUserID, 1)
+
+	err := e.uc.Execute(t.Context(), usecase.LogoutInput{UserID: newUserID, RefreshToken: token.Reveal(), DeviceID: deviceID})
+
+	require.ErrorIs(t, err, errDB)
+	require.ErrorIs(t, e.tx.workErr, errDB, "the unit of work rolls back")
+	assert.NotContains(t, e.logs.String(), `"event":"logout"`)
+}
+
+// Without the reminders module wired, a device id is accepted and ignored.
+func TestLogout_withoutADeviceStoreIgnoresTheDeviceID(t *testing.T) {
+	e := newLogoutEnv()
+	e.uc = usecase.NewLogout(usecase.LogoutDeps{Tx: e.tx, Tokens: e.store})
+	token := tokenOf(t, newUserID, 1)
+
+	err := e.uc.Execute(t.Context(), usecase.LogoutInput{UserID: newUserID, RefreshToken: token.Reveal(), DeviceID: deviceID})
+
+	require.NoError(t, err)
+}
+
+type missingDevices struct{}
+
+func (missingDevices) DeleteDevice(context.Context, string) (bool, error) { return false, nil }

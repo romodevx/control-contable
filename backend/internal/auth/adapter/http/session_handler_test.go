@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -46,6 +47,10 @@ func sessionHandler(r *fakeRefresher, l *fakeLogout) *authhttp.SessionHandler {
 
 func refreshBody(token string) *gen.RefreshSessionJSONRequestBody {
 	return &gen.RefreshSessionJSONRequestBody{RefreshToken: token}
+}
+
+func logoutBody(token string) *gen.LogoutJSONRequestBody {
+	return &gen.LogoutJSONRequestBody{RefreshToken: token}
 }
 
 func TestRefreshSession_answers200WithAPair(t *testing.T) {
@@ -96,11 +101,42 @@ func TestLogout_answers204ForTheBearersUser(t *testing.T) {
 	l := &fakeLogout{}
 	ctx := principal.With(t.Context(), principal.Principal{UserID: userIDText, TokenID: "jti"})
 
-	resp, err := sessionHandler(&fakeRefresher{}, l).Logout(ctx, gen.LogoutRequestObject{Body: refreshBody("presented")})
+	resp, err := sessionHandler(&fakeRefresher{}, l).Logout(ctx, gen.LogoutRequestObject{Body: logoutBody("presented")})
 
 	require.NoError(t, err)
 	assert.IsType(t, gen.Logout204Response{}, resp)
 	assert.Equal(t, usecase.LogoutInput{UserID: userIDText, RefreshToken: "presented"}, l.got)
+}
+
+// M9 security gate F1: the optional device_id reaches the use case, which
+// removes that push device with the session.
+func TestLogout_passesThePushDeviceID(t *testing.T) {
+	l := &fakeLogout{}
+	ctx := principal.With(t.Context(), principal.Principal{UserID: userIDText})
+	device := uuid.MustParse("0199d4a4-3c4d-7f5e-8a61-7c8d9e0f1a23")
+	body := logoutBody("presented")
+	body.DeviceId = &device
+
+	resp, err := sessionHandler(&fakeRefresher{}, l).Logout(ctx, gen.LogoutRequestObject{Body: body})
+
+	require.NoError(t, err)
+	assert.IsType(t, gen.Logout204Response{}, resp)
+	assert.Equal(t, usecase.LogoutInput{UserID: userIDText, RefreshToken: "presented", DeviceID: device.String()}, l.got)
+}
+
+// A device id the use case refuses is a 400 naming device_id, never a 500.
+func TestLogout_invalidDeviceIDIsAValidationFailure(t *testing.T) {
+	l := &fakeLogout{err: usecase.ErrInvalidDeviceID}
+	ctx := principal.With(t.Context(), principal.Principal{UserID: userIDText})
+
+	_, err := sessionHandler(&fakeRefresher{}, l).Logout(ctx, gen.LogoutRequestObject{Body: logoutBody("x")})
+
+	appErr, ok := errors.AsType[*apperr.Error](err)
+	require.True(t, ok, "%v", err)
+	assert.Equal(t, apperr.CodeValidationFailed, appErr.Code)
+	require.Len(t, appErr.Fields, 1)
+	assert.Equal(t, "device_id", appErr.Fields[0].Field)
+	assert.Equal(t, "format", appErr.Fields[0].Code)
 }
 
 // The authenticator runs first; a handler reached without a principal still
@@ -124,7 +160,7 @@ func TestLogout_401sCarryTheBearerChallenge(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			resp, err := sessionHandler(&fakeRefresher{}, tc.logout).Logout(tc.ctx(t), gen.LogoutRequestObject{Body: refreshBody("x")})
+			resp, err := sessionHandler(&fakeRefresher{}, tc.logout).Logout(tc.ctx(t), gen.LogoutRequestObject{Body: logoutBody("x")})
 
 			require.NoError(t, err)
 			unauthorized, ok := resp.(gen.Logout401JSONResponse)
@@ -143,7 +179,7 @@ func TestLogout_otherFailuresStayErrors(t *testing.T) {
 	l := &fakeLogout{err: dbDown}
 	ctx := principal.With(t.Context(), principal.Principal{UserID: userIDText})
 
-	resp, err := sessionHandler(&fakeRefresher{}, l).Logout(ctx, gen.LogoutRequestObject{Body: refreshBody("x")})
+	resp, err := sessionHandler(&fakeRefresher{}, l).Logout(ctx, gen.LogoutRequestObject{Body: logoutBody("x")})
 
 	require.ErrorIs(t, err, dbDown)
 	assert.Nil(t, resp)
