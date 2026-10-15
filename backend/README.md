@@ -63,7 +63,9 @@ applies the same startup role check as the API (outside dev it refuses to start 
 SUPERUSER or BYPASSRLS role, or when the role cannot be verified).
 
 - **Push (reminders, M9-07)**: `FCM_PROJECT_ID` (plain variable) turns the FCM sender on;
-  unset, the worker logs `push disabled` and the reminder job sends nothing. With a project,
+  unset, the worker logs `push disabled` and the reminder job sends nothing and claims nothing
+  (one `event=reminders_push_disabled` warning while `module_reminders` is ON), so a worker
+  restarted with FCM later that day still sends that day's reminders. With a project,
   the service account key is read from the `FCM_CREDENTIALS_JSON` secret (secret manager in
   shared environments, never the repository); without it the runtime's Application Default
   Credentials are used. Credentials that cannot be used stop the worker at startup. Whether
