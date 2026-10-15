@@ -20,7 +20,7 @@ import '../../helpers/choice_finders.dart';
 import '../../helpers/withholding_fixtures.dart';
 import '../taxpayers/pump_onboarding.dart' show tapText, typeInto;
 import '../taxpayers/taxpayers_fakes.dart';
-import 'expenses_fakes.dart' show businessCategories;
+import 'expenses_fakes.dart' show businessCategories, expense;
 import 'pump_expenses.dart';
 
 const _amount = 'Monto sin IVA';
@@ -282,6 +282,30 @@ void main() {
 
       expect(chosenIn(tester, _e1), SupplierKind.pfWithActivity.json);
       expect(chosenIn(tester, _e2), SupplierRegime.value626.json);
+    });
+
+    // WH-13 QA O2: an expense stored before WH-07 (not backfilled yet) has
+    // no operation_kind; the server derives it with the category's default
+    // when it is omitted, so E3 must show that default instead of an
+    // unanswered question next to a card that already used it.
+    testWidgets('a legacy expense without an operation shows the category '
+        'default the server applies', (tester) async {
+      harness.expenses.categoriesBy['601'] = _softwareServedAs(
+        OperationKind.commission,
+      );
+      harness.expenses.expenses.add(expense(id: 'e-legacy', regime: '601'));
+      await harness.pump(tester, taxpayer: moral601);
+      await tester.tap(find.text('Suscripción de diseño'));
+      await tester.pumpAndSettle();
+
+      await chooseIn(tester, _e1, _pm);
+
+      expect(chosenIn(tester, _e3), OperationKind.commission.json);
+      await settlePreview(tester);
+      expect(
+        harness.expenses.previewRequests.last.operationKind,
+        OperationKind.commission,
+      );
     });
   });
 
