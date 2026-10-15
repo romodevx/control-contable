@@ -40,14 +40,14 @@ const (
 // pending_strategy from its cases in the same PR.
 func gateStrategies() []domain.Strategy { return taxengine.Strategies() }
 
-func registry(t *testing.T) domain.Registry {
+func registry(t testing.TB) domain.Registry {
 	t.Helper()
 	r, err := domain.NewRegistry(gateStrategies()...)
 	require.NoError(t, err)
 	return r
 }
 
-func catalog(t *testing.T) *taxparams.Catalog {
+func catalog(t testing.TB) *taxparams.Catalog {
 	t.Helper()
 	c, err := params.Embedded()
 	require.NoError(t, err)

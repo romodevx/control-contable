@@ -6,7 +6,7 @@
 | Spec | [MODULE-annual.md](../project-specs/MODULE-annual.md) |
 | Design | [ADR-0009](../adr/0009-annual-engine-placement.md) (a sub-context of the tax engine module), [ADR-0002](../adr/0002-tax-engine.md) |
 | Contract | [`docs/api/openapi.yaml`](../api/openapi.yaml), tag `Annual`, `x-module: module_annual` (frozen by ANN-02, 0.11.0) |
-| Status | Contract frozen; implementation in progress (PLAN ANN-03..ANN-27). The full page lands with the module docs task (ANN-26) |
+| Status | Contract frozen; backend built (ANN-03..ANN-15: inputs, `EstimateAnnual`, handlers); flag row, presets, gates and docs pending (ANN-22..ANN-27). The full page lands with the module docs task (ANN-26) |
 
 ## Contract highlights
 
@@ -35,6 +35,41 @@
   answer `402` when read-only (they never use a trial record slot); delete and restore are
   allowed. Budgets: `estimate_reads` (estimate, breakdown, filed payments), `annual_reads`
   600/h, `annual_writes` 300/h; every response carries `Cache-Control: no-store`.
+
+## Engine notes (ANN-14)
+
+- One read-only unit of work per estimate: one ledger pass for the year (through
+  `data_through`), the tax inputs, the annual inputs and filed payments, and at most one
+  `Estimator` range (January..`data_through`), only when some month has neither a filed
+  payment nor a `prior_provisional_payments` tax input.
+- **Chained defaults.** A cumulative regime's monthly estimate (612, 601, RESICO PM) is
+  YTD tax minus the *typed* prior payments, so summing raw monthly estimates would pay the
+  year's tax several times. The default of month *m* is therefore
+  `max(0, isr(m) + Σ typed prior payments before m − Σ payments the annual credits before m)`,
+  exactly the monthly figure had the credited payments been typed. A monthly estimate missing
+  only the prior payments is not "incomplete" for the annual; any other missing input is
+  (the month is listed under `filed_payment`).
+- Sections run through an ordered registry (`taxengine.AnnualSections`); the annual golden
+  gate runs AN-01..AN-08 through the use case. Nothing in the monthly engine imports the
+  annual packages (`TestMonthlyEngineNeverImportsTheAnnual`).
+
+## Mobile input screens (ANN-19..21)
+
+Reached from "Datos para tu anual" on the annual screen and from each "Falta" link of an
+`incomplete` section (`/anual/{taxpayerId}/{ejercicio}/…`, routes registered only while
+`module_annual` is on). Containers follow `ui-forms-and-modals.md` by field count:
+
+| Screen | Location | Container |
+|---|---|---|
+| Personal deductions: groups per category, registered vs applied (`pf_art152` `personal_deductions_cents`) and the breakdown's "Tope aplicado" lines; delete + persistent Undo (restore) | `…/deducciones` | list |
+| New personal deduction: category first, then only its fields (cash toggle where cash is not deductible, beneficiary + UMA attestation, donee, tuition student/level/scholarship, optional CFDI folio) | `…/deducciones/nueva` | own screen (up to 7 fields) |
+| Salary constancias: year totals, one row per employer (tap to edit), delete after a confirmation (hard delete); no employer RFC | `…/constancias` | sheet (≤ 6 fields) |
+| Filed payments of one regime: 12 inline rows prefilled with the app's estimate ("Estimado por la app — confírmalo"), "Confirmar todos" | `…/pagos/{regimeCode}` | inline rows |
+| Year facts (PF): prior-year income (empty = unknown), other exempt income, employer notice; the regimes' losses, PTU paid and depreciation read-only with a link to their tax-inputs form | `…/datos` | own screen |
+
+Writes never use a trial slot; a `402` opens the paywall and marks the session read-only,
+after which the add/save actions show the paywall without calling the server (UX only).
+Delete and restore stay available to a read-only user.
 
 ## Errors
 

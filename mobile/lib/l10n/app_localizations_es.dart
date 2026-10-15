@@ -2572,6 +2572,521 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get cpaTopicPtuRate => 'la tasa de PTU';
+
+  @override
+  String get annualInputsTitle => 'Datos para tu anual';
+
+  @override
+  String get annualInputDeductions => 'Deducciones personales';
+
+  @override
+  String get annualInputSalary => 'Constancias de sueldos';
+
+  @override
+  String get annualInputFacts => 'Datos del año';
+
+  @override
+  String get annualInputPayments => 'Pagos provisionales presentados';
+
+  @override
+  String annualCountRegistered(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count registradas',
+      one: '1 registrada',
+      zero: 'Ninguna registrada',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get annualReadOnly =>
+      'Tu periodo de prueba terminó: puedes consultar esta estimación, pero capturar o cambiar datos requiere un plan.';
+
+  @override
+  String get annualInputsReadOnlyNotice =>
+      'Tu cuenta es de solo consulta: puedes ver y eliminar tus datos, pero capturar o cambiar algo requiere un plan.';
+
+  @override
+  String get annualWriteUnreachable =>
+      'No se pudo guardar por falta de conexión. Vuelve a tocar Guardar: no se duplicará.';
+
+  @override
+  String get annualWriteFailed => 'No se pudo guardar. Intenta de nuevo.';
+
+  @override
+  String get annualWriteIdReused =>
+      'Este registro ya se había guardado con otros datos. Revisa la lista.';
+
+  @override
+  String get annualWriteGone =>
+      'Este registro ya no existe: se eliminó en otro lugar.';
+
+  @override
+  String get annualWritePersonType =>
+      'Este dato es sólo para personas físicas.';
+
+  @override
+  String get annualWriteRegimeNotActive => 'En ese mes no tenías este régimen.';
+
+  @override
+  String get annualWriteInvalidText =>
+      'Usa sólo letras, números y espacios, sin espacios al inicio ni al final.';
+
+  @override
+  String get annualDeductionsAdd => 'Agregar deducción';
+
+  @override
+  String get annualDeductionsLoading => 'Cargando tus deducciones personales…';
+
+  @override
+  String get annualDeductionsLoadFailed =>
+      'No se pudieron cargar tus deducciones personales.';
+
+  @override
+  String get annualDeductionsRegisteredTotal => 'Registrado';
+
+  @override
+  String get annualDeductionsAppliedTotal => 'Aplicado en tu estimación';
+
+  @override
+  String get annualDeductionsAppliedHelp =>
+      'Lo que la estimación toma después de los topes de ley y sin lo pagado en efectivo.';
+
+  @override
+  String get annualDeductionsCapsTitle => 'Tope aplicado';
+
+  @override
+  String annualDeductionsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count deducciones eliminadas',
+      one: 'Deducción eliminada',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String annualDeductionsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count deducciones restauradas',
+      one: 'Deducción restaurada',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get annualDeductionsRestoreFailed =>
+      'No se pudo restaurar la deducción.';
+
+  @override
+  String get annualDeductionsRestoreFull =>
+      'No se pudo restaurar: este año ya tiene 500 deducciones, el límite. Para restaurarla, elimina otra.';
+
+  @override
+  String get annualDeductionsDeleteFailed =>
+      'No se pudo eliminar la deducción. Intenta de nuevo.';
+
+  @override
+  String get annualDeductionsFullOnSave =>
+      'Llegaste al límite de 500 deducciones de este año. Para agregar otra, elimina alguna.';
+
+  @override
+  String annualDeductionsEmpty(String year) {
+    return 'Aún no registras deducciones personales de $year.';
+  }
+
+  @override
+  String annualDeductionsFull(String year) {
+    return 'Llegaste al límite de 500 deducciones de $year. Para agregar otra, elimina alguna.';
+  }
+
+  @override
+  String annualDeductionsGroupRegistered(String amount) {
+    return 'Registrado: $amount';
+  }
+
+  @override
+  String annualDeductionsGroupExcluded(String amount) {
+    return 'No deducible por pago en efectivo: $amount';
+  }
+
+  @override
+  String get annualDeductionsCashExcluded => 'En efectivo: no deducible';
+
+  @override
+  String annualDeductionsDeleteTooltip(String amount) {
+    return 'Eliminar deducción de $amount';
+  }
+
+  @override
+  String get annualDeductionFormTitle => 'Nueva deducción';
+
+  @override
+  String get annualDeductionDiscardTitle => '¿Descartar esta deducción?';
+
+  @override
+  String get annualDeductionSaved => 'Deducción guardada';
+
+  @override
+  String get annualDeductionCategory => 'Tipo de deducción';
+
+  @override
+  String get annualDeductionAmount => 'Monto';
+
+  @override
+  String get annualDeductionAmountHelp =>
+      'El total de tu factura o constancia.';
+
+  @override
+  String get annualDeductionTuitionAmountHelp =>
+      'Sólo la colegiatura, sin inscripción ni reinscripción.';
+
+  @override
+  String get annualDeductionPaidOn => 'Fecha de pago';
+
+  @override
+  String get annualDeductionYearEndHelp =>
+      'Es una constancia anual: usamos el 31 de diciembre.';
+
+  @override
+  String annualDeductionDateOutOfYear(String year) {
+    return 'La fecha debe ser de $year.';
+  }
+
+  @override
+  String get annualDeductionElectronic =>
+      'Pagué con tarjeta, transferencia o cheque';
+
+  @override
+  String get annualDeductionCashWarning =>
+      'En efectivo no es deducible: la guardamos, pero la estimación la deja fuera.';
+
+  @override
+  String get annualDeductionBeneficiary => '¿Para quién fue?';
+
+  @override
+  String get annualBeneficiarySelf => 'Para mí';
+
+  @override
+  String get annualBeneficiarySpouse => 'Cónyuge o concubino(a)';
+
+  @override
+  String get annualBeneficiaryAscendant => 'Ascendiente (padres, abuelos)';
+
+  @override
+  String get annualBeneficiaryDescendant => 'Descendiente (hijos, nietos)';
+
+  @override
+  String annualDeductionAttest(String year) {
+    return 'Confirmo que esta persona tuvo ingresos menores a una UMA anual en $year.';
+  }
+
+  @override
+  String get annualDeductionDonee => '¿A quién donaste?';
+
+  @override
+  String get annualDoneeAuthorized => 'Donataria autorizada';
+
+  @override
+  String get annualDoneeGovernment => 'Gobierno';
+
+  @override
+  String get annualDeductionStudent => 'Alumno';
+
+  @override
+  String get annualDeductionStudentHelp =>
+      'Un nombre para distinguirlo: el tope es por alumno.';
+
+  @override
+  String get annualDeductionStudentInvalid => 'Escribe hasta 40 caracteres.';
+
+  @override
+  String get annualDeductionLevel => 'Nivel escolar';
+
+  @override
+  String get annualLevelPreescolar => 'Preescolar';
+
+  @override
+  String get annualLevelPrimaria => 'Primaria';
+
+  @override
+  String get annualLevelSecundaria => 'Secundaria';
+
+  @override
+  String get annualLevelProfesionalTecnico => 'Profesional técnico';
+
+  @override
+  String get annualLevelBachillerato => 'Bachillerato';
+
+  @override
+  String get annualDeductionScholarship => 'Beca recibida';
+
+  @override
+  String get annualDeductionMore => 'Más datos';
+
+  @override
+  String get annualDeductionCfdi => 'Folio fiscal (UUID) del CFDI';
+
+  @override
+  String get annualDeductionCfdiInvalid =>
+      'Escribe el folio completo: 32 letras y números en grupos 8-4-4-4-12.';
+
+  @override
+  String get annualCategoryMedical => 'Honorarios médicos y hospitalarios';
+
+  @override
+  String get annualCategoryMedicalDisability =>
+      'Gastos médicos por incapacidad o discapacidad';
+
+  @override
+  String get annualCategoryFuneral => 'Gastos funerarios';
+
+  @override
+  String get annualCategoryDonation => 'Donativos';
+
+  @override
+  String get annualCategoryMortgage =>
+      'Intereses reales de crédito hipotecario';
+
+  @override
+  String get annualCategoryRetirement =>
+      'Aportaciones voluntarias para el retiro';
+
+  @override
+  String get annualCategoryHealthInsurance =>
+      'Primas de seguros de gastos médicos';
+
+  @override
+  String get annualCategorySchoolTransport => 'Transporte escolar obligatorio';
+
+  @override
+  String get annualCategoryLocalPayrollTax => 'Impuesto local sobre salarios';
+
+  @override
+  String get annualCategoryTuition => 'Colegiaturas';
+
+  @override
+  String get annualCategoryOther => 'Otra deducción';
+
+  @override
+  String get annualSalaryAdd => 'Agregar constancia';
+
+  @override
+  String get annualSalaryLoading => 'Cargando tus constancias de sueldos…';
+
+  @override
+  String get annualSalaryLoadFailed =>
+      'No se pudieron cargar tus constancias de sueldos.';
+
+  @override
+  String annualSalaryEmpty(String year) {
+    return 'Aún no registras constancias de sueldos de $year.';
+  }
+
+  @override
+  String get annualSalaryTotals => 'Total del año';
+
+  @override
+  String get annualSalaryAccumulable => 'Ingresos gravados (acumulables)';
+
+  @override
+  String get annualSalaryExempt => 'Ingresos exentos';
+
+  @override
+  String get annualSalaryIsrWithheld => 'ISR retenido';
+
+  @override
+  String get annualSalaryEmployer => 'Nombre del empleador';
+
+  @override
+  String get annualSalaryEmployerHelp =>
+      'Sólo para que la reconozcas: no pedimos el RFC del empleador.';
+
+  @override
+  String annualSalaryUnnamed(int number) {
+    return 'Constancia $number';
+  }
+
+  @override
+  String get annualSalaryHelp =>
+      'Copia los totales de tu constancia de sueldos (CFDI de retenciones).';
+
+  @override
+  String get annualSalaryFormTitle => 'Nueva constancia';
+
+  @override
+  String get annualSalaryEditTitle => 'Editar constancia';
+
+  @override
+  String get annualSalaryMore => 'Situaciones especiales';
+
+  @override
+  String get annualSalarySimultaneous =>
+      'Trabajé para dos o más empleadores al mismo tiempo';
+
+  @override
+  String get annualSalaryLeft => 'Dejé de trabajar antes del 31 de diciembre';
+
+  @override
+  String get annualSalaryPayerNotWithholding =>
+      'Mi empleador no estaba obligado a retenerme';
+
+  @override
+  String get annualSalarySaved => 'Constancia guardada';
+
+  @override
+  String get annualSalaryUpdated => 'Constancia actualizada';
+
+  @override
+  String get annualSalaryRegimeNotHeld =>
+      'No tienes el régimen de sueldos (605) en tus datos: agrégalo para que tu anual lo considere completo.';
+
+  @override
+  String get annualSalaryFull =>
+      'Llegaste al límite de 20 constancias de este año.';
+
+  @override
+  String get annualSalaryDiscardTitle => '¿Descartar esta constancia?';
+
+  @override
+  String annualSalaryDeleteTooltip(String name) {
+    return 'Eliminar $name';
+  }
+
+  @override
+  String annualSalaryDeleteTitle(String name) {
+    return '¿Eliminar $name?';
+  }
+
+  @override
+  String get annualSalaryDeleteBody => 'No se puede deshacer.';
+
+  @override
+  String get annualSalaryDeleteConfirm => 'Eliminar';
+
+  @override
+  String get annualSalaryDeleteKeep => 'Conservar';
+
+  @override
+  String get annualSalaryDeleted => 'Constancia eliminada';
+
+  @override
+  String get annualSalaryDeleteFailed =>
+      'No se pudo eliminar la constancia. Intenta de nuevo.';
+
+  @override
+  String get annualPaymentsIntro =>
+      'Escribe lo que pagaste cada mes según tus acuses. Los montos estimados los calculó la app.';
+
+  @override
+  String get annualPaymentsLoading => 'Cargando tus pagos provisionales…';
+
+  @override
+  String get annualPaymentsLoadFailed =>
+      'No se pudieron cargar tus pagos provisionales.';
+
+  @override
+  String get annualPaymentsConfirmAll => 'Confirmar todos';
+
+  @override
+  String get annualPaymentsConfirmAllHelp =>
+      'Guarda como pagados los montos que ves en los meses sin confirmar.';
+
+  @override
+  String get annualPaymentsSourceFiled => 'Confirmado';
+
+  @override
+  String get annualPaymentsSourceTaxInput =>
+      'De tus datos fiscales — confírmalo';
+
+  @override
+  String get annualPaymentsSourceEstimated =>
+      'Estimado por la app — confírmalo';
+
+  @override
+  String get annualPaymentsSourceIncomplete =>
+      'Estimado con datos incompletos — confírmalo';
+
+  @override
+  String get annualPaymentsSourceNone =>
+      'Sin estimación: escribe lo que pagaste';
+
+  @override
+  String get annualPaymentsOutOfWindow => 'No tenías este régimen en este mes.';
+
+  @override
+  String annualPaymentsTotal(String amount) {
+    return 'Total del año: $amount';
+  }
+
+  @override
+  String annualPaymentsSaved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Pagos guardados: $count meses confirmados',
+      one: 'Pagos guardados: 1 mes confirmado',
+      zero: 'Pagos guardados: ningún mes confirmado',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get annualFactsLoading => 'Cargando los datos del año…';
+
+  @override
+  String get annualFactsLoadFailed =>
+      'No se pudieron cargar los datos del año.';
+
+  @override
+  String annualFactsPriorYear(String year) {
+    return 'Ingresos acumulables de $year';
+  }
+
+  @override
+  String get annualFactsPriorYearHelp =>
+      'Antes de deducciones personales; sirve para el tope de donativos (7 %). Déjalo vacío si no lo sabes.';
+
+  @override
+  String get annualFactsOtherExempt => 'Otros ingresos exentos';
+
+  @override
+  String get annualFactsOtherExemptHelp =>
+      'Exentos que no registraste en la app; cuentan para el tope de 15 %.';
+
+  @override
+  String get annualFactsToldEmployer =>
+      'Le avisé a mi empleador que presentaré mi declaración anual';
+
+  @override
+  String get annualFactsSaved => 'Datos del año guardados';
+
+  @override
+  String get annualFactsDiscardTitle => '¿Descartar los cambios?';
+
+  @override
+  String get annualFactsRegimeTitle => 'Datos de tus regímenes';
+
+  @override
+  String get annualFactsRegimeHelp =>
+      'Pérdidas, PTU y depreciación se capturan en los datos fiscales de cada régimen.';
+
+  @override
+  String get annualFactsRegimeEmpty => 'Sin capturar';
+
+  @override
+  String annualFactsRegimeEdit(String label, String code) {
+    return 'Editar $label, régimen $code';
+  }
+
+  @override
+  String get annualFactsMoralNote =>
+      'Las personas morales sólo capturan los datos de sus regímenes.';
 }
 
 /// The translations for Spanish Castilian, as used in Mexico (`es_MX`).

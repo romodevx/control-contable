@@ -42,6 +42,15 @@ func TestPrerequisites_declaresHistoryOnTheTaxEngine(t *testing.T) {
 	assert.Equal(t, []string{"module_taxpayers"}, flags.MissingPrerequisites(graph, "module_history", on), "transitively")
 }
 
+// MODULE-annual §6, ADR-0009 rule 2: the annual estimate is implied OFF
+// when module_tax_engine or module_taxpayers is OFF.
+func TestPrerequisites_declaresTheAnnualOnTheEngineAndTaxpayers(t *testing.T) {
+	graph := flags.Prerequisites()
+	assert.Equal(t, []string{"module_tax_engine", "module_taxpayers"}, graph["module_annual"])
+	on := func(m string) bool { return m == "module_annual" || m == "module_taxpayers" }
+	assert.Equal(t, []string{"module_tax_engine"}, flags.MissingPrerequisites(graph, "module_annual", on))
+}
+
 func TestPrerequisites_isAWellFormedAcyclicGraph(t *testing.T) {
 	require.NoError(t, flags.CheckPrerequisites(flags.Prerequisites()))
 }
