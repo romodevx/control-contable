@@ -165,9 +165,11 @@ to remit 10,333.33 = **166,333.33**.
 ### Engine version
 
 `engine_version` (the breakdown header shows "Motor 1.0.1") is hashed into the
-`records_fingerprint` with the aggregated inputs and the parameter set, so M8 can mark a month
-"changed since viewed". It moves whenever a strategy changes a figure for the same input; two
-tests pin it, one to the strategy list and one to a digest of every golden figure. The log
+`records_fingerprint` with the aggregated inputs and the parameter set. M8 marks a month
+"changed since viewed" only when its `figures_fingerprint` (the displayed figures, ADR-0002
+Amendment 2) moves; the version and parameter set only name the cause
+([history](history.md#the-cambió-desde-que-lo-viste-marker)). The engine version moves whenever
+a strategy changes a figure for the same input; two tests pin it, one to the strategy list and one to a digest of every golden figure. The log
 of versions is in [ADR-0002](../adr/0002-tax-engine.md#engine-version-log):
 
 | Version | Date | Change |
@@ -307,8 +309,8 @@ user's 5 trial incomes and 3 of the 5 trial expenses.
 - `RateCatalog` (allowed IVA rates and withholding suggestions for the record forms) is a
   shared port, not a route: it works with the flag OFF.
 - M6 dashboard is **not** implied OFF with it: Home drops every tax figure and keeps income vs
-  expense ([MODULE-dashboard OQ-D7](dashboard.md#flag-behaviour-module_dashboard)). M8 history will be
-  implied OFF with it and M9 reminders will omit amounts (declared by their own flag tasks).
+  expense ([MODULE-dashboard OQ-D7](dashboard.md#flag-behaviour-module_dashboard)). M8 history **is**
+  implied OFF with it (`flags.Prerequisites`, M8-04); M9 reminders will omit amounts (declared by its flag task).
 - A running API sees a change within 5 s.
 - Suites: `backend/adapter/http/gen/tax_engine_module_test.go` (the 4 operations by
   operationId and route), `backend/cmd/api/taxengine_preset_smoke_integration_test.go` (every
