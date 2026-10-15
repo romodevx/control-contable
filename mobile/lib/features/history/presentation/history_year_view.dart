@@ -76,7 +76,7 @@ class _HistoryYearViewState extends State<HistoryYearView> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: AppSpacing.md,
         children: [
-          const HistoryEmpty(),
+          HistoryEmpty(onOpen: _open),
           EstimateLegend(text: year.legend),
         ],
       );

@@ -6,6 +6,7 @@ import 'package:control_contable/api/generated/models/field_error.dart';
 import 'package:control_contable/api/generated/models/tax_input_value.dart';
 import 'package:control_contable/api/generated/models/tax_inputs.dart';
 import 'package:control_contable/core/access/read_only_access.dart';
+import 'package:control_contable/core/fiscal/tax_data_revision.dart';
 import 'package:control_contable/core/forms/app_checkbox_field.dart';
 import 'package:control_contable/core/forms/app_text_field.dart';
 import 'package:control_contable/core/network/api_failure.dart';
@@ -347,6 +348,8 @@ void main() {
     ]);
     expect(harness.location, TaxEngineRoutes.estimate);
     expect(harness.repository.calls.length, greaterThan(estimateReads));
+    // History and Home below read again too (M8-07 device walk F2).
+    expect(harness.container.read(taxDataRevisionProvider), 1);
     expect(find.textContaining('Guardamos tus datos'), findsOneWidget);
   });
 
