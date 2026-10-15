@@ -53,8 +53,8 @@ func TestPFRESICOCheckReproducesAN03(t *testing.T) {
 			assert.Equal(t, annual.ObligationRelieved, s.Obligation)
 			assert.Equal(t, []annual.CPATopic{annual.TopicRESICOPFReliefRenewal}, s.CPATopics)
 			assert.Nil(t, s.Tax, "never a payable or refundable balance")
-			require.NotNil(t, s.Difference)
-			assert.Equal(t, pesos(t, tt.wantDiff), *s.Difference)
+			require.NotNil(t, s.RESICOCheck)
+			assert.Equal(t, pesos(t, tt.wantDiff), s.RESICOCheck.Difference)
 			assert.Contains(t, s.Disclaimers, annual.DisclaimerRESICOPFDefinitive)
 			assert.Equal(t, rate(t, tt.wantRow), art152Line(t, s.Lines, annual.LineRESICOCheckRate).Rate)
 			for _, l := range s.Lines {
@@ -74,7 +74,11 @@ func TestPFRESICOCheckSubtractsTheMoralWithholding(t *testing.T) {
 
 	s := resicoCheckCompute(t, resicoCheckYear(pesos(t, "200000.00"), pesos(t, "300.00")), pay)
 
-	assert.Equal(t, pesos(t, "200.00"), *s.Difference, "2,000 - 1,500 - 300 (LISR 113-J)")
+	require.NotNil(t, s.RESICOCheck)
+	assert.Equal(t, annual.RESICOCheck{
+		Income: pesos(t, "200000.00"), Rate: rate(t, "0.01"), AnnualISR: pesos(t, "2000.00"),
+		Payments: pesos(t, "1500.00"), Withheld: pesos(t, "300.00"), Difference: pesos(t, "200.00"),
+	}, *s.RESICOCheck, "contract ResicoPfCheck: 2,000 - 1,500 - 300 (LISR 113-J)")
 	assert.Equal(t, []domain.LineCode{
 		annual.LineRESICOCheckIncome, annual.LineRESICOCheckRate,
 		annual.LineRESICOCheckPayments, annual.LineRESICOCheckPayments, annual.LineRESICOCheckWithheld,
@@ -89,7 +93,10 @@ func TestPFRESICOCheckWithoutIncome(t *testing.T) {
 
 	s := resicoCheckCompute(t, resicoCheckYear(0, 0), pay)
 
-	assert.Equal(t, pesos(t, "-100.00"), *s.Difference)
+	require.NotNil(t, s.RESICOCheck)
+	assert.Equal(t, pesos(t, "-100.00"), s.RESICOCheck.Difference)
+	assert.Equal(t, money.Cents(0), s.RESICOCheck.AnnualISR)
+	assert.Equal(t, rate(t, "0.01"), s.RESICOCheck.Rate, "no income is the first 113-F row")
 	assert.NotContains(t, art152Codes(s.Lines), annual.LineRESICOCheckRate)
 }
 
@@ -98,7 +105,7 @@ func TestPFRESICOCheckWithoutIncome(t *testing.T) {
 func TestPFRESICOCheckAboveTheTable(t *testing.T) {
 	s := resicoCheckCompute(t, resicoCheckYear(pesos(t, "3500000.01"), 0), art152Payments{})
 
-	assert.Nil(t, s.Difference)
+	assert.Nil(t, s.RESICOCheck)
 	assert.Equal(t, annual.StatusInformational, s.Status)
 	assert.Equal(t, domain.OpInfo, art152Line(t, s.Lines, annual.LineRESICOCheckAboveTable).Operation)
 }

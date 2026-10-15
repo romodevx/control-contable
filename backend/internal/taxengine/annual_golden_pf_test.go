@@ -85,7 +85,10 @@ func (e pfAnnualSections) Estimate(in annualgolden.Input) (annualgolden.Result, 
 func withSection(r annualgolden.Result, s annual.Section) annualgolden.Result {
 	got := annualgolden.SectionResult{
 		Kind: s.Kind, Regimes: s.Regimes, Status: s.Status, Obligation: s.Obligation,
-		MissingInputs: s.MissingInputs, CPATopics: s.CPATopics, Difference: s.Difference,
+		MissingInputs: s.MissingInputs, CPATopics: s.CPATopics,
+	}
+	if s.RESICOCheck != nil {
+		got.Difference = &s.RESICOCheck.Difference
 	}
 	if s.Tax != nil {
 		got.Tax = &annualgolden.TaxFigures{

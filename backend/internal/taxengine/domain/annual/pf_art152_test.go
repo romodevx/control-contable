@@ -400,7 +400,8 @@ func TestPFArt152BaseAtOrBelowZeroOwesNoTax(t *testing.T) {
 	got := art152Compute(t, in, art152Payments{})
 
 	assert.Equal(t, money.Cents(0), got.Section.Tax.ISR)
-	assert.Equal(t, pesos(t, "-10000.00"), got.Section.Tax.Base)
+	assert.Equal(t, money.Cents(0), got.Section.Tax.Base, "contract AnnualTax.base_cents: PF base ≤ 0 → 0")
+	assert.Equal(t, pesos(t, "-10000.00"), art152Line(t, got.Section.Lines, annual.LineArt152Base).Amount, "the trace keeps the signed base")
 	assert.Equal(t, annual.Balance{Kind: annual.BalanceAFavor, Amount: pesos(t, "500.00")}, got.Section.Tax.Balance)
 	art152Line(t, got.Section.Lines, annual.LineArt152NoBase)
 }
@@ -479,6 +480,12 @@ func TestPFArt152RejectsInvalidInput(t *testing.T) {
 		{"a regime held twice", annual.PFYear{FiscalYear: 2026, Regimes: []annual.RegimeYear{art152Business(1, 0, 0), art152Business(2, 0, 0)}}, art152Payments{}},
 		{"negative payment", annual.PFYear{FiscalYear: 2026, Regimes: []annual.RegimeYear{art152Business(1, 0, 0)}}, art152Payments{fiscal.RegimeBusiness: {art152Filed(-1)}}},
 		{"unknown payment source", annual.PFYear{FiscalYear: 2026, Regimes: []annual.RegimeYear{art152Business(1, 0, 0)}}, art152Payments{fiscal.RegimeBusiness: {{Amount: 1, Source: "guess"}}}},
+		{"a month paid twice", annual.PFYear{FiscalYear: 2026, Regimes: []annual.RegimeYear{art152Business(1, 0, 0)}}, art152Payments{fiscal.RegimeBusiness: {
+			{Month: 3, Amount: 1, Source: annual.PaymentFiled}, {Month: 3, Amount: 1, Source: annual.PaymentEstimatedByApp},
+		}}},
+		{"a year total beside monthly payments", annual.PFYear{FiscalYear: 2026, Regimes: []annual.RegimeYear{art152Business(1, 0, 0)}}, art152Payments{fiscal.RegimeBusiness: {
+			art152Filed(1), {Month: 1, Amount: 1, Source: annual.PaymentTaxInput},
+		}}},
 		{"payment month 13", annual.PFYear{FiscalYear: 2026, Regimes: []annual.RegimeYear{art152Business(1, 0, 0)}}, art152Payments{fiscal.RegimeBusiness: {{Month: 13, Amount: 1, Source: annual.PaymentFiled}}}},
 		{"invalid deduction", annual.PFYear{FiscalYear: 2026, Regimes: []annual.RegimeYear{art152Business(1, 0, 0)}, Deductions: []annual.Deduction{{Category: "yacht"}}}, art152Payments{}},
 	}
