@@ -2,6 +2,7 @@ package infra
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -60,6 +61,37 @@ func TestOutboxPayload_kindDoesNotShowInTheLength(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Len(t, notice, len(code))
+}
+
+// Every address domain.NewEmail accepts must seal, at the same padded length.
+// RFC 5322 atext allows '&', which an HTML-escaping JSON encoder turns into six
+// bytes: a 64-byte local part of '&' would overflow the pad and fail every
+// sign-up for that address with a 500.
+func TestOutboxPayload_sealsTheLongestValidAddress(t *testing.T) {
+	box := NewOutbox(outboxKeyring(t, 0x31))
+	host := strings.Repeat(strings.Repeat("a", 63)+".", 2) + strings.Repeat("b", 58) + ".mx"
+	tests := map[string]string{
+		"html-escapable local part": strings.Repeat("&", 64) + "@example.mx",
+		"longest address":           strings.Repeat("&", 64) + "@" + host,
+	}
+	reference, err := box.seal(uuid.New(), sampleEmails(t)[0])
+	require.NoError(t, err)
+	for name, raw := range tests {
+		t.Run(name, func(t *testing.T) {
+			to, err := domain.NewEmail(raw)
+			require.NoError(t, err, "the domain accepts it")
+			email := usecase.OutboundEmail{Kind: usecase.EmailVerificationCode, To: to, Code: sampleEmails(t)[0].Code}
+			id := uuid.New()
+
+			sealed, err := box.seal(id, email)
+
+			require.NoError(t, err)
+			assert.Len(t, sealed, len(reference))
+			got, ok := box.open(id, sealed)
+			require.True(t, ok)
+			assert.Equal(t, email, got)
+		})
+	}
 }
 
 // Anything this code did not seal for this row is unreadable: another row's

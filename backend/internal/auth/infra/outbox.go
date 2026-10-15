@@ -164,9 +164,9 @@ func (o *Outbox) seal(id uuid.UUID, email usecase.OutboundEmail) ([]byte, error)
 	default:
 		return nil, fmt.Errorf("auth infra: unknown email kind %d", email.Kind)
 	}
-	plain, err := json.Marshal(doc)
+	plain, err := encodeOutboxJSON(doc)
 	if err != nil {
-		return nil, fmt.Errorf("auth infra: encode email: %w", err)
+		return nil, err
 	}
 	if len(plain) > outboxPlaintextSize {
 		return nil, fmt.Errorf("auth infra: email payload of %d bytes exceeds %d", len(plain), outboxPlaintextSize)
@@ -178,6 +178,19 @@ func (o *Outbox) seal(id uuid.UUID, email usecase.OutboundEmail) ([]byte, error)
 		return nil, fmt.Errorf("auth infra: seal email: %w", err)
 	}
 	return sealed, nil
+}
+
+// encodeOutboxJSON encodes doc without HTML escaping: RFC 5322 atext allows
+// '&', which json.Marshal would turn into six bytes and push a valid address
+// past outboxPlaintextSize.
+func encodeOutboxJSON(doc outboxJSON) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(doc); err != nil {
+		return nil, fmt.Errorf("auth infra: encode email: %w", err)
+	}
+	return bytes.TrimSuffix(buf.Bytes(), []byte{'\n'}), nil
 }
 
 // open decrypts and validates a payload sealed by seal for id. It re-checks
