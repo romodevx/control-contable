@@ -136,7 +136,9 @@ func (t *annualTrace) resicoDifference(y RegimeYear, table taxparams.Table, paid
 		if err != nil {
 			return nil, err
 		}
-		t.l.Scale(annualStep(LineRESICOCheckRate, "annual_resico_rate", domain.SourceParams(paramRESICOPFAnnual), basisRESICORate, strconv.Itoa(b.Number)), b.Row.Rate)
+		// The payments are subtracted from the ISR as shown (difference =
+		// annual ISR − payments − withheld), not from its exact value.
+		t.l.ScaleRounded(annualStep(LineRESICOCheckRate, "annual_resico_rate", domain.SourceParams(paramRESICOPFAnnual), basisRESICORate, strconv.Itoa(b.Number)), b.Row.Rate)
 		check.Rate = b.Row.Rate
 		check.AnnualISR = t.l.Running().Round()
 	}

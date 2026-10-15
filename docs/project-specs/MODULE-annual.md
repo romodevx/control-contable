@@ -264,7 +264,9 @@ para tus pagos de {fy+1}; confírmalo con tu contador".
 fiscal per 212 ¶2 (PTU paid subtracted) ⚠️ `resico_pm_ptu_base`; no CU.
 
 **Money**: centavos in API/storage, `Exact` inside, one rounding per result (half away from zero),
-`Ajuste por redondeo` lines, no floats (M5 §2.7). Strategies append lines through the M5 `Ledger`, so the
+`Ajuste por redondeo` lines, no floats (M5 §2.7). The credits are subtracted from the ISR **as shown**
+(`Ledger.ResultRounded`; the RESICO check's annual ISR via `Ledger.ScaleRounded`), so balance = ISR − credits
+to the centavo (ANN-16: a half-centavo ISR paid exactly was a favor of 0.01). Strategies append lines through the M5 `Ledger`, so the
 breakdown is the computation trace (M5 §2.5 line model, citations mandatory).
 
 ### 2.8 Legend and disclaimers
