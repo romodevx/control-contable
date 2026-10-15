@@ -175,6 +175,7 @@ api: $(LOCAL_ENV)
 		AUTH_ACCESS_TOKEN_PREVIOUS_KEY="$${CC_AUTH_ACCESS_TOKEN_PREVIOUS_KEY:-}" \
 		AUTH_ACCESS_TOKEN_PREVIOUS_KEY_ID="$${CC_ACCESS_TOKEN_PREVIOUS_KEY_ID:-}" \
 		RFC_ENC_KEY="$${CC_RFC_ENC_KEY:-}" RFC_INDEX_PEPPER="$${CC_RFC_INDEX_PEPPER:-}" \
+		PUSH_TOKEN_ENC_KEY="$${CC_PUSH_TOKEN_ENC_KEY:-}" PUSH_TOKEN_INDEX_PEPPER="$${CC_PUSH_TOKEN_INDEX_PEPPER:-}" \
 		$(GO) run ./cmd/api
 
 ## access-key-rotate: LOCAL ONLY. New access-token signing key + kid in infra/local/.env; the old one only verifies (restart make api)

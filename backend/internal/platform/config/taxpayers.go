@@ -45,41 +45,56 @@ type namedSecret struct {
 // every auth key (PR #59 security gate: one secret, one purpose), in every
 // environment. The error joins every problem and never contains key material.
 func LoadTaxpayers(ctx context.Context, lookup Lookup, secrets SecretSource, env Environment, auth Auth) (Taxpayers, error) {
-	var (
-		cfg  Taxpayers
-		errs []error
-		err  error
-	)
-	keys := []struct {
-		name string
-		size keySize
-		dst  *Secret
-	}{
+	var cfg Taxpayers
+	errs := loadModuleKeys(ctx, secrets, env, []moduleKey{
 		{secretRFCKey, keySize{bytes: keyBytes, exact: true}, &cfg.RFCKey},
 		{secretRFCIndexPepper, keySize{bytes: keyBytes}, &cfg.RFCIndexPepper},
+	})
+	var err error
+	if cfg.RFCKeyID, err = parseIntInRange(lookup, keyRFCKeyID, defaultRFCKeyID, 1, maxEmailKeyID); err != nil {
+		errs = append(errs, err)
 	}
+	errs = append(errs, distinctSecrets(
+		[]namedSecret{{secretRFCKey, cfg.RFCKey}, {secretRFCIndexPepper, cfg.RFCIndexPepper}},
+		authSecrets(auth),
+	)...)
+	if len(errs) > 0 {
+		return Taxpayers{}, fmt.Errorf("config: %w", errors.Join(errs...))
+	}
+	return cfg, nil
+}
+
+// moduleKey is one hex secret a module loads, its size rule and where it
+// goes.
+type moduleKey struct {
+	name string
+	size keySize
+	dst  *Secret
+}
+
+// loadModuleKeys decodes each key into its destination. Outside dev a
+// missing key is an error; in dev it is left zero (cmd/api substitutes an
+// ephemeral one). It returns every problem found.
+func loadModuleKeys(ctx context.Context, secrets SecretSource, env Environment, keys []moduleKey) []error {
+	var errs []error
 	for _, k := range keys {
+		var err error
 		*k.dst, err = loadHexKey(ctx, secrets, k.name, k.size)
 		devMissing := env == EnvDev && errors.Is(err, ErrSecretNotFound)
 		if err != nil && !devMissing {
 			errs = append(errs, err)
 		}
 	}
-	if cfg.RFCKeyID, err = parseIntInRange(lookup, keyRFCKeyID, defaultRFCKeyID, 1, maxEmailKeyID); err != nil {
-		errs = append(errs, err)
+	return errs
+}
+
+// authSecrets are the auth keys every module key must differ from.
+func authSecrets(auth Auth) []namedSecret {
+	return []namedSecret{
+		{secretEmailPepper, auth.EmailPepper}, {secretEmailKey, auth.EmailKey},
+		{secretCodeKey, auth.CodeKey}, {secretAccessTokenKey, auth.AccessTokenKey},
+		{secretPreviousAccessTokenKey, auth.PreviousAccessTokenKey},
 	}
-	errs = append(errs, distinctSecrets(
-		[]namedSecret{{secretRFCKey, cfg.RFCKey}, {secretRFCIndexPepper, cfg.RFCIndexPepper}},
-		[]namedSecret{
-			{secretEmailPepper, auth.EmailPepper}, {secretEmailKey, auth.EmailKey},
-			{secretCodeKey, auth.CodeKey}, {secretAccessTokenKey, auth.AccessTokenKey},
-			{secretPreviousAccessTokenKey, auth.PreviousAccessTokenKey},
-		},
-	)...)
-	if len(errs) > 0 {
-		return Taxpayers{}, fmt.Errorf("config: %w", errors.Join(errs...))
-	}
-	return cfg, nil
 }
 
 // distinctSecrets reports every secret of owned equal to an earlier one of

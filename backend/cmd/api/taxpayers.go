@@ -1,9 +1,7 @@
 package main
 
 import (
-	"crypto/rand"
 	"database/sql"
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -23,10 +21,6 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/taxpayers/infra"
 	"github.com/romodevx/control-contable/backend/internal/taxpayers/usecase"
 )
-
-// errMissingRFCKeys reports RFC keys missing outside dev, where config
-// refuses them first; it guards the wiring against a zero key anyway.
-var errMissingRFCKeys = errors.New("taxpayers: RFC keys are required outside dev")
 
 // taxpayersWiring is what the taxpayers module needs from the composition
 // root.
@@ -105,11 +99,11 @@ func bucketsOf(limits *ratelimitpg.Store, policies map[string]ratelimit.Policy) 
 // sealed with it cannot be opened, nor matched as duplicates, after a
 // restart. Outside dev config requires both keys.
 func newRFCVault(w taxpayersWiring) (*infra.RFCVault, error) {
-	key, err := keyOrEphemeral(w, w.keys.RFCKey, "RFC_ENC_KEY", crypto.KeySize)
+	key, err := keyOrEphemeral(w.env, w.logger, w.keys.RFCKey, "RFC_ENC_KEY", crypto.KeySize)
 	if err != nil {
 		return nil, err
 	}
-	pepper, err := keyOrEphemeral(w, w.keys.RFCIndexPepper, "RFC_INDEX_PEPPER", crypto.MinPepperSize)
+	pepper, err := keyOrEphemeral(w.env, w.logger, w.keys.RFCIndexPepper, "RFC_INDEX_PEPPER", crypto.MinPepperSize)
 	if err != nil {
 		return nil, err
 	}
@@ -123,20 +117,4 @@ func newRFCVault(w taxpayersWiring) (*infra.RFCVault, error) {
 		return nil, fmt.Errorf("taxpayers: rfc index: %w", err)
 	}
 	return infra.NewRFCVault(keyring, index), nil
-}
-
-func keyOrEphemeral(w taxpayersWiring, secret config.Secret, name string, size int) ([]byte, error) {
-	if !secret.IsZero() {
-		return secret.RevealBytes(), nil
-	}
-	if w.env != config.EnvDev {
-		return nil, fmt.Errorf("%w: %s", errMissingRFCKeys, name)
-	}
-	key := make([]byte, size)
-	if _, err := rand.Read(key); err != nil {
-		return nil, fmt.Errorf("taxpayers: ephemeral %s: %w", name, err)
-	}
-	w.logger.Warn("taxpayers: secret not set; using an ephemeral key until restart (dev only)",
-		slog.String("variable", name))
-	return key, nil
 }

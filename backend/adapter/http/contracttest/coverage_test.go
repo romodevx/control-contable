@@ -21,11 +21,6 @@ var pendingOperations = map[string]string{
 	"getSubscription":          "M7-06",
 	"syncSubscription":         "M7-06",
 	"receiveRevenueCatWebhook": "M7-05",
-	// M9 module_reminders
-	"registerDevice":      "M9-05",
-	"unregisterDevice":    "M9-05",
-	"getReminderSettings": "M9-05",
-	"putReminderSettings": "M9-05",
 }
 
 // backendRoot is the Go module root, three levels above this package.

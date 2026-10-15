@@ -29,7 +29,7 @@ var builtOperations = []string{"getHealth", "listEnabledFlags", "register", "res
 	"listSalaryStatements", "createSalaryStatement", "updateSalaryStatement", "deleteSalaryStatement",
 	"listPersonalDeductions", "createPersonalDeduction", "updatePersonalDeduction", "deletePersonalDeduction",
 	"restorePersonalDeduction", "getFiledPayments", "putFiledPayments",
-	"getTaxCalendar",
+	"getTaxCalendar", "registerDevice", "unregisterDevice", "getReminderSettings", "putReminderSettings",
 }
 
 func TestNotBuilt_coversExactlyTheOperationsWithoutAHandler(t *testing.T) {

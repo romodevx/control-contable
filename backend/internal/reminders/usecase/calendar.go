@@ -1,7 +1,9 @@
-// Package usecase holds the reminders module's use cases (MODULE-reminders).
-// Today: the tax calendar (getTaxCalendar, M9-04). The due-date rule is the
-// fiscal kernel's (ADR-0007 Amendment 1); this package only lays out a
-// year of it.
+// Package usecase holds the reminders module's use cases (MODULE-reminders):
+// the tax calendar (getTaxCalendar, M9-04), devices (registerDevice,
+// unregisterDevice) and reminder settings (get/putReminderSettings, M9-05).
+// The due-date rule is the fiscal kernel's (ADR-0007 Amendment 1); the
+// calendar only lays out a year of it. The ports are declared here, on the
+// consumer side; every store port runs on the use case's unit of work.
 package usecase
 
 import (
