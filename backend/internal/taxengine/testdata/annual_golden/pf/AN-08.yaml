@@ -1,7 +1,6 @@
 # golden: hand-authored from research AN-08 (docs/research/annual-return-2026.md Part D). Never generated or rewritten by a tool.
 id: AN-08
 source: research:AN-08
-pending_strategy: true # ANN-08 registers pf_art152
 input:
   fiscal_year: 2026
   person_type: fisica

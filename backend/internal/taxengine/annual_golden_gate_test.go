@@ -1,7 +1,6 @@
 package taxengine_test
 
 import (
-	"errors"
 	"io/fs"
 	"os"
 	"regexp"
@@ -12,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/romodevx/control-contable/backend/internal/taxengine/annualgolden"
-	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/annual"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/golden"
 )
 
@@ -28,23 +26,12 @@ const (
 	annualResearchSource = "research:"
 )
 
-// gateAnnualEstimator is the annual engine the gate runs. No section is
-// registered yet: the strategy PRs (ANN-08..ANN-11) register theirs and
-// ANN-14 replaces this with the composition root's estimator, removing
-// pending_strategy from their cases and lowering the baseline.
-func gateAnnualEstimator() annualgolden.Estimator { return noAnnualSections{} }
-
-type noAnnualSections struct{}
-
-func (noAnnualSections) Registered(annual.SectionKind) bool { return false }
-
-// errNoAnnualEngine is never reached: Evaluate calls Estimate only when
-// every section a case expects is registered.
-var errNoAnnualEngine = errors.New("no annual section is registered")
-
-func (noAnnualSections) Estimate(annualgolden.Input) (annualgolden.Result, error) {
-	return annualgolden.Result{}, errNoAnnualEngine
-}
+// gateAnnualEstimator is the annual engine the gate runs: the PF sections
+// (ANN-08, ANN-09) are registered; the PM strategy PRs (ANN-10, ANN-11)
+// register theirs and ANN-14 replaces this with the composition root's
+// estimator, removing pending_strategy from their cases and lowering the
+// baseline.
+func gateAnnualEstimator(t *testing.T) annualgolden.Estimator { return newPFAnnualSections(t) }
 
 func annualCases(t *testing.T) []annualgolden.Case {
 	t.Helper()
@@ -59,7 +46,7 @@ func annualCases(t *testing.T) []annualgolden.Case {
 func TestGoldenAnnualCases(t *testing.T) {
 	cases := annualCases(t)
 
-	s := annualgolden.Run(t, cases, gateAnnualEstimator())
+	s := annualgolden.Run(t, cases, gateAnnualEstimator(t))
 
 	assert.Equal(t, len(cases), s.Total())
 	data, err := os.ReadFile(annualBaselineFile)
