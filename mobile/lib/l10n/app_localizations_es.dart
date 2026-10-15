@@ -2511,43 +2511,8 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String annualSuggestedCu(String year, String cu) {
-    return 'Coeficiente de utilidad sugerido para $year: $cu';
+    return 'Coeficiente de utilidad sugerido para tus pagos de $year: $cu. Confírmalo con tu contador.';
   }
-
-  @override
-  String get annualInputsTitle => 'Datos para tu anual';
-
-  @override
-  String get annualInputDeductions => 'Deducciones personales';
-
-  @override
-  String get annualInputSalary => 'Constancias de sueldos';
-
-  @override
-  String get annualInputFacts => 'Datos del año';
-
-  @override
-  String get annualInputPayments => 'Pagos provisionales presentados';
-
-  @override
-  String annualCountRegistered(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count registradas',
-      one: '1 registrada',
-      zero: 'Ninguna registrada',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get annualInputPending =>
-      'Esta pantalla llega en una próxima versión. Mientras tanto, la estimación usa lo que ya registraste.';
-
-  @override
-  String get annualReadOnly =>
-      'Tu periodo de prueba terminó: puedes consultar esta estimación, pero capturar o cambiar datos requiere un plan.';
 
   @override
   String get annualBreakdownTitle => 'Cómo se calculó';

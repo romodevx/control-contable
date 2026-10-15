@@ -1,6 +1,7 @@
 import 'package:control_contable/api/generated/models/annual_computed_section_kind.dart';
 import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/router/app_router.dart';
+import 'package:control_contable/core/router/not_found_screen.dart';
 import 'package:control_contable/features/annual/annual_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -102,7 +103,8 @@ void main() {
       harness.container.read(appRouterProvider).go(location);
       await tester.pumpAndSettle();
 
-      expect(harness.location, AppRoutes.notFound, reason: location);
+      // No route matches: the router's error page, never a placeholder.
+      expect(find.byType(NotFoundScreen), findsOneWidget, reason: location);
     }
   });
 }

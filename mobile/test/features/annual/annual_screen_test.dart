@@ -17,6 +17,11 @@ import '../taxpayers/taxpayers_fakes.dart' show detail;
 import 'annual_fixtures.dart';
 import 'pump_annual.dart';
 
+/// AN-06's suggested coeficiente, labelled as MODULE-annual §2.7 asks.
+const String _suggestedCu =
+    'Coeficiente de utilidad sugerido para tus pagos de 2027: 0.1380. '
+    'Confírmalo con tu contador.';
+
 /// A small phone in portrait (logical pixels).
 const Size _phone = Size(360, 740);
 
@@ -368,8 +373,7 @@ void main() {
         'Base de PTU',
         'PTU a repartir',
         r'$150,000.00',
-        'Coeficiente de utilidad sugerido para tus pagos de 2027: 0.1380. '
-            'Confírmalo con tu contador.',
+        _suggestedCu,
         'Sin validar por un contador',
       ]) {
         expect(

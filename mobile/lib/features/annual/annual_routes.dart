@@ -3,20 +3,18 @@ import 'package:control_contable/core/flags/app_module.dart';
 import 'package:control_contable/core/router/feature_module.dart';
 import 'package:control_contable/core/router/not_found_screen.dart';
 import 'package:control_contable/features/annual/presentation/annual_breakdown_screen.dart';
-import 'package:control_contable/features/annual/presentation/annual_input_pending_screen.dart';
 import 'package:control_contable/features/annual/presentation/annual_screen.dart';
-import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 const String _taxpayerId = 'taxpayerId';
 const String _fiscalYear = 'ejercicio';
 const String _section = 'seccion';
-const String _regimeCode = 'regimeCode';
 const String _root = '/anual';
 const String _year = '$_root/:$_taxpayerId/:$_fiscalYear';
 
-/// Locations owned by `module_annual`. Ids, years, section kinds and regime
-/// codes travel in the location; never an amount or the RFC.
+/// Locations owned by `module_annual`. Ids, years and section kinds travel
+/// in the location; never an amount or the RFC. The input screens arrive
+/// with ANN-19..21, each with its own location: none is a placeholder.
 abstract final class AnnualRoutes {
   /// The active taxpayer's annual estimate (ANN-17).
   static const String estimate = _root;
@@ -27,25 +25,6 @@ abstract final class AnnualRoutes {
     int fiscalYear,
     AnnualComputedSectionKind section,
   ) => '${_of(taxpayerId, fiscalYear)}/secciones/${section.json}';
-
-  /// The personal deductions of the year (ANN-19).
-  static String personalDeductions(String taxpayerId, int fiscalYear) =>
-      '${_of(taxpayerId, fiscalYear)}/deducciones';
-
-  /// The salary constancias of the year (ANN-20).
-  static String salaryStatements(String taxpayerId, int fiscalYear) =>
-      '${_of(taxpayerId, fiscalYear)}/constancias';
-
-  /// The per-year annual facts (ANN-21).
-  static String annualInputs(String taxpayerId, int fiscalYear) =>
-      '${_of(taxpayerId, fiscalYear)}/datos';
-
-  /// The provisional payments filed for [regime] in the year (ANN-21).
-  static String filedPayments(
-    String taxpayerId,
-    int fiscalYear,
-    String regime,
-  ) => '${_of(taxpayerId, fiscalYear)}/pagos/$regime';
 
   static String _of(String taxpayerId, int fiscalYear) =>
       '$_root/$taxpayerId/$fiscalYear';
@@ -78,21 +57,8 @@ final FeatureModule annualFeature = FeatureModule(
         );
       },
     ),
-    for (final (path, input) in [
-      ('$_year/deducciones', AnnualInput.personalDeductions),
-      ('$_year/constancias', AnnualInput.salaryStatements),
-      ('$_year/datos', AnnualInput.annualInputs),
-      ('$_year/pagos/:$_regimeCode', AnnualInput.filedPayments),
-    ])
-      GoRoute(path: path, builder: (context, state) => _pending(state, input)),
   ],
 );
-
-/// Until ANN-19..21 ship their screens, each input location says so.
-Widget _pending(GoRouterState state, AnnualInput input) =>
-    _yearOf(state) == null
-    ? const NotFoundScreen()
-    : AnnualInputPendingScreen(input: input);
 
 int? _yearOf(GoRouterState state) =>
     int.tryParse(state.pathParameters[_fiscalYear] ?? '');

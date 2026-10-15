@@ -43,21 +43,6 @@ final FutureProviderFamily<AnnualEstimate, AnnualQuery> annualEstimateProvider =
       retry: _noAutomaticRetry,
     );
 
-/// How many deductions and constancias the year holds ("Datos para tu
-/// anual"). Counters only: a failure leaves them out, never blocks.
-final FutureProviderFamily<AnnualInputCounts, AnnualQuery>
-annualInputCountsProvider = FutureProvider.autoDispose
-    .family<AnnualInputCounts, AnnualQuery>(
-      (ref, query) => ref
-          .read(annualRepositoryProvider)
-          .getInputCounts(
-            taxpayerId: query.taxpayerId,
-            fiscalYear: query.fiscalYear,
-          ),
-      name: 'annualInputCountsProvider',
-      retry: _noAutomaticRetry,
-    );
-
 /// Which annual breakdown to read.
 typedef AnnualBreakdownQuery = ({
   String taxpayerId,

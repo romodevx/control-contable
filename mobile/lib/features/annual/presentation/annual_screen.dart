@@ -63,7 +63,6 @@ class AnnualScreen extends ConsumerWidget {
   Future<void> _refresh(WidgetRef ref, AnnualQuery? query) async {
     if (query == null) return;
     try {
-      ref.invalidate(annualInputCountsProvider(query));
       final reloaded = ref.refresh(annualEstimateProvider(query).future);
       await reloaded;
     } on ApiFailure {

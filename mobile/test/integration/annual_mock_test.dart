@@ -73,15 +73,6 @@ void main() {
         expect(breakdown.legend, _annualLegend);
         expect(breakdown.disclaimers, isNotEmpty);
       });
-
-      test('the input counters decode', () async {
-        final counts = await container
-            .read(annualRepositoryProvider)
-            .getInputCounts(taxpayerId: _taxpayerId, fiscalYear: 2026);
-
-        expect(counts.personalDeductions, isNonNegative);
-        expect(counts.salaryStatements, isNonNegative);
-      });
     },
     skip: _mockUrl.isEmpty
         ? 'needs the Prism mock: make mock, then make mobile-test-mock'
