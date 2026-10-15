@@ -44,4 +44,29 @@ void main() {
     expect(find.byKey(const ValueKey('dashboard-hero')), findsOneWidget);
     expect(historyEntry(), findsOneWidget);
   });
+
+  // M8-07 QA: the entry lives in Home's app bar, so it must follow
+  // module_history alone, also on the placeholder Home (dashboard OFF).
+  final placeholderHome = homeModules.difference({AppModule.dashboard});
+
+  testWidgets('OFF with the dashboard OFF: the placeholder Home offers no '
+      '"Historial"', (tester) async {
+    await harness.pump(tester, modules: placeholderHome);
+
+    expect(find.byKey(const ValueKey('dashboard-hero')), findsNothing);
+    expect(historyEntry(), findsNothing);
+  });
+
+  testWidgets('ON with the dashboard OFF: the placeholder Home offers '
+      '"Historial" and it opens History', (tester) async {
+    await harness.pump(
+      tester,
+      modules: {...placeholderHome, AppModule.history},
+    );
+
+    expect(find.byKey(const ValueKey('dashboard-hero')), findsNothing);
+    await tester.tap(historyEntry());
+    await tester.pumpAndSettle();
+    expect(find.byType(HistoryScreen), findsOneWidget);
+  });
 }
