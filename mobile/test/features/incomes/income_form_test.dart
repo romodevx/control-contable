@@ -327,6 +327,29 @@ void main() {
       expect(sent.collectedOn, isNull);
     });
 
+    testWidgets('mixed regimes: the error summary lists the dates in the '
+        'order they show', (tester) async {
+      await pumpForm(
+        tester,
+        taxpayer: taxpayer(
+          personType: PersonType.moral,
+          regimes: [
+            heldRegime('626'),
+            heldRegime('601', incomeBasis: IncomeBasis.accrual),
+          ],
+        ),
+      );
+      await tapText(tester, 'Régimen 601');
+      await typeInto(tester, _invoicedOn, '');
+      await _save(tester);
+
+      expect(
+        tester.getTopLeft(find.textContaining('$_invoicedOn:')).dy,
+        lessThan(tester.getTopLeft(find.textContaining('$_amount:')).dy),
+        reason: 'the invoice date shows first, so it is listed first',
+      );
+    });
+
     testWidgets('mixed regimes: back to cash, the collection date books '
         'again', (tester) async {
       await pumpForm(

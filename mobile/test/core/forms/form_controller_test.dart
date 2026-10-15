@@ -43,6 +43,26 @@ void main() {
     });
   });
 
+  group('reading order that follows another choice', () {
+    test('a moved field is listed where it now shows', () async {
+      final collected = form.dateField(label: 'Fecha de cobro');
+      final amount = form.textField(label: 'Monto');
+      final invoiced = form.dateField(label: 'Fecha de factura');
+      var notified = 0;
+      form
+        ..addListener(() => notified++)
+        ..moveBefore(invoiced, collected);
+
+      expect(form.fields, [invoiced, collected, amount]);
+      expect(notified, 1);
+      await form.submit(() async {});
+      expect(form.invalidFields, [invoiced, collected, amount]);
+
+      form.moveBefore(invoiced, invoiced);
+      expect(form.fields, [invoiced, collected, amount], reason: 'no-op');
+    });
+  });
+
   group('requiredness that follows another choice', () {
     test('turning optional clears a shown "missing" error', () async {
       final collected = form.dateField(label: 'Fecha de cobro');
