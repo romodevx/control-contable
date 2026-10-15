@@ -384,10 +384,10 @@ holds, first the CPA sign-off (M5-33).
 | D3 | *Datos fiscales*: the suggestion row disappears on the first keystroke and the fields below jump ~260 px, so a second tap lands on the wrong month. Keep the row's space, or hide the suggestion on save | frontend-sr | M5 UX polish |
 | D4 | Breakdown: result lines use a smaller label than input lines (inverted hierarchy); every line repeats a source chip and a *Fundamento* disclosure, so 612 takes ~7 screens. Also: the totals card shows no *Completo* chip when everything is complete | frontend-sr + design | M5 UX polish |
 | D5 | RESICO expense hint repeats the same sentence twice | frontend-sr | M3/M4 UX polish |
-| D7 | MODULE-tax-engine §7 "M5 OFF implies M6 and M8 OFF" is declared by the M6/M8 flag tasks. **M6 settled by design**: the engine is not a dashboard prerequisite, it degrades Home (MODULE-dashboard OQ-D7, pinned by the M6-05 tests); M8 still open | backend-sr | M8 flag task |
+| D7 | MODULE-tax-engine §7 "M5 OFF implies M6 and M8 OFF" is declared by the M6/M8 flag tasks. **M6 settled by design**: the engine is not a dashboard prerequisite, it degrades Home (MODULE-dashboard OQ-D7, pinned by the M6-05 tests). ~~M8 still open~~ **Done**: `module_history` requires `module_tax_engine` (M8-04, pinned by M8-06) | backend-sr | M8 flag task |
 | G-3 | `infra/taxinputs` and the profile reader read taxpayers by id under RLS alone: add an owner check in the query if shared access (accountant, delegated users) is ever designed | architect | ADR for any delegated-access feature |
 | #77 should-fix 2 | `provisional_parameters` notice on the records forms (categories/defaults responses) | architect | Next contract re-freeze |
-| #98 FU1 | Fingerprint hashes informational sums and multi-enum order (false "changed" marks in M8) | backend-sr | M8 |
+| #98 FU1 | ~~Fingerprint hashes informational sums and multi-enum order (false "changed" marks in M8)~~ **Done** (M8-03, #132) | backend-sr | M8 |
 | #98 FU2 | Replace the weekends-only due-date calendar with the `holidays` table | backend-sr | M9-03/M9-04 (blocker beyond 2028 parameters) |
 | #90 FU | RESICO PF months after the cap still use RESICO rates (warning only) | owner + CPA | M5-33 |
 | #101 FU 1–3 | A half with an error stays open next to the opened one (up to 12 fields); `paymentMonths` offers months of a future fiscal year; `CitationDisclosure` could reuse `FormDisclosure` | frontend-sr | M5 UX polish |
@@ -466,15 +466,31 @@ Backend can start right after P0 + M1-07, in parallel with M5/M6. With the flag 
 | ID | Task | Owner | Deps | Est (h) | Par | Branch | Blocked by | Done |
 |---|---|---|---|---|---|---|---|---|
 | M8-01 | Contract freeze: history paths | architect | P0-05 | 1 | — | `feature/history-contract` | — | [x] |
-| M8-02 | Migration `estimate_views` with RLS + isolation tests | db-sr | M2-03 | 2 | — | `feature/history-migration` | — | [ ] |
-| M8-03 | History use case: fiscal-year summaries in one aggregate pass, changed-since-viewed via fingerprint, mark viewed; **contract follow-up (M8-01):** make `TaxpayerEstimate.figures_fingerprint` required and type `TaxpayerEstimate.engine_version` as `EngineVersion` (re-freeze, regenerate clients) | backend-sr | M5-22, M8-01, M8-02 | 3.5 | — | `feature/history-backend` | — | [ ] |
-| M8-04 | History handlers, contract tests, flag ON/OFF (implies M5) | backend-sr | M8-03, M5-23 | 2 | — | `feature/history-backend` | — | [ ] |
-| M8-05 | Flutter history list, changed marker, open breakdown (reuses M5-26) | frontend-sr | M8-01, M5-26 | 4 | — | `feature/history-mobile` | — | [ ] |
+| M8-02 | Migration `estimate_views` with RLS + isolation tests | db-sr | M2-03 | 2 | — | `feature/history-migration` | — | [x] |
+| M8-03 | History use case: fiscal-year summaries in one aggregate pass, changed-since-viewed via fingerprint, mark viewed; **contract follow-up (M8-01):** make `TaxpayerEstimate.figures_fingerprint` required and type `TaxpayerEstimate.engine_version` as `EngineVersion` (re-freeze, regenerate clients) | backend-sr | M5-22, M8-01, M8-02 | 3.5 | — | `feature/history-backend` | — | [x] |
+| M8-04 | History handlers, contract tests, flag ON/OFF (implies M5) | backend-sr | M8-03, M5-23 | 2 | — | `feature/history-backend` | — | [x] |
+| M8-05 | Flutter history list, changed marker, open breakdown (reuses M5-26) | frontend-sr | M8-01, M5-26 | 4 | — | `feature/history-mobile` | — | [x] |
 | M8-06 | Register flag `module_history` | backend-sr | M8-04, M8-05 | 0.5 | — | `feature/history-flag` | — | [x] |
-| M8-07 | QA M8 | qa-sr | M8-06 | 2 | — | `feature/history-qa-fixes` | OB6 | [ ] |
-| M8-08 | Tech-lead gate M8 | tech-lead | M8-07 | 1 | — | (PR review) | — | [ ] |
-| M8-09 | Security gate M8 | security | M8-07 | 1 | — | (PR review) | — | [ ] |
-| M8-10 | Docs M8 | doc-writer | M8-08, M8-09 | 0.5 | — | `feature/history-docs` | — | [ ] |
+| M8-07 | QA M8 ([report](../../.gstack/qa-reports/qa-report-history-2026-10-14.md); automated pass, device walk owed) | qa-sr | M8-06 | 2 | — | `feature/history-qa-fixes` | OB6 | [x] |
+| M8-08 | Tech-lead gate M8 (PASS, [#149](https://github.com/romodevx/control-contable/pull/149)) | tech-lead | M8-07 | 1 | — | (PR review) | — | [x] |
+| M8-09 | Security gate M8 (PASS, [#149](https://github.com/romodevx/control-contable/pull/149)) | security | M8-07 | 1 | — | (PR review) | — | [x] |
+| M8-10 | Docs M8: [module page](../modules/history.md) | doc-writer | M8-08, M8-09 | 0.5 | — | `feature/history-docs` | — | [x] |
+
+#### M8 follow-ups
+
+Deferred by the M8 gates and QA ([M8-07 report](../../.gstack/qa-reports/qa-report-history-2026-10-14.md),
+M8-08 / M8-09 on [#149](https://github.com/romodevx/control-contable/pull/149)); none blocks M8's merge.
+The module stays **OFF in shared environments** until the first row is done and `module_tax_engine`'s own
+preconditions hold.
+
+| ID | Item | Owner | Target |
+|---|---|---|---|
+| QA §5 | **Device walk** (blocked: Docker down, no local PostgreSQL): wipe the run's DB, `demo_full`, PF + PM created through the app, records across months, open from History and Home "Ver detalle", late record → marker appears and clears, switch taxpayer, read-only account, History / engine OFF, incomes / expenses OFF (F1 on device), TalkBack on the rows (order, focus return, announcement). iOS: OB6 | qa-sr + owner | Before `module_history` is enabled in a shared environment |
+| TL obs. 1 | Estimate screen marks on `ref.listen` transitions only: pin with a test that a pre-warmed `estimateProvider` still posts the view | frontend-sr | Next touch of `features/tax_engine` |
+| TL obs. 2 | Fire-and-forget POST can lose the race with the re-read on a very fast return (old state announced) | frontend-sr | Device walk; fix if seen |
+| TL obs. 3 | Widget test for focus return to the row after pop (§6) | frontend-sr | With the TalkBack pass |
+| QA obs. | `none` months are tappable and open an empty estimate screen | owner (UX) | UX polish |
+| Perf | History p95 < 1 s on staging (local p95 96 ms, PR #132) | qa-sr | REL-06 |
 
 ### M9 — Reminders (`module_reminders`)
 
@@ -529,7 +545,7 @@ approved, so it is **not** in the §4 totals: **AN adds 27 tasks, 91.5 h (109.8 
 | ANN-19 | Flutter personal deductions: list by category with applied/registered, category-driven form (own screen), cash warning, delete + Undo; adds the "Datos para tu anual" block (row + counter) and links its "Falta" CTAs (restore from 74d97e3) | frontend-sr | ANN-17 | 6 | — | `feature/annual-mobile-deductions` | — | [ ] |
 | ANN-20 | Flutter salary constancias list + sheet form; its "Datos para tu anual" row + "Falta" link | frontend-sr | ANN-17 | 3.5 | — | `feature/annual-mobile-salary` | — | [ ] |
 | ANN-21 | Flutter filed payments (12 inline rows prefilled with app estimates, "Confirmar todos") + annual inputs form; their "Datos para tu anual" rows + "Falta" links | frontend-sr | ANN-17 | 4 | — | `feature/annual-mobile-payments` | — | [ ] |
-| ANN-22 | Register flag `module_annual` + prerequisites (`module_tax_engine`, `module_taxpayers`) + `demo_full` preset | backend-sr | ANN-15, ANN-16, ANN-18, ANN-19, ANN-20, ANN-21 | 0.5 | — | `feature/annual-flag` | — | [ ] |
+| ANN-22 | Register flag `module_annual` + prerequisites (`module_tax_engine`, `module_taxpayers`) + `demo_full` preset | backend-sr | ANN-15, ANN-16, ANN-18, ANN-19, ANN-20, ANN-21 | 0.5 | — | `feature/annual-flag` | — | [x] |
 | ANN-23 | QA AN: LOCAL DB wiped, data entered through the app; UI figures equal AN-01..AN-08; flag ON/OFF; read-only; PF and PM | qa-sr | ANN-22 | 5 | — | `feature/annual-qa-fixes` | OB6 | [ ] |
 | ANN-24 | Tech-lead gate AN (OCP per section, purity, no floats, determinism, ports only) | tech-lead | ANN-23 | 2 | — | (PR review) | — | [ ] |
 | ANN-25 | Security gate AN (RLS on 4 tables, PII in labels, logs, flag matrix, 404 indistinguishability) | security | ANN-23 | 2 | — | `feature/annual-security-gate` | — | [ ] |

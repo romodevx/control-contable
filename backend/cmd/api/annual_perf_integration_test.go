@@ -90,7 +90,6 @@ FROM generate_series(1, %d) AS g`, n)
 func TestPerf_annualReadPath(t *testing.T) {
 	rec := &statementRecorder{}
 	env := newContractEnv(t, pingOK{}, withTaxEngineDay(annualPerfToday), func(w *contractWiring) { w.wrapApp = traced(rec) })
-	env.registerAnnualFlag(t)
 	env.apply(t, annualModules, annualAllOn())
 	session := env.signUp(t, signUpEmail, acceptableSample)
 	user, token := session.User.Id.String(), session.Tokens.AccessToken

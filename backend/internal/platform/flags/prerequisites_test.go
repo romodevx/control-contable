@@ -51,6 +51,29 @@ func TestPrerequisites_declaresTheAnnualOnTheEngineAndTaxpayers(t *testing.T) {
 	assert.Equal(t, []string{"module_tax_engine"}, flags.MissingPrerequisites(graph, "module_annual", on))
 }
 
+// ANN-22: module_annual ON with any prerequisite OFF is effectively OFF,
+// the prerequisites themselves untouched.
+func TestEffectiveModules_annualNeedsTheEngineAndTaxpayers(t *testing.T) {
+	graph := flags.Prerequisites()
+	for _, tc := range []struct {
+		name    string
+		enabled []string
+		want    []string
+	}{
+		{"all ON", []string{"module_taxpayers", "module_tax_engine", "module_annual"},
+			[]string{"module_taxpayers", "module_tax_engine", "module_annual"}},
+		{"annual OFF", []string{"module_taxpayers", "module_tax_engine"},
+			[]string{"module_taxpayers", "module_tax_engine"}},
+		{"engine OFF", []string{"module_taxpayers", "module_annual"}, []string{"module_taxpayers"}},
+		{"taxpayers OFF", []string{"module_tax_engine", "module_annual"}, []string{}},
+		{"only annual", []string{"module_annual"}, []string{}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, flags.EffectiveModules(graph, tc.enabled))
+		})
+	}
+}
+
 func TestPrerequisites_isAWellFormedAcyclicGraph(t *testing.T) {
 	require.NoError(t, flags.CheckPrerequisites(flags.Prerequisites()))
 }

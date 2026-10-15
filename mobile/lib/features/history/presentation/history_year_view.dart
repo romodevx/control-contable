@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:control_contable/api/generated/models/disclaimer.dart';
 import 'package:control_contable/api/generated/models/disclaimer_severity.dart';
+import 'package:control_contable/api/generated/models/history_month.dart';
 import 'package:control_contable/api/generated/models/history_year.dart';
 import 'package:control_contable/core/theme/app_spacing.dart';
 import 'package:control_contable/core/widgets/estimate_legend.dart';
@@ -70,7 +71,7 @@ class _HistoryYearViewState extends State<HistoryYearView> {
 
   @override
   Widget build(BuildContext context) {
-    if (year.months.every((month) => !month.hasRecords)) {
+    if (_isEmpty) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         spacing: AppSpacing.md,
@@ -118,6 +119,19 @@ class _HistoryYearViewState extends State<HistoryYearView> {
         for (final disclaimer in notes) DisclaimerNote(disclaimer: disclaimer),
       ],
     );
+  }
+
+  /// A year with nothing to show (§7): no month has records and no month
+  /// has a figure. `has_records` counts only the enabled record modules
+  /// (§3) while every figure comes from all the records, so with a record
+  /// module off a month can have a figure and no records: it is shown.
+  bool get _isEmpty =>
+      year.months.every((month) => !month.hasRecords && !_hasFigure(month));
+
+  static bool _hasFigure(HistoryMonth month) {
+    final tax = month.tax;
+    return tax != null &&
+        (tax.totalPayableRoundedCents != 0 || tax.ivaInFavorCents != 0);
   }
 
   Iterable<Disclaimer> _bySeverity(DisclaimerSeverity severity) =>

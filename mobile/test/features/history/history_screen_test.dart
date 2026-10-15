@@ -495,6 +495,55 @@ void main() {
       expect(find.text('Ver ingresos'), findsNothing);
       expect(find.text('Ver gastos'), findsNothing);
     });
+
+    // has_records counts only the enabled record modules (§3), while the
+    // figures still come from every record: with both modules off the
+    // server sends has_records false on every month, and the year must
+    // still show its figures, never "Aún no hay registros".
+    testWidgets('with both record modules off, the figures still show', (
+      tester,
+    ) async {
+      _tall(tester);
+      await harness.pump(
+        tester,
+        modules: historyModules.difference({
+          AppModule.incomes,
+          AppModule.expenses,
+        }),
+        reply: _year([
+          historyMonthJson('2026-03', isCurrent: true, hasRecords: false),
+          historyMonthJson('2026-02', hasRecords: false),
+        ]),
+      );
+
+      expect(find.byKey(const ValueKey('history-empty')), findsNothing);
+      expect(_row('2026-02'), findsOneWidget);
+    });
+
+    testWidgets('a saldo a favor alone is a figure, not an empty year', (
+      tester,
+    ) async {
+      _tall(tester);
+      await harness.pump(
+        tester,
+        modules: historyModules.difference({AppModule.incomes}),
+        reply: _year([
+          historyMonthJson(
+            '2026-02',
+            hasRecords: false,
+            tax: historyTaxJson(
+              isr: 0,
+              iva: 0,
+              ivaOutcome: 'in_favor',
+              ivaInFavor: 16000,
+            ),
+          ),
+        ]),
+      );
+
+      expect(find.byKey(const ValueKey('history-empty')), findsNothing);
+      expect(_row('2026-02'), findsOneWidget);
+    });
   });
 
   group('states', () {
@@ -586,8 +635,13 @@ void main() {
       await harness.pump(
         tester,
         reply: _year([
-          historyMonthJson('2026-03', isCurrent: true, hasRecords: false),
-          historyMonthJson('2026-02', hasRecords: false),
+          historyMonthJson(
+            '2026-03',
+            isCurrent: true,
+            hasRecords: false,
+            tax: historyTaxJson(isr: 0, iva: 0, ivaOutcome: 'zero'),
+          ),
+          historyMonthJson('2026-02', hasRecords: false, tax: null),
         ]),
       );
 

@@ -92,7 +92,7 @@ they expire; a second rotation drops it. Shared environments set `AUTH_ACCESS_TO
 ## 4. Feature flags
 
 ```sh
-make -C backend flags                                # all 9 module flags, "0 of 9 modules ON"
+make -C backend flags                                # all 10 module flags, "0 of 10 modules ON"
 make -C backend flags ARGS="enable module_auth"
 make -C backend flags ARGS="disable module_auth"
 make -C backend flags ARGS="presets"                 # demo_core, demo_monetization, demo_full
