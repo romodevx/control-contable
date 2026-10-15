@@ -24,6 +24,7 @@ batch size (1..5000); it cannot move a cutoff.
 | `email_verifications` | pending sign-up expired more than 24 h ago | Until then a late code still answers "expired" |
 | `email_verification_failures` | the 24 h failure window ended | The consume function already treats it as a fresh window |
 | `notification_log` | created more than 13 months ago (M9-06, migration `20261022101000`) | MODULE-reminders §2.6 retention: the reminder log answers "was this sent?" for a year plus a margin, and holds no token or PII |
+| `auth_email_outbox` | expired (`expires_at`, the code's 15 min; migration `20261023100000`) | Its sealed payload holds an address and maybe a code: an expired one is never sent, so it goes at once. The delivery job also deletes expired rows on every run and delivered ones right away; this is the backstop |
 
 Not purged here: `rate_limit_buckets`. A row that vanished mid-call would make `rate_limit_take`
 return NULL (PLAN #47 FU2); that fix and the bucket purge ship together.
