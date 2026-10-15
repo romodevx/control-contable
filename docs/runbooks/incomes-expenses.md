@@ -121,7 +121,7 @@ compares the record in the app with the CFDI. Operators do not read or correct a
 
 - Request and response bodies are never logged (the API has no access log yet), and the
   audit logger takes ids only (S-5, S-6).
-- Errors are written by `platform/httperr` with a fixed message per code; a PostgreSQL error
+- Errors are written by `adapter/http/httperr` with a fixed message per code; a PostgreSQL error
   never reaches the wire, and the domain's violations name the field, never the value.
 - The mobile app keeps no record data on the device (no storage, providers dispose on leave),
   and what the forms remember in a session (last payer, payment method, Undo stacks) is

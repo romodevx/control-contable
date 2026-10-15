@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"runtime/debug"
 
+	"github.com/romodevx/control-contable/backend/adapter/http/httperr"
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
-	"github.com/romodevx/control-contable/backend/internal/platform/httperr"
 )
 
 // errPanic marks a recovered panic; its text reaches the logs only.

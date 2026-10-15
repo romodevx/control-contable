@@ -106,6 +106,17 @@ func TestCheckImport(t *testing.T) {
 		{"module adapter may import its usecase", "internal/ledger/adapter/http", "internal/ledger/usecase", ""},
 		{"infra may import the unit-of-work port", "internal/ledger/infra", "internal/platform/tx", ""},
 		{"composition root may import the unit-of-work port", "cmd/api", "internal/platform/tx", ""},
+		// P0-29 FU3: the HTTP delivery tree (adapter/..., httperr included)
+		// is for adapters and cmd/ only; nothing inward of an adapter sees it.
+		{"module adapter may import the HTTP error writer", "internal/ledger/adapter/http", "adapter/http/httperr", ""},
+		{"top-level adapter may import the HTTP error writer", "adapter/http/router", "adapter/http/httperr", ""},
+		{"composition root may import the HTTP error writer", "cmd/api", "adapter/http/httperr", ""},
+		{"platform may not import the HTTP delivery tree", "internal/platform/ratelimit", "adapter/http/httperr", RuleInwardAdapter},
+		{"infra may not import the HTTP delivery tree", "internal/ledger/infra", "adapter/http/gen", RuleInwardAdapter},
+		{"usecase may not import the HTTP delivery tree", "internal/ledger/usecase", "adapter/http/httperr", RuleInwardAdapter},
+		{"domain may not import the HTTP delivery tree", "internal/ledger/domain", "adapter/http/httperr", RuleDomainImports},
+		{"kernel may not import the HTTP delivery tree", "internal/kernel/fiscal", "adapter/http/httperr", RuleKernelImports},
+		{"migrations may not import the HTTP delivery tree", "migrations", "adapter/http/httperr", RuleInwardAdapter},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -115,9 +126,9 @@ func TestCheckImport(t *testing.T) {
 	}
 }
 
-// qualify prefixes repo-relative "internal/..." paths with the fixture module path.
+// qualify prefixes repo-relative "internal/..." and "adapter/..." paths with the fixture module path.
 func qualify(path string) string {
-	if !strings.HasPrefix(path, "internal/") {
+	if !strings.HasPrefix(path, "internal/") && !strings.HasPrefix(path, "adapter/") {
 		return path
 	}
 	return fixtureModule + "/" + path
@@ -152,7 +163,9 @@ func TestCheckReportsFrameworksReachedThroughModulePackages(t *testing.T) {
 
 	const usecase = "internal/ledger/usecase/post.go"
 	want := []Violation{
-		{File: usecase, Imported: "example.com/fx/adapter/http/router", Rule: RuleInnerTransitiveFramework},
+		// The adapter/ tree is refused per import (inward-adapter) before the
+		// transitive walk runs.
+		{File: usecase, Imported: "example.com/fx/adapter/http/router", Rule: RuleInwardAdapter},
 		{File: usecase, Imported: "example.com/fx/internal/platform/flags/flagsgorm", Rule: RuleInnerTransitiveFramework},
 		{File: usecase, Imported: "example.com/fx/internal/platform/ports", Rule: RuleInnerTransitiveFramework},
 	}

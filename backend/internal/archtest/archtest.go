@@ -37,6 +37,10 @@ const (
 	// ADR-0007) importing anything the domain could not: every module's
 	// domain imports the kernel, so it is held to the same rule.
 	RuleKernelImports Rule = "kernel-imports"
+	// RuleInwardAdapter reports a package other than an adapter or cmd/
+	// importing the top-level HTTP delivery tree (adapter/..., httperr
+	// included; P0-29 FU3): delivery details never flow inward.
+	RuleInwardAdapter Rule = "inward-adapter"
 )
 
 // Violation is one forbidden import found in a non-test Go file.
@@ -173,7 +177,25 @@ func checkImport(modulePath, importer, imported string) Rule {
 	if rule == "" && isAdapter(modulePath, importer, from) && to.kind == kindPlatform && to.module == unitOfWorkPort {
 		return RuleAdapterUnitOfWork
 	}
+	if rule == "" && isDeliveryTree(modulePath, imported) && !isAdapter(modulePath, importer, from) && !isCompositionRoot(modulePath, importer) {
+		return RuleInwardAdapter
+	}
 	return rule
+}
+
+// compositionRootDir holds the binaries that wire every layer (cmd/).
+const compositionRootDir = "cmd"
+
+// isDeliveryTree reports a package of this module's top-level adapter/ tree
+// (the router, the generated server, httperr, ...).
+func isDeliveryTree(modulePath, pkg string) bool {
+	rel, ok := strings.CutPrefix(pkg, modulePath+"/")
+	return ok && (rel == adapterDir || strings.HasPrefix(rel, adapterDir+"/"))
+}
+
+func isCompositionRoot(modulePath, pkg string) bool {
+	rel, ok := strings.CutPrefix(pkg, modulePath+"/")
+	return ok && (rel == compositionRootDir || strings.HasPrefix(rel, compositionRootDir+"/"))
 }
 
 // isAdapter reports a package of the delivery layer: the top-level adapter/

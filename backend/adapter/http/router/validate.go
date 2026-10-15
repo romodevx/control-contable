@@ -10,8 +10,8 @@ import (
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/getkin/kin-openapi/routers"
 
+	"github.com/romodevx/control-contable/backend/adapter/http/httperr"
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
-	"github.com/romodevx/control-contable/backend/internal/platform/httperr"
 )
 
 // pathParamPattern finds the {name} segments of an OpenAPI path template.
