@@ -66,6 +66,16 @@ android {
     }
 }
 
+// Push (M9-09). The Firebase config is never committed (public repo, OB9): CI writes it from a
+// secret, a developer drops their own in. Without one the plugin is not applied and every build
+// works; the app then reports push as not available. One android/app/google-services.json can
+// carry the three flavors' package names, or one per flavor in src/<flavor>/ (README).
+val firebaseConfigs = fileTree("src") { include("*/google-services.json") } +
+    files("google-services.json").filter { it.exists() }
+if (!firebaseConfigs.isEmpty) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17

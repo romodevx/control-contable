@@ -8,6 +8,9 @@
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
 	<string>Control Contable</string>
+	<!--  FCM makes no token until the user turns reminders on (M9-09). -->
+	<key>FirebaseMessagingAutoInitEnabled</key>
+	<false/>
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>es</string>
