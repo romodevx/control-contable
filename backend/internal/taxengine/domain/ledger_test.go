@@ -128,6 +128,67 @@ func TestLedgerAddsARoundingAdjustment(t *testing.T) {
 	}
 }
 
+// TestLedgerResultRoundedCarriesOnFromTheShownFigure: a figure closed by
+// ResultRounded is carried on as shown, so a later result is that figure
+// plus the centavo lines after it, with no adjustment (the annual balance
+// = ISR − credits, ANN-16). Result carries the exact value on instead.
+func TestLedgerResultRoundedCarriesOnFromTheShownFigure(t *testing.T) {
+	tests := []struct {
+		name    string
+		rounded bool
+		want    []money.Cents // the amounts of the lines after the input
+	}{
+		{name: "rounded", rounded: true, want: []money.Cents{100_01, 100_01, 0}},
+		{name: "exact", rounded: false, want: []money.Cents{100_01, 100_01, -1, -1}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := domain.NewLedger()
+			l.Input(step("a", domain.SourceRecords()), exactPesos(t, "100.005"))
+			var figure money.Exact
+			if tt.rounded {
+				figure = l.ResultRounded(step("isr", domain.SourceComputed()))
+			} else {
+				figure = l.Result(step("isr", domain.SourceComputed()))
+			}
+			l.Subtract(step("paid", domain.SourceRecords()), exactPesos(t, "100.01"))
+			l.Result(step("balance", domain.SourceComputed()))
+			lines, err := l.Lines()
+			require.NoError(t, err)
+
+			var got []money.Cents
+			for _, line := range lines[1:] {
+				got = append(got, line.Amount)
+			}
+			assert.Equal(t, tt.want, got)
+			if tt.rounded {
+				assert.Equal(t, exactPesos(t, "100.01"), figure, "ResultRounded returns the shown figure")
+				assert.Equal(t, exactPesos(t, "100.005"), lines[1].Exact, "the line keeps its exact value")
+			}
+		})
+	}
+}
+
+// TestLedgerScaleRoundedStartsFromTheShownProduct: a product that later
+// steps take as shown (the RESICO annual ISR the payments are subtracted
+// from, ANN-16) anchors the running value at its rounded amount; the line
+// keeps the exact product.
+func TestLedgerScaleRoundedStartsFromTheShownProduct(t *testing.T) {
+	l := domain.NewLedger()
+	l.Input(step("income", domain.SourceRecords()), exactPesos(t, "100000.50"))
+	l.ScaleRounded(step("rate", domain.SourceComputed()), money.Rate(money.RateScale/100))
+	l.Subtract(step("paid", domain.SourceRecords()), exactPesos(t, "1000.01"))
+	l.Result(step("difference", domain.SourceComputed()))
+	lines, err := l.Lines()
+	require.NoError(t, err)
+
+	require.Len(t, lines, 4, "no rounding adjustment")
+	assert.Equal(t, money.Cents(1000_01), lines[1].Amount)
+	assert.Equal(t, exactPesos(t, "1000.005"), lines[1].Exact)
+	assert.Equal(t, money.Cents(0), lines[3].Amount)
+	assert.Equal(t, money.Exact(0), l.Running())
+}
+
 // exactPesos parses up to six decimals of a peso into Exact.
 func exactPesos(t testing.TB, s string) money.Exact {
 	t.Helper()

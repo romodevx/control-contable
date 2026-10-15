@@ -100,6 +100,17 @@ func (l *Ledger) Scale(s Step, r money.Rate) {
 	}
 }
 
+// ScaleRounded is Scale for a product later steps take as shown, such as
+// the RESICO annual ISR the payments are subtracted from (MODULE-annual
+// §2.7): the line shows the exact product, the running value starts from
+// it rounded to the centavo.
+func (l *Ledger) ScaleRounded(s Step, r money.Rate) {
+	l.Scale(s, r)
+	if l.err == nil {
+		l.running = money.Exact(l.shown) * money.ExactPerCent
+	}
+}
+
 // Lookup finds base's row in table and starts a new running value from the
 // row's fixed fee: a lookup line naming the row. It returns the bracket, so
 // the strategy can AddProduct its excess times its rate; the zero Bracket
@@ -139,6 +150,21 @@ func (l *Ledger) Result(s Step) money.Exact {
 	}
 	l.append(l.line(s, OpResult, l.running, 0, 0))
 	l.shown = rounded
+	return l.running
+}
+
+// ResultRounded closes a figure that later steps take as shown, such as
+// the annual ISR the credits are subtracted from (MODULE-annual §2.7:
+// balance = ISR − credits): like Result, but the running value carries on
+// from the rounded result, which it returns. Without it a half centavo of
+// the exact value could round a later result past the figure (an ISR of
+// 100.005 shown 100.01, less 100.01 paid, would be −0.01).
+func (l *Ledger) ResultRounded(s Step) money.Exact {
+	l.Result(s)
+	if l.err != nil {
+		return 0
+	}
+	l.running = money.Exact(l.shown) * money.ExactPerCent
 	return l.running
 }
 
