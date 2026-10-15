@@ -138,3 +138,22 @@ years), so the estimate goldens and `EngineVersion` stay as they are; if any est
 changes, M9-04 bumps `EngineVersion` per the engine version policy. The Friday extension
 (OQ-R1) stays out until a CPA confirms; adding it is a change to this one function and every
 reader follows. Contract 0.13.0 marks every calendar entry `subject_to_confirmation` meanwhile.
+
+**As implemented (M9-04, 2026-10-15).** `internal/kernel/fiscal/duedate.go`. Two departures
+from the sketch above, neither a change of meaning:
+
+- `MonthlyDueDate(year int, month time.Month, bimonthly bool, h HolidaySet)`: the kernel has
+  no `Period` type (the tax engine's `domain.Period` and History's `Month` are their own), and
+  adding a third for one function would grow the kernel for nothing. `MovedNone` is `""`.
+- Each consumer's port is `Holidays(ctx) (fiscal.HolidaySet, error)`, read once per unit of
+  work (one estimate range, one annual estimate, one calendar request), with a GORM reader per
+  consumer: `taxengine/infra/holidays` and `reminders/infra/holidays`, both over the M9-03
+  tables, so either module stays removable without the other (Decision item 6).
+  `noHolidays` is gone.
+
+The tax-engine goldens (monthly, annual, property suites) now run on the seeded 2026–2027
+holidays instead of none, and none moved: **`EngineVersion` is not bumped** (ADR-0002 engine
+version policy). archtest `CheckWeekendRule` fails on `time.Saturday` / `time.Sunday` in any
+production file outside `internal/kernel`. The calendar's "year + 1 unseeded" signal is a
+structured warning, `event=reminders_calendar_unseeded` (no metrics backend exists yet; the
+alert matches the log event).

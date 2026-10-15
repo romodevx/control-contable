@@ -16,6 +16,9 @@
 //     the withholding decision table (MODULE-withholdings §3) incomes,
 //     expenses and the preview endpoint share, with its rule IDs and ⚠️
 //     ambiguities.
+//   - HolidaySet, NextBusinessDay, MonthlyDueDate, MovedReason: the CFF 12
+//     due-date rule (ADR-0007 Amendment 1) the estimates, the tax calendar
+//     and the reminder job share; the holidays come in as a value.
 //   - Error, Violation, Violations: the domain error model whose values are
 //     the contract details[].code. Modules declare their own codes with
 //     ValidationError and BusinessRuleError.

@@ -26,7 +26,6 @@ var pendingOperations = map[string]string{
 	"unregisterDevice":    "M9-05",
 	"getReminderSettings": "M9-05",
 	"putReminderSettings": "M9-05",
-	"getTaxCalendar":      "M9-04",
 }
 
 // backendRoot is the Go module root, three levels above this package.

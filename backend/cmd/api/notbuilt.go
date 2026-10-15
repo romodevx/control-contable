@@ -65,10 +65,6 @@ func (notBuilt) SyncSubscription(context.Context, gen.SyncSubscriptionRequestObj
 	return nil, errNotBuilt
 }
 
-func (notBuilt) GetTaxCalendar(context.Context, gen.GetTaxCalendarRequestObject) (gen.GetTaxCalendarResponseObject, error) {
-	return nil, errNotBuilt
-}
-
 func (notBuilt) ReceiveRevenueCatWebhook(context.Context, gen.ReceiveRevenueCatWebhookRequestObject) (gen.ReceiveRevenueCatWebhookResponseObject, error) {
 	return nil, errNotBuilt
 }
