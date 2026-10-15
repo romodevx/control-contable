@@ -506,15 +506,15 @@ M9-07 (FCM) and M9-09 (Flutter push) are built against fakes; live verification 
 | M9-04 | Due-date rule into `internal/kernel/fiscal` (`NextBusinessDay`, `MonthlyDueDate`, `HolidaySet`; ADR-0007 §3 amended), replace both taxengine copies (monthly `duedate.go`, annual `businessDay`) and `noHolidays` with the `holidays` adapter, + `GET /v1/tax-calendar` (TDD, golden 2025-12..2027-11) | backend-sr | M9-01, M9-03, P0-13 | 4 | — | `feature/reminders-calendar` | — | [x] |
 | M9-05 | Devices + reminder settings use cases and handlers, contract tests, flag ON/OFF (push token keys `PUSH_TOKEN_ENC_KEY` / `PUSH_TOKEN_INDEX_PEPPER`, required outside dev) | backend-sr | M9-02, M1-07 | 3.5 | — | `feature/reminders-settings` | — | [x] |
 | M9-06 | Reminder job: due users, per-user tx, `notification_log` exactly-once, bounded errgroup, optional amounts when module_tax_engine ON | backend-sr | P0-27, M9-04, M9-05, M5-22 | 4.5 | — | `feature/reminders-worker` | — | [x] |
-| M9-07 | FCM sender adapter (Firebase Admin) + UNREGISTERED cleanup, fake in tests | backend-sr | P0-08 | 2.5 | PG-M79 | `feature/reminders-fcm` | OB9 (live check only) | [ ] |
+| M9-07 | FCM sender adapter (Firebase Admin) + UNREGISTERED cleanup, fake in tests (#166; INVALID_ARGUMENT attribution #172). **Live check open: OB9** ([runbook §8](../runbooks/reminders.md#8-first-live-push-check)) | backend-sr | P0-08 | 2.5 | PG-M79 | `feature/reminders-fcm` | OB9 (live check only) | [x] |
 | M9-08 | Soft-delete purge job (30 days) via `purge_soft_deleted` definer fn (runs regardless of reminder flag) | db-sr | P0-27, M3-02, M4-03, ANN-03 (must also purge `personal_deductions`, ANN-25) | 2 | — | `feature/records-purge-job` | — | [x] |
 | M9-09 | Flutter push: firebase_messaging (guarded init, "no disponible" without config), permission prompt on opt-in, device registration (sign-in, token refresh, logout), deep link; `PushToken` redaction guard | frontend-sr | M9-01, M1-12 | 3.5 | — | `feature/reminders-mobile` | OB9 (live check only), OB7 | [x] |
 | M9-10 | Flutter reminder settings screen + upcoming due dates | frontend-sr | M9-09 | 3 | — | `feature/reminders-mobile` | — | [x] |
 | M9-11 | Register flag `module_reminders` + preset `demo_full` (seeded by the baseline: no migration) | backend-sr | M9-06, M9-07, M9-10 | 0.5 | — | `feature/reminders-flag` | — | [x] |
 | M9-12 | QA M9 ([report](../../.gstack/qa-reports/qa-report-reminders-2026-10-15.md); Android walk + exactly-once + holiday shift pass; live push owed: OB9, iOS: OB6) | qa-sr | M9-11, M9-08 | 3 | — | `feature/reminders-qa-fixes` | OB6, OB7, OB9 | [x] |
-| M9-13 | Tech-lead gate M9 | tech-lead | M9-12 | 1.5 | — | (PR review) | — | [ ] |
-| M9-14 | Security gate M9 (lock-screen amounts opt-in, token claim) | security | M9-12 | 1.5 | — | (PR review) | — | [ ] |
-| M9-15 | Docs M9 | doc-writer | M9-13, M9-14 | 1 | — | `feature/reminders-docs` | — | [ ] |
+| M9-13 | Tech-lead gate M9 (**PASS** on [#170](https://github.com/romodevx/control-contable/pull/170): push-off claims nothing, one bimonthly rule) | tech-lead | M9-12 | 1.5 | — | (PR review) | — | [x] |
+| M9-14 | Security gate M9 (lock-screen amounts opt-in, token claim): **PASS** on [#170](https://github.com/romodevx/control-contable/pull/170); F1–F3 fixed in [#172](https://github.com/romodevx/control-contable/pull/172) | security | M9-12 | 1.5 | — | (PR review) | — | [x] |
+| M9-15 | Docs M9: [module page](../modules/reminders.md), [shared-environment runbook](../runbooks/reminders.md) (Firebase, APNs, secrets, deploy order, yearly holidays), README | doc-writer | M9-13, M9-14 | 1 | — | `feature/reminders-docs` | — | [x] |
 
 #### M9 notes from M9-02 / M9-03 (migrations `20261021100000`, `20261021101000`)
 
@@ -532,6 +532,24 @@ M9-07 (FCM) and M9-09 (Flutter push) are built against fakes; live verification 
 | M9-06 N3 | The collapse id key is HMAC-SHA256(`PUSH_TOKEN_INDEX_PEPPER`, fixed label): no new secret; rotating the pepper changes collapse ids (one possible duplicate on the rotation day) | security | M9-14 |
 | M9-06 N4 | The worker now loads `PUSH_TOKEN_ENC_KEY` / `PUSH_TOKEN_INDEX_PEPPER` (required outside dev; in dev without them the reminder job is not registered). Its distinctness check covers the two push keys only (the worker loads no auth or RFC key; the API checks the rest) | devops-sr | Before `module_reminders` is enabled in a shared environment |
 | M9-06 N5 | cc_worker reads `taxpayer_tax_inputs` under the user's RLS (migration `20261022100000`) so the Estimator runs in the worker for the amounts; the estimate wiring moved to `cmd/internal/estimates` (shared by cmd/api and cmd/worker) | backend-sr | — |
+
+#### M9 follow-ups
+
+Deferred by the M9 gates and QA ([M9-12 report](../../.gstack/qa-reports/qa-report-reminders-2026-10-15.md),
+M9-13 / M9-14 on [#170](https://github.com/romodevx/control-contable/pull/170), [#172](https://github.com/romodevx/control-contable/pull/172));
+none blocks M9's merge. The module stays **OFF in shared environments** until the
+[enable checklist](../runbooks/reminders.md#7-enable-module_reminders) holds, the first row included.
+
+| ID | Item | Owner | Target |
+|---|---|---|---|
+| OB9 live | **Live push walk** ([runbook §8](../runbooks/reminders.md#8-first-live-push-check)): OS prompt and denied notice, registration from the app, lock-screen notification (names, then amounts), exactly one with two workers, tap → estimate, shared phone, uninstall → `UNREGISTERED`. Android and iOS (OB6, OB7) | qa-sr + owner | Before `module_reminders` is enabled in a shared environment |
+| OQ-R1 | Friday extension (CFF 12 ¶5): owner/CPA to confirm; today the earlier Friday is kept and dates are "sujetas a confirmación" | owner + CPA | With the CPA review (OB5) |
+| HOL-2028 | Seed 2028 holidays ([runbook §6](../runbooks/reminders.md#6-every-december-seed-next-years-holidays)); re-check Holy Thursday/Friday 2027 against the RMF 2027 | db-sr | December 2027 (2027 RMF check: January 2027) |
+| QA O1 | Amounts on and no listed taxpayer with a figure: the body drops "estimado pendiente" (deliberate, pinned). PM to confirm the copy and amend spec §2.5 | pm | Next spec touch |
+| REL cfg | Release pipeline writes `google-services.json` / `GoogleService-Info.plist` from the secret manager per flavor | devops-sr | REL-04 |
+| SEC nit 1 | `deleteDeviceSQL`: add `AND user_id = app_user_id()` (defense in depth over RLS) | backend-sr | Next touch of `reminders/infra/store` |
+| SEC nit 2 | Scheduled OSV scan of `mobile/pubspec.lock` (today only on mobile changes) | devops-sr | With REL-09 |
+| M9-05 N2 | `PUSH_TOKEN_ENC_KEY` rotation path (previous-key entry) | backend-sr | Before the first planned rotation |
 
 ### AN — Annual estimate (`module_annual`)
 

@@ -143,7 +143,7 @@ can run in parallel with M5/M6.
 - **Tables**: `devices` (RLS), `reminder_settings` (RLS), `notification_log` (RLS), `holidays` (global).
 - **Also (from M1-10, ADR-0005)**: the worker purges full `rate_limit_buckets` rows
   (`tat` in the past) on a schedule; cc_worker needs a narrow grant for it.
-- **Spec**: [MODULE-reminders.md](MODULE-reminders.md) (stage 1; contract freeze M9-01 pending).
+- **Spec**: [MODULE-reminders.md](MODULE-reminders.md). **Contract**: frozen by M9-01 (0.13.0; `logout` `device_id` 0.14.0); see [`docs/modules/reminders.md`](../modules/reminders.md) and the [shared-environment runbook](../runbooks/reminders.md).
 
 ## Mapping to the original brief
 
