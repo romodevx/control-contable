@@ -55,6 +55,9 @@ class FakeAnnualInputsRepository implements AnnualInputsRepository {
   /// Every constancia create body sent.
   final List<SalaryStatementCreate> createdStatements = [];
 
+  /// Warnings the next constancia writes answer with.
+  final List<Map<String, Object?>> statementWarnings = [];
+
   /// Every constancia patch sent.
   final List<Map<String, Object?>> statementPatches = [];
 
@@ -136,6 +139,7 @@ class FakeAnnualInputsRepository implements AnnualInputsRepository {
     final json = {
       ...statementJson(id: statement.id ?? 'new', employerLabel: null),
       ...statement.toJson(),
+      'warnings': statementWarnings,
     };
     statements.add(json);
     return statementFrom(json);

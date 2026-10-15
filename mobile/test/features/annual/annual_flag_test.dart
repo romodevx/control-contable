@@ -30,12 +30,12 @@ final List<String> _locations = [
   ),
   AnnualRoutes.personalDeductions(fixtureTaxpayerId, 2026),
   AnnualRoutes.newPersonalDeduction(fixtureTaxpayerId, 2026),
+  AnnualRoutes.salaryStatements(fixtureTaxpayerId, 2026),
 ];
 
 /// Where ANN-19..21 will capture the annual inputs: no screen yet, so no
 /// placeholder either (a deep link is not found, never a dead end).
 const List<String> _unshippedInputs = [
-  '/anual/$fixtureTaxpayerId/2026/constancias',
   '/anual/$fixtureTaxpayerId/2026/datos',
   '/anual/$fixtureTaxpayerId/2026/pagos/612',
 ];
@@ -57,6 +57,7 @@ void main() {
         '/anual/:taxpayerId/:ejercicio/secciones/:seccion',
         '/anual/:taxpayerId/:ejercicio/deducciones',
         '/anual/:taxpayerId/:ejercicio/deducciones/nueva',
+        '/anual/:taxpayerId/:ejercicio/constancias',
       ]),
     );
   });

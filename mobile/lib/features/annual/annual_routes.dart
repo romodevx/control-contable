@@ -6,6 +6,7 @@ import 'package:control_contable/features/annual/presentation/annual_breakdown_s
 import 'package:control_contable/features/annual/presentation/annual_screen.dart';
 import 'package:control_contable/features/annual/presentation/personal_deduction_form_page.dart';
 import 'package:control_contable/features/annual/presentation/personal_deductions_screen.dart';
+import 'package:control_contable/features/annual/presentation/salary_statements_screen.dart';
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
@@ -35,6 +36,10 @@ abstract final class AnnualRoutes {
   /// The new personal deduction form of the year (ANN-19).
   static String newPersonalDeduction(String taxpayerId, int fiscalYear) =>
       '${personalDeductions(taxpayerId, fiscalYear)}/nueva';
+
+  /// The salary constancias of the year (ANN-20).
+  static String salaryStatements(String taxpayerId, int fiscalYear) =>
+      '${_of(taxpayerId, fiscalYear)}/constancias';
 
   static String _of(String taxpayerId, int fiscalYear) =>
       '$_root/$taxpayerId/$fiscalYear';
@@ -81,6 +86,14 @@ final FeatureModule annualFeature = FeatureModule(
         state,
         (taxpayerId, year) =>
             PersonalDeductionFormPage(taxpayerId: taxpayerId, fiscalYear: year),
+      ),
+    ),
+    GoRoute(
+      path: '$_year/constancias',
+      builder: (context, state) => _ofYear(
+        state,
+        (taxpayerId, year) =>
+            SalaryStatementsScreen(taxpayerId: taxpayerId, fiscalYear: year),
       ),
     ),
   ],

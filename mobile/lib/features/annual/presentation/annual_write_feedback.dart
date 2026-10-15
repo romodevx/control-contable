@@ -4,6 +4,9 @@ import 'package:control_contable/api/generated/models/field_error.dart' as api;
 import 'package:control_contable/core/access/paywall_sheet.dart';
 import 'package:control_contable/core/access/read_only_access.dart';
 import 'package:control_contable/core/forms/field_error.dart';
+import 'package:control_contable/core/forms/form_controller.dart';
+import 'package:control_contable/core/forms/form_field_model.dart';
+import 'package:control_contable/core/forms/server_field_errors.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/records/record_save.dart';
 import 'package:control_contable/l10n/app_localizations.dart';
@@ -79,3 +82,25 @@ String refusalText(
     l10n.settingsArchivedWrite,
   _ => fallback,
 };
+
+/// Shows the server's verdict on [form]'s fields and answers the
+/// form-level notice for the details no field owns (`null` when none).
+String? showAnnualVerdict(
+  AppFormController form,
+  List<api.FieldError> details, {
+  required Map<String, AppFormFieldModel> fieldsByPath,
+  required FieldError Function(api.FieldError detail) describe,
+  required AppLocalizations l10n,
+}) {
+  final verdict = matchServerFieldErrors(
+    details,
+    fieldsByPath: fieldsByPath,
+    describe: describe,
+  );
+  form.showServerErrors(verdict.matched);
+  if (verdict.unmatched.isEmpty) return null;
+  return verdict.unmatched
+      .map((detail) => describeFieldError(describe(detail), l10n))
+      .toSet()
+      .join(' ');
+}

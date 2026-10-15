@@ -2,10 +2,8 @@ import 'dart:async';
 
 import 'package:control_contable/api/generated/models/field_error.dart' as api;
 import 'package:control_contable/core/forms/app_form.dart';
-import 'package:control_contable/core/forms/field_error.dart';
 import 'package:control_contable/core/forms/form_leave_guard.dart';
 import 'package:control_contable/core/forms/form_notice.dart';
-import 'package:control_contable/core/forms/server_field_errors.dart';
 import 'package:control_contable/core/records/record_month.dart';
 import 'package:control_contable/core/records/record_save.dart';
 import 'package:control_contable/core/time/clock.dart';
@@ -74,25 +72,19 @@ class _PersonalDeductionFormPageState
   }
 
   void _showVerdict(List<api.FieldError> details) {
-    FieldError describe(api.FieldError detail) => describeAnnualDetail(
-      detail,
-      _l10n,
-      limitReached: _l10n.annualDeductionsFullOnSave,
-      outOfRange: _l10n.annualDeductionDateOutOfYear('${widget.fiscalYear}'),
-    );
-    final verdict = matchServerFieldErrors(
+    final notice = showAnnualVerdict(
+      _model.form,
       details,
       fieldsByPath: _model.fieldsByPath,
-      describe: describe,
+      describe: (detail) => describeAnnualDetail(
+        detail,
+        _l10n,
+        limitReached: _l10n.annualDeductionsFullOnSave,
+        outOfRange: _l10n.annualDeductionDateOutOfYear('${widget.fiscalYear}'),
+      ),
+      l10n: _l10n,
     );
-    _model.form.showServerErrors(verdict.matched);
-    if (verdict.unmatched.isEmpty) return;
-    setState(() {
-      _notice = verdict.unmatched
-          .map((detail) => describeFieldError(describe(detail), _l10n))
-          .toSet()
-          .join(' ');
-    });
+    if (notice != null) setState(() => _notice = notice);
   }
 
   void _leave() {
