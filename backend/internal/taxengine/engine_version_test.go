@@ -30,6 +30,7 @@ import (
 var goldenFiguresDigest = map[string]string{
 	"1.0.1": "2825ad18d43022db573a9bd194ae78c2a5add51ecd8dda032b7f09ef5e0a1f14",
 	"1.1.0": "a0a24f5a5b3e5463bcac1ef1fb67e8f406641439762feed7ae1e8c3cb4b71d41",
+	"1.1.1": "37b170b7d1d59ff8b94e1baebefedfdb9f5f6e3fec8a4d2a8ce0dd8c0ebc14e3",
 }
 
 // TestEngineVersionPinsTheGoldenFigures (M5-30).

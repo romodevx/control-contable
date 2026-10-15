@@ -197,7 +197,7 @@ expense's IVA in two parts, from the same statement:
 
 ### Engine version
 
-`engine_version` (the breakdown header shows "Motor 1.1.0") is hashed into the
+`engine_version` (the breakdown header shows "Motor 1.1.1") is hashed into the
 `records_fingerprint` with the aggregated inputs and the parameter set. M8 marks a month
 "changed since viewed" only when its `figures_fingerprint` (the displayed figures, ADR-0002
 Amendment 2) moves; the version and parameter set only name the cause
@@ -210,6 +210,7 @@ of versions is in [ADR-0002](../adr/0002-tax-engine.md#engine-version-log):
 | 1.0.0 | 2026-10-13 | Launch strategy list |
 | 1.0.1 | 2026-10-14 | 626 PM adds the ISR it withheld from suppliers to `withheld_to_remit` (found by the M5-24 property suite, PR #100) |
 | 1.1.0 | 2026-10-14 | WH-09: the IVA withheld from suppliers is credited the month after (line `iva.creditable.withheld_prior_month`, ⚠️ `withheld_iva_credit_timing`); 626 PF shows a month whose 1.25 % withholding exceeds the ISR as 0 to pay, the excess to the annual return (⚠️ A4). PR #138 |
+| 1.1.1 | 2026-10-15 | Credits come off the ISR as shown (612, 606 `ResultRounded`; 601, 626 PF/PM, 625 `ScaleRounded`): a balance at or below zero on an ISR ending in exactly half a centavo moved by one centavo (−0.01 → 0.00, −7,298.10 → −7,298.09), or a RESICO PF / 625 excess line did. M8 marks "cambió" (reason `engine`) only the viewed months whose shown figures moved; the bump alone marks none. PR #156 |
 
 ## Parameters
 

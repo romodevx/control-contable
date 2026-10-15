@@ -247,6 +247,10 @@ The breakdown header shows the parameter set (fiscal year, version) and the engi
   screen. Never a hidden centavo. Property test: displayed lines + adjustment = result (M5-24).
   - Illustration (synthetic): lines 100.004 and 50.004 display as 100.00 and 50.00; the exact result
     150.008 rounds to 150.01 → "Ajuste por redondeo +0.01".
+- **Credits come off the ISR as shown**: a payable is the ISR figure as displayed less the credits
+  (prior payments, withholdings), so the balance always equals the displayed subtraction to the
+  centavo (`Ledger.ResultRounded` / `ScaleRounded`, engine 1.1.1). Half away from zero is not
+  symmetric across zero: an ISR of 100.005 (shown 100.01) less 100.01 paid is 0.00, not −0.01.
 - **Whole-peso payment rounding (CFF art. 20)**: **not applied** pending CPA. `payable_rounded_cents =
   amount_cents` (positive part) until `rounding.payment_whole_pesos` is switched on in params (a data
   change, ADR-0002 §4). No UI copy may say "redondeado a pesos" while it is off.
