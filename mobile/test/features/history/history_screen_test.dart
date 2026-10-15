@@ -658,6 +658,39 @@ void main() {
       expect(harness.location, '/ingresos/nuevo');
     });
 
+    // Device walk 2026-10-15: the empty state's "Registrar ingreso" pushed
+    // the income form without re-reading the year, so after saving
+    // incomes and coming back History still said "Aún no hay registros".
+    testWidgets('returning from "Registrar ingreso" reads the year again', (
+      tester,
+    ) async {
+      _tall(tester);
+      await harness.pump(
+        tester,
+        reply: _year([
+          historyMonthJson(
+            '2026-03',
+            isCurrent: true,
+            hasRecords: false,
+            tax: historyTaxJson(isr: 0, iva: 0, ivaOutcome: 'zero'),
+          ),
+          historyMonthJson('2026-02', hasRecords: false, tax: null),
+        ]),
+      );
+
+      await tester.tap(find.text('Registrar ingreso'));
+      await tester.pumpAndSettle();
+      harness.repository.fallback = _year([
+        historyMonthJson('2026-03', isCurrent: true),
+        historyMonthJson('2026-02'),
+      ]);
+      await harness.back(tester);
+
+      expect(harness.repository.calls, hasLength(2));
+      expect(find.byKey(const ValueKey('history-empty')), findsNothing);
+      expect(_row('2026-02'), findsOneWidget);
+    });
+
     testWidgets('switching taxpayer never shows the previous figures', (
       tester,
     ) async {
