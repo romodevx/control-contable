@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
+	"github.com/romodevx/control-contable/backend/cmd/internal/estimates"
 	dashboardhttp "github.com/romodevx/control-contable/backend/internal/dashboard/adapter/http"
 	dashdomain "github.com/romodevx/control-contable/backend/internal/dashboard/domain"
 	dashusecase "github.com/romodevx/control-contable/backend/internal/dashboard/usecase"
@@ -166,13 +167,13 @@ func monthTaxOf(e taxusecase.TaxpayerEstimate) dashusecase.MonthTax {
 // incomeRecords is the incomes module's aggregate reader with its
 // existence check (incomesinfra.LedgerReader).
 type incomeRecords interface {
-	incomeSumsReader
+	estimates.IncomeSumsReader
 	HasLive(ctx context.Context, taxpayerID string) (bool, error)
 }
 
 // expenseRecords is the expenses module's (expensesinfra.LedgerReader).
 type expenseRecords interface {
-	expenseSumsReader
+	estimates.ExpenseSumsReader
 	HasLive(ctx context.Context, taxpayerID string) (bool, error)
 }
 

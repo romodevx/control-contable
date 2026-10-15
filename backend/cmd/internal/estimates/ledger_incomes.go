@@ -1,4 +1,4 @@
-package main
+package estimates
 
 import (
 	"context"
@@ -9,9 +9,9 @@ import (
 	taxusecase "github.com/romodevx/control-contable/backend/internal/taxengine/usecase"
 )
 
-// incomeSumsReader is the incomes module's aggregate reader
+// IncomeSumsReader is the incomes module's aggregate reader
 // (incomesinfra.LedgerReader).
-type incomeSumsReader interface {
+type IncomeSumsReader interface {
 	IncomeSums(ctx context.Context, q incomesinfra.LedgerQuery) ([]incomesinfra.IncomeMonthSums, error)
 }
 
@@ -20,20 +20,20 @@ type incomeSumsReader interface {
 // incomes reader has no such range and a caller asking for it is a bug.
 var errIncomePriorDecember = errors.New("taxengine ledger: the incomes reader has no previous-December range")
 
-// incomeLedger adapts the incomes aggregate reader to the tax engine's
+// IncomeLedger adapts the incomes aggregate reader to the tax engine's
 // IncomeLedgerReader port (M3-07). Modules never import each other
 // (ADR-0001), so the composition root, the one place that sees both,
 // translates the row types; M5-22 wires it into the estimate use case.
-type incomeLedger struct{ reader incomeSumsReader }
+type IncomeLedger struct{ reader IncomeSumsReader }
 
-var _ taxusecase.IncomeLedgerReader = incomeLedger{}
+var _ taxusecase.IncomeLedgerReader = IncomeLedger{}
 
-// newIncomeLedger adapts reader.
-func newIncomeLedger(reader incomeSumsReader) incomeLedger { return incomeLedger{reader: reader} }
+// NewIncomeLedger adapts reader.
+func NewIncomeLedger(reader IncomeSumsReader) IncomeLedger { return IncomeLedger{reader: reader} }
 
 // IncomeSums implements taxusecase.IncomeLedgerReader on the unit of work in
 // ctx.
-func (l incomeLedger) IncomeSums(ctx context.Context, q taxusecase.LedgerQuery) ([]taxusecase.IncomeMonthSums, error) {
+func (l IncomeLedger) IncomeSums(ctx context.Context, q taxusecase.LedgerQuery) ([]taxusecase.IncomeMonthSums, error) {
 	if q.PriorDecember {
 		return nil, errIncomePriorDecember
 	}

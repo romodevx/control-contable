@@ -8,19 +8,15 @@ import (
 	"maps"
 
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
-	expensesinfra "github.com/romodevx/control-contable/backend/internal/expenses/infra"
-	incomesinfra "github.com/romodevx/control-contable/backend/internal/incomes/infra"
+	"github.com/romodevx/control-contable/backend/cmd/internal/estimates"
 	"github.com/romodevx/control-contable/backend/internal/platform/access"
 	"github.com/romodevx/control-contable/backend/internal/platform/access/accessgorm"
 	"github.com/romodevx/control-contable/backend/internal/platform/clock"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgdb"
 	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit/ratelimitpg"
 	"github.com/romodevx/control-contable/backend/internal/platform/tx"
-	"github.com/romodevx/control-contable/backend/internal/taxengine"
 	taxenginehttp "github.com/romodevx/control-contable/backend/internal/taxengine/adapter/http"
-	"github.com/romodevx/control-contable/backend/internal/taxengine/domain"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/infra/taxinputs"
-	"github.com/romodevx/control-contable/backend/internal/taxengine/params"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/usecase"
 	tpusecase "github.com/romodevx/control-contable/backend/internal/taxpayers/usecase"
 )
@@ -93,47 +89,17 @@ func newTaxEngineModule(w taxEngineWiring) (taxEngineModule, error) {
 	}, nil
 }
 
-// newEstimator builds the immutable strategy registry (every strategy the
-// engine ships, taxengine.Strategies; ADR-0002 §1) and the embedded
-// parameters (a bad file fails the boot), and wires the estimate's read
-// ports over the shared unit of work.
+// newEstimator wires the monthly Estimator (estimates.NewMonthly) over the
+// shared unit of work and the holidays snapshot.
 func newEstimator(w taxEngineWiring) (*usecase.Estimator, error) {
-	registry, err := domain.NewRegistry(taxengine.Strategies()...)
-	if err != nil {
-		return nil, fmt.Errorf("taxengine: strategy registry: %w", err)
-	}
-	catalog, err := params.Embedded()
-	if err != nil {
-		return nil, err
-	}
 	now := w.clock
 	if now == nil {
 		now = clock.NewSystem()
 	}
-	return usecase.NewEstimator(usecase.EstimateDeps{ // a missing port fails the boot (FU4)
-		Tx:       w.tx,
-		Profiles: estimateProfiles{reader: w.taxpayers},
-		Ledger: taxLedger{
-			incomeLedger:  newIncomeLedger(incomesinfra.NewLedgerReader()),
-			expenseLedger: newExpenseLedger(expensesinfra.NewLedgerReader()),
-		},
-		Inputs:     taxinputs.NewStore(),
-		Texts:      taxinputs.NewStore(),
-		Holidays:   w.holidays,
-		Strategies: registry,
-		Params:     catalog,
-		Clock:      now,
+	return estimates.NewMonthly(estimates.MonthlyDeps{ // a missing port fails the boot (FU4)
+		Tx: w.tx, Taxpayers: w.taxpayers, Holidays: w.holidays, Clock: now,
 	})
 }
-
-// taxLedger is the incomes and expenses aggregate readers as the tax
-// engine's one LedgerReader port.
-type taxLedger struct {
-	incomeLedger
-	expenseLedger
-}
-
-var _ usecase.LedgerReader = taxLedger{}
 
 // mergeLimits joins the per-operation limits of every module. An operation
 // limited by two modules is a wiring error: it would get one budget

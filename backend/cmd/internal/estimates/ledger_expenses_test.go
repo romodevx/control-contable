@@ -1,4 +1,4 @@
-package main
+package estimates
 
 import (
 	"context"
@@ -44,7 +44,7 @@ func TestExpenseLedger_MapsEveryField(t *testing.T) {
 		PriorDecember: true,
 	}
 
-	got, err := newExpenseLedger(source).ExpenseSums(t.Context(), q)
+	got, err := NewExpenseLedger(source).ExpenseSums(t.Context(), q)
 
 	require.NoError(t, err)
 	assert.Equal(t, expensesinfra.LedgerQuery{
@@ -66,12 +66,12 @@ func TestExpenseLedger_MapsEveryField(t *testing.T) {
 
 func TestExpenseLedger_PassesTheReaderErrorOn(t *testing.T) {
 	boom := errors.New("boom")
-	_, err := newExpenseLedger(&fakeExpenseSums{err: boom}).ExpenseSums(t.Context(), taxusecase.LedgerQuery{})
+	_, err := NewExpenseLedger(&fakeExpenseSums{err: boom}).ExpenseSums(t.Context(), taxusecase.LedgerQuery{})
 	require.ErrorIs(t, err, boom)
 }
 
 func TestExpenseLedger_NoRows(t *testing.T) {
-	got, err := newExpenseLedger(&fakeExpenseSums{}).ExpenseSums(t.Context(), taxusecase.LedgerQuery{})
+	got, err := NewExpenseLedger(&fakeExpenseSums{}).ExpenseSums(t.Context(), taxusecase.LedgerQuery{})
 	require.NoError(t, err)
 	assert.Empty(t, got)
 }
