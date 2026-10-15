@@ -45,6 +45,7 @@ VALUES (sha256('closed-window'), 2, now() - interval '25 hours')`)
 		{Target: "incomes"}, {Target: "expenses"}, {Target: "personal_deductions"},
 		{Target: "refresh_tokens"}, {Target: "email_verifications"},
 		{Target: "email_verification_failures", Purged: 1}, {Target: "notification_log"},
+		{Target: "auth_email_outbox"},
 	}, counts)
 }
 

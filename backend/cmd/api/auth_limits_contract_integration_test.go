@@ -17,7 +17,6 @@ import (
 
 	"github.com/romodevx/control-contable/backend/adapter/http/contracttest"
 	"github.com/romodevx/control-contable/backend/internal/auth/domain"
-	"github.com/romodevx/control-contable/backend/internal/platform/config"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagtest"
 	"github.com/romodevx/control-contable/backend/internal/platform/logging"
 	"github.com/romodevx/control-contable/backend/internal/platform/pgtest"
@@ -132,7 +131,7 @@ func TestContract_authLoginLimits(t *testing.T) {
 	t.Run("the email's budget is shared by every API instance", func(t *testing.T) {
 		env := newLimitsEnv(t)
 		auth, err := newAuthModule(authWiring{
-			env: config.EnvDev, keys: testAuthKeys(), pool: env.app, tx: newAppTx(t, env.app), logger: logging.New(&syncBuffer{}, nil),
+			keys: testAuthKeys(), outbox: testOutboxKeys(), pool: env.app, tx: newAppTx(t, env.app), logger: logging.New(&syncBuffer{}, nil),
 			now: time.Now, argon2: fastArgon2,
 		})
 		require.NoError(t, err)
@@ -180,11 +179,13 @@ func TestContract_authSignUpLimits(t *testing.T) {
 		assertRetryAfter(t, c.ServeOp(t, contracttest.Op("register"), env.handler,
 			fromClient(env.post("/v1/auth/register", registerJSON(signUpEmail, "v1")), 6)), time.Hour)
 
+		env.deliver(t)
 		codes := strings.Count(env.logs.String(), `"verification_code"`)
 		rec := c.ServeOp(t, contracttest.Op("resendVerification"), env.handler,
 			fromClient(env.post("/v1/auth/verify-email/resend", `{"email":"`+signUpEmail+`"}`), 7))
 		assert.Equal(t, http.StatusAccepted, rec.Code)
 		assert.JSONEq(t, verifiedSent, rec.Body.String())
+		env.deliver(t)
 		assert.Equal(t, codes, strings.Count(env.logs.String(), `"verification_code"`), "nothing sent")
 	})
 

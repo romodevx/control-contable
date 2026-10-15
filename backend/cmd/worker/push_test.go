@@ -52,6 +52,7 @@ func TestRun_refusesToStartWithUnusablePushCredentials(t *testing.T) {
 		"DATABASE_URL":         "postgres://cc_worker@127.0.0.1:1/control_contable?sslmode=disable&connect_timeout=1",
 		"FCM_PROJECT_ID":       testFCMProject,
 		"FCM_CREDENTIALS_JSON": `{"type":"service_account","private_key":"` + marker + `"}`,
+		"AUTH_OUTBOX_KEY":      randomHex(t),
 	}
 
 	err := run(t.Context(), lookupFrom(env), &bytes.Buffer{})

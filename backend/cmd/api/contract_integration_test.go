@@ -5,6 +5,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -19,6 +20,8 @@ import (
 	"github.com/romodevx/control-contable/backend/adapter/http/contracttest"
 	"github.com/romodevx/control-contable/backend/adapter/http/gen"
 	"github.com/romodevx/control-contable/backend/adapter/http/health"
+	authinfra "github.com/romodevx/control-contable/backend/internal/auth/infra"
+	authusecase "github.com/romodevx/control-contable/backend/internal/auth/usecase"
 	"github.com/romodevx/control-contable/backend/internal/platform/clock"
 	"github.com/romodevx/control-contable/backend/internal/platform/config"
 	"github.com/romodevx/control-contable/backend/internal/platform/flags"
@@ -49,6 +52,31 @@ type contractEnv struct {
 	logs    *syncBuffer // the API's log output (the dev email adapter writes codes here)
 	owner   *sql.DB     // cc_owner on the same database, for fixtures
 	app     *sql.DB     // cc_app, the API's own pool, for reading rows as a user
+	// delivery is cmd/worker's auth email job as cc_worker, sending through
+	// the dev log sender into logs: the API only queues its emails.
+	delivery *authusecase.EmailDeliveryJob
+}
+
+// deliver runs the worker's auth email delivery once, as cmd/worker would.
+func (e contractEnv) deliver(t *testing.T) {
+	t.Helper()
+	require.NoError(t, e.delivery.Run(t.Context()))
+}
+
+// newDeliveryJob builds the auth email delivery over pool (cc_worker) with
+// the fixture outbox key and the dev log sender writing to logger.
+func newDeliveryJob(t *testing.T, pool *sql.DB, logger *slog.Logger) *authusecase.EmailDeliveryJob {
+	t.Helper()
+	units, err := pgdb.NewTxManager(pool)
+	require.NoError(t, err)
+	outbox, err := newOutbox(testOutboxKeys())
+	require.NoError(t, err)
+	job, err := authusecase.NewEmailDeliveryJob(authusecase.DeliveryDeps{
+		System: units, Queue: outbox, Sender: authinfra.NewLogSender(logger, config.EnvDev), Logger: logger,
+		BatchSize: authusecase.DefaultDeliveryBatch, MaxBatches: authusecase.DefaultDeliveryBatches,
+	})
+	require.NoError(t, err)
+	return job
 }
 
 // contractWiring is what a contractOption may adjust: the record modules'
@@ -111,7 +139,7 @@ func newContractEnv(t *testing.T, db health.Pinger, options ...contractOption) c
 	// One cc_app unit of work for every module, as run() builds it.
 	appTx := newAppTx(t, app)
 	auth, err := newAuthModule(authWiring{
-		env: config.EnvDev, keys: testAuthKeys(), pool: app, tx: appTx, logger: logger, now: time.Now, argon2: fastArgon2,
+		keys: testAuthKeys(), outbox: testOutboxKeys(), pool: app, tx: appTx, logger: logger, now: time.Now, argon2: fastArgon2,
 	})
 	require.NoError(t, err)
 	wiring.env, wiring.keys, wiring.tx, wiring.auth, wiring.logger = config.EnvDev, testTaxpayerKeys(), appTx, auth, logger
@@ -131,6 +159,8 @@ func newContractEnv(t *testing.T, db health.Pinger, options ...contractOption) c
 		logs:    logs,
 		owner:   ownerDB,
 		app:     app,
+
+		delivery: newDeliveryJob(t, pg.Connect(t, pgtest.RoleWorker), logger),
 	}
 }
 

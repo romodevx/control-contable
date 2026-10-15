@@ -77,6 +77,10 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err := errors.Join(err, authErr); err != nil {
 		return err
 	}
+	outboxKeys, err := config.LoadAuthOutbox(ctx, lookup, secrets, authKeys)
+	if err != nil {
+		return err
+	}
 	taxpayerKeys, err := config.LoadTaxpayers(ctx, lookup, secrets, cfg.Env, authKeys)
 	if err != nil {
 		return err
@@ -110,7 +114,7 @@ func run(ctx context.Context, lookup config.Lookup, logOut io.Writer) error {
 	if err != nil {
 		return err
 	}
-	auth, err := newAuthModule(authWiring{env: cfg.Env, keys: authKeys, pool: pool, tx: appTx, logger: logger, now: time.Now})
+	auth, err := newAuthModule(authWiring{keys: authKeys, outbox: outboxKeys, pool: pool, tx: appTx, logger: logger, now: time.Now})
 	if err != nil {
 		return err
 	}

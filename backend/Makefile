@@ -171,7 +171,7 @@ api: $(LOCAL_ENV)
 	@$(RUN_ENV) PORT=$(API_PORT) DATABASE_URL="$(call DB_URL,cc_app,CC_APP_PASSWORD)" \
 		AUTH_EMAIL_PEPPER="$${CC_AUTH_EMAIL_PEPPER}" AUTH_EMAIL_KEY="$${CC_AUTH_EMAIL_KEY}" \
 		AUTH_CODE_KEY="$${CC_AUTH_CODE_KEY}" AUTH_ACCESS_TOKEN_KEY="$${CC_AUTH_ACCESS_TOKEN_KEY}" \
-		AUTH_ACCESS_TOKEN_KEY_ID="$${CC_ACCESS_TOKEN_KEY_ID:-k1}" \
+		AUTH_ACCESS_TOKEN_KEY_ID="$${CC_ACCESS_TOKEN_KEY_ID:-k1}" AUTH_OUTBOX_KEY="$${CC_AUTH_OUTBOX_KEY}" \
 		AUTH_ACCESS_TOKEN_PREVIOUS_KEY="$${CC_AUTH_ACCESS_TOKEN_PREVIOUS_KEY:-}" \
 		AUTH_ACCESS_TOKEN_PREVIOUS_KEY_ID="$${CC_ACCESS_TOKEN_PREVIOUS_KEY_ID:-}" \
 		RFC_ENC_KEY="$${CC_RFC_ENC_KEY:-}" RFC_INDEX_PEPPER="$${CC_RFC_INDEX_PEPPER:-}" \
@@ -186,7 +186,8 @@ access-key-rotate: $(LOCAL_ENV)
 ## worker: LOCAL ONLY. Run cmd/worker (APP_ENV=dev) as cc_worker against the local stack
 worker: $(LOCAL_ENV)
 	@$(ASSERT_LOCAL)
-	@$(RUN_ENV) DATABASE_URL="$(call DB_URL,cc_worker,CC_WORKER_PASSWORD)" $(GO) run ./cmd/worker
+	@$(RUN_ENV) DATABASE_URL="$(call DB_URL,cc_worker,CC_WORKER_PASSWORD)" AUTH_OUTBOX_KEY="$${CC_AUTH_OUTBOX_KEY}" \
+		$(GO) run ./cmd/worker
 
 ## backfill-withholdings: LOCAL ONLY. WH-08 backfill as cc_worker: dry run; ARGS="-apply" writes
 backfill-withholdings: $(LOCAL_ENV)
