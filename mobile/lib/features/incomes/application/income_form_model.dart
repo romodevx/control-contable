@@ -88,6 +88,11 @@ class IncomeFormModel extends ChangeNotifier {
     }
     ivaRate.addListener(_recompute);
     form.addListener(_followFacts);
+    // Text fields notify the form only when their error changes: the dates
+    // feed the withholding preview, so each new date must reach listeners.
+    for (final date in [bookingDate, otherDate]) {
+      date.text.addListener(notifyListeners);
+    }
   }
 
   /// The copy the fields were labeled with.

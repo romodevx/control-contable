@@ -398,6 +398,26 @@ void main() {
       expect(harness.incomes.previewRequests, isEmpty);
     });
 
+    // iOS QA walk 2026-10-15 (found on the expense form): a date changed
+    // after the amount never reached the preview, which kept the facts of
+    // the date the form opened with.
+    testWidgets('changing the date after the amount asks again with the new '
+        'date', (tester) async {
+      firstTime();
+      harness.incomes.previewAnswer = (_) => ownerExample;
+      await pumpForm(tester, taxpayer: _resico);
+      await chooseIn(tester, _q1, _pm);
+      await typeInto(tester, _amount, '100000');
+      await settlePreview(tester);
+      final before = harness.incomes.previewRequests.length;
+
+      await typeInto(tester, 'Fecha de cobro', '10072026');
+      await settlePreview(tester);
+
+      expect(harness.incomes.previewRequests.length, greaterThan(before));
+      expect(harness.incomes.previewRequests.last.on, '2026-07-10');
+    });
+
     testWidgets('typing is debounced into one request', (tester) async {
       await pumpForm(tester);
       final field = inputLabeled(_amount);
