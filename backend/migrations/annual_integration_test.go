@@ -133,7 +133,7 @@ func TestAnnualTables_CrossUserWritesMatchNoRow(t *testing.T) {
 		},
 		salaryStatements.name: {
 			"UPDATE salary_statements SET isr_withheld_cents = 1 WHERE taxpayer_id = $1",
-			// 20261017100000: a fiscal-year move never reaches another user's constancia.
+			// 20261017102000: a fiscal-year move never reaches another user's constancia.
 			"UPDATE salary_statements SET fiscal_year = 2027 WHERE taxpayer_id = $1",
 			"DELETE FROM salary_statements WHERE taxpayer_id = $1",
 		},
@@ -163,7 +163,7 @@ func TestAnnualTables_CrossUserWritesMatchNoRow(t *testing.T) {
 	}
 }
 
-// 20261017100000 grants UPDATE (fiscal_year) only: a move stays inside the year CHECK,
+// 20261017102000 grants UPDATE (fiscal_year) only: a move stays inside the year CHECK,
 // and the owner columns stay out of reach, so a constancia never changes user or taxpayer.
 func TestSalaryStatements_FiscalYearMoveKeepsTheGuards(t *testing.T) {
 	app := seedAnnualOwners(t, pgtest.NewDatabase(t))
@@ -507,7 +507,7 @@ func TestAnnualTables_NoAccessBeyondTheGrants(t *testing.T) {
 	}
 	immutable := map[string][]string{
 		personalDeductions.name: {"id", "user_id", "taxpayer_id", "person_type", "created_at", "updated_at"},
-		// fiscal_year moves since 20261017100000 (updateSalaryStatement, ANN-13).
+		// fiscal_year moves since 20261017102000 (updateSalaryStatement, ANN-13).
 		salaryStatements.name: {"id", "user_id", "taxpayer_id", "person_type", "created_at", "updated_at"},
 		filedPayments.name:    {"user_id", "taxpayer_id", "regime_code", "fiscal_year", "month", "created_at", "updated_at"},
 		annualInputs.name:     {"user_id", "taxpayer_id", "fiscal_year", "created_at", "updated_at"},

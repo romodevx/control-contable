@@ -72,7 +72,7 @@ type newStatementRow struct {
 func (newStatementRow) TableName() string { return statementsTable }
 
 // statementUpdates are the columns cc_app may UPDATE (fiscal_year since
-// 20261017100000).
+// 20261017102000).
 func statementUpdates(f annual.SalaryFields) map[string]any {
 	return map[string]any{
 		"fiscal_year": f.FiscalYear, "employer_label": nullable(f.EmployerLabel), "accumulable_cents": int64(f.Accumulable),
