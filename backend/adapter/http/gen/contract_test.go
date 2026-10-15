@@ -20,7 +20,8 @@ var moduleKeyPattern = regexp.MustCompile(`^(platform|module_[a-z][a-z_]*)$`)
 type contractOperation struct {
 	where  string // "METHOD /path"
 	id     string
-	module any // raw x-module extension value
+	module any  // raw x-module extension value
+	public bool // `security: []` and x-public: true
 }
 
 // contractOperations walks the spec embedded in the generated code, which is
@@ -37,6 +38,7 @@ func contractOperations(t *testing.T) []contractOperation {
 				where:  method + " " + path,
 				id:     op.OperationID,
 				module: op.Extensions["x-module"],
+				public: op.Security != nil && len(*op.Security) == 0 && op.Extensions["x-public"] == true,
 			})
 		}
 	}
@@ -57,6 +59,34 @@ func TestEveryOperationDeclaresXModule(t *testing.T) {
 		assert.Regexpf(t, moduleKeyPattern, module,
 			"%s (%s): x-module %q is neither platform nor a module_<name> flag key", op.where, op.id, module)
 	}
+}
+
+// platformOperations is the exact set of operations that skip the flag gate,
+// keyed by the route each one serves. x-module: platform means "never
+// hidden", so labelling an operation platform by mistake (or moving a
+// platform operation to another route) would ship it ungated in every preset.
+// Changing this map is a security-review decision (PR #19 follow-up 4), not a
+// codegen detail.
+var platformOperations = map[string]string{
+	"GET /healthz":  "getHealth",
+	"GET /v1/flags": "listEnabledFlags",
+}
+
+// TestPlatformOperationSetIsPinned reads the contract itself, not the
+// generated flag map: the x-module: platform operations are exactly
+// platformOperations, and each one is public (an ungated operation behind a
+// user would still answer the users of a disabled module).
+func TestPlatformOperationSetIsPinned(t *testing.T) {
+	got := map[string]string{}
+	for _, op := range contractOperations(t) {
+		if op.module != gen.ModulePlatform {
+			continue
+		}
+		got[op.where] = op.id
+		assert.Truef(t, op.public, "%s (%s): a platform operation must be public (security: [] and x-public: true)", op.where, op.id)
+	}
+
+	assert.Equal(t, platformOperations, got, "operations with x-module: platform")
 }
 
 func TestFlagMapMatchesContract(t *testing.T) {
