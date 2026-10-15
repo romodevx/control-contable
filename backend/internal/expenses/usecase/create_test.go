@@ -302,6 +302,15 @@ func TestCreate_DescriptionRules(t *testing.T) {
 
 		requireAppErr(t, err, apperr.CodeValidationFailed, "description", "too_long")
 	})
+	t.Run("holding a bidi override", func(t *testing.T) {
+		h := newHarness(t)
+		in := createInput(t, expense1)
+		in.Description = "Caf\u202ee"
+
+		_, err := h.uc.Create(t.Context(), in)
+
+		requireAppErr(t, err, apperr.CodeValidationFailed, "description", "invisible_characters")
+	})
 }
 
 func TestCreate_BusinessRulesAre422(t *testing.T) {

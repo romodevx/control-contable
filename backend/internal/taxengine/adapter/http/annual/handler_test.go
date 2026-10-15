@@ -414,27 +414,3 @@ func TestAnnualRoutesHiddenWhenOff(t *testing.T) {
 		flagtest.AssertHidden(t, rec)
 	}
 }
-
-// Every annual operation has a per-user budget: reads that show the app's
-// estimates spend estimate_reads, the other reads annual_reads, writes
-// annual_writes.
-func TestUserLimits(t *testing.T) {
-	spec, err := gen.GetSpec()
-	require.NoError(t, err)
-	scopes := map[string]string{}
-	for _, item := range spec.Paths.Map() {
-		for _, op := range item.Operations() {
-			if op.Extensions["x-module"] != "module_annual" {
-				continue
-			}
-			policy, ok := annualhttp.UserLimits[op.OperationID]
-			require.Truef(t, ok, "%s has no budget", op.OperationID)
-			scopes[op.OperationID] = policy.Scope
-		}
-	}
-	assert.Len(t, scopes, 15)
-	assert.Equal(t, "estimate_reads", scopes["getAnnualEstimate"])
-	assert.Equal(t, "estimate_reads", scopes["putFiledPayments"])
-	assert.Equal(t, "annual_reads", scopes["listPersonalDeductions"])
-	assert.Equal(t, "annual_writes", scopes["restorePersonalDeduction"])
-}

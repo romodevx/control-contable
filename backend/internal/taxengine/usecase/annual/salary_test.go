@@ -149,6 +149,14 @@ func TestSalary_CreateRefusals(t *testing.T) {
 			apperr.CodeValidationFailed, []string{"employer_label/invalid"}},
 		{"untrimmed label", nil, func() annual.SalaryInput { in := mainEmployer(clientID); in.EmployerLabel = ptr("x "); return in },
 			apperr.CodeValidationFailed, []string{"employer_label/invalid"}},
+		{"bidi override in label", nil, func() annual.SalaryInput {
+			in := mainEmployer(clientID)
+			in.EmployerLabel = ptr("Empleo\u202eprincipal")
+			return in
+		},
+			apperr.CodeValidationFailed, []string{"employer_label/invisible_characters"}},
+		{"zero-width label", nil, func() annual.SalaryInput { in := mainEmployer(clientID); in.EmployerLabel = ptr("\u200b"); return in },
+			apperr.CodeValidationFailed, []string{"employer_label/invisible_characters"}},
 		{"negative figures", nil, func() annual.SalaryInput {
 			in := mainEmployer(clientID)
 			in.Accumulable, in.Exempt, in.ISRWithheld = -1, -1, -1

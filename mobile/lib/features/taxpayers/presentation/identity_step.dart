@@ -2,7 +2,6 @@ import 'package:control_contable/api/generated/models/person_type.dart';
 import 'package:control_contable/core/forms/app_form.dart';
 import 'package:control_contable/core/forms/app_text_field.dart';
 import 'package:control_contable/core/forms/field_controller.dart';
-import 'package:control_contable/core/forms/field_error.dart';
 import 'package:control_contable/core/forms/form_controller.dart';
 import 'package:control_contable/features/taxpayers/application/onboarding_flow.dart';
 import 'package:control_contable/features/taxpayers/domain/rfc.dart';
@@ -65,11 +64,12 @@ class _IdentityStepState extends State<IdentityStep> {
 
   void _showServerVerdict(AppLocalizations l10n) {
     final rejection = _flow.rfcRejection;
+    final nameRejection = _flow.displayNameRejection;
     _form.showServerErrors({
       if (rejection != null)
         _rfc: describeRfcRejection(rejection, _personType, l10n),
-      if (_flow.displayNameRejected)
-        _nameField!: CustomFieldError(l10n.onboardingDisplayNameTooLong),
+      if (nameRejection != null)
+        _nameField!: describeDisplayNameRejection(nameRejection, l10n),
     });
   }
 

@@ -155,17 +155,21 @@ func TestProfile_rename(t *testing.T) {
 		assert.Equal(t, []string{"rw:" + newUserID}, units.units, "one read-write unit of work")
 	})
 
-	for name, raw := range map[string]string{
-		"blank":             "   ",
-		"too long":          strings.Repeat("a", domain.MaxNameLength+1),
-		"control-character": "Ana\u0007",
+	for name, tt := range map[string]struct {
+		raw  string
+		want error
+	}{
+		"blank":             {"   ", domain.ErrInvalidName},
+		"too long":          {strings.Repeat("a", domain.MaxNameLength+1), domain.ErrInvalidName},
+		"control-character": {"Ana\u0007", domain.ErrNameInvisible},
+		"bidi-override":     {"Ana\u202eB", domain.ErrNameInvisible},
 	} {
-		t.Run("a "+name+" name is ErrInvalidName and opens no unit of work", func(t *testing.T) {
+		t.Run("a "+name+" name is refused and opens no unit of work", func(t *testing.T) {
 			accounts, units := newFakeProfiles(t), &uow{}
 
-			_, err := usecase.NewProfile(units, accounts).Rename(t.Context(), accounts.account.ID, raw)
+			_, err := usecase.NewProfile(units, accounts).Rename(t.Context(), accounts.account.ID, tt.raw)
 
-			assert.ErrorIs(t, err, domain.ErrInvalidName)
+			assert.ErrorIs(t, err, tt.want)
 			assert.Empty(t, units.units)
 			assert.Empty(t, accounts.renamed)
 		})

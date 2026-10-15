@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
+	"github.com/romodevx/control-contable/backend/internal/platform/usertext"
 )
 
 // Use case errors. Stores return the ones that describe stored state; the
@@ -51,7 +52,10 @@ var (
 // FieldError.code values of the annual inputs (MODULE-annual §5, contract
 // 0.11.x).
 const (
-	DetailInvalid               = "invalid"
+	DetailInvalid = "invalid"
+	// DetailInvisibleCharacters: a label holding a control, format (zero
+	// width, bidi) or line separator character (usertext, ANN-25).
+	DetailInvisibleCharacters   = usertext.DetailInvisibleCharacters
 	DetailRequired              = "required"
 	DetailNotApplicable         = "not_applicable"
 	DetailOutOfRange            = "out_of_range"
@@ -107,6 +111,7 @@ const (
 	msgLimitDeductions       = "Ya registraste el máximo de 500 deducciones en ese ejercicio."
 	msgLimitStatements       = "Ya registraste el máximo de 20 constancias en ese ejercicio."
 	msgInvalidValue          = "Este valor no es válido."
+	msgInvisibleCharacters   = "Quita los caracteres invisibles o de formato."
 	msgRequired              = "Este dato es obligatorio para esa categoría."
 	msgNotApplicable         = "Este dato no aplica a esa categoría."
 	msgDateRange             = "La fecha no puede ser futura ni anterior a 2026."

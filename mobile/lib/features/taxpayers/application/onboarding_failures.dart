@@ -1,6 +1,7 @@
 import 'package:control_contable/api/generated/models/error_code.dart';
 import 'package:control_contable/api/generated/models/field_error.dart' as api;
 import 'package:control_contable/api/generated/models/regime.dart';
+import 'package:control_contable/core/forms/server_field_errors.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 
 /// Separator of the server's field paths (`regimes.1.options.rif_year`).
@@ -22,6 +23,15 @@ enum RfcRejection {
 
   /// `409 rfc_already_registered`: the user already manages this RFC.
   duplicate,
+}
+
+/// Why the server refused the display name.
+enum DisplayNameRejection {
+  /// `invisible_characters`: a zero-width, bidi or control character.
+  invisibleCharacters,
+
+  /// Any other verdict (empty or longer than the contract allows).
+  length,
 }
 
 /// A form-level message for the current onboarding screen.
@@ -52,7 +62,7 @@ enum OnboardingNotice {
 /// The rejected fields of a `400`, sorted by the step that owns them.
 typedef OnboardingVerdict = ({
   RfcRejection? rfc,
-  bool displayName,
+  DisplayNameRejection? displayName,
   bool regime,
   bool startPeriod,
   Map<String, Set<String>> options,
@@ -72,7 +82,7 @@ OnboardingVerdict sortDetails(
   required List<Regime> sentRegimes,
 }) {
   RfcRejection? rfc;
-  var displayName = false;
+  DisplayNameRejection? displayName;
   var regime = false;
   var startPeriod = false;
   final options = <String, Set<String>>{};
@@ -82,7 +92,9 @@ OnboardingVerdict sortDetails(
       case ['rfc', ...]:
         rfc ??= _rfcCodes[detail.code] ?? RfcRejection.format;
       case ['display_name', ...]:
-        displayName = true;
+        displayName ??= detail.code == invisibleCharactersCode
+            ? DisplayNameRejection.invisibleCharacters
+            : DisplayNameRejection.length;
       case ['regimes', final index, 'options', final key, ...]:
         final code = _regimeAt(sentRegimes, index);
         if (code == null) {
@@ -115,6 +127,17 @@ RfcRejection? rfcRejectionOf(ApiFailure failure) => switch (failure) {
   ).rfc,
   _ => null,
 };
+
+/// The display name verdict of a failed write, or `null` when [failure] is
+/// not about the display name.
+DisplayNameRejection? displayNameRejectionOf(ApiFailure failure) =>
+    switch (failure) {
+      ApiValidationFailure(:final details) => sortDetails(
+        details,
+        sentRegimes: const [],
+      ).displayName,
+      _ => null,
+    };
 
 /// The form-level message for a [failure] no field owns.
 OnboardingNotice noticeFor(ApiFailure failure) => switch (failure) {

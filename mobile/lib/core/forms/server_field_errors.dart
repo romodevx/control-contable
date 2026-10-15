@@ -2,6 +2,10 @@ import 'package:control_contable/api/generated/models/field_error.dart' as api;
 import 'package:control_contable/core/forms/field_error.dart';
 import 'package:control_contable/core/forms/form_field_model.dart';
 
+/// The detail code of a user-text field holding an invisible character
+/// (control, format, line or paragraph separator; ADR-0004 Amendment 1).
+const String invisibleCharactersCode = 'invisible_characters';
+
 /// Separator of the server's field paths (`accepted_documents.1.kind`;
 /// docs/api/CONTRACT.md).
 const _pathSeparator = '.';

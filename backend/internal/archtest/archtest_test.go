@@ -21,6 +21,8 @@ func TestCheckImport(t *testing.T) {
 		{"domain may import stdlib", "internal/ledger/domain", "time", ""},
 		{"domain may import its own subpackages", "internal/ledger/domain", "internal/ledger/domain/vo", ""},
 		{"domain may import platform money", "internal/ledger/domain", "internal/platform/money", ""},
+		{"domain may import platform usertext", "internal/ledger/domain", "internal/platform/usertext", ""},
+		{"pure platform usertext may not import net/http", "internal/platform/usertext", "net/http", RulePurePlatformImports},
 		{"domain may not import third-party", "internal/ledger/domain", "gorm.io/gorm", RuleDomainImports},
 		// ADR-0004: NFKC password normalization; only this x/text package.
 		{"domain may import unicode/norm", "internal/ledger/domain", "golang.org/x/text/unicode/norm", ""},
