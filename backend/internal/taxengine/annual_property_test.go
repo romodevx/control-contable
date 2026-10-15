@@ -412,7 +412,13 @@ func TestAnnualPropertyGeneratorReachesEveryStrategy(t *testing.T) {
 	statuses := map[annual.Status]int{}
 	years := map[usecaseannual.YearStatus]int{}
 	chapters := map[fiscal.RegimeCode]int{}
+	categories := map[annual.Category]int{}
+	beneficiaries := map[annual.Beneficiary]int{}
 	forEachAnnCase(t, func(t *testing.T, c annCase) {
+		for _, d := range c.year.Deductions {
+			categories[d.Category]++
+			beneficiaries[d.Beneficiary]++
+		}
 		got := c.estimate(t)
 		years[got.YearStatus]++
 		for _, s := range got.Sections {
@@ -425,7 +431,8 @@ func TestAnnualPropertyGeneratorReachesEveryStrategy(t *testing.T) {
 			}
 		}
 	})
-	t.Logf("sections %v; statuses %v; years %v; art. 152 chapters %v", kinds, statuses, years, chapters)
+	t.Logf("sections %v; statuses %v; years %v; art. 152 chapters %v; deductions %v by %v",
+		kinds, statuses, years, chapters, categories, beneficiaries)
 	for _, k := range annExpectedKinds {
 		assert.Positive(t, kinds[k], "no %s section generated", k)
 	}
@@ -437,4 +444,15 @@ func TestAnnualPropertyGeneratorReachesEveryStrategy(t *testing.T) {
 	for _, code := range []fiscal.RegimeCode{annual.RegimeSalary, fiscal.RegimeRent, fiscal.RegimeBusiness, fiscal.RegimePlatforms} {
 		assert.Positive(t, chapters[code], "no art. 152 section with chapter %s", code)
 	}
+	for _, category := range annual.Categories() {
+		assert.Positive(t, categories[category], "no %s deduction generated", category)
+	}
+	for _, b := range annBeneficiaries {
+		assert.Positive(t, beneficiaries[b], "no deduction for a %s generated", b)
+	}
+}
+
+// annBeneficiaries are the spec's beneficiaries (annual.Beneficiary.Valid).
+var annBeneficiaries = []annual.Beneficiary{
+	annual.BeneficiarySelf, annual.BeneficiarySpouse, annual.BeneficiaryAscendant, annual.BeneficiaryDescendant,
 }
