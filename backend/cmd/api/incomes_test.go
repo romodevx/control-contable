@@ -125,6 +125,10 @@ func (stubIncomeUseCases) Defaults(context.Context, string, incomes.DefaultsQuer
 	return incomes.Defaults{}, errStubIncomes
 }
 
+func (stubIncomeUseCases) Preview(context.Context, string, incomes.PreviewQuery) (incomes.Preview, error) {
+	return incomes.Preview{}, errStubIncomes
+}
+
 // stubIncomesModule has stub use cases and no write budget.
 func stubIncomesModule() incomesModule {
 	return incomesModule{handler: incomeshttp.NewHandler(stubIncomeUseCases{})}
@@ -139,7 +143,7 @@ func TestNewHandler_refusesToServeWithoutTheIncomesHandler(t *testing.T) {
 }
 
 // The incomes module needs the shared unit of work, the taxpayers queries
-// and the rate catalog; it hands the router its write budget.
+// and the rate catalog; it hands the router its write and preview budgets.
 func TestNewIncomesModule(t *testing.T) {
 	rates, err := newRateCatalog()
 	require.NoError(t, err)
@@ -154,7 +158,7 @@ func TestNewIncomesModule(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, m.handler)
 	assert.NotNil(t, m.incomes)
-	assert.ElementsMatch(t, []string{"createIncome", "updateIncome", "deleteIncome", "restoreIncome"},
+	assert.ElementsMatch(t, []string{"createIncome", "updateIncome", "deleteIncome", "restoreIncome", "previewIncomeWithholdings"},
 		slices.Collect(maps.Keys(m.userLimits)))
 }
 

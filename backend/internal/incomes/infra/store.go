@@ -51,6 +51,10 @@ type incomeRow struct {
 	TaxpayerID       string     `gorm:"column:taxpayer_id"`
 	RegimeCode       string     `gorm:"column:regime_code"`
 	CounterpartyType string     `gorm:"column:counterparty_type"`
+	CounterpartyKind *string    `gorm:"column:counterparty_kind"`
+	OperationKind    *string    `gorm:"column:operation_kind"`
+	ResidentialRent  bool       `gorm:"column:residential_rent"`
+	ViaPlatform      bool       `gorm:"column:via_platform"`
 	AmountCents      int64      `gorm:"column:amount_cents"`
 	IVARate          string     `gorm:"column:iva_rate"`
 	IVACents         int64      `gorm:"column:iva_cents"`
@@ -65,13 +69,14 @@ type incomeRow struct {
 	DeletedAt        *time.Time `gorm:"column:deleted_at"`
 	CreatedAt        time.Time  `gorm:"column:created_at"`
 	UpdatedAt        time.Time  `gorm:"column:updated_at"`
+	withholdingColumns
 }
 
-var incomeColumns = []string{
-	"id", "taxpayer_id", "regime_code", "counterparty_type", "amount_cents", "iva_rate", "iva_cents",
-	"isr_withheld_cents", "iva_withheld_cents", "invoiced_on", "collected_on", "booked_on",
-	"platform_activity", "cfdi_uuid", "description", "deleted_at", "created_at", "updated_at",
-}
+// incomeColumns is the select list of incomeRow.
+const incomeColumns = "id, taxpayer_id, regime_code, counterparty_type, counterparty_kind, operation_kind, " +
+	"residential_rent, via_platform, amount_cents, iva_rate, iva_cents, isr_withheld_cents, iva_withheld_cents, " +
+	"invoiced_on, collected_on, booked_on, platform_activity, cfdi_uuid, description, deleted_at, created_at, " +
+	"updated_at, " + withholdingSelect
 
 func (r incomeRow) toStored() (usecase.StoredIncome, error) {
 	invoiced, err := dateOf(r.InvoicedOn)
@@ -92,40 +97,25 @@ func (r incomeRow) toStored() (usecase.StoredIncome, error) {
 			return usecase.StoredIncome{}, fmt.Errorf("incomes infra: stored cfdi_uuid: %w", err)
 		}
 	}
+	withholding, err := r.record(r.ISRWithheldCents, r.IVAWithheldCents)
+	if err != nil {
+		return usecase.StoredIncome{}, err
+	}
 	return usecase.StoredIncome{
 		ID: r.ID, TaxpayerID: r.TaxpayerID,
 		Fields: usecase.Fields{
-			Regime: fiscal.RegimeCode(r.RegimeCode), Counterparty: domain.Counterparty(r.CounterpartyType),
-			Amount: money.Cents(r.AmountCents), IVARate: fiscal.IVARate(r.IVARate), IVA: money.Cents(r.IVACents),
-			Withheld:         fiscal.Withholdings{ISR: money.Cents(r.ISRWithheldCents), IVA: money.Cents(r.IVAWithheldCents)},
+			Regime: fiscal.RegimeCode(r.RegimeCode), Counterparty: fiscal.ReceptorKind(deref(r.CounterpartyKind)),
+			Operation: fiscal.OperationKind(deref(r.OperationKind)), ResidentialRent: r.ResidentialRent,
+			ViaPlatform: r.ViaPlatform, Amount: money.Cents(r.AmountCents), IVARate: fiscal.IVARate(r.IVARate),
+			IVA:              money.Cents(r.IVACents),
 			Dates:            domain.Dates{InvoicedOn: invoiced, CollectedOn: collected},
 			PlatformActivity: domain.PlatformActivity(deref(r.PlatformActivity)),
 			CFDIUUID:         folio, Description: deref(r.Description),
 		},
+		Withholding: withholding, CounterpartyType: domain.Counterparty(r.CounterpartyType),
 		BookedOn: booked, Deleted: r.DeletedAt != nil, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 	}, nil
 }
-
-// newIncomeRow is exactly the columns cc_app may INSERT.
-type newIncomeRow struct {
-	ID               string  `gorm:"column:id"`
-	UserID           string  `gorm:"column:user_id"`
-	TaxpayerID       string  `gorm:"column:taxpayer_id"`
-	RegimeCode       string  `gorm:"column:regime_code"`
-	CounterpartyType string  `gorm:"column:counterparty_type"`
-	AmountCents      int64   `gorm:"column:amount_cents"`
-	IVARate          string  `gorm:"column:iva_rate"`
-	IVACents         int64   `gorm:"column:iva_cents"`
-	ISRWithheldCents int64   `gorm:"column:isr_withheld_cents"`
-	IVAWithheldCents int64   `gorm:"column:iva_withheld_cents"`
-	InvoicedOn       *string `gorm:"column:invoiced_on"`
-	CollectedOn      *string `gorm:"column:collected_on"`
-	PlatformActivity *string `gorm:"column:platform_activity"`
-	CFDIUUID         *string `gorm:"column:cfdi_uuid"`
-	Description      *string `gorm:"column:description"`
-}
-
-func (newIncomeRow) TableName() string { return table }
 
 // LockID implements usecase.Store: a transaction-scoped advisory lock on
 // the id, released at commit or rollback.
@@ -166,15 +156,9 @@ func (Store) Insert(ctx context.Context, in usecase.NewIncome) error {
 	if err != nil {
 		return err
 	}
-	c := columnsOf(in.Fields)
-	row := newIncomeRow{
-		ID: in.ID, UserID: in.UserID, TaxpayerID: in.TaxpayerID,
-		RegimeCode: c.regime, CounterpartyType: c.counterparty, AmountCents: c.amount, IVARate: c.ivaRate,
-		IVACents: c.iva, ISRWithheldCents: c.isrWithheld, IVAWithheldCents: c.ivaWithheld,
-		InvoicedOn: c.invoicedOn, CollectedOn: c.collectedOn, PlatformActivity: c.activity,
-		CFDIUUID: c.cfdiUUID, Description: c.description,
-	}
-	if err := db.Create(&row).Error; err != nil {
+	row := columnsOf(in.Fields, in.Withholding)
+	row["id"], row["user_id"], row["taxpayer_id"] = in.ID, in.UserID, in.TaxpayerID
+	if err := db.Table(table).Create(row).Error; err != nil {
 		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok &&
 			pgErr.Code == sqlstateUniqueViolation && pgErr.ConstraintName == primaryKey {
 			return fmt.Errorf("%w (incomes infra: insert income: %w)", usecase.ErrIDTaken, err)
@@ -185,14 +169,42 @@ func (Store) Insert(ctx context.Context, in usecase.NewIncome) error {
 }
 
 // Update implements usecase.Store. The trigger re-derives booked_on.
-func (Store) Update(ctx context.Context, id string, f usecase.Fields) error {
-	c := columnsOf(f)
-	return update(ctx, "update income", id, map[string]any{
-		"regime_code": c.regime, "counterparty_type": c.counterparty, "amount_cents": c.amount,
-		"iva_rate": c.ivaRate, "iva_cents": c.iva, "isr_withheld_cents": c.isrWithheld,
-		"iva_withheld_cents": c.ivaWithheld, "invoiced_on": c.invoicedOn, "collected_on": c.collectedOn,
-		"platform_activity": c.activity, "cfdi_uuid": c.cfdiUUID, "description": c.description,
-	})
+func (Store) Update(ctx context.Context, id string, f usecase.Fields, w fiscal.WithholdingRecord) error {
+	return update(ctx, "update income", id, columnsOf(f, w))
+}
+
+// lastFactsRow is the facts LastFacts reads.
+type lastFactsRow struct {
+	CounterpartyKind string  `gorm:"column:counterparty_kind"`
+	OperationKind    *string `gorm:"column:operation_kind"`
+	ResidentialRent  bool    `gorm:"column:residential_rent"`
+	ViaPlatform      bool    `gorm:"column:via_platform"`
+}
+
+// LastFacts implements usecase.Store: the newest live income of the
+// regime with facts, over incomes_taxpayer_regime_idx (created_at is the
+// transaction's now(); the time-ordered id breaks a tie).
+func (Store) LastFacts(ctx context.Context, taxpayerID string, regime fiscal.RegimeCode) (usecase.LastFacts, bool, error) {
+	db, err := pgdb.Conn(ctx)
+	if err != nil {
+		return usecase.LastFacts{}, false, err
+	}
+	var rows []lastFactsRow
+	err = db.Table(table).Select("counterparty_kind, operation_kind, residential_rent, via_platform").
+		Where("taxpayer_id = ? AND regime_code = ? AND deleted_at IS NULL AND counterparty_kind IS NOT NULL",
+			taxpayerID, string(regime)).
+		Order("created_at DESC, id DESC").Limit(1).Find(&rows).Error
+	if err != nil {
+		return usecase.LastFacts{}, false, fmt.Errorf("incomes infra: last income facts: %w", err)
+	}
+	if len(rows) == 0 {
+		return usecase.LastFacts{}, false, nil
+	}
+	r := rows[0]
+	return usecase.LastFacts{
+		Counterparty: fiscal.ReceptorKind(r.CounterpartyKind), Operation: fiscal.OperationKind(deref(r.OperationKind)),
+		ResidentialRent: r.ResidentialRent, ViaPlatform: r.ViaPlatform,
+	}, true, nil
 }
 
 // SetDeleted implements usecase.Store: deleted_at is the database's now().
@@ -323,24 +335,6 @@ func (Store) IncomeBasis(ctx context.Context, person fiscal.PersonType, regime f
 // errNoCatalogRow reports a regime the catalog does not list for the person
 // type: the composite FK makes it unreachable for a held regime.
 var errNoCatalogRow = errors.New("no catalog row")
-
-// columns are Fields as the database spells them; nil is NULL.
-type columns struct {
-	regime, counterparty, ivaRate         string
-	amount, iva, isrWithheld, ivaWithheld int64
-	invoicedOn, collectedOn               *string
-	activity, cfdiUUID, description       *string
-}
-
-func columnsOf(f usecase.Fields) columns {
-	return columns{
-		regime: string(f.Regime), counterparty: string(f.Counterparty), ivaRate: string(f.IVARate),
-		amount: int64(f.Amount), iva: int64(f.IVA), isrWithheld: int64(f.Withheld.ISR), ivaWithheld: int64(f.Withheld.IVA),
-		invoicedOn: nullable(f.Dates.InvoicedOn.String()), collectedOn: nullable(f.Dates.CollectedOn.String()),
-		activity: nullable(string(f.PlatformActivity)), cfdiUUID: nullable(f.CFDIUUID.String()),
-		description: nullable(f.Description),
-	}
-}
 
 // nullable is nil for "" (NULL), else a pointer to s.
 func nullable(s string) *string {

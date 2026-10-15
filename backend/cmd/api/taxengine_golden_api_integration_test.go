@@ -50,8 +50,8 @@ func TestGolden_pm601IVAEnteredThroughTheAPI(t *testing.T) {
 	}
 	post(incomesPath(taxpayer), incomeJSON(t, "", map[string]any{
 		"regime_code": "601", "amount_cents": 200_000_000, "iva_cents": 32_000_000,
-		"isr_withheld_cents": 0, "iva_withheld_cents": 0,
-		"invoiced_on": "2026-06-10", "collected_on": "2026-06-20",
+		"operation_kind": "business_services",
+		"invoiced_on":    "2026-06-10", "collected_on": "2026-06-20",
 	}))
 	// Since WH-07 the server derives the fees' withholdings from the
 	// supplier (a 612 lawyer: ISR 10 %, 2/3 of the IVA) and credits only the

@@ -80,9 +80,3 @@ func (notBuilt) MarkHistoryViewed(context.Context, gen.MarkHistoryViewedRequestO
 func (notBuilt) ReceiveRevenueCatWebhook(context.Context, gen.ReceiveRevenueCatWebhookRequestObject) (gen.ReceiveRevenueCatWebhookResponseObject, error) {
 	return nil, errNotBuilt
 }
-
-// PreviewIncomeWithholdings is built by WH-06 (ADR-0008): the incomes handler derives the
-// withholding with the kernel decision table (WH-04) and deletes this stub.
-func (notBuilt) PreviewIncomeWithholdings(context.Context, gen.PreviewIncomeWithholdingsRequestObject) (gen.PreviewIncomeWithholdingsResponseObject, error) {
-	return nil, errNotBuilt
-}

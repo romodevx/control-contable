@@ -6,7 +6,9 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 )
 
-// Counterparty is who paid the income (contract CounterpartyType).
+// Counterparty is the deprecated contract CounterpartyType (ADR-0008): the
+// stored mirror of the new facts and the getIncomeDefaults parameter of the
+// deprecated suggestions, until WH-08 / WH-11 remove it.
 type Counterparty string
 
 // The contract's CounterpartyType enum.
@@ -20,6 +22,23 @@ const (
 // Valid reports a contract CounterpartyType.
 func (c Counterparty) Valid() bool {
 	return slices.Contains([]Counterparty{CounterpartyFisica, CounterpartyMoral, CounterpartyPublic, CounterpartyPlatform}, c)
+}
+
+// LegacyCounterparty is the deprecated counterparty_type a derived income
+// still stores (MODULE-withholdings §5.2 read backwards; the column goes in
+// WH-08): a platform sale is plataforma; a persona moral or a government
+// may withhold, so persona_moral; a persona física with activity is
+// persona_fisica; anyone else (the public, abroad) is publico_general.
+func LegacyCounterparty(kind fiscal.ReceptorKind, viaPlatform bool) Counterparty {
+	switch {
+	case viaPlatform:
+		return CounterpartyPlatform
+	case kind == fiscal.ReceptorPM || kind == fiscal.ReceptorGovFederal || kind == fiscal.ReceptorGovStateMunicipal:
+		return CounterpartyMoral
+	case kind == fiscal.ReceptorPFWithActivity:
+		return CounterpartyFisica
+	}
+	return CounterpartyPublic
 }
 
 // PlatformActivity is a 625 activity (contract PlatformActivity).

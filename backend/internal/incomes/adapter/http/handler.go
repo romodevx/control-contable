@@ -29,6 +29,7 @@ type IncomeManager interface {
 	Delete(ctx context.Context, userID, taxpayerID, incomeID string) error
 	Restore(ctx context.Context, userID, taxpayerID, incomeID string) (usecase.WriteResult, error)
 	Defaults(ctx context.Context, userID string, q usecase.DefaultsQuery) (usecase.Defaults, error)
+	Preview(ctx context.Context, userID string, q usecase.PreviewQuery) (usecase.Preview, error)
 }
 
 // Handler implements the module_incomes operations of
@@ -107,6 +108,25 @@ func (h *Handler) GetIncomeDefaults(ctx context.Context, req gen.GetIncomeDefaul
 	return gen.GetIncomeDefaults200JSONResponse{
 		Body: toDefaults(defaults),
 	}, nil
+}
+
+// PreviewIncomeWithholdings implements gen.StrictServerInterface
+// (GET /v1/taxpayers/{taxpayerId}/incomes/withholding-preview): what
+// createIncome would derive, nothing stored (ADR-0008 §4).
+func (h *Handler) PreviewIncomeWithholdings(ctx context.Context, req gen.PreviewIncomeWithholdingsRequestObject) (gen.PreviewIncomeWithholdingsResponseObject, error) {
+	userID, ok := caller(ctx)
+	if !ok {
+		return gen.PreviewIncomeWithholdings401JSONResponse{UnauthorizedJSONResponse: unauthorized(ctx)}, nil
+	}
+	preview, err := h.incomes.Preview(ctx, userID, toPreviewQuery(req))
+	if err != nil {
+		return nil, err
+	}
+	body, err := toPreview(preview)
+	if err != nil {
+		return nil, err
+	}
+	return gen.PreviewIncomeWithholdings200JSONResponse{Body: body}, nil
 }
 
 // GetIncome implements gen.StrictServerInterface

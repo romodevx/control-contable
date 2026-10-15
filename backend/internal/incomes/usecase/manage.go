@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"slices"
 	"strings"
 	"time"
 
+	"github.com/romodevx/control-contable/backend/internal/incomes/domain"
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 )
 
@@ -151,16 +153,52 @@ func (uc *Incomes) restore(ctx context.Context, userID string, stored StoredInco
 	if err := uc.deps.Store.SetDeleted(ctx, stored.ID, false); err != nil {
 		return WriteResult{}, err
 	}
-	warnings, err := uc.duplicateFolio(ctx, stored.TaxpayerID, stored.CFDIUUID, stored.ID)
+	derived, err := uc.rederive(ctx, userID, stored)
 	if err != nil {
 		return WriteResult{}, err
 	}
+	duplicate, err := uc.duplicateFolio(ctx, stored.TaxpayerID, stored.CFDIUUID, stored.ID)
+	if err != nil {
+		return WriteResult{}, err
+	}
+	warnings := slices.Concat(derived, duplicate)
 	restored, err := uc.deps.Store.Find(ctx, stored.ID, LockNone)
 	if err != nil {
 		return WriteResult{}, err
 	}
 	uc.audit(ctx, "income.restored", userID, stored.TaxpayerID, stored.ID)
 	return WriteResult{Income: toIncome(restored), Warnings: warnings}, nil
+}
+
+// rederive derives the restored income's withholding again with today's
+// table and the taxpayer's current 625 options, stores it, and returns its
+// warnings (ADR-0008: create, update and restore derive). A record stored
+// before WH-06 has no facts to derive from and keeps its amounts until the
+// WH-08 backfill.
+func (uc *Incomes) rederive(ctx context.Context, userID string, stored StoredIncome) ([]domain.Warning, error) {
+	if stored.Counterparty == "" {
+		return nil, nil
+	}
+	profile, err := uc.deps.Taxpayers.Profile(ctx, userID, stored.TaxpayerID)
+	if err != nil {
+		return nil, err
+	}
+	held, ok := findRegime(profile, stored.Regime)
+	if !ok {
+		return nil, regimeNotHeldError()
+	}
+	payee, err := uc.payee(ctx, profile.PersonType, held)
+	if err != nil {
+		return nil, err
+	}
+	derivation, err := domain.Derive(draftOf(stored.Fields), payee, stored.PlatformActivity, uc.deps.Withholdings)
+	if err != nil {
+		return nil, err
+	}
+	if err := uc.deps.Store.Update(ctx, stored.ID, stored.Fields, derivation.Record()); err != nil {
+		return nil, err
+	}
+	return domain.WarningsOf(derivation), nil
 }
 
 // findOwned locks the caller's income of the taxpayer, deleted or not; any

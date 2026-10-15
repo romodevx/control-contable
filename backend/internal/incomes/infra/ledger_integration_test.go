@@ -392,15 +392,15 @@ func TestLedgerReader_SumsWhatTheStoreWrote(t *testing.T) {
 	e := newEnv(t)
 	seedLedgerTaxpayers(t, e)
 	accrual := usecase.Fields{
-		Regime: "601", Counterparty: domain.CounterpartyMoral, Amount: 45_000_00, IVARate: fiscal.IVARate16,
-		IVA: 7_200_00, Dates: domain.Dates{InvoicedOn: day(t, "2026-08-28")},
+		Regime: "601", Counterparty: fiscal.ReceptorPM, Operation: fiscal.OperationBusinessServices, Amount: 45_000_00,
+		IVARate: fiscal.IVARate16, IVA: 7_200_00, Dates: domain.Dates{InvoicedOn: day(t, "2026-08-28")},
 	}
 	require.NoError(t, e.as(t, userA, func(ctx context.Context) error {
 		if err := e.store.Insert(ctx, usecase.NewIncome{ID: id(71), UserID: userA, TaxpayerID: ledgerMoral, Fields: accrual}); err != nil {
 			return err
 		}
 		accrual.Dates.CollectedOn = day(t, "2026-09-03")
-		return e.store.Update(ctx, id(71), accrual)
+		return e.store.Update(ctx, id(71), accrual, fiscal.WithholdingRecord{})
 	}))
 
 	got := readIncomeSums(t, e, userA, infra.LedgerQuery{TaxpayerID: ledgerMoral, FiscalYear: 2026, Through: time.September})

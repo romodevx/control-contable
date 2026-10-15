@@ -117,7 +117,7 @@ func TestCreate_Idempotency(t *testing.T) {
 func TestCreate_ReplayKeepsTheWarnings(t *testing.T) {
 	h := newHarness(t)
 	in := us1(t)
-	in.Withheld.ISR = 0 // differs from the 10 % suggestion
+	in.Counterparty = fiscal.ReceptorGovFederal // a ⚠️ rule: withholding_cpa_unverified
 	first, err := h.uc.Create(t.Context(), userA, create(incomeID, taxpayerA, in))
 	require.NoError(t, err)
 	require.NotEmpty(t, first.Warnings)
@@ -206,7 +206,6 @@ func TestCreate_TaxpayerAndRegime(t *testing.T) {
 			code: apperr.CodeBusinessRuleViolation, field: []string{"regime_code", "regime_not_active"}},
 		{name: "regime not held on the date", taxpayer: taxpayerA, edit: func(in *usecase.IncomeInput) {
 			in.Regime = "606"
-			in.Withheld.ISR = 1_000_00
 			in.Dates.CollectedOn = date(t, "2026-10-01")
 		}, code: apperr.CodeBusinessRuleViolation, field: []string{"regime_code", "regime_not_active"}},
 	}
@@ -241,8 +240,13 @@ func TestCreate_DomainRules(t *testing.T) {
 			apperr.CodeValidationFailed, "collected_on", fiscal.ErrOutOfRange},
 		{"IVA off the rate", func(in *usecase.IncomeInput) { in.IVA = 1_500_00 },
 			apperr.CodeBusinessRuleViolation, "iva_cents", fiscal.ErrIVAAmountMismatch},
-		{"withholding by a persona física", func(in *usecase.IncomeInput) { in.Counterparty = domain.CounterpartyFisica },
-			apperr.CodeBusinessRuleViolation, "isr_withheld_cents", fiscal.ErrWithholdingNotApplicable},
+		{"no counterparty kind (MODULE-withholdings §7)", func(in *usecase.IncomeInput) { in.Counterparty = "" },
+			apperr.CodeValidationFailed, "counterparty_kind", fiscal.ErrRequired},
+		{"via a platform on a 612", func(in *usecase.IncomeInput) { in.ViaPlatform = ptr(true) },
+			apperr.CodeValidationFailed, "via_platform", domain.ErrNotForRegime},
+		{"housing rent with IVA", func(in *usecase.IncomeInput) {
+			in.Operation, in.ResidentialRent = fiscal.OperationRentRealEstate, true
+		}, apperr.CodeBusinessRuleViolation, "iva_rate", domain.ErrResidentialRentExempt},
 		{"malformed CFDI UUID", func(in *usecase.IncomeInput) { in.CFDIUUID = "{" + cfdiLower + "}" },
 			apperr.CodeValidationFailed, "cfdi_uuid", fiscal.ErrInvalid},
 		{"description over 200 characters", func(in *usecase.IncomeInput) { in.Description = long },
@@ -310,7 +314,7 @@ func TestCreate_RateNotValidOnDate(t *testing.T) {
 	h := newHarness(t).at(time.Date(2027, time.February, 1, 12, 0, 0, 0, clock.Location()))
 	in := us1(t)
 	in.IVARate, in.IVA = fiscal.IVARate8, 800_00
-	in.Counterparty, in.Withheld = domain.CounterpartyPublic, fiscal.Withholdings{}
+	in.Counterparty = fiscal.ReceptorPFNoActivityOrPublic
 	in.Dates = domain.Dates{CollectedOn: date(t, "2027-01-05")}
 	_, err := h.uc.Create(t.Context(), userA, create(incomeID, taxpayerA, in))
 	requireApp(t, err, apperr.CodeBusinessRuleViolation, "iva_rate", "rate_not_valid_on_date")
@@ -323,7 +327,6 @@ func TestCreate_DuplicateCFDIUUIDWarns(t *testing.T) {
 	second := us1(t)
 	second.CFDIUUID = cfdiUpper
 	second.Amount, second.IVA = 5_000_00, 800_00
-	second.Withheld = fiscal.Withholdings{ISR: 500_00, IVA: 533_33}
 
 	got, err := h.uc.Create(t.Context(), userA, create("", taxpayerA, second))
 	require.NoError(t, err, "a partial collection is legit (OQ-9)")
@@ -363,13 +366,16 @@ func TestCreate_Normalization(t *testing.T) {
 func TestCreate_PlatformActivityDefaultsAndReplays(t *testing.T) {
 	h := newHarness(t)
 	in := usecase.IncomeInput{
-		Regime: "625", Counterparty: domain.CounterpartyPlatform, Amount: 15_000_00,
-		IVARate: fiscal.IVARate16, IVA: 2_400_00, Withheld: fiscal.Withholdings{ISR: 600_00, IVA: 1_200_00},
-		Dates: domain.Dates{CollectedOn: date(t, "2026-09-20")},
+		Regime: "625", Counterparty: fiscal.ReceptorPFNoActivityOrPublic, Amount: 15_000_00,
+		IVARate: fiscal.IVARate16, IVA: 2_400_00, Dates: domain.Dates{CollectedOn: date(t, "2026-09-20")},
 	}
 	got, err := h.uc.Create(t.Context(), userA, create(incomeID, platformA, in))
 	require.NoError(t, err)
 	assert.Equal(t, domain.ActivityLodging, got.Income.PlatformActivity, "the taxpayer's one activity")
+	assert.True(t, got.Income.ViaPlatform, "625 sells via a platform by default")
+	assert.Equal(t, fiscal.OperationOther, got.Income.Operation, "the hidden question's default")
+	assert.Equal(t, fiscal.Withholdings{ISR: 600_00, IVA: 1_200_00}, got.Income.Withholding.Withholdings, "PF-625-02: 4 %, half the IVA")
+	assert.Equal(t, domain.CounterpartyPlatform, got.Income.CounterpartyType, "the deprecated mirror")
 
 	again, err := h.uc.Create(t.Context(), userA, create(incomeID, platformA, in))
 	require.NoError(t, err)
@@ -379,7 +385,7 @@ func TestCreate_PlatformActivityDefaultsAndReplays(t *testing.T) {
 func TestCreate_AccrualPendingCollection(t *testing.T) {
 	h := newHarness(t)
 	in := usecase.IncomeInput{
-		Regime: "601", Counterparty: domain.CounterpartyMoral, Amount: 45_000_00,
+		Regime: "601", Counterparty: fiscal.ReceptorPM, Amount: 45_000_00,
 		IVARate: fiscal.IVARate16, IVA: 7_200_00, Dates: domain.Dates{InvoicedOn: date(t, "2026-09-05")},
 	}
 	got, err := h.uc.Create(t.Context(), userA, create(incomeID, pmA, in))
@@ -436,7 +442,8 @@ func TestCreate_ReplayAfterArchive(t *testing.T) {
 func TestNewIncomesDefaults(t *testing.T) {
 	h := newHarness(t)
 	uc := usecase.NewIncomes(usecase.Deps{
-		Tx: h.tx, Store: h.store, Taxpayers: h.taxpayers, Access: h.access, Rates: h.catalog, Clock: clock.NewFixed(today),
+		Tx: h.tx, Store: h.store, Taxpayers: h.taxpayers, Access: h.access, Rates: h.catalog,
+		Withholdings: h.catalog, Clock: clock.NewFixed(today),
 	})
 	got, err := uc.Create(t.Context(), userA, create("", taxpayerA, us1(t)))
 	require.NoError(t, err)
@@ -449,4 +456,103 @@ func TestCreate_NoUser(t *testing.T) {
 	h := newHarness(t)
 	_, err := h.uc.Create(context.Background(), "", create(incomeID, taxpayerA, us1(t)))
 	require.Error(t, err)
+}
+
+// US-W1 (WM WH-01), the owner's case end to end in the use case: a RESICO
+// persona física bills 100,000.00 of services to a persona moral.
+func TestCreate_DerivesAndStoresTheWithholding(t *testing.T) {
+	h := newHarness(t)
+	h.taxpayers.profiles[taxpayerA] = usecase.TaxpayerProfile{
+		PersonType: fiscal.PersonFisica, Regimes: []usecase.RegimeProfile{{Code: "626"}},
+	}
+	h.taxpayers.windows[taxpayerA+"|626"] = [2]string{"2026-01", ""}
+	in := usecase.IncomeInput{
+		Regime: "626", Counterparty: fiscal.ReceptorPM, Operation: fiscal.OperationProfessionalServices,
+		Amount: 100_000_00, IVARate: fiscal.IVARate16, IVA: 16_000_00,
+		Dates: domain.Dates{CollectedOn: date(t, "2026-07-10")},
+	}
+
+	got, err := h.uc.Create(t.Context(), userA, create(incomeID, taxpayerA, in))
+	require.NoError(t, err)
+
+	assert.Empty(t, got.Warnings)
+	assert.Equal(t, fiscal.WithholdingRecord{
+		Withholdings: fiscal.Withholdings{ISR: 1_250_00, IVA: 10_666_67},
+		ISRRate:      rate(t, "0.0125"), IVABasis: fiscal.IVABasisTwoThirds, Withholder: fiscal.WithholderReceptor,
+		RuleIDs: []fiscal.RuleID{fiscal.RuleISR4, fiscal.RuleIVA6}, TableVersion: fiscal.WithholdingTableVersion,
+	}, got.Income.Withholding)
+	net, err := got.Income.Withholding.Net(got.Income.Amount, got.Income.IVA)
+	require.NoError(t, err)
+	assert.EqualValues(t, 104_083_33, net)
+	assert.Equal(t, domain.CounterpartyMoral, got.Income.CounterpartyType)
+	assert.Equal(t, got.Income.Withholding, h.store.rows[incomeID].Withholding, "stored, not derived on read")
+}
+
+// An omitted operation_kind is the last one used in the regime, else the
+// regime default (MODULE-withholdings §2.1 Q2).
+func TestCreate_OperationDefaultsToTheLastUsedInTheRegime(t *testing.T) {
+	h := newHarness(t)
+	first := us1(t)
+	first.Operation = ""
+	got, err := h.uc.Create(t.Context(), userA, create(incomeID, taxpayerA, first))
+	require.NoError(t, err)
+	assert.Equal(t, fiscal.OperationProfessionalServices, got.Income.Operation, "612's default")
+
+	rent := us1(t)
+	rent.Operation, rent.CFDIUUID = fiscal.OperationRentMovable, ""
+	_, err = h.uc.Create(t.Context(), userA, create("0199d4a3-0000-7000-8000-0000000000d1", taxpayerA, rent))
+	require.NoError(t, err)
+
+	next := us1(t)
+	next.Operation, next.CFDIUUID = "", ""
+	got, err = h.uc.Create(t.Context(), userA, create("0199d4a3-0000-7000-8000-0000000000d2", taxpayerA, next))
+	require.NoError(t, err)
+	assert.Equal(t, fiscal.OperationRentMovable, got.Income.Operation, "the last one used")
+
+	again, err := h.uc.Create(t.Context(), userA, create("0199d4a3-0000-7000-8000-0000000000d2", taxpayerA, next))
+	require.NoError(t, err)
+	assert.False(t, again.Created, "the omitted default replays the same payload")
+}
+
+// The idempotent compare includes the new facts: another answer is another
+// income.
+func TestCreate_ReplayWithOtherFactsIsAConflict(t *testing.T) {
+	tests := map[string]func(*usecase.IncomeInput){
+		"counterparty kind": func(in *usecase.IncomeInput) { in.Counterparty = fiscal.ReceptorGovFederal },
+		"operation kind":    func(in *usecase.IncomeInput) { in.Operation = fiscal.OperationRentMovable },
+		"housing rent":      func(in *usecase.IncomeInput) { in.ResidentialRent = true },
+		"via a platform":    func(in *usecase.IncomeInput) { in.ViaPlatform = ptr(true) },
+	}
+	for name, edit := range tests {
+		t.Run(name, func(t *testing.T) {
+			h := newHarness(t)
+			_, err := h.uc.Create(t.Context(), userA, create(incomeID, taxpayerA, us1(t)))
+			require.NoError(t, err)
+			retry := us1(t)
+			edit(&retry)
+			_, err = h.uc.Create(t.Context(), userA, create(incomeID, taxpayerA, retry))
+			requireApp(t, err, apperr.CodeConflict, "id", "id_reused")
+		})
+	}
+	t.Run("an explicit default is the same payload", func(t *testing.T) {
+		h := newHarness(t)
+		_, err := h.uc.Create(t.Context(), userA, create(incomeID, taxpayerA, us1(t)))
+		require.NoError(t, err)
+		retry := us1(t)
+		retry.ViaPlatform = ptr(false)
+		got, err := h.uc.Create(t.Context(), userA, create(incomeID, taxpayerA, retry))
+		require.NoError(t, err)
+		assert.False(t, got.Created)
+	})
+}
+
+func TestCreate_StoreFailureReadingTheLastFacts(t *testing.T) {
+	h := newHarness(t)
+	h.store.lastFactsErr = errors.New("connection reset")
+	in := us1(t)
+	in.Operation = ""
+	_, err := h.uc.Create(t.Context(), userA, create(incomeID, taxpayerA, in))
+	require.Error(t, err)
+	_, isApp := errors.AsType[*apperr.Error](err)
+	assert.False(t, isApp, "an infrastructure failure is a 500")
 }

@@ -19,7 +19,8 @@ func TestModuleWarningCodesAreInTheContract(t *testing.T) {
 	codes := []string{
 		taxpayers.WarningRFCCheckDigitMismatch,
 		taxpayers.WarningRegimeNeedsCPAReview,
-		string(incomes.WarningWithholdingDiffersFromRate),
+		string(incomes.WarningWithholdingCPAUnverified),
+		string(incomes.WarningForeignCounterpartyNotSupported),
 		string(incomes.WarningDuplicateCFDIUUID),
 		string(incomes.WarningProvisionalParameters),
 		string(expenses.WarningCashOverThreshold),

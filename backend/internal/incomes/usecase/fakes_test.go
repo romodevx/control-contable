@@ -201,7 +201,9 @@ func newFakeCatalog(t testing.TB) *fakeCatalog {
 		rates: map[fiscal.RateKey]money.Rate{
 			fiscal.KeyIVAGeneral: rate(t, "0.16"), fiscal.KeyIVAZero: rate(t, "0"), fiscal.KeyIVABorder: rate(t, "0.08"),
 			fiscal.KeyISRWithholdingFees: rate(t, "0.10"), fiscal.KeyISRWithholdingRent: rate(t, "0.10"),
-			domain.KeyISRPlatformLodging: rate(t, "0.04"),
+			domain.KeyISRPlatformLodging: rate(t, "0.04"), fiscal.KeyISRWithholdingRESICO: rate(t, "0.0125"),
+			fiscal.KeyIVAWithholdingFreight: rate(t, "0.04"), fiscal.KeyISRPlatformNoRFC: rate(t, "0.20"),
+			fiscal.KeyISRPlatformPersonaMoral: rate(t, "0.025"),
 		},
 		provisional: map[int]bool{2026: false, 2027: true},
 	}
@@ -216,6 +218,14 @@ func (c *fakeCatalog) Rate(key fiscal.RateKey, on fiscal.Date) (money.Rate, bool
 	}
 	r, ok := c.rates[key]
 	return r, ok
+}
+
+// federalThreshold is RMF 4.1.3's 2,000.00 (fiscal.WithholdingCatalog).
+const federalThreshold money.Cents = 2_000_00
+
+func (c *fakeCatalog) Amount(key fiscal.AmountKey, on fiscal.Date) (money.Cents, bool) {
+	_, covered := c.provisional[on.Year()]
+	return federalThreshold, covered && key == fiscal.KeyIVAFederalWithholdingThreshold
 }
 
 var errNotCovered = errors.New("no parameter set covers the date")
@@ -236,10 +246,12 @@ type fakeStore struct {
 	foreign map[string]bool // ids another user holds (PK collision, invisible)
 	// lockedIDs are the client ids LockID serialized, in order.
 	lockedIDs []string
-	inserts   int
-	updates   int
-	deletes   int
-	lastList  struct {
+	// order is the insertion order (the newest income is last).
+	order    []string
+	inserts  int
+	updates  int
+	deletes  int
+	lastList struct {
 		filter usecase.ListFilter
 		after  usecase.Keyset
 		limit  int
@@ -247,7 +259,9 @@ type fakeStore struct {
 	// onInsert, when set, runs before the insert and may return its error.
 	onInsert func(s *fakeStore, in usecase.NewIncome) error
 	fail     error // returned by Find when set
-	clock    time.Time
+	// lastFactsErr is returned by LastFacts when set.
+	lastFactsErr error
+	clock        time.Time
 }
 
 func newFakeStore() *fakeStore {
@@ -286,9 +300,11 @@ func (s *fakeStore) Insert(_ context.Context, in usecase.NewIncome) error {
 		return usecase.ErrIDTaken
 	}
 	s.inserts++
+	s.order = append(s.order, in.ID)
 	s.rows[in.ID] = usecase.StoredIncome{
-		ID: in.ID, TaxpayerID: in.TaxpayerID, Fields: in.Fields,
-		BookedOn: bookedOn(in.Fields), CreatedAt: s.clock, UpdatedAt: s.clock,
+		ID: in.ID, TaxpayerID: in.TaxpayerID, Fields: in.Fields, Withholding: in.Withholding,
+		CounterpartyType: domain.LegacyCounterparty(in.Counterparty, in.ViaPlatform),
+		BookedOn:         bookedOn(in.Fields), CreatedAt: s.clock, UpdatedAt: s.clock,
 	}
 	return nil
 }
@@ -301,7 +317,7 @@ func bookedOn(f usecase.Fields) fiscal.Date {
 	return f.Dates.CollectedOn
 }
 
-func (s *fakeStore) Update(_ context.Context, id string, f usecase.Fields) error {
+func (s *fakeStore) Update(_ context.Context, id string, f usecase.Fields, w fiscal.WithholdingRecord) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	row, ok := s.rows[id]
@@ -309,7 +325,8 @@ func (s *fakeStore) Update(_ context.Context, id string, f usecase.Fields) error
 		return usecase.ErrIncomeNotFound
 	}
 	s.updates++
-	row.Fields, row.BookedOn, row.UpdatedAt = f, bookedOn(f), s.clock.Add(time.Minute)
+	row.Fields, row.Withholding, row.BookedOn, row.UpdatedAt = f, w, bookedOn(f), s.clock.Add(time.Minute)
+	row.CounterpartyType = domain.LegacyCounterparty(f.Counterparty, f.ViaPlatform)
 	s.rows[id] = row
 	return nil
 }
@@ -379,11 +396,29 @@ func (s *fakeStore) Totals(_ context.Context, f usecase.ListFilter) (usecase.Per
 			t.Count++
 			t.Amount += row.Amount
 			t.IVA += row.IVA
-			t.ISRWithheld += row.Withheld.ISR
-			t.IVAWithheld += row.Withheld.IVA
+			t.ISRWithheld += row.Withholding.ISR
+			t.IVAWithheld += row.Withholding.IVA
 		}
 	}
 	return t, nil
+}
+
+func (s *fakeStore) LastFacts(_ context.Context, taxpayerID string, regime fiscal.RegimeCode) (usecase.LastFacts, bool, error) {
+	if s.lastFactsErr != nil {
+		return usecase.LastFacts{}, false, s.lastFactsErr
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, id := range slices.Backward(s.order) {
+		row := s.rows[id]
+		if !row.Deleted && row.TaxpayerID == taxpayerID && row.Regime == regime && row.Counterparty != "" {
+			return usecase.LastFacts{
+				Counterparty: row.Counterparty, Operation: row.Operation,
+				ResidentialRent: row.ResidentialRent, ViaPlatform: row.ViaPlatform,
+			}, true, nil
+		}
+	}
+	return usecase.LastFacts{}, false, nil
 }
 
 func (s *fakeStore) IncomeBasis(_ context.Context, p fiscal.PersonType, regime fiscal.RegimeCode) (domain.IncomeBasis, error) {
@@ -423,20 +458,20 @@ func (h *harness) at(now time.Time) *harness {
 func (h *harness) wire() *harness {
 	h.uc = usecase.NewIncomes(usecase.Deps{
 		Tx: h.tx, Store: h.store, Taxpayers: h.taxpayers, Access: h.access, Rates: h.catalog,
-		Clock:  clock.NewFixed(h.now),
+		Withholdings: h.catalog, Clock: clock.NewFixed(h.now),
 		NewID:  func() (string, error) { return generated, nil },
 		Logger: slog.New(slog.NewJSONHandler(h.logs, &slog.HandlerOptions{Level: slog.LevelDebug})),
 	})
 	return h
 }
 
-// us1 is US-I1: 10,000.00 + IVA 1,600.00 billed by a 612 física to a persona
-// moral, withholdings as suggested, collected on 2026-09-12.
+// us1 is US-I1: 10,000.00 + IVA 1,600.00 of professional services billed by
+// a 612 física to a persona moral, collected on 2026-09-12; the server
+// derives ISR 1,000.00 and IVA 1,066.67 (ISR-5, IVA-6).
 func us1(t testing.TB) usecase.IncomeInput {
 	return usecase.IncomeInput{
-		Regime: "612", Counterparty: domain.CounterpartyMoral,
+		Regime: "612", Counterparty: fiscal.ReceptorPM, Operation: fiscal.OperationProfessionalServices,
 		Amount: 10_000_00, IVARate: fiscal.IVARate16, IVA: 1_600_00,
-		Withheld: fiscal.Withholdings{ISR: 1_000_00, IVA: 1_066_67},
 		Dates:    domain.Dates{InvoicedOn: date(t, "2026-09-05"), CollectedOn: date(t, "2026-09-12")},
 		CFDIUUID: cfdiLower, Description: "Diseño de logotipo",
 	}

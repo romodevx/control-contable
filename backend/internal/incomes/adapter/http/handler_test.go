@@ -44,6 +44,8 @@ type fakeIncomes struct {
 	income                       usecase.Income
 	page                         usecase.Page
 	prefill                      usecase.Defaults
+	previewQuery                 usecase.PreviewQuery
+	preview                      usecase.Preview
 	deleted                      bool
 	err                          error
 }
@@ -83,6 +85,11 @@ func (f *fakeIncomes) Defaults(_ context.Context, userID string, q usecase.Defau
 	return f.prefill, f.err
 }
 
+func (f *fakeIncomes) Preview(_ context.Context, userID string, q usecase.PreviewQuery) (usecase.Preview, error) {
+	f.userID, f.previewQuery = userID, q
+	return f.preview, f.err
+}
+
 func authed(t *testing.T) context.Context {
 	t.Helper()
 	return principal.With(t.Context(), principal.Principal{UserID: callerID})
@@ -116,12 +123,18 @@ func sample(t *testing.T) usecase.Income {
 	return usecase.Income{
 		ID: incomeID, TaxpayerID: taxpayerID,
 		Fields: usecase.Fields{
-			Regime: "612", Counterparty: domain.CounterpartyMoral, Amount: 10_000_00,
-			IVARate: fiscal.IVARate16, IVA: 1_600_00, Withheld: fiscal.Withholdings{ISR: 1_000_00, IVA: 1_066_67},
+			Regime: "612", Counterparty: fiscal.ReceptorPM, Operation: fiscal.OperationProfessionalServices,
+			Amount: 10_000_00, IVARate: fiscal.IVARate16, IVA: 1_600_00,
 			Dates:    domain.Dates{InvoicedOn: day(t, "2026-09-05"), CollectedOn: day(t, "2026-09-10")},
 			CFDIUUID: folioValue, Description: "Diseño de logotipo",
 		},
-		BookedOn: day(t, "2026-09-10"), CreatedAt: stamp, UpdatedAt: stamp.Add(time.Hour),
+		Withholding: fiscal.WithholdingRecord{
+			Withholdings: fiscal.Withholdings{ISR: 1_000_00, IVA: 1_066_67}, ISRRate: rate(t, "0.10"),
+			IVABasis: fiscal.IVABasisTwoThirds, Withholder: fiscal.WithholderReceptor,
+			RuleIDs: []fiscal.RuleID{fiscal.RuleISR5, fiscal.RuleIVA6}, TableVersion: "2026.1",
+		},
+		CounterpartyType: domain.CounterpartyMoral,
+		BookedOn:         day(t, "2026-09-10"), CreatedAt: stamp, UpdatedAt: stamp.Add(time.Hour),
 	}
 }
 
@@ -141,7 +154,7 @@ func TestCreateIncome_mapsTheRequestAndAnswers201(t *testing.T) {
 	}}
 	h := incomeshttp.NewHandler(fake)
 	id := uid(incomeID)
-	isr, iva := int64(1_000_00), int64(1_066_67)
+	kind, operation, via := gen.CounterpartyKind("pm"), gen.OperationKind("professional_services"), false
 	folioLower, description := "6f3b2c1d-8a4e-4b7f-9c2d-1e5a7b9c3d4f", "  Diseño  "
 	invoiced, collected := genDate(2026, time.September, 5), genDate(2026, time.September, 10)
 
@@ -149,7 +162,8 @@ func TestCreateIncome_mapsTheRequestAndAnswers201(t *testing.T) {
 		TaxpayerId: uid(taxpayerID),
 		Body: &gen.IncomeCreate{
 			Id: &id, RegimeCode: "612", CounterpartyType: "persona_moral", AmountCents: 10_000_00,
-			IvaRate: "rate_16", IvaCents: 1_600_00, IsrWithheldCents: &isr, IvaWithheldCents: &iva,
+			CounterpartyKind: &kind, OperationKind: &operation, ViaPlatform: &via,
+			IvaRate: "rate_16", IvaCents: 1_600_00,
 			InvoicedOn: &invoiced, CollectedOn: &collected, CfdiUuid: &folioLower, Description: &description,
 		},
 	})
@@ -159,8 +173,8 @@ func TestCreateIncome_mapsTheRequestAndAnswers201(t *testing.T) {
 	assert.Equal(t, usecase.CreateInput{
 		ID: incomeID, TaxpayerID: taxpayerID,
 		Income: usecase.IncomeInput{
-			Regime: "612", Counterparty: domain.CounterpartyMoral, Amount: 10_000_00, IVARate: fiscal.IVARate16,
-			IVA: 1_600_00, Withheld: fiscal.Withholdings{ISR: 1_000_00, IVA: 1_066_67},
+			Regime: "612", Counterparty: fiscal.ReceptorPM, Operation: fiscal.OperationProfessionalServices,
+			ViaPlatform: &via, Amount: 10_000_00, IVARate: fiscal.IVARate16, IVA: 1_600_00,
 			Dates:    domain.Dates{InvoicedOn: day(t, "2026-09-05"), CollectedOn: day(t, "2026-09-10")},
 			CFDIUUID: folioLower, Description: description,
 		},
@@ -170,6 +184,18 @@ func TestCreateIncome_mapsTheRequestAndAnswers201(t *testing.T) {
 	body := encode(t, created.Body)
 	assert.Equal(t, map[string]any{
 		"id": incomeID, "taxpayer_id": taxpayerID, "regime_code": "612", "counterparty_type": "persona_moral",
+		"counterparty_kind": "pm", "operation_kind": "professional_services", "residential_rent": false,
+		"via_platform": false,
+		"withholding": map[string]any{
+			"isr_cents": float64(100_000), "iva_cents": float64(106_667), "isr_rate": "0.1",
+			"iva_basis": "two_thirds_of_iva", "withholder": "counterparty", "net_cents": float64(953_333),
+			"remit_due_on": nil, "rule_ids": []any{"ISR-5", "IVA-6"},
+			"explanations": []any{
+				map[string]any{"rule_id": "ISR-5", "text": "La empresa te retiene 10 % de ISR por honorarios (LISR art. 106)."},
+				map[string]any{"rule_id": "IVA-6", "text": "Y 2/3 del IVA por servicios de persona física (LIVA art. 1-A, RLIVA art. 3)."},
+			},
+			"table_version": "2026.1", "cpa_unverified": false,
+		},
 		"amount_cents": float64(1_000_000), "iva_rate": "rate_16", "iva_cents": float64(160_000),
 		"isr_withheld_cents": float64(100_000), "iva_withheld_cents": float64(106_667),
 		"invoiced_on": "2026-09-05", "collected_on": "2026-09-10", "pending_collection": false,
@@ -197,8 +223,8 @@ func TestCreateIncome_idempotentRetryAnswers200AndOptionalsAbsent(t *testing.T) 
 
 	require.NoError(t, err)
 	assert.Equal(t, usecase.CreateInput{TaxpayerID: taxpayerID, Income: usecase.IncomeInput{
-		Regime: "625", Counterparty: domain.CounterpartyPlatform, Amount: 100, IVARate: fiscal.IVAExempt,
-	}}, fake.create, "no id: the server generates one; absent fields are zero")
+		Regime: "625", Amount: 100, IVARate: fiscal.IVAExempt,
+	}}, fake.create, "no id: the server generates one; absent fields are zero; counterparty_type is ignored")
 	retried, ok := resp.(gen.CreateIncome200JSONResponse)
 	require.True(t, ok, "%T", resp)
 	body := encode(t, retried.Body)
@@ -285,14 +311,16 @@ func TestHandler_passesUseCaseErrorsThrough(t *testing.T) {
 func TestUpdateIncome_mergePatch(t *testing.T) {
 	fake := &fakeIncomes{result: usecase.WriteResult{Income: sample(t)}}
 	h := incomeshttp.NewHandler(fake)
-	regime, counterparty, rateValue := "601", gen.CounterpartyType("persona_moral"), gen.IvaRate("rate_8") //nolint:staticcheck // SA1019: deprecated field tested until WH-06 (ADR-0008)
-	amount, iva, isr, ivaWithheld := int64(2), int64(3), int64(4), int64(5)
+	regime, counterparty, rateValue := "601", gen.CounterpartyType("persona_moral"), gen.IvaRate("rate_8") //nolint:staticcheck // SA1019: the ignored deprecated member, tested until WH-11 (ADR-0008)
+	kind, operation, residential, via := gen.CounterpartyKind("gov_federal"), gen.OperationKind("scrap"), true, false
+	amount, iva := int64(2), int64(3)
 
 	resp, err := h.UpdateIncome(authed(t), gen.UpdateIncomeRequestObject{
 		TaxpayerId: uid(taxpayerID), IncomeId: uid(incomeID),
 		Body: &gen.IncomeUpdate{
 			RegimeCode: &regime, CounterpartyType: &counterparty, AmountCents: &amount, IvaRate: &rateValue,
-			IvaCents: &iva, IsrWithheldCents: &isr, IvaWithheldCents: &ivaWithheld,
+			CounterpartyKind: &kind, OperationKind: &operation, ResidentialRent: &residential, ViaPlatform: &via,
+			IvaCents:         &iva,
 			InvoicedOn:       nullable.NewNullableWithValue(genDate(2026, time.September, 1)),
 			CollectedOn:      nullable.NewNullNullable[openapi_types.Date](),
 			PlatformActivity: nullable.NewNullableWithValue(gen.PlatformActivity("lodging")),
@@ -307,12 +335,13 @@ func TestUpdateIncome_mergePatch(t *testing.T) {
 	assert.Equal(t, incomeID, fake.incomeID)
 	p := fake.patch
 	assert.Equal(t, fiscal.RegimeCode("601"), *p.Regime)
-	assert.Equal(t, domain.CounterpartyMoral, *p.Counterparty)
+	assert.Equal(t, fiscal.ReceptorGovFederal, *p.Counterparty)
+	assert.Equal(t, fiscal.OperationScrap, *p.Operation)
+	assert.True(t, *p.ResidentialRent)
+	assert.False(t, *p.ViaPlatform)
 	assert.Equal(t, money.Cents(2), *p.Amount)
 	assert.Equal(t, fiscal.IVARate8, *p.IVARate)
 	assert.Equal(t, money.Cents(3), *p.IVA)
-	assert.Equal(t, money.Cents(4), *p.ISRWithheld)
-	assert.Equal(t, money.Cents(5), *p.IVAWithheld)
 	assert.Equal(t, day(t, "2026-09-01"), *p.InvoicedOn)
 	assert.True(t, p.CollectedOn.IsZero(), "null clears the collection date")
 	assert.Equal(t, domain.ActivityLodging, *p.PlatformActivity)
@@ -414,6 +443,7 @@ func TestGetIncomeDefaults(t *testing.T) {
 		ISR:              usecase.WithholdingDefault{Allowed: true, Suggested: usecase.SuggestedRate{Rate: rate(t, "0.04"), Known: true}},
 		IVA:              usecase.WithholdingDefault{Allowed: true, Suggested: usecase.SuggestedRate{Rate: rate(t, "0.666667"), Known: true}},
 		PlatformActivity: domain.ActivityLodging,
+		LastUsed:         usecase.LastFacts{Operation: fiscal.OperationOther, ViaPlatform: true},
 	}}
 	h := incomeshttp.NewHandler(fake)
 	on, activity := genDate(2026, time.September, 12), gen.PlatformActivity("lodging")
@@ -436,7 +466,10 @@ func TestGetIncomeDefaults(t *testing.T) {
 		"isr_withholding_allowed": true, "isr_withholding_rate": "0.04",
 		"iva_withholding_allowed": true, "iva_withholding_rate": "0.666667",
 		"platform_activity": "lodging",
-	}, encode(t, got.Body))
+		"last_used": map[string]any{
+			"counterparty_kind": nil, "operation_kind": "other", "residential_rent": false, "via_platform": true,
+		},
+	}, encode(t, got.Body), "no counterparty preselected the first time (OQ-W2)")
 }
 
 func TestGetIncomeDefaults_noSuggestionsAndToday(t *testing.T) {
@@ -461,9 +494,21 @@ func TestGetIncomeDefaults_noSuggestionsAndToday(t *testing.T) {
 	assert.Nil(t, body["platform_activity"])
 }
 
+func TestGetIncomeDefaults_lastUsedCounterparty(t *testing.T) {
+	h := incomeshttp.NewHandler(&fakeIncomes{prefill: usecase.Defaults{
+		LastUsed: usecase.LastFacts{Counterparty: fiscal.ReceptorPM, Operation: fiscal.OperationRentRealEstate, ResidentialRent: true},
+	}})
+	resp, err := h.GetIncomeDefaults(authed(t), gen.GetIncomeDefaultsRequestObject{TaxpayerId: uid(taxpayerID)})
+	require.NoError(t, err)
+	assert.Equal(t, map[string]any{
+		"counterparty_kind": "pm", "operation_kind": "rent_real_estate", "residential_rent": true, "via_platform": false,
+	}, encode(t, resp.(gen.GetIncomeDefaults200JSONResponse).Body)["last_used"])
+}
+
 func TestWarnings_carryTheirMessages(t *testing.T) {
 	codes := []domain.WarningCode{
-		domain.WarningDuplicateCFDIUUID, domain.WarningWithholdingDiffersFromRate, domain.WarningProvisionalParameters,
+		domain.WarningDuplicateCFDIUUID, domain.WarningProvisionalParameters,
+		domain.WarningWithholdingCPAUnverified, domain.WarningForeignCounterpartyNotSupported,
 	}
 	warnings := make([]domain.Warning, 0, len(codes))
 	for _, c := range codes {
@@ -537,4 +582,112 @@ func TestUnpresentableIncomeIsAServerFault(t *testing.T) {
 			assert.False(t, isClient)
 		})
 	}
+}
+
+// US-W8 / ADR-0008 amendment: a typed amount, whatever its value, is the
+// 400 a schema without the member gives; nothing reaches the use case.
+func TestWrites_refuseTypedWithholdings(t *testing.T) {
+	zero, some := int64(0), int64(5)
+	fake := &fakeIncomes{}
+	h := incomeshttp.NewHandler(fake)
+
+	_, err := h.CreateIncome(authed(t), gen.CreateIncomeRequestObject{
+		TaxpayerId: uid(taxpayerID), Body: &gen.IncomeCreate{IsrWithheldCents: &zero, IvaWithheldCents: &some},
+	})
+	app, ok := errors.AsType[*apperr.Error](err)
+	require.True(t, ok, "%v", err)
+	assert.Equal(t, apperr.CodeValidationFailed, app.Code)
+	require.Len(t, app.Fields, 2)
+	assert.Equal(t, "isr_withheld_cents", app.Fields[0].Field)
+	assert.Equal(t, "additionalProperties", app.Fields[0].Code)
+	assert.Equal(t, "iva_withheld_cents", app.Fields[1].Field)
+
+	_, err = h.UpdateIncome(authed(t), gen.UpdateIncomeRequestObject{
+		TaxpayerId: uid(taxpayerID), IncomeId: uid(incomeID), Body: &gen.IncomeUpdate{IvaWithheldCents: &zero},
+	})
+	app, ok = errors.AsType[*apperr.Error](err)
+	require.True(t, ok, "%v", err)
+	assert.Equal(t, []apperr.FieldError{{Field: "iva_withheld_cents", Code: "additionalProperties",
+		Message: "Withholdings are derived by the server; do not send this field."}}, app.Fields)
+	assert.Empty(t, fake.userID, "no use case ran")
+}
+
+// An income stored before WH-06 (until the WH-08 backfill) has no facts and
+// no withholding: both are absent, the mirrors stay.
+func TestGetIncome_legacyRecord(t *testing.T) {
+	legacy := sample(t)
+	legacy.Counterparty, legacy.Operation = "", ""
+	legacy.Withholding = fiscal.WithholdingRecord{Withholdings: fiscal.Withholdings{ISR: 1, IVA: 2}}
+	h := incomeshttp.NewHandler(&fakeIncomes{income: legacy})
+
+	resp, err := h.GetIncome(authed(t), gen.GetIncomeRequestObject{TaxpayerId: uid(taxpayerID), IncomeId: uid(incomeID)})
+
+	require.NoError(t, err)
+	body := encode(t, resp.(gen.GetIncome200JSONResponse).Body)
+	assert.NotContains(t, body, "withholding")
+	assert.NotContains(t, body, "counterparty_kind")
+	assert.NotContains(t, body, "operation_kind")
+	assert.Equal(t, float64(1), body["isr_withheld_cents"])
+	assert.Equal(t, "persona_moral", body["counterparty_type"])
+}
+
+func TestPreviewIncomeWithholdings(t *testing.T) {
+	record := sample(t).Withholding
+	record.CPAUnverified = true
+	fake := &fakeIncomes{preview: usecase.Preview{
+		Withholding: record, Amount: 10_000_00, IVA: 1_600_00, Counterparty: fiscal.ReceptorGovFederal,
+		Warnings: []domain.Warning{{Code: domain.WarningWithholdingCPAUnverified, Field: domain.FieldWithholding}},
+	}}
+	h := incomeshttp.NewHandler(fake)
+	on, operation, residential, via, activity := genDate(2026, time.September, 12), gen.OperationKind("rent_movable"),
+		true, false, gen.PlatformActivity("lodging")
+
+	resp, err := h.PreviewIncomeWithholdings(authed(t), gen.PreviewIncomeWithholdingsRequestObject{
+		TaxpayerId: uid(taxpayerID),
+		Params: gen.PreviewIncomeWithholdingsParams{
+			Regime: "612", On: &on, AmountCents: 10_000_00, IvaRate: "rate_16", IvaCents: 1_600_00,
+			CounterpartyKind: "gov_federal", OperationKind: &operation, ResidentialRent: &residential,
+			ViaPlatform: &via, PlatformActivity: &activity,
+		},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, usecase.PreviewQuery{
+		TaxpayerID: taxpayerID, Regime: "612", On: "2026-09-12", Amount: 10_000_00, IVARate: fiscal.IVARate16,
+		IVA: 1_600_00, Counterparty: fiscal.ReceptorGovFederal, Operation: fiscal.OperationRentMovable,
+		ResidentialRent: true, ViaPlatform: &via, PlatformActivity: domain.ActivityLodging,
+	}, fake.previewQuery)
+	body := encode(t, resp.(gen.PreviewIncomeWithholdings200JSONResponse).Body)
+	w := body["withholding"].(map[string]any)
+	assert.Equal(t, "El gobierno federal te retiene 10 % de ISR por honorarios (LISR art. 106).",
+		w["explanations"].([]any)[0].(map[string]any)["text"], "the payer named from the counterparty")
+	assert.Equal(t, true, w["cpa_unverified"])
+	assert.Equal(t, []any{map[string]any{
+		"code": "withholding_cpa_unverified", "field": "withholding",
+		"message": "Esta retención aún no la confirma un contador. Úsala como aproximado.",
+	}}, body["warnings"])
+
+	_, err = h.PreviewIncomeWithholdings(authed(t), gen.PreviewIncomeWithholdingsRequestObject{
+		TaxpayerId: uid(taxpayerID), Params: gen.PreviewIncomeWithholdingsParams{Regime: "612", CounterpartyKind: "pm"},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, usecase.PreviewQuery{TaxpayerID: taxpayerID, Regime: "612", Counterparty: fiscal.ReceptorPM}, fake.previewQuery)
+}
+
+func TestPreviewIncomeWithholdings_refusals(t *testing.T) {
+	refusal := apperr.New(apperr.CodeBusinessRuleViolation, "No.")
+	h := incomeshttp.NewHandler(&fakeIncomes{err: refusal})
+	_, err := h.PreviewIncomeWithholdings(authed(t), gen.PreviewIncomeWithholdingsRequestObject{TaxpayerId: uid(taxpayerID)})
+	assert.ErrorIs(t, err, refusal)
+
+	resp, err := h.PreviewIncomeWithholdings(t.Context(), gen.PreviewIncomeWithholdingsRequestObject{TaxpayerId: uid(taxpayerID)})
+	require.NoError(t, err)
+	_, ok := resp.(gen.PreviewIncomeWithholdings401JSONResponse)
+	assert.True(t, ok, "%T", resp)
+
+	underived := incomeshttp.NewHandler(&fakeIncomes{})
+	_, err = underived.PreviewIncomeWithholdings(authed(t), gen.PreviewIncomeWithholdingsRequestObject{TaxpayerId: uid(taxpayerID)})
+	require.Error(t, err, "a preview always derives: anything else is a server fault")
+	_, isApp := errors.AsType[*apperr.Error](err)
+	assert.False(t, isApp)
 }
