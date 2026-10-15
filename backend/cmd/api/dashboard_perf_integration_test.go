@@ -43,9 +43,9 @@ const (
 	// of every fiscal year of the window (one statement), the regime texts
 	// and the access summary (entitlements, usage). The window has records,
 	// so is_empty needs no EXISTS. It does not grow with months
-	// (MODULE-dashboard §2.4 explains the 9 against the table's 6: the
-	// ninth is the due date's holidays read, M9-04, one statement).
-	dashPerfReads = 9
+	// (MODULE-dashboard §2.4 explains the 8 against the table's 6). The due
+	// date's holidays are a boot snapshot (M9-04): no statement here.
+	dashPerfReads = 8
 	// dashCountRecords of each table seed the statement-count check: few,
 	// yet every month of 2026-01..2027-06 has some.
 	dashCountRecords = 400

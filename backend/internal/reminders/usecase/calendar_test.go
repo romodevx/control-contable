@@ -11,43 +11,22 @@ import (
 
 	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
-	"github.com/romodevx/control-contable/backend/internal/platform/tx"
 	"github.com/romodevx/control-contable/backend/internal/reminders/usecase"
 )
 
-const userA = "0199d4a2-0000-7000-8000-00000000c41a"
-
 var errPortDown = errors.New("fake: port down")
 
-// userKey carries the fake unit of work's user.
-type userKey struct{}
-
-// fakeTx runs work inline as the user, read-only only.
-type fakeTx struct{ modes []string }
-
-func (f *fakeTx) ReadWrite(ctx context.Context, userID string, work tx.Work) error {
-	f.modes = append(f.modes, "rw")
-	return work(context.WithValue(ctx, userKey{}, userID))
-}
-
-func (f *fakeTx) ReadOnly(ctx context.Context, userID string, work tx.Work) error {
-	f.modes = append(f.modes, "ro")
-	return work(context.WithValue(ctx, userKey{}, userID))
-}
-
 // fakeHolidays is the in-memory holidays table: the covered years and the
-// days that move a due date. It records the user of the unit of work it
-// was read in.
+// days that move a due date. It counts its reads.
 type fakeHolidays struct {
 	years []int
 	days  []string
 	err   error
-	users []string
+	reads int
 }
 
-func (f *fakeHolidays) Holidays(ctx context.Context) (fiscal.HolidaySet, error) {
-	user, _ := ctx.Value(userKey{}).(string)
-	f.users = append(f.users, user)
+func (f *fakeHolidays) Holidays(context.Context) (fiscal.HolidaySet, error) {
+	f.reads++
 	if f.err != nil {
 		return fiscal.HolidaySet{}, f.err
 	}
@@ -70,14 +49,12 @@ func (f *fakeAlerts) CalendarUnseeded(_ context.Context, year int) {
 }
 
 type fixture struct {
-	tx       *fakeTx
 	holidays *fakeHolidays
 	alerts   *fakeAlerts
 }
 
 func newFixture(years ...int) *fixture {
 	return &fixture{
-		tx:       &fakeTx{},
 		holidays: &fakeHolidays{years: years, days: []string{"2026-09-16", "2026-11-16", "2027-01-01"}},
 		alerts:   &fakeAlerts{},
 	}
@@ -85,7 +62,7 @@ func newFixture(years ...int) *fixture {
 
 func (f *fixture) calendar(t *testing.T) *usecase.Calendar {
 	t.Helper()
-	c, err := usecase.NewCalendar(usecase.CalendarDeps{Tx: f.tx, Holidays: f.holidays, Alerts: f.alerts})
+	c, err := usecase.NewCalendar(usecase.CalendarDeps{Holidays: f.holidays, Alerts: f.alerts})
 	require.NoError(t, err)
 	return c
 }
@@ -95,7 +72,7 @@ func (f *fixture) calendar(t *testing.T) *usecase.Calendar {
 func TestCalendarYear(t *testing.T) {
 	f := newFixture(2026, 2027)
 
-	got, err := f.calendar(t).Year(t.Context(), userA, 2026)
+	got, err := f.calendar(t).Year(t.Context(), 2026)
 
 	require.NoError(t, err)
 	assert.Equal(t, 2026, got.Year)
@@ -117,8 +94,7 @@ func TestCalendarYear(t *testing.T) {
 	}
 	assert.Equal(t, fiscal.MovedWeekend, got.Entries[8].MovedReason)
 	assert.Equal(t, fiscal.MovedNone, got.Entries[0].MovedReason)
-	assert.Equal(t, []string{"ro"}, f.tx.modes, "one read-only unit of work")
-	assert.Equal(t, []string{userA}, f.holidays.users, "holidays read once, inside it")
+	assert.Equal(t, 1, f.holidays.reads, "holidays read once (a boot snapshot: no unit of work, no statement)")
 	assert.Empty(t, f.alerts.unseeded, "year+1 is seeded")
 }
 
@@ -127,7 +103,7 @@ func TestCalendarYearHolidayMove(t *testing.T) {
 	f := newFixture(2026, 2027)
 	f.holidays.days = []string{"2026-11-17"}
 
-	got, err := f.calendar(t).Year(t.Context(), userA, 2026)
+	got, err := f.calendar(t).Year(t.Context(), 2026)
 
 	require.NoError(t, err)
 	october := got.Entries[9]
@@ -139,7 +115,7 @@ func TestCalendarYearHolidayMove(t *testing.T) {
 func TestCalendarYearUnseeded(t *testing.T) {
 	f := newFixture(2026, 2027)
 
-	_, err := f.calendar(t).Year(t.Context(), userA, 2028)
+	_, err := f.calendar(t).Year(t.Context(), 2028)
 
 	var ae *apperr.Error
 	require.ErrorAs(t, err, &ae)
@@ -155,7 +131,7 @@ func TestCalendarYearNextYearUnseeded(t *testing.T) {
 	f := newFixture(2026, 2027)
 	f.holidays.days = append(f.holidays.days, "2027-12-17")
 
-	got, err := f.calendar(t).Year(t.Context(), userA, 2027)
+	got, err := f.calendar(t).Year(t.Context(), 2027)
 
 	require.NoError(t, err)
 	december := got.Entries[11]
@@ -177,7 +153,7 @@ func TestCalendarYearBadHolidayData(t *testing.T) {
 		f.holidays.days = append(f.holidays.days, fmt.Sprintf("2026-03-%02d", d))
 	}
 
-	_, err := f.calendar(t).Year(t.Context(), userA, 2026)
+	_, err := f.calendar(t).Year(t.Context(), 2026)
 
 	require.ErrorIs(t, err, fiscal.ErrNoBusinessDay)
 }
@@ -186,20 +162,19 @@ func TestCalendarYearHolidaysDown(t *testing.T) {
 	f := newFixture(2026)
 	f.holidays.err = errPortDown
 
-	_, err := f.calendar(t).Year(t.Context(), userA, 2026)
+	_, err := f.calendar(t).Year(t.Context(), 2026)
 
 	require.ErrorIs(t, err, errPortDown)
 }
 
 func TestNewCalendarRequiresEveryPort(t *testing.T) {
 	for name, drop := range map[string]func(*usecase.CalendarDeps){
-		"tx":       func(d *usecase.CalendarDeps) { d.Tx = nil },
 		"holidays": func(d *usecase.CalendarDeps) { d.Holidays = nil },
 		"alerts":   func(d *usecase.CalendarDeps) { d.Alerts = nil },
 	} {
 		t.Run(name, func(t *testing.T) {
 			f := newFixture(2026)
-			deps := usecase.CalendarDeps{Tx: f.tx, Holidays: f.holidays, Alerts: f.alerts}
+			deps := usecase.CalendarDeps{Holidays: f.holidays, Alerts: f.alerts}
 			drop(&deps)
 
 			_, err := usecase.NewCalendar(deps)

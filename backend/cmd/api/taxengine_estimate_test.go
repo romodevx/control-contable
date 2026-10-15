@@ -100,3 +100,11 @@ func TestNewTaxEngineModule_requiresTheSharedUnitOfWork(t *testing.T) {
 
 	assert.ErrorIs(t, err, errNoTaxEngineTx)
 }
+
+// The estimate's due date needs the holidays snapshot read at boot
+// (loadHolidays): without it the boot fails, never a weekends-only date.
+func TestNewTaxEngineModule_requiresTheHolidays(t *testing.T) {
+	_, err := newTaxEngineModule(taxEngineWiring{pool: &sql.DB{}, limits: &ratelimitpg.Store{}, tx: noopTx{}})
+
+	assert.ErrorIs(t, err, taxusecase.ErrMissingDependency)
+}

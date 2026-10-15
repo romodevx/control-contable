@@ -25,13 +25,13 @@ const callerID = "0199d4a2-0000-7000-8000-00000000c4aa"
 var errCalendarDown = errors.New("fake: calendar down")
 
 type fakeCalendar struct {
-	calls []string
+	calls []int // the years asked for
 	year  usecase.Year
 	err   error
 }
 
-func (f *fakeCalendar) Year(_ context.Context, userID string, year int) (usecase.Year, error) {
-	f.calls = append(f.calls, userID)
+func (f *fakeCalendar) Year(_ context.Context, year int) (usecase.Year, error) {
+	f.calls = append(f.calls, year)
 	f.year.Year = year
 	return f.year, f.err
 }
@@ -93,7 +93,7 @@ func TestGetTaxCalendar(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 	assert.Equal(t, "private, max-age=3600", rec.Header().Get("Cache-Control"))
 	assert.JSONEq(t, schemaExample(t, "TaxCalendar"), rec.Body.String())
-	assert.Equal(t, []string{callerID}, cal.calls)
+	assert.Equal(t, []int{2026}, cal.calls)
 }
 
 func TestGetTaxCalendarWithoutPrincipal(t *testing.T) {

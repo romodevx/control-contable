@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"io"
 	"net/http"
 	"testing"
@@ -14,7 +13,6 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/flags/flagtest"
 	"github.com/romodevx/control-contable/backend/internal/platform/logging"
 	"github.com/romodevx/control-contable/backend/internal/platform/ratelimit/ratelimitpg"
-	"github.com/romodevx/control-contable/backend/internal/platform/tx"
 	remindershttp "github.com/romodevx/control-contable/backend/internal/reminders/adapter/http"
 	remindersusecase "github.com/romodevx/control-contable/backend/internal/reminders/usecase"
 )
@@ -34,19 +32,13 @@ func TestNewHandler_refusesToServeWithoutTheRemindersHandler(t *testing.T) {
 	assert.ErrorContains(t, err, "no reminders handler")
 }
 
-// noTx is a unit of work that is never run (the wiring test only builds).
-type noTx struct{}
-
-func (noTx) ReadWrite(context.Context, string, tx.Work) error { return nil }
-func (noTx) ReadOnly(context.Context, string, tx.Work) error  { return nil }
-
 func TestNewRemindersModule_needsEveryPort(t *testing.T) {
 	logger := logging.New(io.Discard, nil)
 	limits := &ratelimitpg.Store{}
 	for name, w := range map[string]remindersWiring{
-		"tx":     {limits: limits, logger: logger},
-		"limits": {tx: noTx{}, logger: logger},
-		"logger": {tx: noTx{}, limits: limits},
+		"holidays": {limits: limits, logger: logger},
+		"limits":   {holidays: holidaySnapshot{}, logger: logger},
+		"logger":   {holidays: holidaySnapshot{}, limits: limits},
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := newRemindersModule(w)
@@ -57,7 +49,7 @@ func TestNewRemindersModule_needsEveryPort(t *testing.T) {
 }
 
 func TestNewRemindersModule_registersTheCalendarBudget(t *testing.T) {
-	m, err := newRemindersModule(remindersWiring{tx: noTx{}, limits: &ratelimitpg.Store{}, logger: logging.New(io.Discard, nil)})
+	m, err := newRemindersModule(remindersWiring{holidays: holidaySnapshot{}, limits: &ratelimitpg.Store{}, logger: logging.New(io.Discard, nil)})
 
 	require.NoError(t, err)
 	assert.NotNil(t, m.handler)
