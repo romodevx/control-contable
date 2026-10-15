@@ -440,7 +440,7 @@ against `entitlements.ends_at`.
 | `cc_owner` | Owns schema; runs goose migrations | `cmd/migrate` only |
 | `cc_app` | DML on user tables (subject to RLS), SELECT on catalogs. **NOBYPASSRLS, not owner** | API |
 | `cc_webhook` | INSERT/UPDATE `revenuecat_events`; DML on `subscriptions`, `entitlements` (subject to RLS) | Webhook handler (separate pool) |
-| `cc_worker` | EXECUTE `due_reminder_users()`, `purge_soft_deleted()`; DML on reminder tables (subject to RLS) | Worker |
+| `cc_worker` | EXECUTE `due_reminder_users()`, `purge_soft_deleted()`; DML on reminder tables (subject to RLS). Withholdings backfill (WH-08, `20261018100000`): SELECT `users(id)` (all rows: the list to visit); SELECT own `taxpayers` (profile columns, never the RFC ciphertext), `taxpayer_regimes`, `incomes`, `expenses`; SELECT the catalogs; UPDATE own `incomes` / `expenses` facts and derived withholding columns only | Worker, `cmd/backfill-withholdings` |
 | `cc_auth_definer` | **NOLOGIN, NOBYPASSRLS.** Owns the auth definer functions; column grants + policies scoped to the email HMAC bound by the running function (`app.auth_email_hash`). `cc_owner` is a member `WITH INHERIT FALSE, SET TRUE` (ownership transfer only) | Auth definer functions (M1-03) |
 
 `SECURITY DEFINER` functions (`SET search_path = pg_catalog, public, pg_temp`, every
