@@ -80,7 +80,7 @@ flowchart TD
 
 ### Try it locally
 
-These requests were run on 2026-10-14 against `make -C backend api` with the `demo_core` preset
+These requests were run on 2026-10-14 (and again on 2026-10-15 with contract 0.12.0, same output) against `make -C backend api` with the `demo_core` preset
 on an isolated local stack. Get `ACCESS` from the [M1 walkthrough](auth.md#try-it-locally)
 (steps 1 to 5).
 
@@ -101,7 +101,7 @@ curl -s "$HOME_URL" -H "$AUTH" | jq -c '{is_empty, month, points: (.trend | leng
 record() { # $1 incomes|expenses, $2 date, $3 amount
   local body
   if [ "$1" = incomes ]; then
-    body='{id: $id, regime_code: "612", counterparty_type: "persona_fisica", amount_cents: $amt,
+    body='{id: $id, regime_code: "612", counterparty_kind: "pf_with_activity", amount_cents: $amt,
            iva_rate: "rate_16", iva_cents: ($amt * 16 / 100), collected_on: $on}'
   else
     body='{id: $id, regime_code: "612", category_code: "papeleria", amount_cents: $amt, iva_rate: "rate_16",

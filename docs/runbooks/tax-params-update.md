@@ -166,7 +166,7 @@ Two ways to cover January before every source is out:
 Never put a value in a file that has not been published. The owner decides between the two
 and records the decision in the deploy PR (M5-31 P-9).
 
-## 7. `EngineVersion`
+## 7. `EngineVersion` and `WithholdingTableVersion`
 
 The records fingerprint already hashes the parameter set (fiscal year and version) and
 `Provisional`, so a new set moves every affected month's fingerprint by itself: **no bump is
@@ -181,6 +181,24 @@ inputs:
 - A rule change found while reading the sources is a strategy change: follow the
   [add-a-regime guide](../guides/add-a-regime.md) step 9.
 
+**Withholding rates.** The record forms derive withholdings from the same file
+(`isr.withholding.fees_pm`, `isr.withholding.rent_pm`, `isr.withholding.resico_pf`,
+`iva.withholding.freight_pm`, `iva.withholding.scrap_pm`, `iva.withholding.federal_threshold`
+and the platform rates; [withholdings](../modules/withholdings.md#derivation-catalog-summary)).
+Every stored derivation carries `fiscal.WithholdingTableVersion`
+(`backend/internal/kernel/fiscal/derive_enums.go`). When the new year changes one of those
+rates or a rule of the decision table:
+
+1. Verify the withholding keys by independent double entry, as
+   [WH-05](../reviews/WH-05-params-verification.md) did for 2026.
+2. Bump `WithholdingTableVersion` in the same PR (for example `2026.1` → `2027.1`), with the
+   kernel goldens (`derive_test.go`) updated.
+3. After the deploy, run the [withholdings backfill](withholdings-backfill.md#4-after-a-table_version-bump)
+   (dry run, owner review, `-apply`) in every environment that has records. Records written
+   after the deploy already use the new table.
+
+A new year whose withholding rates are unchanged needs no bump: rates are read by date.
+
 ## 8. Release checklist
 
 Copy into the PR description and tick each line.
@@ -191,6 +209,7 @@ Copy into the PR description and tick each line.
 - [ ] `embedded_<year>_test.go` with every key the modules read and the validity edges; the "next year" tests updated; generated edges extended
 - [ ] Year-bearing texts and citations updated (`texts.go`, strategies, contract examples, MODULE §2.3)
 - [ ] `EngineVersion` bumped, digest pinned and logged **if** §7 says so
+- [ ] Withholding rates unchanged, or verified + `WithholdingTableVersion` bumped + [backfill](withholdings-backfill.md) run after the deploy (§7)
 - [ ] Anything new or ambiguous added to [CPA-REVIEW.md](../reviews/CPA-REVIEW.md)
 - [ ] `make -C backend check`, `make -C backend test-integration`, `make contract-lint`, `make api-error-tables-check` green; CI required checks green
 - [ ] Tech-lead review; security gate for the deploy (REL-09)
