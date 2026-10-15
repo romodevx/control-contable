@@ -44,7 +44,7 @@ One Firebase project per shared environment keeps staging pushes away from produ
    | iOS | `mx.romodevx.controlContable` (one scheme today; per-flavor bundle ids arrive with the iOS schemes, OB6) |
 
 4. **Sender credentials for the worker.** Preferred: run the worker as a dedicated service
-   account and grant it the **Firebase Cloud Messaging Admin** role on the project; leave
+   account and grant it the **Firebase Cloud Messaging API Admin** role (`roles/firebasecloudmessaging.admin`) on the project; leave
    `FCM_CREDENTIALS_JSON` unset and the worker uses Application Default Credentials (no key
    exists to leak). Only when the worker runs outside Google Cloud: create a key for that
    service account and store the JSON **directly** in the secret manager as
