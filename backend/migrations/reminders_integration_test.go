@@ -429,7 +429,7 @@ func TestReminderSettings_DefaultsAndRules(t *testing.T) {
 	var row string
 	require.NoError(t, pgtest.AsUser(t.Context(), app, userA, func(tx *sql.Tx) error {
 		return tx.QueryRowContext(t.Context(), `
-SELECT concat_ws(' ', enabled, early_day, on_due_date, to_char(send_time, 'HH24:MI'), show_amounts)
+SELECT concat_ws(' ', enabled::text, early_day, on_due_date::text, to_char(send_time, 'HH24:MI'), show_amounts::text)
 FROM reminder_settings`).Scan(&row)
 	}))
 	assert.Equal(t, "false 14 true 10:00 false", row, "the §2.2 defaults")
