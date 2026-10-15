@@ -122,6 +122,17 @@ SEC FU1). Reminders own no purge logic.
 - **Unregister**: the app calls `DELETE /v1/devices/{id}` on logout (before revoking the session) and on
   opt-out; foreign or unknown id → `404`. Best effort client-side; the claim on the next login and the
   UNREGISTERED cleanup (§2.4) cover a missed call. Account deletion cascades.
+- **Logout removes the device too** (contract 0.14.0, M9 security gate F1). A `DELETE` lost offline would
+  leave user A's row on a phone user B then uses. So (a) `logout` takes the optional `device_id` and
+  deletes the caller's row in the same transaction as the revocation (not gated by `module_reminders`;
+  another user's or an unknown id removes nothing, still `204`); (b) the app keeps its registered
+  marker when the `DELETE` fails with anything but `404`, and sends the id with `logout` while the
+  marker is set; (c) on the next sign-in a marker still set is **claimed** for the new user (`registerDevice`)
+  and, when that user's reminders are off, deleted at once, with or without the OS permission.
+- **`INVALID_ARGUMENT` deletes a device only when FCM names the token** (`google.rpc.BadRequest`
+  violation on `message.token`, M9 security gate F2). Anything else is the message: the device is kept
+  (`rejected`). The payload is capped (title + body + link + collapse id ≤ 2,048 bytes, a listed name ≤ 80
+  characters, the `display_name` maxLength) so FCM never refuses a reminder for its size.
 - **Token at rest**: stored **encrypted** with the same application-level envelope as the RFC, plus a keyed
   HMAC (`token_hmac`, UNIQUE) for the claim lookup. Never logged, never returned by the API (`Device` has
   no token).
