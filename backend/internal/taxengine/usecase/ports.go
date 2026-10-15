@@ -24,6 +24,11 @@ type LedgerQuery struct {
 	FirstYear  int
 	FiscalYear int
 	Through    time.Month
+	// PriorDecember opens the range one month earlier, on December 1st of
+	// the year before: January credits the IVA withheld from suppliers that
+	// December (LIVA 5 fr. IV, MODULE-withholdings §4.2). Expense reads only;
+	// the incomes reader refuses it.
+	PriorDecember bool
 }
 
 // IncomeMonthSums is one (regime, year, month) row of income aggregates.

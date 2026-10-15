@@ -78,6 +78,10 @@ func TestConcept_variants(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "Pagos provisionales anteriores", taxenginehttp.Concept("601", jan, domain.Line{Label: "isr.prior_payments"}))
 	assert.Equal(t, "Paso del cálculo", taxenginehttp.Concept("601", p, domain.Line{Label: "isr.not_a_step"}))
+	assert.Equal(t, "IVA retenido el mes pasado (acreditable este mes; supone que enteraste la retención a tiempo)",
+		taxenginehttp.Concept("601", p, domain.Line{Label: "iva.creditable.withheld_prior_month"}))
+	assert.Equal(t, "Retención mayor al ISR del mes: este mes pagas $0 y el resto queda a favor en tu declaración anual",
+		taxenginehttp.Concept(fiscal.RegimeRESICO, p, domain.Line{Label: "isr.resico_excess_to_annual"}))
 	assert.False(t, taxenginehttp.HasConcept("isr.not_a_step"))
 	assert.True(t, taxenginehttp.HasConcept("isr.payable"))
 }

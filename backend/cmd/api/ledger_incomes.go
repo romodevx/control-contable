@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 
 	incomesinfra "github.com/romodevx/control-contable/backend/internal/incomes/infra"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain"
@@ -13,6 +14,11 @@ import (
 type incomeSumsReader interface {
 	IncomeSums(ctx context.Context, q incomesinfra.LedgerQuery) ([]incomesinfra.IncomeMonthSums, error)
 }
+
+// errIncomePriorDecember reports a PriorDecember income query: only the
+// expenses carry January's withheld IVA credit (LIVA 5 fr. IV), so the
+// incomes reader has no such range and a caller asking for it is a bug.
+var errIncomePriorDecember = errors.New("taxengine ledger: the incomes reader has no previous-December range")
 
 // incomeLedger adapts the incomes aggregate reader to the tax engine's
 // IncomeLedgerReader port (M3-07). Modules never import each other
@@ -28,6 +34,9 @@ func newIncomeLedger(reader incomeSumsReader) incomeLedger { return incomeLedger
 // IncomeSums implements taxusecase.IncomeLedgerReader on the unit of work in
 // ctx.
 func (l incomeLedger) IncomeSums(ctx context.Context, q taxusecase.LedgerQuery) ([]taxusecase.IncomeMonthSums, error) {
+	if q.PriorDecember {
+		return nil, errIncomePriorDecember
+	}
 	rows, err := l.reader.IncomeSums(ctx, incomesinfra.LedgerQuery{
 		TaxpayerID: q.TaxpayerID, FirstYear: q.FirstYear, FiscalYear: q.FiscalYear, Through: q.Through,
 	})

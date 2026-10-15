@@ -117,13 +117,16 @@ func NewEstimator(deps EstimateDeps) (*Estimator, error) {
 // regimeRIF is the bimonthly régimen 621: its payment follows the bimester.
 const regimeRIF fiscal.RegimeCode = "621"
 
-// ledgerRecords is what one estimate reads, in one unit of work.
+// ledgerRecords is what one estimate reads, in one unit of work: one fiscal
+// year's rows and the previous December's expense rows (January's withheld
+// IVA credit).
 type ledgerRecords struct {
-	profile  TaxpayerProfile
-	incomes  []IncomeMonthSums
-	expenses []ExpenseMonthSums
-	inputs   map[fiscal.RegimeCode]domain.TaxInputs
-	texts    map[fiscal.RegimeCode]RegimeText
+	profile       TaxpayerProfile
+	incomes       []IncomeMonthSums
+	expenses      []ExpenseMonthSums
+	priorDecember []ExpenseMonthSums
+	inputs        map[fiscal.RegimeCode]domain.TaxInputs
+	texts         map[fiscal.RegimeCode]RegimeText
 }
 
 // EstimateMonth estimates rawPeriod ("YYYY-MM"; "" is the current month in
@@ -323,20 +326,27 @@ type rangeRecords struct {
 	texts    map[fiscal.RegimeCode]RegimeText
 }
 
-// year narrows the range to one fiscal year's records.
+// year narrows the range to one fiscal year's records and the previous
+// December's expenses.
 func (r rangeRecords) year(fiscalYear int) ledgerRecords {
 	return ledgerRecords{
 		profile:  r.profile,
 		incomes:  slices.DeleteFunc(slices.Clone(r.incomes), func(row IncomeMonthSums) bool { return row.Year != fiscalYear }),
 		expenses: slices.DeleteFunc(slices.Clone(r.expenses), func(row ExpenseMonthSums) bool { return row.Year != fiscalYear }),
-		inputs:   r.inputs[fiscalYear],
-		texts:    r.texts,
+		priorDecember: slices.DeleteFunc(slices.Clone(r.expenses), func(row ExpenseMonthSums) bool {
+			return row.Year != fiscalYear-1 || row.Month != time.December
+		}),
+		inputs: r.inputs[fiscalYear],
+		texts:  r.texts,
 	}
 }
 
 // read loads the profile, the aggregates of January of from's fiscal year
-// through to (one statement per table), the tax inputs of every fiscal year
-// of the range (one statement) and the catalog texts.
+// through to (one statement per table; the expenses' reaches back to the
+// previous December, whose withheld IVA January credits, unless that
+// December is before the first fiscal year with parameters: no record is
+// dated there), the tax inputs of every fiscal year of the range (one
+// statement) and the catalog texts.
 func (uc *Estimator) read(ctx context.Context, userID, taxpayerID string, from, to domain.Period) (rangeRecords, error) {
 	profile, err := uc.deps.Profiles.Profile(ctx, userID, taxpayerID)
 	if err != nil {
@@ -350,7 +360,9 @@ func (uc *Estimator) read(ctx context.Context, userID, taxpayerID string, from, 
 	if err != nil {
 		return rangeRecords{}, fmt.Errorf("income sums: %w", err)
 	}
-	expenses, err := uc.deps.Ledger.ExpenseSums(ctx, q)
+	expenseQuery := q
+	expenseQuery.PriorDecember = from.Year() > firstParamsYear
+	expenses, err := uc.deps.Ledger.ExpenseSums(ctx, expenseQuery)
 	if err != nil {
 		return rangeRecords{}, fmt.Errorf("expense sums: %w", err)
 	}
@@ -537,12 +549,18 @@ func figuresFingerprintOf(est TaxpayerEstimate) string {
 	return domain.FiguresFingerprint(domain.FiguresInput{Totals: est.Totals, DueDate: est.DueDate, Regimes: regimes})
 }
 
-// yearSumsThrough folds the rows of January..p into each regime's sums.
+// yearSumsThrough folds the rows of January..p into each regime's sums,
+// with the previous December's withheld IVA.
 func yearSumsThrough(p domain.Period, r ledgerRecords) (map[fiscal.RegimeCode]domain.YearSums, error) {
 	m := p.Month()
 	incomes := slices.DeleteFunc(slices.Clone(r.incomes), func(row IncomeMonthSums) bool { return row.Month > m })
 	expenses := slices.DeleteFunc(slices.Clone(r.expenses), func(row ExpenseMonthSums) bool { return row.Month > m })
-	return YearSumsByRegime(LedgerQuery{FiscalYear: p.Year(), Through: m}, incomes, expenses)
+	q := LedgerQuery{FiscalYear: p.Year(), Through: m}
+	years, err := YearSumsByRegime(q, incomes, expenses)
+	if err != nil {
+		return nil, err
+	}
+	return WithPriorDecember(q, years, r.priorDecember)
 }
 
 // regimeInput assembles the strategy input of hold for p; a regime with no

@@ -8,6 +8,4 @@ skipped:
   - AN-04 # 625 non-definitive in art. 152 (⚠️ platform_nondefinitive_annual)
   - AN-06-PTU # PTU rate 10 % (⚠️ ptu_rate, not in params)
   - AN-07-PTU # RESICO PM PTU base (⚠️ resico_pm_ptu_base)
-pending: # section kind: cases
-  pf_art152: 4 # AN-01, AN-02, AN-05, AN-08 (ANN-08)
-  pf_resico_check: 2 # AN-03-A, AN-03-B (ANN-09)
+pending: {} # section kind: cases; every annual section kind is registered

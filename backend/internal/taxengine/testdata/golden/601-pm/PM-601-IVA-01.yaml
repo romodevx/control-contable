@@ -4,6 +4,11 @@
 # 5,333.33, remitted separately. IVA 120,000.00 + withheld IVA 5,333.33.
 # The ISR inputs of PM-601-ISR-01 are given so the regime is complete.
 # Line codes are the shared IVA components' (M5-09), renamed by hand in M5-15.
+# Timing (WH-09, engine 1.1.0, LIVA 5 fr. IV): "creditable IVA paid 200,000"
+# is the paid part only (IVA minus IVA withheld). The 5,333.33 withheld from
+# the lawyer is not credited in June, the month it is withheld: it is
+# remitted with the June return and credited in the July return
+# (PM-601-IVA-02). So the June figures are unchanged.
 id: PM-601-IVA-01
 source: research:PM-601-IVA-01
 input:

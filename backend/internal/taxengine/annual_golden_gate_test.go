@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/annualgolden"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/domain/annual"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/golden"
@@ -36,7 +37,26 @@ const (
 func gateAnnualEstimator(t *testing.T) annualgolden.Estimator {
 	sections := annualSections{}
 	maps.Copy(sections, pmGateSections(t)) // ANN-10, ANN-11
-	return sections
+	return byPersonType{fisica: newPFAnnualSections(t), moral: sections}
+}
+
+// byPersonType runs the PF sections (ANN-08, ANN-09, which also decide the
+// estimate-level informative-income fact and disclaimers) for a persona
+// física and the registered PM sections for a persona moral.
+type byPersonType struct {
+	fisica pfAnnualSections
+	moral  annualSections
+}
+
+func (e byPersonType) Registered(kind annual.SectionKind) bool {
+	return e.fisica.Registered(kind) || e.moral.Registered(kind)
+}
+
+func (e byPersonType) Estimate(in annualgolden.Input) (annualgolden.Result, error) {
+	if in.PersonType == fiscal.PersonFisica {
+		return e.fisica.Estimate(in)
+	}
+	return e.moral.Estimate(in)
 }
 
 // annualSectionOrder is the fixed order of an estimate's sections

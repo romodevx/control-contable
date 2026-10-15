@@ -136,6 +136,9 @@ func (s Strategy621PF) Estimate(in Input, p *taxparams.Params) (RegimeEstimate, 
 	ivaNote := rifStep(TaxIVA, rifLineIVABimester, SourceComputed(), rifBasisIVA)
 	ivaNote.Args, ivaNote.NeedsCPAReview = t.bimester, true
 	l.Info(ivaNote, 0)
+	// No WithheldPriorMonth: only a persona moral withholds IVA from its
+	// suppliers (LIVA 1-A fr. II), so a RIF persona física has no withheld
+	// part to credit (LIVA 5 fr. IV).
 	iva, err := ComputeIVA(l, IVAInput{Sums: bimester, Options: in.Options})
 	if err != nil {
 		return RegimeEstimate{}, rifWrap(in.Period, err)

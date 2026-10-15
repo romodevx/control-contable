@@ -30,6 +30,7 @@ func newExpenseLedger(reader expenseSumsReader) expenseLedger { return expenseLe
 func (l expenseLedger) ExpenseSums(ctx context.Context, q taxusecase.LedgerQuery) ([]taxusecase.ExpenseMonthSums, error) {
 	rows, err := l.reader.ExpenseSums(ctx, expensesinfra.LedgerQuery{
 		TaxpayerID: q.TaxpayerID, FirstYear: q.FirstYear, FiscalYear: q.FiscalYear, Through: q.Through,
+		PriorDecember: q.PriorDecember,
 	})
 	if err != nil {
 		return nil, err
@@ -53,9 +54,10 @@ func expenseSumsOf(r expensesinfra.ExpenseMonthSums) domain.ExpenseSums {
 			Rate0Base:  r.IVAPaid.Rate0Base,
 			ExemptBase: r.IVAPaid.ExemptBase,
 		},
-		CreditableIVAPaid:  r.CreditableIVAPaid,
-		PredialPaid:        r.PredialPaid,
-		ISRWithheldToRemit: r.ISRWithheldToRemit,
-		IVAWithheldToRemit: r.IVAWithheldToRemit,
+		CreditableIVAPaid:     r.CreditableIVAPaid,
+		CreditableIVAWithheld: r.CreditableIVAWithheld,
+		PredialPaid:           r.PredialPaid,
+		ISRWithheldToRemit:    r.ISRWithheldToRemit,
+		IVAWithheldToRemit:    r.IVAWithheldToRemit,
 	}
 }

@@ -187,7 +187,10 @@ func TestRESICOPFWithoutIncomeIsZero(t *testing.T) {
 }
 
 // TestRESICOPFWithholdingAboveTheTax: 1.25 % withheld on the whole income
-// is more than the 1 % of row 1, so the month is in favor.
+// is more than the 1 % of row 1. The excess is not refunded or carried in
+// the month: the month shows 0 to pay and the excess goes to the annual
+// return, which subtracts the 113-J withholdings again (LISR 113-F;
+// MODULE-withholdings §4.1, research A4 ⚠️, WH-09).
 func TestRESICOPFWithholdingAboveTheTax(t *testing.T) {
 	month := domain.MonthSums{Income: domain.IncomeSums{
 		Cash: cents(t, "20000.00"), ISRWithheld: domain.Withheld{ByMoral: cents(t, "250.00")},
@@ -197,9 +200,19 @@ func TestRESICOPFWithholdingAboveTheTax(t *testing.T) {
 	est, err := domain.NewRESICOPFStrategy().Estimate(in, params2026(t))
 
 	require.NoError(t, err)
-	assert.Equal(t, "-50.00", est.ISR.Amount.String())
-	assert.Equal(t, domain.OutcomeInFavor, est.ISR.Outcome())
-	assert.Zero(t, est.ISR.Payable())
+	assert.Equal(t, "0.00", est.ISR.Amount.String())
+	assert.Equal(t, domain.OutcomeZero, est.ISR.Outcome())
+	assert.Equal(t, []lineView{
+		{domain.LineRESICOPFIncomeMonth, domain.OpInput, "20000.00"},
+		{domain.LineRESICOPFRate, domain.OpMultiply, "200.00"},
+		{domain.LineRESICOPFWithheldByMoral, domain.OpSubtract, "250.00"},
+		{domain.LineRESICOPFExcessToAnnual, domain.OpAdd, "50.00"},
+		{domain.LineRESICOPFPayable, domain.OpResult, "0.00"},
+	}, isrLines(est.Lines))
+	excess := lineByCode(t, est.Lines, domain.LineRESICOPFExcessToAnnual)
+	assert.True(t, excess.NeedsCPAReview, "A4: the law does not say whether the excess carries to later months")
+	assert.Equal(t, []string{"113-F", "113-J"}, articles(excess.Basis))
+	assert.Equal(t, "computed", excess.Source.String())
 }
 
 // TestRESICOPFAnnualCap: past 3,500,000 collected in the year the taxpayer

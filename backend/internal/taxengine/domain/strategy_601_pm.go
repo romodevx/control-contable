@@ -139,7 +139,7 @@ func (s GeneralPMStrategy) Estimate(in Input, p *taxparams.Params) (RegimeEstima
 		est.Disclaimers = append(est.Disclaimers, DisclaimerNoCoefficientFirstYear)
 	}
 
-	iva, err := ComputeIVA(l, IVAInput{Sums: in.Sums.Month(in.Period.Month()), Options: in.Options})
+	iva, err := ComputeIVA(l, monthIVA(in))
 	if err != nil {
 		return RegimeEstimate{}, fmt.Errorf("601 %s: %w", in.Period, err)
 	}

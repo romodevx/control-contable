@@ -34,6 +34,10 @@ type LedgerQuery struct {
 	FirstYear  int
 	FiscalYear int
 	Through    time.Month
+	// PriorDecember opens the range one month earlier, on December 1st of
+	// the year before FirstYear: the tax engine's January credits the IVA
+	// withheld from suppliers that December (LIVA 5 fr. IV, WH-09).
+	PriorDecember bool
 }
 
 // RateSums are the base (amount_cents) and the IVA (iva_cents) paid at one
@@ -59,21 +63,25 @@ type IVAByRate struct {
 // The deductibility classes partition amount_cents: DeductiblePaid is the
 // stored effective verdict (an override included); a non-deductible
 // expense counts in CashOverLimitPaid when it was paid in cash over the
-// limit, else in NonDeductiblePaid. CreditableIVAPaid sums the stored
-// creditable-IVA candidate; PredialPaid the deductible predial; the
-// withholdings made to suppliers count whatever the deductibility.
+// limit, else in NonDeductiblePaid. CreditableIVAPaid sums the stored paid
+// part of the creditable IVA (creditable_iva_cents) and
+// CreditableIVAWithheld its withheld part (creditable_iva_withheld_cents,
+// credited the month after, LIVA 5 fr. IV); PredialPaid the deductible
+// predial; the withholdings made to suppliers count whatever the
+// deductibility.
 type ExpenseMonthSums struct {
-	Regime             fiscal.RegimeCode
-	Year               int
-	Month              time.Month
-	DeductiblePaid     money.Cents
-	NonDeductiblePaid  money.Cents
-	CashOverLimitPaid  money.Cents
-	IVAPaid            IVAByRate
-	CreditableIVAPaid  money.Cents
-	PredialPaid        money.Cents
-	ISRWithheldToRemit money.Cents
-	IVAWithheldToRemit money.Cents
+	Regime                fiscal.RegimeCode
+	Year                  int
+	Month                 time.Month
+	DeductiblePaid        money.Cents
+	NonDeductiblePaid     money.Cents
+	CashOverLimitPaid     money.Cents
+	IVAPaid               IVAByRate
+	CreditableIVAPaid     money.Cents
+	CreditableIVAWithheld money.Cents
+	PredialPaid           money.Cents
+	ISRWithheldToRemit    money.Cents
+	IVAWithheldToRemit    money.Cents
 }
 
 // LedgerReader reads the tax engine's expense aggregates with GORM on the
@@ -105,6 +113,7 @@ SELECT regime_code,
        coalesce(sum(amount_cents) FILTER (WHERE iva_rate = 'rate_0'), 0)::bigint                     AS rate0_base,
        coalesce(sum(amount_cents) FILTER (WHERE iva_rate = 'exempt'), 0)::bigint                     AS exempt_base,
        coalesce(sum(creditable_iva_cents), 0)::bigint                                                AS creditable_iva_paid,
+       coalesce(sum(creditable_iva_withheld_cents), 0)::bigint                                       AS creditable_iva_withheld,
        coalesce(sum(amount_cents) FILTER (WHERE category_code = @predial AND deductible), 0)::bigint AS predial_paid,
        coalesce(sum(isr_withheld_cents), 0)::bigint                                                  AS isr_withheld,
        coalesce(sum(iva_withheld_cents), 0)::bigint                                                  AS iva_withheld
@@ -115,22 +124,23 @@ ORDER BY regime_code, year, month`
 
 // sumsRow is one row of expenseSumsSQL.
 type sumsRow struct {
-	RegimeCode        string `gorm:"column:regime_code"`
-	Year              int    `gorm:"column:year"`
-	Month             int    `gorm:"column:month"`
-	DeductiblePaid    int64  `gorm:"column:deductible_paid"`
-	NonDeductiblePaid int64  `gorm:"column:non_deductible_paid"`
-	CashOverLimitPaid int64  `gorm:"column:cash_over_limit_paid"`
-	Rate16Base        int64  `gorm:"column:rate16_base"`
-	Rate16IVA         int64  `gorm:"column:rate16_iva"`
-	Rate8Base         int64  `gorm:"column:rate8_base"`
-	Rate8IVA          int64  `gorm:"column:rate8_iva"`
-	Rate0Base         int64  `gorm:"column:rate0_base"`
-	ExemptBase        int64  `gorm:"column:exempt_base"`
-	CreditableIVAPaid int64  `gorm:"column:creditable_iva_paid"`
-	PredialPaid       int64  `gorm:"column:predial_paid"`
-	ISRWithheld       int64  `gorm:"column:isr_withheld"`
-	IVAWithheld       int64  `gorm:"column:iva_withheld"`
+	RegimeCode            string `gorm:"column:regime_code"`
+	Year                  int    `gorm:"column:year"`
+	Month                 int    `gorm:"column:month"`
+	DeductiblePaid        int64  `gorm:"column:deductible_paid"`
+	NonDeductiblePaid     int64  `gorm:"column:non_deductible_paid"`
+	CashOverLimitPaid     int64  `gorm:"column:cash_over_limit_paid"`
+	Rate16Base            int64  `gorm:"column:rate16_base"`
+	Rate16IVA             int64  `gorm:"column:rate16_iva"`
+	Rate8Base             int64  `gorm:"column:rate8_base"`
+	Rate8IVA              int64  `gorm:"column:rate8_iva"`
+	Rate0Base             int64  `gorm:"column:rate0_base"`
+	ExemptBase            int64  `gorm:"column:exempt_base"`
+	CreditableIVAPaid     int64  `gorm:"column:creditable_iva_paid"`
+	CreditableIVAWithheld int64  `gorm:"column:creditable_iva_withheld"`
+	PredialPaid           int64  `gorm:"column:predial_paid"`
+	ISRWithheld           int64  `gorm:"column:isr_withheld"`
+	IVAWithheld           int64  `gorm:"column:iva_withheld"`
 }
 
 func (r sumsRow) toSums() ExpenseMonthSums {
@@ -145,10 +155,11 @@ func (r sumsRow) toSums() ExpenseMonthSums {
 			Rate0Base:  money.Cents(r.Rate0Base),
 			ExemptBase: money.Cents(r.ExemptBase),
 		},
-		CreditableIVAPaid:  money.Cents(r.CreditableIVAPaid),
-		PredialPaid:        money.Cents(r.PredialPaid),
-		ISRWithheldToRemit: money.Cents(r.ISRWithheld),
-		IVAWithheldToRemit: money.Cents(r.IVAWithheld),
+		CreditableIVAPaid:     money.Cents(r.CreditableIVAPaid),
+		CreditableIVAWithheld: money.Cents(r.CreditableIVAWithheld),
+		PredialPaid:           money.Cents(r.PredialPaid),
+		ISRWithheldToRemit:    money.Cents(r.ISRWithheld),
+		IVAWithheldToRemit:    money.Cents(r.IVAWithheld),
 	}
 }
 
@@ -220,6 +231,9 @@ func (q LedgerQuery) dates() (from, until string, err error) {
 		return "", "", fmt.Errorf("%w: %d..%d through month %d", ErrInvalidLedgerQuery, first, q.FiscalYear, q.Through)
 	}
 	start := time.Date(first, time.January, 1, 0, 0, 0, 0, time.UTC)
+	if q.PriorDecember {
+		start = start.AddDate(0, -1, 0)
+	}
 	end := time.Date(q.FiscalYear, q.Through+1, 1, 0, 0, 0, 0, time.UTC) // December rolls into January 1st
 	return start.Format(dateLayout), end.Format(dateLayout), nil
 }
