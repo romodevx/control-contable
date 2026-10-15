@@ -5,9 +5,9 @@ package routertest
 import (
 	"net/http"
 
+	"github.com/romodevx/control-contable/backend/adapter/http/httperr"
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
 	"github.com/romodevx/control-contable/backend/internal/platform/apperr"
-	"github.com/romodevx/control-contable/backend/internal/platform/httperr"
 )
 
 // DenyAll is a router.Authenticator that refuses every request with the 401
