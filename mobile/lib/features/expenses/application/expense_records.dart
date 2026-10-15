@@ -2,6 +2,7 @@ import 'package:control_contable/api/generated/models/expense.dart';
 import 'package:control_contable/api/generated/models/expense_create.dart';
 import 'package:control_contable/api/generated/models/payment_method.dart';
 import 'package:control_contable/core/access/read_only_access.dart';
+import 'package:control_contable/core/fiscal/tax_data_revision.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/records/record_list.dart';
 import 'package:control_contable/core/records/stacked_undo.dart';
@@ -14,7 +15,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// The writes of expenses: create, edit, delete and its Undo (restore).
 /// Delete and restore are allowed while read-only; restore never consumes
 /// a trial slot (contract 0.6.1). After each one every expense list
-/// reloads, so the totals and the other regime filters follow the server.
+/// reloads, so the totals and the other regime filters follow the server,
+/// and the tax-data revision moves, so every figure derived from the
+/// records (History, Home, the estimate) reads again.
 class ExpenseRecords {
   /// The writes over [_ref].
   new(this._ref);
@@ -22,6 +25,11 @@ class ExpenseRecords {
   final Ref _ref;
 
   ExpensesRepository get _repository => _ref.read(expensesRepositoryProvider);
+
+  void _changed() {
+    _ref.invalidate(expenseListProvider);
+    _ref.read(taxDataRevisionProvider.notifier).bump();
+  }
 
   /// Records [expense] for [taxpayerId]; every list reloads and the next
   /// form starts from its payment method. A `402` without a trial cap
@@ -32,8 +40,8 @@ class ExpenseRecords {
         taxpayerId: taxpayerId,
         expense: expense,
       );
+      _changed();
       _ref
-        ..invalidate(expenseListProvider)
         ..read(lastPaymentMethodProvider.notifier).rememberMethodOf(expense)
         ..read(categoryUsageProvider.notifier).used(expense.categoryCode)
         ..read(supplierMemoryProvider.notifier).rememberSupplierOf(expense);
@@ -60,7 +68,7 @@ class ExpenseRecords {
         expenseId: expenseId,
         patch: patch,
       );
-      _ref.invalidate(expenseListProvider);
+      _changed();
       return updated;
     } on ApiEntitlementRequired {
       _ref.read(readOnlyAccessProvider.notifier).markReadOnly();
@@ -78,7 +86,7 @@ class ExpenseRecords {
         expenseId: expense.id,
       );
     } finally {
-      _ref.invalidate(expenseListProvider);
+      _changed();
     }
   }
 
@@ -94,7 +102,7 @@ class ExpenseRecords {
         ),
       );
     } finally {
-      _ref.invalidate(expenseListProvider);
+      _changed();
     }
   }
 }

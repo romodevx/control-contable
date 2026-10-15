@@ -1,4 +1,5 @@
 import 'package:control_contable/api/generated/models/taxpayer_estimate.dart';
+import 'package:control_contable/core/fiscal/tax_data_revision.dart';
 import 'package:control_contable/features/tax_engine/data/tax_engine_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -38,9 +39,12 @@ typedef EstimateQuery = ({String taxpayerId, String? period});
 /// a retry: no automatic retry.
 final FutureProviderFamily<TaxpayerEstimate, EstimateQuery> estimateProvider =
     FutureProvider.autoDispose.family<TaxpayerEstimate, EstimateQuery>(
-      (ref, query) => ref
-          .read(taxEngineRepositoryProvider)
-          .getEstimate(taxpayerId: query.taxpayerId, period: query.period),
+      (ref, query) {
+        ref.watch(taxDataRevisionProvider);
+        return ref
+            .read(taxEngineRepositoryProvider)
+            .getEstimate(taxpayerId: query.taxpayerId, period: query.period);
+      },
       name: 'estimateProvider',
       retry: _noAutomaticRetry,
     );

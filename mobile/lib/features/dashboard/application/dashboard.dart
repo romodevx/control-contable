@@ -1,4 +1,5 @@
 import 'package:control_contable/api/generated/models/dashboard.dart';
+import 'package:control_contable/core/fiscal/tax_data_revision.dart';
 import 'package:control_contable/features/dashboard/data/dashboard_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -10,9 +11,12 @@ import 'package:flutter_riverpod/misc.dart';
 final FutureProviderFamily<Dashboard, String> dashboardProvider = FutureProvider
     .autoDispose
     .family<Dashboard, String>(
-      (ref, taxpayerId) => ref
-          .read(dashboardRepositoryProvider)
-          .getDashboard(taxpayerId: taxpayerId),
+      (ref, taxpayerId) {
+        ref.watch(taxDataRevisionProvider);
+        return ref
+            .read(dashboardRepositoryProvider)
+            .getDashboard(taxpayerId: taxpayerId);
+      },
       name: 'dashboardProvider',
       retry: _noAutomaticRetry,
     );
