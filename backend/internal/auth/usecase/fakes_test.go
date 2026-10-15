@@ -107,8 +107,14 @@ func (f *fakeSystem) System(ctx context.Context, work tx.Work) error {
 	if f.err != nil {
 		return f.err
 	}
-	return work(ctx)
+	return work(context.WithValue(ctx, systemKey{}, true))
 }
+
+// systemKey marks a context inside fakeSystem's unit of work.
+type systemKey struct{}
+
+// inSystem reports whether ctx runs inside fakeSystem's unit of work.
+func inSystem(ctx context.Context) bool { return ctx.Value(systemKey{}) != nil }
 
 // fakeTx runs work inline as userID and records the work's own result, so a
 // test can tell a commit (nil) from a rollback (error).
@@ -206,20 +212,26 @@ type fakeSender struct {
 	mu   sync.Mutex
 	sent []sent
 	err  error
+	// onSend, when set, runs after every send is recorded.
+	onSend func()
+}
+
+func (f *fakeSender) record(s sent) error {
+	f.mu.Lock()
+	f.sent = append(f.sent, s)
+	f.mu.Unlock()
+	if f.onSend != nil {
+		f.onSend()
+	}
+	return f.err
 }
 
 func (f *fakeSender) SendVerificationCode(_ context.Context, to domain.Email, code domain.VerificationCode) error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.sent = append(f.sent, sent{kind: "code", to: to.String(), code: code.Reveal()})
-	return f.err
+	return f.record(sent{kind: "code", to: to.String(), code: code.Reveal()})
 }
 
 func (f *fakeSender) SendSignUpAttemptNotice(_ context.Context, to domain.Email) error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.sent = append(f.sent, sent{kind: "notice", to: to.String()})
-	return f.err
+	return f.record(sent{kind: "notice", to: to.String()})
 }
 
 // fakeLimiter admits limit events per key (a shared Postgres bucket in

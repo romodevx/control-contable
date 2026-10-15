@@ -273,7 +273,8 @@ type AccessTokenVerifier interface {
 	Verify(token string) (AccessClaims, error)
 }
 
-// EmailSender delivers the auth emails. Implementations never put the
+// EmailSender delivers the auth emails, from the worker's EmailDeliveryJob
+// only (requests queue them, EmailOutbox). Implementations never put the
 // address or the code in their errors.
 type EmailSender interface {
 	SendVerificationCode(ctx context.Context, to domain.Email, code domain.VerificationCode) error

@@ -1,7 +1,6 @@
 package usecase_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,7 +14,7 @@ type registerEnv struct {
 	uc       *usecase.Register
 	system   *fakeSystem
 	signUps  *fakeSignUps
-	sender   *fakeSender
+	outbox   *fakeOutbox
 	index    *sha256Index
 	throttle *onceThrottle
 	emails   *fakeLimiter
@@ -25,7 +24,7 @@ type registerEnv struct {
 func newRegisterEnv(signUps *fakeSignUps, legal fakeLegal) *registerEnv {
 	logger, logs := capturedLogs()
 	e := &registerEnv{
-		system: &fakeSystem{}, signUps: signUps, sender: &fakeSender{},
+		system: &fakeSystem{}, signUps: signUps, outbox: &fakeOutbox{},
 		index: &sha256Index{}, throttle: &onceThrottle{}, emails: &fakeLimiter{limit: 100}, logs: logs,
 	}
 	e.uc = usecase.NewRegister(usecase.RegisterDeps{
@@ -36,7 +35,7 @@ func newRegisterEnv(signUps *fakeSignUps, legal fakeLegal) *registerEnv {
 		Codes:   concatCodes{},
 		Legal:   legal,
 		SignUps: signUps,
-		Email:   e.sender,
+		Outbox:  e.outbox,
 		Notices: e.throttle,
 		Emails:  e.emails,
 		Logger:  logger,
@@ -71,7 +70,8 @@ func TestRegister_newEmailStartsASignUpAndSendsTheCode(t *testing.T) {
 		},
 		AcceptedAt: now,
 	}, got.pending)
-	assert.Equal(t, []sent{{kind: "code", to: normalEmail, code: "000000"}}, e.sender.sent)
+	assert.Equal(t, []queued{{kind: "code", to: normalEmail, code: "000000", expiresAt: now.Add(usecase.CodeTTL), inUnit: true}},
+		e.outbox.queued, "queued in the sign-up's own unit of work, deliverable while the code lives")
 	assert.Equal(t, 1, e.system.calls, "one unit of work")
 }
 
@@ -93,7 +93,7 @@ func TestRegister_livePendingSignUpBehavesLikeAResend(t *testing.T) {
 
 			require.NoError(t, e.uc.Execute(t.Context(), validRegistration()))
 
-			assert.Len(t, e.sender.sent, tt.wantSent)
+			assert.Len(t, e.outbox.queued, tt.wantSent)
 		})
 	}
 }
@@ -108,7 +108,8 @@ func TestRegister_verifiedEmailNotifiesTheOwnerOnce(t *testing.T) {
 	require.NoError(t, e.uc.Execute(t.Context(), validRegistration()))
 
 	assert.Empty(t, e.signUps.starts, "no pending sign-up is created")
-	assert.Equal(t, []sent{{kind: "notice", to: normalEmail}}, e.sender.sent, "one notice per window")
+	assert.Equal(t, []queued{{kind: "notice", to: normalEmail, expiresAt: now.Add(usecase.CodeTTL), inUnit: true}},
+		e.outbox.queued, "one notice per window")
 	assert.True(t, e.throttle.seen[hexOf(emailHashOf(normalEmail))], "throttled per email hash, never per email")
 }
 
@@ -131,7 +132,7 @@ func TestRegister_rejectsInvalidInputBeforeTheDatabase(t *testing.T) {
 
 			require.ErrorIs(t, err, tt.wantErr)
 			assert.Zero(t, e.system.calls, "no unit of work")
-			assert.Empty(t, e.sender.sent)
+			assert.Empty(t, e.outbox.queued)
 		})
 	}
 }
@@ -145,22 +146,46 @@ func TestRegister_staleDocumentVersionIsRejectedForEveryEmail(t *testing.T) {
 
 		require.ErrorIs(t, err, domain.ErrDocumentNotCurrent, "existing=%v answers the same", existing)
 		assert.Empty(t, e.signUps.starts)
-		assert.Empty(t, e.sender.sent)
+		assert.Empty(t, e.outbox.queued)
 	}
 }
 
-// An email outage never changes the answer (no oracle); it is logged without
-// the address or the code.
-func TestRegister_emailFailureIsLoggedNotReturned(t *testing.T) {
+// A failed enqueue is a server fault like any other database error: the unit of
+// work rolls back with it, so no sign-up exists without its email.
+func TestRegister_enqueueFailureRollsBack(t *testing.T) {
 	e := newRegisterEnv(&fakeSignUps{startOutcome: usecase.CodeStarted}, currentDocs)
-	e.sender.err = context.DeadlineExceeded
+	e.outbox.err = errDB
 
-	require.NoError(t, e.uc.Execute(t.Context(), validRegistration()))
+	require.ErrorIs(t, e.uc.Execute(t.Context(), validRegistration()), errDB)
+}
 
-	logs := e.logs.String()
-	assert.Contains(t, logs, "verification email not sent")
-	assert.NotContains(t, logs, normalEmail)
-	assert.NotContains(t, logs, "000000")
+// Enumeration by timing (MODULE-auth §4): the request never talks to an email
+// provider. A new email, a live pending sign-up and a verified account all do
+// the same work: one unit of work that queues at most one email, and Register
+// has no EmailSender to call (the worker delivers). Asserted on the calls, not
+// on wall time, so the test is deterministic.
+func TestRegister_sameWorkForEveryEmailState(t *testing.T) {
+	tests := []struct {
+		name    string
+		signUps *fakeSignUps
+		kind    string
+	}{
+		{"new email", &fakeSignUps{startOutcome: usecase.CodeStarted}, "code"},
+		{"live pending sign-up", &fakeSignUps{startOutcome: usecase.CodeResent}, "code"},
+		{"verified account", &fakeSignUps{existing: true}, "notice"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := newRegisterEnv(tt.signUps, currentDocs)
+
+			require.NoError(t, e.uc.Execute(t.Context(), validRegistration()))
+
+			assert.Equal(t, 1, e.system.calls)
+			require.Len(t, e.outbox.queued, 1)
+			assert.Equal(t, tt.kind, e.outbox.queued[0].kind)
+			assert.True(t, e.outbox.queued[0].inUnit, "queued, not sent: inside the unit of work")
+		})
+	}
 }
 
 func TestRegister_databaseErrorsPropagate(t *testing.T) {
@@ -169,7 +194,7 @@ func TestRegister_databaseErrorsPropagate(t *testing.T) {
 	err := e.uc.Execute(t.Context(), validRegistration())
 
 	require.ErrorIs(t, err, errDB)
-	assert.Empty(t, e.sender.sent)
+	assert.Empty(t, e.outbox.queued)
 }
 
 func TestRegister_legalCatalogErrorsPropagate(t *testing.T) {

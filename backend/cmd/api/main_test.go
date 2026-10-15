@@ -148,6 +148,11 @@ func testAuthKeys() config.Auth {
 	}
 }
 
+// testOutboxKeys is the fixture outbox key (all one byte), never a real one.
+func testOutboxKeys() config.AuthOutbox {
+	return config.AuthOutbox{Key: config.NewSecret(strings.Repeat(string(rune(0x55)), 32)), KeyID: 1}
+}
+
 // fastArgon2 keeps password hashing cheap in tests (production: OWASP defaults).
 var fastArgon2 = crypto.Argon2idParams{Memory: 8 * 1024, Time: 1, Threads: 1, SaltLen: 16, KeyLen: 32}
 
@@ -397,7 +402,7 @@ func TestOpenDatabase_rejectsMalformedURL(t *testing.T) {
 
 // withAuthKeys adds fixture auth keys (hex, all one byte) to env.
 func withAuthKeys(env map[string]string) map[string]string {
-	for i, name := range []string{"AUTH_EMAIL_PEPPER", "AUTH_EMAIL_KEY", "AUTH_CODE_KEY", "AUTH_ACCESS_TOKEN_KEY"} {
+	for i, name := range []string{"AUTH_EMAIL_PEPPER", "AUTH_EMAIL_KEY", "AUTH_CODE_KEY", "AUTH_ACCESS_TOKEN_KEY", "AUTH_OUTBOX_KEY"} {
 		env[name] = strings.Repeat(string("0123456789"[i])+"a", 32)
 	}
 	return env

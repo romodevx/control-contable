@@ -53,9 +53,11 @@ func (e contractEnv) post(target, body string) *http.Request {
 	return req
 }
 
-// lastCode is the code the dev email adapter logged last (dev only).
+// lastCode is the code the dev email adapter logged last (dev only), once
+// the worker's delivery has sent what the API queued.
 func (e contractEnv) lastCode(t *testing.T) string {
 	t.Helper()
+	e.deliver(t)
 	matches := loggedCode.FindAllStringSubmatch(e.logs.String(), -1)
 	require.NotEmpty(t, matches, "the dev email adapter logged no code")
 	return matches[len(matches)-1][1]

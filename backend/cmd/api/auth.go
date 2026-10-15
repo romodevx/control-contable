@@ -31,8 +31,9 @@ const signUpNoticeInterval = time.Hour
 
 // authWiring is what the auth module needs from the composition root.
 type authWiring struct {
-	env    config.Environment
-	keys   config.Auth
+	keys config.Auth
+	// outbox seals the queued auth emails; the worker opens them with the same key.
+	outbox config.AuthOutbox
 	pool   *sql.DB // cc_app
 	logger *slog.Logger
 	now    func() time.Time
@@ -76,16 +77,21 @@ func newAuthModule(w authWiring) (authModule, error) {
 		return authModule{}, fmt.Errorf("auth: rate limits: %w", err)
 	}
 	signUpEmails := limits.Bucket(usecase.SignUpEmailPolicy)
-	sender := infra.NewLogSender(w.logger, w.env) // M1-06 replaces it with the provider adapter
+	// Register and resend only queue their emails; cmd/worker delivers them
+	// (auth_email_delivery), so no request waits on an email provider.
+	outbox, err := newOutbox(w.outbox)
+	if err != nil {
+		return authModule{}, err
+	}
 
 	register := usecase.NewRegister(usecase.RegisterDeps{
 		System: txm, Clock: clk, Entropy: rand.Reader, Index: keys.index,
-		Codes: keys.codes, Legal: infra.NewLegalDocumentStore(), SignUps: signUps, Email: sender,
+		Codes: keys.codes, Legal: infra.NewLegalDocumentStore(), SignUps: signUps, Outbox: outbox,
 		Notices: ratelimit.NewEvery(signUpNoticeInterval, 1, w.now), Emails: signUpEmails, Logger: w.logger,
 	})
 	resend := usecase.NewResendVerification(usecase.ResendDeps{
 		System: txm, Clock: clk, Entropy: rand.Reader, Index: keys.index, Codes: keys.codes,
-		SignUps: signUps, Email: sender, Emails: signUpEmails, Logger: w.logger,
+		SignUps: signUps, Outbox: outbox, Emails: signUpEmails, Logger: w.logger,
 	})
 	verify := usecase.NewVerifyEmail(usecase.VerifyDeps{
 		Tx: txm, Clock: clk, Entropy: rand.Reader, NewUserID: newUserID, Index: keys.index,
@@ -208,6 +214,16 @@ func newAuthCrypto(w authWiring) (authCrypto, error) {
 		return authCrypto{}, err
 	}
 	return c, nil
+}
+
+// newOutbox is the auth email outbox sealed with cfg's key.
+func newOutbox(cfg config.AuthOutbox) (*infra.Outbox, error) {
+	keyID := crypto.KeyID(cfg.KeyID) // #nosec G115 -- config bounds it to [1, crypto.MaxKeyID]
+	keyring, err := crypto.NewKeyring(keyID, map[crypto.KeyID][]byte{keyID: cfg.Key.RevealBytes()})
+	if err != nil {
+		return nil, fmt.Errorf("auth: outbox keyring: %w", err)
+	}
+	return infra.NewOutbox(keyring), nil
 }
 
 // newUserID draws a UUIDv7: time-ordered, so new users append to the users
