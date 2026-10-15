@@ -24,7 +24,7 @@ ALTER TABLE expenses VALIDATE CONSTRAINT expenses_operation_kind_valid;
 ALTER TABLE expenses VALIDATE CONSTRAINT expenses_residential_rent_is_exempt;
 ALTER TABLE expenses VALIDATE CONSTRAINT expenses_creditable_iva_withheld_within_withheld;
 ALTER TABLE expenses VALIDATE CONSTRAINT expenses_creditable_iva_split_within_iva;
-ALTER TABLE expenses VALIDATE CONSTRAINT expenses_creditable_iva_withheld_needs_cfdi_and_no_cash_over_limit;
+ALTER TABLE expenses VALIDATE CONSTRAINT expenses_creditable_iva_withheld_needs_cfdi_no_cash_over_limit;
 ALTER TABLE expenses VALIDATE CONSTRAINT expenses_withholding_rule_ids_valid;
 ALTER TABLE expenses VALIDATE CONSTRAINT expenses_withholding_table_version_format;
 ALTER TABLE expenses VALIDATE CONSTRAINT expenses_withholding_derived_together;

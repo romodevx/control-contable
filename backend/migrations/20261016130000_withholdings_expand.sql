@@ -166,7 +166,7 @@ ALTER TABLE expenses
   ADD CONSTRAINT expenses_creditable_iva_split_within_iva CHECK (
     creditable_iva_cents + creditable_iva_withheld_cents <= iva_cents)
     NOT VALID,
-  ADD CONSTRAINT expenses_creditable_iva_withheld_needs_cfdi_and_no_cash_over_limit CHECK (
+  ADD CONSTRAINT expenses_creditable_iva_withheld_needs_cfdi_no_cash_over_limit CHECK (
     creditable_iva_withheld_cents = 0 OR (has_cfdi AND NOT cash_over_limit))
     NOT VALID,
   ADD CONSTRAINT expenses_withholding_rule_ids_valid CHECK (withholding_rule_ids_valid(withholding_rule_ids))

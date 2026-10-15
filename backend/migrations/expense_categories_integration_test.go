@@ -319,7 +319,9 @@ func TestCategoryRegimeRules_RejectMalformedRows(t *testing.T) {
 	}{
 		{"unknown category", ruleColumns{"category_code": "'viajes'"}, sqlstateForeignKeyViolation},
 		{"unknown regime", ruleColumns{"regime_code": "'699'"}, sqlstateForeignKeyViolation},
-		{"regime of the other person type", ruleColumns{"person_type": "'moral'"}, sqlstateForeignKeyViolation},
+		{"regime of the other person type", ruleColumns{
+			"person_type": "'moral'", "default_operation_kind": "'business_services'",
+		}, sqlstateForeignKeyViolation},
 		{"unknown deductibility", ruleColumns{"deductibility": "'maybe'"}, sqlstateCheckViolation},
 		{"default true while not deductible", ruleColumns{"deductibility": "'not_deductible'", "cash_payment_rule": "'not_applicable'"}, sqlstateCheckViolation},
 		{"default true while ISR does not apply", ruleColumns{"deductibility": "'isr_not_applicable'", "cash_payment_rule": "'not_applicable'"}, sqlstateCheckViolation},

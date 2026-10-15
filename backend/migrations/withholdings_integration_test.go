@@ -4,6 +4,7 @@ package migrations_test
 
 import (
 	"database/sql"
+	"maps"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,7 +43,7 @@ var newWithholdingConstraints = []string{
 	"expenses_residential_rent_is_exempt",
 	"expenses_creditable_iva_withheld_within_withheld",
 	"expenses_creditable_iva_split_within_iva",
-	"expenses_creditable_iva_withheld_needs_cfdi_and_no_cash_over_limit",
+	"expenses_creditable_iva_withheld_needs_cfdi_no_cash_over_limit",
 	"expenses_withholding_rule_ids_valid",
 	"expenses_withholding_table_version_format",
 	"expenses_withholding_derived_together",
@@ -311,6 +312,36 @@ func TestWithholdings_CategoryDefaultOperationKind(t *testing.T) {
 	})
 }
 
+func TestWithholdings_CategoryDefaultOperationKindRejectsMalformedRows(t *testing.T) {
+	owner := pgtest.NewDatabase(t).Connect(t, pgtest.RoleOwner)
+	_, err := owner.Exec("DELETE FROM category_regime_rules WHERE category_code = 'software' AND regime_code IN ('612', '601')")
+	require.NoError(t, err)
+	moral := ruleColumns{"regime_code": "'601'", "person_type": "'moral'"}
+	cases := []struct {
+		name      string
+		overrides ruleColumns
+	}{
+		{"persona moral row without a default", moral},
+		{"persona moral row with an unknown kind", withRule(moral, ruleColumns{"default_operation_kind": "'subcontracting'"})},
+		{"persona fisica row with a default", ruleColumns{"default_operation_kind": "'business_services'"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			requireSQLState(t, insertRule(owner, c.overrides), sqlstateCheckViolation)
+		})
+	}
+	t.Run("well-formed rows are accepted", func(t *testing.T) {
+		require.NoError(t, insertRule(owner, nil))
+		require.NoError(t, insertRule(owner, withRule(moral, ruleColumns{"default_operation_kind": "'business_services'"})))
+	})
+}
+
+func withRule(base, overrides ruleColumns) ruleColumns {
+	out := maps.Clone(base)
+	maps.Copy(out, overrides)
+	return out
+}
+
 // The expand step adds every CHECK NOT VALID and the validate step validates them in its
 // own transaction, over rows that existed before the migration.
 func TestWithholdingsMigration_ValidatesOverExistingRows(t *testing.T) {
@@ -335,12 +366,13 @@ func TestWithholdingsMigration_ValidatesOverExistingRows(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, newWithholdingConstraints, constraintsValidated(t, owner, true), "validated")
 
+	// FORCE RLS: the owner sees no row, so the rows are read in their user's context.
 	var legacyIncomes, legacyExpenses int
-	require.NoError(t, owner.QueryRowContext(t.Context(), `SELECT
+	queryAsUser(t, app, userA, `SELECT
 	  (SELECT count(*) FROM incomes WHERE counterparty_kind IS NULL AND NOT residential_rent AND NOT via_platform
 	     AND withholding_rule_ids = '{}' AND isr_withheld_cents = 100000),
 	  (SELECT count(*) FROM expenses WHERE supplier_kind IS NULL AND creditable_iva_withheld_cents = 0
-	     AND creditable_iva_cents = 8000 AND iva_withheld_cents = 5333)`).Scan(&legacyIncomes, &legacyExpenses))
+	     AND creditable_iva_cents = 8000 AND iva_withheld_cents = 5333)`, &legacyIncomes, &legacyExpenses)
 	assert.Equal(t, 1, legacyIncomes, "the typed withholdings are kept")
 	assert.Equal(t, 1, legacyExpenses, "the full creditable candidate is kept until the re-split")
 }
