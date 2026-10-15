@@ -13,8 +13,8 @@
 package usertext
 
 import (
-	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 // DetailInvisibleCharacters is the FieldError code of a text field holding
@@ -29,12 +29,61 @@ const DetailInvisibleCharacters = "invisible_characters"
 // they are part of ordinary emoji and accents.
 var invisible = []*unicode.RangeTable{unicode.Cc, unicode.Cf, unicode.Zl, unicode.Zp}
 
+const (
+	// zeroWidthJoiner (Cf) glues emoji into one glyph (a family, a
+	// profession, the rainbow flag); it is allowed only there.
+	zeroWidthJoiner = '\u200d'
+	// emojiPresentation (VS16) may follow the emoji a joiner continues.
+	emojiPresentation = '\ufe0f'
+	// skinToneFirst and skinToneLast bound the emoji modifiers (Fitzpatrick
+	// skin tones) that may follow the emoji a joiner continues.
+	skinToneFirst = '\U0001f3fb'
+	skinToneLast  = '\U0001f3ff'
+)
+
 // HasInvisible reports whether s holds a control, format, line separator or
-// paragraph separator character. It scans s once, O(len(s)).
+// paragraph separator character. The one exception is a zero-width joiner
+// inside an emoji ZWJ sequence: between an emoji (optionally followed by
+// VS16 or a skin tone) and another emoji, where it renders as one glyph and
+// cannot hide or reorder letters. It scans s once, O(len(s)).
 func HasInvisible(s string) bool {
-	return strings.ContainsFunc(s, isInvisible)
+	afterEmoji := false
+	for i, r := range s {
+		switch {
+		case r == zeroWidthJoiner:
+			if !afterEmoji || !emojiStarts(s[i+utf8.RuneLen(r):]) {
+				return true
+			}
+		case isInvisible(r):
+			return true
+		case isEmoji(r):
+			afterEmoji = true
+		case !extendsEmoji(r):
+			afterEmoji = false
+		}
+	}
+	return false
 }
 
 func isInvisible(r rune) bool {
 	return unicode.In(r, invisible...)
+}
+
+// isEmoji approximates Extended_Pictographic, which the standard library
+// lacks, with Symbol, other (So): every emoji a ZWJ sequence joins is So.
+func isEmoji(r rune) bool {
+	return unicode.Is(unicode.So, r)
+}
+
+// emojiStarts reports whether rest begins with an emoji. An empty rest
+// does not (DecodeRuneInString answers RuneError, itself So).
+func emojiStarts(rest string) bool {
+	next, size := utf8.DecodeRuneInString(rest)
+	return size > 0 && next != utf8.RuneError && isEmoji(next)
+}
+
+// extendsEmoji reports whether r may sit between an emoji and the joiner
+// that continues it.
+func extendsEmoji(r rune) bool {
+	return r == emojiPresentation || (r >= skinToneFirst && r <= skinToneLast)
 }

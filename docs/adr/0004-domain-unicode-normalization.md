@@ -71,7 +71,12 @@ descriptions refused nothing at all (a NUL reached the database and failed there
    breaks and tabs included: every field is single-line), format (Cf: zero-width
    characters, bidi marks, embeddings, overrides and isolates, the BOM, the soft hyphen,
    tags) or line/paragraph separator (Zl, Zp) character. Combining marks and variation
-   selectors (Mn) stay allowed (accents, emoji). Applied after NFC and trimming to: the
+   selectors (Mn) stay allowed (accents, emoji). So does a zero-width joiner (Cf) inside
+   an emoji ZWJ sequence, i.e. between an emoji (optionally followed by VS16 or a skin
+   tone) and another emoji (So): the iOS and Android emoji keyboards insert it for
+   families, professions and the rainbow flag, and there it renders as one glyph and
+   cannot hide or reorder letters. Anywhere else it is refused. Tag characters stay
+   refused, subdivision flags included: they can carry hidden ASCII. Applied after NFC and trimming to: the
    account `name` (`verifyEmail`, `updateMe`), the taxpayer `display_name`, the income
    and expense `description`, `employer_label` and `student_label`. Passwords are out of
    scope (never displayed), and so are values with their own grammar (RFC, ids, codes).
