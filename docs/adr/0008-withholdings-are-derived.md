@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | PROPOSED (WH-02; tech-lead review of the contract PR) |
+| Status | **Accepted** (2026-10-15), with [Amendment 1](#amendment-the-contract-step-as-implemented-by-wh-06--wh-07-0113) (0.11.3) and [Amendment 2](#amendment-2-the-contract-cleanup-of-wh-11--wh-12-0120) (0.12.0). Proposed by WH-02; implemented by #123, #124, #136..#139, #142, #146; gates WH-14 PASS ([review](../reviews/WH-14-tech-lead-gate.md)) and WH-15 PASS ([#154](https://github.com/romodevx/control-contable/pull/154)) |
 | Date | 2026-10-15 |
 | Related | [MODULE-withholdings](../project-specs/MODULE-withholdings.md) (owner decisions 1–4, §3, §5, §7, OQ-W6, OQ-W7), [withholdings matrix](../research/withholdings-matrix-2026.md), [ADR-0002](0002-tax-engine.md) §4, [ADR-0005](0005-rate-limits-in-postgres.md), [ADR-0007](0007-fiscal-shared-kernel.md), [CONTRACT.md](../api/CONTRACT.md), PLAN §9 (WH-01..WH-17) |
 | Owner | architect |

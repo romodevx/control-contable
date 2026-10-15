@@ -109,8 +109,8 @@ Some modules read another module's data and declare it as a **prerequisite**
 effectively ON only while its own flag and every prerequisite's are ON. Otherwise its routes
 answer `404` and `GET /v1/flags` omits it; `flags list` shows it as `hidden` with a `REQUIRES`
 column and says which flag to turn ON. Today `module_incomes`, `module_expenses`,
-`module_tax_engine` and `module_dashboard` require `module_taxpayers`; `module_history` requires
-`module_tax_engine` (and through it `module_taxpayers`). The dashboard does not
+`module_tax_engine` and `module_dashboard` require `module_taxpayers`; `module_history` and
+`module_annual` require `module_tax_engine` (and through it `module_taxpayers`). The dashboard does not
 require the engine or the record modules: each one OFF removes its part of Home.
 Every seeded preset includes the prerequisites of its modules (integration-tested).
 
@@ -129,6 +129,7 @@ Enabling a flag in a shared environment requires the module's tech-lead and secu
 | M5 Tax Engine | `module_tax_engine` | Built; gates M5-30 and M5-31 passed. **OFF in shared environments** until the [security gate preconditions](docs/reviews/M5-31-security-gate.md#5-preconditions-to-enable-module_tax_engine-in-staging-or-production) hold, first the CPA sign-off (M5-33, pending), and a reviewed parameter set for the year in force (needs `module_taxpayers`) | [module](docs/modules/tax-engine.md), [add a regime](docs/guides/add-a-regime.md), [yearly parameter update](docs/runbooks/tax-params-update.md) |
 | M6 Dashboard | `module_dashboard` | Built; gates M6-07 and M6-08 passed. **OFF in shared environments** until the [security gate preconditions](docs/reviews/M6-08-security-gate.md#5-preconditions-to-enable-module_dashboard-in-staging-or-production) hold, among them the owner's manual TalkBack/VoiceOver pass and the staging p95 (needs `module_taxpayers`; the engine and record modules only add sections) | [module](docs/modules/dashboard.md), [runbook](docs/runbooks/dashboard.md) |
 | M8 History | `module_history` | Built; gates M8-08 and M8-09 passed. **OFF in shared environments** until the owed device walk (M8-07 §5, Docker was down) and the tax engine's own preconditions hold (needs `module_tax_engine`, and through it `module_taxpayers`). Preset: `demo_full` only | [module](docs/modules/history.md) |
+| WH Withholdings (cross-cutting) | none of its own: inside `module_incomes`, `module_expenses`, `module_tax_engine` | Built; QA WH-13, gates WH-14 and WH-15 passed. Ships with those three flags and their preconditions; CPA review of the ⚠️ rules (WH-17) pending. The backfill is run after a deploy, not before | [module](docs/modules/withholdings.md), [backfill runbook](docs/runbooks/withholdings-backfill.md), [ADR-0008](docs/adr/0008-withholdings-are-derived.md) |
 | M7, M9 | `module_*` | Not built | [MODULES](docs/project-specs/MODULES.md), [PLAN](docs/project-specs/PLAN-control-contable.md) |
 
 ## API reference

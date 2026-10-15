@@ -1,5 +1,9 @@
 # Runbook: withholdings backfill (`cmd/backfill-withholdings`)
 
+Sibling of the [yearly parameter update](tax-params-update.md#7-engineversion-and-withholdingtableversion):
+a year whose withholding rates change bumps the table version, and this command follows. Module
+page: [withholdings](../modules/withholdings.md).
+
 The server derives every ISR and IVA withholding from the facts of an income or an expense and
 stores the result with the decision table's `table_version`
 ([ADR-0008](../adr/0008-withholdings-are-derived.md), [MODULE-withholdings §5.2, §5.3](../project-specs/MODULE-withholdings.md)).
@@ -17,7 +21,8 @@ Two kinds of records need this command:
 | Owner | backend-sr (run), owner (reads the dry run before `-apply`) |
 | Role | `cc_worker` (`DATABASE_URL`, the worker's secret). Never `cc_owner`: under FORCE RLS it sees no row. The command refuses a superuser, owner or BYPASSRLS login in every environment |
 | Grants | Migration `20261018100000_withholdings_backfill_worker`: see [data-model.md](../architecture/data-model.md#database-roles). The user list comes from the SECURITY DEFINER `withholding_backfill_users()` (ids only), owned by the NOLOGIN `cc_worker_definer`; `cc_worker` itself reads no row outside a user's context |
-| Gate | WH-15 (security) before running against a shared environment |
+| Gate | WH-15 (security) **PASS** ([#154](https://github.com/romodevx/control-contable/pull/154)) for this version of the command; re-run the gate if the command or its migration changes |
+| Deploy order | **None.** Contract 0.12.0 serves underived records (`withholding: null`), so the backfill is no longer a deploy precondition (§5); run it after the deploy |
 
 ## 0. Once per environment: the `cc_worker_definer` role
 

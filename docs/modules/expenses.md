@@ -4,7 +4,7 @@
 |---|---|
 | Flag | `module_expenses` (OFF by default; requires `module_taxpayers`) |
 | Spec | [MODULE-expenses.md](../project-specs/MODULE-expenses.md) (shares money, idempotency, regime window, IVA, delete/restore and access rules with [MODULE-incomes](../project-specs/MODULE-incomes.md)) |
-| Contract | [`docs/api/openapi.yaml`](../api/openapi.yaml), tag `Expenses`, `x-module: module_expenses` (frozen by M4-01 in 0.5.0, amended in 0.6.0 and 0.6.1) |
+| Contract | [`docs/api/openapi.yaml`](../api/openapi.yaml), tag `Expenses`, `x-module: module_expenses` (frozen by M4-01 in 0.5.0, amended in 0.6.0 and 0.6.1; withholdings derived since 0.9.0, typed amounts removed in 0.12.0, [ADR-0008](../adr/0008-withholdings-are-derived.md)) |
 | Gates | [M4-13 tech lead](../reviews/M3-M4-tech-lead-gate.md) PASS, [M4-14 security](../reviews/M3-M4-security-gate.md) PASS, [M4-12 QA](../reviews/M3-M4-QA.md) |
 | Operations | [Incomes and expenses runbook](../runbooks/incomes-expenses.md) |
 | Code | `backend/internal/expenses/` (domain, usecase, infra, adapter), `backend/internal/kernel/fiscal/`, `backend/cmd/api/expenses.go`, `records.go`, `ledger.go`, `backend/migrations/20261013210000_expense_categories.sql`, `20261013211000_expenses.sql`, `20261014150000_expenses_tax_facts.sql`, `mobile/lib/features/expenses/`, `mobile/lib/core/records/` |
@@ -27,6 +27,7 @@ rest.
 | `listExpenseCategories` | `GET /v1/taxpayers/{taxpayerId}/expense-categories?regime=&on=` | allowed |
 | `listExpenses` | `GET /v1/taxpayers/{taxpayerId}/expenses?period=YYYY-MM&regime=&cursor=&limit=` | allowed |
 | `createExpense` | `POST /v1/taxpayers/{taxpayerId}/expenses` | `402` |
+| `previewExpenseWithholdings` | `GET /v1/taxpayers/{taxpayerId}/expenses/withholding-preview?…` (the form's derived card; stores nothing) | allowed |
 | `getExpense` | `GET /v1/taxpayers/{taxpayerId}/expenses/{expenseId}` | allowed |
 | `updateExpense` | `PATCH /v1/taxpayers/{taxpayerId}/expenses/{expenseId}` (merge-patch) | `402` |
 | `deleteExpense` | `DELETE /v1/taxpayers/{taxpayerId}/expenses/{expenseId}` (soft) | allowed |
@@ -141,19 +142,30 @@ The stored tax facts, set only by the domain and never by a client:
 | Column | Meaning |
 |---|---|
 | `cash_over_limit` | The cash rule above |
-| `creditable_iva_cents` | The creditable-IVA candidate M5 sums: the IVA when there is a CFDI, the payment is not cash over the limit, the category's rule allows IVA credit, and the expense is deductible (or the payer is RESICO PF); otherwise 0 ⚠️ CPA |
+| `creditable_iva_cents` | The creditable-IVA candidate M5 sums: the IVA when there is a CFDI, the payment is not cash over the limit, the category's rule allows IVA credit, and the expense is deductible (or the payer is RESICO PF); otherwise 0 ⚠️ CPA. Since WH-07 only the part paid to the supplier (IVA − IVA withheld) |
+| `creditable_iva_withheld_cents` | The creditable share of the IVA the taxpayer withheld from the supplier, credited the month after (engine 1.1.0); 0 without a withholding |
 
 ## Withholdings the taxpayer made
 
-`isr_withheld_cents` and `iva_withheld_cents` on an expense are what the taxpayer withheld
-**from its supplier** (retenciones a proveedores), which M5 adds to the withholdings to remit.
+What a **persona moral** withholds from its supplier (retenciones a proveedores) is derived by
+the server since contract 0.12.0; nobody types it. The taxpayer answers "Tu proveedor":
+`supplier_kind` (required for a persona moral), `supplier_regime` when the supplier is a
+persona física (unknown → derived as 612 with `supplier_regime_unknown`), `operation_kind`
+(omitted → the category's `default_operation_kind`) and `residential_rent`.
 
-- Only a **persona moral** may withhold. A persona física sending a value above 0 gets
-  `422 withholding_not_applicable`.
-- Bounds as incomes: ISR ≤ `amount_cents`, IVA ≤ `iva_cents` (`422 withholding_exceeds_base`).
-- The form shows the section for morales only, collapsed, open by default for
-  `servicios_profesionales`, `renta_local` and `fletes`. Suggestions (UX only): ISR 10 % and
-  IVA 2/3 on fees and rent, IVA 4 % of the price on freight.
+- A **persona física** never withholds from a domestic supplier: the section does not exist and
+  sending a supplier fact answers `422 supplier_not_applicable`.
+- The result is the read-only `withholding` object, with `remit_due_on` (the 17th of the next
+  month). M5 adds it to the withholdings to remit; `isr_withheld_cents` /
+  `iva_withheld_cents` stay as read-only mirrors and answer `400 additionalProperties` in a
+  request.
+- An expense with a withholding carries `deduction_requires_remittance`: it is deductible only
+  if the withholding is remitted on time (v1 assumes it is).
+- Its creditable IVA is split: `creditable_iva_cents` is the IVA paid to the supplier (credited
+  in its month), `creditable_iva_withheld_cents` the IVA withheld (credited the next month,
+  [tax engine](tax-engine.md#withheld-iva-is-credited-the-month-after)).
+- The decision table and what `withholding: null` means for an expense stored before
+  derivation are on the [withholdings page](withholdings.md).
 
 ## Mandatory legend
 
@@ -173,6 +185,9 @@ category and its hint (always visible) and in the list header; it never keeps it
 | `not_isr_deductible_in_regime` | `deductible` | Override to `true` against `isr_not_applicable` |
 | `duplicate_cfdi_uuid` | `cfdi_uuid` | Another live expense of the taxpayer has the folio |
 | `provisional_parameters` | `paid_on` | The year's parameters are not published yet |
+| `deduction_requires_remittance` | `withholding` | A derived withholding > 0: deductible only if remitted by the 17th |
+| `supplier_regime_unknown` | `supplier_regime` | "No sé": derived as 612 |
+| `withholding_cpa_unverified`, `foreign_counterparty_not_supported` | `withholding` / `supplier_kind` | As on [withholdings](withholdings.md#what-is-stored-and-served) |
 
 Non-deductibility is never an error: it is a warning plus `deductible: false`.
 
@@ -186,7 +201,7 @@ As [incomes](incomes.md#trial-cap-and-access), with the expense counter:
 - Read-only users may list, get, read categories, delete and restore; create and edit answer
   `402`.
 - Idempotent client `id`: same table as [incomes](incomes.md#idempotent-client-ids). The
-  same-fields comparison includes the override and the normalized withholdings.
+  same-fields comparison includes the override and the supplier facts.
 - Write budget: 300 expense mutations per user per hour (scope `expense_writes`).
 
 ### Try it locally
@@ -243,7 +258,7 @@ filtered month, plus `legend`.
 
 ## Flag behaviour (`module_expenses`)
 
-- OFF (the default): all 7 operations, **the categories endpoint included**, answer
+- OFF (the default): all 8 operations, **the categories and preview endpoints included**, answer
   `404 not_found`, even with `module_incomes` ON. The app shows no Gastos tab.
 - **Prerequisite `module_taxpayers`**: with it OFF, expenses are hidden whatever their own flag
   says (`hidden` in `make -C backend flags`).
@@ -264,7 +279,7 @@ make -C backend flags ARGS="disable module_expenses"
 ## Errors
 
 Every error uses the single envelope `ErrorResponse`; `details[].code` carries the rule
-(`unknown_category`, `has_cfdi_mismatch`, `withholding_not_applicable`, ...). Amounts,
+(`unknown_category`, `has_cfdi_mismatch`, `supplier_not_applicable`, ...). Amounts,
 descriptions and CFDI folios are never echoed. Every response, record body or error,
 carries `Cache-Control: no-store` (contract 0.7.0, as for [incomes](incomes.md#errors)).
 
