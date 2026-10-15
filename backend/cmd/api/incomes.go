@@ -6,12 +6,11 @@ import (
 	"log/slog"
 
 	"github.com/romodevx/control-contable/backend/adapter/http/router"
+	"github.com/romodevx/control-contable/backend/cmd/internal/profiles"
 	expensesdomain "github.com/romodevx/control-contable/backend/internal/expenses/domain"
 	incomeshttp "github.com/romodevx/control-contable/backend/internal/incomes/adapter/http"
-	incomesdomain "github.com/romodevx/control-contable/backend/internal/incomes/domain"
 	incomesinfra "github.com/romodevx/control-contable/backend/internal/incomes/infra"
 	incomes "github.com/romodevx/control-contable/backend/internal/incomes/usecase"
-	"github.com/romodevx/control-contable/backend/internal/kernel/fiscal"
 	"github.com/romodevx/control-contable/backend/internal/platform/access"
 	"github.com/romodevx/control-contable/backend/internal/platform/access/accessgorm"
 	"github.com/romodevx/control-contable/backend/internal/platform/clock"
@@ -19,14 +18,7 @@ import (
 	"github.com/romodevx/control-contable/backend/internal/platform/tx"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/infra/ratecatalog"
 	"github.com/romodevx/control-contable/backend/internal/taxengine/params"
-	taxpayersdomain "github.com/romodevx/control-contable/backend/internal/taxpayers/domain"
 	taxpayers "github.com/romodevx/control-contable/backend/internal/taxpayers/usecase"
-)
-
-// The 625 options the income withholding rules read (regime catalog keys).
-const (
-	optionActivities         = "activities"
-	optionRFCGivenToPlatform = "rfc_given_to_platform"
 )
 
 // rateCatalog is the tax engine's RateCatalog adapter, bound once with the
@@ -131,35 +123,5 @@ func (a incomesTaxpayers) Profile(ctx context.Context, userID, taxpayerID string
 	if err != nil {
 		return incomes.TaxpayerProfile{}, err
 	}
-	out := incomes.TaxpayerProfile{PersonType: fiscal.PersonType(p.PersonType), Archived: p.Archived}
-	for _, r := range p.Regimes {
-		held := incomes.RegimeProfile{
-			Code:               fiscal.RegimeCode(r.Code),
-			StartPeriod:        r.Window.Start.String(),
-			PlatformActivities: activities(r.Options[optionActivities]),
-			RFCGivenToPlatform: flag(r.Options[optionRFCGivenToPlatform]),
-		}
-		if !r.Window.IsOpen() {
-			held.EndPeriod = r.Window.End.String()
-		}
-		out.Regimes = append(out.Regimes, held)
-	}
-	return out, nil
-}
-
-func activities(v taxpayersdomain.OptionValue) []incomesdomain.PlatformActivity {
-	list, ok := v.List()
-	if !ok {
-		return nil
-	}
-	out := make([]incomesdomain.PlatformActivity, len(list))
-	for i, a := range list {
-		out[i] = incomesdomain.PlatformActivity(a)
-	}
-	return out
-}
-
-func flag(v taxpayersdomain.OptionValue) bool {
-	b, _ := v.Bool()
-	return b
+	return profiles.Incomes(p), nil
 }

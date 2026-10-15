@@ -277,7 +277,12 @@ func TestExpenses_NoAccessBeyondTheGrants(t *testing.T) {
 		{pgtest.RoleApp, "DELETE FROM expenses"},
 		{pgtest.RoleApp, "TRUNCATE expenses"},
 		{pgtest.RoleWebhook, "SELECT 1 FROM expenses"},
-		{pgtest.RoleWorker, "SELECT 1 FROM expenses"},
+		// cc_worker reads its own context's rows since WH-08 (20261018100000) and
+		// writes only the derived columns, never an amount, the verdict or a delete.
+		{pgtest.RoleWorker, "UPDATE expenses SET amount_cents = 1"},
+		{pgtest.RoleWorker, "UPDATE expenses SET deductible = false"},
+		{pgtest.RoleWorker, "UPDATE expenses SET deleted_at = now()"},
+		{pgtest.RoleWorker, "DELETE FROM expenses"},
 	}
 	for _, d := range denied {
 		t.Run(string(d.role)+": "+d.query, func(t *testing.T) {

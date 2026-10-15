@@ -41,6 +41,25 @@ func LegacyCounterparty(kind fiscal.ReceptorKind, viaPlatform bool) Counterparty
 	return CounterpartyPublic
 }
 
+// LegacyFacts reads the deprecated counterparty_type of an income stored
+// before WH-06 forwards (MODULE-withholdings §5.2): persona_moral is a
+// persona moral, persona_fisica one with activity, publico_general the
+// public, and plataforma a persona moral reached through a platform. It is
+// LegacyCounterparty's inverse; ok is false outside the enum.
+func LegacyFacts(c Counterparty) (kind fiscal.ReceptorKind, viaPlatform, ok bool) {
+	switch c {
+	case CounterpartyMoral:
+		return fiscal.ReceptorPM, false, true
+	case CounterpartyFisica:
+		return fiscal.ReceptorPFWithActivity, false, true
+	case CounterpartyPublic:
+		return fiscal.ReceptorPFNoActivityOrPublic, false, true
+	case CounterpartyPlatform:
+		return fiscal.ReceptorPM, true, true
+	}
+	return "", false, false
+}
+
 // PlatformActivity is a 625 activity (contract PlatformActivity).
 type PlatformActivity string
 

@@ -501,6 +501,9 @@ func TestRegimeCatalog_NoOtherRuntimeRoleReadsIt(t *testing.T) {
 	db := pgtest.NewDatabase(t)
 	for _, role := range []pgtest.Role{pgtest.RoleWebhook, pgtest.RoleWorker} {
 		for _, table := range catalogTables {
+			if role == pgtest.RoleWorker && table == "regimes" {
+				continue // read by the withholdings backfill since WH-08 (20261018100000)
+			}
 			t.Run(string(role)+"/"+table, func(t *testing.T) {
 				_, err := db.Connect(t, role).ExecContext(t.Context(), "SELECT 1 FROM "+table)
 				requireSQLState(t, err, sqlstateInsufficientPrivilege)

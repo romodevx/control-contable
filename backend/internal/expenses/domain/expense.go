@@ -224,7 +224,7 @@ func applyRules(d Draft, p Payer, rule CategoryRule, catalog RateCatalog, withho
 	due := RemittanceDue(record, d.PaidOn)
 	hint := ResolveDeductibility(rule, p)
 	deductible, source := effectiveDeductible(hint, d, cashOver)
-	paid, withheld := creditableSplit(isCreditable(d, p, rule, deductible, cashOver), d.IVA, record.IVA)
+	paid, withheld := CreditableSplit(isCreditable(d, p, rule, deductible, cashOver), d.IVA, record.IVA)
 	return Assessment{
 		BookedOn:              d.PaidOn,
 		Hint:                  hint,
