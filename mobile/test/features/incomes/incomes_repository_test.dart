@@ -1,9 +1,11 @@
 import 'dart:convert';
 
 import 'package:control_contable/api/generated/api_client.dart';
+import 'package:control_contable/api/generated/models/counterparty_kind.dart';
 import 'package:control_contable/api/generated/models/counterparty_type.dart';
 import 'package:control_contable/api/generated/models/income_create.dart';
 import 'package:control_contable/api/generated/models/iva_rate.dart';
+import 'package:control_contable/api/generated/models/operation_kind.dart';
 import 'package:control_contable/api/generated/models/platform_activity.dart';
 import 'package:control_contable/api/generated/models/warning_code.dart';
 import 'package:control_contable/core/network/api_failure.dart';
@@ -77,6 +79,34 @@ void main() {
             'iva_withholding_allowed': true,
             'iva_withholding_rate': '0.5',
             'platform_activity': 'lodging',
+            'last_used': {
+              'counterparty_kind': null,
+              'operation_kind': 'professional_services',
+              'residential_rent': false,
+              'via_platform': true,
+            },
+          },
+        ),
+        '$_incomes/withholding-preview': (
+          status: 200,
+          body: {
+            'withholding': {
+              'isr_cents': 125000,
+              'iva_cents': 1066667,
+              'isr_rate': '0.0125',
+              'iva_basis': 'two_thirds_of_iva',
+              'withholder': 'counterparty',
+              'net_cents': 10408333,
+              'remit_due_on': null,
+              'rule_ids': ['ISR-4', 'IVA-6'],
+              'explanations': [
+                {'rule_id': 'ISR-4', 'text': 'La empresa te retiene 1.25 %.'},
+                {'rule_id': 'IVA-6', 'text': 'Y 2/3 del IVA.'},
+              ],
+              'table_version': '2026.1',
+              'cpa_unverified': false,
+            },
+            'warnings': <Object>[],
           },
         ),
         '$_incomes/$_incomeId': (status: 204, body: null),
@@ -143,23 +173,56 @@ void main() {
     expect(created.warnings.single.code, WarningCode.duplicateCfdiUuid);
   });
 
-  test('defaults ask for the regime, payer, date and activity', () async {
+  test('defaults ask for the regime, date and activity, and bring the '
+      'facts last used', () async {
     final defaults = await repository.defaults(
       taxpayerId: _taxpayerId,
       regime: '625',
-      counterparty: CounterpartyType.plataforma,
       on: '2026-10-13',
       platformActivity: PlatformActivity.lodging,
     );
 
     expect(adapter.requests.single.uri.queryParameters, {
       'regime': '625',
-      'counterparty_type': 'plataforma',
+      // Still required by 0.10.0 (deprecated; WH-06 removes it).
+      'counterparty_type': 'persona_fisica',
       'on': '2026-10-13',
       'platform_activity': 'lodging',
     });
-    expect(defaults.isrWithholdingRate, '0.04');
     expect(defaults.ivaRatesAllowed, isNot(contains(IvaRate.rate8)));
+    expect(defaults.lastUsed?.counterpartyKind, isNull);
+    expect(defaults.lastUsed?.viaPlatform, isTrue);
+  });
+
+  test('the withholding preview sends the facts and nothing else (no '
+      'name, RFC or description)', () async {
+    final preview = await repository.previewWithholdings(
+      taxpayerId: _taxpayerId,
+      query: (
+        regime: '626',
+        on: '2026-07-10',
+        amountCents: 10000000,
+        ivaRate: IvaRate.rate16,
+        ivaCents: 1600000,
+        counterpartyKind: CounterpartyKind.pm,
+        operationKind: OperationKind.professionalServices,
+        residentialRent: null,
+        viaPlatform: null,
+        platformActivity: null,
+      ),
+    );
+
+    expect(adapter.requests.single.uri.queryParameters, {
+      'regime': '626',
+      'on': '2026-07-10',
+      'amount_cents': '10000000',
+      'iva_rate': 'rate_16',
+      'iva_cents': '1600000',
+      'counterparty_kind': 'pm',
+      'operation_kind': 'professional_services',
+    });
+    expect(preview.withholding.netCents, 10408333);
+    expect(preview.withholding.ruleIds, ['ISR-4', 'IVA-6']);
   });
 
   test('delete and restore address one income', () async {

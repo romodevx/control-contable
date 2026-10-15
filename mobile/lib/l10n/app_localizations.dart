@@ -1782,12 +1782,6 @@ abstract class AppLocalizations {
   /// **'Tasa de IVA'**
   String get incomeFieldIvaRate;
 
-  /// Counterparty type choice.
-  ///
-  /// In es, this message translates to:
-  /// **'¿Quién pagó?'**
-  String get incomeFieldCounterparty;
-
   /// Regime the income belongs to (only with more than one).
   ///
   /// In es, this message translates to:
@@ -1806,29 +1800,11 @@ abstract class AppLocalizations {
   /// **'IVA cobrado'**
   String get incomeFieldIvaAmount;
 
-  /// ISR the payer withheld.
-  ///
-  /// In es, this message translates to:
-  /// **'ISR retenido'**
-  String get incomeFieldIsrWithheld;
-
-  /// IVA the payer withheld.
-  ///
-  /// In es, this message translates to:
-  /// **'IVA retenido'**
-  String get incomeFieldIvaWithheld;
-
   /// The CFDI's folio fiscal.
   ///
   /// In es, this message translates to:
   /// **'Folio fiscal (UUID)'**
   String get incomeFieldCfdiUuid;
-
-  /// Collapsed section with the withholdings.
-  ///
-  /// In es, this message translates to:
-  /// **'Retenciones'**
-  String get incomeSectionWithholdings;
 
   /// Collapsed section: IVA amount, the other date, folio fiscal.
   ///
@@ -1836,23 +1812,11 @@ abstract class AppLocalizations {
   /// **'Más detalles'**
   String get incomeSectionMore;
 
-  /// Help under the withholdings section.
-  ///
-  /// In es, this message translates to:
-  /// **'Prellenadas con la tasa sugerida. Corrígelas con lo que diga el CFDI.'**
-  String get incomeWithholdingsHelp;
-
   /// Live total under the amount.
   ///
   /// In es, this message translates to:
   /// **'Total con IVA {total}'**
   String incomeSummaryTotal(String total);
-
-  /// Live breakdown under the amount.
-  ///
-  /// In es, this message translates to:
-  /// **'IVA {iva} · Retenciones {withheld} · Neto {net}'**
-  String incomeSummaryNet(String iva, String withheld, String net);
 
   /// Notice for an income in an informational regime (OQ-4).
   ///
@@ -2562,35 +2526,11 @@ abstract class AppLocalizations {
   /// **'Descripción'**
   String get expenseFieldDescription;
 
-  /// Label: ISR the taxpayer withheld from the supplier.
-  ///
-  /// In es, this message translates to:
-  /// **'ISR retenido'**
-  String get expenseFieldIsrWithheld;
-
-  /// Label: IVA the taxpayer withheld from the supplier.
-  ///
-  /// In es, this message translates to:
-  /// **'IVA retenido'**
-  String get expenseFieldIvaWithheld;
-
   /// Collapsed section: IVA, deductibility, folio, description.
   ///
   /// In es, this message translates to:
   /// **'Más detalles'**
   String get expenseSectionMore;
-
-  /// Collapsed section of a persona moral: what it withheld from the supplier.
-  ///
-  /// In es, this message translates to:
-  /// **'Retenciones a tu proveedor'**
-  String get expenseSectionWithholdings;
-
-  /// Help under the supplier withholdings section.
-  ///
-  /// In es, this message translates to:
-  /// **'Lo que le retuviste al proveedor, como dice el CFDI. Lo tienes que enterar al SAT.'**
-  String get expenseWithholdingsHelp;
 
   /// Live total under the amount.
   ///
@@ -3297,6 +3237,336 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'La contratación de planes estará disponible próximamente.'**
   String get dashboardPlansBody;
+
+  /// Operation kind option (professional_services).
+  ///
+  /// In es, this message translates to:
+  /// **'Servicios profesionales (honorarios): asesoría, consultoría, diseño, salud…'**
+  String get withholdingOperationProfessional;
+
+  /// Operation kind option (business_services).
+  ///
+  /// In es, this message translates to:
+  /// **'Otros servicios de tu negocio: reparación, mantenimiento, limpieza, comida…'**
+  String get withholdingOperationBusiness;
+
+  /// Operation kind option (rent_real_estate).
+  ///
+  /// In es, this message translates to:
+  /// **'Renta de un inmueble (casa, local, oficina, terreno)'**
+  String get withholdingOperationRentRealEstate;
+
+  /// Operation kind option (rent_movable).
+  ///
+  /// In es, this message translates to:
+  /// **'Renta de equipo, maquinaria o vehículos'**
+  String get withholdingOperationRentMovable;
+
+  /// Operation kind option (sale_of_goods).
+  ///
+  /// In es, this message translates to:
+  /// **'Venta de productos o mercancía'**
+  String get withholdingOperationGoods;
+
+  /// Operation kind option (ground_freight).
+  ///
+  /// In es, this message translates to:
+  /// **'Flete: transporte de mercancía por carretera'**
+  String get withholdingOperationFreight;
+
+  /// Operation kind option (commission).
+  ///
+  /// In es, this message translates to:
+  /// **'Comisiones por intermediación'**
+  String get withholdingOperationCommission;
+
+  /// Operation kind option (scrap).
+  ///
+  /// In es, this message translates to:
+  /// **'Desperdicios o reciclables (chatarra, cartón, PET…)'**
+  String get withholdingOperationScrap;
+
+  /// Operation kind option (other).
+  ///
+  /// In es, this message translates to:
+  /// **'Otro'**
+  String get withholdingOperationOther;
+
+  /// Question Q3/E4: housing rent (exempt from IVA).
+  ///
+  /// In es, this message translates to:
+  /// **'¿Es una casa o departamento para vivir?'**
+  String get withholdingResidentialRent;
+
+  /// Helper under the housing rent question (LIVA 20 fr. II).
+  ///
+  /// In es, this message translates to:
+  /// **'La renta de vivienda no lleva IVA.'**
+  String get withholdingResidentialRentHelp;
+
+  /// Yes option of a withholding question.
+  ///
+  /// In es, this message translates to:
+  /// **'Sí'**
+  String get withholdingYes;
+
+  /// No option of a withholding question.
+  ///
+  /// In es, this message translates to:
+  /// **'No'**
+  String get withholdingNo;
+
+  /// Help toggle of the derived withholding card.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Tu factura dice otra cantidad?'**
+  String get withholdingHelpLabel;
+
+  /// Why there is no manual override (owner decision 1, OQ-W3).
+  ///
+  /// In es, this message translates to:
+  /// **'La app calcula la retención que marca la ley para lo que nos dijiste. Si tu factura muestra otra, revisa con quién te facturó o con tu contador; la estimación usa la de la ley.'**
+  String get withholdingHelpText;
+
+  /// The preview failed before any figure: the server derives it on save.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin conexión no podemos calcular la retención. Se calculará al guardar.'**
+  String get withholdingOffline;
+
+  /// The preview failed: the last figures may be out of date.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos actualizar el cálculo. Se calculará de nuevo al guardar.'**
+  String get withholdingStale;
+
+  /// Warning withholding_cpa_unverified (⚠️ rule).
+  ///
+  /// In es, this message translates to:
+  /// **'Esta retención aún no la confirma un contador. Úsala como aproximado.'**
+  String get withholdingWarningCpaUnverified;
+
+  /// Warning foreign_counterparty_not_supported.
+  ///
+  /// In es, this message translates to:
+  /// **'Las operaciones con el extranjero pueden llevar otros impuestos que la app todavía no calcula.'**
+  String get withholdingWarningForeign;
+
+  /// Warning supplier_regime_unknown.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisa el régimen en la factura de tu proveedor: cambia la retención.'**
+  String get withholdingWarningSupplierRegimeUnknown;
+
+  /// Warning deduction_requires_remittance, with the remit due date.
+  ///
+  /// In es, this message translates to:
+  /// **'Este gasto solo es deducible si enteras las retenciones a más tardar el {date}.'**
+  String withholdingWarningDeduction(DateTime date);
+
+  /// 625 via a platform without the RFC given (LISR 113-A, LIVA 18-M).
+  ///
+  /// In es, this message translates to:
+  /// **'No le diste tu RFC a la plataforma: te retiene 20 % de ISR y todo el IVA.'**
+  String get withholdingWarningNoRfc;
+
+  /// Question Q1 of the income form.
+  ///
+  /// In es, this message translates to:
+  /// **'¿A quién le facturaste?'**
+  String get incomeFieldCounterpartyKind;
+
+  /// Q1 option (pm).
+  ///
+  /// In es, this message translates to:
+  /// **'Una empresa (persona moral)'**
+  String get counterpartyKindPm;
+
+  /// Q1 option (gov_federal).
+  ///
+  /// In es, this message translates to:
+  /// **'Gobierno federal (o un organismo federal)'**
+  String get counterpartyKindGovFederal;
+
+  /// Q1 option (gov_state_municipal).
+  ///
+  /// In es, this message translates to:
+  /// **'Gobierno estatal o municipal'**
+  String get counterpartyKindGovStateMunicipal;
+
+  /// Q1 option (pf_with_activity).
+  ///
+  /// In es, this message translates to:
+  /// **'Una persona con negocio o profesión (persona física con actividad)'**
+  String get counterpartyKindPfWithActivity;
+
+  /// Q1 option (pf_no_activity_or_public).
+  ///
+  /// In es, this message translates to:
+  /// **'Una persona sin negocio o público en general'**
+  String get counterpartyKindPfPublic;
+
+  /// Q1 option (foreign).
+  ///
+  /// In es, this message translates to:
+  /// **'Alguien en el extranjero'**
+  String get counterpartyKindForeign;
+
+  /// Question Q2 of the income form.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Qué le vendiste o qué servicio diste?'**
+  String get incomeFieldOperationKind;
+
+  /// Question Q4 of the income form.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Lo cobraste a través de una plataforma digital (app de transporte, hospedaje o ventas)?'**
+  String get incomeFieldViaPlatform;
+
+  /// Derived card: what the payer withholds.
+  ///
+  /// In es, this message translates to:
+  /// **'Te retienen: ISR {isr} · IVA {iva}'**
+  String incomeWithheldLine(String isr, String iva);
+
+  /// Derived card: what reaches the user.
+  ///
+  /// In es, this message translates to:
+  /// **'Recibes {net}'**
+  String incomeReceiveLine(String net);
+
+  /// Derived card when nothing is withheld.
+  ///
+  /// In es, this message translates to:
+  /// **'Nadie te retiene impuestos en esta operación.'**
+  String get incomeNothingWithheld;
+
+  /// Derived card before the facts it needs.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe el monto y elige a quién le facturaste para ver si te retienen impuestos.'**
+  String get incomeWithholdingIncomplete;
+
+  /// Section with the supplier questions (persona moral only).
+  ///
+  /// In es, this message translates to:
+  /// **'Tu proveedor'**
+  String get expenseSectionSupplier;
+
+  /// Question E1 of the expense form.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Quién te vendió o te dio el servicio?'**
+  String get expenseFieldSupplierKind;
+
+  /// E1 option (pm).
+  ///
+  /// In es, this message translates to:
+  /// **'Una empresa (persona moral)'**
+  String get supplierKindPm;
+
+  /// E1 option (pf_with_activity).
+  ///
+  /// In es, this message translates to:
+  /// **'Una persona física con negocio o profesión'**
+  String get supplierKindPf;
+
+  /// E1 option (foreign).
+  ///
+  /// In es, this message translates to:
+  /// **'Alguien en el extranjero'**
+  String get supplierKindForeign;
+
+  /// Question E2 of the expense form.
+  ///
+  /// In es, this message translates to:
+  /// **'¿En qué régimen está tu proveedor?'**
+  String get expenseFieldSupplierRegime;
+
+  /// Helper under E2.
+  ///
+  /// In es, this message translates to:
+  /// **'Viene en su factura, junto a su RFC.'**
+  String get expenseSupplierRegimeHelp;
+
+  /// E2 option (612).
+  ///
+  /// In es, this message translates to:
+  /// **'Actividad empresarial o profesional (612)'**
+  String get supplierRegime612;
+
+  /// E2 option (606).
+  ///
+  /// In es, this message translates to:
+  /// **'Arrendamiento (606)'**
+  String get supplierRegime606;
+
+  /// E2 option (626).
+  ///
+  /// In es, this message translates to:
+  /// **'RESICO (626)'**
+  String get supplierRegime626;
+
+  /// E2 option (625).
+  ///
+  /// In es, this message translates to:
+  /// **'Plataformas digitales (625)'**
+  String get supplierRegime625;
+
+  /// E2 option (621).
+  ///
+  /// In es, this message translates to:
+  /// **'RIF (621)'**
+  String get supplierRegime621;
+
+  /// E2 option (unknown).
+  ///
+  /// In es, this message translates to:
+  /// **'No sé'**
+  String get supplierRegimeUnknown;
+
+  /// Question E3 of the expense form.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Qué te vendió o qué servicio te dio?'**
+  String get expenseFieldOperationKind;
+
+  /// Derived card: what the persona moral withholds from the supplier.
+  ///
+  /// In es, this message translates to:
+  /// **'Debes retener: ISR {isr} · IVA {iva}'**
+  String expenseMustWithholdLine(String isr, String iva);
+
+  /// Derived card: what the supplier receives.
+  ///
+  /// In es, this message translates to:
+  /// **'Pagas a tu proveedor {net}'**
+  String expensePaySupplierLine(String net);
+
+  /// Derived card: the withholdings to remit and their due date.
+  ///
+  /// In es, this message translates to:
+  /// **'Entregas al SAT {total} a más tardar el {date}.'**
+  String expenseRemitLine(String total, DateTime date);
+
+  /// Derived card when nothing is withheld.
+  ///
+  /// In es, this message translates to:
+  /// **'No debes retener impuestos en esta compra.'**
+  String get expenseNothingToWithhold;
+
+  /// Derived card before the facts it needs.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe el monto y elige quién te vendió para ver qué debes retener.'**
+  String get expenseWithholdingIncomplete;
+
+  /// Verdict supplier_not_applicable.
+  ///
+  /// In es, this message translates to:
+  /// **'Una persona física no retiene a sus proveedores: no hace falta decir quién te vendió.'**
+  String get expenseErrorSupplierNotApplicable;
 }
 
 class _AppLocalizationsDelegate

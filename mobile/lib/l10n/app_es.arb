@@ -1373,10 +1373,6 @@
   "@incomeFieldIvaRate": {
     "description": "IVA rate choice."
   },
-  "incomeFieldCounterparty": "¿Quién pagó?",
-  "@incomeFieldCounterparty": {
-    "description": "Counterparty type choice."
-  },
   "incomeFieldRegime": "Régimen",
   "@incomeFieldRegime": {
     "description": "Regime the income belongs to (only with more than one)."
@@ -1389,50 +1385,19 @@
   "@incomeFieldIvaAmount": {
     "description": "IVA amount, prefilled from the rate."
   },
-  "incomeFieldIsrWithheld": "ISR retenido",
-  "@incomeFieldIsrWithheld": {
-    "description": "ISR the payer withheld."
-  },
-  "incomeFieldIvaWithheld": "IVA retenido",
-  "@incomeFieldIvaWithheld": {
-    "description": "IVA the payer withheld."
-  },
   "incomeFieldCfdiUuid": "Folio fiscal (UUID)",
   "@incomeFieldCfdiUuid": {
     "description": "The CFDI's folio fiscal."
   },
-  "incomeSectionWithholdings": "Retenciones",
-  "@incomeSectionWithholdings": {
-    "description": "Collapsed section with the withholdings."
-  },
   "incomeSectionMore": "Más detalles",
   "@incomeSectionMore": {
     "description": "Collapsed section: IVA amount, the other date, folio fiscal."
-  },
-  "incomeWithholdingsHelp": "Prellenadas con la tasa sugerida. Corrígelas con lo que diga el CFDI.",
-  "@incomeWithholdingsHelp": {
-    "description": "Help under the withholdings section."
   },
   "incomeSummaryTotal": "Total con IVA {total}",
   "@incomeSummaryTotal": {
     "description": "Live total under the amount.",
     "placeholders": {
       "total": {
-        "type": "String"
-      }
-    }
-  },
-  "incomeSummaryNet": "IVA {iva} · Retenciones {withheld} · Neto {net}",
-  "@incomeSummaryNet": {
-    "description": "Live breakdown under the amount.",
-    "placeholders": {
-      "iva": {
-        "type": "String"
-      },
-      "withheld": {
-        "type": "String"
-      },
-      "net": {
         "type": "String"
       }
     }
@@ -1986,25 +1951,9 @@
   "@expenseFieldDescription": {
     "description": "Label: what the expense was."
   },
-  "expenseFieldIsrWithheld": "ISR retenido",
-  "@expenseFieldIsrWithheld": {
-    "description": "Label: ISR the taxpayer withheld from the supplier."
-  },
-  "expenseFieldIvaWithheld": "IVA retenido",
-  "@expenseFieldIvaWithheld": {
-    "description": "Label: IVA the taxpayer withheld from the supplier."
-  },
   "expenseSectionMore": "Más detalles",
   "@expenseSectionMore": {
     "description": "Collapsed section: IVA, deductibility, folio, description."
-  },
-  "expenseSectionWithholdings": "Retenciones a tu proveedor",
-  "@expenseSectionWithholdings": {
-    "description": "Collapsed section of a persona moral: what it withheld from the supplier."
-  },
-  "expenseWithholdingsHelp": "Lo que le retuviste al proveedor, como dice el CFDI. Lo tienes que enterar al SAT.",
-  "@expenseWithholdingsHelp": {
-    "description": "Help under the supplier withholdings section."
   },
   "expenseSummaryTotal": "Total con IVA {total}",
   "@expenseSummaryTotal": {
@@ -2622,5 +2571,273 @@
   "dashboardPlansBody": "La contratación de planes estará disponible próximamente.",
   "@dashboardPlansBody": {
     "description": "Plans sheet body (placeholder until M7)."
+  },
+  "withholdingOperationProfessional": "Servicios profesionales (honorarios): asesoría, consultoría, diseño, salud…",
+  "@withholdingOperationProfessional": {
+    "description": "Operation kind option (professional_services)."
+  },
+  "withholdingOperationBusiness": "Otros servicios de tu negocio: reparación, mantenimiento, limpieza, comida…",
+  "@withholdingOperationBusiness": {
+    "description": "Operation kind option (business_services)."
+  },
+  "withholdingOperationRentRealEstate": "Renta de un inmueble (casa, local, oficina, terreno)",
+  "@withholdingOperationRentRealEstate": {
+    "description": "Operation kind option (rent_real_estate)."
+  },
+  "withholdingOperationRentMovable": "Renta de equipo, maquinaria o vehículos",
+  "@withholdingOperationRentMovable": {
+    "description": "Operation kind option (rent_movable)."
+  },
+  "withholdingOperationGoods": "Venta de productos o mercancía",
+  "@withholdingOperationGoods": {
+    "description": "Operation kind option (sale_of_goods)."
+  },
+  "withholdingOperationFreight": "Flete: transporte de mercancía por carretera",
+  "@withholdingOperationFreight": {
+    "description": "Operation kind option (ground_freight)."
+  },
+  "withholdingOperationCommission": "Comisiones por intermediación",
+  "@withholdingOperationCommission": {
+    "description": "Operation kind option (commission)."
+  },
+  "withholdingOperationScrap": "Desperdicios o reciclables (chatarra, cartón, PET…)",
+  "@withholdingOperationScrap": {
+    "description": "Operation kind option (scrap)."
+  },
+  "withholdingOperationOther": "Otro",
+  "@withholdingOperationOther": {
+    "description": "Operation kind option (other)."
+  },
+  "withholdingResidentialRent": "¿Es una casa o departamento para vivir?",
+  "@withholdingResidentialRent": {
+    "description": "Question Q3/E4: housing rent (exempt from IVA)."
+  },
+  "withholdingResidentialRentHelp": "La renta de vivienda no lleva IVA.",
+  "@withholdingResidentialRentHelp": {
+    "description": "Helper under the housing rent question (LIVA 20 fr. II)."
+  },
+  "withholdingYes": "Sí",
+  "@withholdingYes": {
+    "description": "Yes option of a withholding question."
+  },
+  "withholdingNo": "No",
+  "@withholdingNo": {
+    "description": "No option of a withholding question."
+  },
+  "withholdingHelpLabel": "¿Tu factura dice otra cantidad?",
+  "@withholdingHelpLabel": {
+    "description": "Help toggle of the derived withholding card."
+  },
+  "withholdingHelpText": "La app calcula la retención que marca la ley para lo que nos dijiste. Si tu factura muestra otra, revisa con quién te facturó o con tu contador; la estimación usa la de la ley.",
+  "@withholdingHelpText": {
+    "description": "Why there is no manual override (owner decision 1, OQ-W3)."
+  },
+  "withholdingOffline": "Sin conexión no podemos calcular la retención. Se calculará al guardar.",
+  "@withholdingOffline": {
+    "description": "The preview failed before any figure: the server derives it on save."
+  },
+  "withholdingStale": "No pudimos actualizar el cálculo. Se calculará de nuevo al guardar.",
+  "@withholdingStale": {
+    "description": "The preview failed: the last figures may be out of date."
+  },
+  "withholdingWarningCpaUnverified": "Esta retención aún no la confirma un contador. Úsala como aproximado.",
+  "@withholdingWarningCpaUnverified": {
+    "description": "Warning withholding_cpa_unverified (⚠️ rule)."
+  },
+  "withholdingWarningForeign": "Las operaciones con el extranjero pueden llevar otros impuestos que la app todavía no calcula.",
+  "@withholdingWarningForeign": {
+    "description": "Warning foreign_counterparty_not_supported."
+  },
+  "withholdingWarningSupplierRegimeUnknown": "Revisa el régimen en la factura de tu proveedor: cambia la retención.",
+  "@withholdingWarningSupplierRegimeUnknown": {
+    "description": "Warning supplier_regime_unknown."
+  },
+  "withholdingWarningDeduction": "Este gasto solo es deducible si enteras las retenciones a más tardar el {date}.",
+  "@withholdingWarningDeduction": {
+    "description": "Warning deduction_requires_remittance, with the remit due date.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "MMMMd"
+      }
+    }
+  },
+  "withholdingWarningNoRfc": "No le diste tu RFC a la plataforma: te retiene 20 % de ISR y todo el IVA.",
+  "@withholdingWarningNoRfc": {
+    "description": "625 via a platform without the RFC given (LISR 113-A, LIVA 18-M)."
+  },
+  "incomeFieldCounterpartyKind": "¿A quién le facturaste?",
+  "@incomeFieldCounterpartyKind": {
+    "description": "Question Q1 of the income form."
+  },
+  "counterpartyKindPm": "Una empresa (persona moral)",
+  "@counterpartyKindPm": {
+    "description": "Q1 option (pm)."
+  },
+  "counterpartyKindGovFederal": "Gobierno federal (o un organismo federal)",
+  "@counterpartyKindGovFederal": {
+    "description": "Q1 option (gov_federal)."
+  },
+  "counterpartyKindGovStateMunicipal": "Gobierno estatal o municipal",
+  "@counterpartyKindGovStateMunicipal": {
+    "description": "Q1 option (gov_state_municipal)."
+  },
+  "counterpartyKindPfWithActivity": "Una persona con negocio o profesión (persona física con actividad)",
+  "@counterpartyKindPfWithActivity": {
+    "description": "Q1 option (pf_with_activity)."
+  },
+  "counterpartyKindPfPublic": "Una persona sin negocio o público en general",
+  "@counterpartyKindPfPublic": {
+    "description": "Q1 option (pf_no_activity_or_public)."
+  },
+  "counterpartyKindForeign": "Alguien en el extranjero",
+  "@counterpartyKindForeign": {
+    "description": "Q1 option (foreign)."
+  },
+  "incomeFieldOperationKind": "¿Qué le vendiste o qué servicio diste?",
+  "@incomeFieldOperationKind": {
+    "description": "Question Q2 of the income form."
+  },
+  "incomeFieldViaPlatform": "¿Lo cobraste a través de una plataforma digital (app de transporte, hospedaje o ventas)?",
+  "@incomeFieldViaPlatform": {
+    "description": "Question Q4 of the income form."
+  },
+  "incomeWithheldLine": "Te retienen: ISR {isr} · IVA {iva}",
+  "@incomeWithheldLine": {
+    "description": "Derived card: what the payer withholds.",
+    "placeholders": {
+      "isr": {
+        "type": "String",
+        "example": "$1,250.00"
+      },
+      "iva": {
+        "type": "String",
+        "example": "$1,250.00"
+      }
+    }
+  },
+  "incomeReceiveLine": "Recibes {net}",
+  "@incomeReceiveLine": {
+    "description": "Derived card: what reaches the user.",
+    "placeholders": {
+      "net": {
+        "type": "String",
+        "example": "$1,250.00"
+      }
+    }
+  },
+  "incomeNothingWithheld": "Nadie te retiene impuestos en esta operación.",
+  "@incomeNothingWithheld": {
+    "description": "Derived card when nothing is withheld."
+  },
+  "incomeWithholdingIncomplete": "Escribe el monto y elige a quién le facturaste para ver si te retienen impuestos.",
+  "@incomeWithholdingIncomplete": {
+    "description": "Derived card before the facts it needs."
+  },
+  "expenseSectionSupplier": "Tu proveedor",
+  "@expenseSectionSupplier": {
+    "description": "Section with the supplier questions (persona moral only)."
+  },
+  "expenseFieldSupplierKind": "¿Quién te vendió o te dio el servicio?",
+  "@expenseFieldSupplierKind": {
+    "description": "Question E1 of the expense form."
+  },
+  "supplierKindPm": "Una empresa (persona moral)",
+  "@supplierKindPm": {
+    "description": "E1 option (pm)."
+  },
+  "supplierKindPf": "Una persona física con negocio o profesión",
+  "@supplierKindPf": {
+    "description": "E1 option (pf_with_activity)."
+  },
+  "supplierKindForeign": "Alguien en el extranjero",
+  "@supplierKindForeign": {
+    "description": "E1 option (foreign)."
+  },
+  "expenseFieldSupplierRegime": "¿En qué régimen está tu proveedor?",
+  "@expenseFieldSupplierRegime": {
+    "description": "Question E2 of the expense form."
+  },
+  "expenseSupplierRegimeHelp": "Viene en su factura, junto a su RFC.",
+  "@expenseSupplierRegimeHelp": {
+    "description": "Helper under E2."
+  },
+  "supplierRegime612": "Actividad empresarial o profesional (612)",
+  "@supplierRegime612": {
+    "description": "E2 option (612)."
+  },
+  "supplierRegime606": "Arrendamiento (606)",
+  "@supplierRegime606": {
+    "description": "E2 option (606)."
+  },
+  "supplierRegime626": "RESICO (626)",
+  "@supplierRegime626": {
+    "description": "E2 option (626)."
+  },
+  "supplierRegime625": "Plataformas digitales (625)",
+  "@supplierRegime625": {
+    "description": "E2 option (625)."
+  },
+  "supplierRegime621": "RIF (621)",
+  "@supplierRegime621": {
+    "description": "E2 option (621)."
+  },
+  "supplierRegimeUnknown": "No sé",
+  "@supplierRegimeUnknown": {
+    "description": "E2 option (unknown)."
+  },
+  "expenseFieldOperationKind": "¿Qué te vendió o qué servicio te dio?",
+  "@expenseFieldOperationKind": {
+    "description": "Question E3 of the expense form."
+  },
+  "expenseMustWithholdLine": "Debes retener: ISR {isr} · IVA {iva}",
+  "@expenseMustWithholdLine": {
+    "description": "Derived card: what the persona moral withholds from the supplier.",
+    "placeholders": {
+      "isr": {
+        "type": "String",
+        "example": "$1,250.00"
+      },
+      "iva": {
+        "type": "String",
+        "example": "$1,250.00"
+      }
+    }
+  },
+  "expensePaySupplierLine": "Pagas a tu proveedor {net}",
+  "@expensePaySupplierLine": {
+    "description": "Derived card: what the supplier receives.",
+    "placeholders": {
+      "net": {
+        "type": "String",
+        "example": "$1,250.00"
+      }
+    }
+  },
+  "expenseRemitLine": "Entregas al SAT {total} a más tardar el {date}.",
+  "@expenseRemitLine": {
+    "description": "Derived card: the withholdings to remit and their due date.",
+    "placeholders": {
+      "total": {
+        "type": "String",
+        "example": "$1,250.00"
+      },
+      "date": {
+        "type": "DateTime",
+        "format": "MMMMd"
+      }
+    }
+  },
+  "expenseNothingToWithhold": "No debes retener impuestos en esta compra.",
+  "@expenseNothingToWithhold": {
+    "description": "Derived card when nothing is withheld."
+  },
+  "expenseWithholdingIncomplete": "Escribe el monto y elige quién te vendió para ver qué debes retener.",
+  "@expenseWithholdingIncomplete": {
+    "description": "Derived card before the facts it needs."
+  },
+  "expenseErrorSupplierNotApplicable": "Una persona física no retiene a sus proveedores: no hace falta decir quién te vendió.",
+  "@expenseErrorSupplierNotApplicable": {
+    "description": "Verdict supplier_not_applicable."
   }
 }

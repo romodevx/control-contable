@@ -5,9 +5,11 @@ import 'package:control_contable/api/generated/models/income_create.dart';
 import 'package:control_contable/api/generated/models/income_defaults.dart';
 import 'package:control_contable/api/generated/models/income_page.dart';
 import 'package:control_contable/api/generated/models/platform_activity.dart';
+import 'package:control_contable/api/generated/models/withholding_preview.dart';
 import 'package:control_contable/core/network/api_client_provider.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/network/dio_provider.dart';
+import 'package:control_contable/features/incomes/domain/income_preview_query.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -31,13 +33,20 @@ abstract interface class IncomesRepository {
     required IncomeCreate income,
   });
 
-  /// The IVA rates and suggested withholdings for a new income.
+  /// The IVA rates for a new income and the withholding facts of the last
+  /// income in [regime] (`last_used`, MODULE-withholdings §2.1).
   Future<IncomeDefaults> defaults({
     required String taxpayerId,
     required String regime,
-    required CounterpartyType counterparty,
     String? on,
     PlatformActivity? platformActivity,
+  });
+
+  /// The withholding the server derives from [query], storing nothing
+  /// (ADR-0008: the app never computes one).
+  Future<WithholdingPreview> previewWithholdings({
+    required String taxpayerId,
+    required IncomePreviewQuery query,
   });
 
   /// One live income (`404` once deleted or purged).
@@ -99,16 +108,36 @@ class ApiIncomesRepository implements IncomesRepository {
   Future<IncomeDefaults> defaults({
     required String taxpayerId,
     required String regime,
-    required CounterpartyType counterparty,
     String? on,
     PlatformActivity? platformActivity,
   }) => guardApi(
     () => _client.getIncomeDefaults(
       taxpayerId: taxpayerId,
       regime: regime,
-      counterpartyType: counterparty,
+      // Still required by 0.10.0 and ignored by `last_used`; WH-06 drops it.
+      counterpartyType: CounterpartyType.personaFisica,
       onValue: on,
       platformActivity: platformActivity,
+    ),
+  );
+
+  @override
+  Future<WithholdingPreview> previewWithholdings({
+    required String taxpayerId,
+    required IncomePreviewQuery query,
+  }) => guardApi(
+    () => _client.previewIncomeWithholdings(
+      taxpayerId: taxpayerId,
+      regime: query.regime,
+      onValue: query.on,
+      amountCents: query.amountCents,
+      ivaRate: query.ivaRate,
+      ivaCents: query.ivaCents,
+      counterpartyKind: query.counterpartyKind,
+      operationKind: query.operationKind,
+      residentialRent: query.residentialRent,
+      viaPlatform: query.viaPlatform,
+      platformActivity: query.platformActivity,
     ),
   );
 

@@ -24,10 +24,8 @@ const _paidOn = 'Fecha de pago';
 const _ivaAmount = 'IVA pagado (opcional)';
 const _uuid = 'Folio fiscal (UUID) (opcional)';
 const _description = 'Descripción (opcional)';
-const _isrWithheld = 'ISR retenido (opcional)';
-const _ivaWithheld = 'IVA retenido (opcional)';
 const _more = 'Más detalles';
-const _withholdings = 'Retenciones a tu proveedor';
+const _supplier = 'Tu proveedor';
 const _cashOverLimit =
     r'Los pagos en efectivo de más de $2,000.00 no son deducibles.';
 const _cashIva = 'El IVA de este pago en efectivo no es acreditable.';
@@ -36,30 +34,6 @@ String _textOf(WidgetTester tester, String label) =>
     tester.widget<TextField>(inputLabeled(label)).controller!.text;
 
 Future<void> _save(WidgetTester tester) => tapText(tester, 'Guardar');
-
-/// Picks [name] in the category picker, searching for [query] first.
-Future<void> pickCategory(
-  WidgetTester tester,
-  String name, {
-  String? query,
-}) async {
-  final opener = find.descendant(
-    of: find.byType(ExpenseCategoryField),
-    matching: find.byType(OutlinedButton),
-  );
-  await tester.ensureVisible(opener.first);
-  await tester.tap(opener.first);
-  await tester.pumpAndSettle();
-  if (query != null) {
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Buscar categoría'),
-      query,
-    );
-    await tester.pumpAndSettle();
-  }
-  await tester.tap(find.text(name).last);
-  await tester.pumpAndSettle();
-}
 
 Future<void> _toggleDeductible(WidgetTester tester) async {
   await tester.ensureVisible(find.byType(SwitchListTile));
@@ -162,8 +136,8 @@ void main() {
       expect(find.text('Régimen'), findsNothing);
       expect(find.text(_uuid), findsNothing);
       expect(find.text(_more), findsOneWidget);
-      // A persona física withholds nothing from suppliers.
-      expect(find.text(_withholdings), findsNothing);
+      // A persona física withholds nothing from suppliers (US-W7).
+      expect(find.text(_supplier), findsNothing);
     });
 
     testWidgets('the picker searches the categories; the choice shows its '
@@ -380,7 +354,7 @@ void main() {
     testWidgets('the override switch sends the user\'s choice; "Usar el '
         'valor sugerido" clears it', (tester) async {
       await pumpForm(tester);
-      await pickCategory(tester, 'Consumo en restaurantes');
+      await pickCategory(tester, 'Consumo en restaurantes', query: 'restau');
       await typeInto(tester, _amount, '800');
       await tapText(tester, _more);
       expect(_deductibleSwitch(tester).value, isFalse);
@@ -564,26 +538,6 @@ void main() {
       await _save(tester);
 
       expect(find.text('Tu cuenta es de solo consulta'), findsOneWidget);
-    });
-  });
-
-  group('M4-10 persona moral withholdings', () {
-    testWidgets('professional fees open the supplier withholdings, which '
-        'are sent', (tester) async {
-      await pumpForm(tester, taxpayer: moral601);
-      expect(find.text(_withholdings), findsOneWidget);
-      expect(find.text(_isrWithheld), findsNothing);
-
-      await pickCategory(tester, 'Honorarios y servicios profesionales');
-      await typeInto(tester, _amount, '10000');
-      await typeInto(tester, _isrWithheld, '1000');
-      await typeInto(tester, _ivaWithheld, '1066.67');
-      await _save(tester);
-
-      final body = harness.expenses.creates.single;
-      expect(body.regimeCode, '601');
-      expect(body.isrWithheldCents, 100000);
-      expect(body.ivaWithheldCents, 106667);
     });
   });
 

@@ -1,4 +1,5 @@
 import 'package:control_contable/api/generated/models/income.dart';
+import 'package:control_contable/api/generated/models/person_type.dart';
 import 'package:control_contable/api/generated/models/taxpayer.dart';
 import 'package:control_contable/api/generated/models/taxpayer_regime.dart';
 import 'package:control_contable/core/fiscal/regimes_held.dart';
@@ -7,7 +8,6 @@ import 'package:control_contable/core/theme/app_spacing.dart';
 import 'package:control_contable/core/time/clock.dart';
 import 'package:control_contable/core/widgets/load_status.dart';
 import 'package:control_contable/features/incomes/application/income_form_model.dart';
-import 'package:control_contable/features/incomes/application/income_records.dart';
 import 'package:control_contable/features/incomes/data/incomes_repository.dart';
 import 'package:control_contable/features/incomes/presentation/income_form_copy.dart';
 import 'package:control_contable/features/incomes/presentation/income_form_page.dart';
@@ -80,7 +80,7 @@ class IncomeEditScreen extends ConsumerWidget {
       createModel: () => IncomeFormModel(
         regimes: regimes,
         today: businessToday(ref.read(clockProvider)()),
-        counterparty: ref.read(lastCounterpartyProvider),
+        isMoral: taxpayer.personType == PersonType.moral,
         copy: incomeFormCopy(l10n),
         newId: ref.read(clientIdProvider),
         editing: income,

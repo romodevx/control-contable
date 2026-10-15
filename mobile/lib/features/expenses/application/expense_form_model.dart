@@ -7,6 +7,7 @@ import 'package:control_contable/api/generated/models/payment_method.dart';
 import 'package:control_contable/api/generated/models/person_type.dart';
 import 'package:control_contable/api/generated/models/taxpayer.dart';
 import 'package:control_contable/api/generated/models/taxpayer_regime.dart';
+import 'package:control_contable/core/fiscal/housing_rent_rate.dart';
 import 'package:control_contable/core/fiscal/iva_math.dart';
 import 'package:control_contable/core/forms/choice_controllers.dart';
 import 'package:control_contable/core/forms/field_controller.dart';
@@ -16,20 +17,19 @@ import 'package:control_contable/core/forms/form_controller.dart';
 import 'package:control_contable/core/forms/money.dart';
 import 'package:control_contable/core/forms/money_suggestions.dart';
 import 'package:control_contable/core/forms/typed_field_controllers.dart';
+import 'package:control_contable/core/forms/yes_no.dart';
 import 'package:control_contable/core/records/record_month.dart';
+import 'package:control_contable/features/expenses/application/expense_supplier_facts.dart';
+import 'package:control_contable/features/expenses/domain/expense_preview_query.dart';
 import 'package:control_contable/features/expenses/domain/expense_rules.dart';
 import 'package:flutter/foundation.dart';
+
+export 'package:control_contable/core/forms/yes_no.dart' show no, yes;
 
 /// A folio fiscal: 8-4-4-4-12 hexadecimal digits (contract `CfdiUuid`).
 final RegExp _cfdiUuid = RegExp(
   r'^[0-9A-Fa-f]{8}-([0-9A-Fa-f]{4}-){3}[0-9A-Fa-f]{12}$',
 );
-
-/// The wire value of a yes/no choice.
-const String yes = 'true';
-
-/// The wire value of a yes/no choice.
-const String no = 'false';
 
 /// The visible labels the model needs (read from the ARB files by the
 /// screen, so this layer has no `BuildContext`).
@@ -46,13 +46,14 @@ typedef ExpenseFormCopy = ({
   String cfdiUuid,
   String cfdiUuidInvalid,
   String description,
-  String isrWithheld,
-  String ivaWithheld,
+  SupplierFactLabels supplier,
 });
 
-/// What the expense form page holds (M4-10): its fields in reading order,
-/// the category catalog of the chosen regime and date, the live
-/// deductibility preview, and the idempotency id of the form session.
+/// What the expense form page holds (M4-10, WH-12): its fields in reading
+/// order, "Tu proveedor" for a persona moral (the server derives what to
+/// withhold, ADR-0008), the category catalog of the chosen regime and
+/// date, the live deductibility preview, and the idempotency id of the
+/// form session.
 ///
 /// New expense: the context fields (date, payment method, "¿Tienes
 /// factura?", IVA rate, regime) survive "Guardar y crear otro"; category,
@@ -69,10 +70,11 @@ class ExpenseFormModel extends ChangeNotifier {
     required PaymentMethod paymentMethod,
     required this.copy,
     required String Function() newId,
+    SupplierMemory? Function(String category) lastSupplierFor = _noMemory,
     this.editing,
   }) : _newId = newId,
        _sessionId = newId() {
-    _build(today, paymentMethod);
+    _build(today, paymentMethod, lastSupplierFor);
     final stored = editing;
     if (stored == null ||
         stored.ivaCents == ivaCentsFor(stored.amountCents, stored.ivaRate)) {
@@ -82,7 +84,8 @@ class ExpenseFormModel extends ChangeNotifier {
       field.text.addListener(_recompute);
     }
     ivaRate.addListener(_recompute);
-    form.addListener(notifyListeners);
+    category.addListener(() => supplier.followCategory(category.value));
+    form.addListener(_followFacts);
   }
 
   /// Whose expense (its person type decides the withholdings).
@@ -97,6 +100,10 @@ class ExpenseFormModel extends ChangeNotifier {
   final List<TaxpayerRegime> _regimes;
   final String Function() _newId;
   final MoneySuggestions _suggestions = MoneySuggestions();
+  late final HousingRentRate _housing = HousingRentRate(
+    ivaRate,
+    () => IvaRate.rate16,
+  );
   String _sessionId;
   ExpenseCategoryList? _catalog;
   bool _isApplying = false;
@@ -106,6 +113,9 @@ class ExpenseFormModel extends ChangeNotifier {
 
   /// The category code.
   late final ChoiceFieldController category;
+
+  /// E1–E4: what the supplier withholdings are derived from.
+  late final ExpenseSupplierFacts supplier;
 
   /// Subtotal before IVA.
   late final MoneyFieldController amount;
@@ -138,21 +148,26 @@ class ExpenseFormModel extends ChangeNotifier {
   /// What the expense was.
   late final AppFieldController description;
 
-  /// ISR the taxpayer (a persona moral) withheld from the supplier.
-  late final MoneyFieldController isrWithheld;
+  static SupplierMemory? _noMemory(String category) => null;
 
-  /// IVA the taxpayer (a persona moral) withheld from the supplier.
-  late final MoneyFieldController ivaWithheld;
-
-  void _build(DateTime today, PaymentMethod method) {
+  void _build(
+    DateTime today,
+    PaymentMethod method,
+    SupplierMemory? Function(String category) lastSupplierFor,
+  ) {
     final stored = editing;
-    String money(int? cents) =>
-        cents == null || cents == 0 ? '' : formatCentavos(cents);
     category = form.add(
       ChoiceFieldController(
         label: copy.category,
         initialValue: stored?.categoryCode,
       ),
+    );
+    supplier = ExpenseSupplierFacts(
+      form: form,
+      labels: copy.supplier,
+      isMoral: isMoral,
+      lastUsedFor: lastSupplierFor,
+      stored: stored,
     );
     amount = form.moneyField(
       label: copy.amount,
@@ -218,16 +233,6 @@ class ExpenseFormModel extends ChangeNotifier {
       label: copy.description,
       isRequired: false,
       initialText: stored?.description ?? '',
-    );
-    isrWithheld = form.moneyField(
-      label: copy.isrWithheld,
-      isRequired: false,
-      initialText: money(stored?.isrWithheldCents),
-    );
-    ivaWithheld = form.moneyField(
-      label: copy.ivaWithheld,
-      isRequired: false,
-      initialText: money(stored?.ivaWithheldCents),
     );
   }
 
@@ -340,13 +345,38 @@ class ExpenseFormModel extends ChangeNotifier {
           );
   }
 
-  /// Whether the supplier withholdings section opens by itself: a stored
-  /// withholding, or a category that usually carries one (§2.6).
-  bool get suggestsWithholdings =>
-      isMoral &&
-      ((editing?.isrWithheldCents ?? 0) + (editing?.ivaWithheldCents ?? 0) >
-              0 ||
-          withholdingCategories.contains(category.value));
+  /// Whether the IVA rate is asked (housing rent is exempt by law).
+  bool get asksIvaRate => !supplier.isResidentialRent;
+
+  /// The facts the server derives the supplier withholding from, or `null`
+  /// for a persona física and until the category, the amount, the rate and
+  /// the supplier are known.
+  ExpensePreviewQuery? get previewQuery {
+    final code = category.value;
+    final cents = amount.centavos;
+    final kind = supplier.kind;
+    final rate = IvaRate.fromJson(ivaRate.value ?? '');
+    if (code == null || kind == null || rate == IvaRate.$unknown) return null;
+    if (cents == null || cents <= 0) return null;
+    return (
+      regime: regimeCode,
+      on: paidDay,
+      amountCents: cents,
+      ivaRate: rate,
+      ivaCents: ivaCents,
+      categoryCode: code,
+      supplierKind: kind,
+      supplierRegime: supplier.regime,
+      operationKind: supplier.operation,
+      residentialRent: supplier.residentialRentSent,
+    );
+  }
+
+  /// Housing rent carries no IVA: the rate is held at exempt meanwhile.
+  void _followFacts() {
+    _housing.follow(isHousing: supplier.isResidentialRent);
+    notifyListeners();
+  }
 
   /// The catalog for the current regime and date arrived.
   void applyCatalog(ExpenseCategoryList catalog) {

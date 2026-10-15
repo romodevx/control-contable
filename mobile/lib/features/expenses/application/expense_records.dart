@@ -7,6 +7,7 @@ import 'package:control_contable/core/records/record_list.dart';
 import 'package:control_contable/core/records/stacked_undo.dart';
 import 'package:control_contable/core/session/session_scoped.dart';
 import 'package:control_contable/features/expenses/application/expense_list.dart';
+import 'package:control_contable/features/expenses/application/expense_supplier_facts.dart';
 import 'package:control_contable/features/expenses/data/expenses_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -34,7 +35,8 @@ class ExpenseRecords {
       _ref
         ..invalidate(expenseListProvider)
         ..read(lastPaymentMethodProvider.notifier).rememberMethodOf(expense)
-        ..read(categoryUsageProvider.notifier).used(expense.categoryCode);
+        ..read(categoryUsageProvider.notifier).used(expense.categoryCode)
+        ..read(supplierMemoryProvider.notifier).rememberSupplierOf(expense);
       return created;
     } on ApiEntitlementRequired catch (failure) {
       if (failure.trialCapOf == null) {
@@ -146,6 +148,35 @@ categoryUsageProvider =
     NotifierProvider<CategoryUsageNotifier, Map<String, int>>(
       CategoryUsageNotifier.new,
       name: 'categoryUsageProvider',
+    );
+
+/// The supplier last recorded for each category in this session: the next
+/// expense of that category starts there (MODULE-withholdings §2.2 E1,
+/// E2). Memory only, forgotten on sign-out.
+class SupplierMemoryNotifier extends Notifier<Map<String, SupplierMemory>> {
+  @override
+  Map<String, SupplierMemory> build() {
+    forgetOnSignOut(ref);
+    return const {};
+  }
+
+  /// [expense] was just recorded: its supplier answers its category next.
+  void rememberSupplierOf(ExpenseCreate expense) {
+    final kind = expense.supplierKind;
+    if (kind == null) return;
+    state = {
+      ...state,
+      expense.categoryCode: (kind: kind, regime: expense.supplierRegime),
+    };
+  }
+}
+
+/// See [SupplierMemoryNotifier].
+final NotifierProvider<SupplierMemoryNotifier, Map<String, SupplierMemory>>
+supplierMemoryProvider =
+    NotifierProvider<SupplierMemoryNotifier, Map<String, SupplierMemory>>(
+      SupplierMemoryNotifier.new,
+      name: 'supplierMemoryProvider',
     );
 
 /// The expenses the Undo toast would restore (it outlives the list screen).

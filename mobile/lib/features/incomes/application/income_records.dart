@@ -1,4 +1,3 @@
-import 'package:control_contable/api/generated/models/counterparty_type.dart';
 import 'package:control_contable/api/generated/models/income.dart';
 import 'package:control_contable/api/generated/models/income_create.dart';
 import 'package:control_contable/core/access/read_only_access.dart';
@@ -31,9 +30,7 @@ class IncomeRecords {
         taxpayerId: taxpayerId,
         income: income,
       );
-      _ref
-        ..invalidate(incomeListProvider)
-        ..read(lastCounterpartyProvider.notifier).rememberPayerOf(income);
+      _ref.invalidate(incomeListProvider);
       return created;
     } on ApiEntitlementRequired catch (failure) {
       if (failure.trialCapOf == null) {
@@ -101,29 +98,6 @@ final incomeRecordsProvider = Provider<IncomeRecords>(
   IncomeRecords.new,
   name: 'incomeRecordsProvider',
 );
-
-/// Who paid the last income recorded in this session: the next form starts
-/// there (US-I1; persona física the first time). Memory only, forgotten on
-/// sign-out.
-class LastCounterpartyNotifier extends Notifier<CounterpartyType> {
-  @override
-  CounterpartyType build() {
-    forgetOnSignOut(ref);
-    return CounterpartyType.personaFisica;
-  }
-
-  /// [income] was just recorded: its payer starts the next form.
-  // ignore: deprecated_member_use_from_same_package, deprecated until WH-11 (ADR-0008).
-  void rememberPayerOf(IncomeCreate income) => state = income.counterpartyType;
-}
-
-/// See [LastCounterpartyNotifier].
-final NotifierProvider<LastCounterpartyNotifier, CounterpartyType>
-lastCounterpartyProvider =
-    NotifierProvider<LastCounterpartyNotifier, CounterpartyType>(
-      LastCounterpartyNotifier.new,
-      name: 'lastCounterpartyProvider',
-    );
 
 /// The incomes the Undo toast would restore (it outlives the list screen).
 final incomesUndoProvider = Provider<StackedUndo<Income>>((ref) {

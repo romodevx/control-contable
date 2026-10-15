@@ -3,9 +3,11 @@ import 'package:control_contable/api/generated/models/expense.dart';
 import 'package:control_contable/api/generated/models/expense_category_list.dart';
 import 'package:control_contable/api/generated/models/expense_create.dart';
 import 'package:control_contable/api/generated/models/expense_page.dart';
+import 'package:control_contable/api/generated/models/withholding_preview.dart';
 import 'package:control_contable/core/network/api_client_provider.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/core/network/dio_provider.dart';
+import 'package:control_contable/features/expenses/domain/expense_preview_query.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -36,6 +38,13 @@ abstract interface class ExpensesRepository {
   Future<Expense> create({
     required String taxpayerId,
     required ExpenseCreate expense,
+  });
+
+  /// What a persona moral must withhold from the supplier, derived by the
+  /// server from [query] and stored nowhere (ADR-0008).
+  Future<WithholdingPreview> previewWithholdings({
+    required String taxpayerId,
+    required ExpensePreviewQuery query,
   });
 
   /// One live expense (`404` once deleted or purged).
@@ -105,6 +114,26 @@ class ApiExpensesRepository implements ExpensesRepository {
     required ExpenseCreate expense,
   }) => guardApi(
     () => _client.createExpense(taxpayerId: taxpayerId, body: expense),
+  );
+
+  @override
+  Future<WithholdingPreview> previewWithholdings({
+    required String taxpayerId,
+    required ExpensePreviewQuery query,
+  }) => guardApi(
+    () => _client.previewExpenseWithholdings(
+      taxpayerId: taxpayerId,
+      regime: query.regime,
+      onValue: query.on,
+      amountCents: query.amountCents,
+      ivaRate: query.ivaRate,
+      ivaCents: query.ivaCents,
+      categoryCode: query.categoryCode,
+      supplierKind: query.supplierKind,
+      supplierRegime: query.supplierRegime,
+      operationKind: query.operationKind,
+      residentialRent: query.residentialRent,
+    ),
   );
 
   @override
