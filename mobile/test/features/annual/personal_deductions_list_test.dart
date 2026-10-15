@@ -1,9 +1,11 @@
+import 'package:control_contable/api/generated/models/error_code.dart';
 import 'package:control_contable/core/network/api_failure.dart';
 import 'package:control_contable/features/annual/annual_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../tax_engine/estimate_fixtures.dart' show fixtureTaxpayerId;
+import '../taxpayers/taxpayers_fakes.dart' show detail;
 import 'annual_fixtures.dart';
 import 'annual_inputs_fixtures.dart';
 import 'pump_annual_inputs.dart';
@@ -139,6 +141,30 @@ void main() {
     expect(harness.inputs.calls, contains('restoreDeduction ded-1'));
     expect(group('medical'), findsOneWidget);
     expect(find.text('Deducción restaurada'), findsOneWidget);
+  });
+
+  testWidgets('an Undo refused by the 500 bound says so, not a bare failure', (
+    tester,
+  ) async {
+    harness.inputs.deductions.add(deductionJson());
+    await harness.pump(tester, location: _list);
+    await tester.tap(find.byTooltip(r'Eliminar deducción de $1,500.00'));
+    await tester.pumpAndSettle();
+    harness.inputs.failures['restoreDeduction'] = ApiRejected(
+      code: ErrorCode.businessRuleViolation,
+      details: [detail('body', 'limit_reached')],
+    );
+
+    await tester.tap(find.text('Deshacer'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'No se pudo restaurar: este año ya tiene 500 deducciones, el límite. '
+        'Para restaurarla, elimina otra.',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a refused delete keeps the row and says why', (tester) async {
