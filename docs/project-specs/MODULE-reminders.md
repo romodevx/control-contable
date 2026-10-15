@@ -51,15 +51,33 @@ SEC FU1). Reminders own no purge logic.
   ¶5 last sentence, bank payments; the app keeps the earlier Friday until a CPA confirms, OQ-R1).
   Holy Thursday/Friday (RMF 2.1.6) are stored with `moves_due_date = true` ⚠️; no 2026–2027 day 17
   touches them.
-- **Single source of truth.** Today `taxengine/usecase/duedate.go` computes the date with a
-  `HolidayCalendar` port that answers weekends only (the M5 "holiday gap"). M9-04 **moves the rule into
-  the fiscal shared kernel** (`internal/kernel/fiscal`, ADR-0007: pure function
-  `DueDate(period, isHoliday) (Date, MovedReason)`), backs `HolidayCalendar` with the `holidays` table, and
-  makes the estimate, History, the calendar endpoint and the reminder job call the same function. No
-  second copy of the rule. A golden table (the 24 periods 2026-01..2027-12 + 2025-12, research §A.4.1)
-  pins it.
+- **Single source of truth.** Today the rule lives in **two** copies: `taxengine/usecase/duedate.go`
+  (monthly day 17, plus the 621 bimester offset) and `taxengine/usecase/annual/estimate.go`
+  `businessDay` (annual deadlines), both asking a `HolidayCalendar` port whose composition-root adapter
+  (`noHolidays`, `cmd/api`) answers "never" (the M5 "holiday gap"). M9-04 **moves the rule into the
+  fiscal shared kernel** (`internal/kernel/fiscal`, ADR-0007) as pure functions with no I/O, no
+  `time.Now`:
+  - `NextBusinessDay(d Date, h HolidaySet) (Date, MovedReason, error)` — the CFF 12 move, bounded
+    (today's `maxDueShift` 14 → error), used by the monthly **and** the annual deadline;
+  - `MonthlyDueDate(p Period, bimonthly bool, h HolidaySet) (nominal, due Date, MovedReason, error)` —
+    day 17 of the following month (after the bimester when `bimonthly`), then `NextBusinessDay`;
+  - `HolidaySet` — an immutable value built from the `holidays` rows of the seeded years, with
+    `Covers(year) bool`; outside a covered year it answers weekends only (the caller decides whether that
+    is acceptable, §2.1 next bullet).
+  The `holidays` adapter (M9-03) replaces `noHolidays`; the estimate (monthly and annual), History (it
+  reads the estimate's `due_date`), the calendar endpoint and the reminder job all call these functions.
+  No other copy of the rule survives (an archtest/grep guard in M9-04 fails on `time.Saturday` outside the
+  kernel). M9-04 **amends ADR-0007 §3** (the kernel's closed list of contents) to add the due-date
+  functions: more than one bounded context reads them and they must agree. A golden table pins it: the
+  24 periods **2025-12..2027-11** (every due date in the seeded years 2026–2027, research §A.4.1), plus
+  the annual deadlines of fiscal years 2025–2026. No 2026–2027 date changes when the adapter swaps
+  (checked in research §A.4.1), so the engine golden figures stay identical and `EngineVersion` is not
+  bumped; if any estimate golden changes, M9-04 bumps it per the engine version policy.
 - **Unseeded years fail closed.** The calendar covers only years whose holidays are seeded
-  (`holiday_years`, §2.6). `getTaxCalendar` for another year → `422 calendar_unavailable`. The job never
+  (`holiday_years`, §2.6). `getTaxCalendar?year=Y` lists the **periods** `Y-01..Y-12` (so its last entry
+  is due in January of `Y+1`); `Y` unseeded → `422 calendar_unavailable`. When `Y` is seeded but `Y+1` is
+  not, the December entry is computed weekends-only and emits the metric below (it is already
+  `subject_to_confirmation`). The job never
   guesses: for a due date in an unseeded year it falls back to weekends-only **and** emits the
   `reminders_calendar_unseeded` metric/alert (ops seeds the next year each December after the RMF; a
   PLAN follow-up). MODULE-tax-engine §2.10's "beyond 2028" blocker stays.
@@ -93,7 +111,8 @@ SEC FU1). Reminders own no purge logic.
   **moves to B**: A loses it atomically, so A's reminders never reach B's phone. RLS forbids B from seeing
   A's row, so the move runs in the SECURITY DEFINER function `claim_push_token(p_user, p_installation_id,
   p_token_hmac, …)` (M9-02): narrow, `search_path` pinned, deletes any row matching the id **or** the token
-  hash for another user, then upserts for `p_user`, all in one statement set; executable only by `cc_app`.
+  hash on **any other row** (another user, or the same user's stale installation after a reinstall), then
+  upserts for `p_user`, all in one statement set; executable only by `cc_app`.
   It returns nothing about A (no oracle: B gets the same `201` whether or not the token had an owner).
 - **Unregister**: the app calls `DELETE /v1/devices/{id}` on logout (before revoking the session) and on
   opt-out; foreign or unknown id → `404`. Best effort client-side; the claim on the next login and the
@@ -114,22 +133,32 @@ Worker job `reminders`, tick **every 5 minutes**, leader only (P0-27).
    day; a reminder missed for a whole day is **skipped**, never sent late), and with **no
    `notification_log` row** for (user, period, kind, channel). Returns user ids only, in batches.
 3. **Per user, own transaction** with `SET LOCAL app.current_user_id`, bounded `errgroup` (concurrency 8):
-   - **Claim**: `INSERT INTO notification_log (user_id, period, kind, channel, status='pending', …) ON
-     CONFLICT (user_id, period, kind, channel) DO NOTHING RETURNING id`. No row returned → someone else owns
-     it → stop. Commit.
+   - **Claim**: `INSERT INTO notification_log (user_id, period, kind, channel, status='pending',
+     attempts=1, claimed_at=now(), …) ON CONFLICT (user_id, period, kind, channel) DO NOTHING RETURNING id`.
+     No row returned → someone else owns it → stop. Commit.
    - **Build** the message (§2.5), **send** via the FCM sender port (`SendEach` to the user's devices,
-     ≤ 500), **record** `status = sent | failed`, `sent_at`, `devices_ok/failed`, error class (no token, no PII).
-   - **UNREGISTERED / invalid-argument token** (`messaging.IsUnregistered`) → delete that device in the same
-     user transaction. Other errors are retried by the next tick only while the row is `pending` and
-     `attempts < 3`.
+     ≤ 500) with a **send deadline of 30 s**, far below the 10-minute lease of step 5, so a live sender is
+     never reclaimed mid-send. Then **record** in a second short transaction (no token, no PII):
+     - at least one device accepted → `status = sent`, `sent_at`, `devices_ok/failed`;
+     - only transient errors (FCM unavailable/internal, deadline) and `attempts < 3` → stays `pending`
+       (`error_class` set); step 5 retries it;
+     - otherwise (`attempts = 3`, or every device permanently rejected) → `status = failed`.
+   - **UNREGISTERED / invalid-argument token** (`messaging.IsUnregistered`) → delete that device in the
+     record transaction; the user's other devices are unaffected.
 4. **Why the dedupe key is (user, period, kind, channel)**: leader election has a split-brain window of
    about **15 s** (`DefaultHeartbeat` 10 s + election timeout 5 s), so two workers can run the same tick;
    the UNIQUE constraint, not the scheduler, decides who sends (ADR-0001 O8). It keys on **period**, not
    on `due_date`, so a holidays correction that moves a date cannot produce a second reminder. `channel`
    is `push` in v1 (room for email without a migration).
-5. **Crash between claim and send**: a `pending` row older than 10 minutes is retried (at-least-once at the
-   transport). Visible duplicates are prevented on the device by a **collapse id** = hex of HMAC(user,
-   period, kind): `android.collapse_key` / `apns-collapse-id` / `tag`, so a resend replaces the earlier
+5. **Crash or transient failure after the claim**: `due_reminder_users` also returns users with a `pending`
+   row whose `claimed_at` is older than **10 minutes** (the lease), `attempts < 3`, and whose reminder is
+   still **within today** (same window as step 2; past it the row becomes `failed`, `error_class =
+   expired`, never sent late). The retry **re-claims atomically**: `UPDATE notification_log SET
+   attempts = attempts + 1, claimed_at = now() WHERE id = $1 AND status = 'pending' AND claimed_at <
+   now() - interval '10 minutes' RETURNING id`; no row → another worker re-claimed it → stop. This is
+   at-least-once at the transport. Visible duplicates are prevented on the device by a **collapse id** = hex of HMAC(user,
+   period, kind), truncated to 64 hex chars (the `apns-collapse-id` limit): `android.collapse_key` /
+   `apns-collapse-id` / `tag`, so a resend replaces the earlier
    notification instead of stacking. Net effect for the user: exactly one notification.
 6. **Which taxpayers**: the user's non-archived taxpayers whose due date for that period is the reminder's
    date (621-only taxpayers appear only in their bimester's month). None → the job writes `status =
@@ -219,7 +248,10 @@ would punish lapsed users without protecting any paid capability.
 - **Given** period 2026-09 (17 Oct 2026 is a Saturday), **Then** the calendar and the reminder say Monday
   19 Oct 2026, `moved_reason: weekend`. **Given** a test holiday row on a day 17, **Then** the date moves
   past it, `moved_reason: holiday`. **Given** period 2026-03 (17 Apr 2026, Friday), **Then** the date
-  stays Friday (OQ-R1).
+  stays Friday (OQ-R1). **Given** `year=2028` (unseeded), **Then** `422 calendar_unavailable`; **Given**
+  `year=2027`, **Then** the December entry (due 2028-01-17) is weekends-only and
+  `reminders_calendar_unseeded` fires. **Given** the swap from `noHolidays` to the table, **Then** every
+  estimate golden is unchanged.
 
 ### US-R4 Amounts only with opt-in
 - **Given** `show_amounts: false`, **Then** no figure appears in any payload. **Given** `show_amounts:
@@ -229,8 +261,10 @@ would punish lapsed users without protecting any paid capability.
 ### US-R5 Exactly once
 - **Given** two worker instances in the split-brain window, **When** both process the same user/period/kind,
   **Then** one `notification_log` row exists and the fake FCM sender received one send. **Given** a crash
-  after the claim, **Then** the retry carries the same collapse id. **Given** the job runs again later that
-  day, **Then** nothing is sent.
+  after the claim, **Then** after the 10-minute lease the retry carries the same collapse id, and two
+  workers racing to re-claim it produce one retry (`attempts` = 2). **Given** a `pending` row whose day has
+  passed, **Then** it becomes `failed` / `expired` and nothing is sent. **Given** the job runs again later
+  that day after a `sent`, **Then** nothing is sent.
 
 ### US-R6 Shared phone (token claim)
 - **Given** A registered this phone, **When** A logs out without unregistering and B logs in on it,
@@ -307,9 +341,12 @@ Metrics: `reminders_sent_total{kind}`, `reminders_failed_total{error_class}`, `r
 1. `DeviceCreate.id`: document as the installation id (UUIDv7, client-generated, stable per install);
    `push_token` `writeOnly`. `registerDevice`: keep `201`/`200`; add `429`.
 2. `unregisterDevice`: add `429`.
-3. `ReminderSettings`: keep the shape; add the `422 no_reminder_selected` response on `putReminderSettings`
-   and `429`; document "defaults if never saved" on GET; `additionalProperties: false`.
-4. `getTaxCalendar`: add `422 calendar_unavailable` and `429`; `Cache-Control: private, max-age=3600`
+3. `ReminderSettings`: keep the shape but make `early_day` **required** (nullable): with PUT replacing the
+   whole object, an omitted `early_day` must be a `400`, never read as `null` (no early reminder) or as
+   the default 14. Add the `422 no_reminder_selected` response on `putReminderSettings` and `429`;
+   document "defaults if never saved" on GET; `additionalProperties: false`.
+4. `getTaxCalendar`: document `year` as the **period** year (December's entry is due in `year + 1`);
+   add `422 calendar_unavailable` and `429`; `Cache-Control: private, max-age=3600`
    instead of `no-store` (same data for everyone, behind auth); `TaxCalendarEntry` gains
    `subject_to_confirmation: boolean` (true for every entry while OQ-R1 is open) and `obligation` enum
    documents `monthly_isr_iva` only in v1.
