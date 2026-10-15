@@ -139,10 +139,43 @@ total_payable_rounded_cents      = isr.payable_rounded + iva.payable_rounded (on
 
 Withholdings to remit (ISR and IVA a persona moral withheld from its suppliers) are the
 supplier's tax, not the taxpayer's. They are their own line under the totals, added to the
-total **once**, never netted against the taxpayer's IVA and never credited as creditable IVA
-(v1, pending CPA). IVA withheld *from* the taxpayer, as recorded on an income, is different:
-it reduces the taxpayer's IVA. Example TX-601-REMIT-01: ISR 36,000.00 + IVA 120,000.00 +
-to remit 10,333.33 = **166,333.33**.
+total **once** and never netted against the taxpayer's IVA. The IVA withheld becomes the
+taxpayer's creditable IVA one month later (next section). IVA withheld *from* the taxpayer,
+as recorded on an income, is different: it reduces the taxpayer's IVA in its own month.
+Example TX-601-REMIT-01: ISR 36,000.00 + IVA 120,000.00 + to remit 10,333.33 = **166,333.33**.
+Since contract 0.12.0 every withheld amount is derived by the server, never typed
+([withholdings](withholdings.md)).
+
+### Withheld IVA is credited the month after
+
+Engine 1.1.0 (WH-09, [MODULE-withholdings §4.2](../project-specs/MODULE-withholdings.md#42-user-as-receptor-expenses-of-a-persona-moral-required-engine-change)).
+When a persona moral withholds IVA from a supplier, that IVA is creditable "en la declaración
+de pago mensual siguiente a la declaración en la que se haya efectuado el entero de la
+retención" (LIVA 5 fr. IV, read verbatim). The expense ledger therefore returns a creditable
+expense's IVA in two parts, from the same statement:
+
+| Part | Column | Credited in |
+|---|---|---|
+| `CreditableIVAPaid`: IVA − IVA withheld | `creditable_iva_cents` | the month it is paid (n) |
+| `CreditableIVAWithheld`: the IVA withheld | `creditable_iva_withheld_cents` | **n + 1**, as the line `iva.creditable.withheld_prior_month` |
+
+- The line reads "IVA retenido el mes pasado (acreditable este mes; supone que enteraste la
+  retención a tiempo)", operation `subtract`, basis LIVA 5, and is flagged for CPA review
+  (topic `withheld_iva_credit_timing`, OQ-W4: v1 assumes the withholding was remitted on time
+  and asks nothing).
+- **January credits the previous December**: the expense read reaches one month back across
+  the fiscal year (one statement; from fiscal year 2027, since no record is dated before
+  2026). The records fingerprint hashes that December figure, so a late December expense moves
+  January.
+- `IvaComponents.creditable_paid_cents` is **both** parts (this month's paid part plus last
+  month's withheld part); the app labels it "IVA acreditable" (WH-13 F1).
+- 621 takes no withheld part (a persona física never withholds IVA). 625 under the definitive
+  option shows it as not applied, like the paid part.
+- Example WH-11 (601): 40,000.00 + IVA 6,400.00 of fees paid to a 612 persona física in June.
+  June: ISR 4,000.00 + IVA 4,266.67 to remit (8,266.67), creditable 2,133.33. July: the
+  4,266.67 is credited (goldens PM-601-WH-11-JUN, PM-601-WH-11-JUL; PM-601-IVA-02 credits
+  the 5,333.33 withheld in PM-601-IVA-01's June). Walkthrough on the
+  [withholdings page](withholdings.md#try-it-locally).
 
 ### Rounding and "Ajuste por redondeo"
 
@@ -164,7 +197,7 @@ to remit 10,333.33 = **166,333.33**.
 
 ### Engine version
 
-`engine_version` (the breakdown header shows "Motor 1.0.1") is hashed into the
+`engine_version` (the breakdown header shows "Motor 1.1.0") is hashed into the
 `records_fingerprint` with the aggregated inputs and the parameter set. M8 marks a month
 "changed since viewed" only when its `figures_fingerprint` (the displayed figures, ADR-0002
 Amendment 2) moves; the version and parameter set only name the cause
@@ -176,6 +209,7 @@ of versions is in [ADR-0002](../adr/0002-tax-engine.md#engine-version-log):
 |---|---|---|
 | 1.0.0 | 2026-10-13 | Launch strategy list |
 | 1.0.1 | 2026-10-14 | 626 PM adds the ISR it withheld from suppliers to `withheld_to_remit` (found by the M5-24 property suite, PR #100) |
+| 1.1.0 | 2026-10-14 | WH-09: the IVA withheld from suppliers is credited the month after (line `iva.creditable.withheld_prior_month`, ⚠️ `withheld_iva_credit_timing`); 626 PF shows a month whose 1.25 % withholding exceeds the ISR as 0 to pay, the excess to the annual return (⚠️ A4). PR #138 |
 
 ## Parameters
 
@@ -203,8 +237,9 @@ suggestion that is saved only when the user taps **Usar este monto**.
 These requests were run against `make -C backend api` with the `demo_core` preset
 (`module_auth`, `module_taxpayers`, `module_incomes`, `module_expenses` and
 `module_tax_engine` ON). Get `ACCESS` from the [M1 walkthrough](auth.md#try-it-locally)
-(steps 1 to 5). They rebuild the research cases PF-612-ISR-01 and PF-612-IVA-01 from records,
-then read March 2026 (TX-612-TOTAL-01).
+(steps 1 to 5). They rebuild the monthly totals of the research cases PF-612-ISR-01 and
+PF-612-IVA-01 from records, then read March 2026 (TX-612-TOTAL-01). Since contract 0.12.0
+the withholdings are derived, so the records carry who paid instead of withheld amounts.
 
 ```sh
 API=http://localhost:3000
@@ -215,13 +250,14 @@ TAXPAYER_ID=$(curl -s -X POST "$API/v1/taxpayers" -H "$AUTH" -H 'Content-Type: a
   "person_type": "fisica", "rfc": "GOMA800101AB6", "display_name": "Ana (honorarios)",
   "regimes": [{"regime_code": "612", "start_period": "2026-01"}]}' | jq -r .id)
 
-# 1. Records of PF-612-ISR-01 / PF-612-IVA-01 (4 incomes and 3 expenses, inside the trial cap).
-income() { # $1 date, $2 counterparty, $3 amount, $4 IVA, $5 ISR withheld, $6 IVA withheld
+# 1. Records with the monthly totals of PF-612-ISR-01 / PF-612-IVA-01 (4 incomes and 3 expenses,
+#    inside the trial cap). Fees billed to a company withhold ISR 10 % and IVA 2/3 (derived).
+income() { # $1 date, $2 who paid (pm | pf_with_activity), $3 amount; IVA 16 %
   curl -s -o /dev/null -w '%{http_code} ' -X POST "$API/v1/taxpayers/$TAXPAYER_ID/incomes" -H "$AUTH" \
     -H 'Content-Type: application/json' -d "$(jq -nc --arg id "$(uuidgen | tr 'A-Z' 'a-z')" \
-    --arg on "$1" --arg cp "$2" --argjson amt "$3" --argjson iva "$4" --argjson isr "$5" --argjson ivaw "$6" \
-    '{id: $id, regime_code: "612", counterparty_type: $cp, amount_cents: $amt, iva_rate: "rate_16",
-      iva_cents: $iva, isr_withheld_cents: $isr, iva_withheld_cents: $ivaw, collected_on: $on}')"
+    --arg on "$1" --arg cp "$2" --argjson amt "$3" \
+    '{id: $id, regime_code: "612", counterparty_kind: $cp, operation_kind: "professional_services",
+      amount_cents: $amt, iva_rate: "rate_16", iva_cents: ($amt * 16 / 100), collected_on: $on}')"
 }
 expense() { # $1 date: 10,000.00 + IVA 1,600.00 of papelería, by transfer, with CFDI
   curl -s -o /dev/null -w '%{http_code} ' -X POST "$API/v1/taxpayers/$TAXPAYER_ID/expenses" -H "$AUTH" \
@@ -229,10 +265,10 @@ expense() { # $1 date: 10,000.00 + IVA 1,600.00 of papelería, by transfer, with
     '{id: $id, regime_code: "612", category_code: "papeleria", amount_cents: 1000000, iva_rate: "rate_16",
       iva_cents: 160000, payment_method: "transfer", has_cfdi: true, paid_on: $on}')"
 }
-income 2026-01-15 persona_moral 3000000 480000 100000 0; expense 2026-01-20
-income 2026-02-15 persona_moral 3000000 480000 100000 0; expense 2026-02-20
-income 2026-03-10 persona_moral 1000000 160000 100000 106667
-income 2026-03-12 persona_fisica 2000000 320000 0 0; expense 2026-03-20; echo
+income 2026-01-15 pm 2000000; expense 2026-01-20
+income 2026-02-15 pf_with_activity 4000000; expense 2026-02-20
+income 2026-03-10 pm 1000000
+income 2026-03-12 pf_with_activity 2000000; expense 2026-03-20; echo
 
 # 2. March without the prior provisional payments: incomplete, computed with zeros.
 curl -s "$API/v1/taxpayers/$TAXPAYER_ID/estimates?period=2026-03" -H "$AUTH" \
@@ -262,15 +298,15 @@ for p in 2025-12 2099-01; do
 done
 ```
 
-Output, in order (January's 30,000.00 from a persona moral with only 1,000.00 of ISR withheld
-is accepted with the `withholding_differs_from_rate` warning: the CFDI wins):
+Output, in order (run again on 2026-10-15 with engine 1.1.0 and derived withholdings; the
+figures are unchanged):
 
 ```text
 201 201 201 201 201 201 201
 {"status":"incomplete","isr":415096,"missing_inputs":[{"key":"prior_provisional_payments","label":"Pagos provisionales anteriores del ejercicio","months":["2026-01","2026-02"]}]}
 200
 {"status":"complete","isr":15096,"iva":213333,"total":228429,"due_date":"2026-04-17","legend":"Esto es un aproximado. No todos los gastos aplican para tu giro comercial.","disclaimers":["not_tax_advice","deductibility_claimed"]}
-2026 v1 · engine 1.0.1
+2026 v1 · engine 1.1.0
 1 isr input 9000000 Ingresos cobrados acumulados ene–mar
 2 isr subtract 3000000 Deducciones pagadas acumuladas ene–mar
 3 isr result 6000000 Base gravable
@@ -294,7 +330,10 @@ is accepted with the `withholding_differs_from_rate` warning: the CFDI wins):
 ```
 
 Step 2 is TX-612-INC-01 (7,150.96 − 0 − 3,000.00 = 4,150.96, labelled incomplete). The
-figures of steps 4 and 5 are the research's, to the centavo. The walkthrough uses 4 of the
+records keep the research's year-to-date totals: 90,000.00 collected, 30,000.00 deducted and
+3,000.00 of ISR withheld (10 % of the 30,000.00 billed to companies: 20,000.00 in January and
+10,000.00 in March), and March's IVA withheld is 2/3 of 1,600.00. So the figures of steps 4 and
+5 are the research's, to the centavo. The walkthrough uses 4 of the
 user's 5 trial incomes and 3 of the 5 trial expenses.
 
 ## Flag behaviour (`module_tax_engine`)
@@ -306,7 +345,7 @@ user's 5 trial incomes and 3 of the 5 trial expenses.
   too, whatever its own flag says; `make -C backend flags` lists it as `hidden` with
   `REQUIRES module_taxpayers`.
 - Independent of `module_incomes` / `module_expenses`: the estimate reads their records either way.
-- `RateCatalog` (allowed IVA rates and withholding suggestions for the record forms) is a
+- `RateCatalog` (allowed IVA rates and the dated withholding rates the derivation reads) is a
   shared port, not a route: it works with the flag OFF.
 - M6 dashboard is **not** implied OFF with it: Home drops every tax figure and keeps income vs
   expense ([MODULE-dashboard OQ-D7](dashboard.md#flag-behaviour-module_dashboard)). M8 history **is**

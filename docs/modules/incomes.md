@@ -4,7 +4,7 @@
 |---|---|
 | Flag | `module_incomes` (OFF by default; requires `module_taxpayers`) |
 | Spec | [MODULE-incomes.md](../project-specs/MODULE-incomes.md) |
-| Contract | [`docs/api/openapi.yaml`](../api/openapi.yaml), tag `Incomes`, `x-module: module_incomes` (frozen by M3-01 in 0.5.0, amended in 0.6.0 and 0.6.1) |
+| Contract | [`docs/api/openapi.yaml`](../api/openapi.yaml), tag `Incomes`, `x-module: module_incomes` (frozen by M3-01 in 0.5.0, amended in 0.6.0 and 0.6.1; withholdings derived since 0.9.0, typed amounts and `counterparty_type` removed in 0.12.0, [ADR-0008](../adr/0008-withholdings-are-derived.md)) |
 | Gates | [M3-12 tech lead](../reviews/M3-M4-tech-lead-gate.md) PASS, [M3-13 security](../reviews/M3-M4-security-gate.md) PASS, [M3-11 QA](../reviews/M3-M4-QA.md) |
 | Operations | [Incomes and expenses runbook](../runbooks/incomes-expenses.md) |
 | Code | `backend/internal/incomes/` (domain, usecase, infra, adapter), `backend/internal/kernel/fiscal/` (shared with M4), `backend/cmd/api/incomes.go`, `records.go`, `ledger_incomes.go`, `backend/migrations/20261013200000_incomes.sql`, `mobile/lib/features/incomes/`, `mobile/lib/core/records/` |
@@ -12,7 +12,8 @@
 ## What it does
 
 The user records what the **active taxpayer** earned, as read from the CFDI or the bank
-statement: amount before IVA, IVA, who paid, the withholdings the payer made, and the dates.
+statement: amount before IVA, IVA, who paid and for what, and the dates. The server derives
+the withholdings the payer made from those facts ([withholdings](withholdings.md)).
 Each income belongs to one taxpayer and one regime that taxpayer holds on the income's dates.
 M3 stores facts and never computes a tax: the tax engine (M5) reads the incomes through the
 ledger reader (M3-07). Expenses are the sibling module, [M4](expenses.md); both share the
@@ -25,7 +26,8 @@ The API reference for each operation is generated from the contract (`make api-d
 |---|---|---|
 | `listIncomes` | `GET /v1/taxpayers/{taxpayerId}/incomes?period=YYYY-MM&regime=&cursor=&limit=` | allowed |
 | `createIncome` | `POST /v1/taxpayers/{taxpayerId}/incomes` | `402` |
-| `getIncomeDefaults` | `GET /v1/taxpayers/{taxpayerId}/incomes/defaults?regime=&counterparty_type=&on=&platform_activity=` | allowed |
+| `getIncomeDefaults` | `GET /v1/taxpayers/{taxpayerId}/incomes/defaults?regime=&on=&platform_activity=` | allowed |
+| `previewIncomeWithholdings` | `GET /v1/taxpayers/{taxpayerId}/incomes/withholding-preview?…` (the form's derived card; stores nothing) | allowed |
 | `getIncome` | `GET /v1/taxpayers/{taxpayerId}/incomes/{incomeId}` | allowed |
 | `updateIncome` | `PATCH /v1/taxpayers/{taxpayerId}/incomes/{incomeId}` (merge-patch) | `402` |
 | `deleteIncome` | `DELETE /v1/taxpayers/{taxpayerId}/incomes/{incomeId}` (soft) | allowed |
@@ -116,28 +118,24 @@ has no parameters for, while a record date the server cannot validate is invalid
 
 ## Withholdings received (retenciones)
 
-Whether a payer may withhold depends on the taxpayer's person type, the regime and the
-`counterparty_type` (`persona_fisica`, `persona_moral`, `publico_general`, `plataforma`).
-Outside this table a withholding above 0 answers `422 withholding_not_applicable` on that
-field.
+Since contract 0.12.0 the user never types a withholding. The income carries the facts the CFDI
+would show, and the server derives the ISR and IVA the payer withheld, on create, edit, restore
+and in the preview:
 
-| Taxpayer regime | Counterparty | ISR withheld (suggested) | IVA withheld (suggested) |
-|---|---|---|---|
-| 612 PF | persona moral | 10 % of `amount_cents` | 2/3 of `iva_cents` |
-| 606 PF | persona moral | 10 % | 2/3 when IVA > 0 |
-| 626 PF | persona moral | 1.25 % | 2/3 (services, rent) |
-| 625 PF | plataforma | by `platform_activity`: 2.1 % transport/delivery, 4 % lodging, 2.5 % goods/services; 20 % without RFC given to the platform | 50 %; 100 % without RFC |
-| any PM regime | plataforma | 2.5 % | must be 0 |
-| any PM regime | persona moral | must be 0 | allowed (freight), no suggestion |
-| any | persona física, público general | must be 0 | must be 0 |
+| Field | Question in the form |
+|---|---|
+| `counterparty_kind` (required) | "¿A quién le facturaste?": `pm`, `pf_with_activity`, `pf_no_activity_or_public`, `gov_federal`, `gov_state_municipal`, `foreign` |
+| `operation_kind` | "¿Qué le vendiste o qué servicio diste?"; omitted → the last value used in the regime, else the regime default |
+| `residential_rent` | Housing rent; `true` requires `iva_rate: exempt` (`422 residential_rent_exempt`) |
+| `via_platform` | Collected through a platform (625 and personas morales) |
 
-- The suggested rates come from `getIncomeDefaults` (`isr_withholding_rate`,
-  `iva_withholding_rate`, dated catalog data). They are UX only: the stored value is what the
-  user typed, because the CFDI wins.
-- Bounds: `isr_withheld_cents ≤ amount_cents`, `iva_withheld_cents ≤ iva_cents`; above them,
-  `422 withholding_exceeds_base`.
-- A value more than 100 centavos away from the suggestion is accepted with the warning
-  `withholding_differs_from_rate`.
+- The result is the read-only `withholding` object (rates, rule ids, explanations,
+  `table_version`); `isr_withheld_cents` / `iva_withheld_cents` stay as read-only mirrors the
+  ledger reads. Sending either of them answers `400 validation_failed`,
+  `additionalProperties`.
+- `getIncomeDefaults` serves `last_used`, the facts to preselect for the regime.
+- The decision table, the warnings and what `withholding: null` means for an income stored
+  before derivation are on the [withholdings page](withholdings.md).
 - 625 needs `platform_activity`, one of the taxpayer's 625 activities (`422
   activity_not_held` otherwise). It defaults to the only activity when there is one; with
   several and none sent, `400 required`. On any other regime it is `400 not_for_regime`.
@@ -150,7 +148,9 @@ shows the `message` of a code it does not know. Warnings are computed per write,
 | Code | Field | When |
 |---|---|---|
 | `duplicate_cfdi_uuid` | `cfdi_uuid` | Another live income of the same taxpayer has the folio. Legit for partial collections (OQ-9) |
-| `withholding_differs_from_rate` | `isr_withheld_cents` / `iva_withheld_cents` | The CFDI's withholding differs from the suggested rate |
+| `withholding_cpa_unverified` | `withholding` | A derivation rule pending CPA review matched ([withholdings](withholdings.md#what-is-stored-and-served)) |
+| `foreign_counterparty_not_supported` | `counterparty_kind` | Billed abroad: derived zero |
+| `withholding_differs_from_rate` | — | Retired with typed amounts (0.12.0); never emitted, kept in the append-only enum |
 | `provisional_parameters` | `collected_on` / `invoiced_on` | The rates on that date come from a provisional parameter set |
 
 ## Trial cap and access
@@ -207,17 +207,18 @@ TAXPAYER_ID=$(curl -s -X POST "$API/v1/taxpayers" -H "$AUTH" -H 'Content-Type: a
   "person_type": "fisica", "rfc": "GOMA800101AB6", "display_name": "Ana (honorarios)",
   "regimes": [{"regime_code": "612", "start_period": "2026-01"}]}' | jq -r .id)
 
-# 1. Form prefill for a 612 income from a persona moral: IVA rates, suggested withholdings.
-curl -s "$API/v1/taxpayers/$TAXPAYER_ID/incomes/defaults?regime=612&counterparty_type=persona_moral&on=2026-10-05" \
+# 1. Form prefill for a 612 income: IVA rates, and the facts last used in this regime (none yet).
+curl -s "$API/v1/taxpayers/$TAXPAYER_ID/incomes/defaults?regime=612&on=2026-10-05" \
   -H "$AUTH" | jq -c .
 
-# 2. Create with a client id: 201. 10,000.00 + IVA 1,600.00; ISR 10 % and IVA 2/3 withheld.
+# 2. Create with a client id: 201. 10,000.00 + IVA 1,600.00 of fees billed to a company;
+#    the server derives ISR 10 % and IVA 2/3 withheld.
 INCOME_ID=$(uuidgen | tr 'A-Z' 'a-z')
-INCOME=$(jq -nc --arg id "$INCOME_ID" '{id: $id, regime_code: "612", counterparty_type: "persona_moral",
-  amount_cents: 1000000, iva_rate: "rate_16", iva_cents: 160000,
-  isr_withheld_cents: 100000, iva_withheld_cents: 106667, collected_on: "2026-10-05"}')
-curl -s -o /dev/null -w '%{http_code}\n' -X POST "$API/v1/taxpayers/$TAXPAYER_ID/incomes" -H "$AUTH" \
-  -H 'Content-Type: application/json' -d "$INCOME"
+INCOME=$(jq -nc --arg id "$INCOME_ID" '{id: $id, regime_code: "612", counterparty_kind: "pm",
+  operation_kind: "professional_services", amount_cents: 1000000, iva_rate: "rate_16",
+  iva_cents: 160000, collected_on: "2026-10-05"}')
+curl -s -X POST "$API/v1/taxpayers/$TAXPAYER_ID/incomes" -H "$AUTH" \
+  -H 'Content-Type: application/json' -d "$INCOME" | jq -c .withholding
 
 # 3. Same id and body again (a lost response, a double tap): 200, no second record, no slot.
 curl -s -o /dev/null -w '%{http_code}\n' -X POST "$API/v1/taxpayers/$TAXPAYER_ID/incomes" -H "$AUTH" \
@@ -225,7 +226,7 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST "$API/v1/taxpayers/$TAXPAYER_ID
 
 # 4. Same id, another amount: 409 conflict, id / id_reused.
 curl -s -X POST "$API/v1/taxpayers/$TAXPAYER_ID/incomes" -H "$AUTH" -H 'Content-Type: application/json' \
-  -d "$(echo "$INCOME" | jq -c '.amount_cents = 2000000')" \
+  -d "$(echo "$INCOME" | jq -c '.amount_cents = 2000000 | .iva_cents = 320000')" \
   | jq -c '{code: .error.code, details: [.error.details[] | {field, code}]}'
 
 # 5. A date before 2026: the regime window is checked first, so 422 regime_code / regime_not_active.
@@ -242,11 +243,11 @@ curl -s -o /dev/null -w '%{http_code}\n' -X DELETE "$API/v1/taxpayers/$TAXPAYER_
 curl -s -o /dev/null -w '%{http_code}\n' -X POST "$API/v1/taxpayers/$TAXPAYER_ID/incomes/$INCOME_ID/restore" -H "$AUTH"
 ```
 
-Output, in order:
+Output, in order (run again on 2026-10-15 against contract 0.12.0):
 
 ```text
-{"isr_withholding_allowed":true,"isr_withholding_rate":"0.1","iva_rates_allowed":["rate_16","rate_8","rate_0","exempt"],"iva_withholding_allowed":true,"iva_withholding_rate":"0.666667","platform_activity":null,"suggested_iva_rate":"rate_16"}
-201
+{"iva_rates_allowed":["rate_16","rate_8","rate_0","exempt"],"last_used":{"counterparty_kind":null,"operation_kind":"professional_services","residential_rent":false,"via_platform":false},"platform_activity":null,"suggested_iva_rate":"rate_16"}
+{"cpa_unverified":false,"explanations":[{"rule_id":"ISR-5","text":"La empresa te retiene 10 % de ISR por honorarios (LISR art. 106)."},{"rule_id":"IVA-6","text":"Y 2/3 del IVA por servicios de persona física (LIVA art. 1-A, RLIVA art. 3)."}],"isr_cents":100000,"isr_rate":"0.1","iva_basis":"two_thirds_of_iva","iva_cents":106667,"net_cents":953333,"remit_due_on":null,"rule_ids":["ISR-5","IVA-6"],"table_version":"2026.1","withholder":"counterparty"}
 200
 {"code":"conflict","details":[{"field":"id","code":"id_reused"}]}
 {"code":"business_rule_violation","details":[{"field":"regime_code","code":"regime_not_active"}]}
@@ -269,7 +270,7 @@ continues in the [M4 walkthrough](expenses.md#try-it-locally) with the same `TAX
 
 ## Flag behaviour (`module_incomes`)
 
-- OFF (the default): all 7 operations, `defaults` included, answer `404 not_found` with the
+- OFF (the default): all 8 operations, `defaults` and `withholding-preview` included, answer `404 not_found` with the
   standard error envelope. The app shows no Ingresos tab and no "Registrar ingreso" on Home.
 - **Prerequisite `module_taxpayers`** (`flags.Prerequisites`): with `module_taxpayers` OFF,
   incomes are hidden too, whatever their own flag says. `GET /v1/flags` omits the module and
@@ -279,9 +280,9 @@ continues in the [M4 walkthrough](expenses.md#try-it-locally) with the same `TAX
   and taxpayer deletion still cascade, and the M5 estimate still reads them (OQ-8: flags hide
   screens, not data; own data only).
 - A running API sees a change within 5 s.
-- Suites: `backend/adapter/http/gen/records_module_test.go` (the 7 operations, by operationId
+- Suites: `backend/adapter/http/gen/records_module_test.go` (the 8 operations, by operationId
   and route), `backend/cmd/api/records_preset_smoke_integration_test.go` (every preset and the
-  prerequisite fixtures, all 14 record operations probed),
+  prerequisite fixtures, all 16 record operations probed),
   `mobile/test/features/incomes/*_flag_test.dart`.
 - Member of `demo_core`, `demo_monetization` and `demo_full`.
 - **Do not enable it in staging or production** until every precondition in
