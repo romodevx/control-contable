@@ -1,10 +1,10 @@
-# ADR-0010: Access policy ownership and request authorization
+# ADR-0011: Access policy ownership and request authorization
 
 | Field | Value |
 |---|---|
 | Status | **Proposed** (2026-10-15, WP4: PR #176 `refactor/platform-m7-readiness` and `refactor/platform-hygiene`). It records decisions that are already built and tested. The architect and tech-lead accept or amend it in review |
 | Date | 2026-10-15 |
-| Related | P0-29 tech-lead gate FU4 / FU5 / FU3, M1-16 gate FU6 / FU7 / FU10, [ADR-0001](0001-stack.md) (Dependency Rule, the flag gate before authentication), [ADR-0007](0007-fiscal-shared-kernel.md), [platform.md](../architecture/platform.md) `access`, [MODULES.md](../project-specs/MODULES.md) M7 (PR #58 follow-up), [CONTRACT.md](../api/CONTRACT.md) 0.16.0, `backend/internal/archtest` |
+| Related | P0-29 tech-lead gate FU4 / FU5 / FU3, M1-16 gate FU6 / FU7 / FU10, [ADR-0001](0001-stack.md) (Dependency Rule, the flag gate before authentication), [ADR-0007](0007-fiscal-shared-kernel.md), [platform.md](../architecture/platform.md) `access`, [MODULES.md](../project-specs/MODULES.md) M7 (PR #58 follow-up), [CONTRACT.md](../api/CONTRACT.md) 0.17.0, `backend/internal/archtest` |
 | Owner | architect (drafted by backend-sr) |
 
 ## Context
@@ -84,7 +84,7 @@ Constraints that come with the exception:
 - **One view for the client.** `access.Summary.View` is the only computation of the client's
   `AccessSummary` (level, trial end, whole days left on the server clock, records left), and
   `adapter/http/accesshttp.Summary` is its only presenter. `getDashboard` and `getMe` (contract
-  0.16.0) both use them, whatever `module_subscriptions` says. M7's `getSubscription` must use
+  0.17.0) both use them, whatever `module_subscriptions` says. M7's `getSubscription` must use
   them too.
 
 ### 4. Delivery details stay at the edge

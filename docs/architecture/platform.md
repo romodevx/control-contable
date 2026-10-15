@@ -7,7 +7,7 @@ invariants callers may rely on. The authoritative detail is each package's Go do
 code wins and this page has a bug.
 
 Rule (P0-29 FU4): **no new business logic goes into `platform/`**. `access` is the one exception,
-kept as a documented shared port by [ADR-0010](../adr/0010-access-and-authorization.md). Business concepts that several bounded contexts must agree
+kept as a documented shared port by [ADR-0011](../adr/0011-access-and-authorization.md). Business concepts that several bounded contexts must agree
 on (dates, IVA treatment, CFDI UUID, withholding shares, the domain error model) go in the fiscal
 shared kernel, `backend/internal/kernel/fiscal` ([ADR-0007](../adr/0007-fiscal-shared-kernel.md)).
 

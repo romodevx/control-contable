@@ -43,14 +43,14 @@
 //     tx.SystemManager transaction without a user context (P0-30 D-2).
 //   - inward-adapter: only adapters (the top-level adapter/ tree, a module's
 //     adapter layer) and cmd/ import the top-level adapter/ tree: the router,
-//     the generated server and httperr (P0-29 FU3, ADR-0010). Delivery
+//     the generated server and httperr (P0-29 FU3, ADR-0011). Delivery
 //     details never flow inward, into platform, infra, use cases or
 //     migrations.
 //
 // Apart from test-harness, the composition root (cmd/) may import anything.
 //
 // platform/access is the one platform package with business rules (trial,
-// caps, entitlements), kept there as a documented shared port by ADR-0010:
+// caps, entitlements), kept there as a documented shared port by ADR-0011:
 // modules consume it inside their own transactions, which a module package
 // could not offer them under cross-module. No other business logic goes
 // into platform/.
