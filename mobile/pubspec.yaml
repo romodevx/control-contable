@@ -29,7 +29,7 @@ dependencies:
   # Active-taxpayer id only (a non-secret preference, M2-10); never the RFC or tokens.
   shared_preferences: 2.5.5
   # Opens the legal documents (privacy notice, terms) in the in-app browser view (M1-11).
-  url_launcher: 6.3.2
+  url_launcher: 6.3.3
 
 dev_dependencies:
   # Client generation toolchain (ADR-0003): `make mobile-client` from the repo root.
